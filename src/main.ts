@@ -331,6 +331,14 @@ async function confirmarFundacion(proyeccion: ProyeccionJugador, posicion: { x: 
   }
 }
 
+/** El instante de MUNDO de la partida, legible. Sustituye al `Tick: ${proyeccion.tick}` que llevaba
+ * imprimiendo `undefined` desde que la Fase D retiro el `tick` del contrato: lo que viaja es `instante`, ms
+ * desde la epoca Unix, y lo que le importa al jugador es la fecha de su mundo, no el contador del motor. */
+function fechaDeMundo(instante: number | undefined): string {
+  if (typeof instante !== 'number' || !Number.isFinite(instante)) return 'Fecha desconocida';
+  return new Date(instante).toLocaleString();
+}
+
 async function refrescarDatosJuego(): Promise<void> {
   const proyeccion = await consultarProyeccion(estadoCliente.gameIdActivo);
   estadoCliente.proyeccionUltima = proyeccion;
@@ -338,7 +346,7 @@ async function refrescarDatosJuego(): Promise<void> {
   await dibujarPantallaSegunModo(proyeccion);
   const salida = document.querySelector<HTMLParagraphElement>('#estado');
   const json = document.querySelector<HTMLPreElement>('#proyeccion');
-  if (salida) salida.textContent = `Conectado a '${estadoCliente.gameIdActivo}' — Tick: ${proyeccion.tick} | Modo: ${estadoCliente.modoVista} | Facción: ${proyeccion.faccionId ?? '(Ninguna)'}`;
+  if (salida) salida.textContent = `Conectado a '${estadoCliente.gameIdActivo}' — ${fechaDeMundo(proyeccion.instante)} | Modo: ${estadoCliente.modoVista} | Facción: ${proyeccion.faccionId ?? '(Ninguna)'}`;
   if (json) json.textContent = JSON.stringify(proyeccion, null, 2);
 }
 

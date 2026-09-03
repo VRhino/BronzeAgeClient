@@ -1,7 +1,7 @@
 // Wrapper `fetch` sobre la superficie `/jugador/*` y `/sesiones` del backend (Fase C3) — sin lógica de negocio, solo I/O.
 import type { MapaGenerado } from './terreno';
 
-import type { Asentamiento, CaminoComercial, CampamentoBandido, Caravana, Faccion, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
+import type { Asentamiento, CaminoComercial, CampamentoBandido, Caravana, Ejercito, EjercitoAvistado, Faccion, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
 
 export class ApiError extends Error {
   constructor(
@@ -14,7 +14,10 @@ export class ApiError extends Error {
 
 export interface ProyeccionJugador {
   gameId: string;
-  tick: number;
+  /** Instante de MUNDO "ahora" de la partida, en ms desde la epoca Unix. Es la UNICA referencia temporal del
+   * contrato desde que se cerro la Fase D: el `tick` interno del motor dejo de viajar, y este campo llevaba
+   * declarado aqui como `tick: number` desde entonces — o sea, siempre `undefined`. */
+  instante: number;
   version: number;
   jugadorId: string;
   faccionId: string | null;
@@ -22,6 +25,12 @@ export interface ProyeccionJugador {
   facciones: Faccion[];
   asentamientos: Asentamiento[];
   caravanas: Caravana[];
+  /** Los ejércitos de tu Facción, completos (Doc 5.12). */
+  ejercitos: Ejercito[];
+  /** Los ajenos que se estén viendo AHORA — zona de influencia propia o radio de visión de un ejército
+   * tuyo—, ya redactados por el servidor (Doc 5.12.7). Sin memoria: entran y salen del array segun los
+   * pierdas de vista, porque el "último conocido" de la niebla de guerra todavía no existe. */
+  ejercitosAvistados: EjercitoAvistado[];
   caminos: CaminoComercial[];
   campamentosBandidos: CampamentoBandido[];
   zonasFusionadas: ZonaFaccion[];
