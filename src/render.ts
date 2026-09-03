@@ -38,6 +38,44 @@ function dibujarGlifoArbol(ctx: CanvasRenderingContext2D, x: number, y: number, 
   ctx.fill();
 }
 
+/**
+ * Un ejercito en el mapa: un RACIMO de rombos, uno por jugador que va en la columna (Doc 5.12.2), cada uno
+ * desplazado medio ancho respecto al anterior — o sea, solapados al 50%. Asi el tamano del racimo dice de un
+ * vistazo cuanta gente marcha ahi, que es justo lo que hace falta para decidir si plantarle cara.
+ *
+ * El racimo se recentra sobre `x` para que la POSICION del ejercito caiga en el medio y no en el primer
+ * rombo, y se pinta de atras hacia delante para que el primero quede encima y se lea como una columna.
+ *
+ * Rombo y no triangulo (caravana) ni circulo (asentamiento) ni diamante rojo (campamento): las cuatro cosas
+ * que se mueven o amenazan en este mapa tienen forma propia, para no depender del color. Mismo glifo, mismas
+ * medidas y mismo orden de pintado que el cliente de administracion (`cliente/src/ui/canvas.ts`) — es
+ * deliberadamente el MISMO dibujo, no una variante.
+ */
+function dibujarRacimoDeRombos(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  participantes: number,
+  color: string
+): void {
+  const r = 5;
+  const inicio = ((participantes - 1) * r) / 2;
+  for (let i = participantes - 1; i >= 0; i--) {
+    const x = cx - inicio + i * r;
+    ctx.beginPath();
+    ctx.moveTo(x, cy - r);
+    ctx.lineTo(x + r, cy);
+    ctx.lineTo(x, cy + r);
+    ctx.lineTo(x - r, cy);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = '#1b1a17';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+}
+
 // --- RENDER BASE DEL TERRENO (Cacheable) ---
 const RES_BIOMA = 128;
 const ESCALA_RELIEVE = 350;
@@ -305,7 +343,53 @@ export function pintarTerreno(
     ctx.stroke();
   }
 
-  // 11. CAMPAMENTOS DE BANDIDOS (Diamantes rojos)
+  // 11. EJERCITOS PROPIOS: rastro de su ruta, igual que las caravanas
+  ctx.strokeStyle = 'rgba(241, 230, 200, 0.35)';
+  ctx.lineWidth = 1.5;
+  for (const ejercito of proyeccion.ejercitos || []) {
+    // Estacionado acampo: no tiene trayecto pendiente que ensenar. Marchando y regresando si.
+    if (ejercito.estado === 'estacionado' || !ejercito.ruta || ejercito.ruta.length < 2) continue;
+    ctx.beginPath();
+    ejercito.ruta.forEach((p, i) => {
+      const x = p.x * escalaCanvas;
+      const y = p.y * escalaCanvas;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  }
+
+  // 12. EJERCITOS (racimos de rombos, uno por jugador de la columna)
+  for (const ejercito of proyeccion.ejercitos || []) {
+    // El color sale del asentamiento de ORIGEN, como en las caravanas, con `faccionId` de reserva por si ese
+    // asentamiento ya no existe (a un ejercito se le puede caer la ciudad de la que salio).
+    const origen = proyeccion.asentamientos.find((a) => a.id === ejercito.origenAsentamientoId);
+    const color = faccionColor(origen ? origen.faccionId : ejercito.faccionId, proyeccion.facciones);
+    const participantes = new Set((ejercito.escuadrones || []).map((e) => e.jugadorId)).size;
+    dibujarRacimoDeRombos(
+      ctx,
+      ejercito.posicionActual.x * escalaCanvas,
+      ejercito.posicionActual.y * escalaCanvas,
+      participantes,
+      color
+    );
+  }
+
+  // 13. EJERCITOS AVISTADOS: los ajenos que se ven ahora mismo (Doc 5.12.7). Mismo glifo que los propios —
+  // es la misma clase de cosa— y el color de su Faccion ya dice que no es tuyo. Sin rastro de ruta, y no por
+  // simplificar: su ruta NO viaja en la proyeccion, porque seria leerle el plan de campana. Que no dejen
+  // estela es exactamente lo que se sabe de ellos.
+  for (const avistado of proyeccion.ejercitosAvistados || []) {
+    dibujarRacimoDeRombos(
+      ctx,
+      avistado.posicionActual.x * escalaCanvas,
+      avistado.posicionActual.y * escalaCanvas,
+      avistado.participantes,
+      faccionColor(avistado.faccionId, proyeccion.facciones)
+    );
+  }
+
+  // 14. CAMPAMENTOS DE BANDIDOS (Diamantes rojos)
   for (const campamento of proyeccion.campamentosBandidos || []) {
     const x = campamento.posicion.x * escalaCanvas;
     const y = campamento.posicion.y * escalaCanvas;

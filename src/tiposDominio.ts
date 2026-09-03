@@ -72,6 +72,40 @@ export interface Caravana {
   ruta?: Point[];
 }
 
+/** Escuadrón dentro de un ejército propio — copia local reducida a lo que el mapa necesita: de quién es.
+ * El número de ROMBOS de una columna es el de jugadores distintos que van en ella (Doc 5.12.2), no el de
+ * escuadrones, así que esto es lo único que hay que leer para dibujarla. */
+export interface EscuadronEnCampana {
+  id: string;
+  jugadorId: string;
+}
+
+/** Copia local de `Ejercito` (motor, Doc 5.12) — los de TU Facción, que la proyección manda completos.
+ * Solo los campos que pinta el mapa; el resto (suministro, objetivo, caravanas adjuntas) llegará cuando haya
+ * un panel de campaña que los muestre. */
+export interface Ejercito {
+  id: string;
+  faccionId: string;
+  origenAsentamientoId: string;
+  escuadrones: EscuadronEnCampana[];
+  ruta: Point[];
+  posicionActual: Point;
+  estado: 'marchando' | 'estacionado' | 'regresando';
+}
+
+/**
+ * Un ejército AJENO tal como llega redactado del servidor (Doc 5.12.7): dónde está, de qué Facción es y
+ * cuántos estandartes se le cuentan. No hay más — ni escuadrones (su poder), ni ruta (su intención), ni
+ * estado. La redacción la hace `proyectarParaJugador`, no este cliente: lo que no sale del backend no se
+ * puede mirar en un DevTools.
+ */
+export interface EjercitoAvistado {
+  id: string;
+  faccionId: string;
+  posicionActual: Point;
+  participantes: number;
+}
+
 export interface ZonaFaccion {
   faccionId: string;
   contornos: Point[][];
