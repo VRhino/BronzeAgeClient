@@ -61,6 +61,56 @@ function cambiarPestana(pestana: typeof estadoCliente.pestanaInteraccion): void 
   }
 }
 
+/** Ejecuta un comando de muralla y refresca; devuelve el mensaje de error si lo rechaza, o `null` si fue bien.
+ * Las tres acciones (comprometer/abandonar/mejorar, Consideraciones/Murallas_Definicion.md) comparten esta
+ * misma forma — a diferencia de crear/unirse a Facción (arriba), que solo se usan una vez cada una y no
+ * justificaban factorizar el try/catch. */
+async function ejecutarAccionMuralla(tipo: string, params: Record<string, unknown>): Promise<string | null> {
+  try {
+    const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, tipo, params);
+    if (!respuesta.resultado.ok) throw new ApiError(409, respuesta.resultado.codigoError ?? 'El servidor rechazó la operación.');
+    await refrescarDatosJuego();
+    return null;
+  } catch (err) {
+    return mensajeError(err);
+  }
+}
+
+/** Cablea los botones de la pestaña Muralla (`ui/pestanaMuralla.ts`) tras cada render — mismo `#wall-error`
+ * para las tres acciones, y el `asentamientoId` viaja en `data-asentamiento-id` del `.wall-panel` que las
+ * envuelve, no en cada botón (uno solo por asentamiento en vista, no hace falta repetirlo). */
+function cablearAccionesMuralla(panel: HTMLDivElement): void {
+  const wallPanel = panel.querySelector<HTMLElement>('.wall-panel');
+  const asentamientoId = wallPanel?.dataset.asentamientoId;
+  const error = panel.querySelector<HTMLParagraphElement>('#wall-error');
+  if (!wallPanel || !asentamientoId) return;
+
+  // `paramsAlClic` se evalúa DENTRO del listener, nunca al cablear: el selector de nivel puede cambiar entre
+  // que se pinta el panel y que se pulsa el botón, y capturar su `.value` al cablear mandaría un nivel viejo.
+  const conBoton = (boton: HTMLButtonElement, tipo: string, paramsAlClic: () => Record<string, unknown>): void => {
+    boton.addEventListener('click', async () => {
+      boton.disabled = true;
+      const mensaje = await ejecutarAccionMuralla(tipo, { asentamientoId, ...paramsAlClic() });
+      if (mensaje) {
+        boton.disabled = false;
+        if (error) error.textContent = mensaje;
+      }
+    });
+  };
+
+  const btnComprometer = wallPanel.querySelector<HTMLButtonElement>('#btn-muralla-comprometer');
+  if (btnComprometer) {
+    const nivelSelect = wallPanel.querySelector<HTMLSelectElement>('#select-muralla-nivel');
+    conBoton(btnComprometer, 'comprometerRecinto', () => ({ cargo: btnComprometer.dataset.cargo, nivel: Number(nivelSelect?.value ?? 1) }));
+  }
+  wallPanel.querySelectorAll<HTMLButtonElement>('[data-abandonar-recinto]').forEach((boton) => {
+    conBoton(boton, 'abandonarRecinto', () => ({ recintoId: boton.dataset.abandonarRecinto }));
+  });
+  wallPanel.querySelectorAll<HTMLButtonElement>('[data-mejorar-recinto]').forEach((boton) => {
+    conBoton(boton, 'mejorarRecinto', () => ({ cargo: boton.dataset.cargo, recintoId: boton.dataset.mejorarRecinto }));
+  });
+}
+
 function renderizarPanelInteraccion(proyeccion: ProyeccionJugador): void {
   const panel = document.querySelector<HTMLDivElement>('#panel-interaccion');
   if (!panel) return;
@@ -97,7 +147,7 @@ function renderizarPanelInteraccion(proyeccion: ProyeccionJugador): void {
   panel.querySelectorAll<HTMLButtonElement>('[data-settlement-detail-tab]').forEach((boton) => {
     boton.addEventListener('click', () => {
       const tab = boton.dataset.settlementDetailTab;
-      if (tab === 'general' || tab === 'edificios' || tab === 'almacen' || tab === 'produccion' || tab === 'militar') {
+      if (tab === 'general' || tab === 'edificios' || tab === 'almacen' || tab === 'produccion' || tab === 'militar' || tab === 'muralla') {
         estadoCliente.asentamientoDetalleTab = tab;
         if (estadoCliente.proyeccionUltima) renderizarPanelInteraccion(estadoCliente.proyeccionUltima);
       }
@@ -120,6 +170,7 @@ function renderizarPanelInteraccion(proyeccion: ProyeccionJugador): void {
     actualizarModoFundacion(proyeccion);
     renderizarPanelInteraccion(proyeccion);
   });
+  cablearAccionesMuralla(panel);
   const form = panel.querySelector<HTMLFormElement>('#form-crear-faccion');
   form?.addEventListener('submit', async (evento) => {
     evento.preventDefault();

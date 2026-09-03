@@ -1,6 +1,7 @@
 import type { ProyeccionJugador } from '../apiCliente';
 import type { Faccion } from '../tiposDominio';
 import { CAP_FUNDACION_POR_NIVEL, estadoCliente, TIPS_FUNDACION } from './estadoCliente';
+import { renderPestanaMuralla } from './pestanaMuralla';
 
 export function resumenRecursosFundacion(escaparHtml: (valor: string) => string): string {
   const posicion = estadoCliente.posicionFundacion;
@@ -62,7 +63,9 @@ export function renderPestanaAsentamientos(
           ? contenidoAlmacen
           : estadoCliente.asentamientoDetalleTab === 'produccion'
             ? `<div class="settlement-detail-copy"><strong>Producción y recursos</strong><p>La producción se calcula a partir de los edificios activos, la población y los recursos disponibles del asentamiento.</p><span>Edificios activos: ${edificios.filter((edificio) => edificio.estado === 'activo').length}</span></div>`
-            : `<div class="settlement-detail-copy"><strong>Defensa y tropas</strong><p>La información militar detallada aparecerá aquí cuando la proyección incluya escuadrones y guarniciones del asentamiento.</p></div>`
+            : estadoCliente.asentamientoDetalleTab === 'muralla'
+              ? renderPestanaMuralla(asentamiento, proyeccion, escaparHtml)
+              : `<div class="settlement-detail-copy"><strong>Defensa y tropas</strong><p>La información militar detallada aparecerá aquí cuando la proyección incluya escuadrones y guarniciones del asentamiento.</p></div>`
     : '<div class="interaction-empty">Todavía no tienes un asentamiento fundado.</div>';
   return `
     <div class="settlement-panel-view">
@@ -81,7 +84,7 @@ export function renderPestanaAsentamientos(
         <div class="tip-controls"><button id="btn-tip-anterior" class="tip-control" type="button" aria-label="Tip anterior">←</button><span id="tip-counter">${estadoCliente.indiceTip + 1} / ${TIPS_FUNDACION.length}</span><button id="btn-tip-siguiente" class="tip-control" type="button" aria-label="Tip siguiente">→</button></div>
       </div>
       <div class="settlement-explanation"><strong>Antes de fundar</strong><p>Un asentamiento necesita una posición libre del mapa. Al fundarlo, tu facción obtiene una nueva zona de influencia y una base para crecer.</p></div>` : contenidoAlmacen}
-      ${asentamiento ? `<section class="settlement-detail"><div class="settlement-detail-heading"><span class="faction-kicker">Detalle</span><h3>${escaparHtml(asentamiento.nombre ?? asentamiento.id)}</h3></div><div class="settlement-detail-tabs" role="tablist" aria-label="Detalle del asentamiento">${(['general', 'edificios', 'produccion', 'militar'] as const).map((tab) => `<button class="settlement-detail-tab ${estadoCliente.asentamientoDetalleTab === tab ? 'active' : ''}" data-settlement-detail-tab="${tab}" type="button" role="tab" aria-selected="${estadoCliente.asentamientoDetalleTab === tab}">${tab[0]!.toUpperCase()}${tab.slice(1)}</button>`).join('')}</div><div class="settlement-detail-content">${contenidoDetalle}</div></section>` : ''}
+      ${asentamiento ? `<section class="settlement-detail"><div class="settlement-detail-heading"><span class="faction-kicker">Detalle</span><h3>${escaparHtml(asentamiento.nombre ?? asentamiento.id)}</h3></div><div class="settlement-detail-tabs" role="tablist" aria-label="Detalle del asentamiento">${(['general', 'edificios', 'produccion', 'militar', 'muralla'] as const).map((tab) => `<button class="settlement-detail-tab ${estadoCliente.asentamientoDetalleTab === tab ? 'active' : ''}" data-settlement-detail-tab="${tab}" type="button" role="tab" aria-selected="${estadoCliente.asentamientoDetalleTab === tab}">${tab[0]!.toUpperCase()}${tab.slice(1)}</button>`).join('')}</div><div class="settlement-detail-content">${contenidoDetalle}</div></section>` : ''}
       <button id="btn-ir-informacion" class="text-link" type="button">Consulta la información del mundo →</button>
     </div>
   `;

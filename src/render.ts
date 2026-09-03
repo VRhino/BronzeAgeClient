@@ -1,6 +1,6 @@
 import { contornosBosques, evaluarBioma, evaluarElevacion, type MapaGenerado } from './terreno';
 import type { ProyeccionJugador } from './apiCliente';
-import type { Asentamiento, Edificio, Point, SegmentoTrazado, TrazadoAsentamiento } from './tiposDominio';
+import type { Asentamiento, Edificio, Point, RectanguloLocal, TrazadoAsentamiento, TrazadoMuralla } from './tiposDominio';
 import {
   BIOMA_COLOR_SIMPLE,
   EDIFICIO_COLOR,
@@ -380,25 +380,56 @@ export function pintarPrevisualizacionFundacion(
 
 const BIOMA_TIERRA_PLANA = '#93c26b';
 
-function dibujarTramos(
+/** Pinta tiradas de celda como ÁREAS rellenas — la calle/camino ocupa suelo, no es una línea (Etapa 6). */
+function dibujarAreas(
   ctx: CanvasRenderingContext2D,
-  tramos: SegmentoTrazado[],
+  tiradas: RectanguloLocal[],
   aPantalla: (p: Point) => Point,
-  color: string,
-  grosor: number
+  escala: number,
+  color: string
 ): void {
-  if (!tramos || tramos.length === 0) return;
-  ctx.strokeStyle = color;
-  ctx.lineWidth = grosor;
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  for (const tramo of tramos) {
-    const a = aPantalla(tramo.desde);
-    const b = aPantalla(tramo.hasta);
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
+  if (!tiradas || tiradas.length === 0) return;
+  ctx.fillStyle = color;
+  for (const t of tiradas) {
+    const esquina = aPantalla({ x: t.x, y: t.y });
+    ctx.fillRect(esquina.x, esquina.y, t.ancho * escala, t.alto * escala);
   }
-  ctx.stroke();
+}
+
+/**
+ * Pinta los recintos de muralla — mismo criterio visual que el laboratorio del motor
+ * (`lab/src/render.ts`): sólido y contorno continuo lo YA LEVANTADO, translúcido y punteado en rojo lo
+ * PLANIFICADO (ya ocupa suelo, todavía no está en pie — Paso 2b del doc de murallas: dibujarlo como césped
+ * vacío es el peor bug posible, el que parece del motor y es una omisión del dibujo). Puertas en ocre (el
+ * dato irreversible del trazo), torres más oscuras (lectura visual del nivel).
+ */
+function dibujarMurallas(
+  ctx: CanvasRenderingContext2D,
+  murallas: TrazadoMuralla[],
+  aPantalla: (p: Point) => Point,
+  escala: number
+): void {
+  const pintar = (rects: RectanguloLocal[], relleno: string, borde: string): void => {
+    if (!rects || rects.length === 0) return;
+    ctx.fillStyle = relleno;
+    ctx.strokeStyle = borde;
+    ctx.lineWidth = 1;
+    for (const r of rects) {
+      const esquina = aPantalla({ x: r.x, y: r.y });
+      const w = r.ancho * escala;
+      const h = r.alto * escala;
+      ctx.fillRect(esquina.x, esquina.y, w, h);
+      ctx.strokeRect(esquina.x, esquina.y, w, h);
+    }
+  };
+  for (const muralla of murallas || []) {
+    ctx.setLineDash([3, 2]);
+    pintar(muralla.planificado, 'rgba(90, 90, 90, 0.30)', 'rgba(200, 40, 40, 0.95)');
+    ctx.setLineDash([]);
+    pintar(muralla.muro, 'rgba(90, 90, 90, 0.95)', 'rgba(20, 20, 20, 1)');
+    pintar(muralla.torres, 'rgba(45, 45, 45, 1)', 'rgba(10, 10, 10, 1)');
+    pintar(muralla.puertas, 'rgba(214, 158, 46, 1)', 'rgba(120, 84, 10, 1)');
+  }
 }
 
 function dibujarEdificioLocal(
@@ -448,7 +479,7 @@ export function pintarAsentamiento(
   const radioMapa = 60; // Constante estática
   const tamanoCelda = 5;
   const usable = width * 0.92;
-  const escala = usable / (radioMapa * 2);
+  const escala = usable / (radioMapa * 4);
   const cx = width / 2;
   const cy = height / 2;
   const aPantalla = (p: Point): Point => ({ x: cx + p.x * escala, y: cy + p.y * escala });
@@ -480,8 +511,8 @@ export function pintarAsentamiento(
   }
 
   // Trazados
-  dibujarTramos(ctx, trazado.caminos, aPantalla, 'rgba(140, 118, 88, 0.55)', 1.5);
-  dibujarTramos(ctx, trazado.calles, aPantalla, 'rgba(120, 92, 58, 0.75)', 3);
+  dibujarAreas(ctx, trazado.caminos, aPantalla, escala, 'rgba(140, 118, 88, 0.55)');
+  dibujarAreas(ctx, trazado.calles, aPantalla, escala, 'rgba(120, 92, 58, 0.75)');
 
   // Edificios internos
   const internos = (asentamiento.edificios || []).filter((e) => (e.ambito ?? 'asentamiento') !== 'mapa');
@@ -496,6 +527,9 @@ export function pintarAsentamiento(
     const huella = enPantalla(edificio.id);
     if (huella) dibujarEdificioLocal(ctx, edificio, huella);
   }
+
+  // Muralla ENCIMA de todo: es lo que hay que juzgar de un vistazo (Consideraciones/Murallas_Definicion.md).
+  dibujarMurallas(ctx, trazado.murallas, aPantalla, escala);
 
   // Texto
   ctx.fillStyle = '#1b1a17';

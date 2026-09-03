@@ -66,7 +66,6 @@ export const EDIFICIO_COLOR: Record<string, string> = {
   mercado: '#2d9c8f',
   puestoMercado: '#7fc9bf',
   maravilla: '#ffd700',
-  muralla: '#5a5a5a',
   plaza: '#f0e8c8',
   plazaDeArmas: '#c97a7a',
   patioDeGremios: '#c99a6b',

@@ -1123,3 +1123,87 @@ pre#proyeccion {
     min-height: 150px;
   }
 }
+
+/* --- Pestaña Muralla (Consideraciones/Murallas_Definicion.md, Paso 6) --- */
+
+.wall-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wall-recinto-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wall-recinto-card {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+}
+
+.wall-recinto-heading {
+  align-items: baseline;
+  color: var(--text-primary);
+  display: flex;
+  font-size: 0.8rem;
+  justify-content: space-between;
+}
+
+.wall-recinto-heading span {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.wall-recinto-estado {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.wall-recinto-acciones {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.wall-recinto-acciones .btn-secondary {
+  padding: 6px 12px;
+  font-size: 0.78rem;
+}
+
+.wall-action {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+
+.wall-action label {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.wall-action select {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  padding: 8px 10px;
+}
+
+.wall-note {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}

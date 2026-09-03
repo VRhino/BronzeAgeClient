@@ -13,7 +13,7 @@ export interface EstadoClienteJugador {
   posicionFundacion: { x: number; y: number } | null;
   puntoFundacionFijado: boolean;
   indiceTip: number;
-  asentamientoDetalleTab: 'general' | 'edificios' | 'almacen' | 'produccion' | 'militar';
+  asentamientoDetalleTab: 'general' | 'edificios' | 'almacen' | 'produccion' | 'militar' | 'muralla';
 }
 
 export const estadoCliente: EstadoClienteJugador = {
