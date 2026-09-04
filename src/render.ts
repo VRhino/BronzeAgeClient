@@ -1,9 +1,10 @@
 import { contornosBosques, evaluarBioma, evaluarElevacion, type MapaGenerado } from './terreno';
 import type { ProyeccionJugador } from './apiCliente';
-import type { Asentamiento, Edificio, Point, RectanguloLocal, TrazadoAsentamiento, TrazadoMuralla } from './tiposDominio';
+import type { Asentamiento, Edificio, NieblaProyectada, Point, RectanguloLocal, TrazadoAsentamiento, TrazadoMuralla } from './tiposDominio';
 import {
   BIOMA_COLOR_SIMPLE,
   EDIFICIO_COLOR,
+  NIEBLA,
   RECURSO_COLOR,
   faccionColor,
 } from './paletas';
@@ -74,6 +75,103 @@ function dibujarRacimoDeRombos(
     ctx.lineWidth = 1;
     ctx.stroke();
   }
+}
+
+/**
+ * Un asentamiento en el mapa general. Relleno = lo estás viendo (tuyo o avistado); hueco = lo RECUERDAS, y
+ * puede haber cambiado desde entonces.
+ *
+ * El hueco no es decorativo: dice literalmente "aquí hay una ciudad, no sé cómo está ahora". Junto con el
+ * filtro oscuro que la niebla le echa encima —lo recordado se pinta DEBAJO de la máscara, a propósito— es
+ * todo lo que hace falta para que no se confunda con lo que está a la vista.
+ */
+function dibujarAsentamiento(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  color: string,
+  relleno: boolean
+): void {
+  ctx.beginPath();
+  ctx.arc(x, y, 6, 0, Math.PI * 2);
+  if (relleno) {
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = '#1b1a17';
+    ctx.lineWidth = 1.5;
+  } else {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+  }
+  ctx.stroke();
+}
+
+// --- NIEBLA DE GUERRA ---
+
+/** Un bit por celda, empaquetados en hexadecimal — ver `NieblaProyectada`. Se decodifica el hex UNA vez por
+ * máscara y no una por celda, que serían 6.400 `parseInt` por capa y por frame. */
+function bytesDeMascara(hex: string, celdas: number): Uint8Array {
+  const bytes = new Uint8Array(Math.ceil(celdas / 8));
+  const pares = Math.min(bytes.length, Math.floor(hex.length / 2));
+  for (let i = 0; i < pares; i++) bytes[i] = Number.parseInt(hex.slice(i * 2, i * 2 + 2), 16) || 0;
+  return bytes;
+}
+
+/**
+ * La niebla de guerra, en una sola capa por encima de la geografía (niebla de guerra, Paso 5).
+ *
+ * **Enmascarar es cosa de ESTE cliente, no del servidor** (decisión del usuario, 2026-09-04). La geografía no
+ * es información táctica —es la misma para todos, y el mapa se descarga entero una vez y se cachea por su
+ * `mapaId`—, así que el servidor solo dice QUÉ has explorado. Lo que no puede salir de él son las ENTIDADES,
+ * y eso ya viene filtrado por `proyectarParaJugador`. El cliente de ADMINISTRACIÓN no aplica esta máscara:
+ * es herramienta de operación, no un jugador.
+ *
+ * El truco de dibujo: la máscara se compone a la resolución de la REJILLA (80x80 sobre el mundo de 2000) y se
+ * estira al tamaño del canvas con interpolación. Eso da bordes de niebla suaves gratis — si se pintase celda
+ * a celda sobre el canvas grande, el mundo se vería a cuadros y la frontera delataría la rejilla en vez de
+ * parecer niebla.
+ */
+export function pintarNiebla(
+  ctx: CanvasRenderingContext2D,
+  niebla: NieblaProyectada,
+  escalaCanvas: number
+): void {
+  const { columnas, filas, tamanoCelda } = niebla;
+  if (columnas <= 0 || filas <= 0) return;
+
+  const total = columnas * filas;
+  const explorado = bytesDeMascara(niebla.celdas, total);
+  const visible = bytesDeMascara(niebla.visibles, total);
+  const [r, g, b] = NIEBLA.color;
+
+  const capa = document.createElement('canvas');
+  capa.width = columnas;
+  capa.height = filas;
+  const cctx = capa.getContext('2d')!;
+  const img = cctx.createImageData(columnas, filas);
+
+  for (let i = 0; i < total; i++) {
+    const posicion = i >> 3;
+    const mascara = 1 << (i & 7);
+    const alfa = (visible[posicion]! & mascara) !== 0
+      ? NIEBLA.alfaVisible
+      : (explorado[posicion]! & mascara) !== 0
+        ? NIEBLA.alfaRecordado
+        : NIEBLA.alfaSinVer;
+
+    const p = i * 4;
+    img.data[p] = r;
+    img.data[p + 1] = g;
+    img.data[p + 2] = b;
+    img.data[p + 3] = alfa;
+  }
+  cctx.putImageData(img, 0, 0);
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(capa, 0, 0, columnas * tamanoCelda * escalaCanvas, filas * tamanoCelda * escalaCanvas);
+  ctx.restore();
 }
 
 // --- RENDER BASE DEL TERRENO (Cacheable) ---
@@ -232,7 +330,75 @@ export function pintarTerreno(
     ctx.fill();
   }
 
-  // 5. ZONAS DE INFLUENCIA FUSIONADAS
+  // ---------------------------------------------------------------------------------------------------
+  // A PARTIR DE AQUI, EL ORDEN DE CAPAS ES LA NIEBLA DE GUERRA, no una preferencia estetica.
+  //
+  // Lo que se pinta ANTES de la mascara queda tapado donde nunca se estuvo y oscurecido donde solo se
+  // recuerda; lo que se pinta DESPUES se ve tal cual. Asi que el criterio es:
+  //
+  //   - Antes  -> geografia y lo que solo se RECUERDA. Un camino o un campamento en tierra que no has
+  //               pisado no puede verse, y uno en tierra que viste hace rato se ve como se ve todo lo demas
+  //               de esa zona: a media luz.
+  //   - Despues -> lo tuyo y lo que estas VIENDO ahora mismo. El servidor ya se ha encargado de que aqui no
+  //               llegue nada que no puedas ver, asi que taparlo seria taparte tu propia informacion.
+  //
+  // Mover una capa de un lado al otro cambia lo que el jugador sabe. No es refactor.
+  // ---------------------------------------------------------------------------------------------------
+
+  // 5. CAMINOS COMERCIALES (infraestructura del mundo, bajo la niebla)
+  ctx.strokeStyle = 'rgba(139, 90, 43, 0.9)';
+  ctx.lineWidth = 2.5;
+  ctx.setLineDash([6, 4]);
+  for (const camino of proyeccion.caminos || []) {
+    if (camino.puntos.length < 2) continue;
+    ctx.beginPath();
+    camino.puntos.forEach((p, i) => {
+      const x = p.x * escalaCanvas;
+      const y = p.y * escalaCanvas;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  // 6. CAMPAMENTOS DE BANDIDOS (diamantes rojos). Van BAJO la niebla: hoy la proyeccion los manda todos, sin
+  // filtrar por visibilidad, asi que dibujarlos por encima pondria diamantes flotando sobre tierra que el
+  // jugador no ha pisado. Taparlos aqui es lo correcto de PRESENTACION; que ademas no viajen es cosa del
+  // servidor y esta anotado aparte.
+  for (const campamento of proyeccion.campamentosBandidos || []) {
+    const x = campamento.posicion.x * escalaCanvas;
+    const y = campamento.posicion.y * escalaCanvas;
+    const r = 6;
+    ctx.beginPath();
+    ctx.moveTo(x, y - r);
+    ctx.lineTo(x + r, y);
+    ctx.lineTo(x, y + r);
+    ctx.lineTo(x - r, y);
+    ctx.closePath();
+    ctx.fillStyle = '#8b1a1a';
+    ctx.fill();
+    ctx.strokeStyle = '#1b1a17';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  // 7. ASENTAMIENTOS RECORDADOS: los que se vieron alguna vez y ahora no se ven. Huecos, y debajo de la
+  // mascara para que les caiga el filtro oscuro — que es exactamente lo que son, informacion de anoche.
+  for (const conocido of proyeccion.asentamientosConocidos || []) {
+    dibujarAsentamiento(
+      ctx,
+      conocido.posicion.x * escalaCanvas,
+      conocido.posicion.y * escalaCanvas,
+      faccionColor(conocido.faccionId, proyeccion.facciones),
+      false
+    );
+  }
+
+  // 8. >>> LA NIEBLA <<<
+  if (proyeccion.exploracion) pintarNiebla(ctx, proyeccion.exploracion, escalaCanvas);
+
+  // 9. ZONAS DE INFLUENCIA FUSIONADAS (solo la propia)
   for (const zona of proyeccion.zonasFusionadas || []) {
     if (zona.contornos.length === 0) continue;
     const color = faccionColor(zona.faccionId, proyeccion.facciones);
@@ -253,24 +419,7 @@ export function pintarTerreno(
     ctx.stroke();
   }
 
-  // 6. CAMINOS COMERCIALES
-  ctx.strokeStyle = 'rgba(139, 90, 43, 0.9)';
-  ctx.lineWidth = 2.5;
-  ctx.setLineDash([6, 4]);
-  for (const camino of proyeccion.caminos || []) {
-    if (camino.puntos.length < 2) continue;
-    ctx.beginPath();
-    camino.puntos.forEach((p, i) => {
-      const x = p.x * escalaCanvas;
-      const y = p.y * escalaCanvas;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    });
-    ctx.stroke();
-  }
-  ctx.setLineDash([]);
-
-  // 7. EDIFICIOS DEL MAPA (Minas, Canteras...)
+  // 10. EDIFICIOS DEL MAPA (Minas, Canteras...) — solo de asentamientos propios
   const tamanoEdificio = 6;
   for (const asentamiento of proyeccion.asentamientos || []) {
     for (const edificio of asentamiento.edificios || []) {
@@ -278,10 +427,10 @@ export function pintarTerreno(
       const x = edificio.posicion.x * escalaCanvas;
       const y = edificio.posicion.y * escalaCanvas;
       const color = EDIFICIO_COLOR[edificio.tipo] || '#fff';
-      
+
       ctx.lineWidth = 1;
       ctx.strokeStyle = color;
-      
+
       if (edificio.estado === 'activo') {
         ctx.fillStyle = color;
         ctx.fillRect(x - tamanoEdificio / 2, y - tamanoEdificio / 2, tamanoEdificio, tamanoEdificio);
@@ -295,19 +444,31 @@ export function pintarTerreno(
     }
   }
 
-  // 8. ASENTAMIENTOS (Centros)
+  // 11. ASENTAMIENTOS PROPIOS
   for (const asentamiento of proyeccion.asentamientos || []) {
-    const color = faccionColor(asentamiento.faccionId, proyeccion.facciones);
-    ctx.beginPath();
-    ctx.arc(asentamiento.posicion.x * escalaCanvas, asentamiento.posicion.y * escalaCanvas, 6, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.strokeStyle = '#1b1a17';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+    dibujarAsentamiento(
+      ctx,
+      asentamiento.posicion.x * escalaCanvas,
+      asentamiento.posicion.y * escalaCanvas,
+      faccionColor(asentamiento.faccionId, proyeccion.facciones),
+      true
+    );
   }
 
-  // 9. RUTAS EN TRÁNSITO (Rastros tenues)
+  // 12. ASENTAMIENTOS AVISTADOS: los ajenos que se ven AHORA. Mismo glifo relleno que los propios —es la
+  // misma clase de cosa y el color de su Faccion ya dice que no es tuya—, a diferencia de los recordados,
+  // que van huecos. Lo que llega de ellos es su ficha y nada mas: la redaccion la hizo el servidor.
+  for (const avistado of proyeccion.asentamientosAvistados || []) {
+    dibujarAsentamiento(
+      ctx,
+      avistado.posicion.x * escalaCanvas,
+      avistado.posicion.y * escalaCanvas,
+      faccionColor(avistado.faccionId, proyeccion.facciones),
+      true
+    );
+  }
+
+  // 13. RUTAS EN TRÁNSITO (Rastros tenues)
   ctx.strokeStyle = 'rgba(241, 230, 200, 0.35)';
   ctx.lineWidth = 1.5;
   for (const caravana of proyeccion.caravanas || []) {
@@ -322,14 +483,14 @@ export function pintarTerreno(
     ctx.stroke();
   }
 
-  // 10. CARAVANAS (Triángulos identificables por color de origen)
+  // 14. CARAVANAS (Triángulos identificables por color de origen)
   for (const caravana of proyeccion.caravanas || []) {
     const x = caravana.posicionActual.x * escalaCanvas;
     const y = caravana.posicionActual.y * escalaCanvas;
-    
+
     const origenCaravana = proyeccion.asentamientos.find((a) => a.id === caravana.origenAsentamientoId);
     const color = origenCaravana ? faccionColor(origenCaravana.faccionId, proyeccion.facciones) : '#f1e6c8';
-    
+
     const r = 4.5;
     ctx.beginPath();
     ctx.moveTo(x, y - r);
@@ -343,7 +504,7 @@ export function pintarTerreno(
     ctx.stroke();
   }
 
-  // 11. EJERCITOS PROPIOS: rastro de su ruta, igual que las caravanas
+  // 15. EJERCITOS PROPIOS: rastro de su ruta, igual que las caravanas
   ctx.strokeStyle = 'rgba(241, 230, 200, 0.35)';
   ctx.lineWidth = 1.5;
   for (const ejercito of proyeccion.ejercitos || []) {
@@ -359,7 +520,7 @@ export function pintarTerreno(
     ctx.stroke();
   }
 
-  // 12. EJERCITOS (racimos de rombos, uno por jugador de la columna)
+  // 16. EJERCITOS (racimos de rombos, uno por jugador de la columna)
   for (const ejercito of proyeccion.ejercitos || []) {
     // El color sale del asentamiento de ORIGEN, como en las caravanas, con `faccionId` de reserva por si ese
     // asentamiento ya no existe (a un ejercito se le puede caer la ciudad de la que salio).
@@ -375,10 +536,13 @@ export function pintarTerreno(
     );
   }
 
-  // 13. EJERCITOS AVISTADOS: los ajenos que se ven ahora mismo (Doc 5.12.7). Mismo glifo que los propios —
+  // 17. EJERCITOS AVISTADOS: los ajenos que se ven ahora mismo (Doc 5.12.7). Mismo glifo que los propios —
   // es la misma clase de cosa— y el color de su Faccion ya dice que no es tuyo. Sin rastro de ruta, y no por
   // simplificar: su ruta NO viaja en la proyeccion, porque seria leerle el plan de campana. Que no dejen
   // estela es exactamente lo que se sabe de ellos.
+  //
+  // Y sin memoria, a diferencia de los asentamientos: de un ejercito no se guarda "ultimo conocido". Tiene
+  // sentido — una ciudad sigue donde estaba, una columna en marcha no.
   for (const avistado of proyeccion.ejercitosAvistados || []) {
     dibujarRacimoDeRombos(
       ctx,
@@ -387,24 +551,6 @@ export function pintarTerreno(
       avistado.participantes,
       faccionColor(avistado.faccionId, proyeccion.facciones)
     );
-  }
-
-  // 14. CAMPAMENTOS DE BANDIDOS (Diamantes rojos)
-  for (const campamento of proyeccion.campamentosBandidos || []) {
-    const x = campamento.posicion.x * escalaCanvas;
-    const y = campamento.posicion.y * escalaCanvas;
-    const r = 6;
-    ctx.beginPath();
-    ctx.moveTo(x, y - r);
-    ctx.lineTo(x + r, y);
-    ctx.lineTo(x, y + r);
-    ctx.lineTo(x - r, y);
-    ctx.closePath();
-    ctx.fillStyle = '#8b1a1a';
-    ctx.fill();
-    ctx.strokeStyle = '#1b1a17';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
   }
 }
 

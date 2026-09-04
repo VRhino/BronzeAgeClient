@@ -1,7 +1,7 @@
 // Wrapper `fetch` sobre la superficie `/jugador/*` y `/sesiones` del backend (Fase C3) — sin lógica de negocio, solo I/O.
 import type { MapaGenerado } from './terreno';
 
-import type { Asentamiento, CaminoComercial, CampamentoBandido, Caravana, Ejercito, EjercitoAvistado, Faccion, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
+import type { Asentamiento, AsentamientoAvistado, AsentamientoConocido, CaminoComercial, CampamentoBandido, Caravana, Ejercito, EjercitoAvistado, Faccion, NieblaProyectada, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
 
 export class ApiError extends Error {
   constructor(
@@ -23,13 +23,25 @@ export interface ProyeccionJugador {
   faccionId: string | null;
   mapaId: string;
   facciones: Faccion[];
+  /** Los de tu Faccion, completos. */
   asentamientos: Asentamiento[];
+  /** Los AJENOS que se estan viendo ahora, redactados a su ficha. Array aparte de `asentamientos` a
+   * proposito: la diferencia entre "lo veo entero" y "solo lo avisto" es de tipo, no un campo opcional del
+   * que este cliente pueda olvidarse. */
+  asentamientosAvistados: AsentamientoAvistado[];
+  /** Los que se vieron alguna vez y ahora no se ven: la ultima foto, congelada, con su `conocidoEn`. Nunca
+   * repite lo que ya esta en `asentamientosAvistados` — cuando algo se ve y ademas se recuerda, gana lo que
+   * se ve. */
+  asentamientosConocidos: AsentamientoConocido[];
+  /** Las dos mascaras de la niebla (ver `NieblaProyectada`). Aplicarlas es cosa de este cliente. */
+  exploracion: NieblaProyectada;
   caravanas: Caravana[];
   /** Los ejércitos de tu Facción, completos (Doc 5.12). */
   ejercitos: Ejercito[];
-  /** Los ajenos que se estén viendo AHORA — zona de influencia propia o radio de visión de un ejército
-   * tuyo—, ya redactados por el servidor (Doc 5.12.7). Sin memoria: entran y salen del array segun los
-   * pierdas de vista, porque el "último conocido" de la niebla de guerra todavía no existe. */
+  /** Los ajenos que se estén viendo AHORA —lo que vigilan tus plazas o el radio de visión de una columna
+   * tuya—, ya redactados por el servidor (Doc 5.12.7). Entran y salen del array según los pierdas de vista:
+   * a diferencia de los asentamientos, de un ejército NO se guarda memoria. Tiene sentido — una ciudad sigue
+   * donde estaba, una columna en marcha no. */
   ejercitosAvistados: EjercitoAvistado[];
   caminos: CaminoComercial[];
   campamentosBandidos: CampamentoBandido[];

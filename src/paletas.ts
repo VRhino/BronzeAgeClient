@@ -79,3 +79,23 @@ export function faccionColor(faccionId: string, facciones: { id: string }[]): st
   const idx = facciones.findIndex((f) => f.id === faccionId);
   return FACCION_COLORES[Math.max(0, idx) % FACCION_COLORES.length]!;
 }
+
+/**
+ * La niebla de guerra se pinta con el MISMO color del fondo de la página (`--bg-primary`), no con negro: así
+ * lo no explorado no se lee como un agujero quemado en el mapa sino como mapa que todavía no está, que es lo
+ * que es.
+ *
+ * Tres opacidades para los tres estados. La del recuerdo (62%) se eligió para que el terreno siga
+ * reconociéndose —la forma de la costa, dónde había bosque— pero nadie confunda esa zona con lo que está
+ * mirando: es "de noche", no "apagado".
+ */
+export const NIEBLA = {
+  /** `--bg-primary` del tema, en RGB. */
+  color: [10, 14, 23] as const,
+  /** Nunca visto: opaco. */
+  alfaSinVer: 255,
+  /** Visto antes: filtro oscuro, como si fuera de noche. */
+  alfaRecordado: 158,
+  /** Viéndolo: sin filtro. */
+  alfaVisible: 0,
+};
