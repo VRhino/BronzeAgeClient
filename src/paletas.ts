@@ -51,6 +51,7 @@ export const EDIFICIO_COLOR: Record<string, string> = {
   cantera: '#8d8d8d',
   lenera: '#3f7d3a',
   almacen: '#7a5c3a',
+  granero: '#b8933f',
   mina: '#f1c40f',
   minaCobre: '#c0703c',
   minaEstano: '#2f6fd1',
