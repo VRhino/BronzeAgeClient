@@ -336,16 +336,19 @@ export function pintarTerreno(
   // Lo que se pinta ANTES de la mascara queda tapado donde nunca se estuvo y oscurecido donde solo se
   // recuerda; lo que se pinta DESPUES se ve tal cual. Asi que el criterio es:
   //
-  //   - Antes  -> geografia y lo que solo se RECUERDA. Un camino o un campamento en tierra que no has
-  //               pisado no puede verse, y uno en tierra que viste hace rato se ve como se ve todo lo demas
-  //               de esa zona: a media luz.
+  //   - Antes  -> geografia y lo que solo se RECUERDA. Un camino que recorriste hace rato se ve como se ve
+  //               todo lo demas de esa zona: a media luz.
   //   - Despues -> lo tuyo y lo que estas VIENDO ahora mismo. El servidor ya se ha encargado de que aqui no
   //               llegue nada que no puedas ver, asi que taparlo seria taparte tu propia informacion.
+  //
+  // Y de que lado cae cada cosa lo decide la regla con que el SERVIDOR la filtra, no su aspecto: los caminos
+  // viajan por lo explorado (van antes), los campamentos de bandidos por lo que se ve ahora (van despues).
   //
   // Mover una capa de un lado al otro cambia lo que el jugador sabe. No es refactor.
   // ---------------------------------------------------------------------------------------------------
 
-  // 5. CAMINOS COMERCIALES (infraestructura del mundo, bajo la niebla)
+  // 5. CAMINOS COMERCIALES. Van BAJO la niebla: el servidor manda los que la Faccion ha PISADO, y una
+  // calzada explorada hace rato se ve como se ve todo lo demas de esa zona, a media luz.
   ctx.strokeStyle = 'rgba(139, 90, 43, 0.9)';
   ctx.lineWidth = 2.5;
   ctx.setLineDash([6, 4]);
@@ -362,28 +365,7 @@ export function pintarTerreno(
   }
   ctx.setLineDash([]);
 
-  // 6. CAMPAMENTOS DE BANDIDOS (diamantes rojos). Van BAJO la niebla: hoy la proyeccion los manda todos, sin
-  // filtrar por visibilidad, asi que dibujarlos por encima pondria diamantes flotando sobre tierra que el
-  // jugador no ha pisado. Taparlos aqui es lo correcto de PRESENTACION; que ademas no viajen es cosa del
-  // servidor y esta anotado aparte.
-  for (const campamento of proyeccion.campamentosBandidos || []) {
-    const x = campamento.posicion.x * escalaCanvas;
-    const y = campamento.posicion.y * escalaCanvas;
-    const r = 6;
-    ctx.beginPath();
-    ctx.moveTo(x, y - r);
-    ctx.lineTo(x + r, y);
-    ctx.lineTo(x, y + r);
-    ctx.lineTo(x - r, y);
-    ctx.closePath();
-    ctx.fillStyle = '#8b1a1a';
-    ctx.fill();
-    ctx.strokeStyle = '#1b1a17';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-  }
-
-  // 7. ASENTAMIENTOS RECORDADOS: los que se vieron alguna vez y ahora no se ven. Huecos, y debajo de la
+  // 6. ASENTAMIENTOS RECORDADOS: los que se vieron alguna vez y ahora no se ven. Huecos, y debajo de la
   // mascara para que les caiga el filtro oscuro — que es exactamente lo que son, informacion de anoche.
   for (const conocido of proyeccion.asentamientosConocidos || []) {
     dibujarAsentamiento(
@@ -395,10 +377,10 @@ export function pintarTerreno(
     );
   }
 
-  // 8. >>> LA NIEBLA <<<
+  // 7. >>> LA NIEBLA <<<
   if (proyeccion.exploracion) pintarNiebla(ctx, proyeccion.exploracion, escalaCanvas);
 
-  // 9. ZONAS DE INFLUENCIA FUSIONADAS (solo la propia)
+  // 8. ZONAS DE INFLUENCIA FUSIONADAS (solo la propia)
   for (const zona of proyeccion.zonasFusionadas || []) {
     if (zona.contornos.length === 0) continue;
     const color = faccionColor(zona.faccionId, proyeccion.facciones);
@@ -419,7 +401,7 @@ export function pintarTerreno(
     ctx.stroke();
   }
 
-  // 10. EDIFICIOS DEL MAPA (Minas, Canteras...) — solo de asentamientos propios
+  // 9. EDIFICIOS DEL MAPA (Minas, Canteras...) — solo de asentamientos propios
   const tamanoEdificio = 6;
   for (const asentamiento of proyeccion.asentamientos || []) {
     for (const edificio of asentamiento.edificios || []) {
@@ -444,7 +426,7 @@ export function pintarTerreno(
     }
   }
 
-  // 11. ASENTAMIENTOS PROPIOS
+  // 10. ASENTAMIENTOS PROPIOS
   for (const asentamiento of proyeccion.asentamientos || []) {
     dibujarAsentamiento(
       ctx,
@@ -455,7 +437,7 @@ export function pintarTerreno(
     );
   }
 
-  // 12. ASENTAMIENTOS AVISTADOS: los ajenos que se ven AHORA. Mismo glifo relleno que los propios —es la
+  // 11. ASENTAMIENTOS AVISTADOS: los ajenos que se ven AHORA. Mismo glifo relleno que los propios —es la
   // misma clase de cosa y el color de su Faccion ya dice que no es tuya—, a diferencia de los recordados,
   // que van huecos. Lo que llega de ellos es su ficha y nada mas: la redaccion la hizo el servidor.
   for (const avistado of proyeccion.asentamientosAvistados || []) {
@@ -468,7 +450,7 @@ export function pintarTerreno(
     );
   }
 
-  // 13. RUTAS EN TRÁNSITO (Rastros tenues)
+  // 12. RUTAS EN TRÁNSITO (Rastros tenues)
   ctx.strokeStyle = 'rgba(241, 230, 200, 0.35)';
   ctx.lineWidth = 1.5;
   for (const caravana of proyeccion.caravanas || []) {
@@ -483,7 +465,7 @@ export function pintarTerreno(
     ctx.stroke();
   }
 
-  // 14. CARAVANAS (Triángulos identificables por color de origen)
+  // 13. CARAVANAS (Triángulos identificables por color de origen)
   for (const caravana of proyeccion.caravanas || []) {
     const x = caravana.posicionActual.x * escalaCanvas;
     const y = caravana.posicionActual.y * escalaCanvas;
@@ -504,7 +486,7 @@ export function pintarTerreno(
     ctx.stroke();
   }
 
-  // 15. EJERCITOS PROPIOS: rastro de su ruta, igual que las caravanas
+  // 14. EJERCITOS PROPIOS: rastro de su ruta, igual que las caravanas
   ctx.strokeStyle = 'rgba(241, 230, 200, 0.35)';
   ctx.lineWidth = 1.5;
   for (const ejercito of proyeccion.ejercitos || []) {
@@ -520,7 +502,7 @@ export function pintarTerreno(
     ctx.stroke();
   }
 
-  // 16. EJERCITOS (racimos de rombos, uno por jugador de la columna)
+  // 15. EJERCITOS (racimos de rombos, uno por jugador de la columna)
   for (const ejercito of proyeccion.ejercitos || []) {
     // El color sale del asentamiento de ORIGEN, como en las caravanas, con `faccionId` de reserva por si ese
     // asentamiento ya no existe (a un ejercito se le puede caer la ciudad de la que salio).
@@ -536,7 +518,7 @@ export function pintarTerreno(
     );
   }
 
-  // 17. EJERCITOS AVISTADOS: los ajenos que se ven ahora mismo (Doc 5.12.7). Mismo glifo que los propios —
+  // 16. EJERCITOS AVISTADOS: los ajenos que se ven ahora mismo (Doc 5.12.7). Mismo glifo que los propios —
   // es la misma clase de cosa— y el color de su Faccion ya dice que no es tuyo. Sin rastro de ruta, y no por
   // simplificar: su ruta NO viaja en la proyeccion, porque seria leerle el plan de campana. Que no dejen
   // estela es exactamente lo que se sabe de ellos.
@@ -551,6 +533,26 @@ export function pintarTerreno(
       avistado.participantes,
       faccionColor(avistado.faccionId, proyeccion.facciones)
     );
+  }
+
+  // 17. CAMPAMENTOS DE BANDIDOS (diamantes rojos). Van SOBRE la niebla: el servidor solo manda los que la
+  // Faccion esta viendo AHORA —no tienen memoria, como los ejercitos avistados y a diferencia de los
+  // asentamientos—, asi que taparlos seria taparle al jugador informacion que acaba de ganarse.
+  for (const campamento of proyeccion.campamentosBandidos || []) {
+    const x = campamento.posicion.x * escalaCanvas;
+    const y = campamento.posicion.y * escalaCanvas;
+    const r = 6;
+    ctx.beginPath();
+    ctx.moveTo(x, y - r);
+    ctx.lineTo(x + r, y);
+    ctx.lineTo(x, y + r);
+    ctx.lineTo(x - r, y);
+    ctx.closePath();
+    ctx.fillStyle = '#8b1a1a';
+    ctx.fill();
+    ctx.strokeStyle = '#1b1a17';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
   }
 }
 
