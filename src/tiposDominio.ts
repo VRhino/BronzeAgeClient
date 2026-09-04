@@ -121,6 +121,10 @@ export interface AsentamientoAvistado {
   faccionId: string;
   posicion: Point;
   nivel: number;
+  /** Su frontera, con la silueta REAL que calcula el motor (recortada contra sus vecinos). Se dibuja BAJO
+   * la niebla, así que del contorno solo se llega a ver el tramo que cae en tierra explorada — que es
+   * exactamente lo que verías: la parte de la frontera por delante de la que has pasado. */
+  zona: Point[];
 }
 
 /**
@@ -138,6 +142,12 @@ export interface AsentamientoConocido {
   nivel: number;
   /** Instante de MUNDO (ms desde la época Unix) en que se tomó la foto. */
   conocidoEn: number;
+  /** Hasta dónde llegaba su tierra cuando se vio — el RADIO, no la silueta. El servidor guarda el número y
+   * no el contorno a propósito: la silueta real está recortada contra vecinos que quizá no conozcas, así
+   * que congelarla sería congelar información de terceros. Se dibuja como un círculo punteado, que es
+   * justo lo que significa: "llegaba más o menos hasta aquí". Ausente en fichas grabadas antes de que
+   * existieran las zonas; se rellena sola al volver a ver esa plaza. */
+  radioPotencial?: number;
 }
 
 /**

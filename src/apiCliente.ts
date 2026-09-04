@@ -35,6 +35,11 @@ export interface ProyeccionJugador {
   asentamientosConocidos: AsentamientoConocido[];
   /** Las dos mascaras de la niebla (ver `NieblaProyectada`). Aplicarlas es cosa de este cliente. */
   exploracion: NieblaProyectada;
+  /** De quien es el suelo que pisa cada ejercito PROPIO: `ejercitoId` -> `faccionId`, o ausente si marcha
+   * por tierra de nadie. Lo resuelve el servidor y no este cliente: aqui solo estan las zonas de lo que se
+   * ve, asi que fallaria justo en el caso que importa — una capital vigila 240 y una columna ve 150, o sea
+   * que se puede entrar en su territorio sin llegar a divisar la ciudad. */
+  territorioPorEjercito: Record<string, string>;
   caravanas: Caravana[];
   /** Los ejércitos de tu Facción, completos (Doc 5.12). */
   ejercitos: Ejercito[];

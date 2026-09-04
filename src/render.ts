@@ -106,6 +106,48 @@ function dibujarAsentamiento(
   ctx.stroke();
 }
 
+/**
+ * La frontera de una Facción: relleno tenue y contorno. Es el mismo trazo para la tuya y para la de un
+ * rival — una frontera es una frontera— y el color de la Facción ya dice de quién es.
+ *
+ * `punteado` marca lo que solo se RECUERDA: una zona recordada llega como radio y no como silueta (el
+ * servidor no congela el contorno real, porque está recortado contra vecinos que quizá no conozcas), así que
+ * se dibuja el círculo de aquel radio y el punteado avisa de que es una aproximación, no la línea exacta.
+ */
+function dibujarFrontera(
+  ctx: CanvasRenderingContext2D,
+  contorno: readonly Point[],
+  color: string,
+  escalaCanvas: number,
+  punteado = false
+): void {
+  if (contorno.length < 3) return;
+  ctx.beginPath();
+  contorno.forEach((p, i) => {
+    const x = p.x * escalaCanvas;
+    const y = p.y * escalaCanvas;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.closePath();
+  ctx.fillStyle = color + '22';
+  ctx.fill();
+  if (punteado) ctx.setLineDash([6, 5]);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+/** El contorno de una zona RECORDADA: un círculo del radio que se recuerda, ya que la silueta real no se
+ * guarda. 32 lados bastan — es una aproximación por definición, y a la escala del mapa no se distingue. */
+function circuloDe(centro: Point, radio: number): Point[] {
+  return Array.from({ length: 32 }, (_, i) => {
+    const a = (i / 32) * Math.PI * 2;
+    return { x: centro.x + Math.cos(a) * radio, y: centro.y + Math.sin(a) * radio };
+  });
+}
+
 // --- NIEBLA DE GUERRA ---
 
 /** Un bit por celda, empaquetados en hexadecimal — ver `NieblaProyectada`. Se decodifica el hex UNA vez por
@@ -365,7 +407,27 @@ export function pintarTerreno(
   }
   ctx.setLineDash([]);
 
-  // 6. ASENTAMIENTOS RECORDADOS: los que se vieron alguna vez y ahora no se ven. Huecos, y debajo de la
+  // 6. FRONTERAS AJENAS. Van BAJO la mascara a proposito, y ahi esta la gracia: del contorno solo se llega a
+  // ver el tramo que cae en tierra explorada. Pasar cerca de una frontera te enseña ESE tramo, no el mapa
+  // politico entero — que es justo como funcionaria de verdad.
+  //
+  // Silueta real (recortada contra sus vecinos) la de una plaza que ves; circulo punteado la de una que solo
+  // recuerdas, porque de esa el servidor guarda el radio y no el contorno.
+  for (const avistado of proyeccion.asentamientosAvistados || []) {
+    dibujarFrontera(ctx, avistado.zona || [], faccionColor(avistado.faccionId, proyeccion.facciones), escalaCanvas);
+  }
+  for (const conocido of proyeccion.asentamientosConocidos || []) {
+    if (conocido.radioPotencial === undefined) continue;
+    dibujarFrontera(
+      ctx,
+      circuloDe(conocido.posicion, conocido.radioPotencial),
+      faccionColor(conocido.faccionId, proyeccion.facciones),
+      escalaCanvas,
+      true
+    );
+  }
+
+  // 7. ASENTAMIENTOS RECORDADOS: los que se vieron alguna vez y ahora no se ven. Huecos, y debajo de la
   // mascara para que les caiga el filtro oscuro — que es exactamente lo que son, informacion de anoche.
   for (const conocido of proyeccion.asentamientosConocidos || []) {
     dibujarAsentamiento(
@@ -377,10 +439,10 @@ export function pintarTerreno(
     );
   }
 
-  // 7. >>> LA NIEBLA <<<
+  // 8. >>> LA NIEBLA <<<
   if (proyeccion.exploracion) pintarNiebla(ctx, proyeccion.exploracion, escalaCanvas);
 
-  // 8. ZONAS DE INFLUENCIA FUSIONADAS (solo la propia)
+  // 9. ZONAS DE INFLUENCIA FUSIONADAS (solo la propia)
   for (const zona of proyeccion.zonasFusionadas || []) {
     if (zona.contornos.length === 0) continue;
     const color = faccionColor(zona.faccionId, proyeccion.facciones);
@@ -401,7 +463,7 @@ export function pintarTerreno(
     ctx.stroke();
   }
 
-  // 9. EDIFICIOS DEL MAPA (Minas, Canteras...) — solo de asentamientos propios
+  // 10. EDIFICIOS DEL MAPA (Minas, Canteras...) — solo de asentamientos propios
   const tamanoEdificio = 6;
   for (const asentamiento of proyeccion.asentamientos || []) {
     for (const edificio of asentamiento.edificios || []) {
@@ -426,7 +488,7 @@ export function pintarTerreno(
     }
   }
 
-  // 10. ASENTAMIENTOS PROPIOS
+  // 11. ASENTAMIENTOS PROPIOS
   for (const asentamiento of proyeccion.asentamientos || []) {
     dibujarAsentamiento(
       ctx,
@@ -437,7 +499,7 @@ export function pintarTerreno(
     );
   }
 
-  // 11. ASENTAMIENTOS AVISTADOS: los ajenos que se ven AHORA. Mismo glifo relleno que los propios —es la
+  // 12. ASENTAMIENTOS AVISTADOS: los ajenos que se ven AHORA. Mismo glifo relleno que los propios —es la
   // misma clase de cosa y el color de su Faccion ya dice que no es tuya—, a diferencia de los recordados,
   // que van huecos. Lo que llega de ellos es su ficha y nada mas: la redaccion la hizo el servidor.
   for (const avistado of proyeccion.asentamientosAvistados || []) {
@@ -450,7 +512,7 @@ export function pintarTerreno(
     );
   }
 
-  // 12. RUTAS EN TRÁNSITO (Rastros tenues)
+  // 13. RUTAS EN TRÁNSITO (Rastros tenues)
   ctx.strokeStyle = 'rgba(241, 230, 200, 0.35)';
   ctx.lineWidth = 1.5;
   for (const caravana of proyeccion.caravanas || []) {
@@ -465,7 +527,7 @@ export function pintarTerreno(
     ctx.stroke();
   }
 
-  // 13. CARAVANAS (Triángulos identificables por color de origen)
+  // 14. CARAVANAS (Triángulos identificables por color de origen)
   for (const caravana of proyeccion.caravanas || []) {
     const x = caravana.posicionActual.x * escalaCanvas;
     const y = caravana.posicionActual.y * escalaCanvas;
@@ -486,7 +548,7 @@ export function pintarTerreno(
     ctx.stroke();
   }
 
-  // 14. EJERCITOS PROPIOS: rastro de su ruta, igual que las caravanas
+  // 15. EJERCITOS PROPIOS: rastro de su ruta, igual que las caravanas
   ctx.strokeStyle = 'rgba(241, 230, 200, 0.35)';
   ctx.lineWidth = 1.5;
   for (const ejercito of proyeccion.ejercitos || []) {
@@ -502,23 +564,42 @@ export function pintarTerreno(
     ctx.stroke();
   }
 
-  // 15. EJERCITOS (racimos de rombos, uno por jugador de la columna)
+  // 16. EJERCITOS (racimos de rombos, uno por jugador de la columna) + de quien es la tierra que pisan
   for (const ejercito of proyeccion.ejercitos || []) {
     // El color sale del asentamiento de ORIGEN, como en las caravanas, con `faccionId` de reserva por si ese
     // asentamiento ya no existe (a un ejercito se le puede caer la ciudad de la que salio).
     const origen = proyeccion.asentamientos.find((a) => a.id === ejercito.origenAsentamientoId);
     const color = faccionColor(origen ? origen.faccionId : ejercito.faccionId, proyeccion.facciones);
     const participantes = new Set((ejercito.escuadrones || []).map((e) => e.jugadorId)).size;
-    dibujarRacimoDeRombos(
-      ctx,
-      ejercito.posicionActual.x * escalaCanvas,
-      ejercito.posicionActual.y * escalaCanvas,
-      participantes,
-      color
-    );
+    const x = ejercito.posicionActual.x * escalaCanvas;
+    const y = ejercito.posicionActual.y * escalaCanvas;
+    dibujarRacimoDeRombos(ctx, x, y, participantes, color);
+
+    // "Estas en tierra de Troya". Solo cuando la tierra es AJENA: marcharse por la propia o por campo
+    // abierto no es noticia, y una etiqueta bajo cada columna en todo momento seria ruido. Lo dice el
+    // servidor (`territorioPorEjercito`), que es quien puede saberlo aunque la ciudad que manda ahi no se
+    // vea — una capital vigila 240 y una columna ve 150.
+    const duena = proyeccion.territorioPorEjercito?.[ejercito.id];
+    if (duena !== undefined && duena !== proyeccion.faccionId) {
+      const suya = proyeccion.facciones.find((f) => f.id === duena);
+      const etiqueta = `⚑ ${suya ? suya.nombre : duena}`;
+      ctx.font = 'bold 11px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      // Contorno oscuro debajo del texto: el mapa va de verde claro a niebla casi negra, y sin el la
+      // etiqueta se pierde en la mitad de los fondos.
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(10, 14, 23, 0.85)';
+      ctx.strokeText(etiqueta, x, y + 9);
+      ctx.fillStyle = faccionColor(duena, proyeccion.facciones);
+      ctx.fillText(etiqueta, x, y + 9);
+      ctx.lineWidth = 1;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+    }
   }
 
-  // 16. EJERCITOS AVISTADOS: los ajenos que se ven ahora mismo (Doc 5.12.7). Mismo glifo que los propios —
+  // 17. EJERCITOS AVISTADOS: los ajenos que se ven ahora mismo (Doc 5.12.7). Mismo glifo que los propios —
   // es la misma clase de cosa— y el color de su Faccion ya dice que no es tuyo. Sin rastro de ruta, y no por
   // simplificar: su ruta NO viaja en la proyeccion, porque seria leerle el plan de campana. Que no dejen
   // estela es exactamente lo que se sabe de ellos.
@@ -535,7 +616,7 @@ export function pintarTerreno(
     );
   }
 
-  // 17. CAMPAMENTOS DE BANDIDOS (diamantes rojos). Van SOBRE la niebla: el servidor solo manda los que la
+  // 18. CAMPAMENTOS DE BANDIDOS (diamantes rojos). Van SOBRE la niebla: el servidor solo manda los que la
   // Faccion esta viendo AHORA —no tienen memoria, como los ejercitos avistados y a diferencia de los
   // asentamientos—, asi que taparlos seria taparle al jugador informacion que acaba de ganarse.
   for (const campamento of proyeccion.campamentosBandidos || []) {
