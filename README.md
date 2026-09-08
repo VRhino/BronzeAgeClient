@@ -1,21 +1,27 @@
-# Cliente de jugador — boilerplate
+# Cliente de jugador
 
-Punto de partida para un cliente de jugador real, no un cliente completo. Nace de una decisión concreta
-(2026-08-26, ver [`Docs/Arquitectura/3_Plan_Evolucion_Roadmap.md`](../Docs/Arquitectura/3_Plan_Evolucion_Roadmap.md)
-hito **C11b**): en vez de que el backend rasterice el terreno y lo sirva como imagen/rejilla, este cliente
-lleva su **propia copia** de las funciones puras de evaluación de terreno (`src/terreno/`) y lo recalcula él
-mismo a partir de los parámetros públicos que ya sirve `GET /jugador/partidas/:gameId/mapa/:mapaId`
-(Fase C11a).
+Cliente de jugador de Bronze Age Collapse. Vive en su propio repositorio y **habla con el backend
+(`BronzeAgeFase0`) solo por red**: sin alias `@motor/*`, sin `paths` en `tsconfig.json`, sin import de su
+código fuente. Ese aislamiento es el criterio de cierre de la Fase C del backend.
 
-## Por qué duplicar en vez de importar
+Nace de una decisión concreta (2026-08-26, hito **C11b** del roadmap del backend,
+`Docs/Arquitectura/3_Plan_Evolucion_Roadmap.md`): en vez de que el backend rasterice el terreno y lo sirva
+como imagen/rejilla, este cliente lleva su **propia copia** de las funciones puras de evaluación de terreno
+(`src/terreno/`) y lo recalcula él mismo a partir de los parámetros públicos que ya sirve
+`GET /jugador/partidas/:gameId/mapa/:mapaId` (Fase C11a).
 
-A diferencia de [`cliente/`](../cliente/) (el cliente de administración/depuración, que todavía importa el
-motor del backend vía el alias `@motor/*`), **esta carpeta no tiene ningún acceso al código fuente del
-servidor** — ni alias, ni `paths` en `tsconfig.json`, ni import de `../src`. Es la prueba de que la Fase C
-puede cerrarse: un cliente que solo habla con el backend por HTTP.
+## Documentación
+
+- [`docs/Analisis_Brecha_Backend.md`](docs/Analisis_Brecha_Backend.md) — qué ofrece el backend, qué consume
+  este cliente y qué falta, con checklist. **Empezar por aquí.**
+- [`docs/COMANDOS.md`](docs/COMANDOS.md) — los 66 comandos de partida y cuáles están cableados.
+- [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md) — endpoints, formas de petición y respuesta.
+- [`docs/Features_Pendientes.md`](docs/Features_Pendientes.md) — cómo se quiere que sea la interfaz.
+
+## Por qué duplicar el terreno en vez de importarlo
 
 Duplicar el evaluador de terreno (no importarlo) es una decisión informada, no una improvisación — ver
-[`Docs/Arquitectura/9_Reglas_vs_Simulacion.md`](../Docs/Arquitectura/9_Reglas_vs_Simulacion.md): las funciones
+`Docs/Arquitectura/9_Reglas_vs_Simulacion.md` en el backend: las funciones
 de `src/terreno/` de aquí son **T2a** ("regla de entrada propia/no privilegiada, el cliente puede calcularla
 sin viaje de red") — el terreno lo ve todo el mundo por igual, no es información privilegiada de ningún
 jugador ni de ningún rival. El coste aceptado es el mismo que en cualquier T2a: la fórmula existe dos veces
@@ -23,20 +29,44 @@ jugador ni de ningún rival. El coste aceptado es el mismo que en cualquier T2a:
 y cliente por presentación) y puede divergir si una cambia sin la otra. Ver `src/terreno/README.md` para el
 detalle y la disciplina de mantenimiento.
 
+## Qué hace hoy
+
+- **Mapa del mundo**: terreno (biomas, relieve, ríos, bosques fusionados), nodos de recurso, niebla de guerra
+  con sus tres estados, fronteras propias y ajenas, asentamientos vistos y recordados, ejércitos propios y
+  avistados, caravanas, caminos y campamentos de bandidos.
+- **Vista de asentamiento**: el trazado urbano que llega calculado en la proyección, con murallas y
+  edificios.
+- **Panel de interacción**: pestañas de Facción (crear, unirse), Asentamientos (fundar con previsualización
+  sobre el mapa, almacén, edificios, muralla) e Información.
+- **Comandos**: 6 de los 66 que expone el backend — `crearFaccion`, `unirseAFaccion`, `fundarAsentamiento` y
+  los tres de muralla.
+
+Las zonas de Facción llegan ya fusionadas del servidor y **así debe seguir siendo**: fusionarlas aquí con
+`unirFormas`/`unirPoligonos` no se puede, porque su entrada (la posición de asentamientos rivales) es
+privilegiada (T2b, doc 9 del backend). Terreno y bosques sí se fusionan localmente porque son T2a.
+
 ## Qué NO hace todavía
 
-Es un boilerplate, no un cliente completo:
+El detalle, con checklist, está en
+[`docs/Analisis_Brecha_Backend.md`](docs/Analisis_Brecha_Backend.md). En titulares:
 
-- Pinta terreno (bioma + ríos + bosques fusionados). No dibuja asentamientos, zonas de influencia ni trazado
-  urbano — esos ya llegan calculados en la proyección (`zonas`/`zonasFusionadas`/`trazadoPorAsentamiento`,
-  Fase C10) y son triviales de pintar encima del canvas existente, pero no está hecho aquí. **Ojo con las
-  zonas de Facción si se implementan luego**: a diferencia de terreno y bosques, fusionarlas con
-  `unirFormas`/`unirPoligonos` NO se puede duplicar aquí — su entrada (posición de asentamientos rivales) es
-  privilegiada (T2b, doc 9), así que el resultado ya filtrado por Facción tiene que seguir viniendo calculado
-  del servidor, como hoy.
+- **`asentamientos` ya no es "todos los tuyos".** Desde el 2026-09-06 (jugador situado) el campo trae
+  SOLO la plaza donde el jugador está físicamente parado —cero o un elemento—, no la lista completa de su
+  Facción. `src/ui/pestanaAsentamientos.ts` sigue escrito sobre el supuesto viejo (`asentamientos[0]`), así
+  que un jugador que salga a caminar con su columna verá su propia pestaña de Asentamientos vacía. Es un bug
+  latente, no solo una carencia — ver el detalle en `docs/Analisis_Brecha_Backend.md`, sección "Lo más
+  urgente".
+- **La fundación elige un punto en el mapa que ya no se envía.** Desde el 2026-09-08 `fundarAsentamiento`
+  solo lleva `faccionId` — el backend funda donde está la columna del fundador (Doc 1.3). El punto que se
+  marca en el mapa es hoy solo la vista previa de recursos; el flujo real necesita `salirAlMundo`, sin
+  cablear. Ver `CHANGELOG.md`.
+- **Sin tiempo real**: el único refresco es el botón de recargar. El WebSocket de la partida y el cursor
+  `/eventos` están sin consumir.
+- **60 de 66 comandos sin interfaz**, entre ellos todo el sistema militar, el de ejércitos, el de comercio,
+  el de diplomacia, el de construcción y los tres bloques nuevos del jugador situado (presencia en el mundo,
+  interacción en el mapa, composición de columna compartida).
+- **Sin leer `GET /v1/balance`**: hay valores del servidor copiados a mano en `src/ui/`.
 - No soporta partidas creadas con `region` (ver la limitación documentada en `src/terreno/elevacion.ts`).
-- Sin formularios de comando: `ejecutarComando` existe en `apiCliente.ts` pero no hay UI que la invoque más
-  allá del ejemplo comentado en `main.ts`.
 - No crea partidas (eso es administración): asume que una partida con el `gameId` indicado ya existe.
 
 ## Uso
@@ -55,4 +85,4 @@ npm run dev
 `VITE_USUARIO` (sujeto del login de desarrollo, `dev <sujeto>`) y `VITE_GAME_ID` (partida a la que unirse) se
 configuran como variables de entorno de Vite — por defecto `ana` y `local`.
 
-`vite.config.ts` proxya `/v1` hacia `:3000` para evitar CORS en desarrollo, igual que `cliente/`.
+`vite.config.ts` proxya `/v1` hacia `:3000` para evitar CORS en desarrollo.

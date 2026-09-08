@@ -1,7 +1,7 @@
 // Wrapper `fetch` sobre la superficie `/jugador/*` y `/sesiones` del backend (Fase C3) — sin lógica de negocio, solo I/O.
 import type { MapaGenerado } from './terreno';
 
-import type { Asentamiento, AsentamientoAvistado, AsentamientoConocido, CaminoComercial, CampamentoBandido, Caravana, Ejercito, EjercitoAvistado, Faccion, NieblaProyectada, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
+import type { AcuerdoTrueque, Asentamiento, AsentamientoAvistado, AsentamientoConocido, CaminoComercial, CampamentoBandido, Caravana, Ejercito, EjercitoAvistado, Faccion, NieblaProyectada, OrdenMercado, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
 
 export class ApiError extends Error {
   constructor(
@@ -49,6 +49,12 @@ export interface ProyeccionJugador {
    * donde estaba, una columna en marcha no. */
   ejercitosAvistados: EjercitoAvistado[];
   caminos: CaminoComercial[];
+  /** Ofertas de mercado en pie de CUALQUIER plaza en cuya puerta esté una columna tuya, más las de tus
+   * propios asentamientos — el resto no viaja (Doc 3.3, `proyectarParaJugador` en el backend). Sin interfaz
+   * que las lea todavía. */
+  ordenes: OrdenMercado[];
+  /** Trueques propuestos o activos que tocan un asentamiento tuyo (Doc 3.2). Sin interfaz que los lea. */
+  acuerdos: AcuerdoTrueque[];
   campamentosBandidos: CampamentoBandido[];
   zonasFusionadas: ZonaFaccion[];
   trazadoPorAsentamiento: Record<string, TrazadoAsentamiento>;

@@ -24,6 +24,9 @@ export interface Edificio {
   estado: 'en_cola' | 'en_construccion' | 'activo';
   ambito?: 'asentamiento' | 'mapa';
   posicion: Point;
+  /** Ocupación post-conquista (backend 2026-09-08, Doc 5.12.9): un saqueo de conquista baja un edificio a
+   * `en_cola` marcándolo `danado`; se reconstruye pagando solo una fracción del costo. Ausente = sano. */
+  danado?: boolean;
 }
 
 /** Celda del anillo de un `Recinto` — copia local de `CeldaMuro` (motor). Sirve solo para contar puertas en
@@ -54,7 +57,14 @@ export interface Asentamiento {
   posicion: Point;
   nivel: number;
   nivelActual?: number;
-  mantenimiento?: number;
+  /** El medidor de mantenimiento 0-100. El dominio lo llama `medidorMantenimiento` — antes este tipo lo
+   * declaraba como `mantenimiento?` (typo), así que siempre valía `undefined` (bug silencioso, ver
+   * `Analisis_Brecha_Backend.md` §3). Corregido en el sync del 2026-09-08. */
+  medidorMantenimiento?: number;
+  /** Ocupación militar tras una conquista (backend 2026-09-08, Doc 5.12.9): instante de MUNDO (ms desde la
+   * época Unix) en que termina. Mientras `instante < ocupacionHasta`: inmune a nuevo asedio, recauda oro
+   * reducido, crece más lento, el mantenimiento no degrada. Ausente = no ocupado (caso normal). */
+  ocupacionHasta?: number;
   poblacion?: { pesants: number; artesanos: number; nobleza: number };
   almacen?: Record<string, { cantidad: number; capacidad: number }>;
   edificios: Edificio[];
@@ -193,6 +203,48 @@ export interface CampamentoBandido {
 export interface CaminoComercial {
   id: string;
   puntos: Point[];
+}
+
+/**
+ * Copia local de `OrdenMercado` (motor, Doc 3.3): una oferta de compra/venta EN PIE en un asentamiento.
+ * Desde 2026-09-07 el servidor ya no la liquida solo por emparejamiento: hace falta el comando
+ * `comerciarEnPlaza`, con la columna del jugador plantada en la puerta de esa plaza
+ * (`Comercio_Fisico_Definicion.md` en el backend), y una orden que nadie toma **caduca** en `expiraEn`.
+ * Sin interfaz que la lea todavía — ver `Analisis_Brecha_Backend.md` §3.
+ */
+export interface OrdenMercado {
+  id: string;
+  asentamientoId: string;
+  tipo: 'compra' | 'venta';
+  recurso: string;
+  cantidad: number;
+  cantidadCumplida: number;
+  precioUnitario: number;
+  /** Instante de MUNDO (ms desde la época Unix), como el resto de instantes del contrato. */
+  creadoEn: number;
+  expiraEn: number;
+  estado: 'activa' | 'cumplida' | 'expirada';
+}
+
+/**
+ * Copia local de `AcuerdoTrueque` (motor, Doc 3.2): un contrato marco entre DOS ASENTAMIENTOS —no entre
+ * jugadores—, cada lado comprometido a entregar su propio recurso. Desde 2026-09-07 nace `'propuesto'` y no
+ * obliga a nadie hasta que el lado receptor (B) contesta con `aceptarTrueque`/`rechazarTrueque`; antes de esa
+ * fecha nacía `'activo'` directamente. Sin interfaz que lo lea todavía.
+ */
+export interface AcuerdoTrueque {
+  id: string;
+  asentamientoAId: string;
+  asentamientoBId: string;
+  recursoA: string;
+  recursoB: string;
+  cantidadTotalA: number;
+  cantidadTotalB: number;
+  cantidadEntregadaA: number;
+  cantidadEntregadaB: number;
+  creadoEn: number;
+  expiraEn: number;
+  estado: 'propuesto' | 'activo' | 'rechazado' | 'cumplido' | 'expirado';
 }
 
 /** Tirada rectangular de celdas, en coordenadas locales — la calle/camino/muro OCUPA suelo (área), no es una

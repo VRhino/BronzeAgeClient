@@ -54,11 +54,13 @@ export function renderPestanaAsentamientos(
   const edificios = asentamiento?.edificios ?? [];
   const almacen = asentamiento?.almacen ?? {};
   const contenidoAlmacen = `<div class="storage-resource-list">${Object.entries(almacen).filter(([, recurso]) => recurso.cantidad > 0 && recurso.capacidad > 0).map(([tipo, recurso]) => { const porcentaje = recurso.capacidad > 0 ? Math.min(100, Math.round((recurso.cantidad / recurso.capacidad) * 100)) : 0; return `<div class="storage-resource-card"><div class="storage-resource-heading"><span>${escaparHtml(tipo)}</span><strong>${Math.floor(recurso.cantidad)} <small>/ ${Math.floor(recurso.capacidad)}</small></strong></div><div class="storage-capacity-track"><span style="width:${porcentaje}%"></span></div></div>`; }).join('') || '<span>Almacén vacío.</span>'}</div>`;
+  const ocupadoHasta = asentamiento?.ocupacionHasta;
+  const minutosOcupacion = ocupadoHasta && ocupadoHasta > proyeccion.instante ? Math.round((ocupadoHasta - proyeccion.instante) / 60_000) : null;
   const contenidoDetalle = asentamiento
     ? estadoCliente.asentamientoDetalleTab === 'general'
-      ? `<div class="settlement-detail-grid"><div><span>Nivel</span><strong>${asentamiento.nivel}</strong></div><div><span>Nivel operativo</span><strong>${asentamiento.nivelActual ?? asentamiento.nivel}</strong></div><div><span>Población</span><strong>${totalPoblacion ?? 'No disponible'}</strong></div><div><span>Mantenimiento</span><strong>${asentamiento.mantenimiento ?? 'No disponible'}</strong></div></div>`
+      ? `<div class="settlement-detail-grid"><div><span>Nivel</span><strong>${asentamiento.nivel}</strong></div><div><span>Nivel operativo</span><strong>${asentamiento.nivelActual ?? asentamiento.nivel}</strong></div><div><span>Población</span><strong>${totalPoblacion ?? 'No disponible'}</strong></div><div><span>Mantenimiento</span><strong>${asentamiento.medidorMantenimiento ?? 'No disponible'}</strong></div></div>${minutosOcupacion !== null ? `<p class="settlement-warning">⚔ Bajo ocupación militar (Doc 5.12.9) — ${minutosOcupacion} min restantes. Inmune a un nuevo asedio; recaudación y crecimiento reducidos; mantenimiento congelado.</p>` : ''}`
       : estadoCliente.asentamientoDetalleTab === 'edificios'
-        ? `<div class="settlement-building-list">${edificios.length > 0 ? edificios.map((edificio) => `<div><strong>${escaparHtml(edificio.tipo)}</strong><span>${edificio.estado.replace('_', ' ')}</span></div>`).join('') : '<span>No hay edificios visibles.</span>'}</div>`
+        ? `<div class="settlement-building-list">${edificios.length > 0 ? edificios.map((edificio) => `<div><strong>${escaparHtml(edificio.tipo)}</strong><span>${edificio.estado.replace('_', ' ')}${edificio.danado ? ' · dañado' : ''}</span></div>`).join('') : '<span>No hay edificios visibles.</span>'}</div>`
         : estadoCliente.asentamientoDetalleTab === 'almacen'
           ? contenidoAlmacen
           : estadoCliente.asentamientoDetalleTab === 'produccion'

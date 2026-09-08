@@ -317,10 +317,14 @@ function actualizarPanelFundacion(): void {
   resumen.innerHTML = resumenRecursosFundacion(escaparHtml);
 }
 
-async function confirmarFundacion(proyeccion: ProyeccionJugador, posicion: { x: number; y: number }): Promise<void> {
+async function confirmarFundacion(proyeccion: ProyeccionJugador, _posicion: { x: number; y: number }): Promise<void> {
   try {
-    const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'fundarAsentamiento', { faccionId: proyeccion.faccionId, posicion });
-    if (!respuesta.resultado.ok) throw new ApiError(409, respuesta.resultado.codigoError ?? 'La posición no es válida.');
+    // Sync backend 2026-09-08 (`BronzeAgeFase0@4fe611b`, "se funda DONDE SE ESTÁ", Doc 1.3): `fundarAsentamiento`
+    // ya NO acepta `posicion` — el backend la deriva de la columna del fundador. El punto elegido en el mapa
+    // es hoy solo la vista previa de recursos; el flujo de fundación real necesita la presencia del jugador
+    // (`salirAlMundo`), aún sin cablear — ver docs/Analisis_Brecha_Backend.md.
+    const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'fundarAsentamiento', { faccionId: proyeccion.faccionId });
+    if (!respuesta.resultado.ok) throw new ApiError(409, respuesta.resultado.codigoError ?? 'No se pudo fundar aquí.');
     estadoCliente.modoFundacionActivo = false;
     estadoCliente.posicionFundacion = null;
     estadoCliente.puntoFundacionFijado = false;
