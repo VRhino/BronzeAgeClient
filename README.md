@@ -82,7 +82,9 @@ npm install
 npm run dev
 ```
 
-`VITE_USUARIO` (sujeto del login de desarrollo, `dev <sujeto>`) y `VITE_GAME_ID` (partida a la que unirse) se
-configuran como variables de entorno de Vite — por defecto `ana` y `local`.
+El login es con **cuenta local** (nick + contraseña, proveedor `clave` del backend). La primera vez se marca
+"No tengo cuenta — crear una" en la pantalla de login; si el backend arrancó con `CODIGO_REGISTRO`, hay que
+poner ese código. La sesión se guarda en `localStorage`; cuando caduca (12 h) la UI vuelve al login (no hay
+re-login en silencio: la contraseña no se guarda).
 
 `vite.config.ts` proxya `/v1` hacia `:3000` para evitar CORS en desarrollo.

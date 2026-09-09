@@ -5,7 +5,8 @@ import {
   consultarProyeccion,
   ejecutarComando,
   guardarSesionLocal,
-  loginConUsuario,
+  loginConClave,
+  registrarCuenta,
   obtenerMapa,
   unirseAPartida,
   type ProyeccionJugador,
@@ -222,21 +223,27 @@ function renderizarPanelInteraccion(proyeccion: ProyeccionJugador): void {
 }
 
 function renderVistaLogin(errorMensaje?: string): void {
-  app.innerHTML = `<div class="login-container"><div class="login-card"><div class="login-header"><h1 class="login-title">Bronze Age Collapse</h1><p class="login-subtitle">Cliente de Jugador — Inicio de Sesión</p></div>${errorMensaje ? `<div class="error-banner">⚠️ ${escaparHtml(errorMensaje)}</div>` : ''}<form id="form-login"><div class="form-group"><label class="form-label" for="input-usuario">Usuario / Nickname</label><input type="text" id="input-usuario" class="form-input" value="${escaparHtml(estadoCliente.usuarioActivo || 'ana')}" required autocomplete="off" /><div class="user-chips"><button type="button" class="chip-btn" data-user="ana">ana</button><button type="button" class="chip-btn" data-user="bruno">bruno</button><button type="button" class="chip-btn" data-user="carla">carla</button><button type="button" class="chip-btn" data-user="jefa">jefa (admin)</button></div></div><div class="form-group"><label class="form-label" for="input-gameid">ID de Partida</label><input type="text" id="input-gameid" class="form-input" value="${escaparHtml(estadoCliente.gameIdActivo)}" required autocomplete="off" /></div><button type="submit" id="btn-login-submit" class="btn-primary">Entrar a la Partida</button></form></div></div>`;
-  document.querySelectorAll<HTMLButtonElement>('.chip-btn').forEach((chip) => chip.addEventListener('click', () => {
-    const input = document.querySelector<HTMLInputElement>('#input-usuario');
-    if (input) input.value = chip.dataset.user ?? '';
-  }));
+  app.innerHTML = `<div class="login-container"><div class="login-card"><div class="login-header"><h1 class="login-title">Bronze Age Collapse</h1><p class="login-subtitle">Cliente de Jugador — Inicio de Sesión</p></div>${errorMensaje ? `<div class="error-banner">⚠️ ${escaparHtml(errorMensaje)}</div>` : ''}<form id="form-login"><div class="form-group"><label class="form-label" for="input-usuario">Nick</label><input type="text" id="input-usuario" class="form-input" value="${escaparHtml(estadoCliente.usuarioActivo)}" required autocomplete="username" /></div><div class="form-group"><label class="form-label" for="input-clave">Contraseña</label><input type="password" id="input-clave" class="form-input" required minlength="6" autocomplete="current-password" /></div><label class="form-check"><input type="checkbox" id="chk-registro" /> No tengo cuenta — crear una</label><div class="form-group" id="grupo-codigo" hidden><label class="form-label" for="input-codigo">Código de invitación</label><input type="text" id="input-codigo" class="form-input" autocomplete="off" /></div><div class="form-group"><label class="form-label" for="input-gameid">ID de Partida</label><input type="text" id="input-gameid" class="form-input" value="${escaparHtml(estadoCliente.gameIdActivo)}" required autocomplete="off" /></div><button type="submit" id="btn-login-submit" class="btn-primary">Entrar a la Partida</button></form></div></div>`;
+  const chkRegistro = document.querySelector<HTMLInputElement>('#chk-registro');
+  chkRegistro?.addEventListener('change', () => {
+    const grupoCodigo = document.querySelector<HTMLDivElement>('#grupo-codigo');
+    if (grupoCodigo) grupoCodigo.hidden = !chkRegistro.checked;
+    const boton = document.querySelector<HTMLButtonElement>('#btn-login-submit');
+    if (boton) boton.textContent = chkRegistro.checked ? 'Crear cuenta y entrar' : 'Entrar a la Partida';
+  });
   document.querySelector<HTMLFormElement>('#form-login')?.addEventListener('submit', async (evento) => {
     evento.preventDefault();
-    const usuario = document.querySelector<HTMLInputElement>('#input-usuario')?.value.trim();
+    const nick = document.querySelector<HTMLInputElement>('#input-usuario')?.value.trim();
+    const clave = document.querySelector<HTMLInputElement>('#input-clave')?.value ?? '';
+    const codigo = document.querySelector<HTMLInputElement>('#input-codigo')?.value.trim() || undefined;
     const gameId = document.querySelector<HTMLInputElement>('#input-gameid')?.value.trim() || 'local';
-    if (!usuario) return;
+    if (!nick || !clave) return;
     try {
-      const login = await loginConUsuario(usuario);
+      if (chkRegistro?.checked) await registrarCuenta(nick, clave, codigo);
+      const login = await loginConClave(nick, clave);
       try { await unirseAPartida(gameId); } catch (err) { if (!(err instanceof ApiError) || err.status !== 409) throw err; }
-      guardarSesionLocal(login.sesionId, usuario, gameId);
-      estadoCliente.usuarioActivo = usuario;
+      guardarSesionLocal(login.sesionId, nick, gameId);
+      estadoCliente.usuarioActivo = nick;
       estadoCliente.gameIdActivo = gameId;
       renderVistaJuego();
       await refrescarDatosJuego();

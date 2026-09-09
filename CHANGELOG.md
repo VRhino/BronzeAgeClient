@@ -3,6 +3,25 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.2.0] — 2026-09-09 · login con cuenta local (nick + contraseña)
+
+Playtest: los jugadores se registran ellos mismos. Antes el login era `dev <nick>` sin contraseña, con
+chips `ana / bruno / carla / jefa` como atajo.
+
+### Cambiado
+- Pantalla de login: nick + **contraseña** + casilla "No tengo cuenta — crear una" (revela el campo de
+  **código de invitación**, si el backend lo exige). Fuera los chips de usuario.
+- `apiCliente.ts`: `loginConUsuario(nick)` → `loginConClave(nick, clave)` (manda `Authorization: clave
+  <nick>:<contraseña>`); nueva `registrarCuenta(nick, clave, codigo?)` contra `POST /v1/registro`.
+- En un 401 la sesión se cierra y la UI vuelve al login — ya no hay re-autenticación en silencio (no
+  guardamos la contraseña).
+- `style.css`: `.user-chips` / `.chip-btn` (sin uso) → `.form-check`.
+
+### Backend que lo habilita — `BronzeAgeFase0`
+- Proveedor de identidad `clave` (nick + contraseña, hash scrypt en `partidas/identidad.json`) y endpoint
+  `POST /v1/registro` (`{nick, clave, codigo?}` → 201 / 400 / 403 / 409). Variable `CODIGO_REGISTRO` opcional.
+- El proveedor `dev` sigue vivo solo para el cliente de administración (local).
+
 ## [0.1.1] — 2026-09-09 · sync con `BronzeAgeFase0@1b52862` (main)
 
 Alineación de contrato con los cambios del backend del 2026-09-08 → 09-09. **No se cablearon comandos nuevos**

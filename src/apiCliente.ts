@@ -98,7 +98,7 @@ async function fetchJson<T>(url: string, opciones: RequestInit, cabeceraAuth: st
     res = await fetch(url, {
       ...opciones,
       headers: {
-        authorization: cabeceraAuth,
+        ...(cabeceraAuth ? { authorization: cabeceraAuth } : {}),
         ...(opciones.body ? { 'content-type': 'application/json' } : {}),
         ...((opciones.headers as Record<string, string>) ?? {}),
       },
@@ -113,11 +113,23 @@ async function fetchJson<T>(url: string, opciones: RequestInit, cabeceraAuth: st
   return res.json() as Promise<T>;
 }
 
-export async function loginConUsuario(usuario: string): Promise<RespuestaLogin> {
-  const sujeto = usuario.trim();
-  if (!sujeto) throw new ApiError(400, 'El nombre de usuario no puede estar vacío.');
+/** Alta de cuenta local en el backend (`POST /v1/registro`, proveedor `clave`). No abre sesión — el cliente
+ * hace `loginConClave` a continuación con las mismas credenciales. `codigo` solo si la instancia lo exige. */
+export async function registrarCuenta(nick: string, clave: string, codigo?: string): Promise<void> {
+  await fetchJson<{ nick: string }>(
+    `${V1}/registro`,
+    { method: 'POST', body: JSON.stringify(codigo ? { nick, clave, codigo } : { nick, clave }) },
+    // sin cabecera de auth: el registro es público (o va con `codigo` en el cuerpo)
+    ''
+  );
+}
 
-  const res = await fetchJson<RespuestaLogin>(`${V1}/sesiones`, { method: 'POST' }, `dev ${sujeto}`);
+/** Login con cuenta local: `Authorization: clave <nick>:<contraseña>`. */
+export async function loginConClave(nick: string, clave: string): Promise<RespuestaLogin> {
+  const sujeto = nick.trim();
+  if (!sujeto || !clave) throw new ApiError(400, 'Nick y contraseña son obligatorios.');
+
+  const res = await fetchJson<RespuestaLogin>(`${V1}/sesiones`, { method: 'POST' }, `clave ${sujeto}:${clave}`);
   sesionIdMemoria = res.sesionId;
   usuarioMemoria = sujeto;
   return res;
@@ -165,16 +177,9 @@ async function peticion<T>(url: string, opciones: RequestInit = {}): Promise<T> 
   try {
     return await fetchJson<T>(url, opciones, `sesion ${sesionIdMemoria}`);
   } catch (err) {
-    if (err instanceof ApiError && err.status === 401) {
-      // Si la sesión expiró o es inválida, intentar re-autenticar automáticamente si conocemos el usuario
-      if (usuarioMemoria) {
-        const loginRes = await loginConUsuario(usuarioMemoria);
-        sesionIdMemoria = loginRes.sesionId;
-        const local = cargarSesionLocal();
-        if (local) guardarSesionLocal(loginRes.sesionId, local.usuario, local.gameId);
-        return fetchJson<T>(url, opciones, `sesion ${sesionIdMemoria}`);
-      }
-    }
+    // Con contraseña no se puede re-autenticar en silencio (no la guardamos): si la sesión caducó, se cierra
+    // y la UI vuelve al login.
+    if (err instanceof ApiError && err.status === 401) cerrarSesion();
     throw err;
   }
 }

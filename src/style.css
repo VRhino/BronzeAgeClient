@@ -146,36 +146,14 @@ body {
   box-shadow: 0 0 0 3px rgba(200, 170, 110, 0.2);
 }
 
-.user-chips {
+.form-check {
   display: flex;
+  align-items: center;
   gap: 8px;
-  margin-top: 4px;
-  flex-wrap: wrap;
-}
-
-.chip-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-glass);
+  margin-bottom: 16px;
+  font-size: 0.85rem;
   color: var(--text-secondary);
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 500;
   cursor: pointer;
-  transition: var(--transition);
-}
-
-.chip-btn:hover {
-  background: rgba(200, 170, 110, 0.15);
-  color: var(--accent-gold);
-  border-color: rgba(200, 170, 110, 0.3);
-}
-
-.chip-btn.active {
-  background: var(--accent-gold);
-  color: #0a0e17;
-  border-color: var(--accent-gold);
-  font-weight: 600;
 }
 
 .btn-primary {
