@@ -31,6 +31,10 @@ chasis, la terracota para avisos.
 
 - **Total War: Rome** — HUD de mármol + bronce, cornisas, serif imperial, minimapa enmarcado en
   bronce. → [Total War Wiki — User interface](https://totalwar.fandom.com/wiki/User_interface)
+- **Total War Saga: Troya** — la referencia más cercana en tema (Egeo micénico, Edad de Bronce).
+  Barra de recursos arriba con icono + reserva + renta por recurso; paleta bronce/terracota,
+  motivos geométricos egeos. Es el modelo de la tira de recursos del asentamiento.
+  → [Total War Wiki — A Total War Saga: Troy](https://totalwar.fandom.com/wiki/A_Total_War_Saga:_Troy)
 - **Nebuchadnezzar / Pharaoh / Zeus** (Impressions city-builders) — paneles de piedra, recursos
   sobredimensionados y legibles de un vistazo, iconografía clara.
   → [PC Gamer — Nebuchadnezzar](https://www.pcgamer.com/nebuchadnezzar-channels-classic-city-builders-like-pharaoh-and-zeus/)
@@ -92,6 +96,9 @@ remata cabeceras y paneles con la moldura clásica. `opacity: .5` para que sea s
   ese color (`--swatch`). Hover: borde `--bronce` + tinte oro.
 - **Tooltip** (`.asent-tooltip`) — panel mini con `--placa-sutil`; título en `--fuente-titulo` +
   `--oro-claro`, cuerpo `--text-secondary`. `pointer-events: none`, sigue al cursor, clamp al viewport.
+- **Tira de recursos** (`.asent-recursos`) — chips `icono + cifra` flotando abajo-centro sobre el
+  mapa, uno por recurso con cantidad > 0; `title` con nombre y `x / capacidad`; chip en terracota
+  si está al 90 %+. Icono y nombre salen de `RECURSO_ICONO` / `RECURSO_NOMBRE` (`src/paletas.ts`).
 - **Avatar** (`.mapa-avatar`) — moneda: `radial-gradient` oro, borde `#6b4a29`, iniciales en serif.
   Abre el menú de esquina (Refrescar · Ver proyección · Interfaz anterior · Cerrar sesión).
 - **Lienzo del mapa** (`.mapa-lienzo`, `.asent-lienzo`) — marco `--placa` + `inset` oscuro (viñeta),

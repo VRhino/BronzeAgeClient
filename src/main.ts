@@ -12,7 +12,7 @@ import {
   type ProyeccionJugador,
 } from './apiCliente';
 import { edificioBajoCursor, pintarAsentamiento, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
-import { EDIFICIO_COLOR, EDIFICIO_NOMBRE } from './paletas';
+import { EDIFICIO_COLOR, EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from './paletas';
 import type { Edificio } from './tiposDominio';
 import type { MapaGenerado } from './terreno';
 import { estadoCliente, TIPS_FUNDACION } from './ui/estadoCliente';
@@ -597,6 +597,31 @@ function renderPanelEdificios(): void {
     ${enRegion > 0 ? `<p class="asent-edif-region">+ ${enRegion} en la región (minas, canteras)</p>` : ''}`;
 }
 
+/** Tira de recursos del almacén de la plaza que se pisa. La proyección solo trae `asentamientos[0]` cuando
+ * es una plaza de tu Facción y con su almacén completo, así que no hace falta comprobar nada más. Solo se
+ * listan los recursos con cantidad > 0. */
+function renderPanelRecursos(): void {
+  const contenedor = document.querySelector<HTMLElement>('.asent-recursos');
+  if (!contenedor) return;
+  const almacen = estadoCliente.proyeccionUltima?.asentamientos[0]?.almacen ?? {};
+  const items = Object.entries(almacen)
+    .filter(([, recurso]) => Math.floor(recurso.cantidad) >= 1)
+    .sort(([a], [b]) => a.localeCompare(b));
+  if (items.length === 0) {
+    contenedor.hidden = true;
+    contenedor.innerHTML = '';
+    return;
+  }
+  contenedor.hidden = false;
+  contenedor.innerHTML = items
+    .map(([recurso, { cantidad, capacidad }]) => {
+      const casiLleno = capacidad > 0 && cantidad / capacidad >= 0.9;
+      const titulo = `${RECURSO_NOMBRE[recurso] ?? recurso} — ${Math.floor(cantidad)}${capacidad > 0 ? ` / ${Math.floor(capacidad)}` : ''}`;
+      return `<span class="asent-recurso${casiLleno ? ' lleno' : ''}" title="${escaparHtml(titulo)}"><span class="asent-recurso-icono" aria-hidden="true">${RECURSO_ICONO[recurso] ?? '📦'}</span>${Math.floor(cantidad)}</span>`;
+    })
+    .join('');
+}
+
 /** Pinta el panel flotante de la barra (Facción / Ejército) según `panelAsentAbierto`. */
 function renderPanelAsent(): void {
   const proyeccion = estadoCliente.proyeccionUltima;
@@ -638,6 +663,7 @@ function montarAsentamiento(): void {
       <div class="asent-mapa">
         <div class="asent-lienzo"><canvas id="mapa" width="900" height="900"></canvas></div>
         <aside class="asent-panel" hidden></aside>
+        <div class="asent-recursos" hidden></div>
       </div>
       <aside class="asent-lado"><div class="asent-edificios"></div></aside>
     </div>
@@ -656,7 +682,17 @@ function montarAsentamiento(): void {
   contenedor.querySelector('#btn-salir-mundo')?.addEventListener('click', () => void salirAlMundo());
   cablearMenuEsquina(contenedor);
   cablearTooltipEdificios(contenedor);
+  // La ciudad tiene vida (almacén, producción, población) aunque el jugador no toque nada: mismo sondeo
+  // suave que el mapa, hasta que exista el canal de tiempo real.
+  let sondeando = false;
+  const sondeo = setInterval(() => {
+    if (sondeando || !document.querySelector('.asent-screen')) return;
+    sondeando = true;
+    void refrescarDatosJuego().catch(() => {}).finally(() => { sondeando = false; });
+  }, 3000);
+  limpiarPantalla = () => clearInterval(sondeo);
   renderPanelEdificios();
+  renderPanelRecursos();
   renderPanelAsent();
   void dibujarPantallaSegunModo(proyeccion);
 }
@@ -923,7 +959,7 @@ function refrescarPantalla(pantalla: Pantalla): void {
   const proyeccion = estadoCliente.proyeccionUltima;
   if (!proyeccion) return;
   if (pantalla === 'mapa') { void dibujarPantallaSegunModo(proyeccion); renderSeleccionMapa(); renderPanelRiel(); return; }
-  if (pantalla === 'asentamiento') { void dibujarPantallaSegunModo(proyeccion); renderPanelEdificios(); renderPanelAsent(); return; }
+  if (pantalla === 'asentamiento') { void dibujarPantallaSegunModo(proyeccion); renderPanelEdificios(); renderPanelRecursos(); renderPanelAsent(); return; }
   if (pantalla !== 'legacy') return;
   renderizarPanelInteraccion(proyeccion);
   void dibujarPantallaSegunModo(proyeccion);

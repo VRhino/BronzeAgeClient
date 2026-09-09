@@ -2044,6 +2044,50 @@ body {
   color: var(--oro-claro);
 }
 
+/* Tira de recursos del almacén (abajo, sobre el mapa) — inspiración: barra de recursos de Total War Saga: Troya. */
+.asent-recursos[hidden] {
+  display: none;
+}
+.asent-recursos {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  max-width: calc(100% - 40px);
+  padding: 8px 12px;
+  background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg));
+  border: 1px solid var(--bronce);
+  border-radius: 3px;
+  box-shadow: var(--placa-sutil);
+}
+.asent-recurso {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid var(--bronce-osc);
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.28);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--oro-claro);
+  font-variant-numeric: tabular-nums;
+  cursor: default;
+}
+.asent-recurso-icono {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+.asent-recurso.lleno {
+  border-color: var(--terracota);
+  color: #e9b8a4;
+}
+
 /* --- PANTALLA MAPA --- */
 .mapa-riel {
   background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg));

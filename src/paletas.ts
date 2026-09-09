@@ -1,5 +1,36 @@
 export const FACCION_COLORES = ['#c0392b', '#2980b9', '#27ae60', '#8e44ad', '#d35400', '#16a085'];
 
+/** Nombre y glifo legibles por recurso — presentación pura, copia de `cliente/`. */
+export const RECURSO_NOMBRE: Record<string, string> = {
+  madera: 'Madera',
+  piedra: 'Piedra',
+  trigo: 'Trigo',
+  cobre: 'Cobre',
+  estano: 'Estaño',
+  oro: 'Oro',
+  livestock: 'Ganado',
+  lingoteCobre: 'Lingote de cobre',
+  lingoteEstano: 'Lingote de estaño',
+  lingoteBronce: 'Lingote de bronce',
+  cuero: 'Cuero',
+  cueroCurtido: 'Cuero curtido',
+  cueroCalidad: 'Cuero de calidad',
+  armaMadera: 'Arma de madera',
+  armaCobre: 'Arma de cobre',
+  armaBronce: 'Arma de bronce',
+  armaBronceCalidad: 'Arma de bronce de calidad',
+  armaduraBasica: 'Armadura básica',
+  armaduraIntermedia: 'Armadura intermedia',
+  armaduraBronce: 'Armadura de bronce',
+};
+
+export const RECURSO_ICONO: Record<string, string> = {
+  madera: '🪵', piedra: '🪨', trigo: '🌾', cobre: '🟠', estano: '⚙️', oro: '🪙', livestock: '🐄',
+  lingoteCobre: '🔶', lingoteEstano: '🔩', lingoteBronce: '🟫', cuero: '🟤', cueroCurtido: '🧵',
+  cueroCalidad: '✨', armaMadera: '🏹', armaCobre: '🗡️', armaBronce: '⚔️', armaBronceCalidad: '🛡️',
+  armaduraBasica: '🥋', armaduraIntermedia: '🛡️', armaduraBronce: '🛡️',
+};
+
 export const RECURSO_COLOR: Record<string, string> = {
   madera: '#6b4226',
   piedra: '#8d8d8d',
