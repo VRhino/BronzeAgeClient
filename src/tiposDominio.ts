@@ -80,6 +80,10 @@ export interface Caravana {
   destinoAsentamientoId?: string;
   posicionActual: Point;
   ruta?: Point[];
+  /** Estado de la caravana (motor, Doc 3.13). `'aparcada'` (2026-09-09, Doc 3.13.7) = una caravana adjunta
+   * que su ejército dejó en una plaza de la Facción al `guarnecer`: sigue siendo de su origen, no la usa la
+   * anfitriona. Sin interfaz que lo lea todavía — el mapa solo pinta la posición. */
+  estado?: 'disponible' | 'preparando' | 'adjunta' | 'aparcada' | 'en_transito' | 'retornando';
 }
 
 /** Escuadrón dentro de un ejército propio — copia local reducida a lo que el mapa necesita: de quién es.

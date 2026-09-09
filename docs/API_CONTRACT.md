@@ -1,7 +1,7 @@
 # Contrato API del cliente jugador
 
 Documento de referencia de este cliente. El backend escucha bajo el prefijo `/v1`. Última revisión:
-**2026-09-08**, contra `BronzeAgeFase0@4fe611b`.
+**2026-09-09**, contra `BronzeAgeFase0@1b52862` (main).
 
 Para el porqué de cada hueco y el orden en que conviene cerrarlos, ver
 [`Analisis_Brecha_Backend.md`](Analisis_Brecha_Backend.md); el catálogo de comandos, en
@@ -15,7 +15,7 @@ Para el porqué de cada hueco y el orden en que conviene cerrarlos, ver
 - [x] `POST /v1/jugador/partidas/{gameId}/membresia`
 - [x] `GET /v1/jugador/partidas/{gameId}`
 - [x] `GET /v1/jugador/partidas/{gameId}/mapa/{mapaId}`
-- [x] `POST /v1/jugador/partidas/{gameId}/comandos` — con 6 de los 66 comandos (ver `COMANDOS.md`)
+- [x] `POST /v1/jugador/partidas/{gameId}/comandos` — con 6 de los 69 comandos (ver `COMANDOS.md`)
 - [x] Reintento automático tras una respuesta `401`, creando una sesión nueva con `POST /v1/sesiones`
 
 ### Funciones disponibles en `apiCliente.ts`, pero sin llamada desde la UI actual
@@ -257,7 +257,7 @@ Body mínimo:
 ```
 
 También admite opcionalmente `idempotencyKey`. El backend valida `params` según el `tipo`, con
-`additionalProperties: false`. El catálogo actual son **66 comandos**, de los que la interfaz cablea 6: la
+`additionalProperties: false`. El catálogo actual son **69 comandos**, de los que la interfaz cablea 6: la
 lista completa, con sus parámetros, está en [`COMANDOS.md`](COMANDOS.md).
 
 En caso de éxito la respuesta incluye `resultado`, resumen de partida y **la `proyeccion` del jugador ya

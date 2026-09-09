@@ -14,7 +14,7 @@ como imagen/rejilla, este cliente lleva su **propia copia** de las funciones pur
 
 - [`docs/Analisis_Brecha_Backend.md`](docs/Analisis_Brecha_Backend.md) — qué ofrece el backend, qué consume
   este cliente y qué falta, con checklist. **Empezar por aquí.**
-- [`docs/COMANDOS.md`](docs/COMANDOS.md) — los 66 comandos de partida y cuáles están cableados.
+- [`docs/COMANDOS.md`](docs/COMANDOS.md) — los 69 comandos de partida y cuáles están cableados.
 - [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md) — endpoints, formas de petición y respuesta.
 - [`docs/Features_Pendientes.md`](docs/Features_Pendientes.md) — cómo se quiere que sea la interfaz.
 
@@ -38,7 +38,7 @@ detalle y la disciplina de mantenimiento.
   edificios.
 - **Panel de interacción**: pestañas de Facción (crear, unirse), Asentamientos (fundar con previsualización
   sobre el mapa, almacén, edificios, muralla) e Información.
-- **Comandos**: 6 de los 66 que expone el backend — `crearFaccion`, `unirseAFaccion`, `fundarAsentamiento` y
+- **Comandos**: 6 de los 69 que expone el backend — `crearFaccion`, `unirseAFaccion`, `fundarAsentamiento` y
   los tres de muralla.
 
 Las zonas de Facción llegan ya fusionadas del servidor y **así debe seguir siendo**: fusionarlas aquí con
@@ -62,7 +62,7 @@ El detalle, con checklist, está en
   cablear. Ver `CHANGELOG.md`.
 - **Sin tiempo real**: el único refresco es el botón de recargar. El WebSocket de la partida y el cursor
   `/eventos` están sin consumir.
-- **60 de 66 comandos sin interfaz**, entre ellos todo el sistema militar, el de ejércitos, el de comercio,
+- **63 de 69 comandos sin interfaz**, entre ellos todo el sistema militar, el de ejércitos, el de comercio,
   el de diplomacia, el de construcción y los tres bloques nuevos del jugador situado (presencia en el mundo,
   interacción en el mapa, composición de columna compartida).
 - **Sin leer `GET /v1/balance`**: hay valores del servidor copiados a mano en `src/ui/`.

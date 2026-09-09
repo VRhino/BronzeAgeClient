@@ -1,12 +1,19 @@
 # Análisis de brecha: este cliente frente al backend
 
 Qué ofrece el backend a un jugador, qué consume este cliente hoy y qué falta por construir. Fotografía
-tomada el **2026-09-08**, contra `BronzeAgeFase0` en `4fe611b` y este cliente en su HEAD actual.
+tomada el **2026-09-09**, contra `BronzeAgeFase0` en `1b52862` (main) y este cliente en su HEAD actual.
 
-> **Sync 2026-09-08 (parcial):** el cliente se alineó con el cambio de `fundarAsentamiento` (ya no manda
-> `posicion`), añadió a los tipos locales `Edificio.danado` y `Asentamiento.ocupacionHasta` (ocupación
-> post-conquista, backend Doc 5.12.9), y corrigió el typo `mantenimiento` → `medidorMantenimiento`. NO se
-> cablearon comandos nuevos — el bloque grande (60 sin interfaz) sigue igual. Ver `CHANGELOG.md`.
+> **Sync 2026-09-09 (contrato, sin comandos nuevos):** +3 comandos en el backend (66 → 69): `guarnecer`
+> (Doc 5.12.4 — un ejército vuelca su tropa en una plaza propia; sus caravanas adjuntas pasan a `'aparcada'`),
+> `moverCargaCaravanaAparcada` y `enviarCaravanaAlOrigen` (operar esas caravanas aparcadas). Niebla **Paso 4**
+> (`f20d64e`): la visión se comparte EN VIVO con aliados/señor/vasallo — se suma a las capas "viéndolo ahora"
+> (`asentamientosAvistados`, `ejercitosAvistados`, `caravanasAvistadas`, `campamentosBandidos`, la máscara
+> `visibles` de la niebla), NUNCA a lo explorado ni a la memoria; **sin campos ni tipos nuevos**. Al romperse
+> la relación, lo que solo veías por ella desaparece en la proyección siguiente.
+>
+> **Sync 2026-09-08:** el cliente se alineó con el cambio de `fundarAsentamiento` (ya no manda `posicion`),
+> añadió a los tipos locales `Edificio.danado` y `Asentamiento.ocupacionHasta` (Doc 5.12.9), y corrigió el
+> typo `mantenimiento` → `medidorMantenimiento`. Ver `CHANGELOG.md`.
 
 No es una lista de deseos de producto —eso vive en [`Features_Pendientes.md`](Features_Pendientes.md)— sino
 la brecha medible entre dos superficies que ya existen: todo lo marcado `[ ]` aquí está **ya construido y
@@ -68,13 +75,12 @@ puede sacar a un jugador de su ciudad todavía. Ver §3 y §4 más abajo para el
 | Superficie | Total | En el cliente | Brecha |
 |---|---:|---:|---:|
 | Endpoints (jugador, sesión y balance) | 9 | 5 | 4 |
-| Comandos de partida | **66** | 6 | **60** |
+| Comandos de partida | **69** | 6 | **63** |
 | Bloques de datos de la proyección | 28 | 17 | 11 |
 
-Los 7 comandos nuevos desde la revisión anterior (59 → 66, backend 2026-09-08): `cambiarResidencia` (Doc 2.5)
-y 6 del revamp de caravanas (`agregarCarroCaravana`, `comprarAnimalCaravana`, `moverCarroCaravana`,
-`reservarCaravana`, `prepararCaravana`, `cancelarCaravana`; `crearCaravana` se conserva). Ninguno cablea
-nada en este cliente todavía.
+Nuevos desde la revisión del 2026-09-08 (66 → 69): `guarnecer`, `moverCargaCaravanaAparcada`,
+`enviarCaravanaAlOrigen` (todo `guarnecer` + caravanas aparcadas, Doc 5.12.4 / 3.13.7). Y antes (59 → 66,
+2026-09-08): `cambiarResidencia` + 6 del revamp de caravanas. Ninguno cablea nada en este cliente todavía.
 
 Reparto por sistema de juego, para ver dónde está el hueco:
 
@@ -85,10 +91,10 @@ Reparto por sistema de juego, para ver dónde está el hueco:
 | Expansión | 3 | 1 (`fundarAsentamiento`) |
 | Cargos y políticas | 4 | 0 |
 | Diplomacia | 5 | 0 |
-| Comercio y caravanas | 12 | 0 — +6 del revamp de caravanas desde 2026-09-08 |
+| Comercio y caravanas | 14 | 0 — +6 revamp (2026-09-08) +2 caravanas aparcadas (2026-09-09) |
 | Construcción y gestión local | 7 | 0 |
 | Militar | 3 | 0 |
-| Ejércitos y logística | 9 | 0 |
+| Ejércitos y logística | 10 | 0 — +`guarnecer` desde 2026-09-09 |
 | Presencia del jugador | 6 | 0 |
 | Interacción en el mapa | 4 | 0 |
 | Composición de columna compartida | 4 | 0 |
@@ -159,9 +165,10 @@ dispara la geometría durante el tick. No hay que implementarlos.
 - **Composición de columna (+4):** `unirseEnCampo`, `responderPeticionDeUnion`, `separarseDelEjercito`,
   `cederLiderazgo`.
 
-Y uno que ya existía **cambió de forma**, sin sumar al recuento de arriba: `movilizarEjercito` ganó un
-parámetro opcional, `politicaDeUnion` (`rechazar` \| `aceptar` \| `preguntar`) — qué hacer con quien pida
-unirse en campo a la columna que se está formando.
+Y dos que ya existían **cambiaron de forma**, sin sumar al recuento: `movilizarEjercito` ganó un parámetro
+opcional, `politicaDeUnion` (`rechazar` \| `aceptar` \| `preguntar`) — qué hacer con quien pida unirse en
+campo a la columna que se está formando. Y `adjuntarCaravana` (2026-09-09) acepta ahora también una caravana
+en estado `'aparcada'` (las que un ejército dejó al `guarnecer`).
 
 ## 3. Datos que el servidor manda y el cliente tira
 
@@ -193,7 +200,7 @@ cliente consume 17. Estos llegan en cada respuesta y no se leen en ningún sitio
 - [ ] `gameId` — se recibe pero el cliente ya lo conoce por su propio estado (`estadoCliente.gameIdActivo`);
       no hay una lectura directa de `proyeccion.gameId` en ningún sitio.
 
-Y dos hallazgos **dentro de lo que sí se lee**, que cambiaron de forma sin que el tipo local se enterara:
+Y hallazgos **dentro de lo que sí se lee**, que cambiaron de forma sin que el tipo local se enterara:
 
 - **`asentamientos` cambió de significado por completo** — ver la sección de arriba, "Lo más urgente". No es
   un campo que falte, es un campo que se lee con la semántica vieja.
@@ -201,6 +208,16 @@ Y dos hallazgos **dentro de lo que sí se lee**, que cambiaron de forma sin que 
   `interiorRecordado?`, Doc 1.10.4 — "tres niveles de acceso": público, de la Facción, de quien la pisó). El
   tipo local (`AsentamientoAvistado`, `src/tiposDominio.ts`) todavía las declara todas como si fueran
   siempre visibles/inexistentes por igual; no distingue estos tres niveles.
+- **Niebla Paso 4 (2026-09-09, `f20d64e`): las capas "viéndolo ahora" ya no son solo tus ojos.** Un aliado, un
+  señor o un vasallo ve lo que ves tú, EN VIVO — sus plazas y columnas se suman al cálculo de
+  `asentamientosAvistados`, `ejercitosAvistados`, `caravanasAvistadas`, `campamentosBandidos` y la máscara
+  `visibles` de la niebla. NUNCA a `exploracion.celdas` ni a `asentamientosConocidos` (la memoria): la visión
+  compartida es en vivo, al romperse la relación desaparece. Sin campos ni tipos nuevos — el cliente ya pinta
+  esas capas; solo que ahora traen también lo que ven tus aliados. Ver `Niebla_De_Guerra_Definicion.md` §5.6
+  del backend.
+- **`Caravana.estado` ganó el valor `'aparcada'` (2026-09-09)** — una caravana adjunta que su ejército dejó en
+  una plaza al `guarnecer`. El tipo local `Caravana` (`src/tiposDominio.ts`) ni siquiera modelaba `estado`;
+  el sync le añadió el campo con el enum completo.
 
 Y dentro de `Asentamiento` (la plaza propia completa), el tipo local de `src/tiposDominio.ts` declara ~15
 campos frente a los **27** del dominio (`ocupacionHasta` se añadió el 2026-09-08, Doc 5.12.9). No modela,

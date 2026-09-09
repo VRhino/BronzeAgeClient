@@ -1,14 +1,14 @@
 # Índice de comandos del cliente jugador
 
 Fuente, en el repositorio del **backend**: `src/session/comandos/registro.ts` (el catálogo) y
-`src/session/comandos/esquemas.ts` (la forma de los `params`). Última revisión: **2026-09-08**, contra
-`BronzeAgeFase0@4fe611b`.
+`src/session/comandos/esquemas.ts` (la forma de los `params`). Última revisión: **2026-09-09**, contra
+`BronzeAgeFase0@1b52862` (main).
 
-El backend expone **66 comandos de partida** (eran 59 el 2026-09-07: +`cambiarResidencia` y +6 del revamp de
-caravanas), y la matriz de `src/session/comandos/autorizacion.ts` admite el rol `jugador` en todos (uno,
-`alternarFaccionNpc`, admite ADEMÁS `administrador_partida`): nada de lo que falta aquí está bloqueado por
-permisos. La interfaz cablea **6**; el resto solo es alcanzable llamando a mano al wrapper `ejecutarComando`
-de `src/apiCliente.ts`.
+El backend expone **69 comandos de partida** (eran 66 el 2026-09-08: +`guarnecer`, +`moverCargaCaravanaAparcada`,
++`enviarCaravanaAlOrigen`), y la matriz de `src/session/comandos/autorizacion.ts` admite el rol `jugador` en
+todos (uno, `alternarFaccionNpc`, admite ADEMÁS `administrador_partida`): nada de lo que falta aquí está
+bloqueado por permisos. La interfaz cablea **6**; el resto solo es alcanzable llamando a mano al wrapper
+`ejecutarComando` de `src/apiCliente.ts`.
 
 > **Sync 2026-09-08 — un supuesto roto:** `fundarAsentamiento` **ya no acepta `posicion`** (backend
 > `76d7e9b`/`4fe611b`, "se funda DONDE SE ESTÁ", Doc 1.3). El backend deriva la posición de la columna del
@@ -93,6 +93,8 @@ Una caravana ya no nace lista: se crea un casco vacío, se le montan carros y an
 - [ ] `reservarCaravana` — `caravanaId`, `reservada` (boolean)
 - [ ] `prepararCaravana` — `caravanaId`, `jugadorId`, `destinoAsentamientoId`, `carga` (recurso→cantidad); opcional: `escoltaEscuadronIds` — lanzamiento manual con preparación (escolta sin héroe, Doc 3.13.4)
 - [ ] `cancelarCaravana` — `caravanaId`
+- [ ] `moverCargaCaravanaAparcada` — `jugadorId`, `caravanaId`, `asentamientoId`, `recurso`, `cantidad`, `sentido` (`cargar` \| `descargar`) (nuevo 2026-09-09, Doc 3.13.7) · intercambia carga entre una caravana `'aparcada'` tras `guarnecer` y el almacén de la plaza anfitriona
+- [ ] `enviarCaravanaAlOrigen` — `jugadorId`, `caravanaId`, `asentamientoId` (nuevo 2026-09-09) · saca una caravana `'aparcada'` de vuelta a su origen (vacía al instante; cargada recorre el mapa y vuelca en el almacén de origen al llegar)
 
 ### Militar
 
@@ -107,10 +109,11 @@ Una caravana ya no nace lista: se crea un casco vacío, se le montan carros y an
 - [ ] `replegarEjercito` — `ejercitoId`
 - [ ] `estacionarEjercito` — `ejercitoId`
 - [ ] `alternarReabastecerAliados` — `asentamientoId`, `permitido`
-- [ ] `adjuntarCaravana` — `ejercitoId`, `caravanaId`, `jugadorId`
+- [ ] `adjuntarCaravana` — `ejercitoId`, `caravanaId`, `jugadorId` (2026-09-09: acepta también una caravana `'aparcada'`)
 - [ ] `soltarCaravana` — `ejercitoId`, `caravanaId`, `jugadorId`
 - [ ] `cargarCaravana` — `ejercitoId`, `caravanaId`, `asentamientoId`, `recurso`, `cantidad`
 - [ ] `entregarDeCaravana` — `ejercitoId`, `caravanaId`, `acuerdoId`
+- [ ] `guarnecer` — `asentamientoId`, `jugadorId` (nuevo 2026-09-09, Doc 5.12.4 / Ocupacion §2.3) · un ejército en la puerta de una plaza de su Facción vuelca sus escuadrones en la guarnición y se consume; los jugadores quedan DENTRO. Las caravanas adjuntas pasan a `'aparcada'` en esa plaza. Es `absorberColumna` con destino ≠ hogar — lo mismo que hace sola la conquista
 
 ### Presencia del jugador (Doc 1.10)
 

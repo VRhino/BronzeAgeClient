@@ -3,6 +3,29 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.1.1] — 2026-09-09 · sync con `BronzeAgeFase0@1b52862` (main)
+
+Alineación de contrato con los cambios del backend del 2026-09-08 → 09-09. **No se cablearon comandos nuevos**
+— sigue en 6 de 69; esto es contrato, no funcionalidad.
+
+### Backend nuevo, reflejado en los docs
+- **+3 comandos (66 → 69):** `guarnecer` (Doc 5.12.4 — un ejército vuelca su tropa en una plaza propia y se
+  consume; sus caravanas adjuntas pasan a `'aparcada'`), `moverCargaCaravanaAparcada` y `enviarCaravanaAlOrigen`
+  (operar esas caravanas aparcadas, Doc 3.13.7). `adjuntarCaravana` acepta ahora una caravana `'aparcada'`.
+- **Niebla Paso 4 (`f20d64e`):** la visión se comparte EN VIVO con aliados / señor / vasallo. Se suma a las
+  capas "viéndolo ahora" (`asentamientosAvistados`, `ejercitosAvistados`, `caravanasAvistadas`,
+  `campamentosBandidos`, la máscara `visibles` de la niebla), nunca a lo explorado ni a la memoria. **Sin
+  campos ni tipos nuevos** — el cliente ya pinta esas capas, solo que ahora traen también lo que ven tus
+  aliados. Al romperse la relación, desaparece en la proyección siguiente.
+
+### Añadido
+- `Caravana.estado?` en el tipo local (`src/tiposDominio.ts`), con el enum completo incl. `'aparcada'`. El
+  tipo ni siquiera modelaba `estado` antes.
+
+### Documentación
+- `docs/COMANDOS.md`, `docs/Analisis_Brecha_Backend.md`, `docs/API_CONTRACT.md`: 66 → 69 comandos, medido
+  contra `1b52862` (main), niebla Paso 4 anotada en §3.
+
 ## [0.1.0] — 2026-09-08 · sync con `BronzeAgeFase0@4fe611b`
 
 Sincronización con los cambios del backend del 2026-09-05 → 09-08 (jugador situado ya estaba, economía del
