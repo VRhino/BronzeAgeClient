@@ -25,6 +25,33 @@
   --shadow-main: 0 20px 40px rgba(0, 0, 0, 0.5);
   --shadow-glow: 0 0 25px rgba(200, 170, 110, 0.15);
   --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* --- Sistema visual "bronce y arcilla" (rediseño estilo estrategia) --- */
+  --tinta: #0b0805;
+  --marco-bg: #191410;
+  --marco-bg-alt: #221a12;
+  --marco-panel: #14100c;
+  --bronce: #a9793f;
+  --bronce-osc: #6b4a29;
+  --oro: #d8b878;
+  --oro-claro: #f1dcae;
+  --terracota: #bf5233;
+  --pergamino: #ede0c4;
+  --fuente-titulo: 'Cinzel', 'Times New Roman', Georgia, serif;
+  /* Marco de "placa de bronce": filete claro interior, junta oscura, banda de bronce, junta exterior, sombra. */
+  --placa:
+    inset 0 0 0 1px rgba(241, 220, 174, 0.14),
+    0 0 0 1px var(--tinta),
+    0 0 0 4px var(--bronce-osc),
+    0 0 0 5px var(--tinta),
+    0 26px 55px rgba(0, 0, 0, 0.62);
+  --placa-sutil:
+    inset 0 0 0 1px rgba(241, 220, 174, 0.12),
+    0 0 0 1px var(--tinta),
+    0 0 0 3px var(--bronce-osc),
+    0 18px 40px rgba(0, 0, 0, 0.55);
+  /* Dentículos: hilera de dientes de bronce, para rematar cabeceras (moldura de dentículo clásica). */
+  --denticulo: repeating-linear-gradient(90deg, var(--bronce) 0 5px, transparent 5px 9px);
 }
 
 * {
@@ -1328,10 +1355,10 @@ pre#proyeccion {
   position: absolute;
   left: 76px;
   top: 16px;
-  bottom: 16px;
   z-index: 3;
   width: 300px;
   max-width: calc(100vw - 92px);
+  max-height: calc(100% - 32px);
   padding: 18px;
   overflow-y: auto;
   display: flex;
@@ -1789,4 +1816,310 @@ pre#proyeccion {
   .asent-lado {
     display: none;
   }
+}
+
+/* =====================================================================================
+   REDISEÑO ESTILO ESTRATEGIA — "bronce y arcilla"
+   Bloque al final: reescribe el aspecto de las pantallas nuevas (mapa / asentamiento /
+   facción / login) sin tocar `#/legacy`. Inspiración: city-builders de la Edad de Bronce
+   (Nebuchadnezzar, Pharaoh) y el HUD de mármol + bronce de Total War: Rome.
+   ===================================================================================== */
+
+body {
+  background-color: #0c0a08;
+  background-image:
+    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(169, 121, 63, 0.12), transparent 60%),
+    radial-gradient(ellipse at 50% 120%, rgba(0, 0, 0, 0.5), transparent 55%);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- Tipografía de titular --- */
+.login-title,
+.panel-title,
+.faction-kicker,
+.asent-nombre,
+.asent-lado-cabecera strong,
+.mapa-seleccion h3,
+.faction-detail-header h2,
+.faction-empty-state h2,
+.faction-form-view h2,
+.information-panel-view h2,
+.settlement-panel-view h2 {
+  font-family: var(--fuente-titulo);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.faction-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--oro);
+}
+.faction-kicker::before {
+  content: "";
+  width: 14px;
+  height: 2px;
+  background: var(--bronce);
+}
+
+/* --- Marco de bronce: aspecto común de todos los paneles flotantes --- */
+.mapa-panel,
+.mapa-seleccion,
+.mapa-menu,
+.mapa-json,
+.asent-panel,
+.login-card {
+  background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg));
+  border: 1px solid var(--bronce);
+  border-radius: 3px;
+  box-shadow: var(--placa);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.mapa-panel::after,
+.mapa-seleccion::after,
+.asent-panel::after,
+.login-card::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 6px;
+  height: 4px;
+  background: var(--denticulo);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* --- Botones --- */
+.btn-primary {
+  font-family: var(--fuente-titulo);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #201509;
+  background: linear-gradient(180deg, var(--oro-claro), var(--oro) 45%, #b98f4e);
+  border: 1px solid #7a5626;
+  border-radius: 3px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 4px rgba(90, 60, 20, 0.4),
+    0 2px 0 var(--tinta),
+    0 8px 18px rgba(0, 0, 0, 0.45);
+  text-shadow: 0 1px 0 rgba(255, 240, 210, 0.35);
+}
+.btn-primary:hover {
+  background: linear-gradient(180deg, #ffeecb, var(--oro-claro) 45%, var(--oro));
+  transform: translateY(-1px);
+}
+.btn-primary:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 5px rgba(60, 40, 12, 0.5), 0 1px 0 var(--tinta);
+}
+
+.btn-secondary,
+.btn-cancel,
+.btn-join-faction,
+.mapa-menu button,
+.mapa-zoom button,
+.mapa-riel button,
+.asent-barra button[data-panel-asent] {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: linear-gradient(180deg, #241c14, #17110c);
+  border: 1px solid var(--bronce-osc);
+  color: var(--pergamino);
+  box-shadow: inset 0 1px 0 rgba(241, 220, 174, 0.08);
+  transition: var(--transition);
+}
+.btn-secondary:hover,
+.btn-join-faction:hover,
+.mapa-menu button:hover,
+.mapa-zoom button:hover,
+.mapa-riel button:hover,
+.asent-barra button[data-panel-asent]:hover {
+  border-color: var(--bronce);
+  color: var(--oro-claro);
+  background: linear-gradient(180deg, #322618, #201811);
+}
+.mapa-riel button.activo,
+.asent-barra button[data-panel-asent].activo {
+  border-color: var(--oro);
+  color: var(--oro-claro);
+  background: linear-gradient(180deg, rgba(169, 121, 63, 0.32), rgba(107, 74, 41, 0.22));
+  box-shadow: inset 0 0 12px rgba(216, 184, 120, 0.25);
+}
+
+/* --- Inputs --- */
+.form-input {
+  background: #12100b;
+  border: 1px solid var(--bronce-osc);
+  border-radius: 3px;
+  color: var(--pergamino);
+}
+.form-input:focus {
+  border-color: var(--oro);
+  box-shadow: 0 0 0 3px rgba(216, 184, 120, 0.16);
+}
+
+/* --- PANTALLA ASENTAMIENTO --- */
+.asent-screen {
+  background:
+    radial-gradient(ellipse 120% 70% at 50% -5%, rgba(169, 121, 63, 0.1), transparent 55%),
+    radial-gradient(ellipse at 50% 50%, #1a140e, #0b0805 78%);
+}
+.asent-barra {
+  position: relative;
+  background: linear-gradient(180deg, rgba(20, 15, 10, 0.96), rgba(20, 15, 10, 0.55));
+  border-bottom: 2px solid var(--bronce-osc);
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.4);
+  padding: 12px 74px 12px 26px;
+}
+.asent-barra::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 2px;
+  background: var(--denticulo);
+  opacity: 0.55;
+}
+.asent-nombre {
+  font-size: 1.15rem;
+  color: var(--oro-claro);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.asent-nivel {
+  padding: 2px 8px;
+  border: 1px solid var(--bronce-osc);
+  border-radius: 2px;
+  color: var(--oro);
+}
+.asent-lienzo {
+  border: 1px solid var(--bronce);
+  border-radius: 2px;
+  box-shadow: var(--placa), inset 0 0 160px rgba(0, 0, 0, 0.4);
+}
+.asent-lado {
+  background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-panel));
+  border-left: 3px solid var(--bronce);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.45), inset 6px 0 12px rgba(0, 0, 0, 0.3);
+  padding: 22px 18px;
+}
+.asent-lado-cabecera {
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--bronce-osc);
+}
+.asent-lado-cabecera strong {
+  font-size: 1.25rem;
+  color: var(--oro-claro);
+}
+.asent-edif-item {
+  background: linear-gradient(180deg, rgba(30, 23, 15, 0.7), rgba(18, 14, 9, 0.7));
+  border: 1px solid rgba(107, 74, 41, 0.5);
+  border-left: 3px solid var(--swatch, #8c6239);
+  border-radius: 2px;
+}
+.asent-edif-item:hover {
+  background: linear-gradient(180deg, rgba(169, 121, 63, 0.16), rgba(60, 44, 26, 0.16));
+  border-color: var(--bronce);
+}
+.asent-edif-nombre { color: var(--pergamino); }
+.asent-edif-nota { color: var(--terracota); }
+
+.asent-tooltip,
+.mapa-aviso {
+  background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg));
+  border: 1px solid var(--bronce);
+  border-radius: 2px;
+  box-shadow: var(--placa-sutil);
+}
+.asent-tooltip strong {
+  font-family: var(--fuente-titulo);
+  color: var(--oro-claro);
+}
+
+/* --- PANTALLA MAPA --- */
+.mapa-riel {
+  background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg));
+  border: 1px solid var(--bronce);
+  border-radius: 3px;
+  box-shadow: var(--placa-sutil);
+}
+.mapa-riel button {
+  border-bottom: 1px solid var(--bronce-osc);
+}
+.mapa-riel button.destaca {
+  box-shadow: inset 3px 0 0 var(--oro), inset 0 0 16px rgba(216, 184, 120, 0.22);
+}
+.mapa-zoom {
+  background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg));
+  border: 1px solid var(--bronce);
+  box-shadow: var(--placa-sutil);
+}
+.mapa-zoom button { color: var(--pergamino); }
+.mapa-zoom button:first-child { border-bottom: 1px solid var(--bronce-osc); }
+.mapa-avatar {
+  background: radial-gradient(circle at 35% 30%, var(--oro-claro), var(--oro) 55%, #8a6531);
+  border: 2px solid #6b4a29;
+  color: #1c1409;
+  font-family: var(--fuente-titulo);
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.4), 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+.mapa-lista-item {
+  background: linear-gradient(180deg, rgba(30, 23, 15, 0.6), rgba(18, 14, 9, 0.6));
+  border: 1px solid rgba(107, 74, 41, 0.5);
+  color: var(--pergamino);
+}
+.mapa-lista-item:hover {
+  border-color: var(--bronce);
+  background: rgba(169, 121, 63, 0.14);
+}
+.mapa-panel-jugador { color: var(--oro); }
+.mapa-seleccion-datos strong { color: var(--pergamino); }
+
+/* --- LOGIN / FACCIÓN --- */
+.login-title {
+  color: var(--oro-claro);
+  font-size: 1.55rem;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+.login-subtitle {
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+}
+.login-card {
+  padding: 44px 38px 38px;
+}
+.login-card::before {
+  height: 4px;
+  background: linear-gradient(90deg, var(--bronce-osc), var(--oro), var(--bronce-osc));
+}
+.faction-stats div,
+.faction-roles div {
+  background: linear-gradient(180deg, rgba(30, 23, 15, 0.65), rgba(16, 12, 8, 0.65));
+  border: 1px solid var(--bronce-osc);
+  border-radius: 2px;
+}
+.faction-stats strong,
+.faction-roles strong {
+  color: var(--oro-claro);
+}
+.faction-choice {
+  background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg));
+  border: 1px solid var(--bronce-osc);
+  border-radius: 3px;
+}
+.faction-choice:hover,
+.faction-choice:focus-visible {
+  border-color: var(--oro);
+  box-shadow: 0 0 0 1px var(--oro), 0 12px 30px rgba(0, 0, 0, 0.5);
+}
+.choice-icon {
+  color: var(--oro);
 }

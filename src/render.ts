@@ -753,13 +753,16 @@ export function pintarPrevisualizacionFundacion(
 
 const BIOMA_TIERRA_PLANA = '#93c26b';
 
-/** Radio del recorte cuadrado de la vista de asentamiento, en unidades locales. Estático. */
-const RADIO_MAPA_ASENTAMIENTO = 60;
+/** Radio del recorte cuadrado de la vista de asentamiento, en unidades locales — el canon
+ * (`REJILLA_ASENTAMIENTO.radioMapa` del backend, el mismo que usa el cliente admin). El espacio de la vista
+ * es ESTÁTICO: no crece con el asentamiento, deja sitio para que crezca. */
+const RADIO_MAPA_ASENTAMIENTO = 220;
 
 /** Escala px/unidad-local y centro del canvas, para convertir entre coords locales del trazado y píxeles.
- * Lo comparten el dibujo (`pintarAsentamiento`) y el hit-test del tooltip (`edificioBajoCursor`). */
+ * Lo comparten el dibujo (`pintarAsentamiento`) y el hit-test del tooltip (`edificioBajoCursor`). Misma
+ * fórmula que `cliente/` admin: el borde del lienzo cae en `±radioMapa` locales. */
 function proyeccionAsentamiento(width: number): { escala: number; centro: number } {
-  return { escala: (width * 0.92) / (RADIO_MAPA_ASENTAMIENTO * 4), centro: width / 2 };
+  return { escala: (width * 0.92) / (RADIO_MAPA_ASENTAMIENTO * 2), centro: width / 2 };
 }
 
 /**
