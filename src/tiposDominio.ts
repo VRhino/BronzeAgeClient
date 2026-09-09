@@ -24,6 +24,10 @@ export interface Edificio {
   estado: 'en_cola' | 'en_construccion' | 'activo';
   ambito?: 'asentamiento' | 'mapa';
   posicion: Point;
+  /** Nivel del edificio (subidas de nivel internas). Ausente = 1. */
+  nivelInterno?: number;
+  /** El edificio produce pero su recurso no cabe en el almacén, así que está parado. */
+  pausadoPorAlmacenLleno?: boolean;
   /** Ocupación post-conquista (backend 2026-09-08, Doc 5.12.9): un saqueo de conquista baja un edificio a
    * `en_cola` marcándolo `danado`; se reconstruye pagando solo una fracción del costo. Ausente = sano. */
   danado?: boolean;

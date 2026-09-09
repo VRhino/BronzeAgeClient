@@ -11,7 +11,8 @@ import {
   unirseAPartida,
   type ProyeccionJugador,
 } from './apiCliente';
-import { pintarAsentamiento, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
+import { edificioBajoCursor, pintarAsentamiento, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
+import { EDIFICIO_NOMBRE } from './paletas';
 import type { MapaGenerado } from './terreno';
 import { estadoCliente, TIPS_FUNDACION } from './ui/estadoCliente';
 import { actualizarTip, resumenRecursosFundacion } from './ui/pestanaAsentamientos';
@@ -586,6 +587,7 @@ function montarAsentamiento(): void {
       <p id="asent-error" class="faction-error" role="alert"></p>
     </div>
     <aside class="asent-panel" hidden></aside>
+    <div class="asent-tooltip" hidden></div>
     ${menuEsquinaHtml()}
   </div>`;
   const contenedor = document.querySelector<HTMLElement>('.asent-screen')!;
@@ -599,8 +601,36 @@ function montarAsentamiento(): void {
   });
   contenedor.querySelector('#btn-salir-mundo')?.addEventListener('click', () => void salirAlMundo());
   cablearMenuEsquina(contenedor);
+  cablearTooltipEdificios(contenedor);
   renderPanelAsent();
   void dibujarPantallaSegunModo(proyeccion);
+}
+
+/** Tooltip al pasar el cursor sobre un edificio interno del mapa del asentamiento: nombre, nivel, estado.
+ * La economía por edificio no viaja en la proyección (ver docs/Features_Pendientes.md §3.1). */
+function cablearTooltipEdificios(contenedor: HTMLElement): void {
+  const canvas = contenedor.querySelector<HTMLCanvasElement>('#mapa');
+  const tooltip = contenedor.querySelector<HTMLElement>('.asent-tooltip');
+  if (!canvas || !tooltip) return;
+
+  canvas.addEventListener('mousemove', (evento) => {
+    const proyeccion = estadoCliente.proyeccionUltima;
+    const asentamiento = proyeccion?.asentamientos[0];
+    if (!proyeccion || !asentamiento) { tooltip.hidden = true; return; }
+    const edificio = edificioBajoCursor(canvas, evento, asentamiento, proyeccion.trazadoPorAsentamiento?.[asentamiento.id]);
+    if (!edificio) { tooltip.hidden = true; return; }
+
+    const estado = edificio.estado === 'activo' ? 'Activo' : edificio.estado === 'en_construccion' ? 'En construcción' : 'En cola';
+    const notas = [
+      edificio.danado ? 'dañado (reconstrucción)' : null,
+      edificio.pausadoPorAlmacenLleno ? 'parado — almacén lleno' : null,
+    ].filter(Boolean).join(' · ');
+    tooltip.innerHTML = `<strong>${escaparHtml(EDIFICIO_NOMBRE[edificio.tipo] ?? edificio.tipo)}</strong><span>Nivel ${edificio.nivelInterno ?? 1} · ${estado}</span>${notas ? `<span>${escaparHtml(notas)}</span>` : ''}`;
+    tooltip.hidden = false;
+    tooltip.style.left = `${Math.min(window.innerWidth - tooltip.offsetWidth - 8, evento.clientX + 14)}px`;
+    tooltip.style.top = `${Math.min(window.innerHeight - tooltip.offsetHeight - 8, evento.clientY + 14)}px`;
+  });
+  canvas.addEventListener('mouseleave', () => { tooltip.hidden = true; });
 }
 
 function renderizarPanelInteraccion(proyeccion: ProyeccionJugador): void {

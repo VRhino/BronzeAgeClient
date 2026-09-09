@@ -1641,8 +1641,30 @@ pre#proyeccion {
   flex-basis: 100%;
 }
 
-.asent-panel[hidden] {
+.asent-panel[hidden],
+.asent-tooltip[hidden] {
   display: none;
+}
+
+.asent-tooltip {
+  position: fixed;
+  z-index: 8;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  max-width: 240px;
+  background: rgba(10, 14, 23, 0.95);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  color: var(--text-primary);
+}
+
+.asent-tooltip span {
+  font-size: 0.74rem;
+  color: var(--text-secondary);
 }
 
 .asent-panel {

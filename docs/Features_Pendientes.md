@@ -61,11 +61,14 @@ borra mensajes de error transitorios (ver §7).
 
 ## 3. Pantalla de asentamiento
 
-### 3.1 El mapa del asentamiento es solo lienzo
-**Hoy:** `pintarAsentamiento` dibuja trazado, edificios y murallas; no hay interacción.
-**Falta** (ver [`notas.md`](notas.md) §"vista asentamiento"): tooltip al pasar el cursor sobre un
-edificio; al hacer clic, un cuadro con la info del edificio y acciones (mejorar, con su coste;
-pausar/reanudar; prioridad).
+### 3.1 Interacción con el mapa del asentamiento
+**Hoy:** `pintarAsentamiento` dibuja trazado, edificios y murallas. Al pasar el cursor sobre un edificio
+interno sale un **tooltip** con nombre, nivel y estado (`edificioBajoCursor` en `src/render.ts`,
+`cablearTooltipEdificios` en `src/main.ts`).
+**Falta:** la **economía por edificio** en el tooltip (producción/consumo por minuto) — no viaja en la
+proyección, el `cliente/` admin la calcula con su propio store. Y al hacer clic, un cuadro con la info del
+edificio y acciones (mejorar con su coste; pausar/reanudar; prioridad) — ver
+[`notas.md`](notas.md) §"vista asentamiento".
 
 ### 3.2 Detalle del asentamiento
 **Hoy:** la pantalla nueva solo muestra el mapa + la barra. El detalle rico

@@ -753,6 +753,43 @@ export function pintarPrevisualizacionFundacion(
 
 const BIOMA_TIERRA_PLANA = '#93c26b';
 
+/** Radio del recorte cuadrado de la vista de asentamiento, en unidades locales. Estático. */
+const RADIO_MAPA_ASENTAMIENTO = 60;
+
+/** Escala px/unidad-local y centro del canvas, para convertir entre coords locales del trazado y píxeles.
+ * Lo comparten el dibujo (`pintarAsentamiento`) y el hit-test del tooltip (`edificioBajoCursor`). */
+function proyeccionAsentamiento(width: number): { escala: number; centro: number } {
+  return { escala: (width * 0.92) / (RADIO_MAPA_ASENTAMIENTO * 4), centro: width / 2 };
+}
+
+/**
+ * El edificio INTERNO cuya huella está bajo el cursor, o `null`. Recorre los edificios al revés (el último
+ * dibujado gana) y salta los de ámbito `mapa` (minas y cantera viven en el mapa general). Mismo modelo de
+ * coordenadas que `pintarAsentamiento` — de ahí `proyeccionAsentamiento`.
+ */
+export function edificioBajoCursor(
+  canvas: HTMLCanvasElement,
+  evento: { clientX: number; clientY: number },
+  asentamiento: Asentamiento,
+  trazado: TrazadoAsentamiento | undefined
+): Edificio | null {
+  if (!trazado) return null;
+  const rect = canvas.getBoundingClientRect();
+  const pixelX = (evento.clientX - rect.left) * (canvas.width / rect.width);
+  const pixelY = (evento.clientY - rect.top) * (canvas.height / rect.height);
+  const { escala, centro } = proyeccionAsentamiento(canvas.width);
+  const localX = (pixelX - centro) / escala;
+  const localY = (pixelY - canvas.height / 2) / escala;
+  for (const edificio of [...(asentamiento.edificios ?? [])].reverse()) {
+    if ((edificio.ambito ?? 'asentamiento') === 'mapa') continue;
+    const huella = trazado.huellas[edificio.id];
+    if (huella && localX >= huella.x && localX <= huella.x + huella.ancho && localY >= huella.y && localY <= huella.y + huella.alto) {
+      return edificio;
+    }
+  }
+  return null;
+}
+
 /** Pinta tiradas de celda como ÁREAS rellenas — la calle/camino ocupa suelo, no es una línea (Etapa 6). */
 function dibujarAreas(
   ctx: CanvasRenderingContext2D,
@@ -849,11 +886,8 @@ export function pintarAsentamiento(
   ctx.fillStyle = BIOMA_TIERRA_PLANA;
   ctx.fillRect(0, 0, width, height);
 
-  const radioMapa = 60; // Constante estática
   const tamanoCelda = 5;
-  const usable = width * 0.92;
-  const escala = usable / (radioMapa * 4);
-  const cx = width / 2;
+  const { escala, centro: cx } = proyeccionAsentamiento(width);
   const cy = height / 2;
   const aPantalla = (p: Point): Point => ({ x: cx + p.x * escala, y: cy + p.y * escala });
 

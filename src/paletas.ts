@@ -75,6 +75,39 @@ export const EDIFICIO_COLOR: Record<string, string> = {
   parque: '#c8e0b8',
 };
 
+/** Nombre legible por tipo de edificio — presentación pura, mantenida a mano (copia de `cliente/`). */
+export const EDIFICIO_NOMBRE: Record<string, string> = {
+  centroUrbano: 'Centro Urbano',
+  vivienda: 'Vivienda',
+  granja: 'Granja',
+  cantera: 'Cantera',
+  lenera: 'Leñera',
+  almacen: 'Almacén',
+  granero: 'Granero',
+  mina: 'Mina de oro',
+  minaCobre: 'Mina de cobre',
+  minaEstano: 'Mina de estaño',
+  corral: 'Corral',
+  fundicion: 'Fundición',
+  granFundicion: 'Gran Fundición',
+  curtiduria: 'Curtiduría',
+  armeria: 'Armería',
+  carpinteria: 'Carpintería',
+  tallerCarpinteria: 'Taller de carpintería',
+  barracon: 'Barracón',
+  galeriaDeTiro: 'Galería de Tiro',
+  palacio: 'Palacio',
+  mercado: 'Mercado',
+  puestoMercado: 'Puesto de mercado',
+  maravilla: 'Maravilla',
+  muralla: 'Muralla',
+  plaza: 'Plaza',
+  plazaDeArmas: 'Plaza de Armas',
+  patioDeGremios: 'Patio de Gremios',
+  pozo: 'Pozo',
+  parque: 'Parque',
+};
+
 export function faccionColor(faccionId: string, facciones: { id: string }[]): string {
   const idx = facciones.findIndex((f) => f.id === faccionId);
   return FACCION_COLORES[Math.max(0, idx) % FACCION_COLORES.length]!;
