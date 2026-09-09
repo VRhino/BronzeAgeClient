@@ -88,3 +88,7 @@ poner ese código. La sesión se guarda en `localStorage`; cuando caduca (12 h) 
 re-login en silencio: la contraseña no se guarda).
 
 `vite.config.ts` proxya `/v1` hacia `:3000` para evitar CORS en desarrollo.
+
+Para desplegarlo como sitio estático apuntando a un backend en otro dominio: `VITE_API_BASE=https://<backend>
+npm run build` (el backend debe listar el origen de este cliente en `ORIGENES_PERMITIDOS`). Sin
+`VITE_API_BASE` las peticiones van a `/v1` del mismo origen — lo que vale si el backend sirve este estático.

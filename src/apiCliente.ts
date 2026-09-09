@@ -84,7 +84,10 @@ export interface RespuestaComando {
   [campo: string]: unknown;
 }
 
-const V1 = '/v1';
+// En dev, Vite proxya `/v1` al backend (mismo origen, sin CORS). En producción, si este cliente se sirve
+// desde un dominio distinto al del backend, `VITE_API_BASE` lleva la URL del backend
+// (p. ej. `https://mi-backend.fly.dev`) — y el backend debe listar este origen en `ORIGENES_PERMITIDOS`.
+const V1 = `${import.meta.env.VITE_API_BASE ?? ''}/v1`;
 const STORAGE_KEY_SESION = 'bac_jugador_sesion_id';
 const STORAGE_KEY_USUARIO = 'bac_jugador_usuario';
 const STORAGE_KEY_GAME_ID = 'bac_jugador_game_id';
