@@ -64,18 +64,23 @@ borra mensajes de error transitorios (ver §7).
 ### 3.1 Interacción con el mapa del asentamiento
 **Hoy:** `pintarAsentamiento` dibuja trazado, edificios y murallas. Al pasar el cursor sobre un edificio
 interno sale un **tooltip** con nombre, nivel y estado (`edificioBajoCursor` en `src/render.ts`,
-`cablearTooltipEdificios` en `src/main.ts`).
-**Falta:** la **economía por edificio** en el tooltip (producción/consumo por minuto) — no viaja en la
-proyección, el `cliente/` admin la calcula con su propio store. Y al hacer clic, un cuadro con la info del
-edificio y acciones (mejorar con su coste; pausar/reanudar; prioridad) — ver
-[`notas.md`](notas.md) §"vista asentamiento".
+`cablearTooltipEdificios` en `src/main.ts`). La columna derecha lista los edificios agrupados por tipo
+(`renderPanelEdificios`).
+**Falta:**
+- La **economía por edificio** en el tooltip (producción/consumo por minuto) — no viaja en la proyección,
+  el `cliente/` admin la calcula con su propio store.
+- **Clic en un edificio** → cuadro con su info + acciones (mejorar con su coste; pausar/reanudar;
+  prioridad); y clic en una fila de la lista → resaltarlo/centrarlo en el mapa.
+- **Escala de la vista**: `pintarAsentamiento` usa `radioMapa = 60` hard-codeado; el canon es
+  `REJILLA_ASENTAMIENTO.radioMapa = 220` (el `cliente/` admin lo usa). El cliente-jugador está más
+  acercado y podría **recortar** edificios de un asentamiento grande situados más allá de ±120 locales.
 
 ### 3.2 Detalle del asentamiento
-**Hoy:** la pantalla nueva solo muestra el mapa + la barra. El detalle rico
-(general / edificios / almacén / producción / militar / muralla) sigue **solo en `#/legacy`**.
-**Falta:** re‑incorporar ese detalle a la pantalla nueva (probablemente como panel/es flotante/s a la
-izquierda), incluyendo cola de construcción (`moverEnCola` / `quitarDeCola`), reserva del tesorero
-(`calibrarReservaManual`) y tablas de producción/consumo.
+**Hoy:** la pantalla nueva muestra el mapa + la barra + la lista de edificios de la columna derecha. El
+detalle rico (general / almacén / producción / militar / muralla) sigue **solo en `#/legacy`**.
+**Falta:** re‑incorporar ese detalle a la pantalla nueva, incluyendo cola de construcción
+(`moverEnCola` / `quitarDeCola`), reserva del tesorero (`calibrarReservaManual`) y tablas de
+producción/consumo.
 
 ## 4. Panel de Ejército
 

@@ -12,7 +12,8 @@ import {
   type ProyeccionJugador,
 } from './apiCliente';
 import { edificioBajoCursor, pintarAsentamiento, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
-import { EDIFICIO_NOMBRE } from './paletas';
+import { EDIFICIO_COLOR, EDIFICIO_NOMBRE } from './paletas';
+import type { Edificio } from './tiposDominio';
 import type { MapaGenerado } from './terreno';
 import { estadoCliente, TIPS_FUNDACION } from './ui/estadoCliente';
 import { actualizarTip, resumenRecursosFundacion } from './ui/pestanaAsentamientos';
@@ -552,6 +553,50 @@ async function salirAlMundo(): Promise<void> {
   }
 }
 
+/** Columna derecha de la vista de asentamiento: los edificios internos agrupados por tipo (nombre, número,
+ * nivel máximo, y avisos de obra / parado por almacén lleno). Los extractores de la región van aparte. */
+function renderPanelEdificios(): void {
+  const contenedor = document.querySelector<HTMLElement>('.asent-edificios');
+  const asentamiento = estadoCliente.proyeccionUltima?.asentamientos[0];
+  if (!contenedor || !asentamiento) return;
+
+  const edificios = asentamiento.edificios ?? [];
+  const internos = edificios.filter((e) => (e.ambito ?? 'asentamiento') !== 'mapa');
+  const enRegion = edificios.length - internos.length;
+
+  const grupos = new Map<string, Edificio[]>();
+  for (const edificio of internos) {
+    const lista = grupos.get(edificio.tipo) ?? [];
+    lista.push(edificio);
+    grupos.set(edificio.tipo, lista);
+  }
+
+  const filas = [...grupos.entries()]
+    .sort(([a, la], [b, lb]) =>
+      (a === 'centroUrbano' ? -1 : 0) - (b === 'centroUrbano' ? -1 : 0) ||
+      lb.length - la.length ||
+      a.localeCompare(b)
+    )
+    .map(([tipo, lista]) => {
+      const nivelMax = Math.max(...lista.map((e) => e.nivelInterno ?? 1));
+      const enObra = lista.filter((e) => e.estado !== 'activo').length;
+      const parados = lista.filter((e) => e.pausadoPorAlmacenLleno).length;
+      const meta = [lista.length > 1 ? `×${lista.length}` : '', nivelMax > 1 ? `N${nivelMax}` : ''].filter(Boolean).join(' · ');
+      const nota = [enObra ? `${enObra} en obra` : '', parados ? `${parados} parado${parados > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ');
+      return `<div class="asent-edif-item" style="--swatch:${EDIFICIO_COLOR[tipo] ?? '#888'}">
+        <span class="asent-edif-nombre">${escaparHtml(EDIFICIO_NOMBRE[tipo] ?? tipo)}</span>
+        <span class="asent-edif-meta">${escaparHtml(meta)}</span>
+        ${nota ? `<span class="asent-edif-nota">${escaparHtml(nota)}</span>` : ''}
+      </div>`;
+    })
+    .join('');
+
+  contenedor.innerHTML = `
+    <div class="asent-lado-cabecera"><span class="faction-kicker">Edificios</span><strong>${internos.length}</strong></div>
+    <div class="asent-edif-lista">${filas || '<p class="mapa-lista-vacia">Sin edificios.</p>'}</div>
+    ${enRegion > 0 ? `<p class="asent-edif-region">+ ${enRegion} en la región (minas, canteras)</p>` : ''}`;
+}
+
 /** Pinta el panel flotante de la barra (Facción / Ejército) según `panelAsentAbierto`. */
 function renderPanelAsent(): void {
   const proyeccion = estadoCliente.proyeccionUltima;
@@ -568,8 +613,9 @@ function renderPanelAsent(): void {
     : `<span class="faction-kicker">Ejército</span><p class="mapa-lista-vacia">Sin comandos militares cableados todavía (composición de columna, reclutamiento, movilización) — ver docs/Features_Pendientes.md.</p>`;
 }
 
-/** Pantalla ASENTAMIENTO: el mapa del asentamiento centrado, con una barra transparente arriba (nombre +
- * Facción / Ejército + Salir al mundo) y el menú de esquina compartido. El mapa es solo lienzo por ahora. */
+/** Pantalla ASENTAMIENTO (rediseño estilo estrategia): barra superior (nombre + nivel + acciones), el mapa
+ * de la ciudad ocupando el espacio a la izquierda, y la columna de edificios a la derecha. Facción /
+ * Ejército abren un panel flotante sobre el mapa. */
 function montarAsentamiento(): void {
   const proyeccion = estadoCliente.proyeccionUltima;
   const asentamiento = proyeccion?.asentamientos[0];
@@ -578,15 +624,23 @@ function montarAsentamiento(): void {
   panelAsentAbierto = null;
   menuEsquinaAbierto = false;
   app.innerHTML = `<div class="asent-screen">
-    <div class="asent-lienzo"><canvas id="mapa" width="900" height="900"></canvas></div>
-    <div class="asent-barra">
+    <header class="asent-barra">
       <span class="asent-nombre">${escaparHtml(asentamiento.nombre ?? asentamiento.id)}</span>
-      <button type="button" data-panel-asent="faccion">Facción</button>
-      <button type="button" data-panel-asent="ejercito">Ejército</button>
-      <button id="btn-salir-mundo" class="btn-primary" type="button">Salir al mundo</button>
+      <span class="asent-nivel">Nivel ${asentamiento.nivel}</span>
+      <div class="asent-barra-acciones">
+        <button type="button" data-panel-asent="faccion">Facción</button>
+        <button type="button" data-panel-asent="ejercito">Ejército</button>
+        <button id="btn-salir-mundo" class="btn-primary" type="button">Salir al mundo</button>
+      </div>
       <p id="asent-error" class="faction-error" role="alert"></p>
+    </header>
+    <div class="asent-cuerpo">
+      <div class="asent-mapa">
+        <div class="asent-lienzo"><canvas id="mapa" width="900" height="900"></canvas></div>
+        <aside class="asent-panel" hidden></aside>
+      </div>
+      <aside class="asent-lado"><div class="asent-edificios"></div></aside>
     </div>
-    <aside class="asent-panel" hidden></aside>
     <div class="asent-tooltip" hidden></div>
     ${menuEsquinaHtml()}
   </div>`;
@@ -602,6 +656,7 @@ function montarAsentamiento(): void {
   contenedor.querySelector('#btn-salir-mundo')?.addEventListener('click', () => void salirAlMundo());
   cablearMenuEsquina(contenedor);
   cablearTooltipEdificios(contenedor);
+  renderPanelEdificios();
   renderPanelAsent();
   void dibujarPantallaSegunModo(proyeccion);
 }
@@ -868,7 +923,7 @@ function refrescarPantalla(pantalla: Pantalla): void {
   const proyeccion = estadoCliente.proyeccionUltima;
   if (!proyeccion) return;
   if (pantalla === 'mapa') { void dibujarPantallaSegunModo(proyeccion); renderSeleccionMapa(); renderPanelRiel(); return; }
-  if (pantalla === 'asentamiento') { void dibujarPantallaSegunModo(proyeccion); renderPanelAsent(); return; }
+  if (pantalla === 'asentamiento') { void dibujarPantallaSegunModo(proyeccion); renderPanelEdificios(); renderPanelAsent(); return; }
   if (pantalla !== 'legacy') return;
   renderizarPanelInteraccion(proyeccion);
   void dibujarPantallaSegunModo(proyeccion);
