@@ -615,9 +615,14 @@ function renderPanelRecursos(): void {
   contenedor.hidden = false;
   contenedor.innerHTML = items
     .map(([recurso, { cantidad, capacidad }]) => {
-      const casiLleno = capacidad > 0 && cantidad / capacidad >= 0.9;
-      const titulo = `${RECURSO_NOMBRE[recurso] ?? recurso} — ${Math.floor(cantidad)}${capacidad > 0 ? ` / ${Math.floor(capacidad)}` : ''}`;
-      return `<span class="asent-recurso${casiLleno ? ' lleno' : ''}" title="${escaparHtml(titulo)}"><span class="asent-recurso-icono" aria-hidden="true">${RECURSO_ICONO[recurso] ?? '📦'}</span>${Math.floor(cantidad)}</span>`;
+      const llenado = capacidad > 0 ? Math.min(100, Math.round((cantidad / capacidad) * 100)) : 0;
+      const casiLleno = llenado >= 90;
+      const nombre = escaparHtml(RECURSO_NOMBRE[recurso] ?? recurso);
+      const detalle = escaparHtml(`${Math.floor(cantidad)}${capacidad > 0 ? ` / ${Math.floor(capacidad)}` : ''}`);
+      return `<span class="asent-recurso${casiLleno ? ' lleno' : ''}" data-nombre="${nombre}" data-detalle="${detalle}">
+        <span class="asent-recurso-icono" aria-hidden="true">${RECURSO_ICONO[recurso] ?? '📦'}</span>${Math.floor(cantidad)}
+        <span class="asent-recurso-barra" style="--llenado:${llenado}%"></span>
+      </span>`;
     })
     .join('');
 }

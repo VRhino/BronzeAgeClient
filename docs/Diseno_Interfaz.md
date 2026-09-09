@@ -97,8 +97,10 @@ remata cabeceras y paneles con la moldura clásica. `opacity: .5` para que sea s
 - **Tooltip** (`.asent-tooltip`) — panel mini con `--placa-sutil`; título en `--fuente-titulo` +
   `--oro-claro`, cuerpo `--text-secondary`. `pointer-events: none`, sigue al cursor, clamp al viewport.
 - **Tira de recursos** (`.asent-recursos`) — chips `icono + cifra` flotando abajo-centro sobre el
-  mapa, uno por recurso con cantidad > 0; `title` con nombre y `x / capacidad`; chip en terracota
-  si está al 90 %+. Icono y nombre salen de `RECURSO_ICONO` / `RECURSO_NOMBRE` (`src/paletas.ts`).
+  mapa, uno por recurso con `floor(cantidad) >= 1`. Cada chip lleva una **barra de llenado**
+  (`--llenado: %` sobre `cantidad / capacidad`) en el borde inferior, y un **tooltip** al pasar el
+  cursor (`::after` con `data-nombre` + `data-detalle`, dos líneas). Oro por defecto, terracota al
+  90 %+. Icono y nombre salen de `RECURSO_ICONO` / `RECURSO_NOMBRE` (`src/paletas.ts`).
 - **Avatar** (`.mapa-avatar`) — moneda: `radial-gradient` oro, borde `#6b4a29`, iniciales en serif.
   Abre el menú de esquina (Refrescar · Ver proyección · Interfaz anterior · Cerrar sesión).
 - **Lienzo del mapa** (`.mapa-lienzo`, `.asent-lienzo`) — marco `--placa` + `inset` oscuro (viñeta),

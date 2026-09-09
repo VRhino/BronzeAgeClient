@@ -2066,10 +2066,11 @@ body {
   box-shadow: var(--placa-sutil);
 }
 .asent-recurso {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 4px 10px;
+  padding: 4px 10px 8px;
   border: 1px solid var(--bronce-osc);
   border-radius: 2px;
   background: rgba(0, 0, 0, 0.28);
@@ -2086,6 +2087,54 @@ body {
 .asent-recurso.lleno {
   border-color: var(--terracota);
   color: #e9b8a4;
+}
+
+/* Barra de llenado del almacén para ese recurso */
+.asent-recurso-barra {
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  bottom: 1px;
+  height: 3px;
+  background: rgba(0, 0, 0, 0.45);
+}
+.asent-recurso-barra::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--llenado, 0%);
+  background: var(--oro);
+}
+.asent-recurso.lleno .asent-recurso-barra::before {
+  background: var(--terracota);
+}
+
+/* Tooltip de nombre (+ cantidad/capacidad) al pasar el cursor */
+.asent-recurso::after {
+  content: attr(data-nombre) "\A" attr(data-detalle);
+  white-space: pre;
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 5px 9px;
+  background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg));
+  border: 1px solid var(--bronce);
+  border-radius: 2px;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  text-align: center;
+  color: var(--oro-claro);
+  box-shadow: var(--placa-sutil);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+  z-index: 4;
+}
+.asent-recurso:hover::after {
+  opacity: 1;
 }
 
 /* --- PANTALLA MAPA --- */
