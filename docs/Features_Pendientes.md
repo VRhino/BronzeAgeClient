@@ -5,6 +5,7 @@ asentamiento + routing por proyección, plan `twinkly-greeting-peacock.md`) dej�
 olvidarlo. Cada entrada dice **cómo está hoy** y **qué falta**.
 
 - Guía visual (leer antes de diseñar UI nueva): [`Diseno_Interfaz.md`](Diseno_Interfaz.md).
+- Inventario de info y acciones del asentamiento: [`Panel_Asentamiento.md`](Panel_Asentamiento.md).
 - Intención de producto / UX a mano: [`notas.md`](notas.md).
 - Qué hay ya en el backend esperando interfaz: [`Analisis_Brecha_Backend.md`](Analisis_Brecha_Backend.md).
 - Catálogo de comandos: [`COMANDOS.md`](COMANDOS.md).
