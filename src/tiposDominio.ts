@@ -102,6 +102,9 @@ export interface Ejercito {
   faccionId: string;
   origenAsentamientoId: string;
   escuadrones: EscuadronEnCampana[];
+  /** Jugadores que MARCHAN en la columna (Doc 5.12.2) — un viajero sin tropas va aquí y no en `escuadrones`,
+   * así que es la única forma de localizar la columna propia de quien salió con el carro seco. */
+  participantes?: { jugadorId: string }[];
   ruta: Point[];
   posicionActual: Point;
   estado: 'marchando' | 'estacionado' | 'regresando';

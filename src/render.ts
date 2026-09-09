@@ -77,6 +77,51 @@ function dibujarRacimoDeRombos(
   }
 }
 
+const MARCADOR_COLOR = '#f1d38b'; // el mismo ocre que la previsualización de fundación
+
+/** El "aquí estás tú": una mira sobre la columna del propio jugador, para no perderse en el mapa. Se pinta
+ * ENCIMA de su racimo de rombos, que sigue diciendo cuánta gente marcha con él. */
+function dibujarMarcadorJugador(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+  ctx.save();
+  ctx.strokeStyle = MARCADOR_COLOR;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(x, y, 13, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.lineWidth = 2;
+  for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]] as const) {
+    ctx.beginPath();
+    ctx.moveTo(x + dx * 9, y + dy * 9);
+    ctx.lineTo(x + dx * 17, y + dy * 17);
+    ctx.stroke();
+  }
+  ctx.beginPath();
+  ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+  ctx.fillStyle = MARCADOR_COLOR;
+  ctx.fill();
+  ctx.restore();
+}
+
+/** El destino fijado: un aspa dentro de un anillo punteado en el punto al que marcha la columna. La estela
+ * hasta aquí ya la pinta el paso 15 (`ejercito.ruta`). */
+function dibujarMarcadorDestino(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+  ctx.save();
+  ctx.strokeStyle = MARCADOR_COLOR;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  ctx.arc(x, y, 9, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(x - 4, y - 4);
+  ctx.lineTo(x + 4, y + 4);
+  ctx.moveTo(x + 4, y - 4);
+  ctx.lineTo(x - 4, y + 4);
+  ctx.stroke();
+  ctx.restore();
+}
+
 /**
  * Un asentamiento en el mapa general. Relleno = lo estás viendo (tuyo o avistado); hueco = lo RECUERDAS, y
  * puede haber cambiado desde entonces.
@@ -634,6 +679,21 @@ export function pintarTerreno(
     ctx.strokeStyle = '#1b1a17';
     ctx.lineWidth = 1.5;
     ctx.stroke();
+  }
+
+  // 19. TÚ Y TU DESTINO. Encima de todo: la mira sobre la columna del propio jugador (para ubicarse de un
+  // vistazo) y, si va en marcha, un aspa en el punto al que se dirige — el último vértice de su ruta.
+  const miColumna = (proyeccion.ejercitos || []).find(
+    (ejercito) =>
+      (ejercito.participantes || []).some((p) => p.jugadorId === proyeccion.jugadorId) ||
+      ejercito.escuadrones.some((e) => e.jugadorId === proyeccion.jugadorId)
+  );
+  if (miColumna) {
+    dibujarMarcadorJugador(ctx, miColumna.posicionActual.x * escalaCanvas, miColumna.posicionActual.y * escalaCanvas);
+    if (miColumna.estado !== 'estacionado' && miColumna.ruta && miColumna.ruta.length >= 2) {
+      const destino = miColumna.ruta[miColumna.ruta.length - 1]!;
+      dibujarMarcadorDestino(ctx, destino.x * escalaCanvas, destino.y * escalaCanvas);
+    }
   }
 }
 
