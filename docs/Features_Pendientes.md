@@ -4,6 +4,7 @@ Lo que el **revamp de pantallas** del cliente‑jugador (mapa a pantalla complet
 asentamiento + routing por proyección, plan `twinkly-greeting-peacock.md`) dejó fuera a propósito, para no
 olvidarlo. Cada entrada dice **cómo está hoy** y **qué falta**.
 
+- Guía visual (leer antes de diseñar UI nueva): [`Diseno_Interfaz.md`](Diseno_Interfaz.md).
 - Intención de producto / UX a mano: [`notas.md`](notas.md).
 - Qué hay ya en el backend esperando interfaz: [`Analisis_Brecha_Backend.md`](Analisis_Brecha_Backend.md).
 - Catálogo de comandos: [`COMANDOS.md`](COMANDOS.md).
