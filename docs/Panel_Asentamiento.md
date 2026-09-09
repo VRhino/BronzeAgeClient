@@ -221,22 +221,28 @@ estar dentro de ella, o que la proyección mande la lista completa de plazas de 
 
 ## 12. Estructura propuesta del panel
 
-Ampliar la columna derecha (`.asent-lado`) de "lista de edificios" a **panel de gestión con secciones**
-(pestañas o acordeón), estilo city-builder:
+La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, estilo city-builder.
 
-1. **Resumen** — nivel/nivel operativo, población (con techos), mantenimiento, nutrición, ocupación,
-   progreso al siguiente nivel (`progresoNivelAsentamiento`).
-2. **Edificios** — lista completa por tipo con estado; **cola de construcción** (reordenar/quitar);
-   añadir edificio (catálogo filtrado por nivel); toggle auto-construcción; por edificio: mejorar
-   (con coste y motivo si bloqueado), ver `fuenteId`, `pausadoPorAlmacenLleno`, `danado`.
-3. **Producción** — tabla producción/consumo por edificio y recurso (necesita datos de §2).
-4. **Tropas** — guarnición (`escuadrones`), reclutar (catálogo + siguiente desbloqueo), movilizar.
-5. **Políticas** — solo si tienes cargo: activas (cards con cuenta atrás) + activables por tu cargo.
-6. **Puerta** — solo Gobernador: política de acceso + vetos.
-7. **Almacén / reserva** — reserva manual por recurso (Tesorero), abrir a aliados.
-8. **Muralla** — traer `pestanaMuralla` de `#/legacy`.
-9. **(Comercio** — probablemente panel aparte.)
-10. **Cargos** — en el panel de **Facción** (§10), no aquí.
+1. **Resumen** ✅ — nivel/nivel operativo, población (pesants/artesanos/nobleza + total), medidores de
+   mantenimiento y nutrición, aviso de ocupación, toggle auto-construcción (`alternarAutoConstruccion`).
+   *Falta*: progreso al siguiente nivel (`progresoNivelAsentamiento`, no viaja).
+2. **Edificios** ✅ — lista por tipo con estado y avisos; añadir a la cola (catálogo `EDIFICIOS_MANUALES`,
+   `anadirEdificioManualmente`); ⬆ mejorar el de menor nivel de cada tipo (`mejorarEdificioAhora`).
+   *Falta*: coste/motivo de la mejora (`estadoMejoraEdificio`, no viaja); detalle por instancia.
+3. **Cola** ✅ — obras en curso + en cola ordenadas por `prioridad`, con cuenta atrás (`completaEn`),
+   reordenar (`moverEnCola`) y quitar (`quitarDeCola`, solo `en_cola`).
+4. **Cargos** ✅ — en el panel de **Facción**, acotado al asentamiento que se pisa (`asignarCargoLocal`):
+   Gobernador si eres residente; los otros cuatro si eres el Gobernador. El Rey NO tiene autoridad
+   directa (§10).
+
+Pendiente (secciones nuevas):
+5. **Producción** — tabla producción/consumo por edificio y recurso (necesita datos de §2).
+6. **Tropas** — guarnición (`escuadrones`), reclutar, movilizar.
+7. **Políticas** — solo si tienes cargo: activas + activables.
+8. **Puerta** — solo Gobernador: política de acceso + vetos.
+9. **Almacén / reserva** — reserva manual por recurso (Tesorero), abrir a aliados.
+10. **Muralla** — traer `pestanaMuralla` de `#/legacy`.
+11. **(Comercio** — probablemente panel aparte.)
 
 Clic en un edificio del mapa → abre la sección "Edificios" enfocada en ese edificio (`notas.md`).
 

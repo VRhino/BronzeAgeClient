@@ -26,6 +26,13 @@ export interface Edificio {
   posicion: Point;
   /** Nivel del edificio (subidas de nivel internas). Ausente = 1. */
   nivelInterno?: number;
+  /** Instante de MUNDO (ms) en que la obra pasa a `activo` — solo mientras `estado === 'en_construccion'`.
+   * `completaEn - proyeccion.instante` da los ms restantes. */
+  completaEn?: number;
+  /** Score de necesidad con que entró en la cola: gobierna el orden en que arrancan los proyectos. */
+  prioridad?: number;
+  /** Nodo de recurso o bosque que explota (cantera/leñera/corral/minas). */
+  fuenteId?: string;
   /** El edificio produce pero su recurso no cabe en el almacén, así que está parado. */
   pausadoPorAlmacenLleno?: boolean;
   /** Ocupación post-conquista (backend 2026-09-08, Doc 5.12.9): un saqueo de conquista baja un edificio a
@@ -70,10 +77,29 @@ export interface Asentamiento {
    * reducido, crece más lento, el mantenimiento no degrada. Ausente = no ocupado (caso normal). */
   ocupacionHasta?: number;
   poblacion?: { pesants: number; artesanos: number; nobleza: number };
+  /** Nutrición de la población 0-100 (hambruna). Ausente = 100. */
+  nutricionPoblacion?: number;
+  /** Racha de ticks con mantenimiento sano (para recuperar `nivelActual`). */
+  rachaMantenimientoSano?: number;
   almacen?: Record<string, { cantidad: number; capacidad: number }>;
   edificios: Edificio[];
-  /** Gobernador/Maestro de Obras/Tesorero/General asignados (Doc 2.5) — quién puede ordenar qué. */
-  cargos?: { gobernadorId?: string | null; maestroObrasId?: string | null; tesoreroId?: string | null; generalId?: string | null };
+  /** Auto-construcción congelada: el motor deja de comprometer necesidades nuevas. Ausente = activa. */
+  autoConstruccionPausada?: boolean;
+  /** Reserva de recursos calibrada por el Tesorero (0-999 por recurso). */
+  reservaManual?: Record<string, number>;
+  /** Guarnición: escuadrones posados en la plaza. */
+  escuadrones?: { id: string; nombre?: string; jugadorId: string; origen?: string; cantidad: number }[];
+  /** Residentes que llegaron fundando · comprando casa (Doc 2.5). */
+  jugadoresFundadoresIds?: string[];
+  casasCompradas?: string[];
+  /** Cargos designados (Doc 2.5) — quién puede ordenar qué. Llegan como id o `null`. */
+  cargos?: {
+    gobernadorId?: string | null;
+    maestroObrasId?: string | null;
+    tesoreroId?: string | null;
+    generalId?: string | null;
+    sacerdoteId?: string | null;
+  };
   /** Recintos de muralla, del más interior al más exterior (Paso 2a en adelante). Vacío/ausente = sin muro. */
   recintos?: Recinto[];
 }

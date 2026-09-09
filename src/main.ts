@@ -13,7 +13,7 @@ import {
 } from './apiCliente';
 import { edificioBajoCursor, pintarAsentamiento, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
 import { EDIFICIO_COLOR, EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from './paletas';
-import type { Edificio } from './tiposDominio';
+import type { Asentamiento, Edificio } from './tiposDominio';
 import type { MapaGenerado } from './terreno';
 import { estadoCliente, TIPS_FUNDACION } from './ui/estadoCliente';
 import { actualizarTip, resumenRecursosFundacion } from './ui/pestanaAsentamientos';
@@ -553,29 +553,118 @@ async function salirAlMundo(): Promise<void> {
   }
 }
 
-/** Columna derecha de la vista de asentamiento: los edificios internos agrupados por tipo (nombre, número,
- * nivel máximo, y avisos de obra / parado por almacén lleno). Los extractores de la región van aparte. */
+// --- PANEL DE GESTIÓN DEL ASENTAMIENTO (columna derecha): Resumen · Edificios · Cola ------------
+// Solo con lo que ya trae la proyección. Las acciones sin dato previo (mejorar, añadir) se mandan y se
+// muestra el error del backend si lo rechaza. Ver docs/Panel_Asentamiento.md.
+
+type SeccionAsent = 'resumen' | 'edificios' | 'cola';
+let seccionAsent: SeccionAsent = 'edificios';
+
+/** Edificios que un Gobernador / Maestro de Obras puede añadir a mano (el backend gatea nivel, únicos y
+ * topes; aquí solo se ofrece el catálogo). Fuera: centroUrbano, puestoMercado y los extractores de `mapa`. */
+const EDIFICIOS_MANUALES = [
+  'vivienda', 'almacen', 'granero', 'granja', 'lenera', 'corral',
+  'barracon', 'galeriaDeTiro', 'palacio', 'mercado',
+  'fundicion', 'granFundicion', 'curtiduria', 'armeria', 'carpinteria', 'maravilla',
+] as const;
+
+/** El cargo de construcción que el jugador tiene en esta plaza, o `null`. */
+function cargoConstructor(asentamiento: Asentamiento, jugadorId: string): 'gobernador' | 'maestroObras' | null {
+  if (asentamiento.cargos?.gobernadorId === jugadorId) return 'gobernador';
+  if (asentamiento.cargos?.maestroObrasId === jugadorId) return 'maestroObras';
+  return null;
+}
+
+function esResidente(asentamiento: Asentamiento, jugadorId: string): boolean {
+  return Boolean(asentamiento.jugadoresFundadoresIds?.includes(jugadorId) || asentamiento.casasCompradas?.includes(jugadorId));
+}
+
+/** "3 min" / "45 s" que faltan para un instante de mundo. */
+function cuentaAtras(instanteFin: number | undefined): string {
+  if (typeof instanteFin !== 'number') return '';
+  const ms = instanteFin - (estadoCliente.proyeccionUltima?.instante ?? Date.now());
+  if (ms <= 0) return 'listo';
+  const min = Math.round(ms / 60_000);
+  return min >= 1 ? `${min} min` : `${Math.round(ms / 1000)} s`;
+}
+
+/** Lanza un comando de gestión del asentamiento y refresca; el error va a `#asent-lado-error`. */
+async function ejecutarAccionAsent(tipo: string, params: Record<string, unknown>): Promise<void> {
+  try {
+    const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, tipo, params);
+    if (!respuesta.resultado.ok) throw new ApiError(409, respuesta.resultado.codigoError ?? 'El servidor rechazó la operación.');
+    await refrescarDatosJuego();
+  } catch (err) {
+    const error = document.querySelector<HTMLElement>('#asent-lado-error');
+    if (error) error.textContent = mensajeError(err);
+  }
+}
+
+/** Pinta y cablea la columna derecha completa (tabs + sección activa). Se llama al montar y en cada
+ * refresco/sondeo. Guarda el nombre `renderPanelEdificios` por los sitios que ya lo llaman. */
 function renderPanelEdificios(): void {
   const contenedor = document.querySelector<HTMLElement>('.asent-edificios');
-  const asentamiento = estadoCliente.proyeccionUltima?.asentamientos[0];
-  if (!contenedor || !asentamiento) return;
+  const proyeccion = estadoCliente.proyeccionUltima;
+  const asentamiento = proyeccion?.asentamientos[0];
+  if (!contenedor || !proyeccion || !asentamiento) return;
 
   const edificios = asentamiento.edificios ?? [];
-  const internos = edificios.filter((e) => (e.ambito ?? 'asentamiento') !== 'mapa');
-  const enRegion = edificios.length - internos.length;
+  const cargo = cargoConstructor(asentamiento, proyeccion.jugadorId);
+  const puedeConstruir = cargo !== null;
+
+  const tabs = (['resumen', 'edificios', 'cola'] as const)
+    .map((s) => `<button class="asent-tab${s === seccionAsent ? ' activo' : ''}" type="button" data-seccion="${s}">${s === 'resumen' ? 'Resumen' : s === 'edificios' ? 'Edificios' : 'Cola'}</button>`)
+    .join('');
+
+  contenedor.innerHTML = `
+    <div class="asent-tabs">${tabs}</div>
+    <div class="asent-lado-cuerpo">${
+      seccionAsent === 'resumen'
+        ? seccionResumen(asentamiento)
+        : seccionAsent === 'edificios'
+          ? seccionEdificios(asentamiento, cargo)
+          : seccionCola(edificios, cargo)
+    }</div>
+    ${!puedeConstruir && seccionAsent !== 'resumen' ? '<p class="asent-lado-nota">Necesitas ser Gobernador o Maestro de Obras para gestionar la construcción.</p>' : ''}
+    <p id="asent-lado-error" class="faction-error" role="alert"></p>`;
+
+  contenedor.querySelectorAll<HTMLButtonElement>('.asent-tab').forEach((boton) => {
+    boton.addEventListener('click', () => { seccionAsent = boton.dataset.seccion as SeccionAsent; renderPanelEdificios(); });
+  });
+  cablearAccionesAsentLado(contenedor, asentamiento, cargo);
+}
+
+function seccionResumen(a: Asentamiento): string {
+  const pob = a.poblacion;
+  const total = pob ? pob.pesants + pob.artesanos + pob.nobleza : null;
+  const ocupado = typeof a.ocupacionHasta === 'number' && a.ocupacionHasta > (estadoCliente.proyeccionUltima?.instante ?? 0);
+  const medidor = (etiqueta: string, valor: number | undefined) =>
+    typeof valor === 'number'
+      ? `<div class="asent-medidor"><span>${etiqueta}</span><div class="asent-medidor-track"><span style="width:${Math.max(0, Math.min(100, valor))}%"></span></div><strong>${Math.round(valor)}</strong></div>`
+      : '';
+  return `
+    <div class="asent-ficha-grid">
+      <div><span>Nivel</span><strong>${a.nivel}${a.nivelActual !== undefined && a.nivelActual !== a.nivel ? ` (op. ${a.nivelActual})` : ''}</strong></div>
+      <div><span>Población</span><strong>${total ?? '—'}</strong></div>
+      ${pob ? `<div><span>Pesants</span><strong>${pob.pesants}</strong></div><div><span>Artesanos</span><strong>${pob.artesanos}</strong></div>` : ''}
+      ${pob && pob.nobleza > 0 ? `<div><span>Nobleza</span><strong>${pob.nobleza}</strong></div>` : ''}
+    </div>
+    ${medidor('Mantenimiento', a.medidorMantenimiento)}
+    ${medidor('Nutrición', a.nutricionPoblacion)}
+    ${ocupado ? `<p class="asent-lado-nota asent-aviso-ocupacion">⚔ Bajo ocupación militar — ${cuentaAtras(a.ocupacionHasta)} restantes.</p>` : ''}
+    <label class="asent-toggle"><input type="checkbox" id="chk-autoconstruccion" ${a.autoConstruccionPausada ? '' : 'checked'} /> Auto-construcción</label>`;
+}
+
+function seccionEdificios(a: Asentamiento, cargo: 'gobernador' | 'maestroObras' | null): string {
+  const internos = (a.edificios ?? []).filter((e) => (e.ambito ?? 'asentamiento') !== 'mapa');
+  const enRegion = (a.edificios ?? []).length - internos.length;
 
   const grupos = new Map<string, Edificio[]>();
-  for (const edificio of internos) {
-    const lista = grupos.get(edificio.tipo) ?? [];
-    lista.push(edificio);
-    grupos.set(edificio.tipo, lista);
-  }
+  for (const e of internos) grupos.set(e.tipo, [...(grupos.get(e.tipo) ?? []), e]);
 
   const filas = [...grupos.entries()]
-    .sort(([a, la], [b, lb]) =>
-      (a === 'centroUrbano' ? -1 : 0) - (b === 'centroUrbano' ? -1 : 0) ||
-      lb.length - la.length ||
-      a.localeCompare(b)
+    .sort(([x, lx], [y, ly]) =>
+      (x === 'centroUrbano' ? -1 : 0) - (y === 'centroUrbano' ? -1 : 0) || ly.length - lx.length || x.localeCompare(y)
     )
     .map(([tipo, lista]) => {
       const nivelMax = Math.max(...lista.map((e) => e.nivelInterno ?? 1));
@@ -583,18 +672,68 @@ function renderPanelEdificios(): void {
       const parados = lista.filter((e) => e.pausadoPorAlmacenLleno).length;
       const meta = [lista.length > 1 ? `×${lista.length}` : '', nivelMax > 1 ? `N${nivelMax}` : ''].filter(Boolean).join(' · ');
       const nota = [enObra ? `${enObra} en obra` : '', parados ? `${parados} parado${parados > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ');
+      // La mejora ataca la instancia ACTIVA de menor nivel interno (todas las de un tipo son intercambiables).
+      const objetivoMejora = lista
+        .filter((e) => e.estado === 'activo')
+        .sort((e1, e2) => (e1.nivelInterno ?? 1) - (e2.nivelInterno ?? 1))[0];
       return `<div class="asent-edif-item" style="--swatch:${EDIFICIO_COLOR[tipo] ?? '#888'}">
         <span class="asent-edif-nombre">${escaparHtml(EDIFICIO_NOMBRE[tipo] ?? tipo)}</span>
         <span class="asent-edif-meta">${escaparHtml(meta)}</span>
+        ${cargo && objetivoMejora && tipo !== 'centroUrbano' ? `<button class="asent-edif-mejora" type="button" data-mejorar="${escaparHtml(objetivoMejora.id)}" title="Mejorar el de menor nivel">⬆</button>` : ''}
         ${nota ? `<span class="asent-edif-nota">${escaparHtml(nota)}</span>` : ''}
       </div>`;
     })
     .join('');
-
-  contenedor.innerHTML = `
+  const anadir = cargo
+    ? `<div class="asent-anadir">
+        <select id="sel-anadir-edificio">${EDIFICIOS_MANUALES.map((t) => `<option value="${t}">${escaparHtml(EDIFICIO_NOMBRE[t] ?? t)}</option>`).join('')}</select>
+        <button id="btn-anadir-edificio" class="btn-secondary" type="button">Añadir a la cola</button>
+      </div>`
+    : '';
+  return `
     <div class="asent-lado-cabecera"><span class="faction-kicker">Edificios</span><strong>${internos.length}</strong></div>
+    ${anadir}
     <div class="asent-edif-lista">${filas || '<p class="mapa-lista-vacia">Sin edificios.</p>'}</div>
     ${enRegion > 0 ? `<p class="asent-edif-region">+ ${enRegion} en la región (minas, canteras)</p>` : ''}`;
+}
+
+function seccionCola(edificios: Edificio[], cargo: 'gobernador' | 'maestroObras' | null): string {
+  const cola = edificios
+    .filter((e) => e.estado !== 'activo')
+    .sort((x, y) => (y.prioridad ?? 0) - (x.prioridad ?? 0));
+  if (cola.length === 0) return '<p class="mapa-lista-vacia">Sin obras en curso ni en cola.</p>';
+  return `<div class="asent-cola-lista">${cola
+    .map((e, i) => `<div class="asent-cola-item" style="--swatch:${EDIFICIO_COLOR[e.tipo] ?? '#888'}">
+      <span class="asent-cola-pos">${i + 1}</span>
+      <span class="asent-edif-nombre">${escaparHtml(EDIFICIO_NOMBRE[e.tipo] ?? e.tipo)}</span>
+      <span class="asent-edif-nota">${e.estado === 'en_construccion' ? `obra · ${cuentaAtras(e.completaEn)}` : 'en cola'}</span>
+      ${cargo ? `<span class="asent-cola-acciones">
+        <button type="button" data-cola-mover="arriba" data-edificio="${escaparHtml(e.id)}" title="Subir">▲</button>
+        <button type="button" data-cola-mover="abajo" data-edificio="${escaparHtml(e.id)}" title="Bajar">▼</button>
+        ${e.estado === 'en_cola' ? `<button type="button" data-cola-quitar="${escaparHtml(e.id)}" title="Quitar">✕</button>` : ''}
+      </span>` : ''}
+    </div>`)
+    .join('')}</div>`;
+}
+
+function cablearAccionesAsentLado(cont: HTMLElement, a: Asentamiento, cargo: 'gobernador' | 'maestroObras' | null): void {
+  cont.querySelector('#chk-autoconstruccion')?.addEventListener('change', (ev) => {
+    void ejecutarAccionAsent('alternarAutoConstruccion', { asentamientoId: a.id, pausada: !(ev.target as HTMLInputElement).checked });
+  });
+  if (!cargo) return;
+  cont.querySelector('#btn-anadir-edificio')?.addEventListener('click', () => {
+    const tipo = cont.querySelector<HTMLSelectElement>('#sel-anadir-edificio')?.value;
+    if (tipo) void ejecutarAccionAsent('anadirEdificioManualmente', { asentamientoId: a.id, cargo, tipo });
+  });
+  cont.querySelectorAll<HTMLButtonElement>('[data-mejorar]').forEach((b) => {
+    b.addEventListener('click', () => void ejecutarAccionAsent('mejorarEdificioAhora', { asentamientoId: a.id, cargo, edificioId: b.dataset.mejorar }));
+  });
+  cont.querySelectorAll<HTMLButtonElement>('[data-cola-mover]').forEach((b) => {
+    b.addEventListener('click', () => void ejecutarAccionAsent('moverEnCola', { asentamientoId: a.id, cargo, edificioId: b.dataset.edificio, direccion: b.dataset.colaMover }));
+  });
+  cont.querySelectorAll<HTMLButtonElement>('[data-cola-quitar]').forEach((b) => {
+    b.addEventListener('click', () => void ejecutarAccionAsent('quitarDeCola', { asentamientoId: a.id, cargo, edificioId: b.dataset.colaQuitar }));
+  });
 }
 
 /** Tira de recursos del almacén de la plaza que se pisa. La proyección solo trae `asentamientos[0]` cuando
@@ -638,9 +777,72 @@ function renderPanelAsent(): void {
   });
   if (panelAsentAbierto === null) { panel.hidden = true; panel.innerHTML = ''; return; }
   panel.hidden = false;
-  panel.innerHTML = panelAsentAbierto === 'faccion'
-    ? renderPestanaFaccion(proyeccion, escaparHtml)
-    : `<span class="faction-kicker">Ejército</span><p class="mapa-lista-vacia">Sin comandos militares cableados todavía (composición de columna, reclutamiento, movilización) — ver docs/Features_Pendientes.md.</p>`;
+  if (panelAsentAbierto === 'ejercito') {
+    panel.innerHTML = `<span class="faction-kicker">Ejército</span><p class="mapa-lista-vacia">Sin comandos militares cableados todavía (composición de columna, reclutamiento, movilización) — ver docs/Features_Pendientes.md.</p>`;
+    return;
+  }
+  panel.innerHTML = renderPestanaFaccion(proyeccion, escaparHtml) + renderCargosAsentamiento(proyeccion.asentamientos[0], proyeccion);
+  cablearCargosAsentamiento(panel, proyeccion.asentamientos[0]);
+}
+
+/** Sección "Cargos" del panel de Facción, acotada al asentamiento que se pisa. Solo aparecen los cargos que
+ * el jugador PUEDE asignar aquí: Gobernador si eres residente; los otros cuatro si eres el Gobernador
+ * (Doc 2.2, `asignarCargoLocal` en el backend — el Rey NO tiene autoridad directa sobre cargos locales). */
+function renderCargosAsentamiento(asentamiento: Asentamiento | undefined, proyeccion: ProyeccionJugador): string {
+  if (!asentamiento) return '';
+  const soyGobernador = asentamiento.cargos?.gobernadorId === proyeccion.jugadorId;
+  const soyResidente = esResidente(asentamiento, proyeccion.jugadorId);
+  if (!soyGobernador && !soyResidente) return '';
+
+  const faccion = proyeccion.facciones.find((f) => f.id === proyeccion.faccionId);
+  const ciudadanos = faccion?.ciudadanosIds ?? [];
+  const cargos = (
+    [
+      ['gobernadorId', 'Gobernador', soyResidente],
+      ['maestroObrasId', 'Maestro de Obras', soyGobernador],
+      ['tesoreroId', 'Tesorero', soyGobernador],
+      ['generalId', 'General', soyGobernador],
+      ['sacerdoteId', 'Sacerdote', soyGobernador],
+    ] as const
+  ).filter(([, , puede]) => puede);
+  if (cargos.length === 0) return '';
+
+  return `
+    <section class="asent-cargos">
+      <span class="faction-kicker">Cargos de ${escaparHtml(asentamiento.nombre ?? asentamiento.id)}</span>
+      ${cargos.map(([clave, nombre]) => {
+        const actual = asentamiento.cargos?.[clave] ?? null;
+        return `<div class="asent-cargo" data-cargo="${clave.replace('Id', '')}">
+          <span>${nombre}</span>
+          <select class="asent-cargo-sel">
+            <option value="">— vacante —</option>
+            ${ciudadanos.map((id) => `<option value="${escaparHtml(id)}"${id === actual ? ' selected' : ''}>${escaparHtml(id)}</option>`).join('')}
+          </select>
+          <button class="btn-secondary asent-cargo-btn" type="button">Asignar</button>
+        </div>`;
+      }).join('')}
+      <p id="asent-cargo-error" class="faction-error" role="alert"></p>
+    </section>`;
+}
+
+function cablearCargosAsentamiento(panel: HTMLElement, asentamiento: Asentamiento | undefined): void {
+  if (!asentamiento) return;
+  panel.querySelectorAll<HTMLElement>('.asent-cargo').forEach((fila) => {
+    const cargo = fila.dataset.cargo;
+    const select = fila.querySelector<HTMLSelectElement>('.asent-cargo-sel');
+    fila.querySelector<HTMLButtonElement>('.asent-cargo-btn')?.addEventListener('click', async () => {
+      const jugadorId = select?.value;
+      if (!cargo || !jugadorId) return;
+      try {
+        const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'asignarCargoLocal', { asentamientoId: asentamiento.id, cargo, jugadorId });
+        if (!respuesta.resultado.ok) throw new ApiError(409, respuesta.resultado.codigoError ?? 'No se pudo asignar el cargo.');
+        await refrescarDatosJuego();
+      } catch (err) {
+        const error = panel.querySelector<HTMLElement>('#asent-cargo-error');
+        if (error) error.textContent = mensajeError(err);
+      }
+    });
+  });
 }
 
 /** Pantalla ASENTAMIENTO (rediseño estilo estrategia): barra superior (nombre + nivel + acciones), el mapa

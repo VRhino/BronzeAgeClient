@@ -1728,9 +1728,9 @@ pre#proyeccion {
 
 .asent-edif-item {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   align-items: center;
-  gap: 4px 10px;
+  gap: 4px 8px;
   padding: 8px 10px 8px 12px;
   border-left: 3px solid var(--swatch, #888);
   border-radius: var(--radius-sm);
@@ -1763,6 +1763,200 @@ pre#proyeccion {
   margin-top: 12px;
   font-size: 0.76rem;
   color: var(--text-muted);
+}
+
+/* --- Panel de gestión de la columna derecha: tabs + secciones --- */
+.asent-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+.asent-tab {
+  flex: 1;
+  padding: 6px 4px;
+  border: 1px solid var(--bronce-osc);
+  border-radius: 2px;
+  background: linear-gradient(180deg, #241c14, #17110c);
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+.asent-tab.activo {
+  border-color: var(--oro);
+  color: var(--oro-claro);
+  background: linear-gradient(180deg, rgba(169, 121, 63, 0.3), rgba(107, 74, 41, 0.2));
+}
+.asent-lado-cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.asent-lado-nota {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+.asent-aviso-ocupacion {
+  color: var(--terracota);
+}
+
+.asent-ficha-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.asent-ficha-grid div {
+  display: flex;
+  flex-direction: column;
+  padding: 7px 9px;
+  border: 1px solid var(--bronce-osc);
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.25);
+}
+.asent-ficha-grid span {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+.asent-ficha-grid strong {
+  color: var(--oro-claro);
+  font-size: 0.95rem;
+}
+
+.asent-medidor {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+}
+.asent-medidor-track {
+  height: 6px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--bronce-osc);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.asent-medidor-track span {
+  display: block;
+  height: 100%;
+  background: var(--oro);
+}
+.asent-medidor strong {
+  color: var(--oro-claro);
+}
+
+.asent-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--pergamino);
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.asent-anadir {
+  display: flex;
+  gap: 6px;
+}
+.asent-anadir select {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 6px;
+  background: #12100b;
+  border: 1px solid var(--bronce-osc);
+  border-radius: 2px;
+  color: var(--pergamino);
+  font-size: 0.8rem;
+}
+.asent-anadir button {
+  padding: 5px 10px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 0.78rem;
+}
+
+.asent-edif-mejora,
+.asent-cola-acciones button {
+  border: 1px solid var(--bronce-osc);
+  border-radius: 2px;
+  background: linear-gradient(180deg, #241c14, #17110c);
+  color: var(--oro);
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: 0.78rem;
+  line-height: 1;
+}
+.asent-edif-mejora:hover,
+.asent-cola-acciones button:hover {
+  border-color: var(--oro);
+  color: var(--oro-claro);
+}
+
+.asent-cola-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.asent-cola-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 7px 9px;
+  border: 1px solid rgba(107, 74, 41, 0.5);
+  border-left: 3px solid var(--swatch, #8c6239);
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.22);
+}
+.asent-cola-pos {
+  font-family: var(--fuente-titulo);
+  color: var(--oro);
+  font-size: 0.9rem;
+}
+.asent-cola-item .asent-edif-nota {
+  grid-column: 2;
+  font-size: 0.7rem;
+}
+.asent-cola-acciones {
+  grid-row: 1 / span 2;
+  grid-column: 3;
+  display: flex;
+  gap: 3px;
+}
+
+/* --- Cargos del asentamiento (en el panel de Facción) --- */
+.asent-cargos {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--bronce-osc);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.asent-cargo {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.asent-cargo-sel {
+  padding: 5px 6px;
+  background: #12100b;
+  border: 1px solid var(--bronce-osc);
+  border-radius: 2px;
+  color: var(--pergamino);
+  font-size: 0.78rem;
+}
+.asent-cargo-btn {
+  padding: 5px 10px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 0.76rem;
 }
 
 /* Panel flotante Facción / Ejército — sobre el mapa, izquierda. */
