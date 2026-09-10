@@ -13,7 +13,7 @@ import {
 } from './apiCliente';
 import { edificioBajoCursor, pintarAsentamiento, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
 import { EDIFICIO_COLOR, EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from './paletas';
-import type { Asentamiento, Edificio } from './tiposDominio';
+import type { Asentamiento, Edificio, ProduccionItem } from './tiposDominio';
 import type { MapaGenerado } from './terreno';
 import { estadoCliente, TIPS_FUNDACION } from './ui/estadoCliente';
 import { actualizarTip, resumenRecursosFundacion } from './ui/pestanaAsentamientos';
@@ -557,7 +557,7 @@ async function salirAlMundo(): Promise<void> {
 // Solo con lo que ya trae la proyección. Las acciones sin dato previo (mejorar, añadir) se mandan y se
 // muestra el error del backend si lo rechaza. Ver docs/Panel_Asentamiento.md.
 
-type SeccionAsent = 'resumen' | 'edificios' | 'cola';
+type SeccionAsent = 'resumen' | 'edificios' | 'produccion' | 'cola';
 let seccionAsent: SeccionAsent = 'edificios';
 
 /** Edificios que un Gobernador / Maestro de Obras puede añadir a mano (el backend gatea nivel, únicos y
@@ -573,10 +573,6 @@ function cargoConstructor(asentamiento: Asentamiento, jugadorId: string): 'gober
   if (asentamiento.cargos?.gobernadorId === jugadorId) return 'gobernador';
   if (asentamiento.cargos?.maestroObrasId === jugadorId) return 'maestroObras';
   return null;
-}
-
-function esResidente(asentamiento: Asentamiento, jugadorId: string): boolean {
-  return Boolean(asentamiento.jugadoresFundadoresIds?.includes(jugadorId) || asentamiento.casasCompradas?.includes(jugadorId));
 }
 
 /** "3 min" / "45 s" que faltan para un instante de mundo. */
@@ -612,8 +608,9 @@ function renderPanelEdificios(): void {
   const cargo = cargoConstructor(asentamiento, proyeccion.jugadorId);
   const puedeConstruir = cargo !== null;
 
-  const tabs = (['resumen', 'edificios', 'cola'] as const)
-    .map((s) => `<button class="asent-tab${s === seccionAsent ? ' activo' : ''}" type="button" data-seccion="${s}">${s === 'resumen' ? 'Resumen' : s === 'edificios' ? 'Edificios' : 'Cola'}</button>`)
+  const ETIQUETA_SECCION: Record<SeccionAsent, string> = { resumen: 'Resumen', edificios: 'Edificios', produccion: 'Producción', cola: 'Cola' };
+  const tabs = (['resumen', 'edificios', 'produccion', 'cola'] as const)
+    .map((s) => `<button class="asent-tab${s === seccionAsent ? ' activo' : ''}" type="button" data-seccion="${s}">${ETIQUETA_SECCION[s]}</button>`)
     .join('');
 
   contenedor.innerHTML = `
@@ -623,9 +620,11 @@ function renderPanelEdificios(): void {
         ? seccionResumen(asentamiento)
         : seccionAsent === 'edificios'
           ? seccionEdificios(asentamiento, cargo)
-          : seccionCola(edificios, cargo)
+          : seccionAsent === 'produccion'
+            ? seccionProduccion(proyeccion.produccionDeAsentamiento)
+            : seccionCola(edificios, cargo)
     }</div>
-    ${!puedeConstruir && seccionAsent !== 'resumen' ? '<p class="asent-lado-nota">Necesitas ser Gobernador o Maestro de Obras para gestionar la construcción.</p>' : ''}
+    ${!puedeConstruir && (seccionAsent === 'edificios' || seccionAsent === 'cola') ? '<p class="asent-lado-nota">Necesitas ser Gobernador o Maestro de Obras para gestionar la construcción.</p>' : ''}
     <p id="asent-lado-error" class="faction-error" role="alert"></p>`;
 
   contenedor.querySelectorAll<HTMLButtonElement>('.asent-tab').forEach((boton) => {
@@ -695,6 +694,27 @@ function seccionEdificios(a: Asentamiento, cargo: 'gobernador' | 'maestroObras' 
     ${anadir}
     <div class="asent-edif-lista">${filas || '<p class="mapa-lista-vacia">Sin edificios.</p>'}</div>
     ${enRegion > 0 ? `<p class="asent-edif-region">+ ${enRegion} en la región (minas, canteras)</p>` : ''}`;
+}
+
+/** Solo lectura: producción por minuto de mundo de cada edificio, tal como la calcula el servidor
+ * (`ProyeccionJugador.produccionDeAsentamiento` — este cliente no tiene motor para calcularla). */
+function seccionProduccion(items: ProduccionItem[] | undefined): string {
+  const fmt = (n: number) => (n >= 10 ? Math.round(n).toString() : n.toFixed(1));
+  const filas = (items ?? [])
+    .filter((it) => it.cantidadPorMinuto > 0)
+    .sort((a, b) => b.cantidadPorMinuto - a.cantidadPorMinuto)
+    .map(
+      (it) => `<div class="asent-edif-item" style="--swatch:${EDIFICIO_COLOR[it.tipo] ?? '#888'}">
+        <span class="asent-edif-nombre">${escaparHtml(EDIFICIO_NOMBRE[it.tipo] ?? it.tipo)}</span>
+        <span class="asent-edif-meta">${it.activos > 1 ? `×${it.activos}` : ''}</span>
+        <span class="asent-edif-nota">${RECURSO_ICONO[it.recurso] ?? '📦'} ${escaparHtml(RECURSO_NOMBRE[it.recurso] ?? it.recurso)} · ${fmt(it.cantidadPorMinuto)}/min</span>
+      </div>`
+    )
+    .join('');
+  return `
+    <div class="asent-lado-cabecera"><span class="faction-kicker">Producción</span></div>
+    <div class="asent-edif-lista">${filas || '<p class="mapa-lista-vacia">Sin edificios productores activos.</p>'}</div>
+    <p class="asent-lado-nota">Por minuto de mundo, con la mano de obra y los yacimientos actuales.</p>`;
 }
 
 function seccionCola(edificios: Edificio[], cargo: 'gobernador' | 'maestroObras' | null): string {
@@ -786,19 +806,19 @@ function renderPanelAsent(): void {
 }
 
 /** Sección "Cargos" del panel de Facción, acotada al asentamiento que se pisa. Solo aparecen los cargos que
- * el jugador PUEDE asignar aquí: Gobernador si eres residente; los otros cuatro si eres el Gobernador
- * (Doc 2.2, `asignarCargoLocal` en el backend — el Rey NO tiene autoridad directa sobre cargos locales). */
+ * el jugador PUEDE asignar aquí: Gobernador si eres el REY de la Facción; los otros cuatro si eres el
+ * Gobernador (Doc 2.2, `asignarCargoLocal` en el backend, 2026-09-10). */
 function renderCargosAsentamiento(asentamiento: Asentamiento | undefined, proyeccion: ProyeccionJugador): string {
   if (!asentamiento) return '';
-  const soyGobernador = asentamiento.cargos?.gobernadorId === proyeccion.jugadorId;
-  const soyResidente = esResidente(asentamiento, proyeccion.jugadorId);
-  if (!soyGobernador && !soyResidente) return '';
-
   const faccion = proyeccion.facciones.find((f) => f.id === proyeccion.faccionId);
+  const soyGobernador = asentamiento.cargos?.gobernadorId === proyeccion.jugadorId;
+  const soyRey = faccion?.reyId === proyeccion.jugadorId;
+  if (!soyGobernador && !soyRey) return '';
+
   const ciudadanos = faccion?.ciudadanosIds ?? [];
   const cargos = (
     [
-      ['gobernadorId', 'Gobernador', soyResidente],
+      ['gobernadorId', 'Gobernador', soyRey],
       ['maestroObrasId', 'Maestro de Obras', soyGobernador],
       ['tesoreroId', 'Tesorero', soyGobernador],
       ['generalId', 'General', soyGobernador],

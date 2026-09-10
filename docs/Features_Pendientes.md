@@ -69,8 +69,9 @@ interno sale un **tooltip** con nombre, nivel y estado (`edificioBajoCursor` en 
 `cablearTooltipEdificios` en `src/main.ts`). La columna derecha lista los edificios agrupados por tipo
 (`renderPanelEdificios`).
 **Falta:**
-- La **economía por edificio** en el tooltip (producción/consumo por minuto) — no viaja en la proyección,
-  el `cliente/` admin la calcula con su propio store.
+- La **producción por edificio** ya viaja (`proyeccion.produccionDeAsentamiento`, 2026-09-10) y la muestra
+  la pestaña **Producción** del panel. Falta el **consumo** por edificio y llevar la producción al tooltip
+  de cada edificio.
 - **Clic en un edificio** → cuadro con su info + acciones (mejorar con su coste; pausar/reanudar;
   prioridad); y clic en una fila de la lista → resaltarlo/centrarlo en el mapa.
 - **Escala de la vista**: `pintarAsentamiento` usa `radioMapa = 60` hard-codeado; el canon es

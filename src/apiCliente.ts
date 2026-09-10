@@ -1,7 +1,7 @@
 // Wrapper `fetch` sobre la superficie `/jugador/*` y `/sesiones` del backend (Fase C3) — sin lógica de negocio, solo I/O.
 import type { MapaGenerado } from './terreno';
 
-import type { AcuerdoTrueque, Asentamiento, AsentamientoAvistado, AsentamientoConocido, CaminoComercial, CampamentoBandido, Caravana, Ejercito, EjercitoAvistado, Faccion, NieblaProyectada, OrdenMercado, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
+import type { AcuerdoTrueque, Asentamiento, AsentamientoAvistado, AsentamientoConocido, CaminoComercial, CampamentoBandido, Caravana, Ejercito, EjercitoAvistado, Faccion, NieblaProyectada, OrdenMercado, ProduccionItem, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
 
 export class ApiError extends Error {
   constructor(
@@ -58,6 +58,10 @@ export interface ProyeccionJugador {
   campamentosBandidos: CampamentoBandido[];
   zonasFusionadas: ZonaFaccion[];
   trazadoPorAsentamiento: Record<string, TrazadoAsentamiento>;
+  /** Producción por minuto de mundo de cada edificio de la plaza que pisas (`asentamientos[0]`) — ausente si
+   * estás en el mundo. La calcula el servidor (entrada privilegiada: bosques, yacimientos), este cliente no
+   * puede. */
+  produccionDeAsentamiento?: ProduccionItem[];
   [campo: string]: unknown;
 }
 

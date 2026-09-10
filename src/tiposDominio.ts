@@ -316,3 +316,13 @@ export interface TrazadoAsentamiento {
   huellas: Record<string, RectanguloLocal>;
   murallas: TrazadoMuralla[];
 }
+
+/** Producción por minuto de mundo de un tipo de edificio productor/transformador — la calcula el servidor
+ * (`produccionPorMinuto`, entrada privilegiada) y viaja en `ProyeccionJugador.produccionDeAsentamiento` solo
+ * para la plaza que pisas. */
+export interface ProduccionItem {
+  tipo: string;
+  recurso: string;
+  activos: number;
+  cantidadPorMinuto: number;
+}

@@ -74,8 +74,10 @@ el cliente (como se hace con worldgen). Decisión pendiente.
   la Facción** (para `reservaDinamicaConstruccion`) — el cliente no la tiene.
 - **`progresoNivelAsentamiento(asent)`** → qué falta para subir de nivel (pesants/artesanos requeridos,
   edificios `N de M` o `todos`, lista de los que faltan).
-- **`produccionPorMinuto(asent, mapa, zona)`** y consumo → tabla producción/consumo por edificio/recurso
-  (lo pide `notas.md`, "Pestaña Producción"). Necesita el mapa y la zona.
+- **`produccionPorMinuto(asent, mapa, zona)`** → **YA VIAJA** (2026-09-10) como
+  `ProyeccionJugador.produccionDeAsentamiento` (`ProduccionItem[]`), solo para la plaza que pisas. La
+  calcula el servidor (`RunnerDePartida.produccionDeAsentamiento`, entrada privilegiada) y la muestra la
+  pestaña **Producción** del panel. El **consumo** por edificio sigue sin viajar.
 - **`poblacionDisponibleParaReclutar(asent, origen)`** y **`TROPAS_RECLUTABLES`** (catálogo con
   `nivelRequerido`, `costoEquipo`, `edificio`, `poderBase`, `velocidad`, `escalon`) → qué tropas se
   pueden reclutar ahora y qué falta para desbloquear la siguiente.
@@ -91,8 +93,8 @@ La mayoría de acciones exigen **residir** + **tener el cargo** (`residenteConCa
 
 | Acción | Cargo(s) que la autorizan |
 |---|---|
-| designar Gobernador | cualquier **residente** (Fase 0: designación directa) |
-| designar los demás cargos locales | **Gobernador** vigente |
+| designar Gobernador | **el Rey de la Facción** (2026-09-10 — antes: cualquier residente). No exige residir ni estar presente |
+| designar los demás cargos locales | **Gobernador** vigente (residente + presente) |
 | añadir a cola / quitar / reordenar / mejorar edificio / comprometer-mejorar recinto | **Gobernador** o **Maestro de Obras** (`CARGO_CONSTRUCTOR`) |
 | abandonar recinto de muralla | solo **Gobernador** |
 | pausar auto-construcción | **Gobernador** o **Maestro de Obras** |
@@ -193,24 +195,17 @@ Facción.
 
 | Comando | `params` | Quién |
 |---|---|---|
-| `asignarRey` | `faccionId, jugadorId` | 1ª vez: cualquier ciudadano; luego solo el Rey (traspaso) |
+| `asignarRey` | `faccionId, jugadorId` | el Rey vigente (traspaso). Toda Facción nace con Rey (su creador), así que "trono vacío" solo ocurre tras conquista/fusión |
 | `asignarEmbajador` | `faccionId, jugadorId` | solo el Rey |
-| `asignarCargoLocal` | `asentamientoId, cargo, jugadorId` | Gobernador: cualquier residente · resto: el Gobernador vigente |
+| `asignarCargoLocal` (Gobernador) | `asentamientoId, cargo: 'gobernador', jugadorId` | **el Rey de la Facción** (2026-09-10). No exige residir ni estar presente |
+| `asignarCargoLocal` (resto) | `asentamientoId, cargo, jugadorId` | el **Gobernador** vigente, residente y presente |
 
-**Ojo con el alcance**: `asignarCargoLocal` lo autoriza el **Gobernador** del asentamiento, no el Rey
-(salvo que el Rey sea además residente/Gobernador de esa plaza). El backend **no** da hoy al Rey
-autoridad directa sobre los cargos locales de todas sus plazas. Opciones:
-1. En el panel de Facción, mostrar los cargos de cada asentamiento **propio que el jugador ve** y
-   permitir editar solo donde el jugador tenga permiso (Gobernador de esa plaza, o residente para
-   nombrar Gobernador). Es lo que el backend permite hoy.
-2. Si se quiere que el Rey nombre cargos en cualquier plaza, es un cambio de `autorizacion.ts`
-   (`asignarCargoLocal.condicionJugador` → permitir también `esReyDe`). **Decisión de diseño del
-   backend.**
-
-Además, el panel de Facción solo ve `proyeccion.asentamientos[0]` (el que se pisa) + los avistados
-redactados (que traen `cargos` solo si eres ciudadano). Para editar cargos de OTRA plaza propia hay que
-estar dentro de ella, o que la proyección mande la lista completa de plazas de la Facción con sus cargos
-(hoy no lo hace — ver `Features_Pendientes.md` §6.2).
+**Alcance (2026-09-10, resuelto)**: designar Gobernador es potestad exclusiva del **Rey** — es un acto de
+nivel Facción, como designar Embajador. El panel de Facción muestra la sección "Cargos" acotada a
+`proyeccion.asentamientos[0]` (el asentamiento que se pisa): la fila de Gobernador aparece **si eres el
+Rey** (`faccion.reyId === proyeccion.jugadorId`); las otras cuatro, si eres el Gobernador de esa plaza.
+Editar cargos de OTRA plaza propia sin estar dentro sigue necesitando que la proyección mande la lista
+completa de plazas con sus cargos (hoy no lo hace — `Features_Pendientes.md` §6.2).
 
 ## 11. Acciones — residencia y presencia
 
@@ -232,11 +227,11 @@ La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, es
 3. **Cola** ✅ — obras en curso + en cola ordenadas por `prioridad`, con cuenta atrás (`completaEn`),
    reordenar (`moverEnCola`) y quitar (`quitarDeCola`, solo `en_cola`).
 4. **Cargos** ✅ — en el panel de **Facción**, acotado al asentamiento que se pisa (`asignarCargoLocal`):
-   Gobernador si eres residente; los otros cuatro si eres el Gobernador. El Rey NO tiene autoridad
-   directa (§10).
+   Gobernador si eres el **Rey** de la Facción; los otros cuatro si eres el Gobernador de esa plaza (§10).
 
 Pendiente (secciones nuevas):
-5. **Producción** — tabla producción/consumo por edificio y recurso (necesita datos de §2).
+5. **Producción** ✅ — pestaña con la producción/min de cada edificio (`proyeccion.produccionDeAsentamiento`,
+   la calcula el servidor). *Falta*: el consumo por edificio (no viaja).
 6. **Tropas** — guarnición (`escuadrones`), reclutar, movilizar.
 7. **Políticas** — solo si tienes cargo: activas + activables.
 8. **Puerta** — solo Gobernador: política de acceso + vetos.
