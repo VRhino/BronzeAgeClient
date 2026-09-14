@@ -12,6 +12,7 @@ olvidarlo. Cada entrada dice **cómo está hoy** y **qué falta**.
 
 ## Índice
 
+0. [Héroe](#0-héroe) — creación y pantalla del héroe
 1. [Presencia del jugador y movimiento](#1-presencia-del-jugador-y-movimiento)
 2. [Tiempo real](#2-tiempo-real)
 3. [Pantalla de asentamiento](#3-pantalla-de-asentamiento)
@@ -24,14 +25,82 @@ olvidarlo. Cada entrada dice **cómo está hoy** y **qué falta**.
 
 ---
 
+## 0. Héroe
+
+### 0.1 Creación del héroe
+
+**Hoy:** desde el modelo de Héroe (backend `BronzeAgeFase0@6281527`, rama `heroe-dominio`) unirse a una
+partida ya no basta para jugar: la membresía necesita un héroe. Mientras no lo tenga, la proyección llega como
+`{ gameId, instante, version, mapaId, sinHeroe: true }` y cualquier comando que no sea `crearHeroe` es `403`
+(`API_CONTRACT.md`, «Partida sin héroe»).
+
+El **cableado está hecho**:
+- `refrescarDatosJuego` detecta `sinHeroe` y lo guarda en `estadoCliente.sinHeroe`.
+- El router monta la pantalla `heroe` (`montarHeroe` en `src/main.ts`): es la única a la que se llega sin
+  héroe, antes incluso que `#/legacy`.
+- `crearHeroe(params: ParamsCrearHeroe)` manda el comando y refresca. Con el héroe creado, el router sigue solo:
+  Facción si aún no tiene, luego Mapa, porque el héroe aparece en el mundo con su propia columna.
+
+La pantalla es **provisional**: solo pide el nombre. Clase, género y aspecto van fijos (`HEROE_PROVISIONAL`: clase
+`Spear`, `masculino`, piezas de avatar vacías), que es lo mismo que llevan los héroes bot del backend.
+
+**Falta:** la pantalla de creación de verdad. `crearHeroe` en el doc 02 §4.2 de `Docs/Coordinacion/` del
+backend. La nueva pantalla solo tiene que llamar a `crearHeroe` con los cuatro campos:
+- **Nombre** (`displayName`): ya está.
+- **Clase** (`classDefinitionId`): el catálogo de clases es de Conquest. BronzeAge lo guarda sin interpretarlo y
+  **no lo publica**; hoy solo existe `Spear`. Falta decidir de dónde lo lee este cliente: una tabla en
+  `GET /v1/balance`, o una copia versionada como el catálogo de tropas del contrato (`src/contratos/v1/` del
+  backend). Ojo: el doc 02 lista «clase inexistente» como rechazo, pero el backend todavía no lo comprueba.
+- **Género** (`genero`: `masculino` | `femenino`).
+- **Aspecto** (`avatar`: `cabezaId`, `peloId`, `barbaId`, `cejasId`): son ids de piezas del catálogo visual de
+  Conquest. Tiene el mismo problema que la clase: sin catálogo publicado no hay nada que ofrecer, ni con qué
+  dibujar una vista previa.
+- **Errores legibles** para `heroe.nombre_vacio` y `heroe.ya_existe` (ver §7).
+
+Fuera de esta pantalla, el nombre del héroe ya se usa (2026-09-14, `nombreDeHeroe` en `src/main.ts`): iniciales
+del menú de esquina, cabecera del panel de Facción y selector de cargos, que enseña el nombre de todos los
+compañeros de Facción (`nombresDeCompaneros`, se les vea o no).
+
+### 0.2 Pantalla del héroe: ficha, atributos, escuadras, loadouts y guarnición
+
+**Hoy (cliente 0.5.0):** el **panel Héroe** (`src/ui/panelHeroe.ts`) se abre desde el riel del Mapa (🛡) y desde
+la barra del Asentamiento, con tres pestañas. Las reglas son las del canon del backend: Doc 5.16 (el Héroe),
+5.12.4 y 5.15.3 (defensa y guarnición).
+- **Ficha:** clase, dónde está, nivel, experiencia hacia el siguiente, Liderazgo, monedas y los cuatro atributos.
+  Con puntos sin gastar aparece un campo por atributo y «Repartir puntos» (`repartirPuntos`); hoy ningún nivel
+  da puntos (CQ-001), así que no sale.
+- **Escuadras:** cada escuadra con hombres, nivel, moral, coste de Liderazgo, dónde está y si **defiende** (la
+  guarnición, y el loadout activo mientras estás dentro de tu residencia). Arriba, la guarnición ocupada frente al
+  cupo; «A la guarnición» / «Retirar» (`asignarGuarnicion`, `retirarGuarnicion`), apagado si no cabe.
+- **Loadouts:** lista con su Liderazgo frente al tuyo; activar, editar, borrar y crear (`guardarLoadout`,
+  `borrarLoadout`). El editor suma el Liderazgo en vivo con el `costeLiderazgo` de cada escuadra y apaga Guardar
+  si no cabe o no tiene nombre. Los perks se conservan tal cual (hoy siempre `[]`).
+
+El sondeo de 3 s no repinta el panel si nada cambió, ni mientras hay un loadout a medio editar.
+
+**Falta:**
+1. **Equipo e inventario.** `equipamiento` (6 huecos) e `inventario` llegan vacíos y no hay `equipar` hasta que
+   Conquest publique su catálogo de objetos (CQ-004). Con él, una pestaña Equipo.
+2. **Perks.** Elegirlos en el editor de loadout cuando exista el catálogo (CQ-004).
+3. **Héroes ajenos.** Al seleccionar una columna, propia o avistada (`ejercitosAvistados[].heroeIds`), la ficha
+   pública de quien va en ella (`heroesVisibles`: nombre, clase, nivel, escuadras que lleva y equipo puesto). Hoy
+   el mapa solo selecciona asentamientos (§1.4).
+4. **Salir al mundo** (§1.1). La pantalla de equipamiento puede proponer el loadout activo como selección.
+5. **Errores legibles** (§7). El backend solo devuelve `heroe.invalido`, sin detalle; el panel evita de antemano
+   los casos corrientes (no cabe en el Liderazgo o en el cupo, nombre vacío), y lo demás sale como código.
+6. **Probarlo con escuadras de verdad.** Verificado en vivo con un héroe sin escuadras (ficha, loadouts). Las filas
+   de la pestaña Escuadras y la guarnición no se han visto aún con datos reales: hace falta una plaza con
+   Barracón o Galería de tiro y tropa reclutada.
+
 ## 1. Presencia del jugador y movimiento
 
 ### 1.1 Pantalla de equipamiento para `salirAlMundo`
 **Hoy:** el botón "Salir al mundo" de la barra del asentamiento llama a `salirAlMundo` con
 `escuadronIds: []` y `carga: {}` — salida "en seco" (`montarAsentamiento` / `salirAlMundo` en
 `src/main.ts`).
-**Falta:** la pantalla de equipamiento (Doc 1.10.2): elegir qué escuadrones de la guarnición salen y qué
-carga el carro del almacén, con el roster y el almacén delante.
+**Falta:** la pantalla de equipamiento (Doc 1.10.2): elegir qué escuadras de tu campamento salen
+(`heroe.escuadrones`; el loadout activo sirve de propuesta, §0.2) y qué carga el carro del almacén, con el roster
+y el almacén delante.
 
 ### 1.2 `salirDeAsentamiento` desde una plaza ajena
 **Hoy:** solo se contempla salir de la **propia residencia** (`salirAlMundo`).
@@ -129,10 +198,10 @@ sondeo (§2) y pierde el texto de error.
 ## 8. Backend
 
 ### 8.1 Reconocimiento compartido de un ciudadano con columna huérfana
-**Hoy:** la columna de aparición de un jugador nace `faccionId: ''` (`columnaDeAparicion` en
+**Hoy:** la columna de aparición de un héroe nace `faccionId: ''` (`columnaDeAparicion` en
 `engine/ubicacion.ts`). Si el jugador ya era ciudadano —o se hace ciudadano después—, su columna **no** se
 re‑marca con la bandera. `grabarLoVisto` la ignora (filtra por `faccionId`), así que su reconocimiento
-solo lo ve él vía `Jugador.exploracionPersonal`.
+solo lo ve él vía `Heroe.exploracionPersonal`.
 **Parche aplicado:** la proyección funde `exploracionPersonal` con la memoria de la facción, así que el
 jugador **sí** ve su propio rastro (`src/session/proyecciones/jugador.ts`).
 **Falta:** que ese reconocimiento llegue también a los **compañeros de facción** — o re‑marcando la

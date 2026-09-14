@@ -3,6 +3,84 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.5.0] — 2026-09-14 · panel del héroe · sync con `BronzeAgeFase0@52498a2` (rama `heroe-dominio`)
+
+### Añadido
+- **Panel Héroe** (`src/ui/panelHeroe.ts`), en el riel del Mapa (🛡) y en la barra del Asentamiento, con tres
+  pestañas:
+  - **Ficha**: clase, dónde está, nivel, experiencia, Liderazgo, monedas y atributos; con puntos sin gastar,
+    reparte (`repartirPuntos`).
+  - **Escuadras**: cada una con hombres, nivel, moral, coste de Liderazgo, dónde está y si defiende; guarnición
+    ocupada frente al cupo, y `asignarGuarnicion`/`retirarGuarnicion` (el botón se apaga si no cabe).
+  - **Loadouts**: lista con su Liderazgo; activar, editar, borrar y crear (`guardarLoadout`, `borrarLoadout`),
+    con la suma de Liderazgo en vivo y Guardar apagado si no cabe o no tiene nombre.
+- El sondeo de 3 s no repinta el panel si nada cambió, ni mientras hay un loadout a medio editar.
+- `aplicarYRefrescar` en `src/main.ts`: lo mismo que `ejecutarYRefrescar` para una petición ya lanzada.
+
+### Documentación
+- `COMANDOS.md`: los cinco comandos del héroe cableados (21 de 74). `Features_Pendientes.md` §0.2 queda en lo
+  que falta (equipo, perks, héroes ajenos). README, `API_CONTRACT.md`, `Analisis_Brecha_Backend.md`.
+
+## [0.4.0] — 2026-09-14 · escuadras en el héroe · sync con `BronzeAgeFase0@6d43688` (rama `heroe-dominio`)
+
+Fases 2 y 3 del modelo de Héroe en el backend: las escuadras viven en el héroe, y tu héroe viaja completo en la
+proyección. Sigue necesitando el backend de esa rama.
+
+### Cambiado
+- `Ejercito.escuadrones` → `escuadronIds` (solo ids), y `participantes` pasa a obligatorio: los rombos de una
+  columna y "tu columna" se leen solo de `participantes`. Fuera `EscuadronEnCampana` y `Asentamiento.escuadrones`
+  (la guarnición son ahora escuadras del héroe marcadas `enGuarnicion`).
+- Las iniciales del menú de esquina y la cabecera del panel de Facción usan el nombre del héroe, no el nick. El
+  selector de cargos enseña el nombre de cada compañero de Facción (`nombreDeHeroe`).
+
+### Añadido
+- `ProyeccionJugador.heroe` (`HeroeProyectado`, con `costeLiderazgo` en cada escuadra y `guarnicionOcupada`),
+  `heroesVisibles` (`HeroePublico`), `nombresDeCompaneros` y `EjercitoAvistado.heroeIds`, y los tipos `Escuadron`,
+  `Loadout`, `ItemInstancia`, `AtributoHeroe` y `SlotEquipo`.
+- Wrappers tipados de `repartirPuntos`, `guardarLoadout`, `borrarLoadout`, `asignarGuarnicion` y
+  `retirarGuarnicion` en `apiCliente.ts`, sin pantalla todavía.
+
+### Backend que lo habilita
+- Catálogo 70 → 75 (74 de jugador). Guarnición con cupo por residente; una plaza la defienden su guarnición y el
+  loadout activo de los residentes que están dentro.
+
+### Documentación
+- `docs/Features_Pendientes.md` §0.2: la pantalla del héroe (ficha, atributos, escuadras, loadouts, guarnición,
+  equipo y héroes ajenos).
+- `docs/COMANDOS.md`, `docs/API_CONTRACT.md`, `docs/Analisis_Brecha_Backend.md`, `docs/Panel_Asentamiento.md` y
+  README.
+
+## [0.3.0] — 2026-09-14 · héroe · sync con `BronzeAgeFase0@6281527` (rama `heroe-dominio`)
+
+El backend pasa a jugar con un **Héroe** (fase 1 del modelo: doc 01 §12 y doc 02 §4 de `Docs/Coordinacion/`).
+**Necesita el backend de esa rama**: contra `main`, la proyección todavía trae `jugadorId`.
+
+### Cambiado
+- `jugadorId` → `heroeId` en `ProyeccionJugador`, en los tipos locales (dueño de escuadrón, `participantes` de
+  columna, `jugadoresFundadoresIds` → `heroesFundadoresIds`) y en los `params` que se mandan (`marcharA`,
+  `entrarEnAsentamiento`, `salirAlMundo`, `asignarCargoLocal`). Cargos, Rey y columna propia se comparan contra
+  `proyeccion.heroeId`.
+- `ejecutarAccionMuralla` → `ejecutarYRefrescar`: la usan la muralla y el héroe.
+
+### Añadido
+- La respuesta `sinHeroe` de la proyección (`PartidaSinHeroe` en `apiCliente.ts`, `estadoCliente.sinHeroe`) y la
+  pantalla **Héroe** en el router, que con `sinHeroe` es la única. `crearHeroe(params: ParamsCrearHeroe)` manda
+  el comando y refresca.
+- Pantalla **provisional**: solo el nombre; clase `Spear`, género y avatar van fijos (`HEROE_PROVISIONAL`). La
+  definitiva está descrita en `docs/Features_Pendientes.md` §0.
+
+### Backend que lo habilita
+- `crearHeroe`: el héroe aparece en el mundo con su columna. Sin héroe, la proyección es
+  `{ gameId, instante, version, mapaId, sinHeroe: true }` y cualquier comando salvo `crearHeroe` es `403`.
+- Catálogo 69 → 70: entran `crearHeroe` y `crearFaccionNpc` (solo admin: una Facción de jugador ya no se cede a
+  la IA) y sale `alternarFaccionNpc`.
+
+### Documentación
+- `docs/COMANDOS.md`: params `heroeId`, sección Héroe, y los cableados al día (16 de 69, con los 9 que
+  trajeron las pantallas nuevas y no se habían marcado).
+- `docs/API_CONTRACT.md`, `docs/Analisis_Brecha_Backend.md`, `docs/Panel_Asentamiento.md` y
+  `docs/Features_Pendientes.md` §0.
+
 ## [0.2.0] — 2026-09-09 · login con cuenta local (nick + contraseña)
 
 Playtest: los jugadores se registran ellos mismos. Antes el login era `dev <nick>` sin contraseña, con

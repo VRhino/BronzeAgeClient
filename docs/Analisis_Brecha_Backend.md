@@ -1,8 +1,26 @@
 # Análisis de brecha: este cliente frente al backend
 
 Qué ofrece el backend a un jugador, qué consume este cliente hoy y qué falta por construir. Fotografía
-tomada el **2026-09-09**, contra `BronzeAgeFase0` en `1b52862` (main) y este cliente en su HEAD actual.
+tomada el **2026-09-14**, contra `BronzeAgeFase0` en `6d43688` (rama `heroe-dominio`) y este cliente en su HEAD
+actual.
 
+> **Sync 2026-09-14 (modelo de Héroe, fases 2 y 3 — cambio de forma, ya alineado):** (1) las escuadras viven en
+> el héroe: `ejercitos[].escuadrones` pasa a `escuadronIds` (solo ids) y `Asentamiento.escuadrones` desaparece.
+> (2) La proyección gana `heroe` (tu héroe completo, con todas tus escuadras y su coste de Liderazgo, loadouts y
+> cupo de guarnición con lo ocupado), `heroesVisibles` (la ficha pública de los ajenos que se ven) y
+> `nombresDeCompaneros` (el nombre de cada ciudadano de tu Facción); `ejercitosAvistados[]` gana `heroeIds`. (3)
+> Catálogo 70 → 75: `repartirPuntos`, `guardarLoadout`, `borrarLoadout`, `asignarGuarnicion`,
+> `retirarGuarnicion`. El cliente lee los datos (`CHANGELOG.md` 0.4.0) y los cinco comandos los usa el panel
+> Héroe (0.5.0, `Features_Pendientes.md` §0.2).
+>
+> **Sync 2026-09-14 (modelo de Héroe, fase 1 — cambio de forma, ya alineado):** se juega con un HÉROE.
+> (1) `proyeccion.jugadorId` → `heroeId`, y todo id de persona que viaja (cargos, `reyId`, `ciudadanosIds`,
+> dueños de escuadrón, participantes de columna, `heroesFundadoresIds`) es un id de héroe; los `params`
+> `jugadorId` de los comandos pasan a `heroeId`. (2) Sin héroe, la proyección es `{ ...resumen, sinHeroe: true }`
+> y todo comando salvo `crearHeroe` es `403`. (3) Catálogo 69 → 70: +`crearHeroe`, +`crearFaccionNpc` (solo
+> admin), −`alternarFaccionNpc`. El cliente ya está alineado (`CHANGELOG.md` 0.3.0); la pantalla de creación
+> de héroe es provisional (`Features_Pendientes.md` §0).
+>
 > **Sync 2026-09-09 (contrato, sin comandos nuevos):** +3 comandos en el backend (66 → 69): `guarnecer`
 > (Doc 5.12.4 — un ejército vuelca su tropa en una plaza propia; sus caravanas adjuntas pasan a `'aparcada'`),
 > `moverCargaCaravanaAparcada` y `enviarCaravanaAlOrigen` (operar esas caravanas aparcadas). Niebla **Paso 4**
@@ -75,34 +93,37 @@ puede sacar a un jugador de su ciudad todavía. Ver §3 y §4 más abajo para el
 | Superficie | Total | En el cliente | Brecha |
 |---|---:|---:|---:|
 | Endpoints (jugador, sesión y balance) | 9 | 5 | 4 |
-| Comandos de partida | **69** | 6 | **63** |
-| Bloques de datos de la proyección | 28 | 17 | 11 |
+| Comandos de partida (de jugador) | **74** | 21 | **53** |
+| Bloques de datos de la proyección | 31 | 20 | 11 |
 
-Nuevos desde la revisión del 2026-09-08 (66 → 69): `guarnecer`, `moverCargaCaravanaAparcada`,
-`enviarCaravanaAlOrigen` (todo `guarnecer` + caravanas aparcadas, Doc 5.12.4 / 3.13.7). Y antes (59 → 66,
-2026-09-08): `cambiarResidencia` + 6 del revamp de caravanas. Ninguno cablea nada en este cliente todavía.
+Desde la revisión del 2026-09-09: +`crearHeroe` (cableado, pantalla provisional), +5 del héroe sobre sí mismo
+(cableados en el panel Héroe) y −`alternarFaccionNpc` (las Facciones NPC las crea ahora el admin con
+`crearFaccionNpc`, que no es de jugador). En la proyección, +`heroe`, +`heroesVisibles` y +`nombresDeCompaneros`, que ya se
+leen para los nombres. Y el cliente cableó 9 que ya existían, con las pantallas nuevas: `marcharA`, `entrarEnAsentamiento`,
+`salirAlMundo` (en seco), `asignarCargoLocal` y 5 de construcción.
 
 Reparto por sistema de juego, para ver dónde está el hueco:
 
 | Sistema | Comandos | Implementados |
 |---|---:|---|
+| Héroe | 6 | **6 — completo** (`crearHeroe` con pantalla provisional; los otros 5 en el panel Héroe) |
 | Murallas | 3 | **3 — completo** |
-| Facción y ciudadanía | 6 | 2 (`crearFaccion`, `unirseAFaccion`) — +`cambiarResidencia` desde 2026-09-08 |
+| Facción y ciudadanía | 5 | 2 (`crearFaccion`, `unirseAFaccion`) |
 | Expansión | 3 | 1 (`fundarAsentamiento`) |
-| Cargos y políticas | 4 | 0 |
+| Cargos y políticas | 4 | 1 (`asignarCargoLocal`) |
 | Diplomacia | 5 | 0 |
-| Comercio y caravanas | 14 | 0 — +6 revamp (2026-09-08) +2 caravanas aparcadas (2026-09-09) |
-| Construcción y gestión local | 7 | 0 |
+| Comercio y caravanas | 14 | 0 |
+| Construcción y gestión local | 7 | 5 (faltan `calibrarReservaManual`, `renombrarAsentamiento`) |
 | Militar | 3 | 0 |
-| Ejércitos y logística | 10 | 0 — +`guarnecer` desde 2026-09-09 |
-| Presencia del jugador | 6 | 0 |
+| Ejércitos y logística | 10 | 0 |
+| Presencia del jugador | 6 | 3 (`salirAlMundo` en seco, `marcharA`, `entrarEnAsentamiento`) |
 | Interacción en el mapa | 4 | 0 |
 | Composición de columna compartida | 4 | 0 |
 
-Murallas es el único sistema entero. Los bloques mayores —ejércitos (9), presencia del jugador (6) y
-construcción (7)— están a cero: el mapa **pinta** ejércitos, caravanas y campamentos de bandidos, pero no se
-puede mover, reclutar ni atacar con ninguno, y ni siquiera se puede sacar a un jugador de su residencia.
-Frente a la capa militar y de campaña el jugador es hoy un espectador.
+Héroe y Murallas son los únicos sistemas enteros. Construcción y presencia ya se usan desde las pantallas
+nuevas, pero ejércitos, militar, comercio, diplomacia, interacción y composición de columna siguen a cero: el
+mapa **pinta** ejércitos, caravanas y campamentos de bandidos, pero no se puede reclutar, movilizar ni atacar
+con ninguno. Frente a la capa militar y de campaña el jugador es hoy un espectador.
 
 Los tres sistemas nuevos de la última fila —presencia, interacción y composición de columna— no existían la
 revisión anterior de este documento: nacieron con el "jugador situado" (backend, 2026-09-05/06) y son la
@@ -114,11 +135,11 @@ condición previa de todo lo demás que involucre moverse por el mapa, incluido 
 
 ### Consumidos
 
-- [x] `POST /v1/sesiones` — login de desarrollo (`Authorization: dev <usuario>`)
+- [x] `POST /v1/sesiones` — login con cuenta local (`Authorization: clave <nick>:<contraseña>`)
 - [x] `POST /v1/jugador/partidas/{gameId}/membresia`
-- [x] `GET /v1/jugador/partidas/{gameId}` — la proyección
+- [x] `GET /v1/jugador/partidas/{gameId}` — la proyección (o `sinHeroe`, que lleva a la pantalla Héroe)
 - [x] `GET /v1/jugador/partidas/{gameId}/mapa/{mapaId}` — cacheado en memoria por `mapaId`
-- [x] `POST /v1/jugador/partidas/{gameId}/comandos` — con 6 de los 66 comandos
+- [x] `POST /v1/jugador/partidas/{gameId}/comandos` — con 21 de los 74 comandos
 
 ### Sin consumir
 
@@ -137,21 +158,21 @@ condición previa de todo lo demás que involucre moverse por el mapa, incluido 
 - [ ] `GET /v1/sesiones/actual` — `obtenerWhoami()` existe en `apiCliente.ts` y **no lo invoca nadie**: hoy
       es código muerto. O se cablea (para conocer el rol real en la partida) o se borra.
 
-## 2. Comandos: 6 de 66
+## 2. Comandos: 21 de 74
 
 El checklist por comando, con sus `params` exactos, vive en [`COMANDOS.md`](COMANDOS.md) — **es la única
 lista de esa granularidad**, para no mantener dos que se contradigan. Aquí solo la lectura de conjunto.
 
 Ninguno de los 53 que faltan está fuera de alcance por permisos: la matriz de `autorizacion.ts` admite el rol
-`jugador` en los 66 (uno, `alternarFaccionNpc`, admite ADEMÁS `administrador_partida`, nunca en su lugar). Lo
+`jugador` en los 74 (el único comando de partida que no es suyo, `crearFaccionNpc`, es de administración). Lo
 que falta es siempre interfaz, nunca backend.
 
 Dos comandos que este cliente llegó a documentar ya **no existen**: `combateCampoAbierto` e
 `interceptarCaravana` se retiraron en el Paso 11 del movimiento de ejércitos, sustituidos por encuentros que
 dispara la geometría durante el tick. No hay que implementarlos.
 
-**Diecisiete de los 53 son nuevos desde la revisión anterior de este documento** (backend, 2026-09-05 a
-09-07) — coincide exacto con el salto de 42 a 59 comandos totales:
+**Diecisiete llegaron del backend entre el 2026-09-05 y el 09-07** (de 42 a 59 comandos totales); tres de
+ellos —`salirAlMundo`, `marcharA`, `entrarEnAsentamiento`— ya están cableados:
 
 - **Comercio (+3):** `aceptarTrueque`, `rechazarTrueque`, `comerciarEnPlaza`. Un trueque ya no se pacta al
   proponerse: hace falta que el lado receptor conteste, y comerciar con una orden de mercado exige estar
@@ -172,8 +193,8 @@ en estado `'aparcada'` (las que un ejército dejó al `guarnecer`).
 
 ## 3. Datos que el servidor manda y el cliente tira
 
-La proyección trae **28 bloques** (antes 18 — la cuenta subió con el jugador situado y con el comercio). El
-cliente consume 17. Estos llegan en cada respuesta y no se leen en ningún sitio:
+La proyección trae **31 bloques** (antes 18 — la cuenta subió con el jugador situado, el comercio y el héroe). El
+cliente consume 20. Estos llegan en cada respuesta y no se leen en ningún sitio:
 
 - [ ] `estadoMapa` (`extraido`, `regeneraEn`) — **el más urgente de este grupo, porque hoy produce
       información falsa**: el mapa dibuja cada nodo con la `cantidadInicial` del asset estático, así que **un
@@ -202,6 +223,11 @@ cliente consume 17. Estos llegan en cada respuesta y no se leen en ningún sitio
 
 Y hallazgos **dentro de lo que sí se lee**, que cambiaron de forma sin que el tipo local se enterara:
 
+- **`ejercitos[].escuadrones` → `escuadronIds` (2026-09-14, fase 2 del Héroe) — ya alineado.** El mapa contaba
+  los rombos de una columna por los dueños distintos de sus escuadrones y encontraba "tu columna" por ellos; con
+  solo ids habría dejado de pintar rombos. Ahora los dos salen de `participantes`, que era lo correcto de todas
+  formas (un viajero sin tropa también es un rombo). `Asentamiento.escuadrones` desapareció del tipo local, que
+  ninguna pantalla leía.
 - **`asentamientos` cambió de significado por completo** — ver la sección de arriba, "Lo más urgente". No es
   un campo que falte, es un campo que se lee con la semántica vieja.
 - **`asentamientosAvistados` ganó tres secciones opcionales** (`cargos?`, `politicasActivas?`,
@@ -219,11 +245,10 @@ Y hallazgos **dentro de lo que sí se lee**, que cambiaron de forma sin que el t
   una plaza al `guarnecer`. El tipo local `Caravana` (`src/tiposDominio.ts`) ni siquiera modelaba `estado`;
   el sync le añadió el campo con el enum completo.
 
-Y dentro de `Asentamiento` (la plaza propia completa), el tipo local de `src/tiposDominio.ts` declara ~15
+Y dentro de `Asentamiento` (la plaza propia completa), el tipo local de `src/tiposDominio.ts` declara 20
 campos frente a los **27** del dominio (`ocupacionHasta` se añadió el 2026-09-08, Doc 5.12.9). No modela,
-entre otros: `jugadoresFundadoresIds`, `politicasActivas`, `escuadrones`, `casasCompradas`,
-`politicaDeAcceso`, `vetadosIds`, `autoConstruccionPausada`, `reservaManual`, `permiteReabastecerAliados`,
-`nutricionPoblacion`, `ultimaCaravanaCreadaEn`.
+entre otros: `politicasActivas`, `politicaDeAcceso`, `vetadosIds`, `permiteReabastecerAliados`,
+`ultimaCaravanaCreadaEn`.
 
 - **`Edificio.danado` y `Asentamiento.ocupacionHasta` (2026-09-08, ocupación post-conquista, Doc 5.12.9)** —
   añadidos al tipo local en el sync. Un saqueo de conquista baja edificios a `en_cola` marcados `danado`
@@ -264,19 +289,22 @@ No son de una mecánica concreta; condicionan a todas las demás.
 
 ## 5. Orden sugerido
 
+0. **Héroe** ([`Features_Pendientes.md`](Features_Pendientes.md) §0): la creación provisional solo pide el
+   nombre, y es lo primero que ve cualquier jugador nuevo. El panel Héroe ya existe (§0.2); le faltan el equipo,
+   los perks y la ficha de los héroes ajenos.
 1. **Corregir el supuesto de `asentamientos`** (§4, primer punto) — no es trabajo nuevo, es dejar de leer mal
    un campo que ya llega. Bloquea con seguridad silenciosa cualquier otra cosa que se construya sobre la
    pestaña Asentamientos.
 2. **`GET /v1/balance` y el tiempo real (WebSocket + `/eventos`).** Son los dos habilitadores: sin balance no
    hay catálogo con el que dibujar ninguna pantalla de gestión, y sin tiempo real todo lo demás se siente
    muerto.
-3. **Presencia del jugador (6 comandos).** Es la condición previa de todo lo que sigue: sin poder sacar a un
-   jugador de su residencia no hay columna que mover, con la que comerciar en persona o que atacar.
+3. **Presencia del jugador (3 de 6 hechos).** Faltan `salirDeAsentamiento`, `fijarPoliticaDeAcceso`,
+   `vetarJugador` y la pantalla de equipamiento de `salirAlMundo` (hoy sale en seco).
 4. **Selector de asentamiento** (§4) — desbloquea el `asentamientoId` de casi todo lo que sigue, ahora que
    §1 ya resolvió de dónde leer cada plaza.
-5. **Gestión local: los 7 comandos de construcción, más `estadoMapa`.** Es donde más datos están ya llegando
-   sin usarse.
-6. **Cargos y políticas (4 comandos).** Muchas condiciones de autorización del resto exigen un cargo: sin
+5. **Gestión local: faltan 2 de los 7 comandos de construcción** (`calibrarReservaManual`,
+   `renombrarAsentamiento`), **más `estadoMapa`**.
+6. **Cargos y políticas (1 de 4: `asignarCargoLocal`).** Muchas condiciones de autorización del resto exigen un cargo: sin
    poder asignarlos, buena parte de la gestión queda inalcanzable en la práctica.
 7. **Ejércitos, interacción y militar (20 comandos).** El bloque mayor; el mapa ya pinta ejércitos y
    caravanas, falta el panel de campaña y `caravanasAvistadas`/interacción para poder hacer algo con lo ajeno.

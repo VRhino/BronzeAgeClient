@@ -87,10 +87,8 @@ export interface Asentamiento {
   autoConstruccionPausada?: boolean;
   /** Reserva de recursos calibrada por el Tesorero (0-999 por recurso). */
   reservaManual?: Record<string, number>;
-  /** Guarnición: escuadrones posados en la plaza. */
-  escuadrones?: { id: string; nombre?: string; jugadorId: string; origen?: string; cantidad: number }[];
-  /** Residentes que llegaron fundando · comprando casa (Doc 2.5). */
-  jugadoresFundadoresIds?: string[];
+  /** Héroes residentes que llegaron fundando · comprando casa (Doc 2.5). */
+  heroesFundadoresIds?: string[];
   casasCompradas?: string[];
   /** Cargos designados (Doc 2.5) — quién puede ordenar qué. Llegan como id o `null`. */
   cargos?: {
@@ -116,14 +114,6 @@ export interface Caravana {
   estado?: 'disponible' | 'preparando' | 'adjunta' | 'aparcada' | 'en_transito' | 'retornando';
 }
 
-/** Escuadrón dentro de un ejército propio — copia local reducida a lo que el mapa necesita: de quién es.
- * El número de ROMBOS de una columna es el de jugadores distintos que van en ella (Doc 5.12.2), no el de
- * escuadrones, así que esto es lo único que hay que leer para dibujarla. */
-export interface EscuadronEnCampana {
-  id: string;
-  jugadorId: string;
-}
-
 /** Copia local de `Ejercito` (motor, Doc 5.12) — los de TU Facción, que la proyección manda completos.
  * Solo los campos que pinta el mapa; el resto (suministro, objetivo, caravanas adjuntas) llegará cuando haya
  * un panel de campaña que los muestre. */
@@ -131,26 +121,29 @@ export interface Ejercito {
   id: string;
   faccionId: string;
   origenAsentamientoId: string;
-  escuadrones: EscuadronEnCampana[];
-  /** Jugadores que MARCHAN en la columna (Doc 5.12.2) — un viajero sin tropas va aquí y no en `escuadrones`,
-   * así que es la única forma de localizar la columna propia de quien salió con el carro seco. */
-  participantes?: { jugadorId: string }[];
+  /** Solo ids (backend 2026-09-14): las escuadras viven en su héroe. Las tuyas están en `proyeccion.heroe.escuadrones`;
+   * de los demás participantes solo se ve `heroesVisibles[].escuadrasQueLleva`. */
+  escuadronIds: string[];
+  /** Héroes que MARCHAN en la columna (Doc 5.12.2), lleven tropa o no: un rombo por cada uno. */
+  participantes: { heroeId: string; unidoEn: number }[];
   ruta: Point[];
   posicionActual: Point;
   estado: 'marchando' | 'estacionado' | 'regresando';
 }
 
 /**
- * Un ejército AJENO tal como llega redactado del servidor (Doc 5.12.7): dónde está, de qué Facción es y
- * cuántos estandartes se le cuentan. No hay más — ni escuadrones (su poder), ni ruta (su intención), ni
- * estado. La redacción la hace `proyectarParaJugador`, no este cliente: lo que no sale del backend no se
- * puede mirar en un DevTools.
+ * Un ejército AJENO tal como llega redactado del servidor (Doc 5.12.7): dónde está, de qué Facción es,
+ * cuántos estandartes se le cuentan y qué héroes van en él. No hay más — ni escuadrones (su poder), ni ruta
+ * (su intención), ni estado. La redacción la hace `proyectarParaJugador`, no este cliente: lo que no sale del
+ * backend no se puede mirar en un DevTools.
  */
 export interface EjercitoAvistado {
   id: string;
   faccionId: string;
   posicionActual: Point;
   participantes: number;
+  /** Quiénes van (Doc 5.16.7): un héroe que se ve es público. Su ficha, en `proyeccion.heroesVisibles`. */
+  heroeIds: string[];
 }
 
 /**
@@ -325,4 +318,125 @@ export interface ProduccionItem {
   recurso: string;
   activos: number;
   cantidadPorMinuto: number;
+}
+
+/** `params` de `crearHeroe` (backend `session/comandos/crearHeroe.ts`). `classDefinitionId` y las piezas de
+ * `avatar` son ids de los catálogos de Conquest: el backend los guarda sin interpretarlos. */
+export interface ParamsCrearHeroe {
+  displayName: string;
+  classDefinitionId: string;
+  genero: 'masculino' | 'femenino';
+  avatar: { cabezaId: string; peloId: string; barbaId: string; cejasId: string };
+}
+
+export type AtributoHeroe = 'fuerza' | 'destreza' | 'armadura' | 'vitalidad';
+export type SlotEquipo = 'arma' | 'casco' | 'torso' | 'guantes' | 'pantalones' | 'botas';
+
+/** Copia local de `ItemInstancia` (backend, doc 01 §12.1: el `InventoryItem` de Conquest). Hoy inventario y equipo
+ * llegan siempre vacíos: no hay `equipar` ni de dónde sacar objetos hasta CQ-004. */
+export interface ItemInstancia {
+  itemDefinitionId: string;
+  tipo: 'arma' | 'armadura' | 'consumible' | 'visual';
+  cantidad: number;
+  /** Solo el equipo único; ausente = apilable. */
+  itemInstanceId?: string;
+  estadisticas?: { nombre: string; valor: number }[];
+  precio: number;
+  /** -1 si no ocupa casilla. */
+  casillaInventario: number;
+}
+
+/** Una escuadra de tu héroe (backend `Escuadron`, Doc 5.16.2). Como mucho una por `tropaId`; persiste a 0 y se
+ * repone reclutando. */
+export interface Escuadron {
+  id: string;
+  nombre: string;
+  heroeId: string;
+  tropaId: string;
+  origen: 'pesants' | 'artesanos' | 'nobleza';
+  cantidad: number;
+  nivel: number;
+  experiencia: number;
+  /** 0-100, por raciones (Doc 5.4). */
+  moral: number;
+  /** Dónde está: en el campamento de tu residencia, en una columna o escoltando una caravana. */
+  contenedor: { tipo: 'campamento' } | { tipo: 'ejercito'; ejercitoId: string } | { tipo: 'escolta'; caravanaId: string };
+  /** En la guarnición de tu residencia (`asignarGuarnicion`). Solo con `contenedor: campamento`. */
+  enGuarnicion: boolean;
+  /** Progresión táctica de Conquest: el backend la guarda sin interpretarla. */
+  habilidadesDesbloqueadas: string[];
+  formacionesDesbloqueadas: number[];
+  formacionSeleccionada: number;
+  /** Lo que cuesta en Liderazgo, calculado por el servidor: con esto se sabe si un loadout cabe antes de guardarlo. */
+  costeLiderazgo: number;
+}
+
+/** Una selección de escuadras guardada (Doc 5.16.5). El `activo` es el que defiende tu residencia mientras estás
+ * dentro (Doc 5.12.4); solo hay uno. */
+export interface Loadout {
+  id: string;
+  displayName: string;
+  squadIds: string[];
+  perksSeleccionados: number[];
+  activo: boolean;
+  /** Liderazgo que suman sus escuadras, calculado por el servidor. */
+  liderazgoTotal: number;
+}
+
+/** Tu héroe, completo (`HeroeProyectado` del backend, doc 02 §4.1). */
+export interface HeroeProyectado {
+  id: string;
+  jugadorId: string | null;
+  controlador: 'humano' | 'bot';
+  displayName: string;
+  classDefinitionId: string;
+  genero: 'masculino' | 'femenino';
+  avatar: ParamsCrearHeroe['avatar'];
+  liderazgoBase: number;
+  ubicacion: { tipo: 'asentamiento'; asentamientoId: string } | { tipo: 'columna'; ejercitoId: string } | { tipo: 'desconectado'; punto: Point };
+  /** TODAS tus escuadras, estén donde estén (`contenedor`). */
+  escuadrones: Escuadron[];
+  nivel: number;
+  experienciaHaciaSiguienteNivel: number;
+  puntosDeAtributoSinGastar: number;
+  puntosDePerkSinGastar: number;
+  /** Solo lo repartido (tope 100 por atributo); la base de la clase la suma Conquest. */
+  atributosBase: Record<AtributoHeroe, number>;
+  perksDesbloqueados: number[];
+  loadouts: Loadout[];
+  inventario: ItemInstancia[];
+  equipamiento: Record<SlotEquipo, ItemInstancia | null>;
+  /** Economía propia del héroe, sin relación con el oro recurso. Nace con 500 de bronce. */
+  monedasHeroe: { bronce: number; plata: number; oro: number };
+  /** Cupo de guarnición que te da tu residencia, en Liderazgo (0 si no resides en ninguna). */
+  cupoGuarnicion: number;
+  /** Liderazgo de tus escuadras en guarnición: lo libre es `cupoGuarnicion - guarnicionOcupada` (puede ser negativo
+   * si el cupo bajó, porque lo asignado se queda). */
+  guarnicionOcupada: number;
+}
+
+/** Un héroe ajeno que se ve (Doc 5.16.7): solo su parte pública. */
+export interface HeroePublico {
+  heroeId: string;
+  displayName: string;
+  classDefinitionId: string;
+  nivel: number;
+  /** Las que lleva en su columna; las del campamento no se ven. */
+  escuadrasQueLleva: { tropaId: string; cantidad: number; nivel: number }[];
+  /** `itemDefinitionId` de lo que lleva puesto en cada hueco. */
+  equipamiento: Record<SlotEquipo, string | null>;
+}
+
+/** `params` de `repartirPuntos`: puntos a sumar por atributo, enteros ≥ 0 que no pasen de `puntosDeAtributoSinGastar`. */
+export interface ParamsRepartirPuntos {
+  atributos: Partial<Record<AtributoHeroe, number>>;
+}
+
+/** `params` de `guardarLoadout`. Sin `loadoutId` crea uno; `activo` ausente conserva el que tenía (uno nuevo, no activo). */
+export interface ParamsGuardarLoadout {
+  loadoutId?: string;
+  displayName: string;
+  squadIds: string[];
+  perksSeleccionados: number[];
+  activo?: boolean;
 }

@@ -38,9 +38,8 @@ solo cuando pisas una plaza de tu Facción. Campos útiles:
 | `recintos[]` | murallas (ya cableado en `#/legacy`, `pestanaMuralla`) |
 | `cargos` | `{ gobernadorId, tesoreroId, generalId, maestroObrasId, sacerdoteId }` (id o `null`) |
 | `politicasActivas[]` | `{ id, politicaId, cargo, activadaEn, expiraEn }` |
-| `escuadrones[]` | guarnición: `{ id, nombre, jugadorId, origen, cantidad, ... }` |
 | `politicaDeAcceso` | `abierto` \| `faccion_y_aliados` \| `solo_faccion` \| `cerrado` (ausente = `faccion_y_aliados`) |
-| `vetadosIds[]` | jugadores vetados por el Gobernador |
+| `vetadosIds[]` | héroes vetados por el Gobernador |
 | `medidorMantenimiento` | 0-100 (a 0 baja `nivelActual` / cae en ruinas) |
 | `nutricionPoblacion` | 0-100 (hambruna; a 0 cuesta población) |
 | `autoConstruccionPausada` | bool |
@@ -58,7 +57,7 @@ solo cuando pisas una plaza de tu Facción. Campos útiles:
 `proyeccion.trazadoPorAsentamiento[id]` — geometría del trazado (huellas, calles, murallas) para dibujar.
 
 **Falta en el tipo local del cliente** (`src/tiposDominio.ts`): `nivelActual`, `poblacion`,
-`politicasActivas`, `escuadrones`, `politicaDeAcceso`, `vetadosIds`, `autoConstruccionPausada`,
+`politicasActivas`, `politicaDeAcceso`, `vetadosIds`, `autoConstruccionPausada`,
 `reservaManual`, `nutricionPoblacion`, `permiteReabastecerAliados`, `casasCompradas`. Hoy `Asentamiento`
 del cliente solo copia lo mínimo.
 
@@ -108,8 +107,8 @@ La mayoría de acciones exigen **residir** + **tener el cargo** (`residenteConCa
 | trueques (aceptar/rechazar) | residente del lado que contesta |
 | asignar Rey / Embajador (Facción) | ver §10 |
 
-`faccion.reyId === proyeccion.jugadorId` ⇒ eres el Rey.
-El cliente sabe si tienes un cargo comparando `asentamiento.cargos.<cargo>Id === proyeccion.jugadorId`.
+`faccion.reyId === proyeccion.heroeId` ⇒ eres el Rey.
+El cliente sabe si tienes un cargo comparando `asentamiento.cargos.<cargo>Id === proyeccion.heroeId`.
 
 ## 4. Acciones — construcción y edificios
 
@@ -144,12 +143,14 @@ recuperar nivel, ocupación post-conquista (`ocupacionHasta`).
 
 | Comando | `params` | Notas |
 |---|---|---|
-| `reclutarTropa` | `asentamientoId, jugadorId, tropaId, origen` (`pesants`\|`artesanos`) | cualquier residente; amplía su escuadrón |
-| `movilizarEjercito` | `asentamientoId, jugadorId, escuadronIds, objetivo, politicaDeUnion?` | sacar un ejército de la guarnición |
-| `guarnecer` | `asentamientoId, jugadorId` | volcar la columna en la guarnición |
+| `reclutarTropa` | `asentamientoId, heroeId, tropaId, origen` (`pesants`\|`artesanos`) | cualquier residente; amplía su escuadrón |
+| `movilizarEjercito` | `asentamientoId, heroeId, escuadronIds, objetivo, politicaDeUnion?` | sacar un ejército con escuadras de tu campamento |
+| `guarnecer` | `asentamientoId, heroeId` | deshacer un ejército en una plaza donde residen todos: la tropa vuelve a sus campamentos |
+| `asignarGuarnicion` / `retirarGuarnicion` | `squadId` | una escuadra de tu campamento entra en / sale de la guarnición, dentro de `heroe.cupoGuarnicion` |
 
 **Info**: `poblacion` (pesants/artesanos/nobleza + total + techos por nivel/vivienda), mano de obra
-(`manoObraInfo`), `escuadrones` (guarnición: quién, tipo, tamaño), catálogo `TROPAS_RECLUTABLES`
+(`manoObraInfo`), tus escuadras (`proyeccion.heroe.escuadrones`, con `contenedor` y `enGuarnicion`; la plaza
+ya no trae `escuadrones`: su guarnición son las escuadras de sus residentes), catálogo `TROPAS_RECLUTABLES`
 filtrado por lo que este asentamiento desbloquea + "siguiente tropa y qué falta" (`notas.md`, "Pestaña
 Reclutamiento").
 
@@ -169,8 +170,8 @@ activar. Solo visible si el jugador tiene un cargo aquí.
 
 | Comando | `params` | Notas |
 |---|---|---|
-| `fijarPoliticaDeAcceso` | `asentamientoId, jugadorId, politica` (`abierto`\|`faccion_y_aliados`\|`solo_faccion`\|`cerrado`) | solo Gobernador |
-| `vetarJugador` | `asentamientoId, jugadorId, vetadoId, vetar` (bool) | solo Gobernador; veta/perdona |
+| `fijarPoliticaDeAcceso` | `asentamientoId, heroeId, politica` (`abierto`\|`faccion_y_aliados`\|`solo_faccion`\|`cerrado`) | solo Gobernador |
+| `vetarJugador` | `asentamientoId, heroeId, vetadoId, vetar` (bool) | solo Gobernador; veta/perdona |
 
 **Info**: política de acceso actual, lista de `vetadosIds`.
 
@@ -195,15 +196,15 @@ Facción.
 
 | Comando | `params` | Quién |
 |---|---|---|
-| `asignarRey` | `faccionId, jugadorId` | el Rey vigente (traspaso). Toda Facción nace con Rey (su creador), así que "trono vacío" solo ocurre tras conquista/fusión |
-| `asignarEmbajador` | `faccionId, jugadorId` | solo el Rey |
-| `asignarCargoLocal` (Gobernador) | `asentamientoId, cargo: 'gobernador', jugadorId` | **el Rey de la Facción** (2026-09-10). No exige residir ni estar presente |
-| `asignarCargoLocal` (resto) | `asentamientoId, cargo, jugadorId` | el **Gobernador** vigente, residente y presente |
+| `asignarRey` | `faccionId, heroeId` | el Rey vigente (traspaso). Toda Facción nace con Rey (su creador), así que "trono vacío" solo ocurre tras conquista/fusión |
+| `asignarEmbajador` | `faccionId, heroeId` | solo el Rey |
+| `asignarCargoLocal` (Gobernador) | `asentamientoId, cargo: 'gobernador', heroeId` | **el Rey de la Facción** (2026-09-10). No exige residir ni estar presente |
+| `asignarCargoLocal` (resto) | `asentamientoId, cargo, heroeId` | el **Gobernador** vigente, residente y presente |
 
 **Alcance (2026-09-10, resuelto)**: designar Gobernador es potestad exclusiva del **Rey** — es un acto de
 nivel Facción, como designar Embajador. El panel de Facción muestra la sección "Cargos" acotada a
 `proyeccion.asentamientos[0]` (el asentamiento que se pisa): la fila de Gobernador aparece **si eres el
-Rey** (`faccion.reyId === proyeccion.jugadorId`); las otras cuatro, si eres el Gobernador de esa plaza.
+Rey** (`faccion.reyId === proyeccion.heroeId`); las otras cuatro, si eres el Gobernador de esa plaza.
 Editar cargos de OTRA plaza propia sin estar dentro sigue necesitando que la proyección mande la lista
 completa de plazas con sus cargos (hoy no lo hace — `Features_Pendientes.md` §6.2).
 
@@ -211,8 +212,8 @@ completa de plazas con sus cargos (hoy no lo hace — `Features_Pendientes.md` �
 
 - `salirAlMundo` — ya cableado (en seco). Falta la pantalla de equipamiento.
 - `entrarEnAsentamiento` / `salirDeAsentamiento` — cableado el primero (botón "Entrar").
-- `comprarCasa` — `asentamientoId, jugadorId` · 2ª vía de entrar en una Facción.
-- `cambiarResidencia` — `destinoId, jugadorId` · mudarse a otra plaza propia con hueco.
+- `comprarCasa` — `asentamientoId, heroeId` · 2ª vía de entrar en una Facción.
+- `cambiarResidencia` — `destinoId, heroeId` · mudarse a otra plaza propia con hueco.
 
 ## 12. Estructura propuesta del panel
 
@@ -232,7 +233,8 @@ La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, es
 Pendiente (secciones nuevas):
 5. **Producción** ✅ — pestaña con la producción/min de cada edificio (`proyeccion.produccionDeAsentamiento`,
    la calcula el servidor). *Falta*: el consumo por edificio (no viaja).
-6. **Tropas** — guarnición (`escuadrones`), reclutar, movilizar.
+6. **Tropas** — tus escuadras y tu guarnición (`heroe.escuadrones`, ver `Features_Pendientes.md` §0.2),
+   reclutar, movilizar.
 7. **Políticas** — solo si tienes cargo: activas + activables.
 8. **Puerta** — solo Gobernador: política de acceso + vetos.
 9. **Almacén / reserva** — reserva manual por recurso (Tesorero), abrir a aliados.

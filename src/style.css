@@ -2410,3 +2410,85 @@ body {
 .choice-icon {
   color: var(--oro);
 }
+
+/* --- PANEL DEL HÉROE (riel del Mapa y barra del Asentamiento) --- */
+.heroe-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.heroe-panel .asent-tabs { margin-bottom: 0; }
+.heroe-datos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.heroe-datos .heroe-ancho { grid-column: 1 / -1; }
+.heroe-sub {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+.heroe-nota {
+  margin: 0;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+.heroe-nota strong { color: var(--oro-claro); }
+.heroe-atributos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.heroe-atributos label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--bronce-osc);
+  border-radius: 2px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+.heroe-atributos strong {
+  margin-left: auto;
+  color: var(--oro-claro);
+}
+.heroe-atributos input {
+  width: 3.2em;
+  padding: 2px 4px;
+  background: #12100b;
+  border: 1px solid var(--bronce-osc);
+  border-radius: 2px;
+  color: var(--pergamino);
+}
+.heroe-fila {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.heroe-fila > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.heroe-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.heroe-panel .btn-secondary {
+  padding: 4px 8px;
+  border-radius: 2px;
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+.heroe-marca {
+  font-style: normal;
+  color: var(--oro);
+}
+.heroe-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}

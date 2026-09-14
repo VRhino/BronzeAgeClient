@@ -615,10 +615,9 @@ export function pintarTerreno(
     // asentamiento ya no existe (a un ejercito se le puede caer la ciudad de la que salio).
     const origen = proyeccion.asentamientos.find((a) => a.id === ejercito.origenAsentamientoId);
     const color = faccionColor(origen ? origen.faccionId : ejercito.faccionId, proyeccion.facciones);
-    const participantes = new Set((ejercito.escuadrones || []).map((e) => e.jugadorId)).size;
     const x = ejercito.posicionActual.x * escalaCanvas;
     const y = ejercito.posicionActual.y * escalaCanvas;
-    dibujarRacimoDeRombos(ctx, x, y, participantes, color);
+    dibujarRacimoDeRombos(ctx, x, y, ejercito.participantes.length, color);
 
     // "Estas en tierra de Troya". Solo cuando la tierra es AJENA: marcharse por la propia o por campo
     // abierto no es noticia, y una etiqueta bajo cada columna en todo momento seria ruido. Lo dice el
@@ -683,11 +682,7 @@ export function pintarTerreno(
 
   // 19. TÚ Y TU DESTINO. Encima de todo: la mira sobre la columna del propio jugador (para ubicarse de un
   // vistazo) y, si va en marcha, un aspa en el punto al que se dirige — el último vértice de su ruta.
-  const miColumna = (proyeccion.ejercitos || []).find(
-    (ejercito) =>
-      (ejercito.participantes || []).some((p) => p.jugadorId === proyeccion.jugadorId) ||
-      ejercito.escuadrones.some((e) => e.jugadorId === proyeccion.jugadorId)
-  );
+  const miColumna = (proyeccion.ejercitos || []).find((ejercito) => ejercito.participantes.some((p) => p.heroeId === proyeccion.heroeId));
   if (miColumna) {
     dibujarMarcadorJugador(ctx, miColumna.posicionActual.x * escalaCanvas, miColumna.posicionActual.y * escalaCanvas);
     if (miColumna.estado !== 'estacionado' && miColumna.ruta && miColumna.ruta.length >= 2) {

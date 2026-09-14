@@ -1,7 +1,7 @@
 // Wrapper `fetch` sobre la superficie `/jugador/*` y `/sesiones` del backend (Fase C3) — sin lógica de negocio, solo I/O.
 import type { MapaGenerado } from './terreno';
 
-import type { AcuerdoTrueque, Asentamiento, AsentamientoAvistado, AsentamientoConocido, CaminoComercial, CampamentoBandido, Caravana, Ejercito, EjercitoAvistado, Faccion, NieblaProyectada, OrdenMercado, ProduccionItem, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
+import type { AcuerdoTrueque, Asentamiento, AsentamientoAvistado, AsentamientoConocido, CaminoComercial, CampamentoBandido, Caravana, Ejercito, EjercitoAvistado, Faccion, HeroeProyectado, HeroePublico, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
 
 export class ApiError extends Error {
   constructor(
@@ -19,7 +19,11 @@ export interface ProyeccionJugador {
    * declarado aqui como `tick: number` desde entonces — o sea, siempre `undefined`. */
   instante: number;
   version: number;
-  jugadorId: string;
+  /** El héroe con el que juega esta membresía (backend 2026-09-14; antes `jugadorId`). Todo id de persona que
+   * viaja —cargos, `reyId`, `ciudadanosIds`, dueños de escuadrón, participantes de columna— es un id de héroe. */
+  heroeId: string;
+  /** Discrimina contra `PartidaSinHeroe`. */
+  sinHeroe?: undefined;
   faccionId: string | null;
   mapaId: string;
   facciones: Faccion[];
@@ -48,6 +52,14 @@ export interface ProyeccionJugador {
    * a diferencia de los asentamientos, de un ejército NO se guarda memoria. Tiene sentido — una ciudad sigue
    * donde estaba, una columna en marcha no. */
   ejercitosAvistados: EjercitoAvistado[];
+  /** Tu héroe, completo (backend 2026-09-14). El backend lo tipa `| null`, pero la ruta HTTP responde
+   * `PartidaSinHeroe` antes de proyectar a una membresía sin héroe: aquí siempre llega. */
+  heroe: HeroeProyectado;
+  /** Los héroes AJENOS que se ven —en una columna tuya o avistada, o dentro de la plaza que pisas—, en su parte
+   * pública. */
+  heroesVisibles: HeroePublico[];
+  /** `heroeId` -> nombre de cada ciudadano de tu Facción, tú incluido, se le vea o no. Vacío sin Facción. */
+  nombresDeCompaneros: Record<string, string>;
   caminos: CaminoComercial[];
   /** Ofertas de mercado en pie de CUALQUIER plaza en cuya puerta esté una columna tuya, más las de tus
    * propios asentamientos — el resto no viaja (Doc 3.3, `proyectarParaJugador` en el backend). Sin interfaz
@@ -63,6 +75,16 @@ export interface ProyeccionJugador {
    * puede. */
   produccionDeAsentamiento?: ProduccionItem[];
   [campo: string]: unknown;
+}
+
+/** Lo que responde la proyección mientras la membresía no tiene héroe: solo el resumen de la partida. El único
+ * comando que admite es `crearHeroe` (el resto, `403`). */
+export interface PartidaSinHeroe {
+  gameId: string;
+  instante: number;
+  version: number;
+  mapaId: string;
+  sinHeroe: true;
 }
 
 export interface RespuestaLogin {
@@ -84,7 +106,7 @@ export interface RespuestaComando {
     ok: boolean;
     codigoError?: string;
   };
-  proyeccion?: ProyeccionJugador;
+  proyeccion?: ProyeccionJugador | PartidaSinHeroe;
   [campo: string]: unknown;
 }
 
@@ -201,8 +223,8 @@ export function unirseAPartida(gameId: string): Promise<{ jugadorId: string }> {
   return peticion<{ jugadorId: string }>(`${V1}/jugador/partidas/${encodeURIComponent(gameId)}/membresia`, { method: 'POST' });
 }
 
-export function consultarProyeccion(gameId: string): Promise<ProyeccionJugador> {
-  return peticion<ProyeccionJugador>(`${V1}/jugador/partidas/${encodeURIComponent(gameId)}`);
+export function consultarProyeccion(gameId: string): Promise<ProyeccionJugador | PartidaSinHeroe> {
+  return peticion<ProyeccionJugador | PartidaSinHeroe>(`${V1}/jugador/partidas/${encodeURIComponent(gameId)}`);
 }
 
 /** El mapa como asset (Fase C11a): se pide una sola vez por `mapaId` y se cachea */
@@ -216,3 +238,11 @@ export function ejecutarComando(gameId: string, tipo: string, params: unknown): 
     body: JSON.stringify({ tipo, params }),
   });
 }
+
+// Comandos del héroe (backend 2026-09-14). Todavía sin pantalla que los use: docs/Features_Pendientes.md §0.2.
+// Un rechazo de dominio llega como `resultado.codigoError === 'heroe.invalido'`.
+export const repartirPuntos = (gameId: string, params: ParamsRepartirPuntos) => ejecutarComando(gameId, 'repartirPuntos', params);
+export const guardarLoadout = (gameId: string, params: ParamsGuardarLoadout) => ejecutarComando(gameId, 'guardarLoadout', params);
+export const borrarLoadout = (gameId: string, loadoutId: string) => ejecutarComando(gameId, 'borrarLoadout', { loadoutId });
+export const asignarGuarnicion = (gameId: string, squadId: string) => ejecutarComando(gameId, 'asignarGuarnicion', { squadId });
+export const retirarGuarnicion = (gameId: string, squadId: string) => ejecutarComando(gameId, 'retirarGuarnicion', { squadId });

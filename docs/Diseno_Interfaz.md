@@ -141,5 +141,6 @@ remata cabeceras y paneles con la moldura clásica. `opacity: .5` para que sea s
 - **Escala de la vista de asentamiento**: `RADIO_MAPA_ASENTAMIENTO` + `proyeccionAsentamiento` en
   `src/render.ts` (fuente única para dibujo y hit-test).
 - **Estructura de las pantallas**: `montarMapa` / `montarAsentamiento` / `montarFaccion` /
-  `menuEsquinaHtml` en `src/main.ts`.
+  `menuEsquinaHtml` en `src/main.ts`. El panel del héroe, que comparten Mapa y Asentamiento, en
+  `src/ui/panelHeroe.ts` (estilos: bloque `PANEL DEL HÉROE` al final de `src/style.css`).
 - Pendientes visuales conocidos: `docs/Features_Pendientes.md` §9.

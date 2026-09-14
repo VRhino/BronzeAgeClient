@@ -67,7 +67,7 @@ export function renderPestanaAsentamientos(
             ? `<div class="settlement-detail-copy"><strong>Producción y recursos</strong><p>La producción se calcula a partir de los edificios activos, la población y los recursos disponibles del asentamiento.</p><span>Edificios activos: ${edificios.filter((edificio) => edificio.estado === 'activo').length}</span></div>`
             : estadoCliente.asentamientoDetalleTab === 'muralla'
               ? renderPestanaMuralla(asentamiento, proyeccion, escaparHtml)
-              : `<div class="settlement-detail-copy"><strong>Defensa y tropas</strong><p>La información militar detallada aparecerá aquí cuando la proyección incluya escuadrones y guarniciones del asentamiento.</p></div>`
+              : `<div class="settlement-detail-copy"><strong>Defensa y tropas</strong><p>Tus escuadras, tu guarnición y tus loadouts ya llegan en la proyección (<code>heroe</code>); falta su interfaz (docs/Features_Pendientes.md §0.2).</p></div>`
     : '<div class="interaction-empty">Todavía no tienes un asentamiento fundado.</div>';
   return `
     <div class="settlement-panel-view">

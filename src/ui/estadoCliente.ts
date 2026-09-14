@@ -7,6 +7,8 @@ export interface EstadoClienteJugador {
   mapaCache: { id: string; mapa: MapaGenerado } | null;
   modoVista: 'mundo' | 'asentamiento';
   proyeccionUltima: ProyeccionJugador | null;
+  /** La última proyección vino `sinHeroe`: la membresía aún no tiene héroe (`proyeccionUltima` queda `null`). */
+  sinHeroe: boolean;
   modoPanelFaccion: 'inicio' | 'crear' | 'unirse';
   pestanaInteraccion: 'faccion' | 'asentamientos' | 'informacion';
   modoFundacionActivo: boolean;
@@ -22,6 +24,7 @@ export const estadoCliente: EstadoClienteJugador = {
   mapaCache: null,
   modoVista: 'mundo',
   proyeccionUltima: null,
+  sinHeroe: false,
   modoPanelFaccion: 'inicio',
   pestanaInteraccion: 'faccion',
   modoFundacionActivo: false,

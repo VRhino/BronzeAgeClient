@@ -66,9 +66,9 @@ function renderTarjetaRecinto(
 
 export function renderPestanaMuralla(asentamiento: Asentamiento, proyeccion: ProyeccionJugador, escaparHtml: (valor: string) => string): string {
   const cargos = asentamiento.cargos ?? {};
-  const jugadorId = proyeccion.jugadorId;
-  const esGobernador = !!jugadorId && cargos.gobernadorId === jugadorId;
-  const esMaestroObras = !!jugadorId && cargos.maestroObrasId === jugadorId;
+  const heroeId = proyeccion.heroeId;
+  const esGobernador = !!heroeId && cargos.gobernadorId === heroeId;
+  const esMaestroObras = !!heroeId && cargos.maestroObrasId === heroeId;
   // Comprometer admite Gobernador O Maestro de Obras (§8: es una decisión de obra); abandonar es solo del
   // Gobernador (decisión de gobierno) — ver `renderTarjetaRecinto`. Cuando valen los dos, se prefiere
   // gobernador — da igual cuál se mande, el servidor solo exige que el jugador SEA ese cargo.

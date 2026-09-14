@@ -1,7 +1,7 @@
 # Contrato API del cliente jugador
 
 Documento de referencia de este cliente. El backend escucha bajo el prefijo `/v1`. Última revisión:
-**2026-09-09**, contra `BronzeAgeFase0@1b52862` (main).
+**2026-09-14**, contra `BronzeAgeFase0@6d43688` (rama `heroe-dominio`: modelo de Héroe, fases 1 a 3).
 
 Para el porqué de cada hueco y el orden en que conviene cerrarlos, ver
 [`Analisis_Brecha_Backend.md`](Analisis_Brecha_Backend.md); el catálogo de comandos, en
@@ -15,7 +15,7 @@ Para el porqué de cada hueco y el orden en que conviene cerrarlos, ver
 - [x] `POST /v1/jugador/partidas/{gameId}/membresia`
 - [x] `GET /v1/jugador/partidas/{gameId}`
 - [x] `GET /v1/jugador/partidas/{gameId}/mapa/{mapaId}`
-- [x] `POST /v1/jugador/partidas/{gameId}/comandos` — con 6 de los 69 comandos (ver `COMANDOS.md`)
+- [x] `POST /v1/jugador/partidas/{gameId}/comandos` — con 21 de los 74 comandos de jugador (ver `COMANDOS.md`)
 - [x] Reintento automático tras una respuesta `401`, creando una sesión nueva con `POST /v1/sesiones`
 
 ### Funciones disponibles en `apiCliente.ts`, pero sin llamada desde la UI actual
@@ -87,6 +87,9 @@ No requiere body. Devuelve `201 Created`:
 }
 ```
 
+`jugadorId` identifica la **membresía** (es el `usuarioId`), no a quien juega: dentro de la partida se juega con
+un **héroe**, que se crea aparte con el comando `crearHeroe` (ver «Partida sin héroe», abajo).
+
 El cliente trata `409 Conflict` como membresía ya existente y continúa con el login.
 Otros errores no se ignoran:
 
@@ -101,15 +104,15 @@ GET /v1/jugador/partidas/{gameId}
 Authorization: sesion <sesionId>
 ```
 
-La respuesta es la proyección filtrada para el jugador, no el estado completo de la partida. Trae **28
-bloques** (`ProyeccionJugador`, `src/session/proyecciones/jugador.ts` en el backend); el cliente consume 17.
+La respuesta es la proyección filtrada para el jugador, no el estado completo de la partida. Trae **31
+bloques** (`ProyeccionJugador`, `src/session/proyecciones/jugador.ts` en el backend); el cliente consume 20.
 
 ```json
 {
   "gameId": "local",
   "instante": 1756900000000,
   "version": 42,
-  "jugadorId": "ana",
+  "heroeId": "heroe-3",
   "faccionId": "faccion-1",
   "mapaId": "mapa-...",
   "estadoMapa": { "extraido": {}, "regeneraEn": {} },
@@ -123,6 +126,9 @@ bloques** (`ProyeccionJugador`, `src/session/proyecciones/jugador.ts` en el back
   "caravanasAvistadas": [],
   "ejercitos": [],
   "ejercitosAvistados": [],
+  "heroe": {},
+  "heroesVisibles": [],
+  "nombresDeCompaneros": {},
   "acuerdos": [],
   "ordenes": [],
   "relaciones": [],
@@ -136,6 +142,39 @@ bloques** (`ProyeccionJugador`, `src/session/proyecciones/jugador.ts` en el back
   "preciosReferencia": {}
 }
 ```
+
+`heroeId` (antes `jugadorId`, 2026-09-14) es el héroe con el que juega esta membresía. Todo id de persona que
+viaja en la proyección —`reyId`, `embajadorId` y `ciudadanosIds` de una Facción, los `cargos` de un
+asentamiento, `heroesFundadoresIds`, `casasCompradas`, el dueño de cada escuadrón y los `participantes` de una
+columna— es un id de héroe (`heroe-12`), no un nick: se compara con `proyeccion.heroeId`. El nombre viaja en
+`heroe.displayName` (el tuyo), en `nombresDeCompaneros` (`heroeId` → nombre de todos los ciudadanos de tu Facción,
+se les vea o no) y en `heroesVisibles` (los ajenos que se ven, abajo).
+
+#### El héroe y sus escuadras
+
+`heroe` es tu héroe completo (`HeroeProyectado`, `src/tiposDominio.ts`): identidad, `ubicacion`, progresión
+(nivel, experiencia, las dos bolsas de puntos, `atributosBase`, perks), `loadouts` con el `liderazgoTotal` que
+calcula el servidor, `inventario`, `equipamiento`, `monedasHeroe`, `cupoGuarnicion` con su `guarnicionOcupada`, y
+**todas tus escuadras** (`escuadrones`, cada una con su `contenedor` —campamento, ejército o escolta—,
+`enGuarnicion` y su `costeLiderazgo`). Es el único sitio
+donde viajan escuadras completas: un ejército lleva solo `escuadronIds` (antes `escuadrones`), y un `Asentamiento`
+ya no trae `escuadrones` (su guarnición son las escuadras `enGuarnicion` de sus residentes).
+
+`heroesVisibles` son los héroes AJENOS que se ven —en una columna tuya o avistada, o dentro de la plaza que
+pisas—, solo en su parte pública (`HeroePublico`: nombre, clase, nivel, escuadras que lleva en la columna y
+equipo puesto). `ejercitosAvistados[].heroeIds` dice quién va en cada columna ajena.
+
+#### Partida sin héroe
+
+Mientras la membresía no tiene héroe, este mismo `GET` no devuelve la proyección sino el resumen de la partida:
+
+```json
+{ "gameId": "local", "instante": 1756900000000, "version": 42, "mapaId": "mapa-...", "sinHeroe": true }
+```
+
+En ese estado el único comando que se acepta es `crearHeroe` (el resto responde `403`) y `/eventos` devuelve
+`{ "eventos": [] }`. El cliente lo modela como `PartidaSinHeroe` (`src/apiCliente.ts`) y monta la pantalla
+Héroe; en cuanto se crea el héroe, la proyección vuelve a ser la normal.
 
 `instante` es **la única referencia temporal del contrato** desde que cerró la Fase D: milisegundos desde la
 época Unix, el "ahora" del mundo. Con él el cliente pinta cuentas atrás localmente (`completaEn - instante`).
@@ -257,7 +296,8 @@ Body mínimo:
 ```
 
 También admite opcionalmente `idempotencyKey`. El backend valida `params` según el `tipo`, con
-`additionalProperties: false`. El catálogo actual son **69 comandos**, de los que la interfaz cablea 6: la
+`additionalProperties: false`. El catálogo de jugador son **74 comandos** (75 en el backend: `crearFaccionNpc`
+es solo de administración), de los que la interfaz cablea 21: la
 lista completa, con sus parámetros, está en [`COMANDOS.md`](COMANDOS.md).
 
 En caso de éxito la respuesta incluye `resultado`, resumen de partida y **la `proyeccion` del jugador ya
@@ -267,8 +307,9 @@ cliente descarta esa proyección y encadena un `GET` de más.
 Un **rechazo de dominio no es un error HTTP**: llega como `200` con `resultado.ok === false` y un
 `resultado.codigoError`. Hay que comprobar el status *y* `resultado.ok`.
 
-Errores relevantes: `400` petición, tipo o `params` inválidos; `401` sesión inválida; `403` no autorizado;
-`409` **fallo de persistencia**; `404` partida no abierta.
+Errores relevantes: `400` petición, tipo o `params` inválidos; `401` sesión inválida; `403` no autorizado
+(también, sin héroe, cualquier comando que no sea `crearHeroe`); `409` **fallo de persistencia**; `404`
+partida no abierta.
 
 ## Endpoints todavía no consumidos
 
@@ -291,7 +332,8 @@ Respuesta esperada:
 }
 ```
 
-`gameId` es opcional. Sin él, la respuesta solo garantiza `usuarioId` y `esAdministradorGlobal`. El wrapper
+`gameId` es opcional. Sin él, la respuesta solo garantiza `usuarioId` y `esAdministradorGlobal`. `jugadorId` es
+el de la membresía: no trae el `heroeId`. El wrapper
 `obtenerWhoami()` existe en `apiCliente.ts` pero no lo invoca nadie.
 
 ### Tiempo real (WebSocket)

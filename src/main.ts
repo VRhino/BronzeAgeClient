@@ -10,10 +10,12 @@ import {
   obtenerMapa,
   unirseAPartida,
   type ProyeccionJugador,
+  type RespuestaComando,
 } from './apiCliente';
+import { pintarPanelHeroe } from './ui/panelHeroe';
 import { edificioBajoCursor, pintarAsentamiento, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
 import { EDIFICIO_COLOR, EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from './paletas';
-import type { Asentamiento, Edificio, ProduccionItem } from './tiposDominio';
+import type { Asentamiento, Edificio, ParamsCrearHeroe, ProduccionItem } from './tiposDominio';
 import type { MapaGenerado } from './terreno';
 import { estadoCliente, TIPS_FUNDACION } from './ui/estadoCliente';
 import { actualizarTip, resumenRecursosFundacion } from './ui/pestanaAsentamientos';
@@ -66,13 +68,16 @@ function cambiarPestana(pestana: typeof estadoCliente.pestanaInteraccion): void 
   }
 }
 
-/** Ejecuta un comando de muralla y refresca; devuelve el mensaje de error si lo rechaza, o `null` si fue bien.
- * Las tres acciones (comprometer/abandonar/mejorar, Consideraciones/Murallas_Definicion.md) comparten esta
- * misma forma — a diferencia de crear/unirse a Facción (arriba), que solo se usan una vez cada una y no
- * justificaban factorizar el try/catch. */
-async function ejecutarAccionMuralla(tipo: string, params: Record<string, unknown>): Promise<string | null> {
+/** Ejecuta un comando y refresca; devuelve el mensaje de error si lo rechaza, o `null` si fue bien. La usan las
+ * tres acciones de muralla (Consideraciones/Murallas_Definicion.md) y `crearHeroe`. */
+function ejecutarYRefrescar(tipo: string, params: object): Promise<string | null> {
+  return aplicarYRefrescar(ejecutarComando(estadoCliente.gameIdActivo, tipo, params));
+}
+
+/** Lo mismo con la petición ya lanzada, para los wrappers tipados de `apiCliente.ts` (panel del héroe). */
+async function aplicarYRefrescar(peticion: Promise<RespuestaComando>): Promise<string | null> {
   try {
-    const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, tipo, params);
+    const respuesta = await peticion;
     if (!respuesta.resultado.ok) throw new ApiError(409, respuesta.resultado.codigoError ?? 'El servidor rechazó la operación.');
     await refrescarDatosJuego();
     return null;
@@ -95,7 +100,7 @@ function cablearAccionesMuralla(panel: HTMLDivElement): void {
   const conBoton = (boton: HTMLButtonElement, tipo: string, paramsAlClic: () => Record<string, unknown>): void => {
     boton.addEventListener('click', async () => {
       boton.disabled = true;
-      const mensaje = await ejecutarAccionMuralla(tipo, { asentamientoId, ...paramsAlClic() });
+      const mensaje = await ejecutarYRefrescar(tipo, { asentamientoId, ...paramsAlClic() });
       if (mensaje) {
         boton.disabled = false;
         if (error) error.textContent = mensaje;
@@ -176,6 +181,46 @@ function cablearFaccion(root: ParentNode, proyeccion: ProyeccionJugador, rerende
   }
 }
 
+/** Punto de entrada de la creación de héroe, para la pantalla provisional y para la definitiva. Con el héroe
+ * creado la proyección deja de venir `sinHeroe` y el router sigue solo (Facción si aún no tiene, luego Mapa: el
+ * héroe aparece en el mundo con su columna). */
+function crearHeroe(params: ParamsCrearHeroe): Promise<string | null> {
+  return ejecutarYRefrescar('crearHeroe', params);
+}
+
+/** Lo que la pantalla PROVISIONAL manda además del nombre: lo mismo que los héroes bot del backend
+ * (`npcGobernanza.ts`) — `Spear` es la única clase que tiene hoy Conquest. docs/Features_Pendientes.md §0. */
+const HEROE_PROVISIONAL: Omit<ParamsCrearHeroe, 'displayName'> = {
+  classDefinitionId: 'Spear',
+  genero: 'masculino',
+  avatar: { cabezaId: '', peloId: '', barbaId: '', cejasId: '' },
+};
+
+/** Pantalla HÉROE: se llega con `sinHeroe` (membresía sin héroe; el backend no admite otro comando que
+ * `crearHeroe`). PROVISIONAL: solo pide el nombre. */
+function montarHeroe(): void {
+  app.innerHTML = `<div class="login-container"><div class="login-card">
+    <div class="login-header"><h1 class="login-title">Tu héroe</h1><p class="login-subtitle">Con él aparecerás en el mundo.</p></div>
+    <form id="form-crear-heroe">
+      <div class="form-group"><label class="form-label" for="input-nombre-heroe">Nombre</label><input type="text" id="input-nombre-heroe" class="form-input" required autocomplete="off" /></div>
+      <button type="submit" id="btn-crear-heroe" class="btn-primary">Crear héroe</button>
+      <p id="error-heroe" class="faction-error" role="alert"></p>
+    </form>
+  </div><button id="btn-logout" class="text-link" type="button">Cerrar sesión</button></div>`;
+  document.querySelector('#btn-logout')?.addEventListener('click', () => cerrarSesionYVolverALogin());
+  document.querySelector<HTMLFormElement>('#form-crear-heroe')?.addEventListener('submit', async (evento) => {
+    evento.preventDefault();
+    const nombre = document.querySelector<HTMLInputElement>('#input-nombre-heroe')?.value.trim() ?? '';
+    const boton = document.querySelector<HTMLButtonElement>('#btn-crear-heroe');
+    if (boton) boton.disabled = true;
+    const mensaje = await crearHeroe({ ...HEROE_PROVISIONAL, displayName: nombre });
+    if (!mensaje) return;
+    if (boton) boton.disabled = false;
+    const error = document.querySelector<HTMLElement>('#error-heroe');
+    if (error) error.textContent = mensaje;
+  });
+}
+
 /** Pantalla FACCIÓN a pantalla completa (T2): tarjeta central sobre el fondo de la app, con el flujo
  * crear/unirse. Se llega solo con `faccionId === null`; un crear/unir con éxito reencamina (router). */
 function montarFaccion(): void {
@@ -189,11 +234,13 @@ function montarFaccion(): void {
 /** La columna en la que MARCHA el jugador (Doc 5.12.2) — su posición en el mundo. `undefined` mientras esté
  * en una plaza o desconectado. */
 function miColumna(proyeccion: ProyeccionJugador) {
-  return proyeccion.ejercitos.find(
-    (ejercito) =>
-      (ejercito.participantes ?? []).some((p) => p.jugadorId === proyeccion.jugadorId) ||
-      ejercito.escuadrones.some((e) => e.jugadorId === proyeccion.jugadorId)
-  );
+  return proyeccion.ejercitos.find((ejercito) => ejercito.participantes.some((p) => p.heroeId === proyeccion.heroeId));
+}
+
+/** El nombre de un héroe si la proyección lo trae (el tuyo, un compañero de Facción o un ajeno que se ve); si no, su id. */
+function nombreDeHeroe(proyeccion: ProyeccionJugador, heroeId: string): string {
+  if (heroeId === proyeccion.heroeId) return proyeccion.heroe.displayName;
+  return proyeccion.nombresDeCompaneros[heroeId] ?? proyeccion.heroesVisibles.find((h) => h.heroeId === heroeId)?.displayName ?? heroeId;
 }
 
 // --- MOVIMIENTO Y SELECCIÓN EN EL MAPA (T4) -------------------------------------------------------
@@ -258,7 +305,7 @@ async function marcharAObjetivo(objetivo: { tipo: 'punto'; punto: { x: number; y
   const proyeccion = estadoCliente.proyeccionUltima;
   if (!proyeccion) return;
   try {
-    const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'marcharA', { jugadorId: proyeccion.jugadorId, objetivo });
+    const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'marcharA', { heroeId: proyeccion.heroeId, objetivo });
     if (!respuesta.resultado.ok) throw new ApiError(409, respuesta.resultado.codigoError ?? 'El servidor rechazó la marcha.');
     await refrescarDatosJuego();
   } catch (err) {
@@ -302,7 +349,7 @@ function renderSeleccionMapa(): void {
   cont.querySelector('#btn-marchar-alli')?.addEventListener('click', () => void marcharAObjetivo({ tipo: 'asentamiento', id: asentamiento.id }));
   cont.querySelector('#btn-entrar-asent')?.addEventListener('click', async () => {
     try {
-      const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'entrarEnAsentamiento', { asentamientoId: asentamiento.id, jugadorId: proyeccion.jugadorId });
+      const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'entrarEnAsentamiento', { asentamientoId: asentamiento.id, heroeId: proyeccion.heroeId });
       if (!respuesta.resultado.ok) throw new ApiError(409, respuesta.resultado.codigoError ?? 'No se pudo entrar.');
       seleccionMapa = null;
       await refrescarDatosJuego(); // si entró, el router lleva a la pantalla Asentamiento
@@ -315,7 +362,7 @@ function renderSeleccionMapa(): void {
 
 // --- RIEL DE ICONOS Y MENÚ DE ESQUINA DEL MAPA (T5) ---------------------------------------------
 
-type PanelRiel = 'faccion' | 'cosas' | 'fundar';
+type PanelRiel = 'heroe' | 'faccion' | 'cosas' | 'fundar';
 let panelMapaAbierto: PanelRiel | null = null;
 let menuEsquinaAbierto = false;
 let controlMapaActivo: ControlMapa | null = null;
@@ -360,7 +407,8 @@ function abrirPanelRiel(panel: PanelRiel): void {
 /** Markup del avatar + menú desplegable + overlay JSON. Las clases llevan prefijo `mapa-` por herencia,
  * pero el componente es común a las dos pantallas a pantalla completa. */
 function menuEsquinaHtml(): string {
-  const iniciales = escaparHtml(estadoCliente.usuarioActivo.substring(0, 2).toUpperCase());
+  const nombre = estadoCliente.proyeccionUltima?.heroe.displayName ?? estadoCliente.usuarioActivo;
+  const iniciales = escaparHtml(nombre.substring(0, 2).toUpperCase());
   return `
     <button class="mapa-avatar" type="button" aria-label="Menú de sesión">${iniciales}</button>
     <div class="mapa-menu" hidden>
@@ -414,8 +462,10 @@ function renderPanelRiel(): void {
 
   if (panelMapaAbierto === null) { panel.hidden = true; panel.innerHTML = ''; return; }
   panel.hidden = false;
-  if (panelMapaAbierto === 'faccion') {
-    panel.innerHTML = `<div class="mapa-panel-jugador">${escaparHtml(estadoCliente.usuarioActivo)}</div>${renderPestanaFaccion(proyeccion, escaparHtml)}`;
+  if (panelMapaAbierto === 'heroe') {
+    pintarPanelHeroe(panel, proyeccion, escaparHtml, aplicarYRefrescar);
+  } else if (panelMapaAbierto === 'faccion') {
+    panel.innerHTML = `<div class="mapa-panel-jugador">${escaparHtml(proyeccion.heroe.displayName)}</div>${renderPestanaFaccion(proyeccion, escaparHtml)}`;
   } else if (panelMapaAbierto === 'cosas') {
     const asentamientos = asentamientosDelMapa(proyeccion).filter((a) => a.faccionId === proyeccion.faccionId);
     const columnas = proyeccion.ejercitos;
@@ -428,7 +478,7 @@ function renderPanelRiel(): void {
           : '<p class="mapa-lista-vacia">Ninguno a la vista.</p>'}
         <strong>Columnas</strong>
         ${columnas.length > 0
-          ? columnas.map((e) => `<button class="mapa-lista-item" type="button" data-centrar-x="${e.posicionActual.x}" data-centrar-y="${e.posicionActual.y}">${e.participantes?.some((p) => p.jugadorId === proyeccion.jugadorId) ? 'Tu columna' : escaparHtml(e.id)}<span>${e.estado}</span></button>`).join('')
+          ? columnas.map((e) => `<button class="mapa-lista-item" type="button" data-centrar-x="${e.posicionActual.x}" data-centrar-y="${e.posicionActual.y}">${e.participantes.some((p) => p.heroeId === proyeccion.heroeId) ? 'Tu columna' : escaparHtml(e.id)}<span>${e.estado}</span></button>`).join('')
           : '<p class="mapa-lista-vacia">Ninguna.</p>'}
       </div>`;
     panel.querySelectorAll<HTMLButtonElement>('.mapa-lista-item').forEach((boton) => {
@@ -462,6 +512,7 @@ function montarMapa(): void {
   app.innerHTML = `<div class="mapa-screen">
     <div class="mapa-lienzo"><canvas id="mapa" width="900" height="900"></canvas></div>
     <nav class="mapa-riel" aria-label="Paneles del mapa">
+      <button type="button" data-panel="heroe" title="Héroe" aria-label="Héroe">🛡</button>
       <button type="button" data-panel="faccion" title="Facción" aria-label="Facción">⚑</button>
       <button type="button" data-panel="cosas" title="Mis cosas" aria-label="Mis cosas">📍</button>
       <button type="button" data-panel="fundar" title="Fundar asentamiento" aria-label="Fundar asentamiento" hidden>⌂</button>
@@ -528,7 +579,7 @@ function montarMapa(): void {
 
 // --- PANTALLA ASENTAMIENTO (T6) -----------------------------------------------------------------
 
-type PanelAsent = 'faccion' | 'ejercito';
+type PanelAsent = 'heroe' | 'faccion' | 'ejercito';
 let panelAsentAbierto: PanelAsent | null = null;
 
 /** Salida "en seco" al mundo (Doc 1.10.2): sin tropas ni carga. La pantalla de equipamiento (elegir
@@ -540,7 +591,7 @@ async function salirAlMundo(): Promise<void> {
   try {
     const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'salirAlMundo', {
       asentamientoId: asentamiento.id,
-      jugadorId: proyeccion.jugadorId,
+      heroeId: proyeccion.heroeId,
       escuadronIds: [],
       carga: {},
     });
@@ -568,10 +619,10 @@ const EDIFICIOS_MANUALES = [
   'fundicion', 'granFundicion', 'curtiduria', 'armeria', 'carpinteria', 'maravilla',
 ] as const;
 
-/** El cargo de construcción que el jugador tiene en esta plaza, o `null`. */
-function cargoConstructor(asentamiento: Asentamiento, jugadorId: string): 'gobernador' | 'maestroObras' | null {
-  if (asentamiento.cargos?.gobernadorId === jugadorId) return 'gobernador';
-  if (asentamiento.cargos?.maestroObrasId === jugadorId) return 'maestroObras';
+/** El cargo de construcción que el héroe tiene en esta plaza, o `null`. */
+function cargoConstructor(asentamiento: Asentamiento, heroeId: string): 'gobernador' | 'maestroObras' | null {
+  if (asentamiento.cargos?.gobernadorId === heroeId) return 'gobernador';
+  if (asentamiento.cargos?.maestroObrasId === heroeId) return 'maestroObras';
   return null;
 }
 
@@ -605,7 +656,7 @@ function renderPanelEdificios(): void {
   if (!contenedor || !proyeccion || !asentamiento) return;
 
   const edificios = asentamiento.edificios ?? [];
-  const cargo = cargoConstructor(asentamiento, proyeccion.jugadorId);
+  const cargo = cargoConstructor(asentamiento, proyeccion.heroeId);
   const puedeConstruir = cargo !== null;
 
   const ETIQUETA_SECCION: Record<SeccionAsent, string> = { resumen: 'Resumen', edificios: 'Edificios', produccion: 'Producción', cola: 'Cola' };
@@ -797,6 +848,10 @@ function renderPanelAsent(): void {
   });
   if (panelAsentAbierto === null) { panel.hidden = true; panel.innerHTML = ''; return; }
   panel.hidden = false;
+  if (panelAsentAbierto === 'heroe') {
+    pintarPanelHeroe(panel, proyeccion, escaparHtml, aplicarYRefrescar);
+    return;
+  }
   if (panelAsentAbierto === 'ejercito') {
     panel.innerHTML = `<span class="faction-kicker">Ejército</span><p class="mapa-lista-vacia">Sin comandos militares cableados todavía (composición de columna, reclutamiento, movilización) — ver docs/Features_Pendientes.md.</p>`;
     return;
@@ -811,8 +866,8 @@ function renderPanelAsent(): void {
 function renderCargosAsentamiento(asentamiento: Asentamiento | undefined, proyeccion: ProyeccionJugador): string {
   if (!asentamiento) return '';
   const faccion = proyeccion.facciones.find((f) => f.id === proyeccion.faccionId);
-  const soyGobernador = asentamiento.cargos?.gobernadorId === proyeccion.jugadorId;
-  const soyRey = faccion?.reyId === proyeccion.jugadorId;
+  const soyGobernador = asentamiento.cargos?.gobernadorId === proyeccion.heroeId;
+  const soyRey = faccion?.reyId === proyeccion.heroeId;
   if (!soyGobernador && !soyRey) return '';
 
   const ciudadanos = faccion?.ciudadanosIds ?? [];
@@ -836,7 +891,7 @@ function renderCargosAsentamiento(asentamiento: Asentamiento | undefined, proyec
           <span>${nombre}</span>
           <select class="asent-cargo-sel">
             <option value="">— vacante —</option>
-            ${ciudadanos.map((id) => `<option value="${escaparHtml(id)}"${id === actual ? ' selected' : ''}>${escaparHtml(id)}</option>`).join('')}
+            ${ciudadanos.map((id) => `<option value="${escaparHtml(id)}"${id === actual ? ' selected' : ''}>${escaparHtml(nombreDeHeroe(proyeccion, id))}</option>`).join('')}
           </select>
           <button class="btn-secondary asent-cargo-btn" type="button">Asignar</button>
         </div>`;
@@ -851,10 +906,10 @@ function cablearCargosAsentamiento(panel: HTMLElement, asentamiento: Asentamient
     const cargo = fila.dataset.cargo;
     const select = fila.querySelector<HTMLSelectElement>('.asent-cargo-sel');
     fila.querySelector<HTMLButtonElement>('.asent-cargo-btn')?.addEventListener('click', async () => {
-      const jugadorId = select?.value;
-      if (!cargo || !jugadorId) return;
+      const heroeId = select?.value;
+      if (!cargo || !heroeId) return;
       try {
-        const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'asignarCargoLocal', { asentamientoId: asentamiento.id, cargo, jugadorId });
+        const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'asignarCargoLocal', { asentamientoId: asentamiento.id, cargo, heroeId });
         if (!respuesta.resultado.ok) throw new ApiError(409, respuesta.resultado.codigoError ?? 'No se pudo asignar el cargo.');
         await refrescarDatosJuego();
       } catch (err) {
@@ -880,6 +935,7 @@ function montarAsentamiento(): void {
       <span class="asent-nombre">${escaparHtml(asentamiento.nombre ?? asentamiento.id)}</span>
       <span class="asent-nivel">Nivel ${asentamiento.nivel}</span>
       <div class="asent-barra-acciones">
+        <button type="button" data-panel-asent="heroe">Héroe</button>
         <button type="button" data-panel-asent="faccion">Facción</button>
         <button type="button" data-panel-asent="ejercito">Ejército</button>
         <button id="btn-salir-mundo" class="btn-primary" type="button">Salir al mundo</button>
@@ -1026,6 +1082,7 @@ function renderVistaLogin(errorMensaje?: string): void {
       estadoCliente.usuarioActivo = nick;
       estadoCliente.gameIdActivo = gameId;
       estadoCliente.proyeccionUltima = null;
+      estadoCliente.sinHeroe = false;
       pantallaMontada = null;
       enrutar();
       await refrescarDatosJuego();
@@ -1135,8 +1192,9 @@ function fechaDeMundo(instante: number | undefined): string {
 }
 
 async function refrescarDatosJuego(): Promise<void> {
-  const proyeccion = await consultarProyeccion(estadoCliente.gameIdActivo);
-  estadoCliente.proyeccionUltima = proyeccion;
+  const respuesta = await consultarProyeccion(estadoCliente.gameIdActivo);
+  estadoCliente.sinHeroe = respuesta.sinHeroe === true;
+  estadoCliente.proyeccionUltima = respuesta.sinHeroe ? null : respuesta;
   enrutar();
 }
 
@@ -1145,7 +1203,7 @@ async function refrescarDatosJuego(): Promise<void> {
 // `twinkly-greeting-peacock.md`): no hay "última pantalla" guardada, así que recargar devuelve al jugador a
 // donde estaba. `#/legacy` es la válvula de escape a la interfaz anterior, intacta, y solo se llega
 // escribiéndola en la URL.
-type Pantalla = 'login' | 'cargando' | 'faccion' | 'mapa' | 'asentamiento' | 'legacy';
+type Pantalla = 'login' | 'cargando' | 'heroe' | 'faccion' | 'mapa' | 'asentamiento' | 'legacy';
 
 let pantallaMontada: Pantalla | null = null;
 /** Limpieza de la pantalla saliente (listeners globales, etc.). La fija quien monta una pantalla que los
@@ -1158,6 +1216,7 @@ function esRutaLegacy(): boolean {
 
 function pantallaActual(): Pantalla {
   if (!estadoCliente.usuarioActivo) return 'login';
+  if (estadoCliente.sinHeroe) return 'heroe';
   if (esRutaLegacy()) return 'legacy';
   const proyeccion = estadoCliente.proyeccionUltima;
   if (!proyeccion) return 'cargando';
@@ -1173,6 +1232,7 @@ function montar(pantalla: Pantalla): void {
     case 'login': renderVistaLogin(); break;
     case 'legacy': montarLegacy(); break;
     case 'cargando': app.innerHTML = '<div class="login-container"><div class="login-card"><p class="login-subtitle">Cargando partida…</p></div></div>'; break;
+    case 'heroe': montarHeroe(); break;
     case 'faccion': montarFaccion(); break;
     case 'mapa': montarMapa(); break;
     case 'asentamiento': montarAsentamiento(); break;
@@ -1209,6 +1269,7 @@ function cerrarSesionYVolverALogin(mensaje?: string): void {
   cerrarSesion();
   estadoCliente.usuarioActivo = '';
   estadoCliente.proyeccionUltima = null;
+  estadoCliente.sinHeroe = false;
   pantallaMontada = 'login';
   renderVistaLogin(mensaje);
 }

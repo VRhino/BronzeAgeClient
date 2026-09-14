@@ -14,7 +14,7 @@ como imagen/rejilla, este cliente lleva su **propia copia** de las funciones pur
 
 - [`docs/Analisis_Brecha_Backend.md`](docs/Analisis_Brecha_Backend.md) — qué ofrece el backend, qué consume
   este cliente y qué falta, con checklist. **Empezar por aquí.**
-- [`docs/COMANDOS.md`](docs/COMANDOS.md) — los 69 comandos de partida y cuáles están cableados.
+- [`docs/COMANDOS.md`](docs/COMANDOS.md) — los 74 comandos de partida y cuáles están cableados.
 - [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md) — endpoints, formas de petición y respuesta.
 - [`docs/Features_Pendientes.md`](docs/Features_Pendientes.md) — cómo se quiere que sea la interfaz.
 
@@ -38,8 +38,11 @@ detalle y la disciplina de mantenimiento.
   edificios.
 - **Panel de interacción**: pestañas de Facción (crear, unirse), Asentamientos (fundar con previsualización
   sobre el mapa, almacén, edificios, muralla) e Información.
-- **Comandos**: 6 de los 69 que expone el backend — `crearFaccion`, `unirseAFaccion`, `fundarAsentamiento` y
-  los tres de muralla.
+- **Héroe**: si la membresía no tiene héroe, la única pantalla es la de crearlo (provisional: solo el nombre).
+  Su nombre sale en el menú de esquina, el panel de Facción y el selector de cargos. El **panel Héroe** (riel del
+  Mapa y barra del Asentamiento) enseña su ficha y reparte atributos, lista sus escuadras con la guarnición, y
+  gestiona sus loadouts.
+- **Comandos**: 21 de los 74 de jugador — ver [`docs/COMANDOS.md`](docs/COMANDOS.md).
 
 Las zonas de Facción llegan ya fusionadas del servidor y **así debe seguir siendo**: fusionarlas aquí con
 `unirFormas`/`unirPoligonos` no se puede, porque su entrada (la posición de asentamientos rivales) es
@@ -62,16 +65,18 @@ El detalle, con checklist, está en
   cablear. Ver `CHANGELOG.md`.
 - **Sin tiempo real**: el único refresco es el botón de recargar. El WebSocket de la partida y el cursor
   `/eventos` están sin consumir.
-- **63 de 69 comandos sin interfaz**, entre ellos todo el sistema militar, el de ejércitos, el de comercio,
-  el de diplomacia, el de construcción y los tres bloques nuevos del jugador situado (presencia en el mundo,
-  interacción en el mapa, composición de columna compartida).
+- **53 de 74 comandos sin interfaz**, entre ellos todo el sistema militar, el de ejércitos, el de comercio,
+  el de diplomacia, la interacción en el mapa y la composición de columna compartida.
+- **La creación del héroe es provisional** (clase, género y aspecto fijos), y el panel Héroe aún no tiene equipo
+  ni perks — ver `docs/Features_Pendientes.md` §0.
 - **Sin leer `GET /v1/balance`**: hay valores del servidor copiados a mano en `src/ui/`.
 - No soporta partidas creadas con `region` (ver la limitación documentada en `src/terreno/elevacion.ts`).
 - No crea partidas (eso es administración): asume que una partida con el `gameId` indicado ya existe.
 
 ## Uso
 
-Requiere el backend corriendo aparte, y una partida ya creada por un administrador:
+Requiere el backend corriendo aparte, y una partida ya creada por un administrador. Desde el 2026-09-14 tiene
+que ser la rama `heroe-dominio` del backend (modelo de Héroe), hasta que se fusione a `main`:
 
 ```bash
 ADMINISTRADORES='dev:jefa' npm run server
@@ -86,6 +91,9 @@ El login es con **cuenta local** (nick + contraseña, proveedor `clave` del back
 "No tengo cuenta — crear una" en la pantalla de login; si el backend arrancó con `CODIGO_REGISTRO`, hay que
 poner ese código. La sesión se guarda en `localStorage`; cuando caduca (12 h) la UI vuelve al login (no hay
 re-login en silencio: la contraseña no se guarda).
+
+La primera vez que se entra en una partida hay que crear el héroe: hasta entonces el backend no deja hacer nada
+más.
 
 `vite.config.ts` proxya `/v1` hacia `:3000` para evitar CORS en desarrollo.
 
