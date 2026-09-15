@@ -1,7 +1,7 @@
 # Contrato API del cliente jugador
 
 Documento de referencia de este cliente. El backend escucha bajo el prefijo `/v1`. Última revisión:
-**2026-09-14**, contra `BronzeAgeFase0@6d43688` (rama `heroe-dominio`: modelo de Héroe, fases 1 a 3).
+**2026-09-15**, contra `BronzeAgeFase0@3602f71` (rama `heroe-dominio`: modelo de Héroe, Herido y bandidos con columna).
 
 Para el porqué de cada hueco y el orden en que conviene cerrarlos, ver
 [`Analisis_Brecha_Backend.md`](Analisis_Brecha_Backend.md); el catálogo de comandos, en
@@ -15,7 +15,7 @@ Para el porqué de cada hueco y el orden en que conviene cerrarlos, ver
 - [x] `POST /v1/jugador/partidas/{gameId}/membresia`
 - [x] `GET /v1/jugador/partidas/{gameId}`
 - [x] `GET /v1/jugador/partidas/{gameId}/mapa/{mapaId}`
-- [x] `POST /v1/jugador/partidas/{gameId}/comandos` — con 21 de los 74 comandos de jugador (ver `COMANDOS.md`)
+- [x] `POST /v1/jugador/partidas/{gameId}/comandos` — con 22 de los 73 comandos de jugador (ver `COMANDOS.md`)
 - [x] Reintento automático tras una respuesta `401`, creando una sesión nueva con `POST /v1/sesiones`
 
 ### Funciones disponibles en `apiCliente.ts`, pero sin llamada desde la UI actual
@@ -156,12 +156,13 @@ se les vea o no) y en `heroesVisibles` (los ajenos que se ven, abajo).
 (nivel, experiencia, las dos bolsas de puntos, `atributosBase`, perks), `loadouts` con el `liderazgoTotal` que
 calcula el servidor, `inventario`, `equipamiento`, `monedasHeroe`, `cupoGuarnicion` con su `guarnicionOcupada`, y
 **todas tus escuadras** (`escuadrones`, cada una con su `contenedor` —campamento, ejército o escolta—,
-`enGuarnicion` y su `costeLiderazgo`). Es el único sitio
+`enGuarnicion` y su `costeLiderazgo`). Y `heridoHasta` mientras está herido (Doc 5.16.4): 2 minutos tras perder una
+batalla, sin atacar, perseguir ni entrar en batallas. Es el único sitio
 donde viajan escuadras completas: un ejército lleva solo `escuadronIds` (antes `escuadrones`), y un `Asentamiento`
 ya no trae `escuadrones` (su guarnición son las escuadras `enGuarnicion` de sus residentes).
 
 `heroesVisibles` son los héroes AJENOS que se ven —en una columna tuya o avistada, o dentro de la plaza que
-pisas—, solo en su parte pública (`HeroePublico`: nombre, clase, nivel, escuadras que lleva en la columna y
+pisas—, solo en su parte pública (`HeroePublico`: nombre, clase, nivel, `heridoHasta` si está herido, escuadras que lleva en la columna y
 equipo puesto). `ejercitosAvistados[].heroeIds` dice quién va en cada columna ajena.
 
 #### Partida sin héroe
@@ -296,8 +297,8 @@ Body mínimo:
 ```
 
 También admite opcionalmente `idempotencyKey`. El backend valida `params` según el `tipo`, con
-`additionalProperties: false`. El catálogo de jugador son **74 comandos** (75 en el backend: `crearFaccionNpc`
-es solo de administración), de los que la interfaz cablea 21: la
+`additionalProperties: false`. El catálogo de jugador son **73 comandos** (74 en el backend: `crearFaccionNpc`
+es solo de administración), de los que la interfaz cablea 22: la
 lista completa, con sus parámetros, está en [`COMANDOS.md`](COMANDOS.md).
 
 En caso de éxito la respuesta incluye `resultado`, resumen de partida y **la `proyeccion` del jugador ya

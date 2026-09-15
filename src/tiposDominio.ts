@@ -228,6 +228,8 @@ export interface ZonaFaccion {
 export interface CampamentoBandido {
   id: string;
   posicion: Point;
+  /** Lo que hay que vencer, fijo (Doc 1.9). Se ataca con la columna que llega hasta él (`atacar`). */
+  poder: number;
 }
 
 export interface CaminoComercial {
@@ -413,6 +415,9 @@ export interface HeroeProyectado {
   /** Liderazgo de tus escuadras en guarnición: lo libre es `cupoGuarnicion - guarnicionOcupada` (puede ser negativo
    * si el cupo bajó, porque lo asignado se queda). */
   guarnicionOcupada: number;
+  /** Herido hasta este instante de mundo (Doc 5.16.4): 2 minutos tras perder una batalla. Mientras dura no ataca, no
+   * persigue y sus escuadras no combaten. Vencido o ausente = sano. */
+  heridoHasta?: number;
 }
 
 /** Un héroe ajeno que se ve (Doc 5.16.7): solo su parte pública. */
@@ -421,6 +426,8 @@ export interface HeroePublico {
   displayName: string;
   classDefinitionId: string;
   nivel: number;
+  /** Solo mientras está herido (Doc 5.16.4). */
+  heridoHasta?: number;
   /** Las que lleva en su columna; las del campamento no se ven. */
   escuadrasQueLleva: { tropaId: string; cantidad: number; nivel: number }[];
   /** `itemDefinitionId` de lo que lleva puesto en cada hueco. */

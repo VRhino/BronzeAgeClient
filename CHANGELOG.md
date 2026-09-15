@@ -3,6 +3,26 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.6.0] — 2026-09-15 · Herido y bandidos con columna · sync con `BronzeAgeFase0@3602f71` (rama `heroe-dominio`)
+
+### Añadido
+- **Atacar campamentos de bandidos** (Doc 1.9): clic en un campamento abre su ficha en el panel de Selección
+  (poder, distancia a tu columna) y marcha hacia él; «Atacar» manda `atacar` con `objetivo: campamento`. Se apaga
+  si estás herido o a más de 15 (`RADIO_ATAQUE`, copia de `LOGISTICA.radioEncuentro`), y al terminar avisa de si
+  cayó o aguantó.
+- **Herido** (Doc 5.16.4): `heridoHasta` en `HeroeProyectado` y `HeroePublico`. La Ficha del panel Héroe enseña los
+  minutos que quedan, y el loadout de un herido deja de marcarse como que defiende.
+- `CampamentoBandido.poder`.
+
+### Backend que lo habilita
+- La Tregua de columna se sustituye por el Herido del héroe; sale `atacarCampamentoBandidos` (desde una plaza):
+  74 comandos, 73 de jugador. Al caer una plaza, quien estaba dentro queda fuera en una columna (el router ya
+  lleva a Mapa).
+
+### Documentación
+- `COMANDOS.md` (22 de 73, `atacar` cableado para campamentos), `API_CONTRACT.md`, `Analisis_Brecha_Backend.md`,
+  `Features_Pendientes.md` §0.2 y §1.4, README.
+
 ## [0.5.0] — 2026-09-14 · panel del héroe · sync con `BronzeAgeFase0@52498a2` (rama `heroe-dominio`)
 
 ### Añadido

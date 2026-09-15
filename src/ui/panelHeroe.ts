@@ -23,6 +23,12 @@ let borrador: { loadoutId?: string; displayName: string; squadIds: Set<string>; 
 /** Lo último pintado en cada panel. Si el refresco no cambia nada, no se toca el DOM (ni el foco ni los inputs). */
 const pintado = new WeakMap<HTMLElement, string>();
 
+/** Minutos que le quedan de Herido a tu héroe (Doc 5.16.4), o `null` si está sano. */
+export function minutosHerido(proyeccion: ProyeccionJugador): number | null {
+  const hasta = proyeccion.heroe.heridoHasta;
+  return hasta !== undefined && hasta > proyeccion.instante ? Math.ceil((hasta - proyeccion.instante) / 60_000) : null;
+}
+
 /** ¿Está el héroe dentro de su residencia? Solo ahí defiende su loadout activo (Doc 5.12.4). */
 function dentroDeSuResidencia(proyeccion: ProyeccionJugador): boolean {
   const aqui = proyeccion.asentamientos[0];
@@ -40,8 +46,10 @@ function dondeEsta(heroe: HeroeProyectado, proyeccion: ProyeccionJugador): strin
 function renderFicha(h: HeroeProyectado, proyeccion: ProyeccionJugador, e: Escapar): string {
   const puntos = h.puntosDeAtributoSinGastar;
   const m = h.monedasHeroe;
+  const herido = minutosHerido(proyeccion);
   return `
     <p class="heroe-nota">${e(h.classDefinitionId)} · ${e(dondeEsta(h, proyeccion))}</p>
+    ${herido !== null ? `<p class="heroe-herido">Herido: ${herido} min. No atacas, no persigues y tus escuadras no combaten.</p>` : ''}
     <div class="faction-stats heroe-datos">
       <div><span>Nivel</span><strong>${h.nivel}</strong></div>
       <div><span>Experiencia</span><strong>${h.experienciaHaciaSiguienteNivel}</strong></div>
@@ -58,7 +66,8 @@ function renderFicha(h: HeroeProyectado, proyeccion: ProyeccionJugador, e: Escap
 function renderEscuadras(h: HeroeProyectado, proyeccion: ProyeccionJugador, e: Escapar): string {
   const libre = h.cupoGuarnicion - h.guarnicionOcupada;
   const activo = h.loadouts.find((l) => l.activo);
-  const dentro = dentroDeSuResidencia(proyeccion);
+  // Herido, su loadout no defiende aunque esté dentro (Doc 5.16.4); la guarnición sí.
+  const dentro = dentroDeSuResidencia(proyeccion) && minutosHerido(proyeccion) === null;
   const cabecera = `<p class="heroe-nota">Guarnición: <strong>${h.guarnicionOcupada} / ${h.cupoGuarnicion}</strong> de Liderazgo.${h.cupoGuarnicion === 0 ? ' Tu residencia no da cupo: hace falta un Barracón o una Galería de tiro.' : ''} Del campamento solo defienden la guarnición y, mientras estás dentro, tu loadout activo.</p>`;
   if (h.escuadrones.length === 0) return `${cabecera}<p class="mapa-lista-vacia">No tienes escuadras: se reclutan en el asentamiento donde resides.</p>`;
   return `${cabecera}<div class="mapa-lista">${h.escuadrones

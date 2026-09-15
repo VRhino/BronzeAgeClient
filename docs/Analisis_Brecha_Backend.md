@@ -1,8 +1,14 @@
 # Análisis de brecha: este cliente frente al backend
 
 Qué ofrece el backend a un jugador, qué consume este cliente hoy y qué falta por construir. Fotografía
-tomada el **2026-09-14**, contra `BronzeAgeFase0` en `6d43688` (rama `heroe-dominio`) y este cliente en su HEAD
+tomada el **2026-09-15**, contra `BronzeAgeFase0` en `3602f71` (rama `heroe-dominio`) y este cliente en su HEAD
 actual.
+
+> **Sync 2026-09-15 (Herido y bandidos con columna — cambio de forma, ya alineado):** (1) `atacar` gana el objetivo
+> `campamento` y sale `atacarCampamentoBandidos` (74 comandos, 73 de jugador); el cliente ya ataca campamentos
+> desde el panel de Selección. (2) `heroe.heridoHasta` y `heroesVisibles[].heridoHasta` (Doc 5.16.4) sustituyen a
+> la Tregua de columna; el panel Héroe lo enseña y el ataque se apaga mientras dura. (3) Al caer una plaza, quien
+> estaba dentro queda fuera en una columna, lo que el router ya lleva a la pantalla Mapa.
 
 > **Sync 2026-09-14 (modelo de Héroe, fases 2 y 3 — cambio de forma, ya alineado):** (1) las escuadras viven en
 > el héroe: `ejercitos[].escuadrones` pasa a `escuadronIds` (solo ids) y `Asentamiento.escuadrones` desaparece.
@@ -93,7 +99,7 @@ puede sacar a un jugador de su ciudad todavía. Ver §3 y §4 más abajo para el
 | Superficie | Total | En el cliente | Brecha |
 |---|---:|---:|---:|
 | Endpoints (jugador, sesión y balance) | 9 | 5 | 4 |
-| Comandos de partida (de jugador) | **74** | 21 | **53** |
+| Comandos de partida (de jugador) | **73** | 22 | **51** |
 | Bloques de datos de la proyección | 31 | 20 | 11 |
 
 Desde la revisión del 2026-09-09: +`crearHeroe` (cableado, pantalla provisional), +5 del héroe sobre sí mismo
@@ -114,10 +120,10 @@ Reparto por sistema de juego, para ver dónde está el hueco:
 | Diplomacia | 5 | 0 |
 | Comercio y caravanas | 14 | 0 |
 | Construcción y gestión local | 7 | 5 (faltan `calibrarReservaManual`, `renombrarAsentamiento`) |
-| Militar | 3 | 0 |
+| Militar | 2 | 0 |
 | Ejércitos y logística | 10 | 0 |
 | Presencia del jugador | 6 | 3 (`salirAlMundo` en seco, `marcharA`, `entrarEnAsentamiento`) |
-| Interacción en el mapa | 4 | 0 |
+| Interacción en el mapa | 4 | 1 (`atacar`, solo campamentos de bandidos) |
 | Composición de columna compartida | 4 | 0 |
 
 Héroe y Murallas son los únicos sistemas enteros. Construcción y presencia ya se usan desde las pantallas
@@ -139,7 +145,7 @@ condición previa de todo lo demás que involucre moverse por el mapa, incluido 
 - [x] `POST /v1/jugador/partidas/{gameId}/membresia`
 - [x] `GET /v1/jugador/partidas/{gameId}` — la proyección (o `sinHeroe`, que lleva a la pantalla Héroe)
 - [x] `GET /v1/jugador/partidas/{gameId}/mapa/{mapaId}` — cacheado en memoria por `mapaId`
-- [x] `POST /v1/jugador/partidas/{gameId}/comandos` — con 21 de los 74 comandos
+- [x] `POST /v1/jugador/partidas/{gameId}/comandos` — con 22 de los 73 comandos
 
 ### Sin consumir
 
@@ -158,13 +164,13 @@ condición previa de todo lo demás que involucre moverse por el mapa, incluido 
 - [ ] `GET /v1/sesiones/actual` — `obtenerWhoami()` existe en `apiCliente.ts` y **no lo invoca nadie**: hoy
       es código muerto. O se cablea (para conocer el rol real en la partida) o se borra.
 
-## 2. Comandos: 21 de 74
+## 2. Comandos: 22 de 73
 
 El checklist por comando, con sus `params` exactos, vive en [`COMANDOS.md`](COMANDOS.md) — **es la única
 lista de esa granularidad**, para no mantener dos que se contradigan. Aquí solo la lectura de conjunto.
 
-Ninguno de los 53 que faltan está fuera de alcance por permisos: la matriz de `autorizacion.ts` admite el rol
-`jugador` en los 74 (el único comando de partida que no es suyo, `crearFaccionNpc`, es de administración). Lo
+Ninguno de los 51 que faltan está fuera de alcance por permisos: la matriz de `autorizacion.ts` admite el rol
+`jugador` en los 73 (el único comando de partida que no es suyo, `crearFaccionNpc`, es de administración). Lo
 que falta es siempre interfaz, nunca backend.
 
 Dos comandos que este cliente llegó a documentar ya **no existen**: `combateCampoAbierto` e
@@ -272,8 +278,8 @@ No son de una mecánica concreta; condicionan a todas las demás.
 - [ ] **Tiempo real.** Ver §1. Sin WebSocket ni `/eventos`, el mundo solo cambia cuando el jugador pulsa
       refrescar.
 - [ ] **Catálogo de balance.** Hoy el cliente **copia a mano** valores del servidor:
-      `CAP_FUNDACION_POR_NIVEL` en `src/ui/estadoCliente.ts` y el radio `30` de la zona inicial en
-      `src/ui/pestanaAsentamientos.ts`. Es exactamente la divergencia silenciosa contra la que avisa el doc 9
+      `CAP_FUNDACION_POR_NIVEL` en `src/ui/estadoCliente.ts`, el radio `30` de la zona inicial en
+      `src/ui/pestanaAsentamientos.ts` y el radio de choque `15` (`LOGISTICA.radioEncuentro`) en `src/main.ts`. Es exactamente la divergencia silenciosa contra la que avisa el doc 9
       del backend, y además no basta: sin el catálogo de edificios, tropas y políticas no se puede construir
       la interfaz de los 7 comandos de construcción ni la de los 3 militares. Leerlo de `GET /v1/balance`
       resuelve las dos cosas de una vez.

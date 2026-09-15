@@ -66,7 +66,8 @@ compañeros de Facción (`nombresDeCompaneros`, se les vea o no).
 **Hoy (cliente 0.5.0):** el **panel Héroe** (`src/ui/panelHeroe.ts`) se abre desde el riel del Mapa (🛡) y desde
 la barra del Asentamiento, con tres pestañas. Las reglas son las del canon del backend: Doc 5.16 (el Héroe),
 5.12.4 y 5.15.3 (defensa y guarnición).
-- **Ficha:** clase, dónde está, nivel, experiencia hacia el siguiente, Liderazgo, monedas y los cuatro atributos.
+- **Ficha:** clase, dónde está, si está **herido** y cuánto le queda (Doc 5.16.4), nivel, experiencia hacia el
+  siguiente, Liderazgo, monedas y los cuatro atributos.
   Con puntos sin gastar aparece un campo por atributo y «Repartir puntos» (`repartirPuntos`); hoy ningún nivel
   da puntos (CQ-001), así que no sale.
 - **Escuadras:** cada escuadra con hombres, nivel, moral, coste de Liderazgo, dónde está y si **defiende** (la
@@ -83,7 +84,7 @@ El sondeo de 3 s no repinta el panel si nada cambió, ni mientras hay un loadout
    Conquest publique su catálogo de objetos (CQ-004). Con él, una pestaña Equipo.
 2. **Perks.** Elegirlos en el editor de loadout cuando exista el catálogo (CQ-004).
 3. **Héroes ajenos.** Al seleccionar una columna, propia o avistada (`ejercitosAvistados[].heroeIds`), la ficha
-   pública de quien va en ella (`heroesVisibles`: nombre, clase, nivel, escuadras que lleva y equipo puesto). Hoy
+   pública de quien va en ella (`heroesVisibles`: nombre, clase, nivel, si está herido, escuadras que lleva y equipo puesto). Hoy
    el mapa solo selecciona asentamientos (§1.4).
 4. **Salir al mundo** (§1.1). La pantalla de equipamiento puede proponer el loadout activo como selección.
 5. **Errores legibles** (§7). El backend solo devuelve `heroe.invalido`, sin detalle; el panel evita de antemano
@@ -116,10 +117,10 @@ alcanza la puerta, en vez de que el jugador pruebe el botón a ciegas.
 
 ### 1.4 Interacción rica con entidades del mapa
 **Hoy:** clic en terreno → `marcharA` punto; clic en asentamiento → panel de ficha + `marcharA` a la
-puerta + "Entrar".
+puerta + "Entrar"; clic en un **campamento de bandidos** → su ficha (poder, distancia a tu columna) + `marcharA`
+hasta él + "Atacar" (`atacar` con `objetivo: campamento`, Doc 1.9), apagado si estás herido o a más de 15.
 **Falta** (ver [`notas.md`](notas.md) §"vista mundo"): acciones sobre **ejércitos** (aliado → unirse,
-enemigo → perseguir), **campamentos de bandidos** (atacar), **rutas comerciales** (interceptar), y
-**caravanas avistadas**. La proyección ya trae `ejercitosAvistados`, `campamentosBandidos`, `caminos`,
+enemigo → perseguir o atacar), **rutas comerciales** (interceptar), y **caravanas avistadas**. La proyección ya trae `ejercitosAvistados`, `campamentosBandidos`, `caminos`,
 `caravanasAvistadas`.
 
 ## 2. Tiempo real

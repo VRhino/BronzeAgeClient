@@ -1,13 +1,20 @@
 # Índice de comandos del cliente jugador
 
 Fuente, en el repositorio del **backend**: `src/session/comandos/registro.ts` (el catálogo) y
-`src/session/comandos/esquemas.ts` (la forma de los `params`). Última revisión: **2026-09-14**, contra
-`BronzeAgeFase0@6d43688` (rama `heroe-dominio`: modelo de Héroe, fases 1 a 3).
+`src/session/comandos/esquemas.ts` (la forma de los `params`). Última revisión: **2026-09-15**, contra
+`BronzeAgeFase0@3602f71` (rama `heroe-dominio`: modelo de Héroe, Herido y bandidos con columna).
 
-El backend expone **75 comandos de partida**. La matriz de `src/session/comandos/autorizacion.ts` admite el rol
-`jugador` en **74**: el que falta, `crearFaccionNpc`, es solo de administración y no se lista aquí. Nada de lo
-que falta aquí está bloqueado por permisos. La interfaz cablea **21**; el resto solo es alcanzable llamando a
+El backend expone **74 comandos de partida**. La matriz de `src/session/comandos/autorizacion.ts` admite el rol
+`jugador` en **73**: el que falta, `crearFaccionNpc`, es solo de administración y no se lista aquí. Nada de lo
+que falta aquí está bloqueado por permisos. La interfaz cablea **22**; el resto solo es alcanzable llamando a
 mano al wrapper `ejecutarComando` de `src/apiCliente.ts`.
+
+> **Sync 2026-09-15 — Herido y bandidos con columna:** (1) `atacar` acepta `objetivo: { tipo: 'campamento', id }`:
+> un campamento de bandidos se ataca con la columna que llega a él (Doc 1.9), y sale `atacarCampamentoBandidos`
+> (el ataque desde una plaza). Recuento: 75 → 74 en el backend, 73 de jugador. (2) La Tregua de columna
+> desaparece: el héroe que pierde una batalla queda **herido** 2 minutos (`heroe.heridoHasta`, también en
+> `heroesVisibles`); no ataca, no persigue y sus escuadras no combaten, y a una columna de solo heridos no se la
+> puede atacar ni perseguir. (3) Al caer una plaza, quien estaba dentro sale junto a ella, en una columna.
 
 > **Sync 2026-09-14 (2) — fases 2 y 3 del Héroe:** +5 comandos del héroe sobre sí mismo, sin `heroeId` en los
 > `params` (el actor es siempre su propio héroe): `repartirPuntos`, `guardarLoadout`, `borrarLoadout`,
@@ -125,7 +132,6 @@ Una caravana ya no nace lista: se crea un casco vacío, se le montan carros y an
 
 - [ ] `reclutarTropa` — `asentamientoId`, `heroeId`, `tropaId`, `origen` (`pesants` \| `artesanos`)
 - [ ] `iniciarAsedio` — `atacanteId`, `defensorId`, `escuadronIds`
-- [ ] `atacarCampamentoBandidos` — `atacanteId`, `escuadronIds`, `campamentoId`
 
 ### Ejércitos y logística de campaña
 
@@ -160,7 +166,7 @@ El menú de clic sobre algo en marcha. Los encuentros ya no son automáticos por
 decidido acercarse (`inspeccionar`) o ir a por algo (`atacar`/`perseguir`) para que pase cualquier cosa.
 
 - [ ] `inspeccionar` — `heroeId`, `objetivo`: `{ tipo: 'ejercito', id }` o `{ tipo: 'caravana', id }` · ver de cerca sin comprometerse a nada
-- [ ] `atacar` — `heroeId`, `objetivo` (misma forma que `inspeccionar`)
+- [x] `atacar` — `heroeId`, `objetivo`: la misma forma que `inspeccionar`, o `{ tipo: 'campamento', id }` para un campamento de bandidos (Doc 1.9) · panel de Selección del mapa, **solo campamentos**; columnas y caravanas pendientes (`Features_Pendientes.md` §1.4)
 - [ ] `perseguir` — `heroeId`, `objetivo` (misma forma) · un objetivo MÓVIL, la ruta se recalcula cada tick hacia donde esté
 - [ ] `dejarDePerseguir` — `heroeId`
 

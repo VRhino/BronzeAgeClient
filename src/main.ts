@@ -12,10 +12,10 @@ import {
   type ProyeccionJugador,
   type RespuestaComando,
 } from './apiCliente';
-import { pintarPanelHeroe } from './ui/panelHeroe';
+import { minutosHerido, pintarPanelHeroe } from './ui/panelHeroe';
 import { edificioBajoCursor, pintarAsentamiento, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
 import { EDIFICIO_COLOR, EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from './paletas';
-import type { Asentamiento, Edificio, ParamsCrearHeroe, ProduccionItem } from './tiposDominio';
+import type { Asentamiento, CampamentoBandido, Edificio, ParamsCrearHeroe, ProduccionItem } from './tiposDominio';
 import type { MapaGenerado } from './terreno';
 import { estadoCliente, TIPS_FUNDACION } from './ui/estadoCliente';
 import { actualizarTip, resumenRecursosFundacion } from './ui/pestanaAsentamientos';
@@ -278,6 +278,17 @@ function asentamientoCercaDe(punto: { x: number; y: number }, proyeccion: Proyec
   return mejor;
 }
 
+/** El campamento de bandidos más cercano al punto clicado, dentro de un radio de agarre, o `null`. Los que viajan
+ * son solo los que se ven ahora (no tienen memoria). */
+function campamentoCercaDe(punto: { x: number; y: number }, proyeccion: ProyeccionJugador): CampamentoBandido | null {
+  const distancia = (c: CampamentoBandido): number => Math.hypot(c.posicion.x - punto.x, c.posicion.y - punto.y);
+  return proyeccion.campamentosBandidos.filter((c) => distancia(c) < 25).sort((a, b) => distancia(a) - distancia(b))[0] ?? null;
+}
+
+/** A qué distancia se ataca: `LOGISTICA.radioEncuentro` del backend (Doc 5.12.3), copiado aquí para avisar antes de
+ * mandar la orden. El que decide es el backend. */
+const RADIO_ATAQUE = 15;
+
 /** Punto de MUNDO bajo un clic: `getBoundingClientRect` del canvas ya incluye el `transform` del zoom/pan. */
 function puntoDeMapa(evento: { clientX: number; clientY: number }, canvas: HTMLCanvasElement, mapa: MapaGenerado): { x: number; y: number } {
   const rect = canvas.getBoundingClientRect();
@@ -287,9 +298,9 @@ function puntoDeMapa(evento: { clientX: number; clientY: number }, canvas: HTMLC
   };
 }
 
-/** Asentamiento seleccionado en el mapa (abre el panel de Selección). Fuera del `estadoCliente` porque solo
- * vive mientras la pantalla Mapa está montada. */
-let seleccionMapa: { id: string } | null = null;
+/** Lo seleccionado en el mapa —un asentamiento o un campamento de bandidos— (abre el panel de Selección). Fuera del
+ * `estadoCliente` porque solo vive mientras la pantalla Mapa está montada. */
+let seleccionMapa: { tipo: 'asentamiento' | 'campamento'; id: string } | null = null;
 let avisoMapaTimer: ReturnType<typeof setTimeout> | undefined;
 
 function avisoMapa(texto: string): void {
@@ -319,7 +330,13 @@ function renderSeleccionMapa(): void {
   const cont = document.querySelector<HTMLElement>('.mapa-seleccion');
   const proyeccion = estadoCliente.proyeccionUltima;
   if (!cont) return;
-  const asentamiento = seleccionMapa && proyeccion
+  const campamento = seleccionMapa?.tipo === 'campamento' ? proyeccion?.campamentosBandidos.find((c) => c.id === seleccionMapa!.id) : undefined;
+  if (proyeccion && campamento) {
+    cont.hidden = false;
+    renderSeleccionCampamento(cont, proyeccion, campamento);
+    return;
+  }
+  const asentamiento = seleccionMapa?.tipo === 'asentamiento' && proyeccion
     ? asentamientosDelMapa(proyeccion).find((a) => a.id === seleccionMapa!.id)
     : undefined;
   if (!asentamiento || !proyeccion) {
@@ -357,6 +374,48 @@ function renderSeleccionMapa(): void {
       const error = cont.querySelector<HTMLElement>('#mapa-seleccion-error');
       if (error) error.textContent = mensajeError(err);
     }
+  });
+}
+
+/** Ficha de un campamento de bandidos (Doc 1.9): se ataca con la columna, llegando hasta él. Si cae, su botín va al
+ * carro; si aguanta, el héroe queda herido y la columna pierde la mitad del carro. */
+function renderSeleccionCampamento(cont: HTMLElement, proyeccion: ProyeccionJugador, campamento: CampamentoBandido): void {
+  const columna = miColumna(proyeccion);
+  const distancia = columna ? Math.round(Math.hypot(columna.posicionActual.x - campamento.posicion.x, columna.posicionActual.y - campamento.posicion.y)) : null;
+  const herido = minutosHerido(proyeccion);
+  const impide =
+    herido !== null ? `Estás herido (${herido} min): no puedes atacar.`
+      : distancia === null ? 'Sal al mundo con tu columna para atacarlo.'
+        : distancia > RADIO_ATAQUE ? `Acércate: estás a ${distancia} y se ataca a ${RADIO_ATAQUE}.`
+          : '';
+  cont.innerHTML = `
+    <button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>
+    <span class="faction-kicker">Campamento de bandidos</span>
+    <h3>Bandidos</h3>
+    <div class="mapa-seleccion-datos">
+      <div><span>Poder</span><strong>${campamento.poder}</strong></div>
+      ${distancia !== null ? `<div><span>Distancia</span><strong>${distancia}</strong></div>` : ''}
+    </div>
+    <div class="mapa-seleccion-acciones">
+      <button id="btn-marchar-alli" class="btn-secondary" type="button">Marchar aquí</button>
+      <button id="btn-atacar-campamento" class="btn-primary" type="button"${impide ? ' disabled' : ''}>Atacar</button>
+    </div>
+    <p class="mapa-lista-vacia">${escaparHtml(impide || 'Si cae, su botín va a tu carro, lo que quepa. Si aguanta, quedas herido y pierdes la mitad del carro.')}</p>
+    <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`;
+  cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
+  cont.querySelector('#btn-marchar-alli')?.addEventListener('click', () => void marcharAObjetivo({ tipo: 'punto', punto: campamento.posicion }));
+  cont.querySelector<HTMLButtonElement>('#btn-atacar-campamento')?.addEventListener('click', async (evento) => {
+    const boton = evento.currentTarget as HTMLButtonElement;
+    boton.disabled = true;
+    const mensaje = await ejecutarYRefrescar('atacar', { heroeId: proyeccion.heroeId, objetivo: { tipo: 'campamento', id: campamento.id } });
+    if (mensaje) {
+      boton.disabled = false;
+      const error = cont.querySelector<HTMLElement>('#mapa-seleccion-error');
+      if (error) error.textContent = mensaje;
+      return;
+    }
+    const sigue = estadoCliente.proyeccionUltima?.campamentosBandidos.some((c) => c.id === campamento.id);
+    avisoMapa(sigue ? 'El campamento aguanta: quedas herido y pierdes la mitad del carro.' : 'Campamento destruido: su botín va a tu carro, lo que quepa.');
   });
 }
 
@@ -532,9 +591,14 @@ function montarMapa(): void {
     const canvas = document.querySelector<HTMLCanvasElement>('#mapa');
     if (!proy || !mapa || !canvas) return;
     const punto = puntoDeMapa(evento, canvas, mapa);
-    const asentamiento = asentamientoCercaDe(punto, proy);
-    if (asentamiento) {
-      seleccionMapa = { id: asentamiento.id };
+    const campamento = campamentoCercaDe(punto, proy);
+    const asentamiento = campamento ? null : asentamientoCercaDe(punto, proy);
+    if (campamento) {
+      seleccionMapa = { tipo: 'campamento', id: campamento.id };
+      renderSeleccionMapa();
+      void marcharAObjetivo({ tipo: 'punto', punto: campamento.posicion });
+    } else if (asentamiento) {
+      seleccionMapa = { tipo: 'asentamiento', id: asentamiento.id };
       renderSeleccionMapa();
       void marcharAObjetivo({ tipo: 'asentamiento', id: asentamiento.id });
     } else {

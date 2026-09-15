@@ -2492,3 +2492,11 @@ body {
   font-size: 0.78rem;
   color: var(--text-secondary);
 }
+.heroe-herido {
+  margin: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--terracota);
+  border-radius: 2px;
+  font-size: 0.76rem;
+  color: var(--terracota);
+}
