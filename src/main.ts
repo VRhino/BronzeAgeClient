@@ -15,7 +15,7 @@ import {
 import { minutosHerido, pintarPanelHeroe } from './ui/panelHeroe';
 import { edificioBajoCursor, pintarAsentamiento, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
 import { EDIFICIO_COLOR, EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from './paletas';
-import type { Asentamiento, CampamentoBandido, Edificio, ParamsCrearHeroe, ProduccionItem } from './tiposDominio';
+import type { Asentamiento, BloqueoAscenso, CampamentoBandido, Edificio, EvaluacionAscenso, ParamsCrearHeroe, ProduccionItem } from './tiposDominio';
 import type { MapaGenerado } from './terreno';
 import { estadoCliente, TIPS_FUNDACION } from './ui/estadoCliente';
 import { actualizarTip, resumenRecursosFundacion } from './ui/pestanaAsentamientos';
@@ -347,6 +347,7 @@ function renderSeleccionMapa(): void {
   }
   const faccion = proyeccion.facciones.find((f) => f.id === asentamiento.faccionId);
   const propio = asentamiento.faccionId === proyeccion.faccionId;
+  const ataque = propio ? null : alcanceDeAtaque(proyeccion, asentamiento.posicion);
   cont.hidden = false;
   cont.innerHTML = `
     <button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>
@@ -356,14 +357,18 @@ function renderSeleccionMapa(): void {
       <div><span>Facción</span><strong>${escaparHtml(faccion?.nombre ?? asentamiento.faccionId)}</strong></div>
       <div><span>Nivel</span><strong>${asentamiento.nivel}</strong></div>
       ${asentamiento.recordado !== null ? `<div><span>Visto</span><strong>${escaparHtml(fechaDeMundo(asentamiento.recordado))}</strong></div>` : ''}
+      ${ataque?.distancia != null ? `<div><span>Distancia</span><strong>${ataque.distancia}</strong></div>` : ''}
     </div>
     <div class="mapa-seleccion-acciones">
       <button id="btn-marchar-alli" class="btn-secondary" type="button">Marchar aquí</button>
       <button id="btn-entrar-asent" class="btn-primary" type="button">Entrar</button>
+      ${ataque ? `<button id="btn-atacar-asent" class="btn-primary" type="button"${ataque.impide ? ' disabled' : ''}>Atacar</button>` : ''}
     </div>
+    ${ataque ? `<p class="mapa-lista-vacia">${escaparHtml(ataque.impide || 'Atacar es asediarla: si cae pasa a tu Facción; si aguanta, quedas herido.')}</p>` : ''}
     <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`;
   cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
   cont.querySelector('#btn-marchar-alli')?.addEventListener('click', () => void marcharAObjetivo({ tipo: 'asentamiento', id: asentamiento.id }));
+  cont.querySelector<HTMLButtonElement>('#btn-atacar-asent')?.addEventListener('click', (evento) => void atacarPlaza(cont, evento.currentTarget as HTMLButtonElement, asentamiento.id));
   cont.querySelector('#btn-entrar-asent')?.addEventListener('click', async () => {
     try {
       const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'entrarEnAsentamiento', { asentamientoId: asentamiento.id, heroeId: proyeccion.heroeId });
@@ -379,15 +384,43 @@ function renderSeleccionMapa(): void {
 
 /** Ficha de un campamento de bandidos (Doc 1.9): se ataca con la columna, llegando hasta él. Si cae, su botín va al
  * carro; si aguanta, el héroe queda herido y la columna pierde la mitad del carro. */
-function renderSeleccionCampamento(cont: HTMLElement, proyeccion: ProyeccionJugador, campamento: CampamentoBandido): void {
+/** A qué distancia está tu columna de `punto` y, si no puedes atacarlo, por qué (vacío = puedes). Es solo un aviso:
+ * el que decide es el backend. */
+function alcanceDeAtaque(proyeccion: ProyeccionJugador, punto: { x: number; y: number }): { distancia: number | null; impide: string } {
   const columna = miColumna(proyeccion);
-  const distancia = columna ? Math.round(Math.hypot(columna.posicionActual.x - campamento.posicion.x, columna.posicionActual.y - campamento.posicion.y)) : null;
+  const distancia = columna ? Math.round(Math.hypot(columna.posicionActual.x - punto.x, columna.posicionActual.y - punto.y)) : null;
   const herido = minutosHerido(proyeccion);
   const impide =
     herido !== null ? `Estás herido (${herido} min): no puedes atacar.`
-      : distancia === null ? 'Sal al mundo con tu columna para atacarlo.'
+      : distancia === null ? 'Sal al mundo con tu columna para atacar.'
         : distancia > RADIO_ATAQUE ? `Acércate: estás a ${distancia} y se ataca a ${RADIO_ATAQUE}.`
           : '';
+  return { distancia, impide };
+}
+
+/** Atacar una plaza de otra Facción es asediarla (Doc 5.12.4): llegar a ella solo es acampar delante. Una batalla,
+ * cuando se ordena; si cae pasa a tu Facción, y si aguanta quedas herido. */
+async function atacarPlaza(cont: HTMLElement, boton: HTMLButtonElement, asentamientoId: string): Promise<void> {
+  const proyeccion = estadoCliente.proyeccionUltima;
+  if (!proyeccion) return;
+  boton.disabled = true;
+  const mensaje = await ejecutarYRefrescar('atacar', { heroeId: proyeccion.heroeId, objetivo: { tipo: 'asentamiento', id: asentamientoId } });
+  if (mensaje) {
+    boton.disabled = false;
+    const error = cont.querySelector<HTMLElement>('#mapa-seleccion-error');
+    if (error) error.textContent = mensaje;
+    return;
+  }
+  const despues = estadoCliente.proyeccionUltima;
+  const enBatalla = despues?.batallas?.some((b) => b.ladoPropio !== undefined && b.contexto.asentamientoId === asentamientoId);
+  const caida = despues && asentamientosDelMapa(despues).find((a) => a.id === asentamientoId)?.faccionId === despues.faccionId;
+  // Sin combate (sin tropa a ninguno de los dos lados) la plaza aguanta y nadie queda herido: se mira, no se supone.
+  const herido = despues && minutosHerido(despues) !== null;
+  avisoMapa(enBatalla ? 'Empieza la batalla por la plaza.' : caida ? 'La plaza cae: ahora es de tu Facción.' : herido ? 'La plaza aguanta: quedas herido.' : 'La plaza aguanta.');
+}
+
+function renderSeleccionCampamento(cont: HTMLElement, proyeccion: ProyeccionJugador, campamento: CampamentoBandido): void {
+  const { distancia, impide } = alcanceDeAtaque(proyeccion, campamento.posicion);
   cont.innerHTML = `
     <button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>
     <span class="faction-kicker">Campamento de bandidos</span>
@@ -695,8 +728,14 @@ function cuentaAtras(instanteFin: number | undefined): string {
   if (typeof instanteFin !== 'number') return '';
   const ms = instanteFin - (estadoCliente.proyeccionUltima?.instante ?? Date.now());
   if (ms <= 0) return 'listo';
-  const min = Math.round(ms / 60_000);
-  return min >= 1 ? `${min} min` : `${Math.round(ms / 1000)} s`;
+  return ms >= 60_000 ? duracion(Math.round(ms / 60_000)) : `${Math.round(ms / 1000)} s`;
+}
+
+/** "2 h 15 min" / "40 min": las obras van por horas desde el backend del 2026-09-26. */
+function duracion(minutos: number): string {
+  const h = Math.floor(minutos / 60);
+  const min = Math.round(minutos % 60);
+  return h === 0 ? `${min} min` : min === 0 ? `${h} h` : `${h} h ${min} min`;
 }
 
 /** Lanza un comando de gestión del asentamiento y refresca; el error va a `#asent-lado-error`. */
@@ -732,7 +771,7 @@ function renderPanelEdificios(): void {
     <div class="asent-tabs">${tabs}</div>
     <div class="asent-lado-cuerpo">${
       seccionAsent === 'resumen'
-        ? seccionResumen(asentamiento)
+        ? seccionResumen(asentamiento) + seccionAscenso(asentamiento, proyeccion.ascensoDeAsentamiento, cargo === 'gobernador')
         : seccionAsent === 'edificios'
           ? seccionEdificios(asentamiento, cargo)
           : seccionAsent === 'produccion'
@@ -769,6 +808,42 @@ function seccionResumen(a: Asentamiento): string {
     <label class="asent-toggle"><input type="checkbox" id="chk-autoconstruccion" ${a.autoConstruccionPausada ? '' : 'checked'} /> Auto-construcción</label>`;
 }
 
+const MOTIVO_BLOQUEO_ASCENSO: Record<BloqueoAscenso, string> = {
+  nivel_maximo: 'Ya está en el nivel máximo.',
+  ascenso_en_curso: 'Ya hay una obra de ascenso en curso.',
+  falta_poblacion: 'Falta población para el nivel siguiente.',
+  faltan_edificios: 'Faltan edificios para el nivel siguiente.',
+  sin_cupo_de_faccion: 'Tu Facción no tiene cupo para otra plaza de ese nivel.',
+  recursos_insuficientes: 'No hay en el almacén con qué pagar la obra.',
+  insolvente: 'Los ingresos no cubrirían el mantenimiento del nivel siguiente.',
+};
+
+/** Subida de nivel (Doc 4.5): ya no sube sola al cumplir los requisitos; la pide el Gobernador, se paga entera del
+ * almacén y tarda una obra. La evaluación (bloqueos, coste, solvencia) la calcula el servidor. */
+function seccionAscenso(a: Asentamiento, evaluacion: EvaluacionAscenso | undefined, soyGobernador: boolean): string {
+  const cabecera = '<div class="asent-lado-cabecera"><span class="faction-kicker">Subida de nivel</span></div>';
+  if (a.ascenso) {
+    return `${cabecera}<p class="asent-lado-nota">Obra en curso hacia el nivel ${a.ascenso.nivelObjetivo} · ${cuentaAtras(a.ascenso.completaEn)}. Si conquistan la plaza, se pierde.</p>`;
+  }
+  if (!evaluacion || evaluacion.nivelObjetivo === null) return '';
+  const costo = Object.entries(evaluacion.costo)
+    .map(([recurso, cantidad]) => `${RECURSO_ICONO[recurso] ?? '📦'} ${Math.ceil(cantidad ?? 0)} ${escaparHtml(RECURSO_NOMBRE[recurso] ?? recurso)}`)
+    .join(' · ');
+  const fmt = (n: number) => (n >= 10 ? Math.round(n).toString() : n.toFixed(1));
+  const deficit = evaluacion.solvencia
+    .filter((s) => s.ingresoPorMinuto < s.costoPorMinuto)
+    .map((s) => `${escaparHtml(RECURSO_NOMBRE[s.recurso] ?? s.recurso)}: ${fmt(s.ingresoPorMinuto)} de ${fmt(s.costoPorMinuto)}/min`)
+    .join(' · ');
+  const motivos = evaluacion.bloqueos.map((b) => `<li>${escaparHtml(MOTIVO_BLOQUEO_ASCENSO[b] ?? b)}</li>`).join('');
+  return `${cabecera}
+    <p class="asent-lado-nota">Al nivel ${evaluacion.nivelObjetivo}: ${costo || 'sin coste'} · obra de ${duracion(evaluacion.obraMinutos)}.</p>
+    ${deficit ? `<p class="asent-lado-nota">No cubre el mantenimiento: ${deficit}.</p>` : ''}
+    ${motivos ? `<ul class="asent-lado-nota">${motivos}</ul>` : ''}
+    ${soyGobernador
+      ? `<button id="btn-solicitar-ascenso" class="btn-primary" type="button"${evaluacion.puede ? '' : ' disabled'}>Subir a nivel ${evaluacion.nivelObjetivo}</button>`
+      : '<p class="asent-lado-nota">Solo el Gobernador puede pedir la subida.</p>'}`;
+}
+
 function seccionEdificios(a: Asentamiento, cargo: 'gobernador' | 'maestroObras' | null): string {
   const internos = (a.edificios ?? []).filter((e) => (e.ambito ?? 'asentamiento') !== 'mapa');
   const enRegion = (a.edificios ?? []).length - internos.length;
@@ -784,11 +859,13 @@ function seccionEdificios(a: Asentamiento, cargo: 'gobernador' | 'maestroObras' 
       const nivelMax = Math.max(...lista.map((e) => e.nivelInterno ?? 1));
       const enObra = lista.filter((e) => e.estado !== 'activo').length;
       const parados = lista.filter((e) => e.pausadoPorAlmacenLleno).length;
+      const mejorandose = lista.filter((e) => e.mejora).length;
       const meta = [lista.length > 1 ? `×${lista.length}` : '', nivelMax > 1 ? `N${nivelMax}` : ''].filter(Boolean).join(' · ');
-      const nota = [enObra ? `${enObra} en obra` : '', parados ? `${parados} parado${parados > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ');
-      // La mejora ataca la instancia ACTIVA de menor nivel interno (todas las de un tipo son intercambiables).
+      const nota = [enObra ? `${enObra} en obra` : '', mejorandose ? `${mejorandose} mejorándose` : '', parados ? `${parados} parado${parados > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ');
+      // La mejora ataca la instancia ACTIVA de menor nivel interno que no se esté mejorando ya (todas las de un tipo
+      // son intercambiables).
       const objetivoMejora = lista
-        .filter((e) => e.estado === 'activo')
+        .filter((e) => e.estado === 'activo' && !e.mejora)
         .sort((e1, e2) => (e1.nivelInterno ?? 1) - (e2.nivelInterno ?? 1))[0];
       return `<div class="asent-edif-item" style="--swatch:${EDIFICIO_COLOR[tipo] ?? '#888'}">
         <span class="asent-edif-nombre">${escaparHtml(EDIFICIO_NOMBRE[tipo] ?? tipo)}</span>
@@ -836,8 +913,17 @@ function seccionCola(edificios: Edificio[], cargo: 'gobernador' | 'maestroObras'
   const cola = edificios
     .filter((e) => e.estado !== 'activo')
     .sort((x, y) => (y.prioridad ?? 0) - (x.prioridad ?? 0));
-  if (cola.length === 0) return '<p class="mapa-lista-vacia">Sin obras en curso ni en cola.</p>';
-  return `<div class="asent-cola-lista">${cola
+  // Las mejoras en curso no están en la cola pero ocupan una cuadrilla de obra: se enseñan encima, sin acciones.
+  const mejoras = edificios
+    .filter((e) => e.mejora)
+    .map((e) => `<div class="asent-cola-item" style="--swatch:${EDIFICIO_COLOR[e.tipo] ?? '#888'}">
+      <span class="asent-cola-pos">⬆</span>
+      <span class="asent-edif-nombre">${escaparHtml(EDIFICIO_NOMBRE[e.tipo] ?? e.tipo)}</span>
+      <span class="asent-edif-nota">mejora a N${e.mejora!.nivelObjetivo} · ${cuentaAtras(e.mejora!.completaEn)}</span>
+    </div>`)
+    .join('');
+  if (cola.length === 0 && !mejoras) return '<p class="mapa-lista-vacia">Sin obras en curso ni en cola.</p>';
+  return `<div class="asent-cola-lista">${mejoras}${cola
     .map((e, i) => `<div class="asent-cola-item" style="--swatch:${EDIFICIO_COLOR[e.tipo] ?? '#888'}">
       <span class="asent-cola-pos">${i + 1}</span>
       <span class="asent-edif-nombre">${escaparHtml(EDIFICIO_NOMBRE[e.tipo] ?? e.tipo)}</span>
@@ -855,6 +941,7 @@ function cablearAccionesAsentLado(cont: HTMLElement, a: Asentamiento, cargo: 'go
   cont.querySelector('#chk-autoconstruccion')?.addEventListener('change', (ev) => {
     void ejecutarAccionAsent('alternarAutoConstruccion', { asentamientoId: a.id, pausada: !(ev.target as HTMLInputElement).checked });
   });
+  cont.querySelector('#btn-solicitar-ascenso')?.addEventListener('click', () => void ejecutarAccionAsent('solicitarAscenso', { asentamientoId: a.id }));
   if (!cargo) return;
   cont.querySelector('#btn-anadir-edificio')?.addEventListener('click', () => {
     const tipo = cont.querySelector<HTMLSelectElement>('#sel-anadir-edificio')?.value;

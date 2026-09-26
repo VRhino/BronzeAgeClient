@@ -1,7 +1,7 @@
 // Wrapper `fetch` sobre la superficie `/jugador/*` y `/sesiones` del backend (Fase C3) — sin lógica de negocio, solo I/O.
 import type { MapaGenerado } from './terreno';
 
-import type { AcuerdoTrueque, Asentamiento, AsentamientoAvistado, AsentamientoConocido, CaminoComercial, CampamentoBandido, Caravana, Ejercito, EjercitoAvistado, Faccion, HeroeProyectado, HeroePublico, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
+import type { AcuerdoTrueque, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoComercial, CampamentoBandido, Caravana, Ejercito, EjercitoAvistado, EvaluacionAscenso, Faccion, HeroeProyectado, HeroePublico, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
 
 export class ApiError extends Error {
   constructor(
@@ -74,6 +74,12 @@ export interface ProyeccionJugador {
    * estás en el mundo. La calcula el servidor (entrada privilegiada: bosques, yacimientos), este cliente no
    * puede. */
   produccionDeAsentamiento?: ProduccionItem[];
+  /** Si la plaza que pisas puede pedir ya la subida de nivel y, si no, por qué (`solicitarAscenso`, Doc 4.5). Mismo
+   * caso que `produccionDeAsentamiento`: solo estando dentro, y lo calcula el servidor. */
+  ascensoDeAsentamiento?: EvaluacionAscenso;
+  /** Batallas de Unity a la vista o en las que combates (backend 2026-09-15). Vacío si el backend no declara
+   * servidores de batalla. Sin interfaz que las pinte todavía (`Features_Pendientes.md` §1.5). */
+  batallas: BatallaVisible[];
   [campo: string]: unknown;
 }
 

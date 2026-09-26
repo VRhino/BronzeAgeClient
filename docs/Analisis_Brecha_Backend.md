@@ -1,8 +1,18 @@
 # Análisis de brecha: este cliente frente al backend
 
 Qué ofrece el backend a un jugador, qué consume este cliente hoy y qué falta por construir. Fotografía
-tomada el **2026-09-15**, contra `BronzeAgeFase0` en `3602f71` (rama `heroe-dominio`) y este cliente en su HEAD
+tomada el **2026-09-26**, contra `BronzeAgeFase0` en `8091638` (rama `ritmo-crecimiento`) y este cliente en su HEAD
 actual.
+
+> **Sync 2026-09-26 (ritmo de crecimiento, asedio como orden y Batalla de Unity — ya alineado):** (1) el nivel de
+> una plaza ya no sube solo: +`solicitarAscenso` (Gobernador), con `Asentamiento.ascenso` (la obra en curso) y
+> `proyeccion.ascensoDeAsentamiento` (bloqueos, coste, obra y solvencia, calculado por el servidor); la pestaña
+> Resumen lo enseña y lo pide. (2) `atacar` gana el objetivo `asentamiento`: llegar a una plaza enemiga solo acampa,
+> y el panel de Selección ofrece "Atacar" a 15 o menos. (3) Mejoras con duración: `Edificio.mejora` y cuadrillas de
+> obra; la pestaña Edificios no ofrece mejorar lo que ya se mejora y la Cola lista las mejoras en curso. (4) Ciclo de
+> Batalla (opt-in con `SERVIDORES_BATALLA`): `proyeccion.batallas`, +`unirseABatalla`, +`cancelarBatalla` y
+> `GET .../batallas/{battleId}/asignacion`; tipado, sin interfaz (`Features_Pendientes.md` §1.5). (5)
+> `Recinto.siguienteCeldaEn` (muralla por minutos por celda), tipado. Catálogo 74 → 77 (76 de jugador).
 
 > **Sync 2026-09-15 (Herido y bandidos con columna — cambio de forma, ya alineado):** (1) `atacar` gana el objetivo
 > `campamento` y sale `atacarCampamentoBandidos` (74 comandos, 73 de jugador); el cliente ya ataca campamentos
@@ -98,9 +108,13 @@ puede sacar a un jugador de su ciudad todavía. Ver §3 y §4 más abajo para el
 
 | Superficie | Total | En el cliente | Brecha |
 |---|---:|---:|---:|
-| Endpoints (jugador, sesión y balance) | 9 | 5 | 4 |
-| Comandos de partida (de jugador) | **73** | 22 | **51** |
-| Bloques de datos de la proyección | 31 | 20 | 11 |
+| Endpoints (jugador, sesión y balance) | 10 | 5 | 5 |
+| Comandos de partida (de jugador) | **76** | 23 | **53** |
+| Bloques de datos de la proyección | 33 | 21 | 12 |
+
+Desde la revisión del 2026-09-15: +`solicitarAscenso` (cableado), +`unirseABatalla` y +`cancelarBatalla` (sin
+interfaz); +`ascensoDeAsentamiento` (leído) y +`batallas` (tipado, solo lo mira el aviso del asedio) en la proyección;
++`GET .../batallas/{battleId}/asignacion` en los endpoints.
 
 Desde la revisión del 2026-09-09: +`crearHeroe` (cableado, pantalla provisional), +5 del héroe sobre sí mismo
 (cableados en el panel Héroe) y −`alternarFaccionNpc` (las Facciones NPC las crea ahora el admin con
@@ -119,12 +133,13 @@ Reparto por sistema de juego, para ver dónde está el hueco:
 | Cargos y políticas | 4 | 1 (`asignarCargoLocal`) |
 | Diplomacia | 5 | 0 |
 | Comercio y caravanas | 14 | 0 |
-| Construcción y gestión local | 7 | 5 (faltan `calibrarReservaManual`, `renombrarAsentamiento`) |
+| Construcción y gestión local | 8 | 6 (faltan `calibrarReservaManual`, `renombrarAsentamiento`) |
 | Militar | 2 | 0 |
 | Ejércitos y logística | 10 | 0 |
 | Presencia del jugador | 6 | 3 (`salirAlMundo` en seco, `marcharA`, `entrarEnAsentamiento`) |
-| Interacción en el mapa | 4 | 1 (`atacar`, solo campamentos de bandidos) |
+| Interacción en el mapa | 4 | 1 (`atacar`, campamentos de bandidos y plazas) |
 | Composición de columna compartida | 4 | 0 |
+| Batallas de Unity | 2 | 0 (solo con `SERVIDORES_BATALLA`) |
 
 Héroe y Murallas son los únicos sistemas enteros. Construcción y presencia ya se usan desde las pantallas
 nuevas, pero ejércitos, militar, comercio, diplomacia, interacción y composición de columna siguen a cero: el
@@ -145,7 +160,7 @@ condición previa de todo lo demás que involucre moverse por el mapa, incluido 
 - [x] `POST /v1/jugador/partidas/{gameId}/membresia`
 - [x] `GET /v1/jugador/partidas/{gameId}` — la proyección (o `sinHeroe`, que lleva a la pantalla Héroe)
 - [x] `GET /v1/jugador/partidas/{gameId}/mapa/{mapaId}` — cacheado en memoria por `mapaId`
-- [x] `POST /v1/jugador/partidas/{gameId}/comandos` — con 22 de los 73 comandos
+- [x] `POST /v1/jugador/partidas/{gameId}/comandos` — con 23 de los 76 comandos
 
 ### Sin consumir
 
@@ -161,16 +176,18 @@ condición previa de todo lo demás que involucre moverse por el mapa, incluido 
       sesión. Ver §4: sin esto no hay catálogo con el que construir ninguna pantalla de gestión. **Nota:** la
       tabla `MERCADO` (plazo de caducidad de una orden, Doc 3.3) todavía no viaja aquí — falta en el propio
       backend, no en este cliente.
+- [ ] `GET /v1/jugador/partidas/{gameId}/batallas/{battleId}/asignacion` — el token con el que el jugador entra en
+      el servidor de batalla de Unity (doc 02 §3.4). Solo sirve con `SERVIDORES_BATALLA`.
 - [ ] `GET /v1/sesiones/actual` — `obtenerWhoami()` existe en `apiCliente.ts` y **no lo invoca nadie**: hoy
       es código muerto. O se cablea (para conocer el rol real en la partida) o se borra.
 
-## 2. Comandos: 22 de 73
+## 2. Comandos: 23 de 76
 
 El checklist por comando, con sus `params` exactos, vive en [`COMANDOS.md`](COMANDOS.md) — **es la única
 lista de esa granularidad**, para no mantener dos que se contradigan. Aquí solo la lectura de conjunto.
 
-Ninguno de los 51 que faltan está fuera de alcance por permisos: la matriz de `autorizacion.ts` admite el rol
-`jugador` en los 73 (el único comando de partida que no es suyo, `crearFaccionNpc`, es de administración). Lo
+Ninguno de los 53 que faltan está fuera de alcance por permisos: la matriz de `autorizacion.ts` admite el rol
+`jugador` en los 76 (el único comando de partida que no es suyo, `crearFaccionNpc`, es de administración). Lo
 que falta es siempre interfaz, nunca backend.
 
 Dos comandos que este cliente llegó a documentar ya **no existen**: `combateCampoAbierto` e
@@ -199,8 +216,11 @@ en estado `'aparcada'` (las que un ejército dejó al `guarnecer`).
 
 ## 3. Datos que el servidor manda y el cliente tira
 
-La proyección trae **31 bloques** (antes 18 — la cuenta subió con el jugador situado, el comercio y el héroe). El
-cliente consume 20. Estos llegan en cada respuesta y no se leen en ningún sitio:
+La proyección trae **33 bloques** (antes 18 — la cuenta subió con el jugador situado, el comercio, el héroe, la
+subida de nivel y las batallas). El cliente consume 21. Estos llegan en cada respuesta y no se leen en ningún sitio:
+
+- [ ] `batallas` — las batallas de Unity a la vista o en las que combates (`BatallaVisible`). Tipado; solo lo mira
+      el aviso del asedio. Vacío mientras el backend no declare `SERVIDORES_BATALLA` (`Features_Pendientes.md` §1.5).
 
 - [ ] `estadoMapa` (`extraido`, `regeneraEn`) — **el más urgente de este grupo, porque hoy produce
       información falsa**: el mapa dibuja cada nodo con la `cantidadInicial` del asset estático, así que **un
@@ -251,8 +271,8 @@ Y hallazgos **dentro de lo que sí se lee**, que cambiaron de forma sin que el t
   una plaza al `guarnecer`. El tipo local `Caravana` (`src/tiposDominio.ts`) ni siquiera modelaba `estado`;
   el sync le añadió el campo con el enum completo.
 
-Y dentro de `Asentamiento` (la plaza propia completa), el tipo local de `src/tiposDominio.ts` declara 20
-campos frente a los **27** del dominio (`ocupacionHasta` se añadió el 2026-09-08, Doc 5.12.9). No modela,
+Y dentro de `Asentamiento` (la plaza propia completa), el tipo local de `src/tiposDominio.ts` declara 21
+campos frente a los **28** del dominio (`ocupacionHasta` se añadió el 2026-09-08, Doc 5.12.9). No modela,
 entre otros: `politicasActivas`, `politicaDeAcceso`, `vetadosIds`, `permiteReabastecerAliados`,
 `ultimaCaravanaCreadaEn`.
 

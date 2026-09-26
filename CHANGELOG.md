@@ -3,6 +3,30 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.7.0] — 2026-09-26 · subida de nivel y asedio · sync con `BronzeAgeFase0@8091638` (rama `ritmo-crecimiento`)
+
+### Añadido
+- **Subida de nivel** (Doc 4.5): la pestaña Resumen enseña la evaluación del servidor (`ascensoDeAsentamiento`:
+  coste, obra, déficit de mantenimiento y bloqueos) y el Gobernador la pide con «Subir a nivel N»
+  (`solicitarAscenso`). Con una obra en curso (`Asentamiento.ascenso`), su cuenta atrás.
+- **Asediar una plaza** (Doc 5.12.4): la ficha de una plaza de otra Facción ofrece «Atacar» (`atacar` con
+  `objetivo: asentamiento`), apagado si estás herido o a más de 15. El aviso dice si cae, aguanta o empieza una
+  batalla, mirando la proyección.
+- **Mejoras con duración**: `Edificio.mejora`; la pestaña Edificios no ofrece mejorar lo que ya se mejora y la Cola
+  lista las mejoras en curso. Las cuentas atrás salen en horas.
+- Tipos `EvaluacionAscenso`, `BatallaVisible` (`proyeccion.batallas`, sin interfaz) y `Recinto.siguienteCeldaEn`.
+
+### Cambiado
+- Los botones del panel de Selección pasan a la línea siguiente si no caben.
+
+### Backend que lo habilita
+- El nivel ya no sube solo; `atacar` asedia plazas (llegar solo acampa); +`unirseABatalla`, +`cancelarBatalla`
+  (opt-in `SERVIDORES_BATALLA`): 77 comandos, 76 de jugador.
+
+### Documentación
+- `COMANDOS.md` (23 de 76), `API_CONTRACT.md`, `Analisis_Brecha_Backend.md`, `Features_Pendientes.md` §1.4 y §1.5,
+  README.
+
 ## [0.6.0] — 2026-09-15 · Herido y bandidos con columna · sync con `BronzeAgeFase0@3602f71` (rama `heroe-dominio`)
 
 ### Añadido

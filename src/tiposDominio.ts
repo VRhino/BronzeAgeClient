@@ -38,6 +38,9 @@ export interface Edificio {
   /** Ocupación post-conquista (backend 2026-09-08, Doc 5.12.9): un saqueo de conquista baja un edificio a
    * `en_cola` marcándolo `danado`; se reconstruye pagando solo una fracción del costo. Ausente = sano. */
   danado?: boolean;
+  /** Mejora de nivel interno en marcha (backend 2026-09-26): sigue `activo` y produciendo con su nivel actual, ocupa
+   * una cuadrilla de obra, y `nivelInterno` sube al llegar `completaEn`. Ausente = no se está mejorando. */
+  mejora?: { nivelObjetivo: number; completaEn: number };
 }
 
 /** Celda del anillo de un `Recinto` — copia local de `CeldaMuro` (motor). Sirve solo para contar puertas en
@@ -59,6 +62,9 @@ export interface Recinto {
   avance: number;
   /** Nivel al que se está mejorando, si hay una mejora en obra (§7). */
   mejorandoA?: number;
+  /** No se levanta otra celda antes de este instante de mundo (backend 2026-09-26: la muralla va por minutos por
+   * celda). Ausente = se puede ya. */
+  siguienteCeldaEn?: number;
 }
 
 export interface Asentamiento {
@@ -100,6 +106,48 @@ export interface Asentamiento {
   };
   /** Recintos de muralla, del más interior al más exterior (Paso 2a en adelante). Vacío/ausente = sin muro. */
   recintos?: Recinto[];
+  /** Obra de ascenso de nivel en curso (Doc 4.5, `solicitarAscenso`): al llegar `completaEn`, `nivel` sube a
+   * `nivelObjetivo`. Ya pagada; se pierde si conquistan la plaza. Ausente = no hay obra. */
+  ascenso?: { nivelObjetivo: number; iniciadoEn: number; completaEn: number };
+}
+
+/** Por qué no se puede pedir la subida de nivel (backend `BloqueoAscenso`, `engine/ascenso.ts`). */
+export type BloqueoAscenso =
+  | 'nivel_maximo'
+  | 'ascenso_en_curso'
+  | 'falta_poblacion'
+  | 'faltan_edificios'
+  | 'sin_cupo_de_faccion'
+  | 'recursos_insuficientes'
+  | 'insolvente';
+
+/** Si la plaza que pisas puede pedir ya la subida de nivel y, si no, por qué (backend `EvaluacionAscenso`). Viaja en
+ * `ProyeccionJugador.ascensoDeAsentamiento` solo estando dentro. */
+export interface EvaluacionAscenso {
+  nivel: number;
+  /** `nivel + 1`, o `null` en el máximo. */
+  nivelObjetivo: number | null;
+  /** Se paga entero del almacén al empezar. */
+  costo: Partial<Record<string, number>>;
+  obraMinutos: number;
+  /** Ingresos de hoy frente al mantenimiento del nivel objetivo, por minuto de mundo y recurso. */
+  solvencia: { recurso: string; ingresoPorMinuto: number; costoPorMinuto: number }[];
+  bloqueos: BloqueoAscenso[];
+  puede: boolean;
+}
+
+/** Una batalla de Unity que se ve en el mapa o en la que combates (backend `BatallaVisible`, doc 02 §4.1). Solo existen
+ * si el backend declara `SERVIDORES_BATALLA`; sin ellos todo combate se resuelve con números y el array llega vacío.
+ * Las columnas y caravanas que están en una no viajan en `ejercitosAvistados`: la batalla las sustituye. */
+export interface BatallaVisible {
+  battleId: string;
+  estado: 'convocando' | 'asignada' | 'en_curso' | 'aplicada' | 'cancelada' | 'fallida';
+  /** `tipo`: `asedio` (con `asentamientoId`), `campo_abierto`, `caravana` o `campamento_bandidos`. */
+  contexto: { tipo: string; [campo: string]: unknown };
+  punto: Point;
+  bandos: Record<'atacante' | 'defensor', { faccionId: string | null; heroes: number; capacidadMaxima: number }>;
+  /** Tu bando, si combates en ella. */
+  ladoPropio?: 'atacante' | 'defensor';
 }
 
 export interface Caravana {

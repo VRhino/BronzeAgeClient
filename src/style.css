@@ -1565,12 +1565,13 @@ pre#proyeccion {
 
 .mapa-seleccion-acciones {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 2px;
 }
 
 .mapa-seleccion-acciones button {
-  flex: 1;
+  flex: 1 1 40%;
 }
 
 .mapa-aviso {

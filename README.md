@@ -14,7 +14,7 @@ como imagen/rejilla, este cliente lleva su **propia copia** de las funciones pur
 
 - [`docs/Analisis_Brecha_Backend.md`](docs/Analisis_Brecha_Backend.md) — qué ofrece el backend, qué consume
   este cliente y qué falta, con checklist. **Empezar por aquí.**
-- [`docs/COMANDOS.md`](docs/COMANDOS.md) — los 73 comandos de partida y cuáles están cableados.
+- [`docs/COMANDOS.md`](docs/COMANDOS.md) — los 76 comandos de partida y cuáles están cableados.
 - [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md) — endpoints, formas de petición y respuesta.
 - [`docs/Features_Pendientes.md`](docs/Features_Pendientes.md) — cómo se quiere que sea la interfaz.
 
@@ -42,8 +42,11 @@ detalle y la disciplina de mantenimiento.
   Su nombre sale en el menú de esquina, el panel de Facción y el selector de cargos. El **panel Héroe** (riel del
   Mapa y barra del Asentamiento) enseña su ficha y reparte atributos, lista sus escuadras con la guarnición, y
   gestiona sus loadouts. Si está herido, lo dice y cuánto le queda.
-- **Bandidos**: clic en un campamento abre su ficha y marcha hacia él; con la columna al lado, «Atacar».
-- **Comandos**: 22 de los 73 de jugador — ver [`docs/COMANDOS.md`](docs/COMANDOS.md).
+- **Bandidos y asedio**: clic en un campamento o en una plaza de otra Facción abre su ficha y marcha hacia él; con la
+  columna a 15 o menos, «Atacar» (asediar, si es una plaza).
+- **Subida de nivel**: la pestaña Resumen enseña si la plaza puede subir, qué cuesta y qué lo impide; el Gobernador
+  la pide. Las mejoras de edificio tardan y salen en la Cola.
+- **Comandos**: 23 de los 76 de jugador — ver [`docs/COMANDOS.md`](docs/COMANDOS.md).
 
 Las zonas de Facción llegan ya fusionadas del servidor y **así debe seguir siendo**: fusionarlas aquí con
 `unirFormas`/`unirPoligonos` no se puede, porque su entrada (la posición de asentamientos rivales) es
@@ -66,7 +69,7 @@ El detalle, con checklist, está en
   cablear. Ver `CHANGELOG.md`.
 - **Sin tiempo real**: el único refresco es el botón de recargar. El WebSocket de la partida y el cursor
   `/eventos` están sin consumir.
-- **51 de 73 comandos sin interfaz**, entre ellos todo el sistema militar, el de ejércitos, el de comercio,
+- **53 de 76 comandos sin interfaz**, entre ellos todo el sistema militar, el de ejércitos, el de comercio,
   el de diplomacia, la interacción en el mapa y la composición de columna compartida.
 - **La creación del héroe es provisional** (clase, género y aspecto fijos), y el panel Héroe aún no tiene equipo
   ni perks — ver `docs/Features_Pendientes.md` §0.

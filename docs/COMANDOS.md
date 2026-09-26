@@ -1,13 +1,26 @@
 # Índice de comandos del cliente jugador
 
 Fuente, en el repositorio del **backend**: `src/session/comandos/registro.ts` (el catálogo) y
-`src/session/comandos/esquemas.ts` (la forma de los `params`). Última revisión: **2026-09-15**, contra
-`BronzeAgeFase0@3602f71` (rama `heroe-dominio`: modelo de Héroe, Herido y bandidos con columna).
+`src/session/comandos/esquemas.ts` (la forma de los `params`). Última revisión: **2026-09-26**, contra
+`BronzeAgeFase0@8091638` (rama `ritmo-crecimiento`: subida de nivel manual, obras en horas, asedio como orden y
+ciclo de Batalla de Unity).
 
-El backend expone **74 comandos de partida**. La matriz de `src/session/comandos/autorizacion.ts` admite el rol
-`jugador` en **73**: el que falta, `crearFaccionNpc`, es solo de administración y no se lista aquí. Nada de lo
-que falta aquí está bloqueado por permisos. La interfaz cablea **22**; el resto solo es alcanzable llamando a
+El backend expone **77 comandos de partida**. La matriz de `src/session/comandos/autorizacion.ts` admite el rol
+`jugador` en **76**: el que falta, `crearFaccionNpc`, es solo de administración y no se lista aquí. Nada de lo
+que falta aquí está bloqueado por permisos. La interfaz cablea **23**; el resto solo es alcanzable llamando a
 mano al wrapper `ejecutarComando` de `src/apiCliente.ts`.
+
+> **Sync 2026-09-26 — ritmo de crecimiento y asedio como orden:** (1) +`solicitarAscenso`: el nivel de un
+> asentamiento **ya no sube solo** al cumplir población y edificios; eso pasa a ser el requisito para pedirlo. Lo pide
+> el Gobernador, se paga entero del almacén, tarda una obra (`asentamiento.ascenso`) y exige solvencia al nivel
+> destino y cupo de la Facción; la evaluación viaja en `proyeccion.ascensoDeAsentamiento`. (2) `atacar` acepta
+> `objetivo: { tipo: 'asentamiento', id }`: **llegar a una plaza enemiga solo es acampar delante**; asediarla es
+> atacarla a 15 o menos. Con servidores de batalla, `atacar` abre una batalla de Unity y devuelve `{ battleId }`.
+> (3) +`unirseABatalla` y +`cancelarBatalla` (ciclo de Batalla, opt-in con `SERVIDORES_BATALLA`; sin eso todo se
+> resuelve con números y `proyeccion.batallas` llega vacío). Todo comando que toque algo que está en una batalla
+> activa se rechaza con `batalla.bloqueado`. (4) `mejorarEdificioAhora` ya no termina la mejora: la **arranca**
+> (`edificio.mejora`, con duración), ocupa una de las 2 cuadrillas de obra y se rechaza si están las dos ocupadas.
+> Recuento: 74 → 77 en el backend, 76 de jugador.
 
 > **Sync 2026-09-15 — Herido y bandidos con columna:** (1) `atacar` acepta `objetivo: { tipo: 'campamento', id }`:
 > un campamento de bandidos se ataca con la columna que llega a él (Doc 1.9), y sale `atacarCampamentoBandidos`
@@ -87,8 +100,9 @@ Los cinco siguientes no llevan `heroeId`: el actor es su propio héroe. Wrapper 
 - [x] `anadirEdificioManualmente` — `asentamientoId`, `cargo`, `tipo` · pestaña Edificios
 - [x] `quitarDeCola` — `asentamientoId`, `cargo`, `edificioId` · pestaña Cola
 - [x] `moverEnCola` — `asentamientoId`, `cargo`, `edificioId`, `direccion` (`arriba` \| `abajo`) · pestaña Cola
-- [x] `mejorarEdificioAhora` — `asentamientoId`, `cargo`, `edificioId` · pestaña Edificios (⬆)
+- [x] `mejorarEdificioAhora` — `asentamientoId`, `cargo`, `edificioId` · arranca la mejora (se paga ya, dura `edificio.mejora.completaEn`, ocupa cuadrilla) · pestaña Edificios (⬆); la mejora en curso sale en la pestaña Cola
 - [x] `alternarAutoConstruccion` — `asentamientoId`, `pausada` · pestaña Resumen
+- [x] `solicitarAscenso` — `asentamientoId` · solo el Gobernador residente, sin `cargo` · pestaña Resumen, «Subir a nivel N», apagado mientras `ascensoDeAsentamiento.puede` sea falso (se listan los bloqueos, el coste, la obra y el déficit de mantenimiento). Rechazo de dominio: `ascenso.invalido`
 - [ ] `calibrarReservaManual` — `asentamientoId`, `recurso`, `valor`
 - [ ] `renombrarAsentamiento` — `asentamientoId`, `nombre` (vacío = volver a mostrar el id)
 
@@ -166,7 +180,7 @@ El menú de clic sobre algo en marcha. Los encuentros ya no son automáticos por
 decidido acercarse (`inspeccionar`) o ir a por algo (`atacar`/`perseguir`) para que pase cualquier cosa.
 
 - [ ] `inspeccionar` — `heroeId`, `objetivo`: `{ tipo: 'ejercito', id }` o `{ tipo: 'caravana', id }` · ver de cerca sin comprometerse a nada
-- [x] `atacar` — `heroeId`, `objetivo`: la misma forma que `inspeccionar`, o `{ tipo: 'campamento', id }` para un campamento de bandidos (Doc 1.9) · panel de Selección del mapa, **solo campamentos**; columnas y caravanas pendientes (`Features_Pendientes.md` §1.4)
+- [x] `atacar` — `heroeId`, `objetivo`: la misma forma que `inspeccionar`, `{ tipo: 'campamento', id }` para un campamento de bandidos (Doc 1.9) o `{ tipo: 'asentamiento', id }` para asediar una plaza de otra Facción (Doc 5.12.4) · panel de Selección del mapa, **campamentos y plazas**; columnas y caravanas pendientes (`Features_Pendientes.md` §1.4). Con servidores de batalla devuelve `{ battleId }`
 - [ ] `perseguir` — `heroeId`, `objetivo` (misma forma) · un objetivo MÓVIL, la ruta se recalcula cada tick hacia donde esté
 - [ ] `dejarDePerseguir` — `heroeId`
 
@@ -179,6 +193,13 @@ Varios jugadores pueden compartir una columna. La política de quién entra la f
 - [ ] `responderPeticionDeUnion` — `ejercitoId`, `heroeId`, `solicitanteId`, `aceptar` (boolean) · solo el Líder, y solo si su política es `preguntar`
 - [ ] `separarseDelEjercito` — `heroeId` (sin `ejercitoId`: se sale de la columna en la que vas, y solo puedes ir en una)
 - [ ] `cederLiderazgo` — `ejercitoId`, `heroeId`, `sucesorId` · el Líder es quien formó la columna y el único que puede cancelar la marcha; para irse tiene que ceder antes
+
+### Batallas de Unity (doc 02 §3.1)
+
+Solo tienen efecto si el backend declara `SERVIDORES_BATALLA` (en Render, hoy no). Sin interfaz: `Features_Pendientes.md` §1.5.
+
+- [ ] `unirseABatalla` — `heroeId`, `battleId` · un compañero de Facción a distancia de ataque, mientras el bando no esté lleno
+- [ ] `cancelarBatalla` — `battleId` · solo quien la inició, antes de que empiece
 
 ## Comandos retirados del backend
 

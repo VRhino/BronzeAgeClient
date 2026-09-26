@@ -118,10 +118,21 @@ alcanza la puerta, en vez de que el jugador pruebe el botón a ciegas.
 ### 1.4 Interacción rica con entidades del mapa
 **Hoy:** clic en terreno → `marcharA` punto; clic en asentamiento → panel de ficha + `marcharA` a la
 puerta + "Entrar"; clic en un **campamento de bandidos** → su ficha (poder, distancia a tu columna) + `marcharA`
-hasta él + "Atacar" (`atacar` con `objetivo: campamento`, Doc 1.9), apagado si estás herido o a más de 15.
+hasta él + "Atacar" (`atacar` con `objetivo: campamento`, Doc 1.9), apagado si estás herido o a más de 15. Una
+plaza de **otra Facción** también ofrece "Atacar" (`objetivo: asentamiento`, asedio, Doc 5.12.4) con la misma regla:
+llegar a ella solo es acampar delante.
 **Falta** (ver [`notas.md`](notas.md) §"vista mundo"): acciones sobre **ejércitos** (aliado → unirse,
 enemigo → perseguir o atacar), **rutas comerciales** (interceptar), y **caravanas avistadas**. La proyección ya trae `ejercitosAvistados`, `campamentosBandidos`, `caminos`,
 `caravanasAvistadas`.
+
+### 1.5 Batallas de Unity en el mapa
+**Hoy:** `proyeccion.batallas` (`BatallaVisible`) está tipada pero nada la pinta, y `unirseABatalla`/`cancelarBatalla`
+no tienen interfaz. Solo hay batallas si el backend declara `SERVIDORES_BATALLA` (en Render, hoy no): sin eso, todo
+combate se resuelve con números al momento. El aviso del asedio ya distingue "empieza la batalla".
+**Falta:** pintar la batalla en su `punto` (las columnas y caravanas que están en ella dejan de viajar en los
+avistados: la batalla las sustituye), una ficha con bandos y estado, "Unirse" para un compañero de Facción a 15 o
+menos y "Cancelar" para quien la inició, y recoger el token del jugador
+(`GET /v1/jugador/partidas/{gameId}/batallas/{battleId}/asignacion`) para lanzar Unity.
 
 ## 2. Tiempo real
 

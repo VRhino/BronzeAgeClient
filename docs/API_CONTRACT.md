@@ -1,7 +1,7 @@
 # Contrato API del cliente jugador
 
 Documento de referencia de este cliente. El backend escucha bajo el prefijo `/v1`. Última revisión:
-**2026-09-15**, contra `BronzeAgeFase0@3602f71` (rama `heroe-dominio`: modelo de Héroe, Herido y bandidos con columna).
+**2026-09-26**, contra `BronzeAgeFase0@8091638` (rama `ritmo-crecimiento`: subida de nivel manual, obras en horas, asedio como orden y Batalla de Unity).
 
 Para el porqué de cada hueco y el orden en que conviene cerrarlos, ver
 [`Analisis_Brecha_Backend.md`](Analisis_Brecha_Backend.md); el catálogo de comandos, en
@@ -15,7 +15,7 @@ Para el porqué de cada hueco y el orden en que conviene cerrarlos, ver
 - [x] `POST /v1/jugador/partidas/{gameId}/membresia`
 - [x] `GET /v1/jugador/partidas/{gameId}`
 - [x] `GET /v1/jugador/partidas/{gameId}/mapa/{mapaId}`
-- [x] `POST /v1/jugador/partidas/{gameId}/comandos` — con 22 de los 73 comandos de jugador (ver `COMANDOS.md`)
+- [x] `POST /v1/jugador/partidas/{gameId}/comandos` — con 23 de los 76 comandos de jugador (ver `COMANDOS.md`)
 - [x] Reintento automático tras una respuesta `401`, creando una sesión nueva con `POST /v1/sesiones`
 
 ### Funciones disponibles en `apiCliente.ts`, pero sin llamada desde la UI actual
@@ -29,6 +29,7 @@ Para el porqué de cada hueco y el orden en que conviene cerrarlos, ver
       pulsar refrescar
 - [ ] `GET /v1/jugador/partidas/{gameId}/eventos?desde={version}`
 - [ ] `GET /v1/balance`
+- [ ] `GET /v1/jugador/partidas/{gameId}/batallas/{battleId}/asignacion` — token del jugador para Unity (solo con `SERVIDORES_BATALLA`)
 
 ## Autenticación
 
@@ -104,8 +105,10 @@ GET /v1/jugador/partidas/{gameId}
 Authorization: sesion <sesionId>
 ```
 
-La respuesta es la proyección filtrada para el jugador, no el estado completo de la partida. Trae **31
-bloques** (`ProyeccionJugador`, `src/session/proyecciones/jugador.ts` en el backend); el cliente consume 20.
+La respuesta es la proyección filtrada para el jugador, no el estado completo de la partida. Trae **33
+bloques** (`ProyeccionJugador`, `src/session/proyecciones/jugador.ts` en el backend); el cliente consume 21.
+`ascensoDeAsentamiento` (la evaluación de la subida de nivel) solo viaja estando dentro de una plaza, igual que
+`produccionDeAsentamiento`; `batallas` llega vacío sin servidores de batalla.
 
 ```json
 {
@@ -126,6 +129,7 @@ bloques** (`ProyeccionJugador`, `src/session/proyecciones/jugador.ts` en el back
   "caravanasAvistadas": [],
   "ejercitos": [],
   "ejercitosAvistados": [],
+  "batallas": [],
   "heroe": {},
   "heroesVisibles": [],
   "nombresDeCompaneros": {},
@@ -297,8 +301,8 @@ Body mínimo:
 ```
 
 También admite opcionalmente `idempotencyKey`. El backend valida `params` según el `tipo`, con
-`additionalProperties: false`. El catálogo de jugador son **73 comandos** (74 en el backend: `crearFaccionNpc`
-es solo de administración), de los que la interfaz cablea 22: la
+`additionalProperties: false`. El catálogo de jugador son **76 comandos** (77 en el backend: `crearFaccionNpc`
+es solo de administración), de los que la interfaz cablea 23: la
 lista completa, con sus parámetros, está en [`COMANDOS.md`](COMANDOS.md).
 
 En caso de éxito la respuesta incluye `resultado`, resumen de partida y **la `proyeccion` del jugador ya
