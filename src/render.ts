@@ -434,13 +434,15 @@ export function pintarTerreno(
   // Mover una capa de un lado al otro cambia lo que el jugador sabe. No es refactor.
   // ---------------------------------------------------------------------------------------------------
 
-  // 5. CAMINOS COMERCIALES. Van BAJO la niebla: el servidor manda los que la Faccion ha PISADO, y una
-  // calzada explorada hace rato se ve como se ve todo lo demas de esa zona, a media luz.
+  // 5. RED DE CAMINOS (Doc 1.6). Va BAJO la niebla: el servidor manda los tramos con algun extremo explorado, ya
+  // fusionados, y una calzada explorada hace rato se ve como todo lo demas de esa zona, a media luz. El grosor
+  // dice cuanto se usa: sendero, camino, calzada.
   ctx.strokeStyle = 'rgba(139, 90, 43, 0.9)';
-  ctx.lineWidth = 2.5;
   ctx.setLineDash([6, 4]);
   for (const camino of proyeccion.caminos || []) {
     if (camino.puntos.length < 2) continue;
+    // Sin `escalon` (un servidor anterior a la red de caminos), grosor de camino.
+    ctx.lineWidth = [1.2, 2.5, 4][camino.escalon ?? 1] ?? 2.5;
     ctx.beginPath();
     camino.puntos.forEach((p, i) => {
       const x = p.x * escalaCanvas;

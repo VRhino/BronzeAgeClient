@@ -1,7 +1,7 @@
 // Wrapper `fetch` sobre la superficie `/jugador/*` y `/sesiones` del backend (Fase C3) — sin lógica de negocio, solo I/O.
 import type { MapaGenerado } from './terreno';
 
-import type { AcuerdoTrueque, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoComercial, CampamentoBandido, Caravana, Ejercito, EjercitoAvistado, EvaluacionAscenso, Faccion, HeroeProyectado, HeroePublico, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
+import type { AcuerdoTrueque, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, Caravana, Ejercito, EjercitoAvistado, EvaluacionAscenso, Faccion, HeroeProyectado, HeroePublico, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
 
 export class ApiError extends Error {
   constructor(
@@ -60,7 +60,7 @@ export interface ProyeccionJugador {
   heroesVisibles: HeroePublico[];
   /** `heroeId` -> nombre de cada ciudadano de tu Facción, tú incluido, se le vea o no. Vacío sin Facción. */
   nombresDeCompaneros: Record<string, string>;
-  caminos: CaminoComercial[];
+  caminos: CaminoProyectado[];
   /** Ofertas de mercado en pie de CUALQUIER plaza en cuya puerta esté una columna tuya, más las de tus
    * propios asentamientos — el resto no viaja (Doc 3.3, `proyectarParaJugador` en el backend). Sin interfaz
    * que las lea todavía. */

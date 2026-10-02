@@ -280,8 +280,11 @@ export interface CampamentoBandido {
   poder: number;
 }
 
-export interface CaminoComercial {
+/** Copia local de `CaminoProyectado` (motor, Doc 1.6): un tramo de la red de caminos ya fusionado por el servidor,
+ * bajo la niebla. `escalon` por peso (rutas vigentes que lo recorren): 0 sendero, 1 camino, 2 calzada. */
+export interface CaminoProyectado {
   id: string;
+  escalon: 0 | 1 | 2;
   puntos: Point[];
 }
 

@@ -3,6 +3,13 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.7.1] — 2026-10-02 · red de caminos · sync con `BronzeAgeFase0` `main` (red de caminos, aún sin commit)
+
+### Cambiado
+- **Caminos** (Doc 1.6): `proyeccion.caminos` son ahora tramos fusionados de la red de caminos,
+  `CaminoProyectado { id, escalon, puntos }` (sustituye a `CaminoComercial`). Se pintan con grosor por escalón:
+  sendero, camino, calzada. Contra un servidor anterior, sin `escalon`, se pintan como antes.
+
 ## [0.7.0] — 2026-09-26 · subida de nivel y asedio · sync con `BronzeAgeFase0@8091638` (rama `ritmo-crecimiento`)
 
 ### Añadido
