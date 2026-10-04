@@ -15,7 +15,8 @@ import {
 import { minutosHerido, pintarPanelHeroe } from './ui/panelHeroe';
 import { edificioBajoCursor, pintarAsentamiento, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
 import { EDIFICIO_COLOR, EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from './paletas';
-import type { Asentamiento, BloqueoAscenso, CampamentoBandido, Edificio, EvaluacionAscenso, ParamsCrearHeroe, ProduccionItem } from './tiposDominio';
+import type { Alijo, Asentamiento, BloqueoAscenso, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Edificio, EvaluacionAscenso, ParamsCrearHeroe, ProduccionItem } from './tiposDominio';
+import { cablearCampamento, campamentoActual, renderCampamento } from './ui/pantallaCampamento';
 import type { MapaGenerado } from './terreno';
 import { estadoCliente, TIPS_FUNDACION } from './ui/estadoCliente';
 import { actualizarTip, resumenRecursosFundacion } from './ui/pestanaAsentamientos';
@@ -25,6 +26,8 @@ import { renderPestanaFaccion } from './ui/pestanaFaccion';
 import { instalarZoomPan, type ControlMapa } from './ui/pantallaMapa';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
+/** Los campamentos donde se puede nacer, de la última respuesta `sinHeroe` (pantalla Héroe). */
+let campamentosParaElegir: CampamentoParaElegir[] = [];
 
 function escaparHtml(valor: string): string {
   return valor.replace(/[&<>'"]/g, (caracter) => ({
@@ -122,9 +125,9 @@ function cablearAccionesMuralla(panel: HTMLDivElement): void {
 }
 
 /** Cablea el flujo crear/unirse a Facción sobre cualquier contenedor que lleve el HTML de
- * `renderPestanaFaccion` (`ui/pestanaFaccion.ts`): lo usan el panel legacy y la pantalla Facción a pantalla
- * completa (`montarFaccion`). `rerender` repinta ese contenedor tras un cambio de modo (inicio/crear/unirse);
- * un crear/unir con éxito va por `refrescarDatosJuego`, que reencamina a otra pantalla. */
+ * `renderPestanaFaccion` (`ui/pestanaFaccion.ts`): lo usan el panel legacy, el riel del Mapa y la pantalla Campamento.
+ * `rerender` repinta ese contenedor tras un cambio de modo (inicio/crear/pedir ingreso); un éxito va por
+ * `refrescarDatosJuego`. */
 function cablearFaccion(root: ParentNode, proyeccion: ProyeccionJugador, rerender: () => void): void {
   root.querySelector('#btn-crear-faccion')?.addEventListener('click', () => { estadoCliente.modoPanelFaccion = 'crear'; rerender(); });
   root.querySelector('#btn-unirse-faccion')?.addEventListener('click', () => { estadoCliente.modoPanelFaccion = 'unirse'; rerender(); });
@@ -158,17 +161,18 @@ function cablearFaccion(root: ParentNode, proyeccion: ProyeccionJugador, rerende
     const pintarLista = (): void => {
       const termino = busqueda.value.trim().toLowerCase();
       const facciones = proyeccion.facciones.filter((faccion) => faccion.nombre.toLowerCase().includes(termino));
-      lista.innerHTML = facciones.length > 0 ? facciones.map((faccion) => `<div class="faction-list-item"><div><strong>${escaparHtml(faccion.nombre)}</strong><span>Nivel ${faccion.nivel}</span></div><button class="btn-join-faction" type="button" data-faccion-id="${escaparHtml(faccion.id)}">Unirse</button></div>`).join('') : '<p class="faction-empty-list">No hay facciones que coincidan.</p>';
+      lista.innerHTML = facciones.length > 0 ? facciones.map((faccion) => `<div class="faction-list-item"><div><strong>${escaparHtml(faccion.nombre)}</strong><span>Nivel ${faccion.nivel}</span></div>${(faccion.solicitudesIds ?? []).includes(proyeccion.heroeId) ? '<span>Pedido: decide su Rey</span>' : `<button class="btn-join-faction" type="button" data-faccion-id="${escaparHtml(faccion.id)}">Pedir ingreso</button>`}</div>`).join('') : '<p class="faction-empty-list">No hay facciones que coincidan.</p>';
       lista.querySelectorAll<HTMLButtonElement>('.btn-join-faction').forEach((boton) => boton.addEventListener('click', async () => {
         boton.disabled = true;
-        boton.textContent = 'Uniendo...';
+        boton.textContent = 'Pidiendo...';
         try {
-          const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'unirseAFaccion', { faccionId: boton.dataset.faccionId });
+          const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'solicitarIngreso', { faccionId: boton.dataset.faccionId });
           if (!respuesta.resultado.ok) throw new ApiError(409, respuesta.resultado.codigoError ?? 'El servidor rechazó la operación.');
+          boton.textContent = 'Pedido: decide su Rey';
           await refrescarDatosJuego();
         } catch (err) {
           boton.disabled = false;
-          boton.textContent = 'Unirse';
+          boton.textContent = 'Pedir ingreso';
           const aviso = document.createElement('p');
           aviso.className = 'faction-error';
           aviso.textContent = mensajeError(err);
@@ -179,6 +183,13 @@ function cablearFaccion(root: ParentNode, proyeccion: ProyeccionJugador, rerende
     busqueda.addEventListener('input', pintarLista);
     pintarLista();
   }
+
+  // El Rey contesta las solicitudes de ingreso (`renderPestanaFaccion`, vista de detalle).
+  root.querySelectorAll<HTMLButtonElement>('[data-solicitud]').forEach((boton) => boton.addEventListener('click', async () => {
+    boton.disabled = true;
+    const mensaje = await ejecutarYRefrescar('responderSolicitud', { faccionId: proyeccion.faccionId, heroeId: boton.dataset.solicitud, aceptar: boton.dataset.aceptar === 'si' });
+    if (mensaje) { boton.disabled = false; avisoMapa(mensaje); }
+  }));
 }
 
 /** Punto de entrada de la creación de héroe, para la pantalla provisional y para la definitiva. Con el héroe
@@ -188,21 +199,26 @@ function crearHeroe(params: ParamsCrearHeroe): Promise<string | null> {
   return ejecutarYRefrescar('crearHeroe', params);
 }
 
-/** Lo que la pantalla PROVISIONAL manda además del nombre: lo mismo que los héroes bot del backend
- * (`npcGobernanza.ts`) — `Spear` es la única clase que tiene hoy Conquest. docs/Features_Pendientes.md §0. */
-const HEROE_PROVISIONAL: Omit<ParamsCrearHeroe, 'displayName'> = {
+/** Lo que la pantalla PROVISIONAL manda además del nombre y el campamento — `Spear` es la única clase que tiene hoy
+ * Conquest. docs/Features_Pendientes.md §0. */
+const HEROE_PROVISIONAL: Omit<ParamsCrearHeroe, 'displayName' | 'campamentoId'> = {
   classDefinitionId: 'Spear',
   genero: 'masculino',
   avatar: { cabezaId: '', peloId: '', barbaId: '', cejasId: '' },
 };
 
 /** Pantalla HÉROE: se llega con `sinHeroe` (membresía sin héroe; el backend no admite otro comando que
- * `crearHeroe`). PROVISIONAL: solo pide el nombre. */
+ * `crearHeroe`). PROVISIONAL: pide el nombre y el campamento de mercenarios donde nace (Doc 1.3); las dos cifras de
+ * cada campamento solo informan. */
 function montarHeroe(): void {
+  const opciones = campamentosParaElegir
+    .map((c, i) => `<label class="mapa-lista-item"><div><strong>${escaparHtml(c.id)}</strong><span>(${Math.round(c.posicion.x)}, ${Math.round(c.posicion.y)}) · lo eligieron ${c.eligieronComoInicial} · residen ${c.residentes}</span></div><input type="radio" name="campamento" value="${escaparHtml(c.id)}"${i === 0 ? ' checked' : ''} /></label>`)
+    .join('');
   app.innerHTML = `<div class="login-container"><div class="login-card">
-    <div class="login-header"><h1 class="login-title">Tu héroe</h1><p class="login-subtitle">Con él aparecerás en el mundo.</p></div>
+    <div class="login-header"><h1 class="login-title">Tu héroe</h1><p class="login-subtitle">Nace dentro de un campamento de mercenarios.</p></div>
     <form id="form-crear-heroe">
       <div class="form-group"><label class="form-label" for="input-nombre-heroe">Nombre</label><input type="text" id="input-nombre-heroe" class="form-input" required autocomplete="off" /></div>
+      <div class="form-group"><span class="form-label">Campamento</span><div class="mapa-lista">${opciones || '<p class="mapa-lista-vacia">Esta partida no tiene campamentos.</p>'}</div></div>
       <button type="submit" id="btn-crear-heroe" class="btn-primary">Crear héroe</button>
       <p id="error-heroe" class="faction-error" role="alert"></p>
     </form>
@@ -213,7 +229,8 @@ function montarHeroe(): void {
     const nombre = document.querySelector<HTMLInputElement>('#input-nombre-heroe')?.value.trim() ?? '';
     const boton = document.querySelector<HTMLButtonElement>('#btn-crear-heroe');
     if (boton) boton.disabled = true;
-    const mensaje = await crearHeroe({ ...HEROE_PROVISIONAL, displayName: nombre });
+    const campamentoId = document.querySelector<HTMLInputElement>('input[name="campamento"]:checked')?.value ?? '';
+    const mensaje = await crearHeroe({ ...HEROE_PROVISIONAL, displayName: nombre, campamentoId });
     if (!mensaje) return;
     if (boton) boton.disabled = false;
     const error = document.querySelector<HTMLElement>('#error-heroe');
@@ -221,14 +238,28 @@ function montarHeroe(): void {
   });
 }
 
-/** Pantalla FACCIÓN a pantalla completa (T2): tarjeta central sobre el fondo de la app, con el flujo
- * crear/unirse. Se llega solo con `faccionId === null`; un crear/unir con éxito reencamina (router). */
-function montarFaccion(): void {
+/** Pantalla CAMPAMENTO: dentro de un campamento de mercenarios (Doc 1.9b), donde se nace. Sin Facción, aquí se crea o
+ * se pide el ingreso en una (el flujo común de `cablearFaccion`). */
+function montarCampamento(): void {
   const proyeccion = estadoCliente.proyeccionUltima;
-  if (!proyeccion) { montar('cargando'); return; }
-  app.innerHTML = `<div class="login-container"><div class="login-card">${renderPestanaFaccion(proyeccion, escaparHtml)}</div><button id="btn-logout" class="text-link" type="button">Cerrar sesión</button></div>`;
-  document.querySelector('#btn-logout')?.addEventListener('click', () => cerrarSesionYVolverALogin());
-  cablearFaccion(app, proyeccion, montarFaccion);
+  const campamento = proyeccion && campamentoActual(proyeccion);
+  if (!proyeccion || !campamento) { montar('cargando'); return; }
+  app.innerHTML = `<div class="login-container campamento-contenedor"><div class="login-card campamento-card"></div>${menuEsquinaHtml()}</div>`;
+  cablearMenuEsquina(app.querySelector<HTMLElement>('.campamento-contenedor')!);
+  pintarCampamento(proyeccion, campamento);
+}
+
+/** Vuelca la proyección en la pantalla Campamento (en cada refresco). */
+function pintarCampamento(p: ProyeccionJugador, campamento: CampamentoMercenarios): void {
+  const card = app.querySelector<HTMLElement>('.campamento-card');
+  if (!card) return;
+  card.innerHTML = renderCampamento(p, campamento, escaparHtml);
+  cablearCampamento(card, p, campamento, ejecutarYRefrescar);
+  const faccion = card.querySelector<HTMLElement>('#campamento-faccion');
+  if (faccion) {
+    faccion.innerHTML = renderPestanaFaccion(p, escaparHtml);
+    cablearFaccion(faccion, p, () => pintarCampamento(p, campamento));
+  }
 }
 
 /** La columna en la que MARCHA el jugador (Doc 5.12.2) — su posición en el mundo. `undefined` mientras esté
@@ -285,6 +316,12 @@ function campamentoCercaDe(punto: { x: number; y: number }, proyeccion: Proyecci
   return proyeccion.campamentosBandidos.filter((c) => distancia(c) < 25).sort((a, b) => distancia(a) - distancia(b))[0] ?? null;
 }
 
+/** El elemento de `lista` más cercano al punto clicado, dentro de un radio de agarre, o `null`. */
+function cercano<T extends { posicion: { x: number; y: number } }>(lista: readonly T[], punto: { x: number; y: number }, radio: number): T | null {
+  const distancia = (c: T): number => Math.hypot(c.posicion.x - punto.x, c.posicion.y - punto.y);
+  return lista.filter((c) => distancia(c) < radio).sort((a, b) => distancia(a) - distancia(b))[0] ?? null;
+}
+
 /** A qué distancia se ataca: `LOGISTICA.radioEncuentro` del backend (Doc 5.12.3), copiado aquí para avisar antes de
  * mandar la orden. El que decide es el backend. */
 const RADIO_ATAQUE = 15;
@@ -300,7 +337,7 @@ function puntoDeMapa(evento: { clientX: number; clientY: number }, canvas: HTMLC
 
 /** Lo seleccionado en el mapa —un asentamiento o un campamento de bandidos— (abre el panel de Selección). Fuera del
  * `estadoCliente` porque solo vive mientras la pantalla Mapa está montada. */
-let seleccionMapa: { tipo: 'asentamiento' | 'campamento'; id: string } | null = null;
+let seleccionMapa: { tipo: 'asentamiento' | 'campamento' | 'mercenarios' | 'alijo'; id: string } | null = null;
 let avisoMapaTimer: ReturnType<typeof setTimeout> | undefined;
 
 function avisoMapa(texto: string): void {
@@ -334,6 +371,18 @@ function renderSeleccionMapa(): void {
   if (proyeccion && campamento) {
     cont.hidden = false;
     renderSeleccionCampamento(cont, proyeccion, campamento);
+    return;
+  }
+  const mercenarios = seleccionMapa?.tipo === 'mercenarios' ? proyeccion?.campamentosMercenarios.find((c) => c.id === seleccionMapa!.id) : undefined;
+  if (proyeccion && mercenarios) {
+    cont.hidden = false;
+    renderSeleccionMercenarios(cont, proyeccion, mercenarios);
+    return;
+  }
+  const alijo = seleccionMapa?.tipo === 'alijo' ? proyeccion?.alijos.find((a) => a.id === seleccionMapa!.id) : undefined;
+  if (proyeccion && alijo) {
+    cont.hidden = false;
+    renderSeleccionAlijo(cont, alijo);
     return;
   }
   const asentamiento = seleccionMapa?.tipo === 'asentamiento' && proyeccion
@@ -452,6 +501,60 @@ function renderSeleccionCampamento(cont: HTMLElement, proyeccion: ProyeccionJuga
   });
 }
 
+/** Una acción de la ficha de Selección: manda el comando y, si lo rechaza, deja el motivo en `#mapa-seleccion-error`. */
+function cablearAccionSeleccion(cont: HTMLElement, selector: string, tipo: string, params: object, alAcabar?: () => void): void {
+  cont.querySelector<HTMLButtonElement>(selector)?.addEventListener('click', async (evento) => {
+    const boton = evento.currentTarget as HTMLButtonElement;
+    boton.disabled = true;
+    const mensaje = await ejecutarYRefrescar(tipo, params);
+    boton.disabled = false;
+    const error = cont.querySelector<HTMLElement>('#mapa-seleccion-error');
+    if (error) error.textContent = mensaje ?? '';
+    if (!mensaje) alAcabar?.();
+  });
+}
+
+/** Ficha de un campamento de mercenarios (Doc 1.9b): enclave neutral, cualquiera entra con su columna a la puerta. */
+function renderSeleccionMercenarios(cont: HTMLElement, proyeccion: ProyeccionJugador, campamento: CampamentoMercenarios): void {
+  const columna = miColumna(proyeccion);
+  const distancia = columna ? Math.round(Math.hypot(columna.posicionActual.x - campamento.posicion.x, columna.posicionActual.y - campamento.posicion.y)) : null;
+  const tuyo = campamento.residentesIds.includes(proyeccion.heroeId);
+  cont.innerHTML = `
+    <button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>
+    <span class="faction-kicker">Campamento de mercenarios${tuyo ? ' · tu residencia' : ''}</span>
+    <h3>${escaparHtml(campamento.id)}</h3>
+    <div class="mapa-seleccion-datos">
+      <div><span>Residentes</span><strong>${campamento.residentesIds.length}</strong></div>
+      ${distancia !== null ? `<div><span>Distancia</span><strong>${distancia}</strong></div>` : ''}
+    </div>
+    <div class="mapa-seleccion-acciones">
+      <button id="btn-marchar-alli" class="btn-secondary" type="button">Marchar aquí</button>
+      <button id="btn-entrar-mercenarios" class="btn-primary" type="button">Entrar</button>
+    </div>
+    <p class="mapa-lista-vacia">Se entra con la columna a la puerta, yendo solo. Junto a él nadie inicia un combate.</p>
+    <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`;
+  cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
+  cont.querySelector('#btn-marchar-alli')?.addEventListener('click', () => void marcharAObjetivo({ tipo: 'punto', punto: campamento.posicion }));
+  cablearAccionSeleccion(cont, '#btn-entrar-mercenarios', 'entrarEnCampamento', { campamentoId: campamento.id, heroeId: proyeccion.heroeId }, () => { seleccionMapa = null; });
+}
+
+/** Ficha de un alijo de exploración (Doc 1.9b): se abre estando en el sitio, y su oro va al oro de botín. */
+function renderSeleccionAlijo(cont: HTMLElement, alijo: Alijo): void {
+  cont.innerHTML = `
+    <button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>
+    <span class="faction-kicker">Alijo</span>
+    <h3>${alijo.oro} de oro</h3>
+    <div class="mapa-seleccion-acciones">
+      <button id="btn-marchar-alli" class="btn-secondary" type="button">Marchar aquí</button>
+      <button id="btn-abrir-alijo" class="btn-primary" type="button">Abrir</button>
+    </div>
+    <p class="mapa-lista-vacia">Hay que estar en el sitio. El oro va a tu oro de botín.</p>
+    <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`;
+  cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
+  cont.querySelector('#btn-marchar-alli')?.addEventListener('click', () => void marcharAObjetivo({ tipo: 'punto', punto: alijo.posicion }));
+  cablearAccionSeleccion(cont, '#btn-abrir-alijo', 'abrirAlijo', { alijoId: alijo.id }, () => { seleccionMapa = null; avisoMapa(`Alijo abierto: ${alijo.oro} de oro de botín.`); });
+}
+
 // --- RIEL DE ICONOS Y MENÚ DE ESQUINA DEL MAPA (T5) ---------------------------------------------
 
 type PanelRiel = 'heroe' | 'faccion' | 'cosas' | 'fundar';
@@ -465,11 +568,16 @@ function tieneAsentamientoPropio(proyeccion: ProyeccionJugador): boolean {
   return asentamientosDelMapa(proyeccion).some((a) => a.faccionId === proyeccion.faccionId);
 }
 
+/** La Caravana de Fundación de campamento de la que eres titular (Doc 1.8/1.9b): la llevas tú y fundas tú. */
+function caravanaDeFundacion(proyeccion: ProyeccionJugador) {
+  return proyeccion.caravanas.find((c) => c.titularId === proyeccion.heroeId && c.origenCampamentoId !== undefined);
+}
+
 async function fundarAqui(): Promise<void> {
   const proyeccion = estadoCliente.proyeccionUltima;
   if (!proyeccion) return;
   try {
-    const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'fundarAsentamiento', { faccionId: proyeccion.faccionId });
+    const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'fundar', {});
     if (!respuesta.resultado.ok) throw new ApiError(409, respuesta.resultado.codigoError ?? 'No se pudo fundar aquí.');
     estadoCliente.modoFundacionActivo = false;
     estadoCliente.posicionFundacion = null;
@@ -552,12 +660,19 @@ function renderPanelRiel(): void {
   });
   riel.querySelector('[data-panel="fundar"]')?.classList.toggle('destaca', puedeFundar && !tieneAsentamientoPropio(proyeccion));
 
+  if (panelMapaAbierto !== 'faccion') delete panel.dataset.pintado;
   if (panelMapaAbierto === null) { panel.hidden = true; panel.innerHTML = ''; return; }
   panel.hidden = false;
   if (panelMapaAbierto === 'heroe') {
     pintarPanelHeroe(panel, proyeccion, escaparHtml, aplicarYRefrescar);
   } else if (panelMapaAbierto === 'faccion') {
-    panel.innerHTML = `<div class="mapa-panel-jugador">${escaparHtml(proyeccion.heroe.displayName)}</div>${renderPestanaFaccion(proyeccion, escaparHtml)}`;
+    // El sondeo de 3 s repinta el riel: si nada cambió no se toca el DOM, o se llevaría lo que se está escribiendo.
+    const html = `<div class="mapa-panel-jugador">${escaparHtml(proyeccion.heroe.displayName)}</div>${renderPestanaFaccion(proyeccion, escaparHtml)}`;
+    if (panel.dataset.pintado !== html) {
+      panel.innerHTML = html;
+      panel.dataset.pintado = html;
+      cablearFaccion(panel, proyeccion, () => { delete panel.dataset.pintado; renderPanelRiel(); });
+    }
   } else if (panelMapaAbierto === 'cosas') {
     const asentamientos = asentamientosDelMapa(proyeccion).filter((a) => a.faccionId === proyeccion.faccionId);
     const columnas = proyeccion.ejercitos;
@@ -580,14 +695,26 @@ function renderPanelRiel(): void {
       });
     });
   } else {
-    // fundar
+    // fundar: solo con una Caravana de Fundación enganchada, y donde se está (Doc 1.3, 1.8)
+    const caravana = caravanaDeFundacion(proyeccion);
+    const enganchada = Boolean(caravana && columna?.caravanasAdjuntasIds?.includes(caravana.id));
     panel.innerHTML = `
       <span class="faction-kicker">Fundar asentamiento</span>
-      <p>Se funda donde está ahora tu columna. Estos son los recursos a tu alcance:</p>
-      <div id="mapa-fundar-recursos">${resumenRecursosFundacion(escaparHtml)}</div>
-      <button id="btn-fundar-aqui" class="btn-primary" type="button">Fundar aquí</button>
+      ${!caravana
+        ? '<p>Se funda con una Caravana de Fundación. Tu Facción la compra en un campamento de mercenarios con el fondo de sus héroes, y quien la compra la lleva.</p>'
+        : enganchada
+          ? `<p>Se funda donde está ahora tu columna (no en agua ni a menos de 100 de un campamento). Estos son los recursos a tu alcance:</p>
+            <div id="mapa-fundar-recursos">${resumenRecursosFundacion(escaparHtml)}</div>
+            <button id="btn-fundar-aqui" class="btn-primary" type="button">Fundar aquí</button>`
+          : `<p>Tu Caravana de Fundación espera en su campamento. Lleva tu columna a la puerta y engánchala.</p>
+            <button id="btn-enganchar-caravana" class="btn-primary" type="button">Enganchar caravana</button>`}
       <p id="mapa-fundar-error" class="faction-error" role="alert"></p>`;
     panel.querySelector('#btn-fundar-aqui')?.addEventListener('click', () => void fundarAqui());
+    panel.querySelector('#btn-enganchar-caravana')?.addEventListener('click', async () => {
+      const mensaje = await ejecutarYRefrescar('adjuntarCaravana', { ejercitoId: columna?.id, caravanaId: caravana?.id, heroeId: proyeccion.heroeId });
+      const error = document.querySelector<HTMLElement>('#mapa-fundar-error');
+      if (error) error.textContent = mensaje ?? '';
+    });
   }
 }
 
@@ -624,9 +751,15 @@ function montarMapa(): void {
     const canvas = document.querySelector<HTMLCanvasElement>('#mapa');
     if (!proy || !mapa || !canvas) return;
     const punto = puntoDeMapa(evento, canvas, mapa);
-    const campamento = campamentoCercaDe(punto, proy);
-    const asentamiento = campamento ? null : asentamientoCercaDe(punto, proy);
-    if (campamento) {
+    const alijo = cercano(proy.alijos ?? [], punto, 15);
+    const mercenarios = alijo ? null : cercano(proy.campamentosMercenarios ?? [], punto, 30);
+    const campamento = alijo || mercenarios ? null : campamentoCercaDe(punto, proy);
+    const asentamiento = alijo || mercenarios || campamento ? null : asentamientoCercaDe(punto, proy);
+    if (alijo || mercenarios) {
+      seleccionMapa = alijo ? { tipo: 'alijo', id: alijo.id } : { tipo: 'mercenarios', id: mercenarios!.id };
+      renderSeleccionMapa();
+      void marcharAObjetivo({ tipo: 'punto', punto: (alijo ?? mercenarios)!.posicion });
+    } else if (campamento) {
       seleccionMapa = { tipo: 'campamento', id: campamento.id };
       renderSeleccionMapa();
       void marcharAObjetivo({ tipo: 'punto', punto: campamento.posicion });
@@ -1316,13 +1449,11 @@ function actualizarPanelFundacion(): void {
   resumen.innerHTML = resumenRecursosFundacion(escaparHtml);
 }
 
-async function confirmarFundacion(proyeccion: ProyeccionJugador, _posicion: { x: number; y: number }): Promise<void> {
+async function confirmarFundacion(_proyeccion: ProyeccionJugador, _posicion: { x: number; y: number }): Promise<void> {
   try {
-    // Sync backend 2026-09-08 (`BronzeAgeFase0@4fe611b`, "se funda DONDE SE ESTÁ", Doc 1.3): `fundarAsentamiento`
-    // ya NO acepta `posicion` — el backend la deriva de la columna del fundador. El punto elegido en el mapa
-    // es hoy solo la vista previa de recursos; el flujo de fundación real necesita la presencia del jugador
-    // (`salirAlMundo`), aún sin cablear — ver docs/Analisis_Brecha_Backend.md.
-    const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'fundarAsentamiento', { faccionId: proyeccion.faccionId });
+    // Backend 2026-10-04 (Doc 1.3): solo se funda con `fundar`, el titular con su Caravana de Fundación enganchada y donde
+    // está su columna. El punto elegido en el mapa es solo la vista previa de recursos.
+    const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'fundar', {});
     if (!respuesta.resultado.ok) throw new ApiError(409, respuesta.resultado.codigoError ?? 'No se pudo fundar aquí.');
     estadoCliente.modoFundacionActivo = false;
     estadoCliente.posicionFundacion = null;
@@ -1346,6 +1477,7 @@ async function refrescarDatosJuego(): Promise<void> {
   const respuesta = await consultarProyeccion(estadoCliente.gameIdActivo);
   estadoCliente.sinHeroe = respuesta.sinHeroe === true;
   estadoCliente.proyeccionUltima = respuesta.sinHeroe ? null : respuesta;
+  if (respuesta.sinHeroe) campamentosParaElegir = respuesta.campamentos ?? [];
   enrutar();
 }
 
@@ -1354,7 +1486,7 @@ async function refrescarDatosJuego(): Promise<void> {
 // `twinkly-greeting-peacock.md`): no hay "última pantalla" guardada, así que recargar devuelve al jugador a
 // donde estaba. `#/legacy` es la válvula de escape a la interfaz anterior, intacta, y solo se llega
 // escribiéndola en la URL.
-type Pantalla = 'login' | 'cargando' | 'heroe' | 'faccion' | 'mapa' | 'asentamiento' | 'legacy';
+type Pantalla = 'login' | 'cargando' | 'heroe' | 'campamento' | 'mapa' | 'asentamiento' | 'legacy';
 
 let pantallaMontada: Pantalla | null = null;
 /** Limpieza de la pantalla saliente (listeners globales, etc.). La fija quien monta una pantalla que los
@@ -1371,7 +1503,8 @@ function pantallaActual(): Pantalla {
   if (esRutaLegacy()) return 'legacy';
   const proyeccion = estadoCliente.proyeccionUltima;
   if (!proyeccion) return 'cargando';
-  if (proyeccion.faccionId === null) return 'faccion';
+  // Sin Facción ya no hay pantalla aparte: se nace en un campamento y desde él (o desde el riel del Mapa) se crea o se pide.
+  if (proyeccion.heroe.ubicacion.tipo === 'mercenarios') return 'campamento';
   if (proyeccion.asentamientos.length > 0) return 'asentamiento';
   return 'mapa';
 }
@@ -1384,7 +1517,7 @@ function montar(pantalla: Pantalla): void {
     case 'legacy': montarLegacy(); break;
     case 'cargando': app.innerHTML = '<div class="login-container"><div class="login-card"><p class="login-subtitle">Cargando partida…</p></div></div>'; break;
     case 'heroe': montarHeroe(); break;
-    case 'faccion': montarFaccion(); break;
+    case 'campamento': montarCampamento(); break;
     case 'mapa': montarMapa(); break;
     case 'asentamiento': montarAsentamiento(); break;
   }
@@ -1397,6 +1530,7 @@ function refrescarPantalla(pantalla: Pantalla): void {
   const proyeccion = estadoCliente.proyeccionUltima;
   if (!proyeccion) return;
   if (pantalla === 'mapa') { void dibujarPantallaSegunModo(proyeccion); renderSeleccionMapa(); renderPanelRiel(); return; }
+  if (pantalla === 'campamento') { const c = campamentoActual(proyeccion); if (c) pintarCampamento(proyeccion, c); return; }
   if (pantalla === 'asentamiento') { void dibujarPantallaSegunModo(proyeccion); renderPanelEdificios(); renderPanelRecursos(); renderPanelAsent(); return; }
   if (pantalla !== 'legacy') return;
   renderizarPanelInteraccion(proyeccion);

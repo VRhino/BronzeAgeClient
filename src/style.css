@@ -2501,3 +2501,48 @@ body {
   font-size: 0.76rem;
   color: var(--terracota);
 }
+
+/* --- PANTALLA CAMPAMENTO DE MERCENARIOS (Doc 1.9b) --- */
+.campamento-contenedor {
+  position: relative;
+  justify-content: flex-start;
+  padding: 24px 16px;
+}
+
+.login-card.campamento-card {
+  max-width: 640px;
+  overflow: visible;
+}
+
+.campamento-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.campamento-seccion {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-glass);
+}
+
+.campamento-seccion:empty {
+  display: none;
+}
+
+.campamento-fila {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.campamento-fila > span {
+  flex: 1;
+  color: var(--text-secondary);
+}
+
+.campamento-fila .form-input {
+  width: 110px;
+}

@@ -1,7 +1,7 @@
 // Wrapper `fetch` sobre la superficie `/jugador/*` y `/sesiones` del backend (Fase C3) — sin lógica de negocio, solo I/O.
 import type { MapaGenerado } from './terreno';
 
-import type { AcuerdoTrueque, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, Caravana, Ejercito, EjercitoAvistado, EvaluacionAscenso, Faccion, HeroeProyectado, HeroePublico, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
+import type { AcuerdoTrueque, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, Ejercito, EjercitoAvistado, EvaluacionAscenso, Faccion, HeroeProyectado, HeroePublico, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
 
 export class ApiError extends Error {
   constructor(
@@ -68,6 +68,10 @@ export interface ProyeccionJugador {
   /** Trueques propuestos o activos que tocan un asentamiento tuyo (Doc 3.2). Sin interfaz que los lea. */
   acuerdos: AcuerdoTrueque[];
   campamentosBandidos: CampamentoBandido[];
+  /** Los campamentos de mercenarios que conoces (como un camino: los explorados, más el tuyo y aquel en que estás). */
+  campamentosMercenarios: CampamentoMercenarios[];
+  /** Alijos a la vista de tu columna que aún no abriste (solo si tu Facción no tiene asentamiento). */
+  alijos: Alijo[];
   zonasFusionadas: ZonaFaccion[];
   trazadoPorAsentamiento: Record<string, TrazadoAsentamiento>;
   /** Producción por minuto de mundo de cada edificio de la plaza que pisas (`asentamientos[0]`) — ausente si
@@ -91,6 +95,8 @@ export interface PartidaSinHeroe {
   version: number;
   mapaId: string;
   sinHeroe: true;
+  /** Dónde se puede nacer (backend 2026-10-04): la pantalla de elección de `crearHeroe`. */
+  campamentos: CampamentoParaElegir[];
 }
 
 export interface RespuestaLogin {

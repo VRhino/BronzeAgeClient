@@ -29,6 +29,11 @@ export function renderPestanaFaccion(
         <div><span>Rey</span><strong>${escaparHtml(faccion.reyId ?? 'Sin designar')}</strong></div>
         <div><span>Embajador</span><strong>${escaparHtml(faccion.embajadorId ?? 'Sin designar')}</strong></div>
       </div>
+      ${faccion.reyId === proyeccion.heroeId && (faccion.solicitudesIds ?? []).length > 0
+        ? `<div class="faction-list"><span class="faction-kicker">Piden entrar</span>${(faccion.solicitudesIds ?? [])
+            .map((id) => `<div class="faction-list-item"><div><strong>${escaparHtml(id)}</strong></div><button class="btn-secondary" type="button" data-solicitud="${escaparHtml(id)}" data-aceptar="si">Aceptar</button><button class="btn-secondary" type="button" data-solicitud="${escaparHtml(id)}" data-aceptar="no">Denegar</button></div>`)
+            .join('')}</div>`
+        : ''}
     `;
   }
 
@@ -37,9 +42,9 @@ export function renderPestanaFaccion(
       <div class="faction-empty-state">
         <span class="faction-kicker">Organización política</span>
         <h2>Elige tu facción</h2>
-        <p>Construye una nueva identidad o únete a una facción existente.</p>
+        <p>Crea una nueva o pide entrar en una existente: su Rey decide.</p>
         <div class="faction-choice-grid">
-          <button id="btn-unirse-faccion" class="faction-choice" type="button"><span class="choice-icon">↗</span><strong>Unirse a una facción</strong><span>Explora las facciones del mundo.</span></button>
+          <button id="btn-unirse-faccion" class="faction-choice" type="button"><span class="choice-icon">↗</span><strong>Pedir ingreso</strong><span>Explora las facciones del mundo.</span></button>
           <button id="btn-crear-faccion" class="faction-choice" type="button"><span class="choice-icon">✦</span><strong>Crear facción</strong><span>Funda una nueva casa política.</span></button>
         </div>
       </div>
@@ -65,7 +70,7 @@ export function renderPestanaFaccion(
   return `
     <div class="faction-form-view faction-join-view">
       <button class="back-button" id="btn-volver-faccion" type="button" aria-label="Volver a elegir facción">←</button>
-      <span class="faction-kicker">Facciones del mundo</span><h2>Unirse a una facción</h2>
+      <span class="faction-kicker">Facciones del mundo</span><h2>Pedir ingreso</h2>
       <input id="input-buscar-faccion" class="form-input" type="search" placeholder="Buscar por nombre..." autocomplete="off" />
       <div id="lista-facciones" class="faction-list"></div>
     </div>

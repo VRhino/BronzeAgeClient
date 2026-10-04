@@ -682,6 +682,33 @@ export function pintarTerreno(
     ctx.stroke();
   }
 
+  // 18b. CAMPAMENTOS DE MERCENARIOS (tienda parda) y ALIJOS (punto dorado), backend 2026-10-04 (Doc 1.9b). Los
+  // campamentos se conocen como un camino —no se mueven ni desaparecen— y los alijos solo viajan si están a la vista.
+  for (const campamento of proyeccion.campamentosMercenarios || []) {
+    const x = campamento.posicion.x * escalaCanvas;
+    const y = campamento.posicion.y * escalaCanvas;
+    const r = 8;
+    ctx.beginPath();
+    ctx.moveTo(x, y - r);
+    ctx.lineTo(x + r, y + r * 0.7);
+    ctx.lineTo(x - r, y + r * 0.7);
+    ctx.closePath();
+    ctx.fillStyle = '#a0703c';
+    ctx.fill();
+    ctx.strokeStyle = '#1b1a17';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+  for (const alijo of proyeccion.alijos || []) {
+    ctx.beginPath();
+    ctx.arc(alijo.posicion.x * escalaCanvas, alijo.posicion.y * escalaCanvas, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#e0b422';
+    ctx.fill();
+    ctx.strokeStyle = '#1b1a17';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
   // 19. TÚ Y TU DESTINO. Encima de todo: la mira sobre la columna del propio jugador (para ubicarse de un
   // vistazo) y, si va en marcha, un aspa en el punto al que se dirige — el último vértice de su ruta.
   const miColumna = (proyeccion.ejercitos || []).find((ejercito) => ejercito.participantes.some((p) => p.heroeId === proyeccion.heroeId));

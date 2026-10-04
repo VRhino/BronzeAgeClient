@@ -3,6 +3,32 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.8.0] — 2026-10-04 · campamentos de mercenarios · sync con `BronzeAgeFase0@cb7f343` (`main`)
+
+### Añadido
+- **Nacer en un campamento** (Doc 1.3, 1.9b): la pantalla Héroe lista los campamentos de `sinHeroe.campamentos`
+  (con cuántos lo eligieron y cuántos residen) y `crearHeroe` manda `campamentoId`.
+- **Pantalla Campamento**, cuando `heroe.ubicacion.tipo === 'mercenarios'`: salir al mundo eligiendo tropa y carga
+  (`salirDelCampamento`), almacén personal y oro de botín, tropa prestada gratis (`pedirPrestamo`,
+  `reponerPrestamo`), mercado (`comprarEnCampamento`), residir (`residirEnCampamento`), crear Facción o pedir ingreso
+  y, para una Facción sin asentamiento, el fondo de refundación (`aportarARefundacion`, `retirarDeRefundacion`,
+  `comprarCaravanaDeRefundacion`).
+- **Mapa**: campamentos de mercenarios (tienda parda) con ficha y «Entrar» (`entrarEnCampamento`), y alijos (punto
+  dorado) con «Abrir» (`abrirAlijo`). El panel de Facción del riel ya crea y pide ingreso.
+- **Rey**: la ficha de su Facción lista las solicitudes y las acepta o deniega (`responderSolicitud`).
+- Tipos `CampamentoMercenarios`, `CampamentoParaElegir`, `Alijo`; `heroe.almacenPersonal`, `heroe.oroDeBotin`,
+  `Escuadron.prestada`, contenedor `fuera`, `Faccion.solicitudesIds`, `Caravana.titularId`/`origenCampamentoId`,
+  `Ejercito.caravanasAdjuntasIds`.
+
+### Cambiado
+- **Fundar** (panel ⌂): solo con la Caravana de Fundación de la que eres titular, enganchada a tu columna
+  (`adjuntarCaravana`), y con `fundar` donde estás. `fundarAsentamiento` ya no existe.
+- `unirseAFaccion` → `solicitarIngreso`: decide el Rey. Ya no hay pantalla Facción obligatoria: sin Facción se juega
+  desde el campamento o el mapa.
+
+### Pendiente
+- Los rechazos del campamento llegan solo con el código (`mercenarios.invalido`): el backend no manda el motivo.
+
 ## [0.7.1] — 2026-10-02 · red de caminos · sync con `BronzeAgeFase0` `main` (red de caminos, aún sin commit)
 
 ### Cambiado

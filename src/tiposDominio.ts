@@ -14,6 +14,8 @@ export interface Faccion {
   nivel: number;
   experiencia?: number;
   ciudadanosIds?: string[];
+  /** Héroes que pidieron entrar (`solicitarIngreso`); el Rey acepta o deniega (`responderSolicitud`). */
+  solicitudesIds?: string[];
   reputacion?: number;
   // ... ignoramos otros campos que no impactan el render ...
 }
@@ -160,6 +162,11 @@ export interface Caravana {
    * que su ejército dejó en una plaza de la Facción al `guarnecer`: sigue siendo de su origen, no la usa la
    * anfitriona. Sin interfaz que lo lea todavía — el mapa solo pinta la posición. */
   estado?: 'disponible' | 'preparando' | 'adjunta' | 'aparcada' | 'en_transito' | 'retornando';
+  tipo?: 'comercial' | 'fundacion';
+  /** Caravana de Fundación comprada en un campamento (Doc 1.9b): de dónde salió, su Facción y quién la lleva y funda. */
+  origenCampamentoId?: string;
+  faccionId?: string;
+  titularId?: string;
 }
 
 /** Copia local de `Ejercito` (motor, Doc 5.12) — los de TU Facción, que la proyección manda completos.
@@ -177,6 +184,8 @@ export interface Ejercito {
   ruta: Point[];
   posicionActual: Point;
   estado: 'marchando' | 'estacionado' | 'regresando';
+  /** Caravanas enganchadas a la columna (Doc 3.13): la de Fundación de un campamento se lleva así hasta `fundar`. */
+  caravanasAdjuntasIds?: string[];
 }
 
 /**
@@ -380,6 +389,39 @@ export interface ParamsCrearHeroe {
   classDefinitionId: string;
   genero: 'masculino' | 'femenino';
   avatar: { cabezaId: string; peloId: string; barbaId: string; cejasId: string };
+  /** El campamento de mercenarios donde nace, dentro y como residente (backend 2026-10-04, Doc 1.3/1.9b). */
+  campamentoId: string;
+}
+
+/** Un campamento de la pantalla de elección de `crearHeroe` (`sinHeroe`): las dos cifras solo informan. */
+export interface CampamentoParaElegir {
+  id: string;
+  posicion: Point;
+  origen: number;
+  eligieronComoInicial: number;
+  residentes: number;
+}
+
+/** Copia local de `CampamentoMercenarios` (backend, Doc 1.9b): enclave neutral donde se nace, se reside sin plaza, se
+ * pide tropa prestada, se compra y se junta el fondo para fundar. Viajan los que tu Facción conoce. */
+export interface CampamentoMercenarios {
+  id: string;
+  posicion: Point;
+  origen: number;
+  edificios: string[];
+  residentesIds: string[];
+  eligieronComoInicial: number;
+  /** Stock en venta: bien -> unidades. */
+  mercado: Record<string, number>;
+  /** Fondo de refundación: `heroeId` -> recurso -> lo que aportó. */
+  fondos: Record<string, Record<string, number>>;
+}
+
+/** Un alijo de exploración a la vista que aún no abriste (Doc 1.9b): su oro va a tu oro de botín. */
+export interface Alijo {
+  id: string;
+  posicion: Point;
+  oro: number;
 }
 
 export type AtributoHeroe = 'fuerza' | 'destreza' | 'armadura' | 'vitalidad';
@@ -413,7 +455,9 @@ export interface Escuadron {
   /** 0-100, por raciones (Doc 5.4). */
   moral: number;
   /** Dónde está: en el campamento de tu residencia, en una columna o escoltando una caravana. */
-  contenedor: { tipo: 'campamento' } | { tipo: 'ejercito'; ejercitoId: string } | { tipo: 'escolta'; caravanaId: string };
+  contenedor: { tipo: 'campamento' } | { tipo: 'ejercito'; ejercitoId: string } | { tipo: 'escolta'; caravanaId: string } | { tipo: 'fuera' };
+  /** Prestada por un campamento de mercenarios (Doc 1.9b): gratis, sin experiencia. */
+  prestada?: { campamentoId: string };
   /** En la guarnición de tu residencia (`asignarGuarnicion`). Solo con `contenedor: campamento`. */
   enGuarnicion: boolean;
   /** Progresión táctica de Conquest: el backend la guarda sin interpretarla. */
@@ -446,7 +490,15 @@ export interface HeroeProyectado {
   genero: 'masculino' | 'femenino';
   avatar: ParamsCrearHeroe['avatar'];
   liderazgoBase: number;
-  ubicacion: { tipo: 'asentamiento'; asentamientoId: string } | { tipo: 'columna'; ejercitoId: string } | { tipo: 'desconectado'; punto: Point };
+  ubicacion:
+    | { tipo: 'asentamiento'; asentamientoId: string }
+    | { tipo: 'columna'; ejercitoId: string }
+    | { tipo: 'mercenarios'; campamentoId: string }
+    | { tipo: 'desconectado'; punto: Point };
+  /** Lo que guarda en su campamento de residencia (Doc 2.5). */
+  almacenPersonal?: Record<string, number>;
+  /** Oro de bandidos y alijos: solo se gasta en el mercado de un campamento o en el fondo de refundación (Doc 1.9). */
+  oroDeBotin?: number;
   /** TODAS tus escuadras, estén donde estén (`contenedor`). */
   escuadrones: Escuadron[];
   nivel: number;
