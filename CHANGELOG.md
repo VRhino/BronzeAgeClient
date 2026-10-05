@@ -3,6 +3,35 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.10.0] — 2026-10-05 · taberna e intel · sync con `BronzeAgeFase0@c6dda58` (rama `claude/gracious-sinoussi-5b2ee7`, sin fusionar a `main`)
+
+### Añadido
+- **Panel Intel** (backend Doc 5.12.10, modelo en `Docs/Coordinacion/01` §24, comandos en `02` §4.2c): la taberna vende **Miradas** (un ojo de
+  150 de radio durante 2 h sobre cualquier punto, en vivo y sin interiores) e **Informes de plaza** (foto con fecha del layout y la defensa
+  de una plaza ajena que conoces). Está en tres sitios: el riel del mapa (🔭), la barra de la plaza (**Intel**) y la pantalla Campamento.
+  `src/ui/panelIntel.ts`.
+  - Se compra en la taberna de una plaza propia (estando dentro; Rey, Embajador o Gobernador) o en la de un campamento de mercenarios
+    (dentro, o con la columna a la puerta; cualquier héroe con Facción, con su oro de botín). El selector ofrece las que tengas a mano.
+  - **Cotiza antes de comprar** con `tarifasIntel` (la misma cuenta que el backend: base más un tanto por la distancia a tus ojos propios
+    más cercanos para la Mirada; por nivel de la plaza para el Informe). Quien valida es el backend: su rechazo (`intel.invalida`) sale tal cual.
+  - **Punto de la Mirada**: «Elegir punto en el mapa» (un clic lo fija, sin mandar marchar a la columna), una lista de plazas conocidas y
+    campamentos, o coordenadas a mano. La previsualización sale discontinua sobre el mapa.
+  - **Mapa**: las Miradas abiertas se pintan como círculo con su cuenta atrás y, tras caducar, un anillo tenue mientras la zona sigue vedada
+    (`pintarMiradas`, `render.ts`). Lo que dejan ver llega por las listas de avistados de siempre, así que no hay otra capa.
+  - **Informes**: lista con su antigüedad y detalle con mini plano del layout, edificios por tipo, guarnición, héroes y murallas. Es una foto:
+    no se actualiza.
+- La **Taberna** en el catálogo de edificios (nombre, color) y en el selector «Añadir a la cola» del Gobernador.
+- Tipos `MiradaIntel`, `InformePlaza`, `EdificioInforme`, `TarifasIntel`, `OrigenDeIntel` y los campos `miradasIntel`, `informesPlaza` y
+  `tarifasIntel` de `ProyeccionJugador`.
+
+### Pendiente
+- **Aviso al espiado**: el backend emite `asentamiento.informe_pedido` a la Facción espiada, sin decir quién. Este cliente no consume el canal
+  de eventos todavía, así que no se ve.
+- El cupo de Miradas de una taberna de plaza se lee del `nivelInterno` (1/2/3, `cupoMiradas` del backend): si cambia el catálogo, hay que
+  ajustarlo en `tabernasDisponibles`.
+- Verificado a mano contra un servidor local (comprar Mirada e Informe desde el campamento y desde la plaza, elegir punto con clic); falta
+  probarlo con dos jugadores reales y con la Mirada de un aliado.
+
 ## [0.9.0] — 2026-10-05 · sigilo de Facción · sync con la rama `claude/gracious-sinoussi-5b2ee7` de `BronzeAgeFase0` (sin fusionar a `main`)
 
 ### Añadido

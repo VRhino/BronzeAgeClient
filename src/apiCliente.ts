@@ -1,7 +1,7 @@
 // Wrapper `fetch` sobre la superficie `/jugador/*` y `/sesiones` del backend (Fase C3) — sin lógica de negocio, solo I/O.
 import type { MapaGenerado } from './terreno';
 
-import type { AcuerdoTrueque, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, Ejercito, EjercitoAvistado, EvaluacionAscenso, Faccion, HeroeProyectado, HeroePublico, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, RelacionPolitica, Titulo, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
+import type { AcuerdoTrueque, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, Ejercito, EjercitoAvistado, EvaluacionAscenso, Faccion, HeroeProyectado, HeroePublico, InformePlaza, MiradaIntel, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, RelacionPolitica, TarifasIntel, Titulo, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
 
 export class ApiError extends Error {
   constructor(
@@ -72,6 +72,11 @@ export interface ProyeccionJugador {
   campamentosMercenarios: CampamentoMercenarios[];
   /** Alijos a la vista de tu columna que aún no abriste (solo si tu Facción no tiene asentamiento). */
   alijos: Alijo[];
+  /** Tus Miradas de las tabernas, abiertas o enfriándose (backend 2026-10-05, Doc 5.12.10). Lo que dejan ver llega por las listas de avistados. */
+  miradasIntel: MiradaIntel[];
+  /** El último Informe de cada plaza ajena que compraste, con su fecha. */
+  informesPlaza: InformePlaza[];
+  tarifasIntel: TarifasIntel;
   zonasFusionadas: ZonaFaccion[];
   /** Relaciones diplomáticas, públicas: de ellas sale la Liga (`sigilo/imperio.ts`). */
   relaciones?: RelacionPolitica[];

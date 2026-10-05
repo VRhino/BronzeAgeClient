@@ -1,6 +1,6 @@
 import { contornosBosques, evaluarBioma, evaluarElevacion, type MapaGenerado } from './terreno';
 import type { ProyeccionJugador } from './apiCliente';
-import type { Asentamiento, Edificio, NieblaProyectada, Point, RectanguloLocal, TrazadoAsentamiento, TrazadoMuralla } from './tiposDominio';
+import type { Asentamiento, Edificio, MiradaIntel, NieblaProyectada, Point, RectanguloLocal, TrazadoAsentamiento, TrazadoMuralla } from './tiposDominio';
 import {
   BIOMA_COLOR_SIMPLE,
   EDIFICIO_COLOR,
@@ -719,6 +719,57 @@ export function pintarTerreno(
       dibujarMarcadorDestino(ctx, destino.x * escalaCanvas, destino.y * escalaCanvas);
     }
   }
+}
+
+/**
+ * Las Miradas de las tabernas sobre el mapa (Doc 5.12.10): un círculo con su cuenta atrás mientras están abiertas y, tras caducar, un
+ * anillo discontinuo tenue mientras la zona sigue vedada. `centroElegido` es el punto que el jugador está eligiendo para la próxima.
+ */
+export function pintarMiradas(
+  ctx: CanvasRenderingContext2D,
+  miradas: readonly MiradaIntel[],
+  instante: number,
+  escalaCanvas: number,
+  elegida?: { centro: Point; radio: number } | null
+): void {
+  ctx.save();
+  for (const m of miradas) {
+    const x = m.centro.x * escalaCanvas;
+    const y = m.centro.y * escalaCanvas;
+    const radio = m.radio * escalaCanvas;
+    const abierta = m.expiraEn > instante;
+    ctx.beginPath();
+    ctx.arc(x, y, radio, 0, Math.PI * 2);
+    if (abierta) {
+      ctx.fillStyle = 'rgba(120, 190, 230, 0.10)';
+      ctx.fill();
+      ctx.strokeStyle = '#7cc4ea';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([]);
+    } else {
+      ctx.strokeStyle = 'rgba(180, 180, 180, 0.45)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 6]);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = abierta ? '#cfeaf8' : 'rgba(200, 200, 200, 0.7)';
+    const minutos = Math.max(0, Math.ceil(((abierta ? m.expiraEn : m.libreEn) - instante) / 60_000));
+    ctx.fillText(`${abierta ? '👁' : '⏳'} ${minutos} min`, x, y);
+  }
+  if (elegida) {
+    ctx.beginPath();
+    ctx.arc(elegida.centro.x * escalaCanvas, elegida.centro.y * escalaCanvas, elegida.radio * escalaCanvas, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(241, 211, 139, 0.14)';
+    ctx.fill();
+    ctx.setLineDash([8, 5]);
+    ctx.strokeStyle = '#f1d38b';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 export function pintarPrevisualizacionFundacion(

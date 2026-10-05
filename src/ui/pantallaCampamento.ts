@@ -119,6 +119,8 @@ export function renderCampamento(p: ProyeccionJugador, c: CampamentoMercenarios,
 
       ${fondo}
 
+      <section class="campamento-seccion" id="campamento-intel"></section>
+
       <section class="campamento-seccion" id="campamento-faccion"></section>
       <p id="campamento-error" class="faction-error" role="alert"></p>
     </div>`;

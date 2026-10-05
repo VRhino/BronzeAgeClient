@@ -2561,3 +2561,8 @@ body {
 .sigilo-creditos { color: var(--text-secondary); font-size: 0.7rem; }
 .sigilo-creditos a { color: inherit; }
 .faction-detail-header .sigilo { display: block; margin: 6px 0; }
+
+/* --- Intel de las tabernas (Doc 5.12.10) --- */
+.intel-panel { display: flex; flex-direction: column; gap: 12px; }
+.intel-plano { align-self: center; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--border-glass); border-radius: var(--radius-sm, 6px); }
+.intel-informe { display: flex; flex-direction: column; gap: 8px; padding-top: 8px; border-top: 1px solid var(--border-glass); }

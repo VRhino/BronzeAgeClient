@@ -580,3 +580,50 @@ export interface ParamsGuardarLoadout {
   perksSeleccionados: number[];
   activo?: boolean;
 }
+
+// --- Intel de las tabernas (backend 2026-10-05, Doc 5.12.10) ---
+
+/** Una Mirada de tu Facción: un ojo prestado sobre un punto del mapa. Abierta hasta `expiraEn`; la zona sigue vedada hasta `libreEn`. */
+export interface MiradaIntel {
+  id: string;
+  faccionId: string;
+  /** La taberna donde se compró: un asentamiento o un campamento de mercenarios. */
+  origenId: string;
+  centro: Point;
+  radio: number;
+  compradaEn: number;
+  expiraEn: number;
+  libreEn: number;
+}
+
+/** Un edificio tal como lo cuenta un Informe: sin colas ni trabajadores. `posicion` es local al asentamiento. */
+export interface EdificioInforme {
+  tipo: string;
+  posicion: Point;
+  estado: 'en_cola' | 'en_construccion' | 'activo';
+  nivelInterno?: number;
+  ambito?: 'asentamiento' | 'mapa';
+}
+
+/** El Informe de una plaza ajena: la foto, con su fecha, de su layout y su defensa al comprarlo. Nunca el almacén. */
+export interface InformePlaza {
+  asentamientoId: string;
+  faccionId: string;
+  nombre?: string;
+  nivel: number;
+  conocidoEn: number;
+  edificios: EdificioInforme[];
+  recintos: { nivel: number; celdas: CeldaMuro[]; avance: number }[];
+  guarnicion: { tropaId: string; cantidad: number; heroeId: string }[];
+  heroesIds: string[];
+}
+
+/** Lo que cuesta la intel (`INTEL` del backend), para cotizar antes de comprar. */
+export interface TarifasIntel {
+  mirada: { radio: number; duracionMinutos: number; oroBase: number; oroPorUnidad: number; cooldownMinutos: number };
+  informe: { oroPorNivel: number; cooldownMinutos: number };
+}
+
+/** Dónde se compra: la taberna de una plaza propia o la de un campamento de mercenarios. */
+export type OrigenDeIntel = { tipo: 'asentamiento' | 'campamento'; id: string };
+

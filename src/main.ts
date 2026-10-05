@@ -13,7 +13,7 @@ import {
   type RespuestaComando,
 } from './apiCliente';
 import { minutosHerido, pintarPanelHeroe } from './ui/panelHeroe';
-import { edificioBajoCursor, pintarAsentamiento, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
+import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
 import { EDIFICIO_COLOR, EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from './paletas';
 import type { Alijo, Asentamiento, BloqueoAscenso, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Edificio, EvaluacionAscenso, ParamsCrearHeroe, ProduccionItem, Sigilo } from './tiposDominio';
 import { svgSigilo } from './sigilo/sigilo';
@@ -25,6 +25,7 @@ import { renderPanelInteraccion } from './ui/panelInteraccion';
 import { renderPanelMapa } from './ui/panelMapa';
 import { renderPestanaFaccion } from './ui/pestanaFaccion';
 import { instalarZoomPan, type ControlMapa } from './ui/pantallaMapa';
+import { cablearPanelIntel, estadoIntel, miradaElegida, renderPanelIntel } from './ui/panelIntel';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 /** Los campamentos donde se puede nacer, de la última respuesta `sinHeroe` (pantalla Héroe). */
@@ -274,6 +275,8 @@ function pintarCampamento(p: ProyeccionJugador, campamento: CampamentoMercenario
   if (!card) return;
   card.innerHTML = renderCampamento(p, campamento, escaparHtml);
   cablearCampamento(card, p, campamento, ejecutarYRefrescar);
+  const intel = card.querySelector<HTMLElement>('#campamento-intel');
+  if (intel) pintarIntel(intel, p, false, () => pintarCampamento(p, campamento));
   const faccion = card.querySelector<HTMLElement>('#campamento-faccion');
   if (faccion) {
     faccion.innerHTML = renderPestanaFaccion(p, escaparHtml);
@@ -574,9 +577,26 @@ function renderSeleccionAlijo(cont: HTMLElement, alijo: Alijo): void {
   cablearAccionSeleccion(cont, '#btn-abrir-alijo', 'abrirAlijo', { alijoId: alijo.id }, () => { seleccionMapa = null; avisoMapa(`Alijo abierto: ${alijo.oro} de oro de botín.`); });
 }
 
+// --- INTEL DE LAS TABERNAS (Doc 5.12.10) ---------------------------------------------------------
+
+/** Pinta el panel de Intel dentro de `cont` (el mapa, la plaza o el campamento). Si nada cambió no toca el DOM, para no llevarse lo que
+ * se está escribiendo con el sondeo de 3 s. `repintar` es cómo se vuelve a pintar en ese sitio. */
+function pintarIntel(cont: HTMLElement, p: ProyeccionJugador, enMapa: boolean, repintar: () => void): void {
+  const html = renderPanelIntel(p, enMapa, escaparHtml);
+  if (cont.dataset.pintadoIntel === html && cont.childElementCount > 0) return;
+  cont.innerHTML = html;
+  cont.dataset.pintadoIntel = html;
+  const mapa = estadoCliente.mapaCache?.mapa;
+  const alRepintar = (): void => { delete cont.dataset.pintadoIntel; repintar(); if (enMapa && estadoCliente.proyeccionUltima) void dibujarPantallaSegunModo(estadoCliente.proyeccionUltima); };
+  cablearPanelIntel(cont, p, ejecutarYRefrescar, alRepintar, {
+    centrarMapa: enMapa && mapa && controlMapaActivo ? (punto) => controlMapaActivo!.centrar(punto, mapa.config.ancho, mapa.config.alto) : undefined,
+    alElegir: enMapa ? () => { estadoIntel.eligiendoEnMapa = !estadoIntel.eligiendoEnMapa; alRepintar(); } : undefined,
+  });
+}
+
 // --- RIEL DE ICONOS Y MENÚ DE ESQUINA DEL MAPA (T5) ---------------------------------------------
 
-type PanelRiel = 'heroe' | 'faccion' | 'cosas' | 'fundar';
+type PanelRiel = 'heroe' | 'faccion' | 'cosas' | 'intel' | 'fundar';
 let panelMapaAbierto: PanelRiel | null = null;
 let menuEsquinaAbierto = false;
 let controlMapaActivo: ControlMapa | null = null;
@@ -614,6 +634,7 @@ function abrirPanelRiel(panel: PanelRiel): void {
   menuEsquinaAbierto = false;
   sincronizarMenuEsquina();
   panelMapaAbierto = panelMapaAbierto === panel ? null : panel;
+  if (panelMapaAbierto !== 'intel') estadoIntel.eligiendoEnMapa = false;
   const columna = estadoCliente.proyeccionUltima ? miColumna(estadoCliente.proyeccionUltima) : undefined;
   estadoCliente.modoFundacionActivo = panelMapaAbierto === 'fundar' && Boolean(columna);
   estadoCliente.posicionFundacion = estadoCliente.modoFundacionActivo && columna ? columna.posicionActual : null;
@@ -680,6 +701,7 @@ function renderPanelRiel(): void {
   riel.querySelector('[data-panel="fundar"]')?.classList.toggle('destaca', puedeFundar && !tieneAsentamientoPropio(proyeccion));
 
   if (panelMapaAbierto !== 'faccion') delete panel.dataset.pintado;
+  if (panelMapaAbierto !== 'intel') delete panel.dataset.pintadoIntel;
   if (panelMapaAbierto === null) { panel.hidden = true; panel.innerHTML = ''; return; }
   panel.hidden = false;
   if (panelMapaAbierto === 'heroe') {
@@ -692,6 +714,8 @@ function renderPanelRiel(): void {
       panel.dataset.pintado = html;
       cablearFaccion(panel, proyeccion, () => { delete panel.dataset.pintado; renderPanelRiel(); });
     }
+  } else if (panelMapaAbierto === 'intel') {
+    pintarIntel(panel, proyeccion, true, renderPanelRiel);
   } else if (panelMapaAbierto === 'cosas') {
     const asentamientos = asentamientosDelMapa(proyeccion).filter((a) => a.faccionId === proyeccion.faccionId);
     const columnas = proyeccion.ejercitos;
@@ -753,6 +777,7 @@ function montarMapa(): void {
       <button type="button" data-panel="heroe" title="Héroe" aria-label="Héroe">🛡</button>
       <button type="button" data-panel="faccion" title="Facción" aria-label="Facción">⚑</button>
       <button type="button" data-panel="cosas" title="Mis cosas" aria-label="Mis cosas">📍</button>
+      <button type="button" data-panel="intel" title="Taberna e intel" aria-label="Taberna e intel">🔭</button>
       <button type="button" data-panel="fundar" title="Fundar asentamiento" aria-label="Fundar asentamiento" hidden>⌂</button>
     </nav>
     <aside class="mapa-panel" hidden></aside>
@@ -770,6 +795,14 @@ function montarMapa(): void {
     const canvas = document.querySelector<HTMLCanvasElement>('#mapa');
     if (!proy || !mapa || !canvas) return;
     const punto = puntoDeMapa(evento, canvas, mapa);
+    if (estadoIntel.eligiendoEnMapa) {
+      // Eligiendo el punto de una Mirada: el clic lo fija y no manda marchar a la columna.
+      estadoIntel.centro = punto;
+      estadoIntel.eligiendoEnMapa = false;
+      renderPanelRiel();
+      void dibujarPantallaSegunModo(proy);
+      return;
+    }
     const alijo = cercano(proy.alijos ?? [], punto, 15);
     const mercenarios = alijo ? null : cercano(proy.campamentosMercenarios ?? [], punto, 30);
     const campamento = alijo || mercenarios ? null : campamentoCercaDe(punto, proy);
@@ -828,7 +861,7 @@ function montarMapa(): void {
 
 // --- PANTALLA ASENTAMIENTO (T6) -----------------------------------------------------------------
 
-type PanelAsent = 'heroe' | 'faccion' | 'ejercito';
+type PanelAsent = 'heroe' | 'faccion' | 'ejercito' | 'intel';
 let panelAsentAbierto: PanelAsent | null = null;
 
 /** Salida "en seco" al mundo (Doc 1.10.2): sin tropas ni carga. La pantalla de equipamiento (elegir
@@ -864,7 +897,7 @@ let seccionAsent: SeccionAsent = 'edificios';
  * topes; aquí solo se ofrece el catálogo). Fuera: centroUrbano, puestoMercado y los extractores de `mapa`. */
 const EDIFICIOS_MANUALES = [
   'vivienda', 'almacen', 'granero', 'granja', 'lenera', 'corral',
-  'barracon', 'galeriaDeTiro', 'palacio', 'mercado',
+  'barracon', 'galeriaDeTiro', 'palacio', 'mercado', 'taberna',
   'fundicion', 'granFundicion', 'curtiduria', 'armeria', 'carpinteria', 'maravilla',
 ] as const;
 
@@ -1155,6 +1188,10 @@ function renderPanelAsent(): void {
     pintarPanelHeroe(panel, proyeccion, escaparHtml, aplicarYRefrescar);
     return;
   }
+  if (panelAsentAbierto === 'intel') {
+    pintarIntel(panel, proyeccion, false, renderPanelAsent);
+    return;
+  }
   if (panelAsentAbierto === 'ejercito') {
     panel.innerHTML = `<span class="faction-kicker">Ejército</span><p class="mapa-lista-vacia">Sin comandos militares cableados todavía (composición de columna, reclutamiento, movilización) — ver docs/Features_Pendientes.md.</p>`;
     return;
@@ -1241,6 +1278,7 @@ function montarAsentamiento(): void {
         <button type="button" data-panel-asent="heroe">Héroe</button>
         <button type="button" data-panel-asent="faccion">Facción</button>
         <button type="button" data-panel-asent="ejercito">Ejército</button>
+        <button type="button" data-panel-asent="intel">Intel</button>
         <button id="btn-salir-mundo" class="btn-primary" type="button">Salir al mundo</button>
       </div>
       <p id="asent-error" class="faction-error" role="alert"></p>
@@ -1431,6 +1469,7 @@ async function dibujarPantallaSegunModo(proyeccion: ProyeccionJugador): Promise<
     if (titulo) titulo.textContent = 'Mapa del Mundo (Evaluación T2a)';
     const mapa = await sincronizarMapa(proyeccion.mapaId);
     pintarTerreno(ctx, mapa, proyeccion, canvas.width / mapa.config.ancho);
+    pintarMiradas(ctx, proyeccion.miradasIntel ?? [], proyeccion.instante, canvas.width / mapa.config.ancho, panelMapaAbierto === 'intel' ? miradaElegida(proyeccion) : null);
   } else {
     if (titulo) titulo.textContent = 'Vista de Asentamiento (Geometría Urbana T2a)';
     const asentamiento = proyeccion.asentamientos[0];
