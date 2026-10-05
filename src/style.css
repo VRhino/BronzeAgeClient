@@ -2546,3 +2546,18 @@ body {
 .campamento-fila .form-input {
   width: 110px;
 }
+
+/* Sigilo de Facción (backend Doc 2.8.1) */
+.sigilo-selector { border: 1px solid var(--border, #5a4a30); border-radius: 6px; margin: 12px 0; padding: 10px 12px; display: grid; gap: 8px; }
+.sigilo-selector legend { color: var(--text-secondary); font-size: 0.8rem; padding: 0 6px; }
+.sigilo-selector label { display: grid; gap: 4px; font-size: 0.8rem; color: var(--text-secondary); }
+#sigilo-previa { text-align: center; }
+.liga-fila { display: flex; gap: 12px; align-items: center; }
+.liga-fila span { display: block; color: var(--text-secondary); font-size: 0.8rem; }
+.liga-orla { display: flex; gap: 3px; padding: 5px; border: 2px solid #c9a227; border-radius: 8px; background: #0003; }
+.titulo-item { display: flex; gap: 10px; align-items: center; padding: 4px 0; }
+.titulo-item span { display: flex; gap: 6px; align-items: center; color: var(--text-secondary); font-size: 0.8rem; }
+.titulo-propio strong { color: #e0b83a; }
+.sigilo-creditos { color: var(--text-secondary); font-size: 0.7rem; }
+.sigilo-creditos a { color: inherit; }
+.faction-detail-header .sigilo { display: block; margin: 6px 0; }

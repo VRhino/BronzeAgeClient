@@ -15,7 +15,8 @@ import {
 import { minutosHerido, pintarPanelHeroe } from './ui/panelHeroe';
 import { edificioBajoCursor, pintarAsentamiento, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
 import { EDIFICIO_COLOR, EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from './paletas';
-import type { Alijo, Asentamiento, BloqueoAscenso, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Edificio, EvaluacionAscenso, ParamsCrearHeroe, ProduccionItem } from './tiposDominio';
+import type { Alijo, Asentamiento, BloqueoAscenso, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Edificio, EvaluacionAscenso, ParamsCrearHeroe, ProduccionItem, Sigilo } from './tiposDominio';
+import { svgSigilo } from './sigilo/sigilo';
 import { cablearCampamento, campamentoActual, renderCampamento } from './ui/pantallaCampamento';
 import type { MapaGenerado } from './terreno';
 import { estadoCliente, TIPS_FUNDACION } from './ui/estadoCliente';
@@ -134,6 +135,24 @@ function cablearFaccion(root: ParentNode, proyeccion: ProyeccionJugador, rerende
   root.querySelector('#btn-volver-faccion')?.addEventListener('click', () => { estadoCliente.modoPanelFaccion = 'inicio'; rerender(); });
 
   const form = root.querySelector<HTMLFormElement>('#form-crear-faccion');
+  const sigiloElegido = (): Sigilo | null => {
+    const valor = (id: string) => root.querySelector<HTMLSelectElement>(`#${id}`)?.value ?? '';
+    const sigilo = {
+      formaId: valor('sigilo-forma'),
+      campoId: valor('sigilo-campo'),
+      emblemaId: valor('sigilo-emblema'),
+      colorPrimarioId: valor('sigilo-color1'),
+      colorSecundarioId: valor('sigilo-color2'),
+      colorEmblemaId: valor('sigilo-colorEmblema'),
+      orlaId: valor('sigilo-orla'),
+      colorOrlaId: valor('sigilo-colorOrla'),
+    };
+    return sigilo.campoId ? sigilo : null;
+  };
+  root.querySelectorAll('select[id^="sigilo-"]').forEach((select) => select.addEventListener('change', () => {
+    const previa = root.querySelector('#sigilo-previa');
+    if (previa) previa.innerHTML = svgSigilo(sigiloElegido() ?? undefined, 88);
+  }));
   form?.addEventListener('submit', async (evento) => {
     evento.preventDefault();
     const input = root.querySelector<HTMLInputElement>('#input-nombre-faccion');
@@ -143,7 +162,7 @@ function cablearFaccion(root: ParentNode, proyeccion: ProyeccionJugador, rerende
     boton.disabled = true;
     boton.textContent = 'Creando...';
     try {
-      const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'crearFaccion', { nombre: input.value.trim() });
+      const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'crearFaccion', { nombre: input.value.trim(), sigilo: sigiloElegido() ?? undefined });
       if (!respuesta.resultado.ok) throw new ApiError(409, respuesta.resultado.codigoError ?? 'El servidor rechazó la operación.');
       estadoCliente.modoPanelFaccion = 'inicio';
       estadoCliente.pestanaInteraccion = 'asentamientos';

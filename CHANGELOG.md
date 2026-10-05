@@ -3,6 +3,34 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.9.0] — 2026-10-05 · sigilo de Facción · sync con la rama `claude/gracious-sinoussi-5b2ee7` de `BronzeAgeFase0` (sin fusionar a `main`)
+
+### Añadido
+- **Sigilo de Facción** (backend Doc 2.8.1): al crear la Facción se elige forma del escudo, fondo (18), dos colores, emblema (56)
+  y su color, y orla opcional con su color, con vista previa (`crearFaccion` manda `sigilo`; se elige una vez y no se cambia
+  nunca). El halo del emblema cambia a claro u oscuro según su color. La ficha de la Facción lo dibuja.
+- `src/sigilo/`: copia del catálogo (`catalogoSigilos.json`, recopiar del backend cuando crezca), el dibujo SVG del
+  escudo (`svgSigilo`) y los 56 emblemas de época (micénicos, minoicos, hititas, mesopotámicos, fenicios, egipcios y helénicos)
+  con iconos de **game-icons.net** (CC BY 3.0; `emblemas.json`, autores en `src/sigilo/CREDITOS.md` y citados bajo el
+  selector), con halo oscuro y relleno crema para leerse sobre cualquier campo. `galeria-sigilos.html` (solo en `npm run dev`) los muestra todos a 96 y a 24 px:
+  es la herramienta del paso 0 del backend (probar el catálogo a tamaño de mapa).
+- Tipos `Sigilo` y `Faccion.sigilo`.
+
+- **Imperios y títulos** (backend Doc 2.8.1), todo derivado de la proyección (`relaciones` y `titulos`), sin dato nuevo:
+  la **corona dorada del Gran Rey** sobre su estandarte, la **Liga** de tu Facción en su ficha (sigilo de la señora si es
+  por vasallaje, fila con los de sus miembros si es una alianza) y la lista de **títulos del servidor** con su insignia por
+  `tituloId` (castillo, oro, cuartel, corona y lira) y quién los tiene. `src/sigilo/imperio.ts`, `insignias.json`.
+
+### Cambiado
+- El territorio y los marcadores de cada Facción en el mapa usan el **color principal de su sigilo** (antes, un color de una
+  paleta fija por orden).
+
+### Pendiente
+- La crónica de los Aedas no tiene pantalla en este cliente, así que sus insignias de título no se ven ahí.
+- Probar el catálogo a ~24 px sobre el mapa (`galeria-sigilos.html`). Faltan iconos de escudo en ocho, Puerta de los Leones,
+  águila bicéfala, toro alado, árbol sagrado, casco de colmillos y sol de Vergina: no hay en game-icons.net y hay que
+  encargarlos (por eso no están en el catálogo).
+
 ## [0.8.0] — 2026-10-04 · campamentos de mercenarios · sync con `BronzeAgeFase0@cb7f343` (`main`)
 
 ### Añadido

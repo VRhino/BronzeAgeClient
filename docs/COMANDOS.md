@@ -82,7 +82,7 @@ Los cinco siguientes no llevan `heroeId`: el actor es su propio héroe. Wrapper 
 
 ### Facción y ciudadanía
 
-- [x] `crearFaccion` — `nombre` · pestaña Facción
+- [x] `crearFaccion` — `nombre`, `sigilo` (campo, emblema y dos colores del catálogo; no se cambia nunca) · pestaña Facción
 - [x] `unirseAFaccion` — `faccionId` · pestaña Facción, lista buscable
 - [ ] `dejarFaccion` — sin parámetros (`{}`); el actor solo puede dejar la suya
 - [ ] `comprarCasa` — `asentamientoId`, `heroeId` · segunda vía de entrar en una Facción, abierta a quien no tenga ninguna

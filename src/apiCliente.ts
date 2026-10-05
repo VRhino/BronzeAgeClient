@@ -1,7 +1,7 @@
 // Wrapper `fetch` sobre la superficie `/jugador/*` y `/sesiones` del backend (Fase C3) — sin lógica de negocio, solo I/O.
 import type { MapaGenerado } from './terreno';
 
-import type { AcuerdoTrueque, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, Ejercito, EjercitoAvistado, EvaluacionAscenso, Faccion, HeroeProyectado, HeroePublico, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
+import type { AcuerdoTrueque, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, Ejercito, EjercitoAvistado, EvaluacionAscenso, Faccion, HeroeProyectado, HeroePublico, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, RelacionPolitica, Titulo, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
 
 export class ApiError extends Error {
   constructor(
@@ -73,6 +73,10 @@ export interface ProyeccionJugador {
   /** Alijos a la vista de tu columna que aún no abriste (solo si tu Facción no tiene asentamiento). */
   alijos: Alijo[];
   zonasFusionadas: ZonaFaccion[];
+  /** Relaciones diplomáticas, públicas: de ellas sale la Liga (`sigilo/imperio.ts`). */
+  relaciones?: RelacionPolitica[];
+  /** Títulos de prestigio del servidor y quién los tiene; cada uno lleva su insignia por `tituloId`. */
+  titulos?: Titulo[];
   trazadoPorAsentamiento: Record<string, TrazadoAsentamiento>;
   /** Producción por minuto de mundo de cada edificio de la plaza que pisas (`asentamientos[0]`) — ausente si
    * estás en el mundo. La calcula el servidor (entrada privilegiada: bosques, yacimientos), este cliente no

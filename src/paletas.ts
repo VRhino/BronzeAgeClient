@@ -1,3 +1,6 @@
+import { colorHex } from './sigilo/sigilo';
+import type { Sigilo } from './tiposDominio';
+
 export const FACCION_COLORES = ['#c0392b', '#2980b9', '#27ae60', '#8e44ad', '#d35400', '#16a085'];
 
 /** Nombre y glifo legibles por recurso — presentación pura, copia de `cliente/`. */
@@ -139,8 +142,11 @@ export const EDIFICIO_NOMBRE: Record<string, string> = {
   parque: 'Parque',
 };
 
-export function faccionColor(faccionId: string, facciones: { id: string }[]): string {
+/** El color de una Facción en el mapa: el primario de su sigilo; sin sigilo, uno de la paleta fija por orden. */
+export function faccionColor(faccionId: string, facciones: { id: string; sigilo?: Sigilo }[]): string {
   const idx = facciones.findIndex((f) => f.id === faccionId);
+  const sigilo = facciones[idx]?.sigilo;
+  if (sigilo) return colorHex(sigilo.colorPrimarioId);
   return FACCION_COLORES[Math.max(0, idx) % FACCION_COLORES.length]!;
 }
 

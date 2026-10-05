@@ -6,9 +6,39 @@ export interface Point {
   y: number;
 }
 
+/** Sigilo de una Facción: ids de `sigilo/catalogoSigilos.json`. Se elige al crear la Facción y no cambia. */
+export interface Sigilo {
+  formaId: string;
+  campoId: string;
+  emblemaId: string;
+  colorPrimarioId: string;
+  colorSecundarioId: string;
+  colorEmblemaId: string;
+  orlaId: string;
+  colorOrlaId: string;
+}
+
+/** Relación diplomática entre dos Facciones (pública). En un vasallaje, A es la señora; en una guerra, quien la declaró. */
+export interface RelacionPolitica {
+  id?: string;
+  tipo: 'vasallaje' | 'alianza' | 'guerra' | string;
+  faccionAId: string;
+  faccionBId: string;
+  estado: 'activa' | 'rota' | string;
+}
+
+/** Título de prestigio del servidor (backend Doc 2.9): `tituloId` es estable y da su insignia; `nombre` es solo texto. */
+export interface Titulo {
+  tituloId?: string;
+  nombre: string;
+  poseedorId: string;
+  valorMetrica: number;
+}
+
 export interface Faccion {
   id: string;
   nombre: string;
+  sigilo: Sigilo;
   reyId?: string | null;
   embajadorId?: string | null;
   nivel: number;

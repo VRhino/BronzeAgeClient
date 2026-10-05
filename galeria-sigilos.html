@@ -1,0 +1,24 @@
+<!doctype html><meta charset="utf-8"><title>galeria</title>
+<body style="background:#222;color:#ddd;font:12px sans-serif;margin:8px">
+<div id="g" style="display:flex;flex-wrap:wrap;gap:10px"></div>
+<script type="module">
+import { CATALOGO_SIGILO as C, svgSigilo } from '/src/sigilo/sigilo.ts';
+import { EMBLEMAS } from '/src/sigilo/emblemas.ts';
+const faltan = C.emblemas.filter((e) => !EMBLEMAS[e]); const sobran = Object.keys(EMBLEMAS).filter((e) => !C.emblemas.includes(e) && !Object.keys(C.reservados).some((k) => C.reservados[k].emblemaId === e));
+document.title = 'faltan:' + faltan.join(',') + ' sobran:' + sobran.join(',');
+const g = document.getElementById('g');
+const campos = C.campos, cols = C.colores;
+C.emblemas.concat(['bandidos','mercenarios']).forEach((e, i) => {
+  const s = { formaId: C.formas[i % C.formas.length], campoId: campos[i % campos.length], emblemaId: e, colorPrimarioId: cols[(i*5) % cols.length].id, colorSecundarioId: cols[(i*5+3) % cols.length].id, colorEmblemaId: cols[(i*5+7) % cols.length].id, orlaId: C.orlas[i % C.orlas.length], colorOrlaId: cols[(i*5+9) % cols.length].id };
+  g.insertAdjacentHTML('beforeend', `<div style="text-align:center">${svgSigilo(s, 96)}<br>${e}<br>${svgSigilo(s, 24)}</div>`);
+});
+
+import { htmlLiga, htmlTitulos, svgInsignia, ligaDe } from '/src/sigilo/imperio.ts';
+const f = (id, i) => ({ id, nombre: 'Casa ' + id, sigilo: { formaId: C.formas[i], campoId: C.campos[i*3], emblemaId: C.emblemas[i*7], colorPrimarioId: C.colores[i].id, colorSecundarioId: C.colores[i+4].id, colorEmblemaId: 'blanco', orlaId: C.orlas[i], colorOrlaId: 'oro' } });
+const fs = ['A','B','C','D'].map(f);
+const rel = (t, a, b) => ({ tipo: t, faccionAId: a, faccionBId: b, estado: 'activa' });
+const ligaV = ligaDe('B', [rel('vasallaje','A','B'), rel('vasallaje','A','C')]);
+const ligaA = ligaDe('D', [rel('alianza','C','D'), rel('alianza','B','C')]);
+const titulos = ['faccionMasGrande','mayorPoderEconomico','mayorEjercito','granRey','mecenasAedas'].map((t,i)=>({tituloId:t,nombre:t,poseedorId:fs[i%4].id,valorMetrica:1}));
+document.body.insertAdjacentHTML('beforeend', '<h3>Imperios</h3><div style="display:flex;gap:30px;align-items:flex-start"><div>' + svgSigilo(fs[0].sigilo, 80, {granRey:true}) + '<br>Gran Rey</div><div>' + htmlLiga(ligaV, fs, 80) + '<br>Liga vasallaje (granRey=' + ligaV.granReyId + ')</div><div>' + htmlLiga(ligaA, fs, 80) + '<br>Liga alianza (' + ligaA.miembrosIds.length + ')</div><div>' + ['faccionMasGrande','mayorPoderEconomico','mayorEjercito','granRey','mecenasAedas'].map(t=>svgInsignia(t,56)).join(' ') + '<br>insignias</div><div style="width:260px">' + htmlTitulos(titulos, fs, 'A', x=>x) + '</div></div>');
+</script>
