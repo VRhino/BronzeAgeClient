@@ -5,6 +5,7 @@
 import type { ProyeccionJugador } from '../apiCliente';
 import { RECURSO_NOMBRE } from '../paletas';
 import type { CampamentoMercenarios } from '../tiposDominio';
+import { leyendaPlanoCampamento, svgPlanoCampamento } from './planoCampamento';
 
 /** Manda el comando y refresca; devuelve el mensaje de error o `null`. Lo pone `main.ts`. */
 export type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
@@ -87,6 +88,12 @@ export function renderCampamento(p: ProyeccionJugador, c: CampamentoMercenarios,
         </div>
         ${resides ? '' : '<button class="btn-secondary" type="button" id="btn-residir">Residir aquí</button>'}
       </header>
+
+      ${p.escenaCampamento && p.escenaCampamento.campamentoId === c.id ? `<section class="campamento-seccion">
+        <span class="faction-kicker">Planta</span>
+        ${svgPlanoCampamento(p.escenaCampamento)}
+        ${leyendaPlanoCampamento(p.escenaCampamento)}
+      </section>` : ''}
 
       <section class="campamento-seccion">
         <span class="faction-kicker">Salir al mundo</span>

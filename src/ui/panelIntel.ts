@@ -16,8 +16,6 @@ export const estadoIntel: { centro: Point | null; eligiendoEnMapa: boolean; info
   informeAbierto: null,
 };
 
-/** Cuántas Miradas admite a la vez la taberna de un campamento (`INTEL.campamento.cupoMiradas`): no sube de nivel. */
-const CUPO_CAMPAMENTO = 1;
 /** A qué distancia de su puerta se actúa en un campamento (`MOVIMIENTO.radioPuerta`). */
 const RADIO_PUERTA = 10;
 
@@ -38,6 +36,7 @@ function miColumna(p: ProyeccionJugador) {
 /** Las tabernas donde puede comprar ahora mismo: la de la plaza que pisa y la del campamento donde está o a cuya puerta tiene la columna. */
 export function tabernasDisponibles(p: ProyeccionJugador): TabernaDisponible[] {
   const lista: TabernaDisponible[] = [];
+  const cupos = p.tarifasIntel.cupoMiradas;
   const plaza = p.asentamientos[0];
   const taberna = plaza?.edificios.find((e) => e.tipo === 'taberna' && e.estado === 'activo');
   if (plaza && taberna) {
@@ -46,7 +45,7 @@ export function tabernasDisponibles(p: ProyeccionJugador): TabernaDisponible[] {
       etiqueta: `Taberna de ${plaza.nombre ?? plaza.id}`,
       posicion: plaza.posicion,
       oro: plaza.almacen?.['oro']?.cantidad ?? 0,
-      cupo: taberna.nivelInterno ?? 1,
+      cupo: cupos.porNivelDeTaberna[(taberna.nivelInterno ?? 1) - 1] ?? 0,
     });
   }
   const u = p.heroe.ubicacion;
@@ -58,7 +57,7 @@ export function tabernasDisponibles(p: ProyeccionJugador): TabernaDisponible[] {
         ? p.campamentosMercenarios.find((c) => Math.hypot(c.posicion.x - columna.posicionActual.x, c.posicion.y - columna.posicionActual.y) <= RADIO_PUERTA)
         : undefined;
   if (campamento && p.faccionId !== null) {
-    lista.push({ origen: { tipo: 'campamento', id: campamento.id }, etiqueta: `Taberna del campamento ${campamento.id}`, posicion: campamento.posicion, oro: p.heroe.oroDeBotin ?? 0, cupo: CUPO_CAMPAMENTO });
+    lista.push({ origen: { tipo: 'campamento', id: campamento.id }, etiqueta: `Taberna del campamento ${campamento.id}`, posicion: campamento.posicion, oro: p.heroe.oroDeBotin ?? 0, cupo: cupos.campamento });
   }
   return lista;
 }

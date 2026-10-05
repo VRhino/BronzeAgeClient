@@ -25,6 +25,7 @@ import { renderPanelInteraccion } from './ui/panelInteraccion';
 import { renderPanelMapa } from './ui/panelMapa';
 import { renderPestanaFaccion } from './ui/pestanaFaccion';
 import { instalarZoomPan, type ControlMapa } from './ui/pantallaMapa';
+import { avisarDeEventos, reiniciarAvisos } from './ui/avisos';
 import { cablearPanelIntel, estadoIntel, miradaElegida, renderPanelIntel } from './ui/panelIntel';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
@@ -1536,6 +1537,7 @@ async function refrescarDatosJuego(): Promise<void> {
   estadoCliente.sinHeroe = respuesta.sinHeroe === true;
   estadoCliente.proyeccionUltima = respuesta.sinHeroe ? null : respuesta;
   if (respuesta.sinHeroe) campamentosParaElegir = respuesta.campamentos ?? [];
+  if (!respuesta.sinHeroe) void avisarDeEventos(estadoCliente.gameIdActivo, respuesta.version);
   enrutar();
 }
 
@@ -1610,6 +1612,7 @@ function enrutar(): void {
 
 function cerrarSesionYVolverALogin(mensaje?: string): void {
   cerrarSesion();
+  reiniciarAvisos();
   estadoCliente.usuarioActivo = '';
   estadoCliente.proyeccionUltima = null;
   estadoCliente.sinHeroe = false;

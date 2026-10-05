@@ -3,6 +3,19 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.10.1] — 2026-10-05 · planta del campamento, avisos y cupo de la proyección · sync con `BronzeAgeFase0@cbe7ffa` (rama `claude/gracious-sinoussi-5b2ee7`)
+
+### Añadido
+- **Planta del campamento** en su pantalla (backend D73, `escenaCampamento`): calles, empalizada con su puerta y los edificios con la taberna
+  en el centro, con leyenda. `src/ui/planoCampamento.ts`. La planta solo viaja estando dentro del campamento.
+- **Avisos de «alguien te ha mirado»** (`src/ui/avisos.ts`): el cliente pide `GET .../eventos?desde=<version>` tras cada proyección y muestra
+  un aviso global con el mensaje de `asentamiento.informe_pedido` (el plano de tu plaza, sin decir quién) y de las inspecciones
+  (`asentamiento.observado`, `columna.observada`, `caravana.observada`). El primer refresco solo fija el cursor: no avisa de lo viejo.
+
+### Cambiado
+- El **cupo de Miradas** de una taberna ya no se deduce en el cliente: viaja en `tarifasIntel.cupoMiradas` (por nivel de la de plaza y fijo en
+  campamento). `docs/COMANDOS.md` apunta los dos comandos de intel.
+
 ## [0.10.0] — 2026-10-05 · taberna e intel · sync con `BronzeAgeFase0@c6dda58` (rama `claude/gracious-sinoussi-5b2ee7`, sin fusionar a `main`)
 
 ### Añadido

@@ -2566,3 +2566,10 @@ body {
 .intel-panel { display: flex; flex-direction: column; gap: 12px; }
 .intel-plano { align-self: center; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--border-glass); border-radius: var(--radius-sm, 6px); }
 .intel-informe { display: flex; flex-direction: column; gap: 8px; padding-top: 8px; border-top: 1px solid var(--border-glass); }
+
+/* --- Planta del campamento y avisos --- */
+.campamento-plano { align-self: center; max-width: 100%; height: auto; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border-glass); border-radius: var(--radius-sm, 6px); }
+.campamento-leyenda { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 0.78rem; color: var(--text-secondary); }
+.campamento-leyenda i { display: inline-block; width: 10px; height: 10px; margin-right: 5px; border-radius: 2px; }
+.aviso-global { position: fixed; right: 16px; bottom: 16px; z-index: 50; max-width: 320px; padding: 12px 16px; background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: var(--radius-md); box-shadow: var(--shadow-main); }
+.aviso-global[hidden] { display: none; }

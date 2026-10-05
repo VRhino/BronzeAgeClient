@@ -622,8 +622,34 @@ export interface InformePlaza {
 export interface TarifasIntel {
   mirada: { radio: number; duracionMinutos: number; oroBase: number; oroPorUnidad: number; cooldownMinutos: number };
   informe: { oroPorNivel: number; cooldownMinutos: number };
+  /** Miradas abiertas a la vez por taberna: por nivel interno de la de plaza (índice 0 = nivel 1) y la fija de un campamento. */
+  cupoMiradas: { porNivelDeTaberna: number[]; campamento: number };
 }
 
 /** Dónde se compra: la taberna de una plaza propia o la de un campamento de mercenarios. */
 export type OrigenDeIntel = { tipo: 'asentamiento' | 'campamento'; id: string };
+
+/** La planta de un campamento de mercenarios (backend D73, `EscenaCampamento`): coordenadas locales con el origen en el centro de la taberna,
+ * `y` hacia abajo; una celda (col, row) ocupa de (col, row) a (col + 1, row + 1) por `unidadesPorCelda`. Solo viaja estando dentro. */
+export interface EscenaCampamento {
+  campamentoId: string;
+  origen: number;
+  layoutVersion: number;
+  unidadesPorCelda: number;
+  /** `posicion` es el centro de la huella, en unidades; `ancho` y `alto` van en celdas. */
+  edificios: { edificioId: string; tipo: string; posicion: Point; ancho: number; alto: number }[];
+  /** Calles en celdas: esquina superior izquierda y tamaño. */
+  calles: { col: number; row: number; ancho: number; alto: number }[];
+  /** La empalizada decorativa; `puerta` es por donde se entra y se sale. */
+  empalizada: { col: number; row: number; clase: 'muro' | 'puerta' }[];
+}
+
+/** Un evento de dominio del backend tal como lo sirve `GET .../eventos`. */
+export interface EventoDominio {
+  codigo: string;
+  mensaje: string;
+  version: number;
+  asentamientoId?: string;
+  payload?: unknown;
+}
 

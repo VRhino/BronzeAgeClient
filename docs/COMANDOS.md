@@ -5,6 +5,11 @@ Fuente, en el repositorio del **backend**: `src/session/comandos/registro.ts` (e
 `BronzeAgeFase0@8091638` (rama `ritmo-crecimiento`: subida de nivel manual, obras en horas, asedio como orden y
 ciclo de Batalla de Unity).
 
+> **Sync 2026-10-05 — taberna e intel (backend `c6dda58`):** +`comprarMirada { origen, centro }` y +`comprarInformePlaza { origen,
+> asentamientoId }` (`origen = { tipo: 'asentamiento' | 'campamento', id }`). Los cablea `src/ui/panelIntel.ts`. Rechazo de dominio:
+> `intel.invalida`. Esta tabla sigue contando los comandos de la revisión del 2026-09-26: desde entonces el backend ha añadido
+> los de los campamentos de mercenarios, los Aedas y estos dos (el esquema publicado trae 102).
+
 El backend expone **77 comandos de partida**. La matriz de `src/session/comandos/autorizacion.ts` admite el rol
 `jugador` en **76**: el que falta, `crearFaccionNpc`, es solo de administración y no se lista aquí. Nada de lo
 que falta aquí está bloqueado por permisos. La interfaz cablea **23**; el resto solo es alcanzable llamando a
