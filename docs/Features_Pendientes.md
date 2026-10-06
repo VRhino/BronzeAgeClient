@@ -63,8 +63,7 @@ compañeros de Facción (`nombresDeCompaneros`, se les vea o no).
 
 ### 0.2 Pantalla del héroe: ficha, atributos, escuadras, loadouts y guarnición
 
-**Hoy (cliente 0.5.0):** el **panel Héroe** (`src/ui/panelHeroe.ts`) se abre desde el riel del Mapa (🛡) y desde
-la barra del Asentamiento, con tres pestañas. Las reglas son las del canon del backend: Doc 5.16 (el Héroe),
+**Hoy (cliente 0.5.0):** el **panel Héroe** (`src/ui/panelHeroe.ts`) se abre desde la barra superior del jugador (Héroe y Escuadras, visible en el mapa, el campamento y el asentamiento), con tres pestañas. Las reglas son las del canon del backend: Doc 5.16 (el Héroe),
 5.12.4 y 5.15.3 (defensa y guarnición).
 - **Ficha:** clase, dónde está, si está **herido** y cuánto le queda (Doc 5.16.4), nivel, experiencia hacia el
   siguiente, Liderazgo, monedas y los cuatro atributos.
@@ -232,3 +231,18 @@ expone porque falta un mecanismo de consentimiento (Doc 1.2/1.3).
 - Los **iconos del riel** (`.mapa-riel`) se ven pequeños y algo apagados.
 - El **panel de Selección** y el **menú de esquina** comparten esquina superior derecha; se solapan si se
   abren a la vez.
+
+## 10. Barra del jugador, campamento, avisos y carro (cliente 0.14.0)
+
+**Hecho:** barra superior común (Héroe, Escuadras, Carro, Facción, Avisos); campamento por subpestañas; mapa desde dentro con `M`; planta de mercenarios como la del admin; ficha de bandidos con
+nivel; briefing de combate e historial de avisos; «te persiguen»; panel del Carro; crear Facción con todos los motivos; nombres de dirigentes; cierre de sesión que desconecta (WebSocket de presencia).
+Detalle y hallazgos del backend en `CHANGELOG.md` 0.14.0.
+
+**Falta:**
+1. **Eventos de combate** (backend): hasta que `GET /eventos` y `mapa/general` entreguen los eventos con `asentamientoId: ''`, el briefing y «fuiste atacado» no se disparan; solo avisan las bajas vistas
+   en la proyección (`vigilarProyeccion`). Con el arreglo no hay que tocar el cliente.
+2. **Tiempo real de datos**: el WebSocket está abierto solo por la presencia; sigue el sondeo de 3 s. Suscribirse a `mapa/general` y `asentamiento/<id>` quitaría el sondeo y los avisos llegarían al instante.
+3. **Atacar o perseguir a otra columna** (`atacar`/`perseguir` con objetivo `ejercito`): el mapa solo ataca plazas y campamentos; «te persiguen» avisa pero no hay respuesta (huir, plantar cara).
+4. **Plano de los bandidos**: esquemático hasta que el backend publique su trazado. **Capacidad del carro y tope del almacén personal**: no viajan; mostrarlos cuando lo hagan.
+5. **Vista del asentamiento con la barra nueva**: probada por tipos, no en vivo (sin plaza en la partida de prueba).
+6. Nombres de los solicitantes de ingreso de otras Facciones (hoy por id).

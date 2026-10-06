@@ -77,7 +77,7 @@ wrapper definidos no cuenta como aplicado.
 
 - [x] `crearHeroe` — `displayName`, `classDefinitionId`, `genero` (`masculino` \| `femenino`), `avatar` (`{ cabezaId, peloId, barbaId, cejasId }`) · devuelve `{ heroeId }`; el héroe aparece en el mundo con su columna. Único comando que admite una membresía sin héroe · pantalla Héroe, **provisional**: solo el nombre, con clase, género y avatar fijos (`Features_Pendientes.md` §0.1)
 
-Los cinco siguientes no llevan `heroeId`: el actor es su propio héroe. Wrapper tipado en `src/apiCliente.ts`, y los usa el panel Héroe (`src/ui/panelHeroe.ts`, riel del Mapa y barra del Asentamiento; `Features_Pendientes.md` §0.2). Rechazo de dominio: `heroe.invalido`.
+Los cinco siguientes no llevan `heroeId`: el actor es su propio héroe. Wrapper tipado en `src/apiCliente.ts`, y los usa el panel Héroe (`src/ui/panelHeroe.ts`, barra superior del jugador; `Features_Pendientes.md` §0.2). Rechazo de dominio: `heroe.invalido`.
 
 - [x] `repartirPuntos` — `atributos` (`{ fuerza?, destreza?, armadura?, vitalidad? }`, enteros) · cada punto suma 1, tope 100, sin pasar de `puntosDeAtributoSinGastar`; hoy ningún nivel da puntos
 - [x] `guardarLoadout` — `displayName`, `squadIds`, `perksSeleccionados` (enteros; hoy `[]`, el catálogo espera a CQ-004); opcionales: `loadoutId` (ausente = uno nuevo), `activo` · devuelve `{ loadoutId, liderazgoTotal }`; las escuadras tienen que caber en el Liderazgo, y el activo es el que defiende tu residencia mientras estás dentro

@@ -3,6 +3,59 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.14.0] — 2026-10-07 · barra del jugador, campamento por subpestañas, avisos de combate y carro · sync con `BronzeAgeFase0@main` (`d1ae802`, `7680bd3`, `90c0caf`)
+
+### Añadido
+- **Barra superior del jugador** común al mapa, al campamento y al asentamiento (`src/ui/barraJugador.ts`): Héroe, Escuadras, Carro, Facción y Avisos. Antes el héroe y la Facción
+  vivían en el riel del mapa y en la barra del asentamiento, y el campamento no tenía ni héroe. El riel del mapa conserva solo lo del mapa (Mis cosas, Fundar); la barra del
+  asentamiento, lo de la plaza (Cargos, Taberna e intel, Salir al mundo).
+- **Campamento de mercenarios por subpestañas**, como el asentamiento (`pantallaCampamento.ts`): planta a la izquierda y, a la derecha, Resumen · Salir · Tropa · Mercado · Fondo (solo sin
+  plaza) · Taberna. Ya no hay una columna infinita ni el flujo de Facción metido dentro. Sondeo de 3 s con diff del DOM.
+- **Mapa desde dentro**: tecla `M` o botón «Mapa» de la barra superponen el mapa del mundo (zoom y arrastre, la visión que se tiene dentro, solo para mirar) sobre el campamento o la plaza;
+  `M` o `Esc` vuelven. No se sale de donde se está.
+- **Planta del campamento como la del admin** (`planoCampamento.ts`): suelo, calles, empalizada y rótulos con la paleta de `drawCampamento`, encuadrada sobre la empalizada.
+- **Ficha del campamento de bandidos**: nivel (1-3) bien visible, poder, defensores y botín por héroe (de `GET /v1/balance`, `internas.CAMPAMENTOS_BANDIDOS.niveles`), a quién acosa, y un plano
+  esquemático (`planoBandidos.ts`). Tipo `CampamentoBandido` con `nivel`, `bosqueId`, `asentamientoId`, `campamentoMercenariosId`.
+- **Briefing de combate** (`informeCombate.ts`): ganador, poder de cada bando y bajas por escuadra para `combate.resuelto`, `combate.campamento_destruido` y `combate.ataque_campamento_fallido`,
+  filtrado por `heroesIds`. Avisos de eventos (`avisos.ts`) con **historial consultable** (panel Avisos, localStorage por partida y héroe) y contador de no leídos.
+- **«Te persiguen»**: banda roja en la barra con la Facción y los héroes de cada columna con `teSigue`.
+- **Carro personal** (`panelCarro.ts`): contenido del carro de la columna (la ración gratis de trigo aparte), almacén personal y oro de botín, con *Guardar* (`guardarEnAlmacenPersonal`) y
+  *Al carro* (`sacarDelAlmacenPersonal`) para el Líder. Tipos `Ejercito.suministro/racion`.
+- **Crear Facción**: valida antes de enviar y enseña **todos** los motivos detectables (nombre vacío o repetido, colores del fondo iguales, sigilo repetido, ya perteneces) con su remedio, y
+  apaga el botón. Cada `codigoError` del backend se traduce (`erroresServidor.ts`), en toda la interfaz.
+- **Nombres de dirigentes**: Rey, Embajador, solicitantes de ingreso, Rey de cada Facción en «Pedir ingreso» y Gran Rey de la Liga salen por nombre (`nombresDeCompaneros` +
+  `nombresDeDirigentes`, `ui/nombres.ts`).
+- **Presencia**: el cliente abre el WebSocket de tiempo real y lo cierra al cerrar sesión (cualquier camino: `cerrarSesion` lo hace) o la pestaña (`pagehide`). El servidor desconecta al héroe
+  cuando cierra el último socket; hasta ahora este cliente no abría ninguno, así que nunca figuraba conectado. Verificado: tras cerrar sesión el héroe queda con `desconectaEn`.
+- **Bajas vistas en la proyección** (`vigilarProyeccion`): una escuadra que mengua, que desaparece o un héroe que pasa a Herido generan aviso aunque el backend no mande el evento (ver abajo).
+
+### Cambiado
+- **Se quita «Taberna e intel» del mapa**: la intel solo se compra dentro de una taberna (plaza propia con taberna o campamento de mercenarios), como ya exigía el backend. El panel de intel
+  ya no tiene «elegir punto en el mapa».
+- Residir en otro campamento con tropa prestada pide confirmación: el backend retira esa tropa al dejar de residir en el campamento que la prestó (D45), sin ningún evento.
+- El campamento enseña TODA la tropa del héroe con su sitio real («en el campamento», «en tu columna, aparcada en la puerta»…): quien entra en un campamento donde no reside deja su columna
+  aparcada y sus escuadras NO pasan a `contenedor: campamento`, y la pantalla anterior filtraba solo esas.
+- La ficha de Selección del mapa se desplaza si no cabe.
+
+### Hallazgos del backend (no se edita el repo del servidor)
+1. **Los eventos de combate no llegan a ningún jugador.** `combate.*`, `ejercito.llega` y otros salen con `asentamientoId: ''` (cadena vacía); `eventosVisiblesParaJugador`
+   (`session/proyecciones/jugador.ts`) y `canalDeEvento` (`session/canales.ts`) solo tratan `undefined` como «global», así que `GET .../eventos` los descarta para todos y el canal `mapa/general` no los
+   lleva. Reproducido: `combate.campamento_destruido` (v386) y `combate.ataque_campamento_fallido` aparecen en el log de admin y no en `GET /eventos` de ninguna cuenta. El doc 02 §4.1b dice que sí
+   viajan. Arreglo propuesto: tratar `''` como `undefined` en esos dos sitios (o no emitir `''` desde el contexto del evento). El cliente ya filtra por `heroesIds`, así que no hace falta más.
+2. **Caso del usuario (0/0/0 tras volver a casa)** — reproducido contra el servidor; no es una emboscada ni un bug de bajas: (a) `entrarEnCampamento` en un campamento donde NO resides deja la columna
+   aparcada y las escuadras con `contenedor: ejercito`, y la pantalla las enseñaba como «sin tropa» (corregido aquí); (b) `residirEnCampamento` no exige estar allí y el tick **borra** (`sinPrestamosAjenos`)
+   la tropa prestada por el campamento anterior, sin evento ni aviso: 3 escuadras de 14 pasan a 0 en un tick. Si el usuario pulsó «Residir aquí» (o se mudó por conquista/ruina), es eso. El backend
+   podría emitir un evento al retirarla. (c) Si su cliente no mantenía el WebSocket y otro sí, un cierre desconecta al héroe y a los 2:30 sale del mundo con la columna (`contenedor: fuera`).
+3. **El tope del almacén personal y la capacidad del carro no viajan** en la proyección ni en `/v1/balance` (`ALMACEN_PERSONAL.capacidad`, `capacidadCargaDe`): el panel Carro muestra existencias y deja
+   que el backend rechace («el almacén personal está lleno»).
+4. **Los campamentos de bandidos no tienen trazado publicado** (solo plazas y campamentos de mercenarios): el plano de la ficha es esquemático. Propuesta: un `layoutBandidos(id, nivel)` en el motor.
+5. `/v1/balance` no publica `MERCENARIOS.prestamo.unidades` (15): el cliente lo repite en el texto de la pestaña Tropa.
+
+### Pendiente
+- Sin verificar en vivo la vista de asentamiento con la barra nueva (no hay plaza en la partida de prueba): comprobada solo por tipos y por el campamento y el mapa, que comparten estructura.
+- «Fuiste atacado» y el briefing solo funcionan con el arreglo 1 del backend; mientras tanto avisan las bajas vistas en la proyección (sin saber quién).
+- Los solicitantes de ingreso que no son de tu Facción salen por id: `nombresDeDirigentes` solo trae Rey y Embajador.
+
 ## [0.13.0] — 2026-10-07 · batallas con héroes y ejércitos en campo · sync con `BronzeAgeFase0@101c035` (rama `claude/elegant-shirley-2ce6d7`, sin push)
 
 ### Añadido

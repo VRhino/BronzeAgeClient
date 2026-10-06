@@ -1,7 +1,7 @@
 {
   "name": "bronze-age-cliente-jugador",
-  "version": "0.13.0",
-  "description": "Boilerplate del cliente de jugador. Sin ninguna dependencia del motor (`@motor/*`): habla con el backend solo por red y recalcula el terreno con su propia copia de las funciones puras de worldgen (ver src/terreno/README.md). Fase C10-C11b. Última sincro con el backend: 2026-10-07, rama `claude/elegant-shirley-2ce6d7` de BronzeAgeFase0 (`101c035`, batallas con héroes y ejércitos en campo), sin fusionar a `main` (ver CHANGELOG.md).",
+  "version": "0.14.0",
+  "description": "Boilerplate del cliente de jugador. Sin ninguna dependencia del motor (`@motor/*`): habla con el backend solo por red y recalcula el terreno con su propia copia de las funciones puras de worldgen (ver src/terreno/README.md). Fase C10-C11b. Última sincro con el backend: 2026-10-07, `main` de BronzeAgeFase0 (`90c0caf`: informe de combate, `teSigue`, `nombresDeDirigentes`; ver CHANGELOG.md).",
   "type": "module",
   "scripts": {
     "dev": "vite",
