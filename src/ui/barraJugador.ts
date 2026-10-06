@@ -3,12 +3,14 @@
 // Aquí solo está el HTML y la lista de paneles; quien pinta cada panel y cablea los botones es `main.ts`.
 import type { ProyeccionJugador } from '../apiCliente';
 
-export type PanelJugador = 'heroe' | 'escuadras' | 'faccion';
+export type PanelJugador = 'heroe' | 'escuadras' | 'carro' | 'faccion' | 'avisos';
 
 const BOTONES: [PanelJugador, string][] = [
   ['heroe', 'Héroe'],
   ['escuadras', 'Escuadras'],
+  ['carro', 'Carro'],
   ['faccion', 'Facción'],
+  ['avisos', 'Avisos'],
 ];
 
 /** Dónde está el héroe, en una frase corta para la barra. */
@@ -27,8 +29,9 @@ function dondeEstas(p: ProyeccionJugador): string {
 export function htmlBarraJugador(p: ProyeccionJugador, conMapa: boolean, e: (valor: string) => string): string {
   return `<header class="jugador-barra">
     <span class="jugador-quien"><strong>${e(p.heroe.displayName)}</strong><small>${e(dondeEstas(p))}</small></span>
+    <div class="jugador-alerta" role="status" hidden></div>
     <nav class="jugador-botones" aria-label="Menús del jugador">
-      ${BOTONES.map(([id, nombre]) => `<button type="button" data-panel-jugador="${id}">${nombre}</button>`).join('')}
+      ${BOTONES.map(([id, nombre]) => `<button type="button" data-panel-jugador="${id}">${nombre}${id === 'avisos' ? '<b class="jugador-badge" hidden></b>' : ''}</button>`).join('')}
       ${conMapa ? '<button type="button" data-ver-mapa title="Ver el mapa con la visión que tienes (M)">Mapa <kbd>M</kbd></button>' : ''}
     </nav>
   </header>`;

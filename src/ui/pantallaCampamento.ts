@@ -179,6 +179,14 @@ export function cablearCampamento(root: HTMLElement, p: ProyeccionJugador, c: Ca
   const marcados = (atributo: string): string[] =>
     Array.from(root.querySelectorAll<HTMLInputElement>(`input[${atributo}]:checked`)).map((i) => i.getAttribute(atributo)!);
 
+  // Mudarse de residencia retira la tropa prestada por el campamento anterior (backend D45), esté donde esté: se avisa antes.
+  const prestadas = p.heroe.escuadrones.filter((s) => s.prestada);
+  const residir = root.querySelector<HTMLButtonElement>('#btn-residir');
+  if (residir && prestadas.length > 0) {
+    residir.addEventListener('click', (ev) => {
+      if (!confirm(`Si resides aquí, el campamento donde te prestaron tropa la retira (${prestadas.map((s) => `${s.nombre}: ${s.cantidad}`).join(', ')}). ¿Seguro?`)) ev.stopImmediatePropagation();
+    }, true);
+  }
   conBoton('#btn-residir', 'residirEnCampamento', () => ({ heroeId, campamentoId: c.id }));
   conBoton('#btn-salir-campamento', 'salirDelCampamento', () => ({
     campamentoId: c.id,

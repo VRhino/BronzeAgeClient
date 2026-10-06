@@ -2704,3 +2704,32 @@ kbd {
 .bandidos-plano { width: 100%; max-width: 240px; aspect-ratio: 1; border-radius: 3px; border: 1px solid var(--bronce-osc); }
 .mapa-seleccion { max-height: calc(100vh - 84px); overflow-y: auto; }
 .faction-motivos { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+
+/* Avisos, peligro y briefing de combate */
+.jugador-alerta { padding: 4px 12px; font-size: 0.78rem; font-weight: 600; color: #fff; background: var(--terracota); border: 1px solid #7a2a15; border-radius: 3px; animation: latido 1.6s ease-in-out infinite; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jugador-alerta[hidden] { display: none; }
+@keyframes latido { 50% { opacity: 0.6; } }
+.jugador-badge { margin-left: 6px; padding: 0 6px; font-size: 0.7rem; border-radius: 9px; background: var(--bronce); color: #201509; }
+.jugador-badge.peligro { background: var(--terracota); color: #fff; }
+.jugador-badge[hidden] { display: none; }
+.aviso-global.peligro { border-color: var(--terracota); }
+.aviso-peligro { border-color: var(--terracota); }
+.briefing-fondo { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.55); }
+.briefing { position: relative; width: min(460px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow-y: auto; padding: 22px; display: flex; flex-direction: column; gap: 10px; background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg)); border: 1px solid var(--bronce); border-radius: 3px; box-shadow: var(--placa); }
+.briefing-titulo { font-family: var(--fuente-titulo); font-size: 1.05rem; }
+.briefing-titulo.victoria { color: #9ad07a; }
+.briefing-titulo.derrota { color: #e08a6f; }
+.briefing-bandos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.briefing-bandos div { display: flex; flex-direction: column; padding: 8px 10px; border: 1px solid var(--bronce-osc); border-radius: 2px; background: rgba(0, 0, 0, 0.25); }
+.briefing-bandos span { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+.briefing-bandos strong { color: var(--oro-claro); }
+.briefing-bandos small { color: var(--text-secondary); font-size: 0.72rem; }
+.briefing-bajas { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.briefing-bajas th, .briefing-bajas td { padding: 4px 6px; text-align: right; border-bottom: 1px solid rgba(107, 74, 41, 0.4); }
+.briefing-bajas th:first-child, .briefing-bajas td:first-child { text-align: left; }
+.briefing-bajas th { color: var(--text-muted); font-weight: 500; }
+.briefing-bajas td.baja { color: #e08a6f; font-weight: 600; }
+.carro-fila { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.85rem; }
+.carro-fila span { flex: 1; color: var(--text-secondary); }
+.carro-fila .form-input { width: 70px; }
+.carro-fila small { flex-basis: 100%; color: var(--text-muted); font-size: 0.7rem; }

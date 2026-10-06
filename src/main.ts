@@ -34,7 +34,10 @@ import { cablearFusion } from './ui/panelFusion';
 import { cablearAdmision } from './ui/panelAdmision';
 import { cablearFichaBatalla, cablearFichaFormacion, cablearMiColumna, formacionesVisibles, htmlFichaBatalla, htmlFichaFormacion, htmlMiColumna } from './ui/panelBatalla';
 import { instalarZoomPan, type ControlMapa } from './ui/pantallaMapa';
-import { avisarDeEventos, reiniciarAvisos } from './ui/avisos';
+import { alCambiarAvisos, alLlegarInforme, avisarDeEventos, avisosNoLeidos, historialDeAvisos, marcarAvisosLeidos, reiniciarAvisos, vigilarProyeccion } from './ui/avisos';
+import { htmlInforme, type InformeDeCombate } from './ui/informeCombate';
+import { htmlAvisos } from './ui/panelAvisos';
+import { cablearCarro, htmlCarro } from './ui/panelCarro';
 import { cablearPanelIntel, renderPanelIntel } from './ui/panelIntel';
 import { svgPlanoBandidos } from './ui/planoBandidos';
 import { explicarError } from './ui/erroresServidor';
@@ -794,9 +797,27 @@ function renderPanelJugador(forzar = false): void {
     boton.classList.toggle('activo', boton.dataset.panelJugador === panelJugador);
   });
   barra.querySelector('[data-ver-mapa]')?.classList.toggle('activo', vistaMapaAbierta);
+  pintarAlertas(barra, proyeccion);
   if (panelJugador !== 'faccion') delete panel.dataset.pintado;
+  if (panelJugador !== 'carro' && panelJugador !== 'avisos') delete panel.dataset.pintadoLista;
   if (panelJugador === null) { panel.hidden = true; panel.innerHTML = ''; return; }
   panel.hidden = false;
+  if (panelJugador === 'carro' || panelJugador === 'avisos') {
+    const html = panelJugador === 'carro' ? htmlCarro(proyeccion, escaparHtml) : htmlAvisos(historialDeAvisos(), escaparHtml);
+    const clave = `${panelJugador}|${html}`;
+    if (panel.dataset.pintadoLista === clave && !forzar) return;
+    panel.innerHTML = html;
+    panel.dataset.pintadoLista = clave;
+    if (panelJugador === 'carro') cablearCarro(panel, ejecutarYRefrescar);
+    else {
+      panel.querySelectorAll<HTMLButtonElement>('[data-aviso]').forEach((b) => b.addEventListener('click', () => {
+        const informe = historialDeAvisos()[Number(b.dataset.aviso)]?.informe;
+        if (informe) mostrarInforme(informe);
+      }));
+      marcarAvisosLeidos();
+    }
+    return;
+  }
   if (panelJugador === 'faccion') {
     const html = `<div class="mapa-panel-jugador">${escaparHtml(proyeccion.heroe.displayName)}</div>${renderPestanaFaccion(proyeccion, escaparHtml)}`;
     if (panel.dataset.pintado !== html || forzar) {
@@ -807,6 +828,37 @@ function renderPanelJugador(forzar = false): void {
     return;
   }
   pintarPanelHeroe(panel, proyeccion, escaparHtml, aplicarYRefrescar, forzar);
+}
+
+/** Los indicadores de peligro de la barra: quién te persigue ahora (`teSigue` de los ejércitos avistados) y los avisos sin leer (rojo si alguno es un ataque). */
+function pintarAlertas(barra: HTMLElement, p: ProyeccionJugador): void {
+  const sigue = p.ejercitosAvistados.filter((x) => x.teSigue);
+  const alerta = barra.querySelector<HTMLElement>('.jugador-alerta');
+  if (alerta) {
+    alerta.hidden = sigue.length === 0;
+    const quien = sigue.map((x) => `${p.facciones.find((f) => f.id === x.faccionId)?.nombre ?? 'sin Facción'}: ${x.heroeIds.map((id) => nombreDeHeroe(p, id)).join(', ') || `${x.participantes} héroes`}`).join(' · ');
+    alerta.textContent = sigue.length === 0 ? '' : `⚠ Te persigue${sigue.length === 1 ? ' una columna' : `n ${sigue.length} columnas`} (${quien})`;
+    alerta.title = 'Una columna ajena va tras la tuya.';
+  }
+  const badge = barra.querySelector<HTMLElement>('.jugador-badge');
+  if (badge) {
+    const n = avisosNoLeidos();
+    badge.hidden = n === 0;
+    badge.textContent = String(n);
+    badge.classList.toggle('peligro', historialDeAvisos().slice(0, n).some((a) => a.clase === 'peligro'));
+  }
+}
+
+/** El briefing de un combate, encima de lo que haya, hasta que se cierre. */
+function mostrarInforme(informe: InformeDeCombate): void {
+  const proyeccion = estadoCliente.proyeccionUltima;
+  if (!proyeccion) return;
+  document.querySelector('.briefing-fondo')?.remove();
+  const fondo = document.createElement('div');
+  fondo.className = 'briefing-fondo';
+  fondo.innerHTML = `<section class="briefing" role="dialog" aria-label="Informe de combate"><button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar informe">×</button>${htmlInforme(informe, proyeccion, escaparHtml)}</section>`;
+  fondo.addEventListener('click', (ev) => { if (ev.target === fondo || (ev.target as HTMLElement).closest('.mapa-seleccion-cerrar')) fondo.remove(); });
+  document.body.appendChild(fondo);
 }
 
 function cablearBarraJugador(contenedor: HTMLElement): void {
@@ -1707,6 +1759,7 @@ async function refrescarDatosJuego(): Promise<void> {
   if (!respuesta.sinHeroe) {
     abrirPresencia(estadoCliente.gameIdActivo);
     void avisarDeEventos(estadoCliente.gameIdActivo, respuesta.version);
+    vigilarProyeccion(respuesta);
   }
   enrutar();
 }
@@ -1809,6 +1862,8 @@ function alPulsarTecla(evento: KeyboardEvent): void {
 function arrancar(): void {
   window.addEventListener('hashchange', enrutar);
   window.addEventListener('keydown', alPulsarTecla);
+  alLlegarInforme(mostrarInforme);
+  alCambiarAvisos(() => renderPanelJugador());
   // Cerrar la pestaña o la ventana cierra el socket de presencia (lo haría el navegador, pero así es explícito y también vale al recargar).
   window.addEventListener('pagehide', () => cerrarPresencia());
   const sesion = cargarSesionLocal();

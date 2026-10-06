@@ -219,6 +219,10 @@ export interface Ejercito {
   estado: 'marchando' | 'estacionado' | 'regresando';
   /** Caravanas enganchadas a la columna (Doc 3.13): la de Fundación de un campamento se lleva así hasta `fundar`. */
   caravanasAdjuntasIds?: string[];
+  /** El carro: lo de todos sus héroes, ya sumado (recurso -> cantidad). En marcha se come de aquí. */
+  suministro?: Record<string, number>;
+  /** Trigo de la ración gratis del campamento que aún lleva el carro: se come primero y no se puede guardar. */
+  racion?: number;
   /** `personal` (un héroe que sale por su cuenta) o `ejercito`: un ejército y una columna personal nunca combaten entre sí (Doc 5.12.1). */
   tipo?: 'personal' | 'ejercito';
   liderId?: string;
@@ -244,6 +248,8 @@ export interface EjercitoAvistado {
   participantes: number;
   /** Quiénes van (Doc 5.16.7): un héroe que se ve es público. Su ficha, en `proyeccion.heroesVisibles`. */
   heroeIds: string[];
+  /** Va tras una columna tuya (backend 2026-10-06): lo único de su intención que se revela, y solo a quien persigue. */
+  teSigue?: true;
 }
 
 /**
@@ -699,6 +705,8 @@ export interface EventoDominio {
   mensaje: string;
   version: number;
   asentamientoId?: string;
+  /** Fecha de mundo del evento (ISO). */
+  momento?: string;
   payload?: unknown;
 }
 
