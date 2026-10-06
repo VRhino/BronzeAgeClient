@@ -2695,3 +2695,11 @@ kbd {
 }
 .asent-tabs-ancho { flex-wrap: wrap; }
 .asent-tabs-ancho .asent-tab { flex: 1 1 30%; }
+
+/* Ficha del campamento de bandidos: nivel y plano. */
+.bandidos-nivel { display: flex; align-items: center; gap: 5px; font-size: 0.74rem; color: var(--text-secondary); }
+.bandidos-nivel i { width: 14px; height: 14px; border: 1px solid var(--terracota); border-radius: 50%; }
+.bandidos-nivel i.on { background: var(--terracota); }
+.bandidos-nivel span { margin-left: 6px; }
+.bandidos-plano { width: 100%; max-width: 240px; aspect-ratio: 1; border-radius: 3px; border: 1px solid var(--bronce-osc); }
+.mapa-seleccion { max-height: calc(100vh - 84px); overflow-y: auto; }

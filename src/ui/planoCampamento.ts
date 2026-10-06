@@ -1,35 +1,78 @@
-// La planta del campamento de mercenarios (backend D73, `EscenaCampamento`), dibujada como plano: calles, empalizada con su puerta y los
-// edificios con la taberna en el centro. Solo presentación: lo que sale es lo que manda el backend, que la deriva del id del campamento.
-import { EDIFICIO_COLOR, EDIFICIO_NOMBRE } from '../paletas';
+// La planta del campamento de mercenarios (backend D73, `EscenaCampamento`), dibujada como la dibuja el cliente admin (`drawCampamento`):
+// suelo de tierra llana, calles, empalizada con su puerta y los edificios con su rótulo, encuadrada para que la empalizada llene el lienzo.
+// Solo presentación: lo que sale es lo que manda el backend, que la deriva del id del campamento.
 import type { EscenaCampamento } from '../tiposDominio';
 
-const LADO = 340;
-const MARGEN = 12;
+/** Colores y nombres por elemento, los mismos que el cliente admin (`COLOR_ELEMENTO_CAMPAMENTO`). */
+const COLOR: Record<string, string> = {
+  taberna: '#a0672d',
+  vivienda: '#c9b27c',
+  mercado: '#d6a437',
+  puestoMercado: '#e0c070',
+  barracon: '#7a2f2f',
+  galeriaDeTiro: '#566b3a',
+  caballerizas: '#6b5638',
+  plazaDeArmas: '#9a8f78',
+  plaza: '#b9ae94',
+  pozo: '#7d8f9a',
+  parque: '#8fb070',
+};
+const NOMBRE: Record<string, string> = {
+  taberna: 'Taberna',
+  vivienda: 'Vivienda',
+  mercado: 'Mercado',
+  puestoMercado: 'Puesto de mercado',
+  barracon: 'Barracón',
+  galeriaDeTiro: 'Galería de tiro',
+  caballerizas: 'Caballerizas',
+  plazaDeArmas: 'Plaza de armas',
+  plaza: 'Plaza',
+  pozo: 'Pozo',
+  parque: 'Parque',
+};
+/** Los que llevan su nombre escrito encima (los demás son relleno del trazado). */
+const ROTULADOS = new Set(['taberna', 'mercado', 'barracon', 'galeriaDeTiro', 'caballerizas', 'plazaDeArmas']);
+export const COLOR_SUELO_CAMPAMENTO = '#93c26b';
 
-/** El SVG del plano. Una celda mide `unidadesPorCelda` unidades; todo se escala para caber en `LADO`. */
+/** El SVG del plano, en unidades del mundo y encuadrado sobre la empalizada con un margen del 12 % (como el 80 % del admin). */
 export function svgPlanoCampamento(escena: EscenaCampamento): string {
   const u = escena.unidadesPorCelda;
-  const rects: { x: number; y: number; w: number; h: number; color: string; titulo: string; opacidad?: number }[] = [];
-  for (const c of escena.calles) rects.push({ x: c.col * u, y: c.row * u, w: c.ancho * u, h: c.alto * u, color: '#7a6a4a', titulo: 'Calle', opacidad: 0.55 });
-  for (const m of escena.empalizada) rects.push({ x: m.col * u, y: m.row * u, w: u, h: u, color: m.clase === 'puerta' ? '#f1d38b' : '#4a3a24', titulo: m.clase === 'puerta' ? 'Puerta' : 'Empalizada' });
-  for (const e of escena.edificios) {
-    rects.push({ x: e.posicion.x - (e.ancho * u) / 2, y: e.posicion.y - (e.alto * u) / 2, w: e.ancho * u, h: e.alto * u, color: EDIFICIO_COLOR[e.tipo] ?? '#888', titulo: EDIFICIO_NOMBRE[e.tipo] ?? e.tipo });
-  }
-  if (rects.length === 0) return '';
-  const minX = Math.min(...rects.map((r) => r.x));
-  const minY = Math.min(...rects.map((r) => r.y));
-  const ancho = Math.max(...rects.map((r) => r.x + r.w)) - minX;
-  const alto = Math.max(...rects.map((r) => r.y + r.h)) - minY;
-  const escala = (LADO - 2 * MARGEN) / Math.max(ancho, alto, 1);
-  const f = (n: number): string => n.toFixed(1);
-  const dibujo = rects
-    .map((r) => `<rect x="${f(MARGEN + (r.x - minX) * escala)}" y="${f(MARGEN + (r.y - minY) * escala)}" width="${f(r.w * escala)}" height="${f(r.h * escala)}" fill="${r.color}"${r.opacidad ? ` opacity="${r.opacidad}"` : ''} stroke="rgba(0,0,0,0.35)" stroke-width="0.5"><title>${r.titulo}</title></rect>`)
+  if (escena.empalizada.length === 0) return '';
+  const minX = Math.min(...escena.empalizada.map((m) => m.col)) * u;
+  const minY = Math.min(...escena.empalizada.map((m) => m.row)) * u;
+  const maxX = (Math.max(...escena.empalizada.map((m) => m.col)) + 1) * u;
+  const maxY = (Math.max(...escena.empalizada.map((m) => m.row)) + 1) * u;
+  const lado = Math.max(maxX - minX, maxY - minY);
+  const margen = lado * 0.12;
+  const cx = (minX + maxX) / 2;
+  const cy = (minY + maxY) / 2;
+  const caja = lado + 2 * margen;
+  const f = (n: number): string => n.toFixed(2);
+  const rect = (x: number, y: number, w: number, h: number, relleno: string, titulo = '', extra = ''): string =>
+    `<rect x="${f(x)}" y="${f(y)}" width="${f(w)}" height="${f(h)}" fill="${relleno}"${extra}>${titulo ? `<title>${titulo}</title>` : ''}</rect>`;
+  const fuente = lado * 0.024;
+
+  const calles = escena.calles.map((c) => rect(c.col * u, c.row * u, c.ancho * u, c.alto * u, 'rgba(120, 92, 58, 0.60)')).join('');
+  const muros = escena.empalizada.map((m) => rect(m.col * u, m.row * u, u, u, m.clase === 'puerta' ? '#e8dcb8' : '#6b4a2a', m.clase === 'puerta' ? 'Puerta' : 'Empalizada')).join('');
+  const edificios = escena.edificios
+    .map((e) => {
+      const w = e.ancho * u;
+      const h = e.alto * u;
+      const x = e.posicion.x - w / 2;
+      const y = e.posicion.y - h / 2;
+      const nombre = NOMBRE[e.tipo] ?? e.tipo;
+      const caja = rect(x, y, w, h, COLOR[e.tipo] ?? '#888', nombre, ` stroke="#1b1a17" stroke-width="${f(lado * 0.0025)}"`);
+      if (!ROTULADOS.has(e.tipo)) return caja;
+      // Un rótulo que no cabe se aprieta al ancho de la huella, como el `maxWidth` del `fillText` del admin.
+      const apretar = nombre.length * fuente * 0.58 > w - 2 ? ` textLength="${f(w - 2)}" lengthAdjust="spacingAndGlyphs"` : '';
+      return `${caja}<text x="${f(e.posicion.x)}" y="${f(e.posicion.y)}" fill="#fff" font-size="${f(fuente)}" text-anchor="middle" dominant-baseline="middle"${apretar}>${nombre}</text>`;
+    })
     .join('');
-  return `<svg class="campamento-plano" viewBox="0 0 ${LADO} ${LADO}" width="${LADO}" height="${LADO}" role="img" aria-label="Planta del campamento">${dibujo}</svg>`;
+  return `<svg class="campamento-plano" viewBox="${f(cx - caja / 2)} ${f(cy - caja / 2)} ${f(caja)} ${f(caja)}" preserveAspectRatio="xMidYMid meet" shape-rendering="crispEdges" role="img" aria-label="Planta del campamento">${rect(cx - caja / 2, cy - caja / 2, caja, caja, COLOR_SUELO_CAMPAMENTO)}${calles}${muros}${edificios}</svg>`;
 }
 
-/** La leyenda: un cuadrado de color por tipo de edificio que hay en la planta. */
+/** La leyenda: un cuadrado de color por tipo de elemento que hay en la planta. */
 export function leyendaPlanoCampamento(escena: EscenaCampamento): string {
   const tipos = [...new Set(escena.edificios.map((e) => e.tipo))];
-  return `<div class="campamento-leyenda">${tipos.map((t) => `<span><i style="background:${EDIFICIO_COLOR[t] ?? '#888'}"></i>${EDIFICIO_NOMBRE[t] ?? t}</span>`).join('')}<span><i style="background:#f1d38b"></i>Puerta</span></div>`;
+  return `<div class="campamento-leyenda">${tipos.map((t) => `<span><i style="background:${COLOR[t] ?? '#888'}"></i>${NOMBRE[t] ?? t}</span>`).join('')}<span><i style="background:#e8dcb8"></i>Puerta</span></div>`;
 }

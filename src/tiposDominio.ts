@@ -330,6 +330,12 @@ export interface CampamentoBandido {
   posicion: Point;
   /** Lo que hay que vencer, fijo (Doc 1.9). Se ataca con la columna que llega hasta él (`atacar`). */
   poder: number;
+  /** Nivel 1-3 (D21, D37): fija el poder y el oro del botín (`GET /v1/balance`, `internas.CAMPAMENTOS_BANDIDOS.niveles`). */
+  nivel: 1 | 2 | 3;
+  /** Dónde acampa: el bosque, y a quién acosa — la plaza o el campamento de mercenarios en cuyo anillo vive. */
+  bosqueId?: string;
+  asentamientoId?: string;
+  campamentoMercenariosId?: string;
 }
 
 /** Copia local de `CaminoProyectado` (motor, Doc 1.6): un tramo de la red de caminos ya fusionado por el servidor,

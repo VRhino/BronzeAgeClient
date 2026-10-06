@@ -6,6 +6,7 @@ import {
   ejecutarComando,
   guardarSesionLocal,
   loginConClave,
+  nivelesBandidos,
   registrarCuenta,
   obtenerMapa,
   unirseAPartida,
@@ -33,6 +34,7 @@ import { cablearFichaBatalla, cablearFichaFormacion, cablearMiColumna, formacion
 import { instalarZoomPan, type ControlMapa } from './ui/pantallaMapa';
 import { avisarDeEventos, reiniciarAvisos } from './ui/avisos';
 import { cablearPanelIntel, renderPanelIntel } from './ui/panelIntel';
+import { svgPlanoBandidos } from './ui/planoBandidos';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 /** Los campamentos donde se puede nacer, de la última respuesta `sinHeroe` (pantalla Héroe). */
@@ -565,14 +567,24 @@ async function atacarPlaza(cont: HTMLElement, boton: HTMLButtonElement, asentami
 
 function renderSeleccionCampamento(cont: HTMLElement, proyeccion: ProyeccionJugador, campamento: CampamentoBandido): void {
   const { distancia, impide } = alcanceDeAtaque(proyeccion, campamento.posicion);
+  const nivel = nivelesBandidos(() => renderSeleccionMapa())?.[String(campamento.nivel)];
+  const acosa = campamento.asentamientoId
+    ? `a ${escaparHtml(asentamientosDelMapa(proyeccion).find((a) => a.id === campamento.asentamientoId)?.nombre ?? campamento.asentamientoId)}`
+    : campamento.campamentoMercenariosId ? `al campamento ${escaparHtml(campamento.campamentoMercenariosId)}` : '';
   cont.innerHTML = `
     <button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>
     <span class="faction-kicker">Campamento de bandidos</span>
-    <h3>Bandidos</h3>
+    <h3>Bandidos · nivel ${campamento.nivel}</h3>
+    <div class="bandidos-nivel" title="Nivel ${campamento.nivel} de 3">${[1, 2, 3].map((n) => `<i${n <= campamento.nivel ? ' class="on"' : ''}></i>`).join('')}<span>Nivel ${campamento.nivel} de 3</span></div>
+    ${svgPlanoBandidos(campamento)}
     <div class="mapa-seleccion-datos">
+      <div><span>Nivel</span><strong>${campamento.nivel}</strong></div>
       <div><span>Poder</span><strong>${campamento.poder}</strong></div>
+      ${nivel ? `<div><span>Defensores</span><strong>${nivel.unidades}</strong></div><div><span>Botín por héroe</span><strong>${nivel.oroPorHeroe} de oro</strong></div>` : ''}
       ${distancia !== null ? `<div><span>Distancia</span><strong>${distancia}</strong></div>` : ''}
+      ${acosa ? `<div><span>Acosa</span><strong>${acosa}</strong></div>` : ''}
     </div>
+    <p class="mapa-lista-vacia">Plano esquemático: el servidor no publica el trazado de los campamentos de bandidos. El botín decrece si se destruyen muchos en un día.</p>
     <div class="mapa-seleccion-acciones">
       <button id="btn-marchar-alli" class="btn-secondary" type="button">Marchar aquí</button>
       <button id="btn-atacar-campamento" class="btn-primary" type="button"${impide ? ' disabled' : ''}>Atacar</button>

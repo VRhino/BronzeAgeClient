@@ -260,6 +260,20 @@ export async function consultarEventos(gameId: string, desde: number): Promise<E
   return r.eventos;
 }
 
+/** Lo que fija cada nivel de bandidos (`GET /v1/balance`, público): su poder, los hombres que defienden y el oro del botín por héroe. */
+export interface NivelDeBandidos { poder: number; unidades: number; oroPorHeroe: number }
+let nivelesDeBandidos: Record<string, NivelDeBandidos> | null = null;
+
+/** Los niveles de bandidos si ya se leyeron; la primera vez los pide al backend en segundo plano y avisa con `alCargar`. */
+export function nivelesBandidos(alCargar?: () => void): Record<string, NivelDeBandidos> | null {
+  if (!nivelesDeBandidos && alCargar) {
+    void fetchJson<{ internas?: { CAMPAMENTOS_BANDIDOS?: { niveles?: Record<string, NivelDeBandidos> } } }>(`${V1}/balance`, {}, '')
+      .then((b) => { nivelesDeBandidos = b.internas?.CAMPAMENTOS_BANDIDOS?.niveles ?? null; if (nivelesDeBandidos) alCargar(); })
+      .catch(() => {});
+  }
+  return nivelesDeBandidos;
+}
+
 /** El mapa como asset (Fase C11a): se pide una sola vez por `mapaId` y se cachea */
 export function obtenerMapa(gameId: string, mapaId: string): Promise<MapaGenerado> {
   return peticion<MapaGenerado>(`${V1}/jugador/partidas/${encodeURIComponent(gameId)}/mapa/${encodeURIComponent(mapaId)}`);
