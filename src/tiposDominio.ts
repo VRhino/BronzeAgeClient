@@ -581,6 +581,19 @@ export interface ParamsGuardarLoadout {
   activo?: boolean;
 }
 
+// --- Anexión con aceptación (backend 2026-10-06, Doc 2.6) ---
+
+/** Una propuesta de anexión vigente que ofrece o recibe tu Facción: la absorbida desaparece al aceptarla su Rey. Caduca en `expiraEn`. */
+export interface PropuestaAnexion {
+  id: string;
+  absorbenteId: string;
+  absorbidaId: string;
+  /** El Rey o Embajador de la absorbente que la hizo. */
+  propuestaPor: string;
+  creadaEn: number;
+  expiraEn: number;
+}
+
 // --- Intel de las tabernas (backend 2026-10-05, Doc 5.12.10) ---
 
 /** Una Mirada de tu Facción: un ojo prestado sobre un punto del mapa. Abierta hasta `expiraEn`; la zona sigue vedada hasta `libreEn`. */

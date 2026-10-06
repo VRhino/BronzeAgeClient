@@ -1,7 +1,7 @@
 // Wrapper `fetch` sobre la superficie `/jugador/*` y `/sesiones` del backend (Fase C3) — sin lógica de negocio, solo I/O.
 import type { MapaGenerado } from './terreno';
 
-import type { AcuerdoTrueque, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, Ejercito, EjercitoAvistado, EscenaCampamento, EvaluacionAscenso, EventoDominio, Faccion, HeroeProyectado, HeroePublico, InformePlaza, MiradaIntel, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, RelacionPolitica, TarifasIntel, Titulo, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
+import type { AcuerdoTrueque, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, Ejercito, EjercitoAvistado, EscenaCampamento, EvaluacionAscenso, EventoDominio, Faccion, HeroeProyectado, HeroePublico, InformePlaza, MiradaIntel, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, PropuestaAnexion, RelacionPolitica, TarifasIntel, Titulo, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
 
 export class ApiError extends Error {
   constructor(
@@ -79,6 +79,8 @@ export interface ProyeccionJugador {
   /** El último Informe de cada plaza ajena que compraste, con su fecha. */
   informesPlaza: InformePlaza[];
   tarifasIntel: TarifasIntel;
+  /** Las propuestas de anexión vigentes de tu Facción, ofrecidas o recibidas (backend 2026-10-06, Doc 2.6). Ausente en un backend anterior. */
+  propuestasAnexion?: PropuestaAnexion[];
   zonasFusionadas: ZonaFaccion[];
   /** Relaciones diplomáticas, públicas: de ellas sale la Liga (`sigilo/imperio.ts`). */
   relaciones?: RelacionPolitica[];

@@ -24,6 +24,7 @@ import { actualizarTip, resumenRecursosFundacion } from './ui/pestanaAsentamient
 import { renderPanelInteraccion } from './ui/panelInteraccion';
 import { renderPanelMapa } from './ui/panelMapa';
 import { renderPestanaFaccion } from './ui/pestanaFaccion';
+import { cablearAnexion } from './ui/panelAnexion';
 import { instalarZoomPan, type ControlMapa } from './ui/pantallaMapa';
 import { avisarDeEventos, reiniciarAvisos } from './ui/avisos';
 import { cablearPanelIntel, estadoIntel, miradaElegida, renderPanelIntel } from './ui/panelIntel';
@@ -211,6 +212,8 @@ function cablearFaccion(root: ParentNode, proyeccion: ProyeccionJugador, rerende
     const mensaje = await ejecutarYRefrescar('responderSolicitud', { faccionId: proyeccion.faccionId, heroeId: boton.dataset.solicitud, aceptar: boton.dataset.aceptar === 'si' });
     if (mensaje) { boton.disabled = false; avisoMapa(mensaje); }
   }));
+
+  cablearAnexion(root, proyeccion, ejecutarYRefrescar, avisoMapa);
 }
 
 /** Punto de entrada de la creación de héroe, para la pantalla provisional y para la definitiva. Con el héroe

@@ -122,7 +122,9 @@ Los cinco siguientes no llevan `heroeId`: el actor es su propio héroe. Wrapper 
 - [ ] `proponerRelacion` — `tipo` (`vasallaje` \| `alianza`), `faccionAId`, `faccionBId`; opcionales: `tributoRecurso`, `tributoCantidad` (solo se usan en vasallaje)
 - [ ] `romperRelacion` — `relacionId`, `iniciadorFaccionId`
 - [ ] `rebelionVasallo` — `relacionId`
-- [ ] `anexionar` — `faccionAId`, `faccionBId` (`faccionAId` absorbe)
+- [x] `proponerAnexion` — `faccionAId` (absorbente), `faccionBId`: Rey o Embajador (pestaña Facción, `ui/panelAnexion.ts`)
+- [x] `responderAnexion` — `propuestaId`, `aceptar`: solo el Rey de la absorbida
+- [x] `retirarAnexion` — `propuestaId`: Rey o Embajador de la absorbente
 - [ ] `fusionar` — `faccionAId`, `faccionBId`, `nuevoNombre`, `nuevoReyId`
 
 ### Comercio

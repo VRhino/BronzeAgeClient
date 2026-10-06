@@ -3,6 +3,20 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.11.0] — 2026-10-06 · anexión con aceptación · sync con `BronzeAgeFase0@8a4eae5` (`main`)
+
+### Añadido
+- **Anexión entre Facciones** (backend Doc 2.6, modelo en `Docs/Coordinacion/01` §25): sección «Anexión» en la pestaña Facción
+  (`src/ui/panelAnexion.ts`). El Rey o el Embajador proponen anexionar a otra Facción (selector) y pueden retirar la propuesta; solo el Rey
+  de la absorbida **acepta o rechaza** las que recibe, con la caducidad a la vista. Quien valida es el backend: su rechazo (`anexion.invalida`,
+  `anexion.caducada`…) sale en el propio panel. Comandos `proponerAnexion`, `responderAnexion` y `retirarAnexion`; `anexionar` ya no existe.
+- Tipo `PropuestaAnexion` y el campo opcional `propuestasAnexion` de `ProyeccionJugador`.
+
+### Pendiente
+- Aviso al Rey cuando le llega una propuesta: los eventos `diplomacia.anexion_*` son públicos (sin plaza) y no dicen a quién tocan; hoy solo se ve
+  abriendo la pestaña Facción. Tras aceptarse una anexión la Facción absorbida desaparece: el cliente se limita a refrescar la proyección.
+- El desarme del señor (sus vasallos quedan libres) no necesita cliente: llega por `relaciones`.
+
 ## [0.10.1] — 2026-10-05 · planta del campamento, avisos y cupo de la proyección · sync con `BronzeAgeFase0@cbe7ffa` (rama `claude/gracious-sinoussi-5b2ee7`)
 
 ### Añadido
