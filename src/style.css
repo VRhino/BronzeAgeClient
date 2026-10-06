@@ -2703,3 +2703,4 @@ kbd {
 .bandidos-nivel span { margin-left: 6px; }
 .bandidos-plano { width: 100%; max-width: 240px; aspect-ratio: 1; border-radius: 3px; border: 1px solid var(--bronce-osc); }
 .mapa-seleccion { max-height: calc(100vh - 84px); overflow-y: auto; }
+.faction-motivos { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }

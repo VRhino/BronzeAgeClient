@@ -5,6 +5,8 @@ import {
   consultarProyeccion,
   ejecutarComando,
   guardarSesionLocal,
+  abrirPresencia,
+  cerrarPresencia,
   loginConClave,
   nivelesBandidos,
   registrarCuenta,
@@ -35,6 +37,9 @@ import { instalarZoomPan, type ControlMapa } from './ui/pantallaMapa';
 import { avisarDeEventos, reiniciarAvisos } from './ui/avisos';
 import { cablearPanelIntel, renderPanelIntel } from './ui/panelIntel';
 import { svgPlanoBandidos } from './ui/planoBandidos';
+import { explicarError } from './ui/erroresServidor';
+import { motivosParaCrearFaccion } from './ui/validarFaccion';
+import { nombreDeHeroe } from './ui/nombres';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 /** Los campamentos donde se puede nacer, de la última respuesta `sinHeroe` (pantalla Héroe). */
@@ -51,7 +56,7 @@ function escaparHtml(valor: string): string {
 }
 
 function mensajeError(error: unknown): string {
-  return error instanceof ApiError ? error.message : 'No se pudo completar la operación.';
+  return error instanceof ApiError ? explicarError(error.message) : 'No se pudo completar la operación.';
 }
 
 function sincronizarEstado(): void {
@@ -159,12 +164,25 @@ function cablearFaccion(root: ParentNode, proyeccion: ProyeccionJugador, rerende
     };
     return sigilo.campoId ? sigilo : null;
   };
+  /** Enseña TODOS los motivos por los que el backend rechazaría el formulario (él solo dice el primero) y apaga «Crear» mientras haya alguno. */
+  const validar = (): string[] => {
+    const motivos = motivosParaCrearFaccion(proyeccion, root.querySelector<HTMLInputElement>('#input-nombre-faccion')?.value ?? '', sigiloElegido());
+    const aviso = root.querySelector('#error-faccion');
+    if (aviso) aviso.innerHTML = motivos.length > 0 ? `<ul class="faction-motivos">${motivos.map((m) => `<li>${escaparHtml(m)}</li>`).join('')}</ul>` : '';
+    const crear = root.querySelector<HTMLButtonElement>('#btn-submit-crear-faccion');
+    if (crear) crear.disabled = motivos.length > 0;
+    return motivos;
+  };
   root.querySelectorAll('select[id^="sigilo-"]').forEach((select) => select.addEventListener('change', () => {
     const previa = root.querySelector('#sigilo-previa');
     if (previa) previa.innerHTML = svgSigilo(sigiloElegido() ?? undefined, 88);
+    validar();
   }));
+  root.querySelector('#input-nombre-faccion')?.addEventListener('input', validar);
+  if (form) validar();
   form?.addEventListener('submit', async (evento) => {
     evento.preventDefault();
+    if (validar().length > 0) return;
     const input = root.querySelector<HTMLInputElement>('#input-nombre-faccion');
     const boton = root.querySelector<HTMLButtonElement>('#btn-submit-crear-faccion');
     const error = root.querySelector<HTMLParagraphElement>('#error-faccion');
@@ -190,7 +208,7 @@ function cablearFaccion(root: ParentNode, proyeccion: ProyeccionJugador, rerende
     const pintarLista = (): void => {
       const termino = busqueda.value.trim().toLowerCase();
       const facciones = proyeccion.facciones.filter((faccion) => faccion.nombre.toLowerCase().includes(termino));
-      lista.innerHTML = facciones.length > 0 ? facciones.map((faccion) => `<div class="faction-list-item"><div><strong>${escaparHtml(faccion.nombre)}</strong><span>Nivel ${faccion.nivel}</span></div>${(faccion.solicitudesIds ?? []).includes(proyeccion.heroeId) ? '<span>Pedido: decide su Rey</span>' : `<button class="btn-join-faction" type="button" data-faccion-id="${escaparHtml(faccion.id)}">Pedir ingreso</button>`}</div>`).join('') : '<p class="faction-empty-list">No hay facciones que coincidan.</p>';
+      lista.innerHTML = facciones.length > 0 ? facciones.map((faccion) => `<div class="faction-list-item"><div><strong>${escaparHtml(faccion.nombre)}</strong><span>Nivel ${faccion.nivel}${faccion.reyId ? ` · Rey: ${escaparHtml(nombreDeHeroe(proyeccion, faccion.reyId))}` : ''}</span></div>${(faccion.solicitudesIds ?? []).includes(proyeccion.heroeId) ? '<span>Pedido: decide su Rey</span>' : `<button class="btn-join-faction" type="button" data-faccion-id="${escaparHtml(faccion.id)}">Pedir ingreso</button>`}</div>`).join('') : '<p class="faction-empty-list">No hay facciones que coincidan.</p>';
       lista.querySelectorAll<HTMLButtonElement>('.btn-join-faction').forEach((boton) => boton.addEventListener('click', async () => {
         boton.disabled = true;
         boton.textContent = 'Pidiendo...';
@@ -345,12 +363,6 @@ function pintarCampamento(p: ProyeccionJugador, campamento: CampamentoMercenario
  * en una plaza o desconectado. */
 function miColumna(proyeccion: ProyeccionJugador) {
   return proyeccion.ejercitos.find((ejercito) => ejercito.participantes.some((p) => p.heroeId === proyeccion.heroeId));
-}
-
-/** El nombre de un héroe si la proyección lo trae (el tuyo, un compañero de Facción o un ajeno que se ve); si no, su id. */
-function nombreDeHeroe(proyeccion: ProyeccionJugador, heroeId: string): string {
-  if (heroeId === proyeccion.heroeId) return proyeccion.heroe.displayName;
-  return proyeccion.nombresDeCompaneros[heroeId] ?? proyeccion.heroesVisibles.find((h) => h.heroeId === heroeId)?.displayName ?? heroeId;
 }
 
 // --- MOVIMIENTO Y SELECCIÓN EN EL MAPA (T4) -------------------------------------------------------
@@ -1692,7 +1704,10 @@ async function refrescarDatosJuego(): Promise<void> {
   estadoCliente.sinHeroe = respuesta.sinHeroe === true;
   estadoCliente.proyeccionUltima = respuesta.sinHeroe ? null : respuesta;
   if (respuesta.sinHeroe) campamentosParaElegir = respuesta.campamentos ?? [];
-  if (!respuesta.sinHeroe) void avisarDeEventos(estadoCliente.gameIdActivo, respuesta.version);
+  if (!respuesta.sinHeroe) {
+    abrirPresencia(estadoCliente.gameIdActivo);
+    void avisarDeEventos(estadoCliente.gameIdActivo, respuesta.version);
+  }
   enrutar();
 }
 
@@ -1794,6 +1809,8 @@ function alPulsarTecla(evento: KeyboardEvent): void {
 function arrancar(): void {
   window.addEventListener('hashchange', enrutar);
   window.addEventListener('keydown', alPulsarTecla);
+  // Cerrar la pestaña o la ventana cierra el socket de presencia (lo haría el navegador, pero así es explícito y también vale al recargar).
+  window.addEventListener('pagehide', () => cerrarPresencia());
   const sesion = cargarSesionLocal();
   if (sesion) {
     estadoCliente.usuarioActivo = sesion.usuario;

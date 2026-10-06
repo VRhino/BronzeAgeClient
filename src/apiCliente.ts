@@ -60,6 +60,8 @@ export interface ProyeccionJugador {
   heroesVisibles: HeroePublico[];
   /** `heroeId` -> nombre de cada ciudadano de tu Facción, tú incluido, se le vea o no. Vacío sin Facción. */
   nombresDeCompaneros: Record<string, string>;
+  /** `heroeId` -> nombre del Rey y el Embajador de CADA Facción, la propia o no (backend 2026-10-06). Ausente en un backend anterior. */
+  nombresDeDirigentes?: Record<string, string>;
   caminos: CaminoProyectado[];
   /** Ofertas de mercado en pie de CUALQUIER plaza en cuya puerta esté una columna tuya, más las de tus
    * propios asentamientos — el resto no viaja (Doc 3.3, `proyectarParaJugador` en el backend). Sin interfaz
@@ -212,7 +214,42 @@ export function cargarSesionLocal(): { sesionId: string; usuario: string; gameId
   return null;
 }
 
+// --- PRESENCIA (WebSocket de tiempo real) ---------------------------------------------------------------
+// Estar conectado es tener un WebSocket abierto (backend Doc 1.10.6, `rutas/tiempoReal.ts`): abrirlo trae al héroe de vuelta al mundo y cerrar el
+// ÚLTIMO socket del jugador lo desconecta (sale del mundo 2:30 después si no vuelve). Este cliente aún no recibe datos por él (sondea la proyección);
+// lo mantiene abierto solo por la presencia, y lo cierra al cerrar sesión o la pestaña. Las suscripciones a canales llegarán con el tiempo real.
+let socketPresencia: WebSocket | null = null;
+let presenciaDeseada: string | null = null;
+let reintentoPresencia: ReturnType<typeof setTimeout> | undefined;
+
+function urlTiempoReal(gameId: string, sesionId: string): string {
+  const base = import.meta.env.VITE_API_BASE ?? location.origin;
+  return `${base.replace(/^http/, 'ws')}/v1/jugador/partidas/${encodeURIComponent(gameId)}/tiempo-real?sesion=${encodeURIComponent(sesionId)}`;
+}
+
+/** Abre el socket de presencia de esa partida si no está abierto (idempotente). Si se cae sin que lo pidamos, reintenta a los 3 s. */
+export function abrirPresencia(gameId: string): void {
+  presenciaDeseada = gameId;
+  if (!sesionIdMemoria || (socketPresencia && socketPresencia.readyState <= WebSocket.OPEN)) return;
+  clearTimeout(reintentoPresencia);
+  const socket = new WebSocket(urlTiempoReal(gameId, sesionIdMemoria));
+  socketPresencia = socket;
+  socket.addEventListener('close', () => {
+    if (socketPresencia === socket) socketPresencia = null;
+    if (presenciaDeseada === gameId && sesionIdMemoria) reintentoPresencia = setTimeout(() => abrirPresencia(gameId), 3000);
+  });
+}
+
+/** Cierra el socket de presencia y deja de reabrirlo: así el servidor ve que el jugador se fue. */
+export function cerrarPresencia(): void {
+  presenciaDeseada = null;
+  clearTimeout(reintentoPresencia);
+  socketPresencia?.close(1000, 'sesion cerrada');
+  socketPresencia = null;
+}
+
 export function cerrarSesion(): void {
+  cerrarPresencia(); // antes de olvidar la sesión: es lo que desconecta al héroe en el servidor
   sesionIdMemoria = null;
   usuarioMemoria = null;
   localStorage.removeItem(STORAGE_KEY_SESION);

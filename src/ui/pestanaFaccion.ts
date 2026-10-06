@@ -3,9 +3,16 @@ import type { Faccion } from '../tiposDominio';
 import { htmlLiga, htmlTitulos, ligaDe } from '../sigilo/imperio';
 import { CATALOGO_SIGILO, opciones, sigiloAleatorio, svgSigilo } from '../sigilo/sigilo';
 import { estadoCliente } from './estadoCliente';
+import { nombreDeHeroe } from './nombres';
 import { htmlAnexion } from './panelAnexion';
 import { htmlFusion } from './panelFusion';
 import { htmlAdmision } from './panelAdmision';
+
+/** «Nombre del Rey (Facción)» del Gran Rey de una Liga: el Gran Rey es la Facción señora, y quien la manda es su Rey. */
+function granRey(p: ProyeccionJugador, faccionId: string): string {
+  const f = p.facciones.find((x) => x.id === faccionId);
+  return f?.reyId ? `${nombreDeHeroe(p, f.reyId)} (${f.nombre})` : (f?.nombre ?? faccionId);
+}
 
 export function faccionDelJugador(proyeccion: ProyeccionJugador): Faccion | undefined {
   return proyeccion.facciones.find((faccion) => faccion.id === proyeccion.faccionId);
@@ -35,12 +42,12 @@ export function renderPestanaFaccion(
         <div><span>Ciudadanos</span><strong>${faccion.ciudadanosIds?.length ?? 0}</strong></div>
       </div>
       <div class="faction-roles">
-        <div><span>Rey</span><strong>${escaparHtml(faccion.reyId ?? 'Sin designar')}</strong></div>
-        <div><span>Embajador</span><strong>${escaparHtml(faccion.embajadorId ?? 'Sin designar')}</strong></div>
+        <div><span>Rey</span><strong>${escaparHtml(faccion.reyId ? nombreDeHeroe(proyeccion, faccion.reyId) : 'Sin designar')}</strong></div>
+        <div><span>Embajador</span><strong>${escaparHtml(faccion.embajadorId ? nombreDeHeroe(proyeccion, faccion.embajadorId) : 'Sin designar')}</strong></div>
       </div>
       ${faccion.reyId === proyeccion.heroeId && (faccion.solicitudesIds ?? []).length > 0
         ? `<div class="faction-list"><span class="faction-kicker">Piden entrar</span>${(faccion.solicitudesIds ?? [])
-            .map((id) => `<div class="faction-list-item"><div><strong>${escaparHtml(id)}</strong></div><button class="btn-secondary" type="button" data-solicitud="${escaparHtml(id)}" data-aceptar="si">Aceptar</button><button class="btn-secondary" type="button" data-solicitud="${escaparHtml(id)}" data-aceptar="no">Denegar</button></div>`)
+            .map((id) => `<div class="faction-list-item"><div><strong>${escaparHtml(nombreDeHeroe(proyeccion, id))}</strong></div><button class="btn-secondary" type="button" data-solicitud="${escaparHtml(id)}" data-aceptar="si">Aceptar</button><button class="btn-secondary" type="button" data-solicitud="${escaparHtml(id)}" data-aceptar="no">Denegar</button></div>`)
             .join('')}</div>`
         : ''}
       ${htmlAnexion(proyeccion, faccion, escaparHtml)}
@@ -49,7 +56,7 @@ export function renderPestanaFaccion(
       <div class="faction-list">
         <span class="faction-kicker">Liga</span>
         ${liga
-          ? `<div class="liga-fila">${htmlLiga(liga, proyeccion.facciones)}<div><strong>${liga.tieneVasallaje ? 'Por vasallaje' : 'Por alianza'}</strong><span>${liga.miembrosIds.map((id) => escaparHtml(nombreDe(id))).join(', ')}</span></div></div>`
+          ? `<div class="liga-fila">${htmlLiga(liga, proyeccion.facciones)}<div><strong>${liga.tieneVasallaje ? 'Por vasallaje' : 'Por alianza'}</strong><span>${liga.miembrosIds.map((id) => escaparHtml(nombreDe(id))).join(', ')}</span>${liga.granReyId ? `<span>Gran Rey: ${escaparHtml(granRey(proyeccion, liga.granReyId))}</span>` : ''}</div></div>`
           : '<p class="legend-note">No perteneces a ninguna Liga.</p>'}
       </div>
       <div class="faction-list">
@@ -83,7 +90,7 @@ export function renderPestanaFaccion(
           <label for="input-nombre-faccion">Nombre de la facción</label>
           <input id="input-nombre-faccion" class="form-input" type="text" maxlength="60" required autocomplete="off" placeholder="Ej. Casa de Micenas" />
           ${renderSelectorSigilo()}
-          <p id="error-faccion" class="faction-error" role="alert"></p>
+          <div id="error-faccion" class="faction-error" role="alert"></div>
           <button id="btn-submit-crear-faccion" class="btn-primary" type="submit">Crear facción</button>
         </form>
       </div>
