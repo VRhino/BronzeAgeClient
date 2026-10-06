@@ -594,6 +594,23 @@ export interface PropuestaAnexion {
   expiraEn: number;
 }
 
+// --- Fusión con aceptación (backend 2026-10-06, Doc 2.6) ---
+
+/** Una propuesta de fusión vigente que hace o recibe tu Facción: al aceptarla el Rey de B, las dos desaparecen y nace una nueva. Caduca en `expiraEn`. */
+export interface PropuestaFusion {
+  id: string;
+  /** Quien propone (su Rey). */
+  faccionAId: string;
+  /** Quien contesta (su Rey). */
+  faccionBId: string;
+  nuevoNombre: string;
+  /** Rey de la Facción nueva: el Rey de A o el de B. */
+  nuevoReyId: string;
+  propuestaPor: string;
+  creadaEn: number;
+  expiraEn: number;
+}
+
 // --- Intel de las tabernas (backend 2026-10-05, Doc 5.12.10) ---
 
 /** Una Mirada de tu Facción: un ojo prestado sobre un punto del mapa. Abierta hasta `expiraEn`; la zona sigue vedada hasta `libreEn`. */

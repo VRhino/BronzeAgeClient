@@ -125,7 +125,9 @@ Los cinco siguientes no llevan `heroeId`: el actor es su propio héroe. Wrapper 
 - [x] `proponerAnexion` — `faccionAId` (absorbente), `faccionBId`: Rey o Embajador (pestaña Facción, `ui/panelAnexion.ts`)
 - [x] `responderAnexion` — `propuestaId`, `aceptar`: solo el Rey de la absorbida
 - [x] `retirarAnexion` — `propuestaId`: Rey o Embajador de la absorbente
-- [ ] `fusionar` — `faccionAId`, `faccionBId`, `nuevoNombre`, `nuevoReyId`
+- [x] `proponerFusion` — `faccionAId`, `faccionBId`, `nuevoNombre`, `nuevoReyId` (el Rey de A o el de B): solo el Rey de A (pestaña Facción, `ui/panelFusion.ts`)
+- [x] `responderFusion` — `propuestaId`, `aceptar`: solo el Rey de B
+- [x] `retirarFusion` — `propuestaId`: solo el Rey de A
 
 ### Comercio
 

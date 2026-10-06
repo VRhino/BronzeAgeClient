@@ -3,6 +3,21 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.12.0] — 2026-10-06 · fusión con aceptación · sync con `BronzeAgeFase0@6aced64` (rama `claude/keen-chandrasekhar-c37099`, sin push)
+
+### Añadido
+- **Fusión entre Facciones** (backend Doc 2.6 opción 2, modelo en `Docs/Coordinacion/01` §26): sección «Fusión» en la pestaña Facción (`src/ui/panelFusion.ts`).
+  El Rey de la Facción que propone elige la otra, el **nombre** de la Facción nueva y quién será su **Rey** (él o el de la otra) y puede retirar la propuesta; solo el
+  Rey de la otra **acepta o rechaza**, con la caducidad a la vista. Comandos `proponerFusion`, `responderFusion` y `retirarFusion`; `fusionar` ya no existe.
+- Tipo `PropuestaFusion` y el campo opcional `propuestasFusion` de `ProyeccionJugador`.
+
+### Cambiado
+- `ui/panelAnexion.ts` exporta `caduca` y `crearEnvio` (envío de comando con el rechazo del backend en el propio panel), que comparten anexión y fusión.
+
+### Pendiente
+- Como en la anexión: no hay aviso al Rey cuando le llega una propuesta (los eventos `diplomacia.fusion_*` son públicos y sin plaza). Tras aceptarse, **las dos** Facciones
+  desaparecen y nace una con id nuevo (`diplomacia.fusion`, payload `faccionNuevaId`): el cliente se limita a refrescar la proyección.
+
 ## [0.11.0] — 2026-10-06 · anexión con aceptación · sync con `BronzeAgeFase0@8a4eae5` (`main`)
 
 ### Añadido

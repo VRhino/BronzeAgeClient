@@ -25,6 +25,7 @@ import { renderPanelInteraccion } from './ui/panelInteraccion';
 import { renderPanelMapa } from './ui/panelMapa';
 import { renderPestanaFaccion } from './ui/pestanaFaccion';
 import { cablearAnexion } from './ui/panelAnexion';
+import { cablearFusion } from './ui/panelFusion';
 import { instalarZoomPan, type ControlMapa } from './ui/pantallaMapa';
 import { avisarDeEventos, reiniciarAvisos } from './ui/avisos';
 import { cablearPanelIntel, estadoIntel, miradaElegida, renderPanelIntel } from './ui/panelIntel';
@@ -214,6 +215,7 @@ function cablearFaccion(root: ParentNode, proyeccion: ProyeccionJugador, rerende
   }));
 
   cablearAnexion(root, proyeccion, ejecutarYRefrescar, avisoMapa);
+  cablearFusion(root, proyeccion, ejecutarYRefrescar, avisoMapa);
 }
 
 /** Punto de entrada de la creación de héroe, para la pantalla provisional y para la definitiva. Con el héroe

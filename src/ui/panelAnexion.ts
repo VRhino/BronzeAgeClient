@@ -5,7 +5,7 @@ import type { Faccion } from '../tiposDominio';
 
 const HORA = 3_600_000;
 
-function caduca(expiraEn: number, ahora: number): string {
+export function caduca(expiraEn: number, ahora: number): string {
   const horas = Math.max(0, Math.ceil((expiraEn - ahora) / HORA));
   return horas >= 48 ? `caduca en ${Math.ceil(horas / 24)} días` : `caduca en ${horas} h`;
 }
@@ -36,22 +36,24 @@ export function htmlAnexion(proyeccion: ProyeccionJugador, faccion: Faccion, esc
   return `<div class="faction-list"><span class="faction-kicker">Anexión</span>${recibidas.map(filaRecibida).join('')}${ofrecidas.map(filaOfrecida).join('')}${formulario}<p id="error-anexion" class="faction-error" role="alert"></p></div>`;
 }
 
-/** Cablea los botones de `htmlAnexion` tras cada render. `ejecutar` devuelve el mensaje de rechazo o `null`. */
-export function cablearAnexion(
-  raiz: ParentNode,
-  proyeccion: ProyeccionJugador,
-  ejecutar: (tipo: string, params: object) => Promise<string | null>,
-  avisar: (mensaje: string) => void
-): void {
-  const enviar = async (boton: HTMLButtonElement, tipo: string, params: object) => {
+export type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
+
+/** Envía un comando desde un botón: lo deshabilita mientras espera y deja el rechazo del backend en `#idError` (o en el aviso global si no está). Lo comparten la anexión y la fusión. */
+export function crearEnvio(raiz: ParentNode, idError: string, ejecutar: Ejecutar, avisar: (mensaje: string) => void) {
+  return async (boton: HTMLButtonElement, tipo: string, params: object): Promise<void> => {
     boton.disabled = true;
     const mensaje = await ejecutar(tipo, params);
     if (mensaje) {
       boton.disabled = false;
-      const error = raiz.querySelector<HTMLElement>('#error-anexion');
+      const error = raiz.querySelector<HTMLElement>(`#${idError}`);
       if (error) error.textContent = mensaje; else avisar(mensaje);
     }
   };
+}
+
+/** Cablea los botones de `htmlAnexion` tras cada render. `ejecutar` devuelve el mensaje de rechazo o `null`. */
+export function cablearAnexion(raiz: ParentNode, proyeccion: ProyeccionJugador, ejecutar: Ejecutar, avisar: (mensaje: string) => void): void {
+  const enviar = crearEnvio(raiz, 'error-anexion', ejecutar, avisar);
   raiz.querySelector<HTMLButtonElement>('#btn-proponer-anexion')?.addEventListener('click', (ev) => {
     const destino = raiz.querySelector<HTMLSelectElement>('#sel-anexion')?.value;
     if (destino && proyeccion.faccionId) void enviar(ev.currentTarget as HTMLButtonElement, 'proponerAnexion', { faccionAId: proyeccion.faccionId, faccionBId: destino });

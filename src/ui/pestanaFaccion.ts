@@ -4,6 +4,7 @@ import { htmlLiga, htmlTitulos, ligaDe } from '../sigilo/imperio';
 import { CATALOGO_SIGILO, opciones, sigiloAleatorio, svgSigilo } from '../sigilo/sigilo';
 import { estadoCliente } from './estadoCliente';
 import { htmlAnexion } from './panelAnexion';
+import { htmlFusion } from './panelFusion';
 
 export function faccionDelJugador(proyeccion: ProyeccionJugador): Faccion | undefined {
   return proyeccion.facciones.find((faccion) => faccion.id === proyeccion.faccionId);
@@ -42,6 +43,7 @@ export function renderPestanaFaccion(
             .join('')}</div>`
         : ''}
       ${htmlAnexion(proyeccion, faccion, escaparHtml)}
+      ${htmlFusion(proyeccion, faccion, escaparHtml)}
       <div class="faction-list">
         <span class="faction-kicker">Liga</span>
         ${liga
