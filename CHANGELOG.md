@@ -31,8 +31,6 @@ commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend
 ### Pendiente
 - No hay aviso en pantalla de que una batalla se abre, termina o cambia: el cliente no usa todavía el canal `batalla/<id>` (WebSocket); la ficha se actualiza con el sondeo.
 - Tampoco hay menú para atacar o perseguir a otra columna, ni la ficha de una columna ajena: solo se atacan plazas y campamentos.
-- Una columna lleva fijada su Facción al salir al mundo (`Ejercito.faccionId`): quien entra en una Facción ya fuera del campamento sigue figurando sin ella, y por eso no
-  se une a las formaciones de sus compañeros hasta volver a salir. Es del backend.
 
 ## [0.12.0] — 2026-10-06 · fusión con aceptación · sync con `BronzeAgeFase0@6aced64` (rama `claude/keen-chandrasekhar-c37099`, sin push)
 
