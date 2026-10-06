@@ -3,6 +3,37 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.13.0] — 2026-10-07 · batallas con héroes y ejércitos en campo · sync con `BronzeAgeFase0@101c035` (rama `claude/elegant-shirley-2ce6d7`, sin push)
+
+### Añadido
+- **Batallas en el mapa** (backend Doc 5.15.1b, doc 02 §4.1): las batallas de Unity a la vista salen como un círculo con espadas cruzadas (verde la tuya).
+  Al pulsarla se abre su ficha en el panel de Selección (`src/ui/panelBatalla.ts`): qué es (asedio, batalla campal, persecución, asalto a una caravana o
+  evento contra bandidos), los bandos con su Facción y sus héroes sobre la capacidad, y **Unirse**. En una **persecución** el bando se elige («Con quien
+  persigue» / «Con el perseguido»), porque es libre; en las demás lo deduce el backend; una batalla campal no admite a nadie de fuera. El botón avisa
+  de la distancia (a 15) y la herida; el rechazo del backend sale en la propia ficha. Comando `unirseABatalla` con `lado` opcional.
+- **Formar un ejército en campo** (backend Doc 5.14.4): «Mi columna» en «Mis cosas» ofrece *Organizar ejército* (unión abierta o «decido yo») a una columna
+  personal que va sola; en una formación, el progreso (n/3 y los minutos que quedan) y *Cancelar la formación* (Líder) o *Separarme*; y con tres, «haz clic en el
+  mapa para fijar el destino», que es el clic de siempre (`marcharA`) y vale una sola vez. Las formaciones se dibujan con un anillo discontinuo y se pulsan para
+  **unirse** a ellas (`unirseEnCampo`). Comandos `organizarEjercito`, `cancelarFormacion`, `separarseDelEjercito`.
+- **Ajuste del Rey** «Ataques abiertos a otras Facciones» en la pestaña Facción (`src/ui/panelAdmision.ts`): activa que en vuestros asedios y asaltos de caravana se
+  unan al ataque héroes de Facciones neutrales o enemigas del defensor. Comando `admitirOtrasFacciones`.
+- Tipos: `Faccion.admiteOtrasEnAtaques`, `Ejercito.tipo/liderId/formacion/destinoPendiente`, `EjercitoAvistado.tipo/enFormacion` y `columnas` en el contexto de una batalla.
+
+### Cambiado
+- **Solo un ejército abre un asedio**: *Atacar* una plaza queda deshabilitado para una columna personal, con el motivo.
+- El panel lateral del mapa ya no aplasta sus bloques cuando hay mucho contenido: se desplaza. Las secciones de Anexión y Fusión de la pestaña Facción salían a altura
+  cero cuando había más de una.
+
+### Verificado
+- Contra el backend real (`npm run server` con `SERVIDORES_BATALLA`), con tres cuentas: formar un ejército entre tres, fijar su destino siendo Líder, el rechazo de
+  un integrante que no lo es; abrir una persecución entre dos Facciones y unirse a ella desde la ficha como un tercero sin Facción; y activar el ajuste del Rey.
+
+### Pendiente
+- No hay aviso en pantalla de que una batalla se abre, termina o cambia: el cliente no usa todavía el canal `batalla/<id>` (WebSocket); la ficha se actualiza con el sondeo.
+- Tampoco hay menú para atacar o perseguir a otra columna, ni la ficha de una columna ajena: solo se atacan plazas y campamentos.
+- Una columna lleva fijada su Facción al salir al mundo (`Ejercito.faccionId`): quien entra en una Facción ya fuera del campamento sigue figurando sin ella, y por eso no
+  se une a las formaciones de sus compañeros hasta volver a salir. Es del backend.
+
 ## [0.12.0] — 2026-10-06 · fusión con aceptación · sync con `BronzeAgeFase0@6aced64` (rama `claude/keen-chandrasekhar-c37099`, sin push)
 
 ### Añadido

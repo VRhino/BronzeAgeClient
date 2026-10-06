@@ -5,6 +5,12 @@ Fuente, en el repositorio del **backend**: `src/session/comandos/registro.ts` (e
 `BronzeAgeFase0@8091638` (rama `ritmo-crecimiento`: subida de nivel manual, obras en horas, asedio como orden y
 ciclo de Batalla de Unity).
 
+> **Sync 2026-10-07 — batallas con héroes y ejércitos en campo (backend `101c035`):** +`organizarEjercito { heroeId, politicaDeUnion:
+> 'aceptar' | 'preguntar' }`, +`cancelarFormacion { heroeId }` y +`admitirOtrasFacciones { faccionId, admitir }`; `unirseABatalla` acepta `lado`
+> (obligatorio en una persecución). Cableados en `src/ui/panelBatalla.ts` y `src/ui/panelAdmision.ts`, junto con `unirseEnCampo` y
+> `separarseDelEjercito`. Solo un ejército abre un asedio (`atacar` una plaza con una columna personal se rechaza). Rechazos de dominio:
+> `batalla.invalida`, `movilizacion.invalida`.
+
 > **Sync 2026-10-05 — taberna e intel (backend `c6dda58`):** +`comprarMirada { origen, centro }` y +`comprarInformePlaza { origen,
 > asentamientoId }` (`origen = { tipo: 'asentamiento' | 'campamento', id }`). Los cablea `src/ui/panelIntel.ts`. Rechazo de dominio:
 > `intel.invalida`. Esta tabla sigue contando los comandos de la revisión del 2026-09-26: desde entonces el backend ha añadido

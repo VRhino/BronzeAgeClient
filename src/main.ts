@@ -26,6 +26,8 @@ import { renderPanelMapa } from './ui/panelMapa';
 import { renderPestanaFaccion } from './ui/pestanaFaccion';
 import { cablearAnexion } from './ui/panelAnexion';
 import { cablearFusion } from './ui/panelFusion';
+import { cablearAdmision } from './ui/panelAdmision';
+import { cablearFichaBatalla, cablearFichaFormacion, cablearMiColumna, formacionesVisibles, htmlFichaBatalla, htmlFichaFormacion, htmlMiColumna } from './ui/panelBatalla';
 import { instalarZoomPan, type ControlMapa } from './ui/pantallaMapa';
 import { avisarDeEventos, reiniciarAvisos } from './ui/avisos';
 import { cablearPanelIntel, estadoIntel, miradaElegida, renderPanelIntel } from './ui/panelIntel';
@@ -216,6 +218,7 @@ function cablearFaccion(root: ParentNode, proyeccion: ProyeccionJugador, rerende
 
   cablearAnexion(root, proyeccion, ejecutarYRefrescar, avisoMapa);
   cablearFusion(root, proyeccion, ejecutarYRefrescar, avisoMapa);
+  cablearAdmision(root, proyeccion, ejecutarYRefrescar, avisoMapa);
 }
 
 /** Punto de entrada de la creación de héroe, para la pantalla provisional y para la definitiva. Con el héroe
@@ -365,7 +368,7 @@ function puntoDeMapa(evento: { clientX: number; clientY: number }, canvas: HTMLC
 
 /** Lo seleccionado en el mapa —un asentamiento o un campamento de bandidos— (abre el panel de Selección). Fuera del
  * `estadoCliente` porque solo vive mientras la pantalla Mapa está montada. */
-let seleccionMapa: { tipo: 'asentamiento' | 'campamento' | 'mercenarios' | 'alijo'; id: string } | null = null;
+let seleccionMapa: { tipo: 'asentamiento' | 'campamento' | 'mercenarios' | 'alijo' | 'batalla' | 'formacion'; id: string } | null = null;
 let avisoMapaTimer: ReturnType<typeof setTimeout> | undefined;
 
 function avisoMapa(texto: string): void {
@@ -395,6 +398,22 @@ function renderSeleccionMapa(): void {
   const cont = document.querySelector<HTMLElement>('.mapa-seleccion');
   const proyeccion = estadoCliente.proyeccionUltima;
   if (!cont) return;
+  const batalla = seleccionMapa?.tipo === 'batalla' ? proyeccion?.batallas?.find((b) => b.battleId === seleccionMapa!.id) : undefined;
+  if (proyeccion && batalla) {
+    cont.hidden = false;
+    cont.innerHTML = htmlFichaBatalla(proyeccion, batalla, alcanceDeAtaque(proyeccion, batalla.punto).impide, escaparHtml);
+    cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
+    cablearFichaBatalla(cont, proyeccion, batalla, ejecutarYRefrescar, avisoMapa);
+    return;
+  }
+  const formacion = seleccionMapa?.tipo === 'formacion' ? (proyeccion ? formacionesVisibles(proyeccion) : []).find((e) => e.id === seleccionMapa!.id) : undefined;
+  if (proyeccion && formacion) {
+    cont.hidden = false;
+    cont.innerHTML = htmlFichaFormacion(proyeccion, formacion, escaparHtml);
+    cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
+    cablearFichaFormacion(cont, proyeccion, formacion, ejecutarYRefrescar, avisoMapa);
+    return;
+  }
   const campamento = seleccionMapa?.tipo === 'campamento' ? proyeccion?.campamentosBandidos.find((c) => c.id === seleccionMapa!.id) : undefined;
   if (proyeccion && campamento) {
     cont.hidden = false;
@@ -425,6 +444,8 @@ function renderSeleccionMapa(): void {
   const faccion = proyeccion.facciones.find((f) => f.id === asentamiento.faccionId);
   const propio = asentamiento.faccionId === proyeccion.faccionId;
   const ataque = propio ? null : alcanceDeAtaque(proyeccion, asentamiento.posicion);
+  // Solo un ejército abre un asedio (backend Doc 5.15.1b): una columna personal puede unirse a uno abierto desde su batalla en el mapa.
+  if (ataque && !ataque.impide && miColumna(proyeccion)?.tipo === 'personal') ataque.impide = 'Solo un ejército abre un asedio: tu columna personal puede unirse a uno ya abierto.';
   cont.hidden = false;
   cont.innerHTML = `
     <button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>
@@ -732,11 +753,14 @@ function renderPanelRiel(): void {
         ${asentamientos.length > 0
           ? asentamientos.map((a) => `<button class="mapa-lista-item" type="button" data-centrar-x="${a.posicion.x}" data-centrar-y="${a.posicion.y}">${escaparHtml(a.nombre ?? a.id)}<span>Nivel ${a.nivel}${a.recordado !== null ? ' · recordado' : ''}</span></button>`).join('')
           : '<p class="mapa-lista-vacia">Ninguno a la vista.</p>'}
+        ${htmlMiColumna(proyeccion, columna)}
+        <p id="mapa-cosas-error" class="faction-error" role="alert"></p>
         <strong>Columnas</strong>
         ${columnas.length > 0
           ? columnas.map((e) => `<button class="mapa-lista-item" type="button" data-centrar-x="${e.posicionActual.x}" data-centrar-y="${e.posicionActual.y}">${e.participantes.some((p) => p.heroeId === proyeccion.heroeId) ? 'Tu columna' : escaparHtml(e.id)}<span>${e.estado}</span></button>`).join('')
           : '<p class="mapa-lista-vacia">Ninguna.</p>'}
       </div>`;
+    cablearMiColumna(panel, proyeccion, ejecutarYRefrescar, avisoMapa);
     panel.querySelectorAll<HTMLButtonElement>('.mapa-lista-item').forEach((boton) => {
       boton.addEventListener('click', () => {
         const mapa = estadoCliente.mapaCache?.mapa;
@@ -807,6 +831,14 @@ function montarMapa(): void {
       estadoIntel.eligiendoEnMapa = false;
       renderPanelRiel();
       void dibujarPantallaSegunModo(proy);
+      return;
+    }
+    const batalla = cercano((proy.batallas ?? []).map((b) => ({ ...b, posicion: b.punto })), punto, 20);
+    const formacion = batalla ? null : cercano(formacionesVisibles(proy).map((e) => ({ ...e, posicion: e.posicionActual })), punto, 20);
+    if (batalla || formacion) {
+      seleccionMapa = batalla ? { tipo: 'batalla', id: batalla.battleId } : { tipo: 'formacion', id: formacion!.id };
+      renderSeleccionMapa();
+      void marcharAObjetivo({ tipo: 'punto', punto: batalla ? batalla.punto : formacion!.posicionActual });
       return;
     }
     const alijo = cercano(proy.alijos ?? [], punto, 15);

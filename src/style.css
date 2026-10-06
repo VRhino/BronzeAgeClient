@@ -1303,6 +1303,11 @@ pre#proyeccion {
   display: none;
 }
 
+/* Los bloques del panel no se encogen: con mucho contenido el panel desplaza (`overflow-y`) en vez de aplastarlos a cero. */
+.mapa-panel > * {
+  flex-shrink: 0;
+}
+
 /* Riel de iconos (izquierda) + panel lateral que despliega */
 .mapa-riel {
   position: absolute;

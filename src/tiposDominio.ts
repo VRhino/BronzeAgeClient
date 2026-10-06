@@ -47,6 +47,8 @@ export interface Faccion {
   /** Héroes que pidieron entrar (`solicitarIngreso`); el Rey acepta o deniega (`responderSolicitud`). */
   solicitudesIds?: string[];
   reputacion?: number;
+  /** Ajuste del Rey (backend Doc 2.2, 5.15.1b): sus ataques admiten héroes de otras Facciones. Ausente = no. */
+  admiteOtrasEnAtaques?: boolean;
   // ... ignoramos otros campos que no impactan el render ...
 }
 
@@ -174,7 +176,8 @@ export interface EvaluacionAscenso {
 export interface BatallaVisible {
   battleId: string;
   estado: 'convocando' | 'asignada' | 'en_curso' | 'aplicada' | 'cancelada' | 'fallida';
-  /** `tipo`: `asedio` (con `asentamientoId`), `campo_abierto`, `caravana` o `campamento_bandidos`. */
+  /** `tipo`: `asedio` (con `asentamientoId`), `campo_abierto` (con `columnas`: `ejercitos` = batalla campal, `solitarios` = persecución),
+   * `caravana` o `campamento_bandidos` (un evento PvE). */
   contexto: { tipo: string; [campo: string]: unknown };
   punto: Point;
   bandos: Record<'atacante' | 'defensor', { faccionId: string | null; heroes: number; capacidadMaxima: number }>;
@@ -216,6 +219,13 @@ export interface Ejercito {
   estado: 'marchando' | 'estacionado' | 'regresando';
   /** Caravanas enganchadas a la columna (Doc 3.13): la de Fundación de un campamento se lleva así hasta `fundar`. */
   caravanasAdjuntasIds?: string[];
+  /** `personal` (un héroe que sale por su cuenta) o `ejercito`: un ejército y una columna personal nunca combaten entre sí (Doc 5.12.1). */
+  tipo?: 'personal' | 'ejercito';
+  liderId?: string;
+  /** Una formación en campo (Doc 5.14.4): columna quieta que espera a ser tres. Pasado `expiraEn` sin lograrlo se deshace. */
+  formacion?: { expiraEn: number };
+  /** Un ejército recién formado en campo que aún no tiene destino: su Líder lo fija una vez con un clic en el mapa. */
+  destinoPendiente?: boolean;
 }
 
 /**
@@ -226,6 +236,9 @@ export interface Ejercito {
  */
 export interface EjercitoAvistado {
   id: string;
+  tipo?: 'personal' | 'ejercito';
+  /** Una formación en campo (Doc 5.14.4): se le puede unir una columna personal de su Facción. */
+  enFormacion?: true;
   faccionId: string;
   posicionActual: Point;
   participantes: number;

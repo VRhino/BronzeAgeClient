@@ -662,6 +662,38 @@ export function pintarTerreno(
     );
   }
 
+  // 17b. FORMACIONES EN CAMPO (anillo discontinuo): columnas quietas que esperan a ser tres para ser un ejército (backend Doc 5.14.4). Las
+  // propias y las avistadas; es lo que le dice a otro jugador de su Facción que hay algo a lo que unirse.
+  const formaciones = [...(proyeccion.ejercitos || []).filter((e) => e.formacion), ...(proyeccion.ejercitosAvistados || []).filter((e) => e.enFormacion)];
+  for (const f of formaciones) {
+    ctx.beginPath();
+    ctx.arc(f.posicionActual.x * escalaCanvas, f.posicionActual.y * escalaCanvas, 11, 0, Math.PI * 2);
+    ctx.setLineDash([3, 3]);
+    ctx.strokeStyle = faccionColor(f.faccionId, proyeccion.facciones);
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // 17c. BATALLAS DE UNITY (espadas cruzadas): el punto donde se libra, o la plaza asediada. En lugar de las columnas que combaten
+  // (el backend no las manda mientras dura). En verde la tuya, donde combates.
+  for (const batalla of proyeccion.batallas || []) {
+    const x = batalla.punto.x * escalaCanvas;
+    const y = batalla.punto.y * escalaCanvas;
+    ctx.beginPath();
+    ctx.arc(x, y, 9, 0, Math.PI * 2);
+    ctx.fillStyle = batalla.ladoPropio ? '#2f6b3a' : '#8a3b12';
+    ctx.fill();
+    ctx.strokeStyle = '#f4ead2';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x - 5, y - 5);
+    ctx.lineTo(x + 5, y + 5);
+    ctx.moveTo(x + 5, y - 5);
+    ctx.lineTo(x - 5, y + 5);
+    ctx.stroke();
+  }
+
   // 18. CAMPAMENTOS DE BANDIDOS (diamantes rojos). Van SOBRE la niebla: el servidor solo manda los que la
   // Faccion esta viendo AHORA —no tienen memoria, como los ejercitos avistados y a diferencia de los
   // asentamientos—, asi que taparlos seria taparle al jugador informacion que acaba de ganarse.
