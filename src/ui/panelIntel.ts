@@ -10,9 +10,8 @@ export type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
 type Escapar = (valor: string) => string;
 
 /** Lo que el panel recuerda entre repintados: el punto elegido para la próxima Mirada y el Informe abierto. */
-export const estadoIntel: { centro: Point | null; eligiendoEnMapa: boolean; informeAbierto: string | null } = {
+export const estadoIntel: { centro: Point | null; informeAbierto: string | null } = {
   centro: null,
-  eligiendoEnMapa: false,
   informeAbierto: null,
 };
 
@@ -76,11 +75,6 @@ function plazasAjenas(p: ProyeccionJugador): PlazaAjena[] {
   const ids = new Set(vistas.map((a) => a.id));
   const recordadas = p.asentamientosConocidos.filter((a) => !ids.has(a.asentamientoId)).map((a) => ({ id: a.asentamientoId, nombre: a.nombre, faccionId: a.faccionId, nivel: a.nivel, posicion: a.posicion }));
   return [...vistas, ...recordadas].filter((a) => a.faccionId !== p.faccionId);
-}
-
-/** El punto y el radio de la Mirada que se está eligiendo, para pintarla en el mapa. */
-export function miradaElegida(p: ProyeccionJugador): { centro: Point; radio: number } | null {
-  return estadoIntel.centro ? { centro: estadoIntel.centro, radio: p.tarifasIntel.mirada.radio } : null;
 }
 
 /** Lo que cuesta mirar `centro` desde `t`: la misma cuenta del backend (`precioMirada`, `engine/intel.ts`). */
@@ -151,10 +145,10 @@ function detalleInforme(inf: InformePlaza, p: ProyeccionJugador, e: Escapar): st
 }
 
 /**
- * El HTML del panel. `enMapa` dice si hay un mapa en pantalla donde elegir el punto de una Mirada con un clic; sin él (pantalla de la
- * plaza o del campamento) se elige de la lista de plazas conocidas o con coordenadas.
+ * El HTML del panel. La intel solo se compra desde dentro de una taberna (la de una plaza propia o la de un campamento de mercenarios):
+ * el punto de una Mirada se elige de la lista de plazas conocidas o con coordenadas, no con un clic en el mapa.
  */
-export function renderPanelIntel(p: ProyeccionJugador, enMapa: boolean, e: Escapar, origenId?: string): string {
+export function renderPanelIntel(p: ProyeccionJugador, e: Escapar, origenId?: string): string {
   const tabernas = tabernasDisponibles(p);
   const t = tabernas.find((x) => x.origen.id === origenId) ?? tabernas[0];
   const ajenas = plazasAjenas(p);
@@ -178,7 +172,6 @@ export function renderPanelIntel(p: ProyeccionJugador, enMapa: boolean, e: Escap
       <section class="campamento-seccion">
         <span class="faction-kicker">Mirada</span>
         <p>Un ojo de ${m.radio} de radio durante ${m.duracionMinutos / 60} h sobre cualquier punto: ves en vivo lo que verías con una columna ahí, sin interiores. Lo ven también tus aliados.</p>
-        ${enMapa ? `<button class="btn-secondary" type="button" id="intel-elegir">${estadoIntel.eligiendoEnMapa ? 'Haz clic en el mapa…' : 'Elegir punto en el mapa'}</button>` : ''}
         <div class="campamento-fila"><select class="form-input" id="intel-cerca"><option value="">Mirar alrededor de…</option>${ajenas.map((a) => `<option value="${a.posicion.x},${a.posicion.y}">${e(a.nombre ?? a.id)}</option>`).join('')}${p.campamentosMercenarios.map((c) => `<option value="${c.posicion.x},${c.posicion.y}">Campamento ${e(c.id)}</option>`).join('')}</select></div>
         <div class="campamento-fila"><input class="form-input" id="intel-x" type="number" min="0" placeholder="x" value="${centro ? Math.round(centro.x) : ''}" /><input class="form-input" id="intel-y" type="number" min="0" placeholder="y" value="${centro ? Math.round(centro.y) : ''}" /></div>
         <button class="btn-primary" type="button" id="intel-comprar-mirada"${centro && abiertas < t.cupo ? '' : ' disabled'}>${abiertas >= t.cupo ? 'Taberna al límite de Miradas' : precio !== null ? `Comprar Mirada · ${precio} de oro` : 'Elige un punto'}</button>
@@ -210,17 +203,8 @@ export function renderPanelIntel(p: ProyeccionJugador, enMapa: boolean, e: Escap
     </div>`;
 }
 
-/**
- * Cablea el panel tras pintarlo. `repintar` vuelve a pintarlo (cambió el punto o el Informe abierto); `centrarMapa` lleva la vista a un
- * punto (solo en el mapa); `alElegir` activa o apaga la elección del punto con un clic en el mapa.
- */
-export function cablearPanelIntel(
-  root: HTMLElement,
-  p: ProyeccionJugador,
-  ejecutar: Ejecutar,
-  repintar: () => void,
-  opciones: { centrarMapa?: (punto: Point) => void; alElegir?: () => void } = {}
-): void {
+/** Cablea el panel tras pintarlo. `repintar` vuelve a pintarlo (cambió el punto o el Informe abierto). */
+export function cablearPanelIntel(root: HTMLElement, p: ProyeccionJugador, ejecutar: Ejecutar, repintar: () => void): void {
   const error = root.querySelector<HTMLElement>('#intel-error');
   const origenDe = (): OrigenDeIntel | undefined => {
     const id = root.querySelector<HTMLSelectElement>('#intel-origen')?.value ?? root.querySelector<HTMLElement>('.intel-panel')?.dataset.origen;
@@ -233,7 +217,6 @@ export function cablearPanelIntel(
   };
 
   root.querySelector('#intel-origen')?.addEventListener('change', repintar);
-  root.querySelector('#intel-elegir')?.addEventListener('click', () => opciones.alElegir?.());
   root.querySelector<HTMLSelectElement>('#intel-cerca')?.addEventListener('change', (ev) => {
     const [x, y] = (ev.currentTarget as HTMLSelectElement).value.split(',').map(Number);
     if (x !== undefined && y !== undefined && (ev.currentTarget as HTMLSelectElement).value !== '') fijarCentro(x, y);
@@ -272,8 +255,5 @@ export function cablearPanelIntel(
       estadoIntel.informeAbierto = estadoIntel.informeAbierto === boton.dataset.informe ? null : boton.dataset.informe!;
       repintar();
     })
-  );
-  root.querySelectorAll<HTMLButtonElement>('.intel-panel [data-centrar-x]').forEach((boton) =>
-    boton.addEventListener('click', () => opciones.centrarMapa?.({ x: Number(boton.dataset.centrarX), y: Number(boton.dataset.centrarY) }))
   );
 }

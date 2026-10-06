@@ -2578,3 +2578,120 @@ body {
 .campamento-leyenda i { display: inline-block; width: 10px; height: 10px; margin-right: 5px; border-radius: 2px; }
 .aviso-global { position: fixed; right: 16px; bottom: 16px; z-index: 50; max-width: 320px; padding: 12px 16px; background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: var(--radius-md); box-shadow: var(--shadow-main); }
 .aviso-global[hidden] { display: none; }
+
+/* =====================================================================================
+   BARRA SUPERIOR DEL JUGADOR + CAMPAMENTO POR SUBPESTAÑAS + MAPA DESDE DENTRO
+   Los menús del jugador (héroe, escuadras, Facción) viven en una barra común a las tres vistas; el avatar de sesión
+   queda en su extremo derecho.
+   ===================================================================================== */
+:root { --jugador-alto: 46px; }
+
+.jugador-barra {
+  position: relative;
+  flex-shrink: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  height: var(--jugador-alto);
+  padding: 0 64px 0 20px;
+  background: linear-gradient(180deg, rgba(20, 15, 10, 0.97), rgba(20, 15, 10, 0.84));
+  border-bottom: 2px solid var(--bronce-osc);
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.4);
+}
+.mapa-screen > .jugador-barra {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+.jugador-quien {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  color: var(--oro-claro);
+  font-family: var(--fuente-titulo);
+}
+.jugador-quien strong { font-size: 0.95rem; font-weight: 600; letter-spacing: 0.03em; }
+.jugador-quien small { font-family: 'Inter', system-ui, sans-serif; font-size: 0.68rem; color: var(--text-muted); letter-spacing: 0.04em; }
+.jugador-botones { display: flex; gap: 8px; margin-left: auto; }
+.jugador-botones button {
+  padding: 6px 14px;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.82rem;
+  color: var(--pergamino);
+  background: linear-gradient(180deg, #241c14, #17110c);
+  border: 1px solid var(--bronce-osc);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+}
+.jugador-botones button:hover { border-color: var(--bronce); color: var(--oro-claro); }
+.jugador-botones button.activo {
+  border-color: var(--oro);
+  color: var(--oro-claro);
+  background: linear-gradient(180deg, rgba(169, 121, 63, 0.32), rgba(107, 74, 41, 0.22));
+  box-shadow: inset 0 0 12px rgba(216, 184, 120, 0.25);
+}
+kbd {
+  padding: 0 5px;
+  font: 600 0.7rem 'Inter', system-ui, sans-serif;
+  color: var(--oro);
+  border: 1px solid var(--bronce-osc);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* El avatar de sesión vive en el extremo derecho de la barra. */
+.mapa-avatar { top: 3px; right: 12px; width: 40px; height: 40px; }
+.mapa-menu { top: 50px; right: 12px; }
+.mapa-panel { top: calc(var(--jugador-alto) + 14px); max-height: calc(100% - var(--jugador-alto) - 28px); }
+.asent-barra { padding-right: 26px; }
+
+.jugador-panel[hidden] { display: none; }
+.jugador-panel {
+  position: absolute;
+  left: 16px;
+  top: calc(var(--jugador-alto) + 12px);
+  z-index: 5;
+  width: min(340px, calc(100vw - 32px));
+  max-height: calc(100% - var(--jugador-alto) - 28px);
+  padding: 18px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg));
+  border: 1px solid var(--bronce);
+  border-radius: 3px;
+  box-shadow: var(--placa);
+}
+.jugador-panel > * { flex-shrink: 0; }
+
+/* Mapa «desde dentro»: el mismo mapa del mundo, solo para mirar, encima de la plaza o del campamento. */
+.mapa-interior {
+  top: var(--jugador-alto);
+  height: calc(100vh - var(--jugador-alto));
+  z-index: 4;
+}
+.mapa-interior-cerrar { position: absolute; top: 14px; left: 16px; z-index: 3; }
+
+/* Campamento: la planta ocupa el centro como el trazado de una plaza, con su leyenda debajo. */
+.camp-lienzo { background: #93c26b; }
+.camp-lienzo svg { display: block; width: 100%; height: 100%; }
+.camp-leyenda-caja:empty { display: none; }
+.camp-leyenda-caja {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  max-width: calc(100% - 40px);
+  padding: 8px 12px;
+  background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg));
+  border: 1px solid var(--bronce);
+  border-radius: 3px;
+  box-shadow: var(--placa-sutil);
+}
+.asent-tabs-ancho { flex-wrap: wrap; }
+.asent-tabs-ancho .asent-tab { flex: 1 1 30%; }

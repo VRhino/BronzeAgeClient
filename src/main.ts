@@ -12,12 +12,14 @@ import {
   type ProyeccionJugador,
   type RespuestaComando,
 } from './apiCliente';
-import { minutosHerido, pintarPanelHeroe } from './ui/panelHeroe';
+import { elegirPestanaHeroe, minutosHerido, pintarPanelHeroe } from './ui/panelHeroe';
+import { htmlBarraJugador, type PanelJugador } from './ui/barraJugador';
 import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
 import { EDIFICIO_COLOR, EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from './paletas';
 import type { Alijo, Asentamiento, BloqueoAscenso, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Edificio, EvaluacionAscenso, ParamsCrearHeroe, ProduccionItem, Sigilo } from './tiposDominio';
 import { svgSigilo } from './sigilo/sigilo';
-import { cablearCampamento, campamentoActual, renderCampamento } from './ui/pantallaCampamento';
+import { cablearCampamento, campamentoActual, htmlSeccionCampamento, seccionesDeCampamento, type SeccionCampamento } from './ui/pantallaCampamento';
+import { leyendaPlanoCampamento, svgPlanoCampamento } from './ui/planoCampamento';
 import type { MapaGenerado } from './terreno';
 import { estadoCliente, TIPS_FUNDACION } from './ui/estadoCliente';
 import { actualizarTip, resumenRecursosFundacion } from './ui/pestanaAsentamientos';
@@ -30,7 +32,7 @@ import { cablearAdmision } from './ui/panelAdmision';
 import { cablearFichaBatalla, cablearFichaFormacion, cablearMiColumna, formacionesVisibles, htmlFichaBatalla, htmlFichaFormacion, htmlMiColumna } from './ui/panelBatalla';
 import { instalarZoomPan, type ControlMapa } from './ui/pantallaMapa';
 import { avisarDeEventos, reiniciarAvisos } from './ui/avisos';
-import { cablearPanelIntel, estadoIntel, miradaElegida, renderPanelIntel } from './ui/panelIntel';
+import { cablearPanelIntel, renderPanelIntel } from './ui/panelIntel';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 /** Los campamentos donde se puede nacer, de la última respuesta `sinHeroe` (pantalla Héroe). */
@@ -267,30 +269,74 @@ function montarHeroe(): void {
   });
 }
 
-/** Pantalla CAMPAMENTO: dentro de un campamento de mercenarios (Doc 1.9b), donde se nace. Sin Facción, aquí se crea o
- * se pide el ingreso en una (el flujo común de `cablearFaccion`). */
+/** Subpestaña abierta de la pantalla Campamento (como las del panel del asentamiento). */
+let seccionCamp: SeccionCampamento = 'resumen';
+
+/** Pantalla CAMPAMENTO: dentro de un campamento de mercenarios (Doc 1.9b), donde se nace. Como la del asentamiento: la planta a la izquierda y,
+ * a la derecha, subpestañas. Lo del jugador (héroe, escuadras, Facción: crear o pedir ingreso) está en la barra superior. */
 function montarCampamento(): void {
   const proyeccion = estadoCliente.proyeccionUltima;
   const campamento = proyeccion && campamentoActual(proyeccion);
   if (!proyeccion || !campamento) { montar('cargando'); return; }
-  app.innerHTML = `<div class="login-container campamento-contenedor"><div class="login-card campamento-card"></div>${menuEsquinaHtml()}</div>`;
-  cablearMenuEsquina(app.querySelector<HTMLElement>('.campamento-contenedor')!);
-  pintarCampamento(proyeccion, campamento);
+  menuEsquinaAbierto = false;
+  seccionCamp = 'resumen';
+  app.innerHTML = `<div class="asent-screen camp-screen">
+    ${htmlBarraJugador(proyeccion, true, escaparHtml)}
+    <header class="asent-barra">
+      <span class="asent-nombre">Campamento ${escaparHtml(campamento.id)}</span>
+      <span class="asent-nivel" id="camp-residencia"></span>
+      <div class="asent-barra-acciones"><button id="btn-salir-mundo" class="btn-primary" type="button">Salir al mundo</button></div>
+    </header>
+    <div class="asent-cuerpo">
+      <div class="asent-mapa"><div class="asent-lienzo camp-lienzo"></div><div class="camp-leyenda-caja"></div></div>
+      <aside class="asent-lado"><div class="camp-lado"></div></aside>
+    </div>
+    <aside class="jugador-panel" hidden></aside>
+    ${menuEsquinaHtml()}
+  </div>`;
+  const contenedor = app.querySelector<HTMLElement>('.asent-screen')!;
+  cablearMenuEsquina(contenedor);
+  cablearBarraJugador(contenedor);
+  contenedor.querySelector('#btn-salir-mundo')?.addEventListener('click', () => { seccionCamp = 'salir'; const lado = contenedor.querySelector<HTMLElement>('.camp-lado'); if (lado) delete lado.dataset.pintado; refrescarPantalla('campamento'); });
+  // Sin tiempo real de datos, el campamento (mercado, fondo, avisos) se pone al día con el mismo sondeo suave que el asentamiento.
+  let sondeando = false;
+  const sondeo = setInterval(() => {
+    if (sondeando || !document.querySelector('.camp-screen')) return;
+    sondeando = true;
+    void refrescarDatosJuego().catch(() => {}).finally(() => { sondeando = false; });
+  }, 3000);
+  limpiarPantalla = () => clearInterval(sondeo);
 }
 
-/** Vuelca la proyección en la pantalla Campamento (en cada refresco). */
+/** Vuelca la proyección en la pantalla Campamento (en cada refresco). No toca el DOM de lo que no cambió, para no llevarse lo que se escribe. */
 function pintarCampamento(p: ProyeccionJugador, campamento: CampamentoMercenarios): void {
-  const card = app.querySelector<HTMLElement>('.campamento-card');
-  if (!card) return;
-  card.innerHTML = renderCampamento(p, campamento, escaparHtml);
-  cablearCampamento(card, p, campamento, ejecutarYRefrescar);
-  const intel = card.querySelector<HTMLElement>('#campamento-intel');
-  if (intel) pintarIntel(intel, p, false, () => pintarCampamento(p, campamento));
-  const faccion = card.querySelector<HTMLElement>('#campamento-faccion');
-  if (faccion) {
-    faccion.innerHTML = renderPestanaFaccion(p, escaparHtml);
-    cablearFaccion(faccion, p, () => pintarCampamento(p, campamento));
+  const lienzo = app.querySelector<HTMLElement>('.camp-lienzo');
+  const leyenda = app.querySelector<HTMLElement>('.camp-leyenda-caja');
+  const lado = app.querySelector<HTMLElement>('.camp-lado');
+  if (!lienzo || !lado) return;
+  const escena = p.escenaCampamento?.campamentoId === campamento.id ? p.escenaCampamento : undefined;
+  const plano = escena ? svgPlanoCampamento(escena) : '';
+  if (lienzo.dataset.pintado !== plano) { lienzo.innerHTML = plano; lienzo.dataset.pintado = plano; if (leyenda) leyenda.innerHTML = escena ? leyendaPlanoCampamento(escena) : ''; }
+  const residencia = app.querySelector<HTMLElement>('#camp-residencia');
+  if (residencia) residencia.textContent = campamento.residentesIds.includes(p.heroeId) ? 'Tu residencia' : 'De paso';
+
+  const secciones = seccionesDeCampamento(p);
+  if (!secciones.some((x) => x.id === seccionCamp)) seccionCamp = 'resumen';
+  const html = `<div class="asent-tabs asent-tabs-ancho">${secciones.map((x) => `<button class="asent-tab${x.id === seccionCamp ? ' activo' : ''}" type="button" data-seccion="${x.id}">${x.etiqueta}</button>`).join('')}</div>
+    <div class="asent-lado-cuerpo">${htmlSeccionCampamento(seccionCamp, p, campamento, escaparHtml)}</div>
+    <p id="camp-error" class="faction-error" role="alert"></p>`;
+  if (lado.dataset.pintado !== html) {
+    lado.innerHTML = html;
+    lado.dataset.pintado = html;
+    lado.querySelectorAll<HTMLButtonElement>('.asent-tab').forEach((boton) => boton.addEventListener('click', () => {
+      seccionCamp = boton.dataset.seccion as SeccionCampamento;
+      delete lado.dataset.pintado;
+      if (estadoCliente.proyeccionUltima) pintarCampamento(estadoCliente.proyeccionUltima, campamento);
+    }));
+    cablearCampamento(lado, p, campamento, ejecutarYRefrescar);
   }
+  const taberna = lado.querySelector<HTMLElement>('#camp-taberna');
+  if (taberna) pintarIntel(taberna, p, () => pintarCampamento(p, campamento));
 }
 
 /** La columna en la que MARCHA el jugador (Doc 5.12.2) — su posición en el mundo. `undefined` mientras esté
@@ -606,24 +652,19 @@ function renderSeleccionAlijo(cont: HTMLElement, alijo: Alijo): void {
 
 // --- INTEL DE LAS TABERNAS (Doc 5.12.10) ---------------------------------------------------------
 
-/** Pinta el panel de Intel dentro de `cont` (el mapa, la plaza o el campamento). Si nada cambió no toca el DOM, para no llevarse lo que
- * se está escribiendo con el sondeo de 3 s. `repintar` es cómo se vuelve a pintar en ese sitio. */
-function pintarIntel(cont: HTMLElement, p: ProyeccionJugador, enMapa: boolean, repintar: () => void): void {
-  const html = renderPanelIntel(p, enMapa, escaparHtml);
+/** Pinta el panel de Intel dentro de `cont` (la taberna de la plaza o del campamento: la intel no se compra desde el mapa). Si nada cambió no
+ * toca el DOM, para no llevarse lo que se está escribiendo con el sondeo de 3 s. `repintar` es cómo se vuelve a pintar en ese sitio. */
+function pintarIntel(cont: HTMLElement, p: ProyeccionJugador, repintar: () => void): void {
+  const html = renderPanelIntel(p, escaparHtml);
   if (cont.dataset.pintadoIntel === html && cont.childElementCount > 0) return;
   cont.innerHTML = html;
   cont.dataset.pintadoIntel = html;
-  const mapa = estadoCliente.mapaCache?.mapa;
-  const alRepintar = (): void => { delete cont.dataset.pintadoIntel; repintar(); if (enMapa && estadoCliente.proyeccionUltima) void dibujarPantallaSegunModo(estadoCliente.proyeccionUltima); };
-  cablearPanelIntel(cont, p, ejecutarYRefrescar, alRepintar, {
-    centrarMapa: enMapa && mapa && controlMapaActivo ? (punto) => controlMapaActivo!.centrar(punto, mapa.config.ancho, mapa.config.alto) : undefined,
-    alElegir: enMapa ? () => { estadoIntel.eligiendoEnMapa = !estadoIntel.eligiendoEnMapa; alRepintar(); } : undefined,
-  });
+  cablearPanelIntel(cont, p, ejecutarYRefrescar, () => { delete cont.dataset.pintadoIntel; repintar(); });
 }
 
 // --- RIEL DE ICONOS Y MENÚ DE ESQUINA DEL MAPA (T5) ---------------------------------------------
 
-type PanelRiel = 'heroe' | 'faccion' | 'cosas' | 'intel' | 'fundar';
+type PanelRiel = 'cosas' | 'fundar';
 let panelMapaAbierto: PanelRiel | null = null;
 let menuEsquinaAbierto = false;
 let controlMapaActivo: ControlMapa | null = null;
@@ -661,7 +702,6 @@ function abrirPanelRiel(panel: PanelRiel): void {
   menuEsquinaAbierto = false;
   sincronizarMenuEsquina();
   panelMapaAbierto = panelMapaAbierto === panel ? null : panel;
-  if (panelMapaAbierto !== 'intel') estadoIntel.eligiendoEnMapa = false;
   const columna = estadoCliente.proyeccionUltima ? miColumna(estadoCliente.proyeccionUltima) : undefined;
   estadoCliente.modoFundacionActivo = panelMapaAbierto === 'fundar' && Boolean(columna);
   estadoCliente.posicionFundacion = estadoCliente.modoFundacionActivo && columna ? columna.posicionActual : null;
@@ -711,6 +751,101 @@ function cablearMenuEsquina(contenedor: HTMLElement): void {
   sincronizarMenuEsquina();
 }
 
+// --- BARRA SUPERIOR DEL JUGADOR (héroe, escuadras, Facción) Y VISTA DE MAPA DESDE DENTRO ---------------
+
+/** El menú del jugador abierto (la barra es la misma en el mapa, el campamento y el asentamiento). Se cierra al cambiar de pantalla. */
+let panelJugador: PanelJugador | null = null;
+/** ¿Está abierto el mapa «desde dentro» (tecla M) sobre el campamento o el asentamiento? */
+let vistaMapaAbierta = false;
+let controlVistaMapa: ControlMapa | null = null;
+
+/** Pinta el botón activo de la barra y el panel abierto (`.jugador-panel`). Se llama al montar y en cada refresco; si nada cambió no toca el
+ * DOM, o el sondeo de 3 s se llevaría lo que se está escribiendo. */
+function renderPanelJugador(forzar = false): void {
+  const proyeccion = estadoCliente.proyeccionUltima;
+  const barra = document.querySelector<HTMLElement>('.jugador-barra');
+  const panel = document.querySelector<HTMLElement>('.jugador-panel');
+  if (!barra || !panel || !proyeccion) return;
+  barra.querySelectorAll<HTMLButtonElement>('[data-panel-jugador]').forEach((boton) => {
+    boton.classList.toggle('activo', boton.dataset.panelJugador === panelJugador);
+  });
+  barra.querySelector('[data-ver-mapa]')?.classList.toggle('activo', vistaMapaAbierta);
+  if (panelJugador !== 'faccion') delete panel.dataset.pintado;
+  if (panelJugador === null) { panel.hidden = true; panel.innerHTML = ''; return; }
+  panel.hidden = false;
+  if (panelJugador === 'faccion') {
+    const html = `<div class="mapa-panel-jugador">${escaparHtml(proyeccion.heroe.displayName)}</div>${renderPestanaFaccion(proyeccion, escaparHtml)}`;
+    if (panel.dataset.pintado !== html || forzar) {
+      panel.innerHTML = html;
+      panel.dataset.pintado = html;
+      cablearFaccion(panel, proyeccion, () => { delete panel.dataset.pintado; renderPanelJugador(true); });
+    }
+    return;
+  }
+  pintarPanelHeroe(panel, proyeccion, escaparHtml, aplicarYRefrescar, forzar);
+}
+
+function cablearBarraJugador(contenedor: HTMLElement): void {
+  contenedor.querySelectorAll<HTMLButtonElement>('[data-panel-jugador]').forEach((boton) => {
+    boton.addEventListener('click', () => {
+      const id = boton.dataset.panelJugador as PanelJugador;
+      menuEsquinaAbierto = false;
+      sincronizarMenuEsquina();
+      panelJugador = panelJugador === id ? null : id;
+      if (id === 'escuadras') elegirPestanaHeroe('escuadras');
+      if (id === 'heroe') elegirPestanaHeroe('ficha');
+      renderPanelJugador(true);
+    });
+  });
+  contenedor.querySelector('[data-ver-mapa]')?.addEventListener('click', () => alternarVistaMapa());
+}
+
+/** Dónde está el héroe en el mundo, para centrar el mapa: su columna, o el campamento o la plaza donde está. */
+function posicionDelHeroe(p: ProyeccionJugador): { x: number; y: number } | null {
+  return miColumna(p)?.posicionActual ?? campamentoActual(p)?.posicion ?? p.asentamientos[0]?.posicion ?? null;
+}
+
+/** Abre o cierra el mapa del mundo sobre la pantalla de dentro. Es el mismo mapa que el de fuera, con la visión de ahora, pero solo para mirar:
+ * un clic no manda marchar a nadie. */
+function alternarVistaMapa(abrir: boolean = !vistaMapaAbierta): void {
+  const pantalla = document.querySelector<HTMLElement>('.asent-screen');
+  const proyeccion = estadoCliente.proyeccionUltima;
+  if (!pantalla || !proyeccion) return;
+  vistaMapaAbierta = abrir;
+  controlVistaMapa?.destruir();
+  controlVistaMapa = null;
+  pantalla.querySelector('.mapa-interior')?.remove();
+  if (abrir) {
+    pantalla.insertAdjacentHTML('beforeend', `<div class="mapa-screen mapa-interior">
+      <div class="mapa-lienzo"><canvas id="mapa-interior" width="900" height="900"></canvas></div>
+      <div class="mapa-zoom"><button type="button" data-zoom="in" aria-label="Acercar">+</button><button type="button" data-zoom="out" aria-label="Alejar">−</button></div>
+      <button class="btn-secondary mapa-interior-cerrar" type="button">Volver <kbd>M</kbd></button>
+    </div>`);
+    const interior = pantalla.querySelector<HTMLElement>('.mapa-interior')!;
+    const control = instalarZoomPan(interior, interior.querySelector<HTMLElement>('.mapa-lienzo')!, { zoomInicial: 1.6 });
+    controlVistaMapa = control;
+    interior.querySelectorAll<HTMLButtonElement>('[data-zoom]').forEach((b) => b.addEventListener('click', () => control.zoomHacia(b.dataset.zoom === 'in' ? 1 : -1)));
+    interior.querySelector('.mapa-interior-cerrar')?.addEventListener('click', () => alternarVistaMapa(false));
+    void pintarVistaMapa(true);
+  }
+  renderPanelJugador();
+}
+
+/** Pinta el terreno y lo que se ve en el mapa de la vista interior; `centrar` la lleva al héroe (solo al abrirla). */
+async function pintarVistaMapa(centrar = false): Promise<void> {
+  const p = estadoCliente.proyeccionUltima;
+  const canvas = document.querySelector<HTMLCanvasElement>('#mapa-interior');
+  const ctx = canvas?.getContext('2d');
+  if (!p || !canvas || !ctx) return;
+  const mapa = await sincronizarMapa(p.mapaId);
+  if (document.querySelector('#mapa-interior') !== canvas) return; // se cerró mientras llegaba el mapa
+  const escala = canvas.width / mapa.config.ancho;
+  pintarTerreno(ctx, mapa, p, escala);
+  pintarMiradas(ctx, p.miradasIntel ?? [], p.instante, escala);
+  const donde = posicionDelHeroe(p);
+  if (centrar && donde) controlVistaMapa?.centrar(donde, mapa.config.ancho, mapa.config.alto);
+}
+
 /** Pinta el riel (estado activo de cada icono) y el panel lateral abierto. Se llama al montar el Mapa y en
  * cada refresco. */
 function renderPanelRiel(): void {
@@ -727,23 +862,9 @@ function renderPanelRiel(): void {
   });
   riel.querySelector('[data-panel="fundar"]')?.classList.toggle('destaca', puedeFundar && !tieneAsentamientoPropio(proyeccion));
 
-  if (panelMapaAbierto !== 'faccion') delete panel.dataset.pintado;
-  if (panelMapaAbierto !== 'intel') delete panel.dataset.pintadoIntel;
   if (panelMapaAbierto === null) { panel.hidden = true; panel.innerHTML = ''; return; }
   panel.hidden = false;
-  if (panelMapaAbierto === 'heroe') {
-    pintarPanelHeroe(panel, proyeccion, escaparHtml, aplicarYRefrescar);
-  } else if (panelMapaAbierto === 'faccion') {
-    // El sondeo de 3 s repinta el riel: si nada cambió no se toca el DOM, o se llevaría lo que se está escribiendo.
-    const html = `<div class="mapa-panel-jugador">${escaparHtml(proyeccion.heroe.displayName)}</div>${renderPestanaFaccion(proyeccion, escaparHtml)}`;
-    if (panel.dataset.pintado !== html) {
-      panel.innerHTML = html;
-      panel.dataset.pintado = html;
-      cablearFaccion(panel, proyeccion, () => { delete panel.dataset.pintado; renderPanelRiel(); });
-    }
-  } else if (panelMapaAbierto === 'intel') {
-    pintarIntel(panel, proyeccion, true, renderPanelRiel);
-  } else if (panelMapaAbierto === 'cosas') {
+  if (panelMapaAbierto === 'cosas') {
     const asentamientos = asentamientosDelMapa(proyeccion).filter((a) => a.faccionId === proyeccion.faccionId);
     const columnas = proyeccion.ejercitos;
     panel.innerHTML = `
@@ -803,14 +924,13 @@ function montarMapa(): void {
   menuEsquinaAbierto = false;
   app.innerHTML = `<div class="mapa-screen">
     <div class="mapa-lienzo"><canvas id="mapa" width="900" height="900"></canvas></div>
+    ${htmlBarraJugador(proyeccion, false, escaparHtml)}
     <nav class="mapa-riel" aria-label="Paneles del mapa">
-      <button type="button" data-panel="heroe" title="Héroe" aria-label="Héroe">🛡</button>
-      <button type="button" data-panel="faccion" title="Facción" aria-label="Facción">⚑</button>
       <button type="button" data-panel="cosas" title="Mis cosas" aria-label="Mis cosas">📍</button>
-      <button type="button" data-panel="intel" title="Taberna e intel" aria-label="Taberna e intel">🔭</button>
       <button type="button" data-panel="fundar" title="Fundar asentamiento" aria-label="Fundar asentamiento" hidden>⌂</button>
     </nav>
     <aside class="mapa-panel" hidden></aside>
+    <aside class="jugador-panel" hidden></aside>
     <aside class="mapa-seleccion" hidden></aside>
     <p class="mapa-aviso" role="status" hidden></p>
     <div class="mapa-zoom"><button type="button" data-zoom="in" aria-label="Acercar">+</button><button type="button" data-zoom="out" aria-label="Alejar">−</button></div>
@@ -825,14 +945,6 @@ function montarMapa(): void {
     const canvas = document.querySelector<HTMLCanvasElement>('#mapa');
     if (!proy || !mapa || !canvas) return;
     const punto = puntoDeMapa(evento, canvas, mapa);
-    if (estadoIntel.eligiendoEnMapa) {
-      // Eligiendo el punto de una Mirada: el clic lo fija y no manda marchar a la columna.
-      estadoIntel.centro = punto;
-      estadoIntel.eligiendoEnMapa = false;
-      renderPanelRiel();
-      void dibujarPantallaSegunModo(proy);
-      return;
-    }
     const batalla = cercano((proy.batallas ?? []).map((b) => ({ ...b, posicion: b.punto })), punto, 20);
     const formacion = batalla ? null : cercano(formacionesVisibles(proy).map((e) => ({ ...e, posicion: e.posicionActual })), punto, 20);
     if (batalla || formacion) {
@@ -889,6 +1001,7 @@ function montarMapa(): void {
     boton.addEventListener('click', () => abrirPanelRiel(boton.dataset.panel as PanelRiel));
   });
   cablearMenuEsquina(contenedor);
+  cablearBarraJugador(contenedor);
 
   renderPanelRiel();
   void dibujarPantallaSegunModo(proyeccion).then(() => {
@@ -899,7 +1012,7 @@ function montarMapa(): void {
 
 // --- PANTALLA ASENTAMIENTO (T6) -----------------------------------------------------------------
 
-type PanelAsent = 'heroe' | 'faccion' | 'ejercito' | 'intel';
+type PanelAsent = 'cargos' | 'intel';
 let panelAsentAbierto: PanelAsent | null = null;
 
 /** Salida "en seco" al mundo (Doc 1.10.2): sin tropas ni carga. La pantalla de equipamiento (elegir
@@ -1222,19 +1335,11 @@ function renderPanelAsent(): void {
   });
   if (panelAsentAbierto === null) { panel.hidden = true; panel.innerHTML = ''; return; }
   panel.hidden = false;
-  if (panelAsentAbierto === 'heroe') {
-    pintarPanelHeroe(panel, proyeccion, escaparHtml, aplicarYRefrescar);
-    return;
-  }
   if (panelAsentAbierto === 'intel') {
-    pintarIntel(panel, proyeccion, false, renderPanelAsent);
+    pintarIntel(panel, proyeccion, renderPanelAsent);
     return;
   }
-  if (panelAsentAbierto === 'ejercito') {
-    panel.innerHTML = `<span class="faction-kicker">Ejército</span><p class="mapa-lista-vacia">Sin comandos militares cableados todavía (composición de columna, reclutamiento, movilización) — ver docs/Features_Pendientes.md.</p>`;
-    return;
-  }
-  panel.innerHTML = renderPestanaFaccion(proyeccion, escaparHtml) + renderCargosAsentamiento(proyeccion.asentamientos[0], proyeccion);
+  panel.innerHTML = renderCargosAsentamiento(proyeccion.asentamientos[0], proyeccion) || '<span class="faction-kicker">Cargos</span><p class="mapa-lista-vacia">No tienes cargos que asignar en esta plaza: el Rey nombra al Gobernador y el Gobernador, al resto.</p>';
   cablearCargosAsentamiento(panel, proyeccion.asentamientos[0]);
 }
 
@@ -1309,14 +1414,13 @@ function montarAsentamiento(): void {
   panelAsentAbierto = null;
   menuEsquinaAbierto = false;
   app.innerHTML = `<div class="asent-screen">
+    ${htmlBarraJugador(proyeccion, true, escaparHtml)}
     <header class="asent-barra">
       <span class="asent-nombre">${escaparHtml(asentamiento.nombre ?? asentamiento.id)}</span>
       <span class="asent-nivel">Nivel ${asentamiento.nivel}</span>
       <div class="asent-barra-acciones">
-        <button type="button" data-panel-asent="heroe">Héroe</button>
-        <button type="button" data-panel-asent="faccion">Facción</button>
-        <button type="button" data-panel-asent="ejercito">Ejército</button>
-        <button type="button" data-panel-asent="intel">Intel</button>
+        <button type="button" data-panel-asent="cargos">Cargos</button>
+        <button type="button" data-panel-asent="intel">Taberna e intel</button>
         <button id="btn-salir-mundo" class="btn-primary" type="button">Salir al mundo</button>
       </div>
       <p id="asent-error" class="faction-error" role="alert"></p>
@@ -1330,6 +1434,7 @@ function montarAsentamiento(): void {
       <aside class="asent-lado"><div class="asent-edificios"></div></aside>
     </div>
     <div class="asent-tooltip" hidden></div>
+    <aside class="jugador-panel" hidden></aside>
     ${menuEsquinaHtml()}
   </div>`;
   const contenedor = document.querySelector<HTMLElement>('.asent-screen')!;
@@ -1343,6 +1448,7 @@ function montarAsentamiento(): void {
   });
   contenedor.querySelector('#btn-salir-mundo')?.addEventListener('click', () => void salirAlMundo());
   cablearMenuEsquina(contenedor);
+  cablearBarraJugador(contenedor);
   cablearTooltipEdificios(contenedor);
   // La ciudad tiene vida (almacén, producción, población) aunque el jugador no toque nada: mismo sondeo
   // suave que el mapa, hasta que exista el canal de tiempo real.
@@ -1507,7 +1613,7 @@ async function dibujarPantallaSegunModo(proyeccion: ProyeccionJugador): Promise<
     if (titulo) titulo.textContent = 'Mapa del Mundo (Evaluación T2a)';
     const mapa = await sincronizarMapa(proyeccion.mapaId);
     pintarTerreno(ctx, mapa, proyeccion, canvas.width / mapa.config.ancho);
-    pintarMiradas(ctx, proyeccion.miradasIntel ?? [], proyeccion.instante, canvas.width / mapa.config.ancho, panelMapaAbierto === 'intel' ? miradaElegida(proyeccion) : null);
+    pintarMiradas(ctx, proyeccion.miradasIntel ?? [], proyeccion.instante, canvas.width / mapa.config.ancho);
   } else {
     if (titulo) titulo.textContent = 'Vista de Asentamiento (Geometría Urbana T2a)';
     const asentamiento = proyeccion.asentamientos[0];
@@ -1609,6 +1715,10 @@ function pantallaActual(): Pantalla {
 function montar(pantalla: Pantalla): void {
   limpiarPantalla?.();
   limpiarPantalla = null;
+  panelJugador = null;
+  vistaMapaAbierta = false;
+  controlVistaMapa?.destruir();
+  controlVistaMapa = null;
   switch (pantalla) {
     case 'login': renderVistaLogin(); break;
     case 'legacy': montarLegacy(); break;
@@ -1626,6 +1736,10 @@ function montar(pantalla: Pantalla): void {
 function refrescarPantalla(pantalla: Pantalla): void {
   const proyeccion = estadoCliente.proyeccionUltima;
   if (!proyeccion) return;
+  if (pantalla === 'mapa' || pantalla === 'campamento' || pantalla === 'asentamiento') {
+    renderPanelJugador();
+    if (vistaMapaAbierta) void pintarVistaMapa();
+  }
   if (pantalla === 'mapa') { void dibujarPantallaSegunModo(proyeccion); renderSeleccionMapa(); renderPanelRiel(); return; }
   if (pantalla === 'campamento') { const c = campamentoActual(proyeccion); if (c) pintarCampamento(proyeccion, c); return; }
   if (pantalla === 'asentamiento') { void dibujarPantallaSegunModo(proyeccion); renderPanelEdificios(); renderPanelRecursos(); renderPanelAsent(); return; }
@@ -1657,8 +1771,17 @@ function cerrarSesionYVolverALogin(mensaje?: string): void {
   renderVistaLogin(mensaje);
 }
 
+/** `M` abre y cierra el mapa desde dentro de un campamento o un asentamiento; `Esc` lo cierra. No actúa mientras se escribe en un campo. */
+function alPulsarTecla(evento: KeyboardEvent): void {
+  if (evento.ctrlKey || evento.metaKey || evento.altKey) return;
+  if ((evento.target as HTMLElement | null)?.closest('input, textarea, select, [contenteditable]')) return;
+  if (evento.key === 'Escape' && vistaMapaAbierta) alternarVistaMapa(false);
+  else if (evento.key.toLowerCase() === 'm' && (pantallaMontada === 'campamento' || pantallaMontada === 'asentamiento')) alternarVistaMapa();
+}
+
 function arrancar(): void {
   window.addEventListener('hashchange', enrutar);
+  window.addEventListener('keydown', alPulsarTecla);
   const sesion = cargarSesionLocal();
   if (sesion) {
     estadoCliente.usuarioActivo = sesion.usuario;

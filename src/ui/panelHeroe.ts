@@ -1,5 +1,5 @@
 // Panel del HÉROE (docs/Features_Pendientes.md §0.2): ficha y atributos, escuadras con su guarnición, y loadouts.
-// Lo abren el riel del Mapa y la barra del Asentamiento. Todo lo que enseña llega calculado en `proyeccion.heroe`
+// Lo abre la barra superior del jugador (visible en el mapa, el campamento y el asentamiento). Todo lo que enseña llega calculado en `proyeccion.heroe`
 // (coste de Liderazgo de cada escuadra, lo que suma cada loadout, cupo y ocupación de la guarnición): aquí no se
 // decide ninguna regla, solo se suma el loadout que se está editando para avisar antes de guardar. Quien valida
 // es el backend (`heroe.invalido`).
@@ -22,6 +22,12 @@ let pestana: Pestana = 'ficha';
 let borrador: { loadoutId?: string; displayName: string; squadIds: Set<string>; activo: boolean } | null = null;
 /** Lo último pintado en cada panel. Si el refresco no cambia nada, no se toca el DOM (ni el foco ni los inputs). */
 const pintado = new WeakMap<HTMLElement, string>();
+
+/** Lo abre la barra superior en la pestaña «Escuadras» sin que el jugador la busque. */
+export function elegirPestanaHeroe(nombre: Pestana): void {
+  pestana = nombre;
+  borrador = null;
+}
 
 /** Minutos que le quedan de Herido a tu héroe (Doc 5.16.4), o `null` si está sano. */
 export function minutosHerido(proyeccion: ProyeccionJugador): number | null {
