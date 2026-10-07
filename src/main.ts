@@ -34,7 +34,7 @@ import { cablearFusion } from './ui/panelFusion';
 import { cablearAdmision } from './ui/panelAdmision';
 import { cablearFichaBatalla, cablearFichaFormacion, cablearMiColumna, formacionesVisibles, htmlFichaBatalla, htmlFichaFormacion, htmlMiColumna } from './ui/panelBatalla';
 import { instalarZoomPan, type ControlMapa } from './ui/pantallaMapa';
-import { alCambiarAvisos, alLlegarInforme, avisarDeEventos, avisosNoLeidos, historialDeAvisos, marcarAvisosLeidos, reiniciarAvisos, vigilarProyeccion } from './ui/avisos';
+import { alCambiarAvisos, alLlegarInforme, avisarDeEventos, avisosNoLeidos, historialDeAvisos, marcarAvisosLeidos, reiniciarAvisos } from './ui/avisos';
 import { htmlInforme, type InformeDeCombate } from './ui/informeCombate';
 import { htmlAvisos } from './ui/panelAvisos';
 import { cablearCarro, htmlCarro } from './ui/panelCarro';
@@ -168,10 +168,10 @@ function cablearFaccion(root: ParentNode, proyeccion: ProyeccionJugador, rerende
     return sigilo.campoId ? sigilo : null;
   };
   /** Enseña TODOS los motivos por los que el backend rechazaría el formulario (él solo dice el primero) y apaga «Crear» mientras haya alguno. */
-  const validar = (): string[] => {
+  const validar = (mostrar = true): string[] => {
     const motivos = motivosParaCrearFaccion(proyeccion, root.querySelector<HTMLInputElement>('#input-nombre-faccion')?.value ?? '', sigiloElegido());
     const aviso = root.querySelector('#error-faccion');
-    if (aviso) aviso.innerHTML = motivos.length > 0 ? `<ul class="faction-motivos">${motivos.map((m) => `<li>${escaparHtml(m)}</li>`).join('')}</ul>` : '';
+    if (aviso && mostrar) aviso.innerHTML = motivos.length > 0 ? `<ul class="faction-motivos">${motivos.map((m) => `<li>${escaparHtml(m)}</li>`).join('')}</ul>` : '';
     const crear = root.querySelector<HTMLButtonElement>('#btn-submit-crear-faccion');
     if (crear) crear.disabled = motivos.length > 0;
     return motivos;
@@ -181,8 +181,9 @@ function cablearFaccion(root: ParentNode, proyeccion: ProyeccionJugador, rerende
     if (previa) previa.innerHTML = svgSigilo(sigiloElegido() ?? undefined, 88);
     validar();
   }));
-  root.querySelector('#input-nombre-faccion')?.addEventListener('input', validar);
-  if (form) validar();
+  root.querySelector('#input-nombre-faccion')?.addEventListener('input', () => validar());
+  // Al abrir solo se apaga «Crear» si hace falta; los motivos salen en cuanto se toca algo.
+  if (form) validar(false);
   form?.addEventListener('submit', async (evento) => {
     evento.preventDefault();
     if (validar().length > 0) return;
@@ -806,6 +807,8 @@ function renderPanelJugador(forzar = false): void {
     const html = panelJugador === 'carro' ? htmlCarro(proyeccion, escaparHtml) : htmlAvisos(historialDeAvisos(), escaparHtml);
     const clave = `${panelJugador}|${html}`;
     if (panel.dataset.pintadoLista === clave && !forzar) return;
+    // En marcha la ración baja cada tick y el carro cambia: no se repinta mientras se escribe una cantidad.
+    if (!forzar && panel.dataset.pintadoLista && panel.contains(document.activeElement) && document.activeElement?.tagName === 'INPUT') return;
     panel.innerHTML = html;
     panel.dataset.pintadoLista = clave;
     if (panelJugador === 'carro') cablearCarro(panel, ejecutarYRefrescar);
@@ -1759,7 +1762,6 @@ async function refrescarDatosJuego(): Promise<void> {
   if (!respuesta.sinHeroe) {
     abrirPresencia(estadoCliente.gameIdActivo);
     void avisarDeEventos(estadoCliente.gameIdActivo, respuesta.version);
-    vigilarProyeccion(respuesta);
   }
   enrutar();
 }

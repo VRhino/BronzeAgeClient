@@ -223,6 +223,8 @@ export interface Ejercito {
   suministro?: Record<string, number>;
   /** Trigo de la ración gratis del campamento que aún lleva el carro: se come primero y no se puede guardar. */
   racion?: number;
+  /** Lo que cabe en el carro, con sus caravanas (DERIVADO por el backend desde 2026-10-07). */
+  capacidadCarga?: number;
   /** `personal` (un héroe que sale por su cuenta) o `ejercito`: un ejército y una columna personal nunca combaten entre sí (Doc 5.12.1). */
   tipo?: 'personal' | 'ejercito';
   liderId?: string;
@@ -552,6 +554,8 @@ export interface HeroeProyectado {
     | { tipo: 'desconectado'; punto: Point };
   /** Lo que guarda en su campamento de residencia (Doc 2.5). */
   almacenPersonal?: Record<string, number>;
+  /** Tope del almacén personal (DERIVADO por el backend desde 2026-10-07). */
+  capacidadAlmacenPersonal?: number;
   /** Oro de bandidos y alijos: solo se gasta en el mercado de un campamento o en el fondo de refundación (Doc 1.9). */
   oroDeBotin?: number;
   /** TODAS tus escuadras, estén donde estén (`contenedor`). */

@@ -3,10 +3,10 @@
 //  - los INFORMES DE COMBATE (doc 02 §4.1b: `combate.resuelto`, `combate.campamento_destruido`, `combate.ataque_campamento_fallido`) en los
 //    que va tu héroe: un briefing con ganador, poder de cada bando y bajas por escuadra (`ui/informeCombate.ts`).
 // Todo se guarda en un HISTORIAL consultable (localStorage, por partida y héroe) con un contador de no leídos, de modo que lo ocurrido mientras
-// estabas dentro, o con la pestaña cerrada, no se pierde. Los eventos sin `asentamientoId` llegan a TODOS los clientes: se filtra por `heroesIds`.
+// estabas dentro, o con la pestaña cerrada, no se pierde. El backend entrega los que nombran a tu héroe (doc 02 §4.1b, 2026-10-07); aquí se mira
+// `heroesIds` para saber en qué lado ibas. También avisa de `mercenarios.prestamo_retirado` (te retiran la tropa prestada).
 import { consultarEventos } from '../apiCliente';
 import type { EventoDominio } from '../tiposDominio';
-import type { ProyeccionJugador } from '../apiCliente';
 import { estadoCliente } from './estadoCliente';
 import { informeDeEvento, type InformeDeCombate } from './informeCombate';
 
@@ -19,7 +19,7 @@ export interface EntradaAviso {
   /** Fecha de mundo del evento (ISO), si el backend la manda. */
   momento?: string;
   texto: string;
-  /** `peligro` = te atacaron; `combate` = un combate tuyo; `baja` = tu tropa menguó (visto en la proyección); `mirada` = alguien te observó. */
+  /** `peligro` = te atacaron; `combate` = un combate tuyo; `baja` = te retiraron tropa; `mirada` = alguien te observó. */
   clase: 'peligro' | 'combate' | 'baja' | 'mirada';
   informe?: InformeDeCombate;
 }
@@ -81,48 +81,9 @@ function mostrar(texto: string, peligro = false): void {
 /** Olvida el cursor y el historial en memoria (al cambiar de partida o cerrar sesión): el siguiente refresco vuelve a cargarlos. */
 export function reiniciarAvisos(): void {
   ultimaVersion = null;
-  tropaVista = null;
-  eraHerido = false;
   historial = [];
   noLeidos = 0;
   clave = '';
-  oyentes.forEach((cb) => cb());
-}
-
-// --- LO QUE SE VE EN LA PROYECCIÓN, SIN EVENTOS ---------------------------------------------------------
-// Los informes de combate viajan en eventos sin plaza (`asentamientoId: ''`), y el backend de hoy NO los entrega a ningún cliente (ni por
-// `GET /eventos` ni por el canal `mapa/general`: ambos esperan `undefined`; ver CHANGELOG 0.14.0). Mientras tanto el cliente se entera de lo que le
-// pasó a su tropa comparando una proyección con la anterior: una escuadra que mengua es una baja (no sabe de quién), una que desaparece se ha
-// retirado (la tropa prestada se retira al dejar de residir en su campamento) y un héroe que pasa a Herido ha perdido un combate.
-let tropaVista: Map<string, { nombre: string; cantidad: number; prestada: boolean }> | null = null;
-let eraHerido = false;
-
-export function vigilarProyeccion(p: ProyeccionJugador): void {
-  const ahora = new Map(p.heroe.escuadrones.map((s) => [s.id, { nombre: s.nombre, cantidad: s.cantidad, prestada: Boolean(s.prestada) }] as const));
-  const herido = p.heroe.heridoHasta !== undefined && p.heroe.heridoHasta > p.instante;
-  const momento = new Date(p.instante).toISOString();
-  const nuevos: { texto: string; peligro: boolean }[] = [];
-  if (tropaVista) {
-    for (const [id, antes] of tropaVista) {
-      const despues = ahora.get(id);
-      if (!despues) {
-        nuevos.push({ texto: `Tu escuadra «${antes.nombre}» (${antes.cantidad} hombres) ya no está.${antes.prestada ? ' La tropa prestada se retira cuando dejas de residir en el campamento que la prestó.' : ''}`, peligro: true });
-      } else if (despues.cantidad < antes.cantidad) {
-        nuevos.push({ texto: `Tu escuadra «${despues.nombre}» pasó de ${antes.cantidad} a ${despues.cantidad} hombres (−${antes.cantidad - despues.cantidad}).`, peligro: despues.cantidad === 0 });
-      }
-    }
-    if (herido && !eraHerido) nuevos.push({ texto: 'Tu héroe quedó herido: perdió un combate.', peligro: true });
-  }
-  tropaVista = ahora;
-  eraHerido = herido;
-  if (nuevos.length === 0) return;
-  for (const n of nuevos) {
-    historial.unshift({ version: p.version, momento, texto: n.texto, clase: 'baja' });
-    noLeidos++;
-    mostrar(n.texto, n.peligro);
-  }
-  if (historial.length > MAX_HISTORIAL) historial.length = MAX_HISTORIAL;
-  guardar();
   oyentes.forEach((cb) => cb());
 }
 
@@ -133,6 +94,16 @@ function procesar(e: EventoDominio, heroeId: string, modo: 'vivo' | 'recuperado'
     historial.unshift({ version: e.version, momento: e.momento, texto: e.mensaje, clase: 'mirada' });
     if (modo !== 'historico') noLeidos++;
     if (!silencioso) mostrar(e.mensaje);
+    return;
+  }
+  if (e.codigo === 'mercenarios.prestamo_retirado') {
+    // El campamento te retira la tropa prestada al dejar de residir en él (backend D45): antes desaparecía sin aviso.
+    const p = e.payload as { campamentoId?: string; escuadras?: { tropaId: string; cantidad: number }[] } | undefined;
+    const tropa = (p?.escuadras ?? []).map((x) => `${x.tropaId.replace(/_/g, ' ')}: ${x.cantidad}`).join(', ');
+    const texto = `${p?.campamentoId ?? 'El campamento'} te retira la tropa prestada (${tropa}): ya no resides allí.`;
+    historial.unshift({ version: e.version, momento: e.momento, texto, clase: 'baja' });
+    if (modo !== 'historico') noLeidos++;
+    if (!silencioso) mostrar(texto, true);
     return;
   }
   const informe = informeDeEvento(e, heroeId);

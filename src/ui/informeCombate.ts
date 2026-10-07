@@ -47,7 +47,7 @@ export function informeDeEvento(e: EventoDominio, heroeId: string): InformeDeCom
     return {
       version: e.version, momento: e.momento, tipo: 'bandidos', resultado: victoria ? 'victoria' : 'derrota', teAtacaron: false,
       titulo: victoria ? 'Campamento de bandidos destruido' : 'Ataque fallido al campamento de bandidos',
-      resumen: `${victoria ? 'Victoria' : 'Derrota'} contra ${rivalNombre.toLowerCase()} (poder ${redondea(Number(p.poderCampamento ?? 0))} contra ${redondea(p.atacante.poder)}).`,
+      resumen: `${victoria ? 'Victoria' : 'Derrota'} contra ${rivalNombre.toLowerCase()} (tu poder ${redondea(p.atacante.poder)} contra ${redondea(Number(p.poderCampamento ?? 0))}).`,
       rivalNombre, propio: p.atacante, rival: null, poderRival: Number(p.poderCampamento ?? 0),
     };
   }
@@ -61,7 +61,7 @@ export function informeDeEvento(e: EventoDominio, heroeId: string): InformeDeCom
     return {
       version: e.version, momento: e.momento, tipo: 'combate', resultado: victoria ? 'victoria' : 'derrota', teAtacaron: !atacando,
       titulo: atacando ? 'Atacaste' : 'Te atacaron',
-      resumen: `${atacando ? 'Atacaste' : 'Te atacaron'} y ${victoria ? 'ganaste' : 'perdiste'} (poder ${redondea(propio.poder)} contra ${redondea(rival.poder)}).`,
+      resumen: `${atacando ? 'Atacaste' : 'Te atacaron'} y ${victoria ? 'ganaste' : 'perdiste'} (tu poder ${redondea(propio.poder)} contra ${redondea(rival.poder)}).`,
       rivalNombre: 'Rival', propio, rival, poderRival: rival.poder,
     };
   }

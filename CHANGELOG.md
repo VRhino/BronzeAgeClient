@@ -3,6 +3,22 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.14.1] — 2026-10-07 · con los arreglos del backend · sync con `BronzeAgeFase0@60b0939` (`main`, sin push)
+
+### Cambiado
+- **El briefing de combate ya llega**: el backend entrega por `GET /eventos` los eventos que nombran a tu héroe (hallazgo 1 de 0.14.0). Verificado en vivo: un
+  ataque fallido a un campamento de bandidos de nivel 3 abre su briefing, el toast y el contador de Avisos.
+- **Tropa prestada retirada**: se avisa con el evento del backend `mercenarios.prestamo_retirado` (hallazgo 2b). Se quita la detección por diff de proyecciones
+  (`vigilarProyeccion`), que con los eventos ya solo duplicaba avisos.
+- **Carro**: enseña la ocupación del carro y del almacén personal contra su capacidad (`ejercitos[].capacidadCarga`, `heroe.capacidadAlmacenPersonal`; hallazgo 3).
+- Los solicitantes de ingreso salen por nombre (el backend los añade a `nombresDeCompaneros`).
+- Revisión de 0.14.0: el panel Carro ya no se repinta mientras escribes una cantidad (en marcha la ración cambia cada tick); Crear Facción no enseña los motivos
+  hasta que se toca algo (solo apaga «Crear»); el resumen del combate pone tu poder primero.
+
+### Sigue pendiente en el backend
+- El canal `mapa/general` no lleva los eventos de «ninguna plaza» (`asentamientoId: ''`): solo el cursor. Hace falta un canal por héroe cuando el cliente use el tiempo real.
+- Trazado de los campamentos de bandidos (el plano de la ficha sigue siendo esquemático).
+
 ## [0.14.0] — 2026-10-07 · barra del jugador, campamento por subpestañas, avisos de combate y carro · sync con `BronzeAgeFase0@main` (`d1ae802`, `7680bd3`, `90c0caf`)
 
 ### Añadido

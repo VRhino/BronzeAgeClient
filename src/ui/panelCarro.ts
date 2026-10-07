@@ -3,8 +3,8 @@
 //   guardarEnAlmacenPersonal { recurso, cantidad }   del carro al almacén personal (lo que cabe hasta el tope; la ración gratis de trigo no)
 //   sacarDelAlmacenPersonal  { recurso, cantidad }   del almacén personal al carro (lo que cabe en el carro)
 //   entrarEnCampamento       devuelve solo lo del carro al almacén personal; salirDelCampamento { carga } carga el carro desde el almacén
-// Ambos exigen ser el LÍDER de la columna (el carro es común) y estar en ella. El backend no publica el tope del almacén personal ni la capacidad
-// del carro: aquí se muestran las existencias y es el backend quien rechaza («El almacén personal está lleno», «El carro está lleno»).
+// Ambos exigen ser el LÍDER de la columna (el carro es común) y estar en ella. El tope del almacén personal (`heroe.capacidadAlmacenPersonal`) y
+// lo que cabe en el carro (`ejercitos[].capacidadCarga`) los manda el backend ya calculados; si falta sitio, el rechazo es suyo.
 import type { ProyeccionJugador } from '../apiCliente';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 
@@ -13,6 +13,13 @@ export type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
 
 const nombre = (r: string): string => RECURSO_NOMBRE[r] ?? r;
 const icono = (r: string): string => RECURSO_ICONO[r] ?? '📦';
+
+/** « · 120 / 1000» si el backend manda la capacidad (un backend anterior no la manda). */
+function ocupacion(recursos: Record<string, number>, capacidad: number | undefined): string {
+  if (capacidad === undefined) return '';
+  const total = Object.values(recursos).reduce((a, b) => a + b, 0);
+  return ` · ${Math.floor(total)} / ${Math.floor(capacidad)}`;
+}
 
 function miColumna(p: ProyeccionJugador) {
   return p.ejercitos.find((c) => c.participantes.some((x) => x.heroeId === p.heroeId));
@@ -47,9 +54,9 @@ export function htmlCarro(p: ProyeccionJugador, e: Escapar): string {
   return `
     <div class="mapa-panel-jugador">${e(p.heroe.displayName)} · carro y almacén</div>
     <p class="asent-lado-nota">${nota}</p>
-    ${columna ? `<strong class="heroe-sub">Carro de tu columna</strong>${filas(carro, 'guardar', 'Guardar', esLider, e, noGuardable)}` : ''}
+    ${columna ? `<strong class="heroe-sub">Carro de tu columna${ocupacion(carro, columna.capacidadCarga)}</strong>${filas(carro, 'guardar', 'Guardar', esLider, e, noGuardable)}` : ''}
     ${aparcadas.map((c) => `<strong class="heroe-sub">Resto del carro, aparcado en la puerta</strong>${filas(c.suministro ?? {}, 'ninguna', '', false, e)}`).join('')}
-    <strong class="heroe-sub">Almacén personal</strong>
+    <strong class="heroe-sub">Almacén personal${ocupacion(almacen, p.heroe.capacidadAlmacenPersonal)}</strong>
     ${filas(almacen, 'sacar', 'Al carro', Boolean(columna) && esLider, e)}
     <div class="carro-fila"><span>🪙 Oro de botín</span><strong>${Math.floor(p.heroe.oroDeBotin ?? 0)}</strong></div>
     <p class="faction-error" data-campo="error-carro" role="alert"></p>`;
