@@ -2643,8 +2643,8 @@ kbd {
 }
 
 /* El avatar de sesión vive en el extremo derecho de la barra. */
-.mapa-avatar { top: 3px; right: 12px; width: 40px; height: 40px; }
-.mapa-menu { top: 50px; right: 12px; }
+.mapa-avatar { top: 3px; right: 12px; width: 40px; height: 40px; z-index: 7; }
+.mapa-menu { top: 50px; right: 12px; z-index: 8; }
 .mapa-panel { top: calc(var(--jugador-alto) + 14px); max-height: calc(100% - var(--jugador-alto) - 28px); }
 .asent-barra { padding-right: 26px; }
 

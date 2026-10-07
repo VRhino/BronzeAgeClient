@@ -15,6 +15,8 @@ commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend
   Hambre / Hambruna de la plaza donde estás. Todo sale de la proyección.
 
 ### Cambiado
+- **El menú de sesión (avatar) vuelve a verse y a pulsarse**: desde 0.14.0 la barra superior se pintaba encima del avatar (z-index), así que «Cerrar sesión»,
+  «Refrescar» y el resto del menú quedaban tapados en todas las pantallas.
 - **Sin atajo de teclado para el mapa**: se quita la tecla `M` (y `Esc`); el mapa desde dentro se abre y se cierra solo con el botón «Mapa» y «Volver».
 - **El panel de Facción ya no cambia solo**: el selector de escudo generaba un sigilo al azar en cada pintado, así que el HTML cambiaba en cada
   refresco y el panel se repintaba entero, llevándose el nombre y el escudo elegidos. Ahora el sigilo propuesto es fijo y, mientras creas una
