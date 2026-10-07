@@ -40,6 +40,7 @@ import { alCambiarAvisos, alLlegarInforme, avisarDeEventos, avisosNoLeidos, hist
 import { htmlInforme, type InformeDeCombate } from './ui/informeCombate';
 import { htmlAvisos } from './ui/panelAvisos';
 import { cablearCarro, htmlCarro } from './ui/panelCarro';
+import { cablearCargaDeSalida, htmlCargaDeSalida, leerCarga } from './ui/cargaDeSalida';
 import { cablearColumna, htmlColumna } from './ui/panelColumna';
 import { cablearPanelIntel, renderPanelIntel } from './ui/panelIntel';
 import { svgPlanoBandidos } from './ui/planoBandidos';
@@ -1157,12 +1158,11 @@ function montarMapa(): void {
 
 // --- PANTALLA ASENTAMIENTO (T6) -----------------------------------------------------------------
 
-type PanelAsent = 'cargos' | 'intel';
+type PanelAsent = 'cargos' | 'intel' | 'salir';
 let panelAsentAbierto: PanelAsent | null = null;
 
-/** Salida "en seco" al mundo (Doc 1.10.2): sin tropas ni carga. La pantalla de equipamiento (elegir
- * escuadrones y carro) queda para más adelante — ver docs/Features_Pendientes.md. */
-async function salirAlMundo(): Promise<void> {
+/** Salir al mundo desde tu residencia (Doc 1.10.2) con la tropa y la carga elegidas en el panel «Salir al mundo». */
+async function salirAlMundo(escuadronIds: string[], carga: Record<string, number>): Promise<void> {
   const proyeccion = estadoCliente.proyeccionUltima;
   const asentamiento = proyeccion?.asentamientos[0];
   if (!proyeccion || !asentamiento) return;
@@ -1170,16 +1170,37 @@ async function salirAlMundo(): Promise<void> {
     const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'salirAlMundo', {
       asentamientoId: asentamiento.id,
       heroeId: proyeccion.heroeId,
-      escuadronIds: [],
-      carga: {},
+      escuadronIds,
+      carga,
     });
     if (!respuesta.resultado.ok) throw errorDeRechazo(respuesta.resultado, 'No se pudo salir al mundo.');
     panelAsentAbierto = null;
     await refrescarDatosJuego(); // el router lleva a la pantalla Mapa
   } catch (err) {
-    const error = document.querySelector<HTMLElement>('#asent-error');
+    const error = document.querySelector<HTMLElement>('.asent-panel [data-campo="error-salida"]') ?? document.querySelector<HTMLElement>('#asent-error');
     if (error) error.textContent = mensajeError(err);
   }
+}
+
+/** Panel «Salir al mundo» de la plaza: tropa que sacas y carga del almacén de la plaza (el backend reserva el trigo que necesita la tropa que se queda). */
+function pintarSalidaAsentamiento(panel: HTMLElement, p: ProyeccionJugador, asentamiento: Asentamiento): void {
+  if (panel.dataset.pintado === 'salir') return; // no se repinta con el sondeo: perdería lo que estás eligiendo
+  panel.dataset.pintado = 'salir';
+  const tropa = p.heroe.escuadrones.filter((s) => s.contenedor.tipo === 'campamento' && !s.enGuarnicion && s.cantidad > 0);
+  const almacen = Object.fromEntries(Object.entries(asentamiento.almacen ?? {}).map(([r, v]) => [r, v.cantidad]));
+  panel.innerHTML = `<span class="faction-kicker">Salir al mundo</span>
+    <strong class="heroe-sub">Tropa que sacas</strong>
+    <div class="mapa-lista">${tropa.length > 0
+      ? tropa.map((s) => `<label class="mapa-lista-item"><div><strong>${escaparHtml(s.nombre)}</strong><span>${s.cantidad} hombres</span></div><input type="checkbox" data-salir-escuadra="${escaparHtml(s.id)}" checked /></label>`).join('')
+      : '<p class="asent-lado-nota">No tienes tropa libre en la plaza (la de guarnición no sale). Puedes salir solo.</p>'}</div>
+    ${htmlCargaDeSalida(almacen, 'el almacén de la plaza', escaparHtml)}
+    <button class="btn-primary" type="button" data-salir>Salir</button>
+    <p class="faction-error" data-campo="error-salida" role="alert"></p>`;
+  cablearCargaDeSalida(panel);
+  panel.querySelector<HTMLButtonElement>('[data-salir]')?.addEventListener('click', () => {
+    const ids = Array.from(panel.querySelectorAll<HTMLInputElement>('input[data-salir-escuadra]:checked')).map((i) => i.dataset.salirEscuadra!);
+    void salirAlMundo(ids, leerCarga(panel));
+  });
 }
 
 // --- PANEL DE GESTIÓN DEL ASENTAMIENTO (columna derecha): Resumen · Edificios · Cola ------------
@@ -1478,8 +1499,14 @@ function renderPanelAsent(): void {
   barra.querySelectorAll<HTMLButtonElement>('[data-panel-asent]').forEach((boton) => {
     boton.classList.toggle('activo', boton.dataset.panelAsent === panelAsentAbierto);
   });
-  if (panelAsentAbierto === null) { panel.hidden = true; panel.innerHTML = ''; return; }
+  if (panelAsentAbierto === null) { panel.hidden = true; panel.innerHTML = ''; delete panel.dataset.pintado; return; }
   panel.hidden = false;
+  if (panelAsentAbierto !== 'salir') delete panel.dataset.pintado;
+  if (panelAsentAbierto === 'salir') {
+    const asentamiento = proyeccion.asentamientos[0];
+    if (asentamiento) pintarSalidaAsentamiento(panel, proyeccion, asentamiento);
+    return;
+  }
   if (panelAsentAbierto === 'intel') {
     pintarIntel(panel, proyeccion, renderPanelAsent);
     return;
@@ -1591,7 +1618,12 @@ function montarAsentamiento(): void {
       renderPanelAsent();
     });
   });
-  contenedor.querySelector('#btn-salir-mundo')?.addEventListener('click', () => void salirAlMundo());
+  contenedor.querySelector('#btn-salir-mundo')?.addEventListener('click', () => {
+    panelAsentAbierto = panelAsentAbierto === 'salir' ? null : 'salir';
+    menuEsquinaAbierto = false;
+    sincronizarMenuEsquina();
+    renderPanelAsent();
+  });
   cablearMenuEsquina(contenedor);
   cablearBarraJugador(contenedor);
   cablearTooltipEdificios(contenedor);

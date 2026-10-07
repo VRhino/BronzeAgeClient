@@ -2,6 +2,7 @@
 // Se organiza como la del asentamiento: la planta a la izquierda y, a la derecha, subpestañas (Resumen · Salir · Tropa · Mercado ·
 // Fondo · Taberna) en vez de una sola columna larga. Aquí no se decide ninguna regla: quien valida es el backend, y su rechazo sale
 // tal cual en `#camp-error`. Los menús del jugador (héroe, escuadras, Facción) están en la barra superior (`barraJugador.ts`).
+import { cablearCargaDeSalida, htmlCargaDeSalida, leerCarga } from './cargaDeSalida';
 import type { ProyeccionJugador } from '../apiCliente';
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { CampamentoMercenarios, Escuadron } from '../tiposDominio';
@@ -92,7 +93,8 @@ function salir(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): stri
     <div class="mapa-lista">${enCampamento.length > 0
       ? enCampamento.map((s) => `<label class="mapa-lista-item"><div><strong>${e(s.nombre)}</strong><span>${s.cantidad} hombres</span></div><input type="checkbox" data-salir-escuadra="${e(s.id)}" checked /></label>`).join('')
       : '<p class="asent-lado-nota">No tienes tropa en el campamento.</p>'}</div>
-    ${Object.entries(almacen).filter(([, n]) => n > 0).map(([r, n]) => `<label class="campamento-fila"><span>${e(nombreRecurso(r))} (hay ${Math.floor(n)})</span><input class="form-input" type="number" min="0" max="${Math.floor(n)}" value="0" data-carga="${e(r)}" /></label>`).join('')}
+    ${htmlCargaDeSalida(almacen, 'tu almacén personal', e)}
+    <p class="asent-lado-nota">Al volver a entrar en un campamento, lo que quede en el carro regresa solo a tu almacén personal (menos la ración gratis).</p>
     <button class="btn-primary" type="button" id="btn-salir-campamento">Salir</button>`;
 }
 
@@ -308,10 +310,9 @@ export function cablearCampamento(root: HTMLElement, p: ProyeccionJugador, c: Ca
     campamentoId: c.id,
     heroeId,
     escuadronIds: marcados('data-salir-escuadra'),
-    carga: Object.fromEntries(
-      Array.from(root.querySelectorAll<HTMLInputElement>('input[data-carga]')).map((i) => [i.dataset.carga!, Number(i.value)] as const).filter(([, n]) => n > 0)
-    ),
+    carga: leerCarga(root),
   }));
+  cablearCargaDeSalida(root);
   conBoton('#btn-pedir-prestamo', 'pedirPrestamo', () => ({ tropaIds: marcados('data-prestamo') }));
   conBoton('#btn-reponer-prestamo', 'reponerPrestamo', () => ({}));
   cablearMercado(root, c, opciones);

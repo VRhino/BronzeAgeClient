@@ -3,6 +3,15 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.18.0] — 2026-10-07 · carga del carro al salir (campamento y plaza) y oro de botín separado
+
+### Añadido
+- **Salir al mundo desde tu plaza** ya no sale «en seco»: el botón abre un panel donde eliges la tropa que sacas y lo que cargas en el carro del almacén de la plaza (`salirAlMundo.carga`; el backend reserva el trigo que necesita la tropa que se queda).
+- Cargar el carro al salir de un campamento y de una plaza comparte módulo (`ui/cargaDeSalida.ts`): cada recurso con lo que hay, cantidad, botón «Todo» y el total contra la capacidad del carro (500). Explica que al volver a entrar a un campamento el carro regresa a tu almacén personal.
+
+### Cambiado
+- El **oro de botín** va en su propio recuadro, fuera del carro y del almacén, con la explicación de para qué sirve y que nunca se pierde.
+
 ## [0.17.1] — 2026-10-07 · el oro de botín y el carro, explicados
 
 ### Cambiado
