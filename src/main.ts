@@ -40,6 +40,7 @@ import { alCambiarAvisos, alLlegarInforme, avisarDeEventos, avisosNoLeidos, hist
 import { htmlInforme, type InformeDeCombate } from './ui/informeCombate';
 import { htmlAvisos } from './ui/panelAvisos';
 import { cablearCarro, htmlCarro } from './ui/panelCarro';
+import { cablearColumna, htmlColumna } from './ui/panelColumna';
 import { cablearPanelIntel, renderPanelIntel } from './ui/panelIntel';
 import { svgPlanoBandidos } from './ui/planoBandidos';
 import { explicarError } from './ui/erroresServidor';
@@ -63,6 +64,12 @@ function escaparHtml(valor: string): string {
 
 function mensajeError(error: unknown): string {
   return error instanceof ApiError ? explicarError(error.message) : 'No se pudo completar la operación.';
+}
+
+/** Un rechazo de dominio como error: el motivo concreto que da el backend (`detalleError`, p. ej. «La columna no lleva soldados con los
+ * que atacar.») y, si no lo da, su código, que `mensajeError` traduce. */
+function errorDeRechazo(resultado: RespuestaComando['resultado'], porDefecto: string): ApiError {
+  return new ApiError(409, resultado.detalleError ?? resultado.codigoError ?? porDefecto);
 }
 
 function sincronizarEstado(): void {
@@ -99,11 +106,23 @@ function ejecutarYRefrescar(tipo: string, params: object): Promise<string | null
   return aplicarYRefrescar(ejecutarComando(estadoCliente.gameIdActivo, tipo, params));
 }
 
+/** Como `ejecutarYRefrescar`, devolviendo además los `datos` del comando (p. ej. lo que sirvió de verdad una compra). */
+async function ejecutarConDatosYRefrescar(tipo: string, params: object): Promise<{ error: string | null; datos?: unknown }> {
+  try {
+    const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, tipo, params);
+    if (!respuesta.resultado.ok) throw errorDeRechazo(respuesta.resultado, 'El servidor rechazó la operación.');
+    await refrescarDatosJuego();
+    return { error: null, datos: respuesta.resultado.datos };
+  } catch (err) {
+    return { error: mensajeError(err) };
+  }
+}
+
 /** Lo mismo con la petición ya lanzada, para los wrappers tipados de `apiCliente.ts` (panel del héroe). */
 async function aplicarYRefrescar(peticion: Promise<RespuestaComando>): Promise<string | null> {
   try {
     const respuesta = await peticion;
-    if (!respuesta.resultado.ok) throw new ApiError(409, respuesta.resultado.codigoError ?? 'El servidor rechazó la operación.');
+    if (!respuesta.resultado.ok) throw errorDeRechazo(respuesta.resultado, 'El servidor rechazó la operación.');
     await refrescarDatosJuego();
     return null;
   } catch (err) {
@@ -198,7 +217,7 @@ function cablearFaccion(root: ParentNode, proyeccion: ProyeccionJugador, rerende
     boton.textContent = 'Creando...';
     try {
       const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'crearFaccion', { nombre: input.value.trim(), sigilo: sigiloElegido() ?? undefined });
-      if (!respuesta.resultado.ok) throw new ApiError(409, respuesta.resultado.codigoError ?? 'El servidor rechazó la operación.');
+      if (!respuesta.resultado.ok) throw errorDeRechazo(respuesta.resultado, 'El servidor rechazó la operación.');
       estadoCliente.modoPanelFaccion = 'inicio';
       estadoCliente.pestanaInteraccion = 'asentamientos';
       await refrescarDatosJuego();
@@ -221,7 +240,7 @@ function cablearFaccion(root: ParentNode, proyeccion: ProyeccionJugador, rerende
         boton.textContent = 'Pidiendo...';
         try {
           const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'solicitarIngreso', { faccionId: boton.dataset.faccionId });
-          if (!respuesta.resultado.ok) throw new ApiError(409, respuesta.resultado.codigoError ?? 'El servidor rechazó la operación.');
+          if (!respuesta.resultado.ok) throw errorDeRechazo(respuesta.resultado, 'El servidor rechazó la operación.');
           boton.textContent = 'Pedido: decide su Rey';
           await refrescarDatosJuego();
         } catch (err) {
@@ -360,7 +379,10 @@ function pintarCampamento(p: ProyeccionJugador, campamento: CampamentoMercenario
       delete lado.dataset.pintado;
       if (estadoCliente.proyeccionUltima) pintarCampamento(estadoCliente.proyeccionUltima, campamento);
     }));
-    cablearCampamento(lado, p, campamento, ejecutarYRefrescar);
+    cablearCampamento(lado, p, campamento, ejecutarYRefrescar, {
+      ejecutarConDatos: ejecutarConDatosYRefrescar,
+      repintar: () => { delete lado.dataset.pintado; if (estadoCliente.proyeccionUltima) pintarCampamento(estadoCliente.proyeccionUltima, campamento); },
+    });
   }
   const taberna = lado.querySelector<HTMLElement>('#camp-taberna');
   if (taberna) pintarIntel(taberna, p, () => pintarCampamento(p, campamento));
@@ -423,6 +445,8 @@ function cercano<T extends { posicion: { x: number; y: number } }>(lista: readon
 /** A qué distancia se ataca: `LOGISTICA.radioEncuentro` del backend (Doc 5.12.3), copiado aquí para avisar antes de
  * mandar la orden. El que decide es el backend. */
 const RADIO_ATAQUE = 15;
+/** Junto a un campamento de mercenarios nadie inicia un combate: `MERCENARIOS.radioProteccion` del backend (M4/D78), copiado para avisar antes. */
+const RADIO_PROTECCION_MERCENARIOS = 60;
 
 /** Punto de MUNDO bajo un clic: `getBoundingClientRect` del canvas ya incluye el `transform` del zoom/pan. */
 function puntoDeMapa(evento: { clientX: number; clientY: number }, canvas: HTMLCanvasElement, mapa: MapaGenerado): { x: number; y: number } {
@@ -452,7 +476,7 @@ async function marcharAObjetivo(objetivo: { tipo: 'punto'; punto: { x: number; y
   if (!proyeccion) return;
   try {
     const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'marcharA', { heroeId: proyeccion.heroeId, objetivo });
-    if (!respuesta.resultado.ok) throw new ApiError(409, respuesta.resultado.codigoError ?? 'El servidor rechazó la marcha.');
+    if (!respuesta.resultado.ok) throw errorDeRechazo(respuesta.resultado, 'El servidor rechazó la marcha.');
     await refrescarDatosJuego();
   } catch (err) {
     avisoMapa(mensajeError(err));
@@ -537,7 +561,7 @@ function renderSeleccionMapa(): void {
   cont.querySelector('#btn-entrar-asent')?.addEventListener('click', async () => {
     try {
       const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'entrarEnAsentamiento', { asentamientoId: asentamiento.id, heroeId: proyeccion.heroeId });
-      if (!respuesta.resultado.ok) throw new ApiError(409, respuesta.resultado.codigoError ?? 'No se pudo entrar.');
+      if (!respuesta.resultado.ok) throw errorDeRechazo(respuesta.resultado, 'No se pudo entrar.');
       seleccionMapa = null;
       await refrescarDatosJuego(); // si entró, el router lleva a la pantalla Asentamiento
     } catch (err) {
@@ -555,11 +579,18 @@ function alcanceDeAtaque(proyeccion: ProyeccionJugador, punto: { x: number; y: n
   const columna = miColumna(proyeccion);
   const distancia = columna ? Math.round(Math.hypot(columna.posicionActual.x - punto.x, columna.posicionActual.y - punto.y)) : null;
   const herido = minutosHerido(proyeccion);
+  // Yendo solo, sin soldados vivos en la columna no hay con qué atacar (en un ejército pueden ponerlos los demás).
+  const sinSoldados = columna !== undefined && columna.participantes.length === 1
+    && !proyeccion.heroe.escuadrones.some((s) => s.contenedor.tipo === 'ejercito' && s.contenedor.ejercitoId === columna.id && s.cantidad > 0);
+  const cerca = (a: { x: number; y: number }) => proyeccion.campamentosMercenarios.find((c) => Math.hypot(c.posicion.x - a.x, c.posicion.y - a.y) <= RADIO_PROTECCION_MERCENARIOS);
+  const protegido = columna ? cerca(columna.posicionActual) ?? cerca(punto) : undefined;
   const impide =
     herido !== null ? `Estás herido (${herido} min): no puedes atacar.`
       : distancia === null ? 'Sal al mundo con tu columna para atacar.'
         : distancia > RADIO_ATAQUE ? `Acércate: estás a ${distancia} y se ataca a ${RADIO_ATAQUE}.`
-          : '';
+          : sinSoldados ? 'Tu columna no lleva soldados vivos: sal del campamento con tropa para atacar.'
+            : protegido ? `Estás a menos de ${RADIO_PROTECCION_MERCENARIOS} del campamento de mercenarios ${protegido.id}: a su lado nadie inicia un combate.`
+              : '';
   return { distancia, impide };
 }
 
@@ -695,7 +726,7 @@ function pintarIntel(cont: HTMLElement, p: ProyeccionJugador, repintar: () => vo
 
 // --- RIEL DE ICONOS Y MENÚ DE ESQUINA DEL MAPA (T5) ---------------------------------------------
 
-type PanelRiel = 'cosas' | 'fundar';
+type PanelRiel = 'columna' | 'cosas' | 'fundar';
 let panelMapaAbierto: PanelRiel | null = null;
 let menuEsquinaAbierto = false;
 let controlMapaActivo: ControlMapa | null = null;
@@ -716,7 +747,7 @@ async function fundarAqui(): Promise<void> {
   if (!proyeccion) return;
   try {
     const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'fundar', {});
-    if (!respuesta.resultado.ok) throw new ApiError(409, respuesta.resultado.codigoError ?? 'No se pudo fundar aquí.');
+    if (!respuesta.resultado.ok) throw errorDeRechazo(respuesta.resultado, 'No se pudo fundar aquí.');
     estadoCliente.modoFundacionActivo = false;
     estadoCliente.posicionFundacion = null;
     panelMapaAbierto = null;
@@ -949,9 +980,18 @@ function renderPanelRiel(): void {
   });
   riel.querySelector('[data-panel="fundar"]')?.classList.toggle('destaca', puedeFundar && !tieneAsentamientoPropio(proyeccion));
 
+  if (panelMapaAbierto !== 'columna') delete panel.dataset.pintadoColumna;
   if (panelMapaAbierto === null) { panel.hidden = true; panel.innerHTML = ''; return; }
   panel.hidden = false;
-  if (panelMapaAbierto === 'cosas') {
+  if (panelMapaAbierto === 'columna') {
+    // Como el carro: no se repinta si nada cambió ni mientras se escribe una cantidad.
+    const html = htmlColumna(proyeccion, escaparHtml);
+    if (panel.dataset.pintadoColumna === html) return;
+    if (panel.dataset.pintadoColumna && panel.contains(document.activeElement) && document.activeElement?.tagName === 'INPUT') return;
+    panel.innerHTML = html;
+    panel.dataset.pintadoColumna = html;
+    cablearColumna(panel, proyeccion, ejecutarYRefrescar);
+  } else if (panelMapaAbierto === 'cosas') {
     const asentamientos = asentamientosDelMapa(proyeccion).filter((a) => a.faccionId === proyeccion.faccionId);
     const columnas = proyeccion.ejercitos;
     panel.innerHTML = `
@@ -1013,6 +1053,7 @@ function montarMapa(): void {
     <div class="mapa-lienzo"><canvas id="mapa" width="900" height="900"></canvas></div>
     ${htmlBarraJugador(proyeccion, false, escaparHtml)}
     <nav class="mapa-riel" aria-label="Paneles del mapa">
+      <button type="button" data-panel="columna" title="Lo que llevas: tropa y carro" aria-label="Lo que llevas: tropa y carro">⚔</button>
       <button type="button" data-panel="cosas" title="Mis cosas" aria-label="Mis cosas">📍</button>
       <button type="button" data-panel="fundar" title="Fundar asentamiento" aria-label="Fundar asentamiento" hidden>⌂</button>
     </nav>
@@ -1115,7 +1156,7 @@ async function salirAlMundo(): Promise<void> {
       escuadronIds: [],
       carga: {},
     });
-    if (!respuesta.resultado.ok) throw new ApiError(409, respuesta.resultado.codigoError ?? 'No se pudo salir al mundo.');
+    if (!respuesta.resultado.ok) throw errorDeRechazo(respuesta.resultado, 'No se pudo salir al mundo.');
     panelAsentAbierto = null;
     await refrescarDatosJuego(); // el router lleva a la pantalla Mapa
   } catch (err) {
@@ -1165,7 +1206,7 @@ function duracion(minutos: number): string {
 async function ejecutarAccionAsent(tipo: string, params: Record<string, unknown>): Promise<void> {
   try {
     const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, tipo, params);
-    if (!respuesta.resultado.ok) throw new ApiError(409, respuesta.resultado.codigoError ?? 'El servidor rechazó la operación.');
+    if (!respuesta.resultado.ok) throw errorDeRechazo(respuesta.resultado, 'El servidor rechazó la operación.');
     await refrescarDatosJuego();
   } catch (err) {
     const error = document.querySelector<HTMLElement>('#asent-lado-error');
@@ -1480,7 +1521,7 @@ function cablearCargosAsentamiento(panel: HTMLElement, asentamiento: Asentamient
       if (!cargo || !heroeId) return;
       try {
         const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'asignarCargoLocal', { asentamientoId: asentamiento.id, cargo, heroeId });
-        if (!respuesta.resultado.ok) throw new ApiError(409, respuesta.resultado.codigoError ?? 'No se pudo asignar el cargo.');
+        if (!respuesta.resultado.ok) throw errorDeRechazo(respuesta.resultado, 'No se pudo asignar el cargo.');
         await refrescarDatosJuego();
       } catch (err) {
         const error = panel.querySelector<HTMLElement>('#asent-cargo-error');
@@ -1743,7 +1784,7 @@ async function confirmarFundacion(_proyeccion: ProyeccionJugador, _posicion: { x
     // Backend 2026-10-04 (Doc 1.3): solo se funda con `fundar`, el titular con su Caravana de Fundación enganchada y donde
     // está su columna. El punto elegido en el mapa es solo la vista previa de recursos.
     const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'fundar', {});
-    if (!respuesta.resultado.ok) throw new ApiError(409, respuesta.resultado.codigoError ?? 'No se pudo fundar aquí.');
+    if (!respuesta.resultado.ok) throw errorDeRechazo(respuesta.resultado, 'No se pudo fundar aquí.');
     estadoCliente.modoFundacionActivo = false;
     estadoCliente.posicionFundacion = null;
     estadoCliente.puntoFundacionFijado = false;

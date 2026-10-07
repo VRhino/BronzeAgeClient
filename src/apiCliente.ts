@@ -74,6 +74,9 @@ export interface ProyeccionJugador {
   campamentosMercenarios: CampamentoMercenarios[];
   /** La planta del campamento donde estás (backend D73): solo viaja estando dentro de uno. */
   escenaCampamento?: EscenaCampamento;
+  /** El mostrador del campamento donde estás (backend 2026-10-07): precio de UNA unidad de cada bien que te venden (n cuestan `ceil(n × precio)`)
+   * y lo que te queda del cupo de hoy (sin entrada = sin cupo). Ausente fuera, o con un backend anterior. */
+  mercadoCampamento?: { precios: Record<string, number>; cupoRestante: Record<string, number> };
   /** Alijos a la vista de tu columna que aún no abriste (solo si tu Facción no tiene asentamiento). */
   alijos: Alijo[];
   /** Tus Miradas de las tabernas, abiertas o enfriándose (backend 2026-10-05, Doc 5.12.10). Lo que dejan ver llega por las listas de avistados. */
@@ -134,6 +137,10 @@ export interface RespuestaComando {
   resultado: {
     ok: boolean;
     codigoError?: string;
+    /** El motivo concreto, en castellano, cuando el backend lo da (2026-10-07). Para mostrarlo; se decide por `codigoError`. */
+    detalleError?: string;
+    /** Lo que devuelve el comando si fue bien (p. ej. `{ cantidad, oro }` de una compra). */
+    datos?: unknown;
   };
   proyeccion?: ProyeccionJugador | PartidaSinHeroe;
   [campo: string]: unknown;

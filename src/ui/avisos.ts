@@ -87,6 +87,26 @@ export function reiniciarAvisos(): void {
   oyentes.forEach((cb) => cb());
 }
 
+/**
+ * La deserción por hambre (`tropas.desercion`, con `heroeId` desde el backend 2026-10-07): una columna sin ración pierde moral y, a 0, deserta un
+ * 5 % por minuto. Llega un evento por escuadra y minuto, así que los de una tanda se juntan en un solo aviso.
+ */
+function avisarDeDesercion(eventos: readonly EventoDominio[], heroeId: string, modo: 'vivo' | 'recuperado' | 'historico'): void {
+  const porEscuadra = new Map<string, number>();
+  let ultimo: EventoDominio | undefined;
+  for (const e of eventos) {
+    const p = e.payload as { heroeId?: string; escuadronNombre?: string; desertores?: number } | undefined;
+    if (e.codigo !== 'tropas.desercion' || p?.heroeId !== heroeId) continue;
+    porEscuadra.set(p.escuadronNombre ?? 'una escuadra', (porEscuadra.get(p.escuadronNombre ?? 'una escuadra') ?? 0) + (p.desertores ?? 0));
+    ultimo = e;
+  }
+  if (!ultimo) return;
+  const texto = `Desertan por hambre (sin ración, moral a 0): ${[...porEscuadra].map(([n, d]) => `${n} −${d}`).join(', ')}. Lleva trigo en el carro.`;
+  historial.unshift({ version: ultimo.version, momento: ultimo.momento, texto, clase: 'baja' });
+  if (modo !== 'historico') noLeidos++;
+  if (modo === 'vivo') mostrar(texto, true);
+}
+
 /** Anota un evento del backend en el historial (y avisa si es nuevo). `silencioso`: lo ocurrido mientras no mirabas, sin toast ni briefing. */
 function procesar(e: EventoDominio, heroeId: string, modo: 'vivo' | 'recuperado' | 'historico'): void {
   const silencioso = modo !== 'vivo';
@@ -135,6 +155,7 @@ export async function avisarDeEventos(gameId: string, version: number): Promise<
   try {
     const eventos = await consultarEventos(gameId, desde);
     for (const e of eventos) procesar(e, heroeId, modo);
+    avisarDeDesercion(eventos, heroeId, modo);
     if (historial.length > MAX_HISTORIAL) historial.length = MAX_HISTORIAL;
     guardar();
     oyentes.forEach((cb) => cb());

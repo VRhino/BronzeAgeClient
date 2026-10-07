@@ -3,6 +3,31 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.16.0] — 2026-10-07 · lo que llevas, errores con motivo, botín en el informe y mercado nuevo · sync con `BronzeAgeFase0@a0945dd` (`main`, sin push)
+
+### Añadido
+- **«Lo que llevas»** (⚔ en el riel del mapa, `ui/panelColumna.ts`): la tropa de tu columna en su orden de combate, con hombres, moral y si es prestada,
+  flechas para cambiar el orden (comando nuevo del backend `ordenarEscuadras`: la primera entra primero, en la batalla de Unity y en el combate con
+  números) y debajo el carro y el almacén personal.
+- **Mercado del campamento rediseñado**: lista de bienes en venta (con su precio por unidad) y, del elegido, en venta, lo que ya tienes (almacén o carro),
+  el cupo de hoy, tu oro, la cantidad (número y barra) y, en vivo, cuánto pagas, cuánto te queda y cuánto tendrás; después, «Comprar N por T de oro». Tras
+  comprar dice lo que se sirvió de verdad. Precio y cupo los manda el backend (`mercadoCampamento`).
+- **Botín y pérdida en el informe contra bandidos**: si cae, el oro de botín que ganas; si aguanta, lo que pierdes del carro (backend `oroPorHeroe` /
+  `carroPerdido`).
+- **Aviso de deserción por hambre**: agrupado por tanda («Desertan por hambre: Milicia −2…»). El backend no le mandaba ese evento a nadie en una columna
+  salida de un campamento; ahora lleva el `heroeId`.
+
+### Cambiado
+- **Los errores dicen el motivo real**: el backend manda `detalleError` (p. ej. «La columna no lleva soldados con los que atacar.») y es lo que se enseña;
+  el texto genérico de `combate.invalido` ya no sugiere distancia o herida.
+- «Atacar» avisa antes de enviar si tu columna no lleva soldados vivos o estás a menos de 60 de un campamento de mercenarios.
+
+### Investigado: «no me deja atacar a menos de 15 y sin estar herido»
+Reproducido el mismo recorrido (crear Facción, préstamo, salir, ir a 6 del campamento, atacar) contra el backend actual: el ataque se acepta. Tu partida ya no
+existía para leer su rechazo, y el backend solo devolvía el código, así que no se puede saber cuál de sus causas fue (columna sin soldados vivos —p. ej.
+por deserción—, escuadras de un héroe herido…). Desde ahora el mensaje dice el motivo exacto. Encontrado de paso: una columna sin ración deserta hasta 0
+sin avisar (corregido arriba), y tras reiniciar el servidor la recuperación de ticks puede dejarla así.
+
 ## [0.15.0] — 2026-10-07 · tiempo real, estados activos y Facción estable · sync con `BronzeAgeFase0@4bf2ac6` (`main`, sin push)
 
 ### Añadido

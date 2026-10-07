@@ -37,7 +37,8 @@ function filas(recursos: Record<string, number>, accion: string, etiqueta: strin
     .join('');
 }
 
-export function htmlCarro(p: ProyeccionJugador, e: Escapar): string {
+/** `cabecera`: la línea con el nombre del héroe (fuera cuando el carro va dentro de otro panel, como «Lo que llevas»). */
+export function htmlCarro(p: ProyeccionJugador, e: Escapar, cabecera = true): string {
   const columna = miColumna(p);
   const almacen = p.heroe.almacenPersonal ?? {};
   const esLider = columna?.liderId === p.heroeId;
@@ -52,7 +53,7 @@ export function htmlCarro(p: ProyeccionJugador, e: Escapar): string {
       ? 'Solo el Líder de la columna mueve lo del carro: el carro es común a todos los que van en ella.'
       : 'Guarda en tu almacén personal lo que quieras conservar. Al entrar en tu campamento se guarda solo; la ración gratis de trigo vuelve al campamento.';
   return `
-    <div class="mapa-panel-jugador">${e(p.heroe.displayName)} · carro y almacén</div>
+    ${cabecera ? `<div class="mapa-panel-jugador">${e(p.heroe.displayName)} · carro y almacén</div>` : ''}
     <p class="asent-lado-nota">${nota}</p>
     ${columna ? `<strong class="heroe-sub">Carro de tu columna${ocupacion(carro, columna.capacidadCarga)}</strong>${filas(carro, 'guardar', 'Guardar', esLider, e, noGuardable)}` : ''}
     ${aparcadas.map((c) => `<strong class="heroe-sub">Resto del carro, aparcado en la puerta</strong>${filas(c.suministro ?? {}, 'ninguna', '', false, e)}`).join('')}

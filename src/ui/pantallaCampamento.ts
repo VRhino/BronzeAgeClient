@@ -3,7 +3,7 @@
 // Fondo · Taberna) en vez de una sola columna larga. Aquí no se decide ninguna regla: quien valida es el backend, y su rechazo sale
 // tal cual en `#camp-error`. Los menús del jugador (héroe, escuadras, Facción) están en la barra superior (`barraJugador.ts`).
 import type { ProyeccionJugador } from '../apiCliente';
-import { EDIFICIO_NOMBRE, RECURSO_NOMBRE } from '../paletas';
+import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { CampamentoMercenarios, Escuadron } from '../tiposDominio';
 
 /** Manda el comando y refresca; devuelve el mensaje de error o `null`. Lo pone `main.ts`. */
@@ -114,14 +114,77 @@ function tropa(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): stri
     ${heroe.escuadrones.length > 0 ? `<div class="mapa-lista">${heroe.escuadrones.map((s) => filaEscuadra(s, p, e)).join('')}</div>` : '<p class="asent-lado-nota">Ninguna.</p>'}`;
 }
 
+/** El bien elegido en el mercado y el resultado de la última compra: viven entre repintados (el sondeo de 3 s no los borra). */
+let bienElegido: string | null = null;
+let ultimaCompra: string | null = null;
+
+/**
+ * El MERCADO del campamento: una lista de lo que hay en venta y, del bien elegido, todo lo necesario para decidir antes de pulsar «Comprar»:
+ * lo que hay en venta, lo que ya tienes, el cupo de hoy, tu oro, la cantidad y el total a pagar. Precio y cupo los manda el backend
+ * (`mercadoCampamento`); se paga primero con el oro de botín y luego con el oro del almacén personal. Si no cabe todo o no alcanza, el
+ * campamento sirve lo que puede, y se dice.
+ */
 function mercado(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): string {
-  const resides = c.residentesIds.includes(p.heroe.id);
-  const enVenta = Object.entries(c.mercado).filter(([r, n]) => n > 0 && (resides || r === 'trigo'));
-  return `
-    ${resides ? '' : '<p class="asent-lado-nota">Si no resides aquí, solo te venden trigo, y va al carro de tu columna.</p>'}
-    ${enVenta.length > 0
-      ? enVenta.map(([r, n]) => `<div class="campamento-fila"><span>${e(nombreRecurso(r))} (${Math.floor(n)})</span><input class="form-input" type="number" min="1" max="${Math.floor(n)}" value="10" data-compra="${e(r)}" /><button class="btn-secondary" type="button" data-comprar="${e(r)}">Comprar</button></div>`).join('')
-      : '<p class="asent-lado-nota">Nada en venta.</p>'}`;
+  const heroe = p.heroe;
+  const resides = c.residentesIds.includes(heroe.id);
+  const precios = p.mercadoCampamento?.precios;
+  const enVenta = Object.entries(c.mercado).filter(([r, n]) => n >= 1 && r !== 'oro' && (resides || r === 'trigo'));
+  const nota = resides ? '' : '<p class="asent-lado-nota">Si no resides aquí, solo te venden trigo, y va al carro de tu columna.</p>';
+  if (enVenta.length === 0) return `${nota}<p class="asent-lado-nota">Nada en venta.</p>`;
+  if (!bienElegido || !enVenta.some(([r]) => r === bienElegido)) bienElegido = enVenta[0]![0];
+
+  const almacen = heroe.almacenPersonal ?? {};
+  const oroBotin = Math.floor(heroe.oroDeBotin ?? 0);
+  const oroAlmacen = Math.floor(almacen['oro'] ?? 0);
+  const oro = oroBotin + oroAlmacen;
+  const carro = p.ejercitos.find((x) => x.liderId === heroe.id)?.suministro ?? {};
+  const tienes = (r: string): number => Math.floor(resides ? (almacen[r] ?? 0) : (carro[r] ?? 0));
+
+  const lista = enVenta
+    .map(([r, n]) => `<button class="mercado-bien${r === bienElegido ? ' activo' : ''}" type="button" data-bien="${e(r)}"><span>${RECURSO_ICONO[r] ?? '📦'} ${e(nombreRecurso(r))}</span><small>${Math.floor(n)} en venta${precios?.[r] ? ` · ${formatoPrecio(precios[r]!)} oro/u` : ''}</small></button>`)
+    .join('');
+
+  const r = bienElegido;
+  const stock = Math.floor(c.mercado[r] ?? 0);
+  const precio = precios?.[r];
+  const cupo = p.mercadoCampamento?.cupoRestante[r];
+  let maximo = Math.min(stock, cupo ?? Infinity);
+  if (precio) {
+    maximo = Math.min(maximo, Math.floor(oro / precio));
+    while (maximo > 0 && Math.ceil(maximo * precio) > oro) maximo--;
+  }
+  const inicial = Math.max(0, Math.min(10, maximo));
+  return `${nota}
+    <div class="mercado-lista">${lista}</div>
+    <section class="mercado-detalle" data-precio="${precio ?? ''}" data-oro="${oro}" data-tienes="${tienes(r)}">
+      <strong class="heroe-sub">${RECURSO_ICONO[r] ?? '📦'} ${e(nombreRecurso(r))}</strong>
+      <div class="asent-ficha-grid">
+        <div><span>En venta</span><strong>${stock}</strong></div>
+        <div><span>Tienes ${resides ? 'en tu almacén' : 'en tu carro'}</span><strong>${tienes(r)}</strong></div>
+        ${cupo !== undefined ? `<div><span>Cupo de hoy</span><strong>${cupo}</strong></div>` : ''}
+        <div><span>Tu oro</span><strong title="Oro de botín ${oroBotin} · almacén ${oroAlmacen}">${oro}</strong></div>
+        ${precio ? `<div><span>Precio por unidad</span><strong>${formatoPrecio(precio)}</strong></div>` : ''}
+      </div>
+      ${maximo < 1
+        ? `<p class="asent-lado-nota">${cupo === 0 ? 'Ya has comprado hoy todo lo que se te vende de esto.' : precio && oro < precio ? 'No te llega el oro ni para una unidad.' : 'No se puede comprar ahora.'}</p>`
+        : `<label class="mercado-cantidad"><span>Cantidad</span>
+            <input class="form-input" type="number" min="1" max="${maximo}" value="${inicial}" data-cantidad />
+            <input type="range" min="1" max="${maximo}" value="${inicial}" data-cantidad-barra />
+          </label>
+          <div class="mercado-total">
+            <div><span>Pagas</span><strong data-total>${precio ? Math.ceil(inicial * precio) : '—'}</strong><small>de oro</small></div>
+            <div><span>Te queda</span><strong data-resta>${precio ? oro - Math.ceil(inicial * precio) : '—'}</strong><small>de oro</small></div>
+            <div><span>Tendrás</span><strong data-tendras>${tienes(r) + inicial}</strong><small>${e(nombreRecurso(r))}</small></div>
+          </div>
+          <button class="btn-primary" type="button" data-comprar="${e(r)}">Comprar</button>`}
+      ${ultimaCompra ? `<p class="mercado-hecho">${e(ultimaCompra)}</p>` : ''}
+      <p class="asent-lado-nota">Se paga primero con el oro de botín y luego con el oro de tu almacén. Si no cabe todo o no te llega, se compra lo que se pueda.</p>
+    </section>`;
+}
+
+/** «1.3» con un decimal si lo tiene; los precios del campamento salen de la economía y no son enteros. */
+function formatoPrecio(n: number): string {
+  return Number.isInteger(n) ? String(n) : n.toFixed(1);
 }
 
 function fondo(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): string {
@@ -163,7 +226,60 @@ export function htmlSeccionCampamento(seccion: SeccionCampamento, p: ProyeccionJ
 }
 
 /** Cablea los botones de la subpestaña pintada. Tras un éxito refresca `ejecutar`, y el router decide la pantalla. */
-export function cablearCampamento(root: HTMLElement, p: ProyeccionJugador, c: CampamentoMercenarios, ejecutar: Ejecutar): void {
+/** Lo que el mercado necesita además de `ejecutar`: comprar sabiendo cuánto se sirvió (`datos` del comando) y repintar la pestaña al elegir. */
+export interface OpcionesMercado {
+  ejecutarConDatos: (tipo: string, params: object) => Promise<{ error: string | null; datos?: unknown }>;
+  repintar: () => void;
+}
+
+function cablearMercado(root: HTMLElement, c: CampamentoMercenarios, opciones: OpcionesMercado): void {
+  const error = root.querySelector<HTMLElement>('#camp-error');
+  root.querySelectorAll<HTMLButtonElement>('[data-bien]').forEach((boton) => boton.addEventListener('click', () => {
+    bienElegido = boton.dataset.bien!;
+    ultimaCompra = null;
+    opciones.repintar();
+  }));
+  const detalle = root.querySelector<HTMLElement>('.mercado-detalle');
+  const numero = root.querySelector<HTMLInputElement>('[data-cantidad]');
+  const barra = root.querySelector<HTMLInputElement>('[data-cantidad-barra]');
+  if (!detalle || !numero) return;
+  const precio = Number(detalle.dataset.precio) || 0;
+  const oro = Number(detalle.dataset.oro);
+  const tienes = Number(detalle.dataset.tienes);
+  const comprar = root.querySelector<HTMLButtonElement>('[data-comprar]');
+  /** Recalcula el total sin repintar (lo escrito no se toca). */
+  const actualizar = (n: number): void => {
+    const total = Math.ceil(n * precio);
+    const poner = (sel: string, v: string) => { const el = detalle.querySelector(sel); if (el) el.textContent = v; };
+    if (precio) { poner('[data-total]', String(total)); poner('[data-resta]', String(oro - total)); }
+    poner('[data-tendras]', String(tienes + n));
+    if (comprar) {
+      comprar.disabled = !(n >= 1) || (precio > 0 && total > oro);
+      comprar.textContent = n >= 1 ? `Comprar ${n}${precio ? ` por ${total} de oro` : ''}` : 'Comprar';
+    }
+  };
+  numero.addEventListener('input', () => { if (barra) barra.value = numero.value; actualizar(Math.floor(Number(numero.value))); });
+  barra?.addEventListener('input', () => { numero.value = barra.value; actualizar(Number(barra.value)); });
+  actualizar(Math.floor(Number(numero.value)));
+  comprar?.addEventListener('click', async () => {
+    const recurso = comprar.dataset.comprar!;
+    const pedida = Math.floor(Number(numero.value));
+    comprar.disabled = true;
+    const r = await opciones.ejecutarConDatos('comprarEnCampamento', { recurso, cantidad: pedida, campamentoId: c.id });
+    if (r.error) {
+      comprar.disabled = false;
+      if (error) error.textContent = r.error;
+      return;
+    }
+    const d = r.datos as { cantidad?: number; oro?: number } | undefined;
+    ultimaCompra = d?.cantidad !== undefined
+      ? `Compraste ${d.cantidad} de ${nombreRecurso(recurso)} por ${d.oro ?? 0} de oro.${d.cantidad < pedida ? ' No cabía o no alcanzaba para más.' : ''}`
+      : 'Compra hecha.';
+    opciones.repintar();
+  });
+}
+
+export function cablearCampamento(root: HTMLElement, p: ProyeccionJugador, c: CampamentoMercenarios, ejecutar: Ejecutar, opciones: OpcionesMercado): void {
   const error = root.querySelector<HTMLElement>('#camp-error');
   const heroeId = p.heroeId;
   const conBoton = (selector: string, tipo: string, params: (this: HTMLButtonElement) => object): void => {
@@ -198,11 +314,7 @@ export function cablearCampamento(root: HTMLElement, p: ProyeccionJugador, c: Ca
   }));
   conBoton('#btn-pedir-prestamo', 'pedirPrestamo', () => ({ tropaIds: marcados('data-prestamo') }));
   conBoton('#btn-reponer-prestamo', 'reponerPrestamo', () => ({}));
-  conBoton('[data-comprar]', 'comprarEnCampamento', function (this: HTMLButtonElement) {
-    const recurso = this.dataset.comprar!;
-    const cantidad = Number(root.querySelector<HTMLInputElement>(`input[data-compra="${recurso}"]`)?.value ?? 0);
-    return { recurso, cantidad, campamentoId: c.id };
-  });
+  cablearMercado(root, c, opciones);
   for (const tipo of ['aportarARefundacion', 'retirarDeRefundacion']) {
     conBoton(`[data-fondo="${tipo}"]`, tipo, () => ({
       recurso: root.querySelector<HTMLSelectElement>('#fondo-recurso')?.value ?? '',

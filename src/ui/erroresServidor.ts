@@ -1,5 +1,6 @@
 // Traduce los `codigoError` del backend (catálogo estable `session/comandos/codigosDeError.ts`) a un mensaje que entienda el jugador.
-// El backend no manda texto, solo el código, y el primero que falle: lo que no esté aquí sale tal cual.
+// Si el backend da el motivo concreto (`detalleError`, 2026-10-07) se enseña ese (`errorDeRechazo` en `main.ts`); esto es para los rechazos que solo
+// traen el código. Lo que no esté aquí sale tal cual.
 const MENSAJES: Record<string, string> = {
   // Facción y membresía
   'faccion.nombre_vacio': 'La Facción necesita un nombre.',
@@ -38,7 +39,7 @@ const MENSAJES: Record<string, string> = {
   'jugador.sin_columna': 'No tienes columna en el mapa: sal al mundo primero.',
   'jugador.no_existe': 'Ese jugador no existe.',
   'movilizacion.invalida': 'La columna no puede hacer eso ahora (distancia, estado o composición).',
-  'combate.invalido': 'No se puede atacar eso: comprueba la distancia (15) y que no estés herido.',
+  'combate.invalido': 'Ese combate no es posible ahora.',
   'ejercito.no_existe': 'Esa columna ya no existe.',
   'puerta.invalida': 'No estás a la puerta.',
   'batalla.no_existe': 'Esa batalla ya no existe.',
