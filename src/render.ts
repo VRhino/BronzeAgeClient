@@ -204,6 +204,9 @@ function bytesDeMascara(hex: string, celdas: number): Uint8Array {
   return bytes;
 }
 
+/** `MERCENARIOS.radioProteccion` del backend (M4/D78), copiado: el cliente no importa el motor. */
+export const RADIO_PROTECCION_MERCENARIOS = 60;
+
 /**
  * La niebla de guerra, en una sola capa por encima de la geografía (niebla de guerra, Paso 5).
  *
@@ -719,17 +722,17 @@ export function pintarTerreno(
   for (const campamento of proyeccion.campamentosMercenarios || []) {
     const x = campamento.posicion.x * escalaCanvas;
     const y = campamento.posicion.y * escalaCanvas;
-    const r = 8;
+    // Como en el cliente admin: cuadrado azul con el anillo de protección (nadie inicia un combate dentro, D78).
     ctx.beginPath();
-    ctx.moveTo(x, y - r);
-    ctx.lineTo(x + r, y + r * 0.7);
-    ctx.lineTo(x - r, y + r * 0.7);
-    ctx.closePath();
-    ctx.fillStyle = '#a0703c';
-    ctx.fill();
+    ctx.arc(x, y, RADIO_PROTECCION_MERCENARIOS * escalaCanvas, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(46, 94, 140, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = '#2e5e8c';
+    ctx.fillRect(x - 5, y - 5, 10, 10);
     ctx.strokeStyle = '#1b1a17';
     ctx.lineWidth = 1.5;
-    ctx.stroke();
+    ctx.strokeRect(x - 5, y - 5, 10, 10);
   }
   for (const alijo of proyeccion.alijos || []) {
     ctx.beginPath();

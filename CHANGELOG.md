@@ -3,6 +3,11 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.16.1] — 2026-10-07 · campamentos de mercenarios como en el cliente admin
+
+### Cambiado
+- Los campamentos de mercenarios se dibujan como en el cliente admin: cuadrado azul con el anillo de la zona de protección (radio 60, donde nadie inicia un combate).
+
 ## [0.16.0] — 2026-10-07 · lo que llevas, errores con motivo, botín en el informe y mercado nuevo · sync con `BronzeAgeFase0@a0945dd` (`main`, sin push)
 
 ### Añadido

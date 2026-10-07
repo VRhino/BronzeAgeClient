@@ -19,7 +19,7 @@ import {
 } from './apiCliente';
 import { elegirPestanaHeroe, minutosHerido, pintarPanelHeroe } from './ui/panelHeroe';
 import { htmlBarraJugador, type PanelJugador } from './ui/barraJugador';
-import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
+import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno, RADIO_PROTECCION_MERCENARIOS } from './render';
 import { EDIFICIO_COLOR, EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from './paletas';
 import type { Alijo, Asentamiento, BloqueoAscenso, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Edificio, EvaluacionAscenso, ParamsCrearHeroe, ProduccionItem, Sigilo } from './tiposDominio';
 import { svgSigilo } from './sigilo/sigilo';
@@ -445,8 +445,6 @@ function cercano<T extends { posicion: { x: number; y: number } }>(lista: readon
 /** A qué distancia se ataca: `LOGISTICA.radioEncuentro` del backend (Doc 5.12.3), copiado aquí para avisar antes de
  * mandar la orden. El que decide es el backend. */
 const RADIO_ATAQUE = 15;
-/** Junto a un campamento de mercenarios nadie inicia un combate: `MERCENARIOS.radioProteccion` del backend (M4/D78), copiado para avisar antes. */
-const RADIO_PROTECCION_MERCENARIOS = 60;
 
 /** Punto de MUNDO bajo un clic: `getBoundingClientRect` del canvas ya incluye el `transform` del zoom/pan. */
 function puntoDeMapa(evento: { clientX: number; clientY: number }, canvas: HTMLCanvasElement, mapa: MapaGenerado): { x: number; y: number } {
