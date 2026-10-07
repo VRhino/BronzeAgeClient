@@ -60,6 +60,7 @@ export function htmlCarro(p: ProyeccionJugador, e: Escapar, cabecera = true): st
     <strong class="heroe-sub">Almacén personal${ocupacion(almacen, p.heroe.capacidadAlmacenPersonal)}</strong>
     ${filas(almacen, 'sacar', 'Al carro', Boolean(columna) && esLider, e)}
     <div class="carro-fila"><span>🪙 Oro de botín</span><strong>${Math.floor(p.heroe.oroDeBotin ?? 0)}</strong></div>
+    <p class="asent-lado-nota">El oro de botín no va en el carro: nunca se pierde al perder un combate (solo se pierde la mitad del carro). Se gasta en el mercado de un campamento o en el fondo de refundación.</p>
     <p class="faction-error" data-campo="error-carro" role="alert"></p>`;
 }
 

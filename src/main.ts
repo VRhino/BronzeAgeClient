@@ -637,7 +637,7 @@ function renderSeleccionCampamento(cont: HTMLElement, proyeccion: ProyeccionJuga
       <button id="btn-marchar-alli" class="btn-secondary" type="button">Marchar aquí</button>
       <button id="btn-atacar-campamento" class="btn-primary" type="button"${impide ? ' disabled' : ''}>Atacar</button>
     </div>
-    <p class="mapa-lista-vacia">${escaparHtml(impide || 'Si cae, su botín va a tu carro, lo que quepa. Si aguanta, quedas herido y pierdes la mitad del carro.')}</p>
+    <p class="mapa-lista-vacia">${escaparHtml(impide || 'Si cae, ganas su oro de botín (a salvo: no va en el carro). Si aguanta, quedas herido y pierdes la mitad del carro.')}</p>
     <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`;
   cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
   cont.querySelector('#btn-marchar-alli')?.addEventListener('click', () => void marcharAObjetivo({ tipo: 'punto', punto: campamento.posicion }));
@@ -652,7 +652,7 @@ function renderSeleccionCampamento(cont: HTMLElement, proyeccion: ProyeccionJuga
       return;
     }
     const sigue = estadoCliente.proyeccionUltima?.campamentosBandidos.some((c) => c.id === campamento.id);
-    avisoMapa(sigue ? 'El campamento aguanta: quedas herido y pierdes la mitad del carro.' : 'Campamento destruido: su botín va a tu carro, lo que quepa.');
+    avisoMapa(sigue ? 'El campamento aguanta: quedas herido y pierdes la mitad del carro.' : 'Campamento destruido: su oro se suma a tu oro de botín.');
   });
 }
 

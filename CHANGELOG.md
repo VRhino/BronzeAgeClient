@@ -3,6 +3,11 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.17.1] — 2026-10-07 · el oro de botín y el carro, explicados
+
+### Cambiado
+- Los textos de bandidos decían que su botín iba al carro: es falso. El oro va a `oroDeBotin`, aparte del carro y del almacén, y el backend nunca lo quita al perder (solo se pierde la mitad del carro). El panel del carro lo dice.
+
 ## [0.17.0] — 2026-10-07 · barra de comida en el mundo abierto
 
 ### Añadido
