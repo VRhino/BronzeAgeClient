@@ -580,6 +580,8 @@ export interface HeroeProyectado {
   /** Herido hasta este instante de mundo (Doc 5.16.4): 2 minutos tras perder una batalla. Mientras dura no ataca, no
    * persigue y sus escuadras no combaten. Vencido o ausente = sano. */
   heridoHasta?: number;
+  /** Sin ningún cliente conectado (Doc 1.10.6): sale del mundo en este instante si no vuelve antes. */
+  desconectaEn?: number;
 }
 
 /** Un héroe ajeno que se ve (Doc 5.16.7): solo su parte pública. */

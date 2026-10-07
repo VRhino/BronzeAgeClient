@@ -214,38 +214,76 @@ export function cargarSesionLocal(): { sesionId: string; usuario: string; gameId
   return null;
 }
 
-// --- PRESENCIA (WebSocket de tiempo real) ---------------------------------------------------------------
-// Estar conectado es tener un WebSocket abierto (backend Doc 1.10.6, `rutas/tiempoReal.ts`): abrirlo trae al héroe de vuelta al mundo y cerrar el
-// ÚLTIMO socket del jugador lo desconecta (sale del mundo 2:30 después si no vuelve). Este cliente aún no recibe datos por él (sondea la proyección);
-// lo mantiene abierto solo por la presencia, y lo cierra al cerrar sesión o la pestaña. Las suscripciones a canales llegarán con el tiempo real.
+// --- TIEMPO REAL (WebSocket) ---------------------------------------------------------------------------
+// Un único WebSocket por jugador (backend `rutas/tiempoReal.ts`, doc 02 §2) con dos papeles:
+//  - PRESENCIA (Doc 1.10.6): tenerlo abierto es estar conectado; cerrar el ÚLTIMO socket del jugador lo desconecta (sale del mundo 2:30 después
+//    si no vuelve). Por eso se cierra al cerrar sesión o la pestaña.
+//  - AVISOS: se suscribe a canales (`mapa/general`, `heroe/<tuId>`, `asentamiento/<id>` de tus plazas) y, cuando llega un evento, avisa a quien
+//    escuche (`alEventoTiempoReal`). El WebSocket solo avisa: el dato se vuelve a pedir por HTTP (proyección y cursor de eventos), que es la verdad.
+// Las suscripciones no sobreviven a una reconexión: al abrirse se mandan todas otra vez.
 let socketPresencia: WebSocket | null = null;
 let presenciaDeseada: string | null = null;
 let reintentoPresencia: ReturnType<typeof setTimeout> | undefined;
+/** Los canales que se quieren tener suscritos, y los que el socket abierto tiene ya pedidos. */
+let canalesDeseados = new Set<string>();
+const canalesPedidos = new Set<string>();
+let oyenteDeEventos: ((evento: EventoDominio) => void) | null = null;
 
 function urlTiempoReal(gameId: string, sesionId: string): string {
   const base = import.meta.env.VITE_API_BASE ?? location.origin;
   return `${base.replace(/^http/, 'ws')}/v1/jugador/partidas/${encodeURIComponent(gameId)}/tiempo-real?sesion=${encodeURIComponent(sesionId)}`;
 }
 
-/** Abre el socket de presencia de esa partida si no está abierto (idempotente). Si se cae sin que lo pidamos, reintenta a los 3 s. */
+/** Pone al día las suscripciones del socket abierto con `canalesDeseados`. */
+function sincronizarCanales(): void {
+  const socket = socketPresencia;
+  if (!socket || socket.readyState !== WebSocket.OPEN) return;
+  for (const canal of canalesDeseados) if (!canalesPedidos.has(canal)) { socket.send(JSON.stringify({ accion: 'suscribir', canal })); canalesPedidos.add(canal); }
+  for (const canal of [...canalesPedidos]) if (!canalesDeseados.has(canal)) { socket.send(JSON.stringify({ accion: 'desuscribir', canal })); canalesPedidos.delete(canal); }
+}
+
+/** Qué canales escuchar (se llama con cada proyección; si no cambia nada no se manda nada). */
+export function fijarCanalesTiempoReal(canales: readonly string[]): void {
+  canalesDeseados = new Set(canales);
+  sincronizarCanales();
+}
+
+/** Quién recibe los eventos que llegan por el socket (uno solo: `main.ts`). */
+export function alEventoTiempoReal(cb: (evento: EventoDominio) => void): void {
+  oyenteDeEventos = cb;
+}
+
+/** Abre el socket de esa partida si no está abierto (idempotente). Si se cae sin que lo pidamos, reintenta a los 3 s. */
 export function abrirPresencia(gameId: string): void {
   presenciaDeseada = gameId;
   if (!sesionIdMemoria || (socketPresencia && socketPresencia.readyState <= WebSocket.OPEN)) return;
   clearTimeout(reintentoPresencia);
   const socket = new WebSocket(urlTiempoReal(gameId, sesionIdMemoria));
   socketPresencia = socket;
+  canalesPedidos.clear();
+  socket.addEventListener('open', () => sincronizarCanales());
+  socket.addEventListener('message', (mensaje) => {
+    try {
+      const datos = JSON.parse(String(mensaje.data)) as { tipo?: string; evento?: EventoDominio };
+      if (datos.tipo === 'evento' && datos.evento) oyenteDeEventos?.(datos.evento);
+    } catch {
+      // Un mensaje ilegible no rompe nada: el sondeo sigue trayendo la verdad.
+    }
+  });
   socket.addEventListener('close', () => {
     if (socketPresencia === socket) socketPresencia = null;
+    canalesPedidos.clear();
     if (presenciaDeseada === gameId && sesionIdMemoria) reintentoPresencia = setTimeout(() => abrirPresencia(gameId), 3000);
   });
 }
 
-/** Cierra el socket de presencia y deja de reabrirlo: así el servidor ve que el jugador se fue. */
+/** Cierra el socket y deja de reabrirlo: así el servidor ve que el jugador se fue. */
 export function cerrarPresencia(): void {
   presenciaDeseada = null;
   clearTimeout(reintentoPresencia);
   socketPresencia?.close(1000, 'sesion cerrada');
   socketPresencia = null;
+  canalesPedidos.clear();
 }
 
 export function cerrarSesion(): void {

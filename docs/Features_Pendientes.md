@@ -240,7 +240,8 @@ Detalle y hallazgos del backend en `CHANGELOG.md` 0.14.0.
 
 **Falta:**
 1. ~~Eventos de combate~~: resuelto en el backend `60b0939` (cliente 0.14.1); el cursor entrega los eventos que nombran a tu héroe.
-2. **Tiempo real de datos**: el WebSocket está abierto solo por la presencia; sigue el sondeo de 3 s. Suscribirse a `mapa/general` y `asentamiento/<id>` quitaría el sondeo y los avisos llegarían al instante.
+2. ~~Tiempo real de datos~~: hecho en 0.15.0 (canales `mapa/general`, `heroe/<id>`, `asentamiento/<id>`). Queda el sondeo de 3 s solo porque el movimiento de las
+   columnas no genera eventos: un evento de posición (o un tick por el canal) permitiría quitarlo.
 3. **Atacar o perseguir a otra columna** (`atacar`/`perseguir` con objetivo `ejercito`): el mapa solo ataca plazas y campamentos; «te persiguen» avisa pero no hay respuesta (huir, plantar cara).
 4. **Plano de los bandidos**: esquemático hasta que el backend publique su trazado. (La capacidad del carro y del almacén personal ya viajan y se muestran, 0.14.1.)
 5. **Vista del asentamiento con la barra nueva**: probada por tipos, no en vivo (sin plaza en la partida de prueba).

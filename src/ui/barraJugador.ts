@@ -23,16 +23,17 @@ function dondeEstas(p: ProyeccionJugador): string {
 }
 
 /**
- * La barra. `conMapa` añade el botón «Mapa (M)» (dentro de un asentamiento o un campamento: en el propio mapa no hace falta). El avatar y su
+ * La barra. `conMapa` añade el botón «Mapa» (dentro de un asentamiento o un campamento: en el propio mapa no hace falta). El avatar y su
  * menú de sesión los pone `main.ts` (`menuEsquinaHtml`) fuera de la barra, anclados a su esquina.
  */
 export function htmlBarraJugador(p: ProyeccionJugador, conMapa: boolean, e: (valor: string) => string): string {
   return `<header class="jugador-barra">
     <span class="jugador-quien"><strong>${e(p.heroe.displayName)}</strong><small>${e(dondeEstas(p))}</small></span>
+    <div class="jugador-estados" aria-label="Estados activos"></div>
     <div class="jugador-alerta" role="status" hidden></div>
     <nav class="jugador-botones" aria-label="Menús del jugador">
       ${BOTONES.map(([id, nombre]) => `<button type="button" data-panel-jugador="${id}">${nombre}${id === 'avisos' ? '<b class="jugador-badge" hidden></b>' : ''}</button>`).join('')}
-      ${conMapa ? '<button type="button" data-ver-mapa title="Ver el mapa con la visión que tienes (M)">Mapa <kbd>M</kbd></button>' : ''}
+      ${conMapa ? '<button type="button" data-ver-mapa title="Ver el mapa con la visión que tienes, sin salir">Mapa</button>' : ''}
     </nav>
   </header>`;
 }

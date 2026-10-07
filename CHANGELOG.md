@@ -3,6 +3,23 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.15.0] — 2026-10-07 · tiempo real, estados activos y Facción estable · sync con `BronzeAgeFase0@4bf2ac6` (`main`, sin push)
+
+### Añadido
+- **Tiempo real**: el WebSocket, que antes solo servía para la presencia, se suscribe a `mapa/general`, a `heroe/<tuId>` (canal personal nuevo del
+  backend) y a `asentamiento/<id>` de cada plaza de tu Facción que conoces; las suscripciones se rehacen al reconectar y se ajustan con cada
+  proyección. Un evento solo avisa: el cliente pide al momento la proyección y el cursor de eventos (agrupando ráfagas en 250 ms). Verificado: el
+  briefing de un ataque llega en ~0,5 s en vez de hasta 3 s. El sondeo de 3 s se mantiene, porque el avance de las columnas no genera eventos.
+- **Estados activos** («debuffs») en la barra superior, en el mapa, el campamento y el asentamiento (`ui/estados.ts`): icono pequeño y nombre, con la
+  descripción en un tooltip al pasar el cursor (o con el foco). Herido, Saliendo del mundo, Moral baja / Deserción de tu columna, Plaza ocupada y
+  Hambre / Hambruna de la plaza donde estás. Todo sale de la proyección.
+
+### Cambiado
+- **Sin atajo de teclado para el mapa**: se quita la tecla `M` (y `Esc`); el mapa desde dentro se abre y se cierra solo con el botón «Mapa» y «Volver».
+- **El panel de Facción ya no cambia solo**: el selector de escudo generaba un sigilo al azar en cada pintado, así que el HTML cambiaba en cada
+  refresco y el panel se repintaba entero, llevándose el nombre y el escudo elegidos. Ahora el sigilo propuesto es fijo y, mientras creas una
+  Facción o buscas a cuál pedir ingreso, el panel no se repinta salvo al cambiar de modo.
+
 ## [0.14.1] — 2026-10-07 · con los arreglos del backend · sync con `BronzeAgeFase0@60b0939` (`main`, sin push)
 
 ### Cambiado

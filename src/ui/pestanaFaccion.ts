@@ -1,5 +1,5 @@
 import type { ProyeccionJugador } from '../apiCliente';
-import type { Faccion } from '../tiposDominio';
+import type { Faccion, Sigilo } from '../tiposDominio';
 import { htmlLiga, htmlTitulos, ligaDe } from '../sigilo/imperio';
 import { CATALOGO_SIGILO, opciones, sigiloAleatorio, svgSigilo } from '../sigilo/sigilo';
 import { estadoCliente } from './estadoCliente';
@@ -109,9 +109,13 @@ export function renderPestanaFaccion(
 
 const NOMBRE_COLOR = (id: string): string => CATALOGO_SIGILO.colores.find((c) => c.id === id)?.nombre ?? id;
 
+/** El sigilo con el que arranca el selector: al azar UNA vez y el mismo en cada repintado. Antes salía uno nuevo en cada pintado, así que el HTML
+ * del panel cambiaba en cada refresco y el panel se repintaba entero, llevándose el nombre y el escudo que se estaban eligiendo. */
+let sigiloPropuesto: Sigilo | null = null;
+
 /** Piezas del sigilo con vista previa. Se elige ahora y no se cambia nunca: avisa de ello. */
 function renderSelectorSigilo(): string {
-  const s = sigiloAleatorio();
+  const s = (sigiloPropuesto ??= sigiloAleatorio());
   const colores = CATALOGO_SIGILO.colores.map((c) => c.id);
   const lista = (id: string, etiqueta: string, ids: readonly string[], elegido: string, nombre?: (id: string) => string): string =>
     `<label>${etiqueta} <select id="${id}" class="form-input">${opciones(ids, elegido, nombre)}</select></label>`;

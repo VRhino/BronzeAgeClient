@@ -2733,3 +2733,12 @@ kbd {
 .carro-fila span { flex: 1; color: var(--text-secondary); }
 .carro-fila .form-input { width: 70px; }
 .carro-fila small { flex-basis: 100%; color: var(--text-muted); font-size: 0.7rem; }
+
+/* Estados activos («debuffs») en la barra: icono + nombre, y la descripción en un tooltip al pasar el cursor o con el foco. */
+.jugador-estados { display: flex; gap: 6px; align-items: center; }
+.jugador-estados:empty { display: none; }
+.estado { position: relative; display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px 3px 6px; font-size: 0.74rem; font-weight: 600; color: #f3d9cf; background: rgba(191, 82, 51, 0.18); border: 1px solid rgba(191, 82, 51, 0.7); border-radius: 3px; cursor: help; white-space: nowrap; }
+.estado svg { flex-shrink: 0; }
+.estado-tip { position: absolute; top: calc(100% + 8px); left: 0; z-index: 20; display: none; width: 260px; padding: 9px 11px; font-size: 0.74rem; font-weight: 400; line-height: 1.4; white-space: normal; color: var(--pergamino); background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg)); border: 1px solid var(--bronce); border-radius: 2px; box-shadow: var(--placa-sutil); }
+.estado-tip strong { display: block; margin-bottom: 3px; font-family: var(--fuente-titulo); color: var(--oro-claro); }
+.estado:hover .estado-tip, .estado:focus .estado-tip { display: block; }

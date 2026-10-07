@@ -6,7 +6,9 @@ import {
   ejecutarComando,
   guardarSesionLocal,
   abrirPresencia,
+  alEventoTiempoReal,
   cerrarPresencia,
+  fijarCanalesTiempoReal,
   loginConClave,
   nivelesBandidos,
   registrarCuenta,
@@ -43,6 +45,7 @@ import { svgPlanoBandidos } from './ui/planoBandidos';
 import { explicarError } from './ui/erroresServidor';
 import { motivosParaCrearFaccion } from './ui/validarFaccion';
 import { nombreDeHeroe } from './ui/nombres';
+import { htmlEstados } from './ui/estados';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 /** Los campamentos donde se puede nacer, de la última respuesta `sinHeroe` (pantalla Héroe). */
@@ -783,7 +786,7 @@ function cablearMenuEsquina(contenedor: HTMLElement): void {
 
 /** El menú del jugador abierto (la barra es la misma en el mapa, el campamento y el asentamiento). Se cierra al cambiar de pantalla. */
 let panelJugador: PanelJugador | null = null;
-/** ¿Está abierto el mapa «desde dentro» (tecla M) sobre el campamento o el asentamiento? */
+/** ¿Está abierto el mapa «desde dentro» (botón Mapa de la barra) sobre el campamento o el asentamiento? */
 let vistaMapaAbierta = false;
 let controlVistaMapa: ControlMapa | null = null;
 
@@ -822,6 +825,8 @@ function renderPanelJugador(forzar = false): void {
     return;
   }
   if (panelJugador === 'faccion') {
+    // Creando una Facción o buscando a cuál pedir ingreso, el formulario es del jugador: solo se repinta al cambiar de modo (`forzar`).
+    if (!forzar && proyeccion.faccionId === null && panel.querySelector('#form-crear-faccion, #input-buscar-faccion')) return;
     const html = `<div class="mapa-panel-jugador">${escaparHtml(proyeccion.heroe.displayName)}</div>${renderPestanaFaccion(proyeccion, escaparHtml)}`;
     if (panel.dataset.pintado !== html || forzar) {
       panel.innerHTML = html;
@@ -835,6 +840,9 @@ function renderPanelJugador(forzar = false): void {
 
 /** Los indicadores de peligro de la barra: quién te persigue ahora (`teSigue` de los ejércitos avistados) y los avisos sin leer (rojo si alguno es un ataque). */
 function pintarAlertas(barra: HTMLElement, p: ProyeccionJugador): void {
+  const estados = barra.querySelector<HTMLElement>('.jugador-estados');
+  const htmlDeEstados = htmlEstados(p, escaparHtml);
+  if (estados && estados.dataset.pintado !== htmlDeEstados) { estados.innerHTML = htmlDeEstados; estados.dataset.pintado = htmlDeEstados; }
   const sigue = p.ejercitosAvistados.filter((x) => x.teSigue);
   const alerta = barra.querySelector<HTMLElement>('.jugador-alerta');
   if (alerta) {
@@ -898,7 +906,7 @@ function alternarVistaMapa(abrir: boolean = !vistaMapaAbierta): void {
     pantalla.insertAdjacentHTML('beforeend', `<div class="mapa-screen mapa-interior">
       <div class="mapa-lienzo"><canvas id="mapa-interior" width="900" height="900"></canvas></div>
       <div class="mapa-zoom"><button type="button" data-zoom="in" aria-label="Acercar">+</button><button type="button" data-zoom="out" aria-label="Alejar">−</button></div>
-      <button class="btn-secondary mapa-interior-cerrar" type="button">Volver <kbd>M</kbd></button>
+      <button class="btn-secondary mapa-interior-cerrar" type="button">Volver</button>
     </div>`);
     const interior = pantalla.querySelector<HTMLElement>('.mapa-interior')!;
     const control = instalarZoomPan(interior, interior.querySelector<HTMLElement>('.mapa-lienzo')!, { zoomInicial: 1.6 });
@@ -1761,6 +1769,7 @@ async function refrescarDatosJuego(): Promise<void> {
   if (respuesta.sinHeroe) campamentosParaElegir = respuesta.campamentos ?? [];
   if (!respuesta.sinHeroe) {
     abrirPresencia(estadoCliente.gameIdActivo);
+    fijarCanalesTiempoReal(canalesDe(respuesta));
     void avisarDeEventos(estadoCliente.gameIdActivo, respuesta.version);
   }
   enrutar();
@@ -1853,17 +1862,27 @@ function cerrarSesionYVolverALogin(mensaje?: string): void {
   renderVistaLogin(mensaje);
 }
 
-/** `M` abre y cierra el mapa desde dentro de un campamento o un asentamiento; `Esc` lo cierra. No actúa mientras se escribe en un campo. */
-function alPulsarTecla(evento: KeyboardEvent): void {
-  if (evento.ctrlKey || evento.metaKey || evento.altKey) return;
-  if ((evento.target as HTMLElement | null)?.closest('input, textarea, select, [contenteditable]')) return;
-  if (evento.key === 'Escape' && vistaMapaAbierta) alternarVistaMapa(false);
-  else if (evento.key.toLowerCase() === 'm' && (pantallaMontada === 'campamento' || pantallaMontada === 'asentamiento')) alternarVistaMapa();
+/** Los canales de tiempo real que interesan con esta proyección: lo global, lo que te nombra a ti y lo de cada plaza de tu Facción que conoces. */
+function canalesDe(p: ProyeccionJugador): string[] {
+  const plazas = new Set([
+    ...p.asentamientos.filter((a) => a.faccionId === p.faccionId).map((a) => a.id),
+    ...p.asentamientosAvistados.filter((a) => a.faccionId === p.faccionId).map((a) => a.id),
+    ...p.asentamientosConocidos.filter((a) => a.faccionId === p.faccionId).map((a) => a.asentamientoId),
+  ]);
+  return ['mapa/general', `heroe/${p.heroeId}`, ...[...plazas].map((id) => `asentamiento/${id}`)];
+}
+
+/** Un evento por el WebSocket solo avisa: se pide la proyección (y con ella el cursor de eventos) al momento, en vez de esperar al sondeo. Los
+ * eventos llegan en ráfagas (un tick narra varios), así que se agrupan en un solo refresco. */
+let refrescoPorEvento: ReturnType<typeof setTimeout> | undefined;
+function alEventoDelServidor(): void {
+  clearTimeout(refrescoPorEvento);
+  refrescoPorEvento = setTimeout(() => { if (estadoCliente.usuarioActivo) void refrescarDatosJuego().catch(() => {}); }, 250);
 }
 
 function arrancar(): void {
   window.addEventListener('hashchange', enrutar);
-  window.addEventListener('keydown', alPulsarTecla);
+  alEventoTiempoReal(alEventoDelServidor);
   alLlegarInforme(mostrarInforme);
   alCambiarAvisos(() => renderPanelJugador());
   // Cerrar la pestaña o la ventana cierra el socket de presencia (lo haría el navegador, pero así es explícito y también vale al recargar).
