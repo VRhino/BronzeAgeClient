@@ -342,18 +342,48 @@ export async function consultarEventos(gameId: string, desde: number): Promise<E
   return r.eventos;
 }
 
-/** Lo que fija cada nivel de bandidos (`GET /v1/balance`, público): su poder, los hombres que defienden y el oro del botín por héroe. */
+/** El balance público (`GET /v1/balance`): se pide una vez, en segundo plano, y avisa con `alCargar` cuando llega. */
+interface BalancePublico {
+  catalogos?: { EDIFICIO_CATALOGO?: Record<string, { costo?: Record<string, number> }> };
+  mundoYMilitar?: { FUNDACION?: { materialesIniciales?: Record<string, number>; viviendasIniciales?: number; costoMaderaExtraCaravana?: number }; MERCENARIOS?: { refundacion?: { porcentajeCoste?: number } } };
+  internas?: { CAMPAMENTOS_BANDIDOS?: { niveles?: Record<string, NivelDeBandidos> } };
+}
+let balancePublico: BalancePublico | null = null;
+let balancePedido = false;
+function balance(alCargar?: () => void): BalancePublico | null {
+  if (!balancePublico && alCargar && !balancePedido) {
+    balancePedido = true;
+    void fetchJson<BalancePublico>(`${V1}/balance`, {}, '')
+      .then((b) => { balancePublico = b; alCargar(); })
+      .catch(() => { balancePedido = false; });
+  }
+  return balancePublico;
+}
+
+/** Lo que fija cada nivel de bandidos: su poder, los hombres que defienden y el oro del botín por héroe. */
 export interface NivelDeBandidos { poder: number; unidades: number; oroPorHeroe: number }
-let nivelesDeBandidos: Record<string, NivelDeBandidos> | null = null;
 
 /** Los niveles de bandidos si ya se leyeron; la primera vez los pide al backend en segundo plano y avisa con `alCargar`. */
 export function nivelesBandidos(alCargar?: () => void): Record<string, NivelDeBandidos> | null {
-  if (!nivelesDeBandidos && alCargar) {
-    void fetchJson<{ internas?: { CAMPAMENTOS_BANDIDOS?: { niveles?: Record<string, NivelDeBandidos> } } }>(`${V1}/balance`, {}, '')
-      .then((b) => { nivelesDeBandidos = b.internas?.CAMPAMENTOS_BANDIDOS?.niveles ?? null; if (nivelesDeBandidos) alCargar(); })
-      .catch(() => {});
-  }
-  return nivelesDeBandidos;
+  return balance(alCargar)?.internas?.CAMPAMENTOS_BANDIDOS?.niveles ?? null;
+}
+
+/**
+ * Lo que cuesta la Caravana de Fundación comprada en un campamento (`costoRefundacion` del backend): el coste normal de una Caravana de Fundación
+ * —materiales iniciales + una granja + las viviendas iniciales + la madera extra— por `MERCENARIOS.refundacion.porcentajeCoste`, redondeado hacia arriba.
+ * El backend no lo publica ya calculado, así que se deriva del balance; `null` mientras no llegue.
+ */
+export function costoDeRefundacion(alCargar?: () => void): Record<string, number> | null {
+  const b = balance(alCargar);
+  const f = b?.mundoYMilitar?.FUNDACION;
+  const cat = b?.catalogos?.EDIFICIO_CATALOGO;
+  const porcentaje = b?.mundoYMilitar?.MERCENARIOS?.refundacion?.porcentajeCoste;
+  if (!f || !cat?.['granja'] || !cat['vivienda'] || porcentaje === undefined) return null;
+  const costo: Record<string, number> = { ...f.materialesIniciales };
+  for (const [r, n] of Object.entries(cat['granja'].costo ?? {})) costo[r] = (costo[r] ?? 0) + n;
+  for (const [r, n] of Object.entries(cat['vivienda'].costo ?? {})) costo[r] = (costo[r] ?? 0) + n * (f.viviendasIniciales ?? 0);
+  costo['madera'] = (costo['madera'] ?? 0) + (f.costoMaderaExtraCaravana ?? 0);
+  return Object.fromEntries(Object.entries(costo).map(([r, n]) => [r, Math.ceil(n * porcentaje)] as const).filter(([, n]) => n > 0));
 }
 
 /** El mapa como asset (Fase C11a): se pide una sola vez por `mapaId` y se cachea */

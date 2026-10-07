@@ -10,6 +10,7 @@ import {
   cerrarPresencia,
   fijarCanalesTiempoReal,
   loginConClave,
+  costoDeRefundacion,
   nivelesBandidos,
   registrarCuenta,
   obtenerMapa,
@@ -367,6 +368,7 @@ function pintarCampamento(p: ProyeccionJugador, campamento: CampamentoMercenario
   const residencia = app.querySelector<HTMLElement>('#camp-residencia');
   if (residencia) residencia.textContent = campamento.residentesIds.includes(p.heroeId) ? 'Tu residencia' : 'De paso';
 
+  costoDeRefundacion(() => { delete lado.dataset.pintado; if (estadoCliente.proyeccionUltima) pintarCampamento(estadoCliente.proyeccionUltima, campamento); });
   const secciones = seccionesDeCampamento(p);
   if (!secciones.some((x) => x.id === seccionCamp)) seccionCamp = 'resumen';
   const html = `<div class="asent-tabs asent-tabs-ancho">${secciones.map((x) => `<button class="asent-tab${x.id === seccionCamp ? ' activo' : ''}" type="button" data-seccion="${x.id}">${x.etiqueta}</button>`).join('')}</div>

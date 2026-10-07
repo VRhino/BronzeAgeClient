@@ -3,7 +3,7 @@
 // Fondo · Taberna) en vez de una sola columna larga. Aquí no se decide ninguna regla: quien valida es el backend, y su rechazo sale
 // tal cual en `#camp-error`. Los menús del jugador (héroe, escuadras, Facción) están en la barra superior (`barraJugador.ts`).
 import { cablearCargaDeSalida, htmlCargaDeSalida, leerCarga } from './cargaDeSalida';
-import type { ProyeccionJugador } from '../apiCliente';
+import { costoDeRefundacion, type ProyeccionJugador } from '../apiCliente';
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { CampamentoMercenarios, Escuadron } from '../tiposDominio';
 
@@ -189,6 +189,10 @@ function formatoPrecio(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
 }
 
+/**
+ * El FONDO de refundación: lo que cuesta la Caravana de Fundación (`costoDeRefundacion`), cuánto lleva reunido tu Facción de cada material, cuánto falta,
+ * lo que has puesto tú, y cómo aportar. Comprar solo se activa con el precio completo.
+ */
 function fondo(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): string {
   const heroe = p.heroe;
   const almacen = heroe.almacenPersonal ?? {};
@@ -198,20 +202,51 @@ function fondo(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): stri
     if (!ciudadanos.has(heroeId)) continue;
     for (const [r, n] of Object.entries(aporte)) fondoDeFaccion[r] = (fondoDeFaccion[r] ?? 0) + n;
   }
+  const mio = c.fondos[heroe.id] ?? {};
   const caravana = p.caravanas.find((k) => k.origenCampamentoId === c.id && k.faccionId === p.faccionId);
-  const recursosAportables = [...new Set([...Object.keys(almacen), ...(heroe.oroDeBotin ? ['oro'] : [])])];
+  const precio = costoDeRefundacion();
+  const tienes = (r: string): number => Math.floor(r === 'oro' ? (heroe.oroDeBotin ?? 0) + (almacen['oro'] ?? 0) : (almacen[r] ?? 0));
+  const falta = (r: string): number => Math.max(0, (precio?.[r] ?? 0) - Math.floor(fondoDeFaccion[r] ?? 0));
+  const recursosAportables = [...new Set([...Object.keys(almacen), ...(heroe.oroDeBotin ? ['oro'] : [])])].filter((r) => tienes(r) >= 1);
+
+  const necesidad = precio
+    ? Object.entries(precio).map(([r, n]) => {
+        const hay = Math.floor(fondoDeFaccion[r] ?? 0);
+        const listo = hay >= n;
+        const mioR = Math.floor(mio[r] ?? 0);
+        return `<div class="fondo-fila${listo ? ' listo' : ''}"><span>${RECURSO_ICONO[r] ?? '📦'} ${e(nombreRecurso(r))}</span>
+          <div class="fondo-barra"><i style="width:${Math.min(100, (hay / n) * 100).toFixed(1)}%"></i></div>
+          <strong>${Math.min(hay, n)} / ${n}</strong>
+          <small>${listo ? '✓ completo' : `faltan ${n - hay}`}${mioR > 0 ? ` · tú: ${mioR}` : ''}</small></div>`;
+      }).join('')
+    : '<p class="asent-lado-nota">Cargando el precio de la caravana…</p>';
+  const total = precio ? Object.values(precio).reduce((x, y) => x + y, 0) : 0;
+  const reunido = precio ? Object.entries(precio).reduce((x, [r, n]) => x + Math.min(n, Math.floor(fondoDeFaccion[r] ?? 0)), 0) : 0;
+  const completo = precio !== null && Object.keys(precio).every((r) => falta(r) === 0);
+  const faltantes = precio ? Object.keys(precio).filter((r) => falta(r) > 0).map((r) => `${falta(r)} de ${nombreRecurso(r)}`).join(', ') : '';
+  // Lo que ya está en el fondo y no pide el precio sigue siendo de quien lo puso y se puede retirar: se enseña aparte.
+  const sobrante = Object.entries(fondoDeFaccion).filter(([r, n]) => n > 0 && !(precio && r in precio));
+
   return `
-    <p class="asent-lado-nota">Lo que los ciudadanos de tu Facción reúnen aquí para comprar la Caravana de Fundación. Lo tuyo se retira mientras no se gaste.</p>
-    ${listaRecursos(fondoDeFaccion, e)}
-    <div class="campamento-fila">
-      <select class="form-input" id="fondo-recurso">${recursosAportables.map((r) => `<option value="${e(r)}">${e(nombreRecurso(r))}</option>`).join('')}</select>
+    <p class="asent-lado-nota">La Caravana de Fundación se compra aquí entre todos los ciudadanos de tu Facción: cada uno aporta lo que quiere a un fondo común. Lo tuyo se puede retirar mientras no se gaste.</p>
+    <strong class="heroe-sub">Precio de la caravana${precio ? ` · reunido ${reunido} / ${total}` : ''}</strong>
+    ${precio ? `<div class="fondo-barra fondo-barra-total"><i style="width:${total > 0 ? ((reunido / total) * 100).toFixed(1) : 0}%"></i></div>` : ''}
+    ${necesidad}
+    ${sobrante.length > 0 ? `<p class="asent-lado-nota">Además en el fondo: ${sobrante.map(([r, n]) => `${Math.floor(n)} de ${e(nombreRecurso(r))}`).join(', ')}.</p>` : ''}
+    <strong class="heroe-sub">Aportar</strong>
+    ${recursosAportables.length === 0
+      ? '<p class="asent-lado-nota">No tienes nada que aportar: el fondo se llena con lo de tu almacén personal y con tu oro de botín.</p>'
+      : `<div class="campamento-fila">
+      <select class="form-input" id="fondo-recurso">${recursosAportables.map((r) => `<option value="${e(r)}" data-tienes="${tienes(r)}" data-falta="${falta(r)}">${e(nombreRecurso(r))} (tienes ${tienes(r)}${precio && falta(r) > 0 ? `, faltan ${falta(r)}` : ''})</option>`).join('')}</select>
       <input class="form-input" id="fondo-cantidad" type="number" min="1" value="10" />
-    </div>
+      <button class="btn-secondary" type="button" id="fondo-lo-que-falta" title="Rellena la cantidad con lo que falta de ese material (o con lo que tienes, si es menos)">Lo que falta</button>
+    </div>`}
     <div class="mapa-seleccion-acciones">
-      <button class="btn-secondary" type="button" data-fondo="aportarARefundacion">Aportar</button>
+      <button class="btn-secondary" type="button" data-fondo="aportarARefundacion"${recursosAportables.length === 0 ? ' disabled' : ''}>Aportar</button>
       <button class="btn-secondary" type="button" data-fondo="retirarDeRefundacion">Retirar</button>
-      <button class="btn-primary" type="button" id="btn-comprar-caravana"${caravana ? ' disabled' : ''}>Comprar caravana</button>
+      <button class="btn-primary" type="button" id="btn-comprar-caravana"${caravana || !completo ? ' disabled' : ''}>Comprar caravana</button>
     </div>
+    ${!caravana && precio && !completo ? `<p class="asent-lado-nota">Aún no se puede comprar: faltan ${faltantes}.</p>` : ''}
     ${caravana ? `<p class="asent-lado-nota">Caravana de Fundación lista${caravana.titularId === heroe.id ? ', y la llevas tú' : ''}: sal con tu columna, engánchala en el mapa y funda donde quieras (panel ⌂).</p>` : ''}`;
 }
 
@@ -324,4 +359,11 @@ export function cablearCampamento(root: HTMLElement, p: ProyeccionJugador, c: Ca
     }));
   }
   conBoton('#btn-comprar-caravana', 'comprarCaravanaDeRefundacion', () => ({}));
+  root.querySelector<HTMLButtonElement>('#fondo-lo-que-falta')?.addEventListener('click', () => {
+    const opcion = root.querySelector<HTMLSelectElement>('#fondo-recurso')?.selectedOptions[0];
+    const cantidad = root.querySelector<HTMLInputElement>('#fondo-cantidad');
+    if (!opcion || !cantidad) return;
+    const falta = Number(opcion.dataset.falta);
+    cantidad.value = String(Math.max(1, Math.min(Number(opcion.dataset.tienes), falta > 0 ? falta : Number(opcion.dataset.tienes))));
+  });
 }

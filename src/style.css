@@ -2800,3 +2800,12 @@ kbd {
 /* Oro de botín, separado del carro; total de la carga de salida. */
 .carro-botin { margin-top: 12px; padding: 8px 10px; border: 1px solid #6b5a2c; border-radius: 6px; background: rgba(224, 180, 34, 0.08); }
 [data-carga-total].excedido { color: #e8806f; }
+
+/* Fondo de refundación: precio de la caravana con barras por material. */
+.fondo-fila { display: grid; grid-template-columns: 1fr 90px auto; align-items: center; gap: 4px 8px; font-size: 0.85rem; margin: 6px 0; }
+.fondo-fila small { grid-column: 1 / -1; color: var(--text-secondary); }
+.fondo-fila.listo small { color: #8bc48a; }
+.fondo-barra { height: 8px; background: #3a362b; border-radius: 4px; overflow: hidden; }
+.fondo-barra i { display: block; height: 100%; background: #d9b44a; transition: width 0.4s; }
+.fondo-fila.listo .fondo-barra i { background: #6fae6e; }
+.fondo-barra-total { height: 12px; margin: 6px 0 10px; }

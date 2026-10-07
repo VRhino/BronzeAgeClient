@@ -3,6 +3,11 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.18.1] — 2026-10-07 · el fondo de refundación enseña el precio y lo que falta
+
+### Cambiado
+- **Fondo del campamento**: muestra el precio de la Caravana de Fundación (derivado del balance público: materiales iniciales + granja + viviendas + madera extra, por el porcentaje de refundación), una barra total y una por material con lo reunido por tu Facción, «faltan N» y lo que has puesto tú. «Aportar» enseña lo que tienes y lo que falta de cada material, y tiene «Lo que falta». «Comprar caravana» solo se activa con el precio completo y dice qué falta.
+
 ## [0.18.0] — 2026-10-07 · carga del carro al salir (campamento y plaza) y oro de botín separado
 
 ### Añadido
