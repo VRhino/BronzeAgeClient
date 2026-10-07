@@ -1040,6 +1040,24 @@ function renderPanelRiel(): void {
 /** Pantalla MAPA: el mundo a pantalla completa como fondo, con zoom (rueda y botones) y arrastre acotados
  * (T3), y movimiento por clic + panel de Selección (T4). El terreno lo pinta `dibujarPantallaSegunModo`
  * sobre el mismo canvas `#mapa` de siempre; el zoom es solo `transform` CSS encima. */
+/** El trigo más alto que ha llevado la columna en el viaje: la barra de comida se vacía respecto a él al irse consumiendo (sube si se recarga). */
+let trigoMaximo = 0;
+
+/** Barra inferior del mundo abierto: el trigo que queda en el carro de tu columna (el que se come con la marcha). */
+function pintarComida(p: ProyeccionJugador): void {
+  const caja = document.querySelector<HTMLElement>('.mapa-comida');
+  if (!caja) return;
+  const columna = p.ejercitos.find((x) => x.participantes.some((y) => y.heroeId === p.heroeId));
+  if (!columna) { caja.hidden = true; trigoMaximo = 0; return; }
+  const trigo = Math.floor(columna.suministro?.['trigo'] ?? 0);
+  trigoMaximo = Math.max(trigoMaximo, trigo);
+  const fraccion = trigoMaximo > 0 ? trigo / trigoMaximo : 0;
+  caja.hidden = false;
+  caja.classList.toggle('poca', fraccion < 0.25);
+  caja.title = 'Trigo en el carro de tu columna: la marcha lo consume. Sin trigo, la moral cae y la tropa deserta.';
+  caja.innerHTML = `<span>🌾 Comida</span><div class="mapa-comida-barra"><i style="width:${(fraccion * 100).toFixed(1)}%"></i></div><strong>${trigo}</strong>`;
+}
+
 function montarMapa(): void {
   const proyeccion = estadoCliente.proyeccionUltima;
   if (!proyeccion) { montar('cargando'); return; }
@@ -1059,6 +1077,7 @@ function montarMapa(): void {
     <aside class="jugador-panel" hidden></aside>
     <aside class="mapa-seleccion" hidden></aside>
     <p class="mapa-aviso" role="status" hidden></p>
+    <div class="mapa-comida" role="status" hidden></div>
     <div class="mapa-zoom"><button type="button" data-zoom="in" aria-label="Acercar">+</button><button type="button" data-zoom="out" aria-label="Alejar">−</button></div>
     ${menuEsquinaHtml()}
   </div>`;
@@ -1876,7 +1895,7 @@ function refrescarPantalla(pantalla: Pantalla): void {
     renderPanelJugador();
     if (vistaMapaAbierta) void pintarVistaMapa();
   }
-  if (pantalla === 'mapa') { void dibujarPantallaSegunModo(proyeccion); renderSeleccionMapa(); renderPanelRiel(); return; }
+  if (pantalla === 'mapa') { pintarComida(proyeccion); void dibujarPantallaSegunModo(proyeccion); renderSeleccionMapa(); renderPanelRiel(); return; }
   if (pantalla === 'campamento') { const c = campamentoActual(proyeccion); if (c) pintarCampamento(proyeccion, c); return; }
   if (pantalla === 'asentamiento') { void dibujarPantallaSegunModo(proyeccion); renderPanelEdificios(); renderPanelRecursos(); renderPanelAsent(); return; }
   if (pantalla !== 'legacy') return;

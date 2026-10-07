@@ -3,6 +3,11 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.17.0] — 2026-10-07 · barra de comida en el mundo abierto
+
+### Añadido
+- **Barra de comida** abajo en el mapa: el trigo que queda en el carro de tu columna, que baja con la marcha (se vacía respecto al máximo que has llevado en el viaje y se pone roja por debajo del 25 %). Con el cursor encima explica qué pasa si se acaba.
+
 ## [0.16.2] — 2026-10-07 · «sin membresía» con salida · sync con `BronzeAgeFase0@501459d` (`main`, sin push)
 
 ### Cambiado

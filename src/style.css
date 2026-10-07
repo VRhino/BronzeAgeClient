@@ -2773,3 +2773,26 @@ kbd {
 .mercado-total strong { font-size: 1.05rem; color: var(--oro-claro); }
 .mercado-total small { font-size: 0.68rem; color: var(--text-secondary); }
 .mercado-hecho { font-size: 0.8rem; color: #9ad07a; }
+
+/* Barra de comida del mundo abierto: el trigo del carro, abajo en el centro. */
+.mapa-comida {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  background: rgba(27, 26, 23, 0.85);
+  border: 1px solid #4a4538;
+  border-radius: 6px;
+  color: #f2ead7;
+  font-size: 13px;
+}
+.mapa-comida[hidden] { display: none; }
+.mapa-comida-barra { width: 220px; height: 10px; background: #3a362b; border-radius: 5px; overflow: hidden; }
+.mapa-comida-barra i { display: block; height: 100%; background: #d9b44a; transition: width 0.4s; }
+.mapa-comida.poca .mapa-comida-barra i { background: #c0392b; }
+.mapa-comida.poca strong { color: #e8806f; }
