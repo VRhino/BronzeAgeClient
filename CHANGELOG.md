@@ -3,6 +3,12 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.16.2] — 2026-10-07 · «sin membresía» con salida · sync con `BronzeAgeFase0@501459d` (`main`, sin push)
+
+### Cambiado
+- Entrar a una partida donde tu cuenta no tiene membresía vigente ya no deja un callejón: el mensaje explica el motivo y hay un botón «Unirme a esta partida».
+- Backend: unirse reabre una membresía terminada (p. ej. la cerró el borrado de una partida que luego se recreó con el mismo id) en vez de dar 409; antes el cliente ignoraba ese 409 y el 403 siguiente no tenía salida. **Hace falta reiniciar el servidor** para que lo aplique.
+
 ## [0.16.1] — 2026-10-07 · campamentos de mercenarios como en el cliente admin
 
 ### Cambiado

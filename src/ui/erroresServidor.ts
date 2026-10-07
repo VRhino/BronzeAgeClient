@@ -3,6 +3,7 @@
 // traen el código. Lo que no esté aquí sale tal cual.
 const MENSAJES: Record<string, string> = {
   // Facción y membresía
+  'sin membresia de jugador en esta partida': 'Tu cuenta no está dentro de esta partida (puede que no te hayas unido, o que tu acceso anterior terminara al borrarse una partida con el mismo nombre).',
   'faccion.nombre_vacio': 'La Facción necesita un nombre.',
   'faccion.nombre_duplicado': 'Ya existe una Facción con ese nombre: elige otro.',
   'faccion.sigilo_invalido': 'El sigilo no es válido: alguna pieza no es del catálogo, o el color principal y el secundario del fondo son el mismo.',

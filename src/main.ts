@@ -1669,8 +1669,14 @@ function renderizarPanelInteraccion(proyeccion: ProyeccionJugador): void {
   cablearFaccion(panel, proyeccion, () => renderizarPanelInteraccion(proyeccion));
 }
 
-function renderVistaLogin(errorMensaje?: string): void {
-  app.innerHTML = `<div class="login-container"><div class="login-card"><div class="login-header"><h1 class="login-title">Bronze Age Collapse</h1><p class="login-subtitle">Cliente de Jugador — Inicio de Sesión</p></div>${errorMensaje ? `<div class="error-banner">⚠️ ${escaparHtml(errorMensaje)}</div>` : ''}<form id="form-login"><div class="form-group"><label class="form-label" for="input-usuario">Nick</label><input type="text" id="input-usuario" class="form-input" value="${escaparHtml(estadoCliente.usuarioActivo)}" required autocomplete="username" /></div><div class="form-group"><label class="form-label" for="input-clave">Contraseña</label><input type="password" id="input-clave" class="form-input" required minlength="6" autocomplete="current-password" /></div><label class="form-check"><input type="checkbox" id="chk-registro" /> No tengo cuenta — crear una</label><div class="form-group" id="grupo-codigo" hidden><label class="form-label" for="input-codigo">Código de invitación</label><input type="text" id="input-codigo" class="form-input" autocomplete="off" /></div><div class="form-group"><label class="form-label" for="input-gameid">ID de Partida</label><input type="text" id="input-gameid" class="form-input" value="${escaparHtml(estadoCliente.gameIdActivo)}" required autocomplete="off" /></div><button type="submit" id="btn-login-submit" class="btn-primary">Entrar a la Partida</button></form></div></div>`;
+function renderVistaLogin(errorMensaje?: string, ofrecerUnirse = false): void {
+  app.innerHTML = `<div class="login-container"><div class="login-card"><div class="login-header"><h1 class="login-title">Bronze Age Collapse</h1><p class="login-subtitle">Cliente de Jugador — Inicio de Sesión</p></div>${errorMensaje ? `<div class="error-banner">⚠️ ${escaparHtml(errorMensaje)}${ofrecerUnirse ? '<br /><button type="button" id="btn-unirse" class="btn-primary">Unirme a esta partida</button>' : ''}</div>` : ''}<form id="form-login"><div class="form-group"><label class="form-label" for="input-usuario">Nick</label><input type="text" id="input-usuario" class="form-input" value="${escaparHtml(estadoCliente.usuarioActivo)}" required autocomplete="username" /></div><div class="form-group"><label class="form-label" for="input-clave">Contraseña</label><input type="password" id="input-clave" class="form-input" required minlength="6" autocomplete="current-password" /></div><label class="form-check"><input type="checkbox" id="chk-registro" /> No tengo cuenta — crear una</label><div class="form-group" id="grupo-codigo" hidden><label class="form-label" for="input-codigo">Código de invitación</label><input type="text" id="input-codigo" class="form-input" autocomplete="off" /></div><div class="form-group"><label class="form-label" for="input-gameid">ID de Partida</label><input type="text" id="input-gameid" class="form-input" value="${escaparHtml(estadoCliente.gameIdActivo)}" required autocomplete="off" /></div><button type="submit" id="btn-login-submit" class="btn-primary">Entrar a la Partida</button></form></div></div>`;
+  document.querySelector<HTMLButtonElement>('#btn-unirse')?.addEventListener('click', async () => {
+    try {
+      await unirseAPartida(estadoCliente.gameIdActivo);
+      await refrescarDatosJuego();
+    } catch (err) { renderVistaLogin(mensajeError(err), true); }
+  });
   const chkRegistro = document.querySelector<HTMLInputElement>('#chk-registro');
   chkRegistro?.addEventListener('change', () => {
     const grupoCodigo = document.querySelector<HTMLDivElement>('#grupo-codigo');
@@ -1697,7 +1703,7 @@ function renderVistaLogin(errorMensaje?: string): void {
       pantallaMontada = null;
       enrutar();
       await refrescarDatosJuego();
-    } catch (err) { renderVistaLogin(mensajeError(err)); }
+    } catch (err) { renderVistaLogin(mensajeError(err), err instanceof ApiError && err.status === 403 && estadoCliente.gameIdActivo !== ''); }
   });
 }
 
