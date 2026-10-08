@@ -5,6 +5,7 @@ import {
   consultarProyeccion,
   ejecutarComando,
   guardarSesionLocal,
+  recordarPartida,
   abrirPresencia,
   alEventoTiempoReal,
   cerrarPresencia,
@@ -39,6 +40,9 @@ import { cablearAdmision } from './ui/panelAdmision';
 import { cablearFichaBatalla, cablearFichaFormacion, formacionesVisibles, htmlFichaBatalla, htmlFichaFormacion } from './ui/panelBatalla';
 import { cablearPanelEjercito, ejercitosDeLaFaccion, htmlFichaEjercito, htmlPanelEjercito, peticionesNuevas } from './ui/ejercitos';
 import { invalidar, olvidarEdicion, pintar, vaciar } from './ui/repintado';
+import { montarPartidas } from './ui/pantallaPartidas';
+import { cablearCaravanas, cablearOrdenes, htmlCaravanas, htmlOrdenes } from './ui/panelMercado';
+import { cablearReclutamiento, htmlReclutamiento } from './ui/reclutamiento';
 import { actualizarConvocatorias, cablearSalidaComoEjercito, htmlSalidaComoEjercito } from './ui/salidaComoEjercito';
 import { cablearPreparacion, htmlPreparacion, peticionesNuevasConv } from './ui/convocatoria';
 import { cablearUnirseDesdePlaza, htmlUnirseDesdePlaza } from './ui/unirseDesdePlaza';
@@ -309,7 +313,8 @@ function montarHeroe(): void {
       <button type="submit" id="btn-crear-heroe" class="btn-primary">Crear héroe</button>
       <p id="error-heroe" class="faction-error" role="alert"></p>
     </form>
-  </div><button id="btn-logout" class="text-link" type="button">Cerrar sesión</button></div>`;
+  </div><button id="btn-partidas" class="text-link" type="button">Cambiar de partida</button> <button id="btn-logout" class="text-link" type="button">Cerrar sesión</button></div>`;
+  document.querySelector('#btn-partidas')?.addEventListener('click', () => volverALasPartidas());
   document.querySelector('#btn-logout')?.addEventListener('click', () => cerrarSesionYVolverALogin());
   document.querySelector<HTMLFormElement>('#form-crear-heroe')?.addEventListener('submit', async (evento) => {
     evento.preventDefault();
@@ -826,6 +831,7 @@ function menuEsquinaHtml(): string {
       <button data-menu="refrescar" type="button">Refrescar</button>
       <button data-menu="json" type="button">Ver proyección (JSON)</button>
       <button data-menu="legacy" type="button">Interfaz anterior</button>
+      <button data-menu="partidas" type="button">Cambiar de partida</button>
       <button data-menu="logout" type="button">Cerrar sesión</button>
     </div>
     <div class="mapa-json" hidden><button class="mapa-json-cerrar" type="button" aria-label="Cerrar">×</button><pre class="mapa-json-pre"></pre></div>`;
@@ -841,6 +847,7 @@ function cablearMenuEsquina(contenedor: HTMLElement): void {
   contenedor.querySelector('.mapa-avatar')?.addEventListener('click', () => { menuEsquinaAbierto = !menuEsquinaAbierto; sincronizarMenuEsquina(); });
   contenedor.querySelector('[data-menu="refrescar"]')?.addEventListener('click', () => { menuEsquinaAbierto = false; sincronizarMenuEsquina(); void refrescarDatosJuego(); });
   contenedor.querySelector('[data-menu="legacy"]')?.addEventListener('click', () => { location.hash = '#/legacy'; });
+  contenedor.querySelector('[data-menu="partidas"]')?.addEventListener('click', () => volverALasPartidas());
   contenedor.querySelector('[data-menu="logout"]')?.addEventListener('click', () => cerrarSesionYVolverALogin());
   contenedor.querySelector('[data-menu="json"]')?.addEventListener('click', () => {
     menuEsquinaAbierto = false;
@@ -1233,21 +1240,12 @@ function montarMapa(): void {
 
 // --- PANTALLA ASENTAMIENTO (T6) -----------------------------------------------------------------
 
-type PanelAsent = 'cargos' | 'intel' | 'salir' | 'escolta' | 'ejercito';
+type PanelAsent = 'salir' | 'ejercito';
 let panelAsentAbierto: PanelAsent | null = null;
 
 /** ¿Resides en la plaza donde estás? (fundadores y quienes compraron casa: así lo cuenta la proyección). */
 function resideEnLaPlaza(p: ProyeccionJugador, a: Asentamiento): boolean {
   return [...(a.heroesFundadoresIds ?? []), ...(a.casasCompradas ?? [])].includes(p.heroeId);
-}
-
-/** «Hacer de esta plaza mi base» solo se ofrece en una plaza de tu Facción donde aún no resides. */
-function actualizarBotonResidencia(): void {
-  const boton = document.querySelector<HTMLButtonElement>('#btn-mudarme');
-  const p = estadoCliente.proyeccionUltima;
-  const a = p?.asentamientos[0];
-  if (!boton || !p || !a) return;
-  boton.hidden = !p.faccionId || a.faccionId !== p.faccionId || resideEnLaPlaza(p, a);
 }
 
 /**
@@ -1262,7 +1260,7 @@ async function mudarseAEstaPlaza(): Promise<void> {
   const prestadas = p.heroe.escuadrones.filter((s) => s.prestada);
   const guarnicion = p.heroe.escuadrones.some((s) => s.enGuarnicion);
   const aviso = `Vas a hacer de ${a.nombre ?? a.id} tu base: dejas de residir donde vives ahora y tu campamento se muda contigo.${prestadas.length > 0 ? ` Se te retira la tropa prestada por tu campamento anterior (${prestadas.map((s) => `${s.nombre}: ${s.cantidad}`).join(', ')}).` : ''}${guarnicion ? ' Tu guarnición se suelta.' : ''} Después hay que esperar un tiempo para volver a mudarte. ¿Seguro?`;
-  const error = document.querySelector<HTMLElement>('#asent-error');
+  const error = document.querySelector<HTMLElement>('#asent-lado-error');
   if (!confirm(aviso)) return;
   const mensaje = await ejecutarYRefrescar('cambiarResidencia', { destinoId: a.id, heroeId: p.heroeId });
   if (error) error.textContent = mensaje ?? '';
@@ -1319,7 +1317,7 @@ function pintarSalidaAsentamiento(panel: HTMLElement, p: ProyeccionJugador, asen
 // Solo con lo que ya trae la proyección. Las acciones sin dato previo (mejorar, añadir) se mandan y se
 // muestra el error del backend si lo rechaza. Ver docs/Panel_Asentamiento.md.
 
-type SeccionAsent = 'resumen' | 'edificios' | 'produccion' | 'cola';
+type SeccionAsent = 'resumen' | 'edificios' | 'produccion' | 'cola' | 'cargos';
 let seccionAsent: SeccionAsent = 'edificios';
 
 /** Edificios que un Gobernador / Maestro de Obras puede añadir a mano (el backend gatea nivel, únicos y
@@ -1364,44 +1362,94 @@ async function ejecutarAccionAsent(tipo: string, params: Record<string, unknown>
   }
 }
 
-/** Pinta y cablea la columna derecha completa (tabs + sección activa). Se llama al montar y en cada
+type EdificioAsent = 'centro' | 'reclutamiento' | 'taberna' | 'mercado';
+let edificioAsent: EdificioAsent = 'centro';
+type SeccionMercado = 'ordenes' | 'caravanas' | 'escolta';
+let seccionMercado: SeccionMercado = 'ordenes';
+
+/** Una pestaña por edificio. Taberna y Mercado existen siempre pero se abren al tener el edificio activo (decir qué falta es parte de la interfaz). */
+const PESTANAS_EDIFICIO: { id: EdificioAsent; etiqueta: string; requiere?: { tipo: string; nombre: string } }[] = [
+  { id: 'centro', etiqueta: 'Centro urbano' },
+  { id: 'reclutamiento', etiqueta: 'Reclutamiento' },
+  { id: 'taberna', etiqueta: 'Taberna', requiere: { tipo: 'taberna', nombre: 'una Taberna' } },
+  { id: 'mercado', etiqueta: 'Mercado', requiere: { tipo: 'mercado', nombre: 'un Mercado' } },
+];
+
+function subpestanas(lista: [string, string][], actual: string): string {
+  return `<div class="asent-tabs asent-subtabs">${lista.map(([id, nombre]) => `<button class="asent-tab${id === actual ? ' activo' : ''}" type="button" data-sub="${id}">${nombre}</button>`).join('')}</div>`;
+}
+
+/** Pinta y cablea la columna derecha completa (pestañas por edificio + su contenido). Se llama al montar y en cada
  * refresco/sondeo. Guarda el nombre `renderPanelEdificios` por los sitios que ya lo llaman. */
 function renderPanelEdificios(): void {
-  const contenedor = document.querySelector<HTMLElement>('.asent-edificios');
+  const raiz = document.querySelector<HTMLElement>('.asent-edificios');
+  const tabsEl = raiz?.querySelector<HTMLElement>('.asent-edif-tabs');
+  const cuerpo = raiz?.querySelector<HTMLElement>('.asent-edif-cuerpo');
   const proyeccion = estadoCliente.proyeccionUltima;
   const asentamiento = proyeccion?.asentamientos[0];
-  if (!contenedor || !proyeccion || !asentamiento) return;
+  if (!tabsEl || !cuerpo || !proyeccion || !asentamiento) return;
 
   const edificios = asentamiento.edificios ?? [];
+  const construido = (tipo: string): boolean => edificios.some((e) => e.tipo === tipo && e.estado === 'activo');
+  const abierta = (id: EdificioAsent): boolean => { const t = PESTANAS_EDIFICIO.find((x) => x.id === id)!; return !t.requiere || construido(t.requiere.tipo); };
+  if (!abierta(edificioAsent)) edificioAsent = 'centro';
+
+  const tabs = PESTANAS_EDIFICIO.map((t) => abierta(t.id)
+    ? `<button class="asent-tab${t.id === edificioAsent ? ' activo' : ''}" type="button" data-edificio="${t.id}">${t.etiqueta}</button>`
+    : `<button class="asent-tab bloqueada" type="button" disabled title="Necesitas construir ${t.requiere!.nombre}">${t.etiqueta} 🔒</button>`).join('');
+  const faltan = PESTANAS_EDIFICIO.filter((t) => !abierta(t.id)).map((t) => `<p class="asent-lado-nota">🔒 ${t.etiqueta}: necesitas construir ${t.requiere!.nombre}.</p>`).join('');
+  pintar(tabsEl, `<div class="asent-tabs asent-tabs-ancho">${tabs}</div>${faltan}`, () => {
+    tabsEl.querySelectorAll<HTMLButtonElement>('[data-edificio]').forEach((boton) => boton.addEventListener('click', () => { edificioAsent = boton.dataset.edificio as EdificioAsent; renderPanelEdificios(); }));
+  }, 'edificios');
+
   const cargo = cargoConstructor(asentamiento, proyeccion.heroeId);
-  const puedeConstruir = cargo !== null;
+  const pie = '<p id="asent-lado-error" class="faction-error" role="alert"></p>';
+  let html = '';
+  let cablear: () => void = () => undefined;
+  let ambito: string = edificioAsent;
+  const cablearSub = (alCambiar: (sub: string) => void): void => cuerpo.querySelectorAll<HTMLButtonElement>('[data-sub]').forEach((b) => b.addEventListener('click', () => { alCambiar(b.dataset.sub!); renderPanelEdificios(); }));
 
-  const ETIQUETA_SECCION: Record<SeccionAsent, string> = { resumen: 'Resumen', edificios: 'Edificios', produccion: 'Producción', cola: 'Cola' };
-  const tabs = (['resumen', 'edificios', 'produccion', 'cola'] as const)
-    .map((s) => `<button class="asent-tab${s === seccionAsent ? ' activo' : ''}" type="button" data-seccion="${s}">${ETIQUETA_SECCION[s]}</button>`)
-    .join('');
-
-  const htmlLado = `
-    <div class="asent-tabs">${tabs}</div>
-    <div class="asent-lado-cuerpo">${
-      seccionAsent === 'resumen'
-        ? seccionResumen(asentamiento) + seccionAscenso(asentamiento, proyeccion.ascensoDeAsentamiento, cargo === 'gobernador')
-        : seccionAsent === 'edificios'
-          ? seccionEdificios(asentamiento, cargo)
-          : seccionAsent === 'produccion'
-            ? seccionProduccion(proyeccion.produccionDeAsentamiento)
-            : seccionCola(edificios, cargo)
-    }</div>
-    ${!puedeConstruir && (seccionAsent === 'edificios' || seccionAsent === 'cola') ? '<p class="asent-lado-nota">Necesitas ser Gobernador o Maestro de Obras para gestionar la construcción.</p>' : ''}
-    <p id="asent-lado-error" class="faction-error" role="alert"></p>`;
-
+  if (edificioAsent === 'centro') {
+    const SECCIONES: [SeccionAsent, string][] = [['resumen', 'Resumen'], ['edificios', 'Edificios'], ['produccion', 'Producción'], ['cola', 'Cola'], ['cargos', 'Cargos']];
+    const puedeMudarme = Boolean(proyeccion.faccionId) && asentamiento.faccionId === proyeccion.faccionId && !resideEnLaPlaza(proyeccion, asentamiento);
+    const contenido = seccionAsent === 'resumen'
+      ? seccionResumen(asentamiento) + seccionAscenso(asentamiento, proyeccion.ascensoDeAsentamiento, cargo === 'gobernador')
+        + (puedeMudarme ? '<button id="btn-mudarme" class="btn-secondary" type="button" title="Hacer de esta plaza tu base: tu campamento se muda contigo">Hacer de esta plaza mi base</button>' : '')
+      : seccionAsent === 'edificios' ? seccionEdificios(asentamiento, cargo)
+        : seccionAsent === 'produccion' ? seccionProduccion(proyeccion.produccionDeAsentamiento)
+          : seccionAsent === 'cola' ? seccionCola(edificios, cargo)
+            : renderCargosAsentamiento(asentamiento, proyeccion) || '<p class="mapa-lista-vacia">No tienes cargos que asignar en esta plaza: el Rey nombra al Gobernador y el Gobernador, al resto.</p>';
+    html = `${subpestanas(SECCIONES, seccionAsent)}<div class="asent-lado-cuerpo">${contenido}</div>
+      ${!cargo && (seccionAsent === 'edificios' || seccionAsent === 'cola') ? '<p class="asent-lado-nota">Necesitas ser Gobernador o Maestro de Obras para gestionar la construcción.</p>' : ''}${pie}`;
+    ambito = `centro:${seccionAsent}`;
+    cablear = () => {
+      cablearSub((s) => { seccionAsent = s as SeccionAsent; });
+      cuerpo.querySelector('#btn-mudarme')?.addEventListener('click', () => void mudarseAEstaPlaza());
+      cablearAccionesAsentLado(cuerpo, asentamiento, cargo);
+      cablearCargosAsentamiento(cuerpo, asentamiento);
+    };
+  } else if (edificioAsent === 'reclutamiento') {
+    html = `<div class="asent-lado-cuerpo">${htmlReclutamiento(proyeccion, asentamiento, escaparHtml, renderPanelEdificios)}</div>${pie}`;
+    cablear = () => cablearReclutamiento(cuerpo, proyeccion, asentamiento, ejecutarYRefrescar);
+  } else if (edificioAsent === 'taberna') {
+    html = `${renderPanelIntel(proyeccion, escaparHtml)}${pie}`;
+    cablear = () => cablearPanelIntel(cuerpo, proyeccion, ejecutarYRefrescar, () => { olvidarEdicion(cuerpo); invalidar(cuerpo); renderPanelEdificios(); });
+  } else {
+    const SECCIONES: [SeccionMercado, string][] = [['ordenes', 'Órdenes'], ['caravanas', 'Caravanas'], ['escolta', 'Escolta']];
+    const contenido = seccionMercado === 'escolta' ? htmlEscolta(proyeccion, asentamiento, escaparHtml)
+      : seccionMercado === 'caravanas' ? htmlCaravanas(proyeccion, asentamiento, escaparHtml)
+        : htmlOrdenes(proyeccion, asentamiento, escaparHtml);
+    html = `${subpestanas(SECCIONES, seccionMercado)}<div class="asent-lado-cuerpo">${contenido}</div>${pie}`;
+    ambito = `mercado:${seccionMercado}`;
+    cablear = () => {
+      cablearSub((s) => { seccionMercado = s as SeccionMercado; });
+      if (seccionMercado === 'escolta') cablearEscolta(cuerpo, proyeccion, ejecutarYRefrescar);
+      else if (seccionMercado === 'caravanas') cablearCaravanas(cuerpo, proyeccion, asentamiento, ejecutarYRefrescar);
+      else cablearOrdenes(cuerpo, asentamiento, ejecutarYRefrescar);
+    };
+  }
   // Solo se repinta si cambió (la ciudad produce a cada tick), y lo elegido en los formularios vuelve a su sitio.
-  pintar(contenedor, htmlLado, () => {
-    contenedor.querySelectorAll<HTMLButtonElement>('.asent-tab').forEach((boton) => {
-      boton.addEventListener('click', () => { seccionAsent = boton.dataset.seccion as SeccionAsent; renderPanelEdificios(); });
-    });
-    cablearAccionesAsentLado(contenedor, asentamiento, cargo);
-  }, seccionAsent);
+  pintar(cuerpo, html, cablear, ambito);
 }
 
 function seccionResumen(a: Asentamiento): string {
@@ -1606,7 +1654,7 @@ function renderPanelRecursos(): void {
   pintar(contenedor, htmlRecursos, undefined, 'recursos');
 }
 
-/** Pinta el panel flotante de la barra (Facción / Ejército) según `panelAsentAbierto`. */
+/** Pinta el panel flotante de la barra (Ejércitos / Salir al mundo) según `panelAsentAbierto`. */
 function renderPanelAsent(): void {
   const proyeccion = estadoCliente.proyeccionUltima;
   const barra = document.querySelector<HTMLElement>('.asent-barra');
@@ -1623,23 +1671,11 @@ function renderPanelAsent(): void {
     pintar(panel, htmlUnirseDesdePlaza(proyeccion, asentamiento, escaparHtml), () => cablearUnirseDesdePlaza(panel, proyeccion, asentamiento, ejecutarYRefrescar), 'ejercito');
     return;
   }
-  if (panelAsentAbierto === 'escolta') {
-    const asentamiento = proyeccion.asentamientos[0];
-    if (!asentamiento) return;
-    pintar(panel, htmlEscolta(proyeccion, asentamiento, escaparHtml), () => cablearEscolta(panel, proyeccion, ejecutarYRefrescar), 'escolta');
-    return;
-  }
   if (panelAsentAbierto === 'salir') {
     const asentamiento = proyeccion.asentamientos[0];
     if (asentamiento) pintarSalidaAsentamiento(panel, proyeccion, asentamiento);
     return;
   }
-  if (panelAsentAbierto === 'intel') {
-    pintarIntel(panel, proyeccion, renderPanelAsent);
-    return;
-  }
-  const htmlCargos = renderCargosAsentamiento(proyeccion.asentamientos[0], proyeccion) || '<span class="faction-kicker">Cargos</span><p class="mapa-lista-vacia">No tienes cargos que asignar en esta plaza: el Rey nombra al Gobernador y el Gobernador, al resto.</p>';
-  pintar(panel, htmlCargos, () => cablearCargosAsentamiento(panel, proyeccion.asentamientos[0]), 'cargos');
 }
 
 /** Sección "Cargos" del panel de Facción, acotada al asentamiento que se pisa. Solo aparecen los cargos que
@@ -1718,11 +1754,7 @@ function montarAsentamiento(): void {
       <span class="asent-nombre">${escaparHtml(asentamiento.nombre ?? asentamiento.id)}</span>
       <span class="asent-nivel">Nivel ${asentamiento.nivel}</span>
       <div class="asent-barra-acciones">
-        <button type="button" data-panel-asent="cargos">Cargos</button>
-        <button type="button" data-panel-asent="intel">Taberna e intel</button>
-        <button type="button" data-panel-asent="escolta">Escolta</button>
         <button type="button" data-panel-asent="ejercito">Ejércitos</button>
-        <button id="btn-mudarme" class="btn-secondary" type="button" hidden title="Hacer de esta plaza tu base: tu campamento se muda contigo">Hacer de esta plaza mi base</button>
         <button id="btn-salir-mundo" class="btn-primary" type="button">Salir al mundo</button>
       </div>
       <p id="asent-error" class="faction-error" role="alert"></p>
@@ -1733,7 +1765,7 @@ function montarAsentamiento(): void {
         <aside class="asent-panel" hidden></aside>
         <div class="asent-recursos" hidden></div>
       </div>
-      <aside class="asent-lado"><div class="asent-edificios"></div></aside>
+      <aside class="asent-lado"><div class="asent-edificios"><div class="asent-edif-tabs"></div><div class="asent-edif-cuerpo"></div></div></aside>
     </div>
     <div class="asent-tooltip" hidden></div>
     <aside class="jugador-panel" hidden></aside>
@@ -1748,7 +1780,6 @@ function montarAsentamiento(): void {
       renderPanelAsent();
     });
   });
-  contenedor.querySelector('#btn-mudarme')?.addEventListener('click', () => void mudarseAEstaPlaza());
   contenedor.querySelector('#btn-salir-mundo')?.addEventListener('click', () => {
     panelAsentAbierto = panelAsentAbierto === 'salir' ? null : 'salir';
     menuEsquinaAbierto = false;
@@ -1851,42 +1882,67 @@ function renderizarPanelInteraccion(proyeccion: ProyeccionJugador): void {
   cablearFaccion(panel, proyeccion, () => renderizarPanelInteraccion(proyeccion));
 }
 
-function renderVistaLogin(errorMensaje?: string, ofrecerUnirse = false): void {
-  app.innerHTML = `<div class="login-container"><div class="login-card"><div class="login-header"><h1 class="login-title">Bronze Age Collapse</h1><p class="login-subtitle">Cliente de Jugador — Inicio de Sesión</p></div>${errorMensaje ? `<div class="error-banner">⚠️ ${escaparHtml(errorMensaje)}${ofrecerUnirse ? '<br /><button type="button" id="btn-unirse" class="btn-primary">Unirme a esta partida</button>' : ''}</div>` : ''}<form id="form-login"><div class="form-group"><label class="form-label" for="input-usuario">Nick</label><input type="text" id="input-usuario" class="form-input" value="${escaparHtml(estadoCliente.usuarioActivo)}" required autocomplete="username" /></div><div class="form-group"><label class="form-label" for="input-clave">Contraseña</label><input type="password" id="input-clave" class="form-input" required minlength="6" autocomplete="current-password" /></div><label class="form-check"><input type="checkbox" id="chk-registro" /> No tengo cuenta — crear una</label><div class="form-group" id="grupo-codigo" hidden><label class="form-label" for="input-codigo">Código de invitación</label><input type="text" id="input-codigo" class="form-input" autocomplete="off" /></div><div class="form-group"><label class="form-label" for="input-gameid">ID de Partida</label><input type="text" id="input-gameid" class="form-input" value="${escaparHtml(estadoCliente.gameIdActivo)}" required autocomplete="off" /></div><button type="submit" id="btn-login-submit" class="btn-primary">Entrar a la Partida</button></form></div></div>`;
-  document.querySelector<HTMLButtonElement>('#btn-unirse')?.addEventListener('click', async () => {
-    try {
-      await unirseAPartida(estadoCliente.gameIdActivo);
-      await refrescarDatosJuego();
-    } catch (err) { renderVistaLogin(mensajeError(err), true); }
-  });
+function renderVistaLogin(errorMensaje?: string): void {
+  app.innerHTML = `<div class="login-container"><div class="login-card"><div class="login-header"><h1 class="login-title">Bronze Age Collapse</h1><p class="login-subtitle">Cliente de Jugador — Inicio de Sesión</p></div>${errorMensaje ? `<div class="error-banner">⚠️ ${escaparHtml(errorMensaje)}</div>` : ''}<form id="form-login"><div class="form-group"><label class="form-label" for="input-usuario">Nick</label><input type="text" id="input-usuario" class="form-input" value="${escaparHtml(estadoCliente.usuarioActivo)}" required autocomplete="username" /></div><div class="form-group"><label class="form-label" for="input-clave">Contraseña</label><input type="password" id="input-clave" class="form-input" required minlength="6" autocomplete="current-password" /></div><label class="form-check"><input type="checkbox" id="chk-registro" /> No tengo cuenta — crear una</label><div class="form-group" id="grupo-codigo" hidden><label class="form-label" for="input-codigo">Código de invitación</label><input type="text" id="input-codigo" class="form-input" autocomplete="off" /></div><button type="submit" id="btn-login-submit" class="btn-primary">Entrar</button></form></div></div>`;
   const chkRegistro = document.querySelector<HTMLInputElement>('#chk-registro');
   chkRegistro?.addEventListener('change', () => {
     const grupoCodigo = document.querySelector<HTMLDivElement>('#grupo-codigo');
     if (grupoCodigo) grupoCodigo.hidden = !chkRegistro.checked;
     const boton = document.querySelector<HTMLButtonElement>('#btn-login-submit');
-    if (boton) boton.textContent = chkRegistro.checked ? 'Crear cuenta y entrar' : 'Entrar a la Partida';
+    if (boton) boton.textContent = chkRegistro.checked ? 'Crear cuenta y entrar' : 'Entrar';
   });
   document.querySelector<HTMLFormElement>('#form-login')?.addEventListener('submit', async (evento) => {
     evento.preventDefault();
     const nick = document.querySelector<HTMLInputElement>('#input-usuario')?.value.trim();
     const clave = document.querySelector<HTMLInputElement>('#input-clave')?.value ?? '';
     const codigo = document.querySelector<HTMLInputElement>('#input-codigo')?.value.trim() || undefined;
-    const gameId = document.querySelector<HTMLInputElement>('#input-gameid')?.value.trim() || 'local';
     if (!nick || !clave) return;
     try {
       if (chkRegistro?.checked) await registrarCuenta(nick, clave, codigo);
       const login = await loginConClave(nick, clave);
-      try { await unirseAPartida(gameId); } catch (err) { if (!(err instanceof ApiError) || err.status !== 409) throw err; }
-      guardarSesionLocal(login.sesionId, nick, gameId);
+      // Se entra con la cuenta; la partida se elige después, en la pantalla de partidas.
+      guardarSesionLocal(login.sesionId, nick, '');
       estadoCliente.usuarioActivo = nick;
-      estadoCliente.gameIdActivo = gameId;
+      estadoCliente.gameIdActivo = '';
       estadoCliente.proyeccionUltima = null;
       estadoCliente.sinHeroe = false;
       pantallaMontada = null;
       enrutar();
-      await refrescarDatosJuego();
-    } catch (err) { renderVistaLogin(mensajeError(err), err instanceof ApiError && err.status === 403 && estadoCliente.gameIdActivo !== ''); }
+    } catch (err) { renderVistaLogin(mensajeError(err)); }
   });
+}
+
+/** Pantalla de partidas: elegir a cuál entrar (unirse si aún no eres miembro) y cargarla como antes. */
+function montarPantallaPartidas(): void {
+  void montarPartidas(app, {
+    usuario: estadoCliente.usuarioActivo,
+    previa: cargarSesionLocal()?.gameId ?? '',
+    cerrarSesion: () => cerrarSesionYVolverALogin(),
+    mensajeError,
+    escapar: escaparHtml,
+    entrar: async (partida) => {
+      if (!partida.membresia) {
+        try { await unirseAPartida(partida.gameId); } catch (err) { if (!(err instanceof ApiError) || err.status !== 409) throw err; }
+      }
+      recordarPartida(partida.gameId);
+      estadoCliente.gameIdActivo = partida.gameId;
+      estadoCliente.proyeccionUltima = null;
+      estadoCliente.sinHeroe = false;
+      await refrescarDatosJuego();
+    },
+  });
+}
+
+/** Deja la partida actual (sin cerrar sesión) y vuelve a la lista de partidas. */
+function volverALasPartidas(): void {
+  cerrarPresencia();
+  reiniciarAvisos();
+  recordarPartida('');
+  estadoCliente.gameIdActivo = '';
+  estadoCliente.proyeccionUltima = null;
+  estadoCliente.sinHeroe = false;
+  pantallaMontada = null;
+  enrutar();
 }
 
 /** La interfaz ANTERIOR, intacta, servida solo desde `#/legacy` (Doc `twinkly-greeting-peacock.md`). El
@@ -2015,7 +2071,7 @@ async function refrescarDatosJuego(): Promise<void> {
 // `twinkly-greeting-peacock.md`): no hay "última pantalla" guardada, así que recargar devuelve al jugador a
 // donde estaba. `#/legacy` es la válvula de escape a la interfaz anterior, intacta, y solo se llega
 // escribiéndola en la URL.
-type Pantalla = 'login' | 'cargando' | 'heroe' | 'campamento' | 'mapa' | 'asentamiento' | 'legacy';
+type Pantalla = 'login' | 'partidas' | 'cargando' | 'heroe' | 'campamento' | 'mapa' | 'asentamiento' | 'legacy';
 
 let pantallaMontada: Pantalla | null = null;
 /** Limpieza de la pantalla saliente (listeners globales, etc.). La fija quien monta una pantalla que los
@@ -2028,6 +2084,7 @@ function esRutaLegacy(): boolean {
 
 function pantallaActual(): Pantalla {
   if (!estadoCliente.usuarioActivo) return 'login';
+  if (!estadoCliente.gameIdActivo) return 'partidas';
   if (estadoCliente.sinHeroe) return 'heroe';
   if (esRutaLegacy()) return 'legacy';
   const proyeccion = estadoCliente.proyeccionUltima;
@@ -2047,6 +2104,7 @@ function montar(pantalla: Pantalla): void {
   controlVistaMapa = null;
   switch (pantalla) {
     case 'login': renderVistaLogin(); break;
+    case 'partidas': montarPantallaPartidas(); break;
     case 'legacy': montarLegacy(); break;
     case 'cargando': app.innerHTML = '<div class="login-container"><div class="login-card"><p class="login-subtitle">Cargando partida…</p></div></div>'; break;
     case 'heroe': montarHeroe(); break;
@@ -2068,7 +2126,7 @@ function refrescarPantalla(pantalla: Pantalla): void {
   }
   if (pantalla === 'mapa') { pintarComida(proyeccion); void dibujarPantallaSegunModo(proyeccion); renderSeleccionMapa(); renderPanelRiel(); return; }
   if (pantalla === 'campamento') { const c = campamentoActual(proyeccion); if (c) pintarCampamento(proyeccion, c); return; }
-  if (pantalla === 'asentamiento') { actualizarBotonResidencia(); void dibujarPantallaSegunModo(proyeccion); renderPanelEdificios(); renderPanelRecursos(); renderPanelAsent(); return; }
+  if (pantalla === 'asentamiento') { void dibujarPantallaSegunModo(proyeccion); renderPanelEdificios(); renderPanelRecursos(); renderPanelAsent(); return; }
   if (pantalla !== 'legacy') return;
   renderizarPanelInteraccion(proyeccion);
   void dibujarPantallaSegunModo(proyeccion);
@@ -2128,7 +2186,7 @@ function arrancar(): void {
     estadoCliente.gameIdActivo = sesion.gameId;
   }
   enrutar();
-  if (sesion) {
+  if (sesion?.gameId) {
     void refrescarDatosJuego().catch(() => cerrarSesionYVolverALogin('La sesión previa expiró o el servidor fue reiniciado.'));
   }
 }

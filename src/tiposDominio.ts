@@ -204,6 +204,12 @@ export interface Caravana {
   escoltaIds?: string[];
   /** Liderazgo que gasta su escolta y cupo que le da el Mercado de su origen: derivado por el backend, solo en las comerciales de una plaza propia. */
   escoltaLiderazgo?: { usado: number; cupo: number };
+  /** Revamp de caravanas (Doc 3.13): solo en las comerciales. Solo los carros con animal tiran. */
+  carros?: { tipoCarro: 'basico' | 'reforzado'; animal?: 'buey' | 'caballo' | 'camello' }[];
+  /** Fuera del reparto automático de trueques. */
+  reservadaManual?: boolean;
+  /** Instante de mundo en que sale, solo en `preparando`. */
+  preparaHasta?: number;
 }
 
 /** Copia local de `Ejercito` (motor, Doc 5.12) — los de TU Facción, que la proyección manda completos.

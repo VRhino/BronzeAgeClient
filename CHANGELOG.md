@@ -3,6 +3,19 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.25.0] — 2026-10-08 · la plaza por edificio, reclutar, mercado y caravanas, y pantalla de partidas · sync con `BronzeAgeFase0@02bd153` (`main`, sin push)
+
+### Añadido
+- **Pantalla de partidas** (`ui/pantallaPartidas.ts`): el login ya no pide el ID de partida. Tras entrar con la cuenta se ve la lista de partidas abiertas (`GET /v1/jugador/partidas`), y en cada una el héroe del jugador —nombre, Facción con su emblema y nivel— o «aún no has entrado»; se elige una y el botón de abajo entra (si aún no eres miembro, antes te une). «Cambiar de partida» en el menú de la esquina vuelve a la lista sin cerrar sesión.
+- **Reclutamiento** (`ui/reclutamiento.ts`, `reclutarTropa`): una pestaña con todas las tropas militares juntas por edificio. Solo salen las que la Facción puede formar ya (tecnología adoptada y edificio activo del nivel pedido); cada fila dice cuántos hombres, de qué población salen, el coste de equipo (en rojo lo que falta) y por qué no se puede ahora (escuadra al completo, fuera del campamento, no resides). Reclutar o reponer.
+- **Mercado** (`ui/panelMercado.ts`): *Órdenes* (colocar compra/venta con precio opcional y ver las de la plaza, `colocarOrdenMercado`), *Caravanas* (crear casco, añadir carros, comprar animales, mover carros, reservar, preparar viaje con destino y carga, cancelar la preparación) y *Escolta* (el panel que ya existía).
+
+### Cambiado
+- **La plaza se organiza por edificio** en la columna derecha: *Centro urbano* (resumen, edificios, producción, cola, cargos y «Hacer de esta plaza mi base»), *Reclutamiento*, *Taberna* (intel) y *Mercado*. Taberna y Mercado salen desactivadas con «necesitas construir …» hasta tener el edificio activo. La barra superior queda con «Ejércitos» y «Salir al mundo».
+
+### Pendiente (backend)
+- El balance no publica el coste de carros/animales ni el oro por soldado del reclutamiento: se enseña lo que el servidor rechaza, no el precio de antemano.
+
 ## [0.24.0] — 2026-10-08 · repintado mínimo de los paneles y cambiar tu base a una plaza
 
 ### Añadido

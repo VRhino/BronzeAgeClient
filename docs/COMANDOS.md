@@ -140,29 +140,29 @@ Los cinco siguientes no llevan `heroeId`: el actor es su propio héroe. Wrapper 
 - [ ] `proponerTrueque` — `asentamientoAId`, `recursoA`, `cantidadA`, `asentamientoBId`, `recursoB`, `cantidadB` (nace `'propuesto'`; ya no obliga a nadie hasta `aceptarTrueque` — cambio del backend 2026-09-07)
 - [ ] `aceptarTrueque` — `acuerdoId` (solo lo puede aceptar el lado B, el receptor de la propuesta)
 - [ ] `rechazarTrueque` — `acuerdoId`
-- [ ] `colocarOrdenMercado` — `asentamientoId`, `tipo` (`compra` \| `venta`), `recurso`, `cantidad`; opcional: `precio`
+- [x] `colocarOrdenMercado` — `asentamientoId`, `tipo` (`compra` \| `venta`), `recurso`, `cantidad`; opcional: `precio` · pestaña Mercado › Órdenes de la plaza (solo residentes); lista las órdenes en pie de la plaza
 - [ ] `comerciarEnPlaza` — `heroeId`, `asentamientoId`, `ordenId`, `cantidad` (toma una orden EN PERSONA: exige tener una columna propia en la puerta de esa plaza y ser su Líder — sustituye al viejo emparejamiento automático entre plazas, ver `Comercio_Fisico_Definicion.md` del backend)
 
 ### Caravanas — revamp del backend 2026-09-08 (`Revamp_Caravanas_Definicion.md`)
 
 Una caravana ya no nace lista: se crea un casco vacío, se le montan carros y animales, y se lanza a mano.
 
-- [ ] `crearCaravana` — `asentamientoId` (casco vacío)
-- [ ] `agregarCarroCaravana` — `caravanaId`, `tipoCarro` (`basico` \| `reforzado`)
-- [ ] `comprarAnimalCaravana` — `caravanaId`, `carroIndice`, `tipoAnimal` (`buey` \| `caballo` \| `camello`) — el buey cuesta oro (economía del oro, 2026-09-08)
-- [ ] `moverCarroCaravana` — `desdeCaravanaId`, `haciaCaravanaId`, `carroIndice`
-- [ ] `reservarCaravana` — `caravanaId`, `reservada` (boolean)
+- [x] `crearCaravana` — `asentamientoId` (casco vacío) · pestaña Mercado › Caravanas
+- [x] `agregarCarroCaravana` — `caravanaId`, `tipoCarro` (`basico` \| `reforzado`) · Mercado › Caravanas
+- [x] `comprarAnimalCaravana` — `caravanaId`, `carroIndice`, `tipoAnimal` (`buey` \| `caballo` \| `camello`) — el buey cuesta oro (economía del oro, 2026-09-08) · Mercado › Caravanas
+- [x] `moverCarroCaravana` — `desdeCaravanaId`, `haciaCaravanaId`, `carroIndice` · Mercado › Caravanas
+- [x] `reservarCaravana` — `caravanaId`, `reservada` (boolean) · Mercado › Caravanas
 - [x] `asignarEscolta` — `caravanaId`, `heroeId`, `escuadronIds` · panel «Escolta» de la plaza: cede escuadras a una caravana comercial parada en su origen; cupo en puntos de Liderazgo (`caravanas[].escoltaLiderazgo`), `comercio.caravana_invalida` si no cabe (nuevo 2026-10-08, Doc 3.13.4)
 - [x] `quitarEscolta` — `caravanaId`, `heroeId`, `escuadronIds?` · mismo panel: retira las tuyas, vuelven al campamento
 - [x] `pasarAViveres` — `cantidad` · responde `{ movido }` · botón «＋ desde el carro» de la barra de víveres del mundo abierto: pasa trigo del carro a TUS víveres, solo lo que cabe (350 por héroe); solo el Líder de la columna (nuevo 2026-10-08, Doc 5.13)
-- [ ] `prepararCaravana` — `caravanaId`, `heroeId`, `destinoAsentamientoId`, `carga` (recurso→cantidad); opcional: `escoltaEscuadronIds` — lanzamiento manual con preparación (escolta sin héroe, Doc 3.13.4)
-- [ ] `cancelarCaravana` — `caravanaId`
+- [x] `prepararCaravana` — `caravanaId`, `heroeId`, `destinoAsentamientoId`, `carga` (recurso→cantidad); opcional: `escoltaEscuadronIds` — lanzamiento manual con preparación (escolta sin héroe, Doc 3.13.4) · Mercado › Caravanas: destino y carga del almacén (la escolta se cede en Mercado › Escolta)
+- [x] `cancelarCaravana` — `caravanaId` · Mercado › Caravanas, solo en `preparando`
 - [ ] `moverCargaCaravanaAparcada` — `heroeId`, `caravanaId`, `asentamientoId`, `recurso`, `cantidad`, `sentido` (`cargar` \| `descargar`) (nuevo 2026-09-09, Doc 3.13.7) · intercambia carga entre una caravana `'aparcada'` tras `guarnecer` y el almacén de la plaza anfitriona
 - [ ] `enviarCaravanaAlOrigen` — `heroeId`, `caravanaId`, `asentamientoId` (nuevo 2026-09-09) · saca una caravana `'aparcada'` de vuelta a su origen (vacía al instante; cargada recorre el mapa y vuelca en el almacén de origen al llegar)
 
 ### Militar
 
-- [ ] `reclutarTropa` — `asentamientoId`, `heroeId`, `tropaId`, `origen` (`pesants` \| `artesanos`)
+- [x] `reclutarTropa` — `asentamientoId`, `heroeId`, `tropaId`, `origen` (`pesants` \| `artesanos`) · pestaña Reclutamiento de la plaza: solo las tropas con tecnología adoptada (`tecnologia.propias.adoptadas`) y edificio activo del nivel pedido; `origen` no se envía
 - [ ] `iniciarAsedio` — `atacanteId`, `defensorId`, `escuadronIds`
 
 ### Ejército en preparación (backend 2026-10-08, Doc 5.14.5)
@@ -268,3 +268,7 @@ comando que no sea `crearHeroe` mientras la membresía no tenga héroe); `409`
 Un **rechazo de dominio no es un error HTTP**: llega como `200` con `resultado.ok === false` y un
 `resultado.codigoError` ("sin recursos", "plaza ocupada"...). Hay que comprobar las dos cosas —el status y
 `resultado.ok`—, tal como hace `ejecutarYRefrescar` en `src/main.ts`.
+
+### Sesión y partidas
+
+- [x] `GET /v1/jugador/partidas` — partidas abiertas con `membresia` y el héroe propio (`nombre`, `nivel`, `faccion` con emblema) · pantalla «Partidas» tras el login (backend 02bd153); entrar = unirse si aún no eres miembro (`POST …/membresia`)

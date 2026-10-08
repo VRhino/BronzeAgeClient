@@ -211,12 +211,30 @@ export function guardarSesionLocal(sesionId: string, usuario: string, gameId: st
   localStorage.setItem(STORAGE_KEY_GAME_ID, gameId);
 }
 
+/** Una partida abierta del servidor y, si el usuario es miembro, su héroe en ella (`GET /v1/jugador/partidas`, backend 02bd153). */
+export interface PartidaListada {
+  gameId: string;
+  estado: string;
+  membresia: { jugadorId: string } | null;
+  heroe: { id: string; nombre: string; nivel: number; faccion: { id: string; nombre: string; emblemaId: string; colorEmblemaId: string } | null } | null;
+}
+
+export async function listarPartidas(): Promise<PartidaListada[]> {
+  return (await peticion<{ partidas: PartidaListada[] }>(`${V1}/jugador/partidas`)).partidas;
+}
+
+/** Recuerda en qué partida se está (`''` = en ninguna: se vuelve a la lista de partidas). */
+export function recordarPartida(gameId: string): void {
+  localStorage.setItem(STORAGE_KEY_GAME_ID, gameId);
+}
+
 export function cargarSesionLocal(): { sesionId: string; usuario: string; gameId: string } | null {
   const sid = localStorage.getItem(STORAGE_KEY_SESION);
   const usr = localStorage.getItem(STORAGE_KEY_USUARIO);
-  const gid = localStorage.getItem(STORAGE_KEY_GAME_ID);
+  const gid = localStorage.getItem(STORAGE_KEY_GAME_ID) ?? '';
 
-  if (sid && usr && gid) {
+  // Sin `gameId` la sesión sigue viva pero el jugador no está en ninguna partida: va a la pantalla de partidas.
+  if (sid && usr) {
     sesionIdMemoria = sid;
     usuarioMemoria = usr;
     return { sesionId: sid, usuario: usr, gameId: gid };
@@ -345,9 +363,21 @@ export async function consultarEventos(gameId: string, desde: number): Promise<E
   return r.eventos;
 }
 
+/** Una tropa del catálogo (`TROPAS_RECLUTABLES`): lo que hace falta para reclutarla y lo que cuesta el equipo de cada soldado. */
+export interface TropaReclutable {
+  id: string;
+  nombre: string;
+  tecnologia: string;
+  edificio: string;
+  nivelRequerido: number;
+  costoEquipo: Record<string, number | undefined>;
+  unidadesPorDefecto: number;
+  escalon: number;
+}
+
 /** El balance público (`GET /v1/balance`): se pide una vez, en segundo plano, y avisa con `alCargar` cuando llega. */
 interface BalancePublico {
-  catalogos?: { EDIFICIO_CATALOGO?: Record<string, { costo?: Record<string, number> }>; TROPAS_RECLUTABLES?: { id: string; unidadesPorDefecto: number }[] };
+  catalogos?: { EDIFICIO_CATALOGO?: Record<string, { costo?: Record<string, number> }>; TROPAS_RECLUTABLES?: TropaReclutable[] };
   mundoYMilitar?: { LOGISTICA?: { capacidadViveresPorHeroe?: number; radioEncuentro?: number; radioReabastecimiento?: number }; FUNDACION?: { materialesIniciales?: Record<string, number>; viviendasIniciales?: number; costoMaderaExtraCaravana?: number }; MERCENARIOS?: { refundacion?: { porcentajeCoste?: number } } };
   internas?: { CAMPAMENTOS_BANDIDOS?: { niveles?: Record<string, NivelDeBandidos> } };
 }
@@ -384,6 +414,11 @@ export function radioDeEncuentro(): number {
 /** A cuánto de tu plaza tiene que pasar un ejército para recoger tropa o reabastecerse (`LOGISTICA.radioReabastecimiento`); 60 mientras no llegue el balance. */
 export function radioDeReabastecimiento(): number {
   return balance()?.mundoYMilitar?.LOGISTICA?.radioReabastecimiento ?? 60;
+}
+
+/** El catálogo de tropas reclutables; `null` mientras no llegue el balance (la primera vez lo pide en segundo plano y avisa con `alCargar`). */
+export function tropasReclutables(alCargar?: () => void): TropaReclutable[] | null {
+  return balance(alCargar)?.catalogos?.TROPAS_RECLUTABLES ?? null;
 }
 
 /** Los hombres de una escuadra completa de esa tropa (`unidadesPorDefecto`), que es también lo que presta un campamento; `undefined` mientras no llegue el balance. */
