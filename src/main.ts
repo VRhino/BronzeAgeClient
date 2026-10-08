@@ -28,7 +28,7 @@ import { svgSigilo } from './sigilo/sigilo';
 import { cablearCampamento, campamentoActual, htmlSeccionCampamento, seccionesDeCampamento, type SeccionCampamento } from './ui/pantallaCampamento';
 import { leyendaPlanoCampamento, svgPlanoCampamento } from './ui/planoCampamento';
 import type { MapaGenerado } from './terreno';
-import { estadoCliente, TIPS_FUNDACION } from './ui/estadoCliente';
+import { estadoCliente, medirRitmoDeMundo, TIPS_FUNDACION } from './ui/estadoCliente';
 import { actualizarTip, resumenRecursosFundacion } from './ui/pestanaAsentamientos';
 import { renderPanelInteraccion } from './ui/panelInteraccion';
 import { renderPanelMapa } from './ui/panelMapa';
@@ -1976,6 +1976,7 @@ function fechaDeMundo(instante: number | undefined): string {
 
 async function refrescarDatosJuego(): Promise<void> {
   const respuesta = await consultarProyeccion(estadoCliente.gameIdActivo);
+  medirRitmoDeMundo(respuesta.instante);
   estadoCliente.sinHeroe = respuesta.sinHeroe === true;
   estadoCliente.proyeccionUltima = respuesta.sinHeroe ? null : respuesta;
   if (respuesta.sinHeroe) campamentosParaElegir = respuesta.campamentos ?? [];

@@ -10,13 +10,13 @@ import type { ProyeccionJugador } from '../apiCliente';
 import { radioDeEncuentro } from '../apiCliente';
 import type { Ejercito } from '../tiposDominio';
 import { nombreDeHeroe } from './nombres';
+import { textoEnTiempoReal } from './estadoCliente';
 import type { Ejecutar } from './panelCarro';
 
 type Escapar = (valor: string) => string;
 
 /** Héroes que hacen falta para que una formación sea un ejército (`FORMACION_EJERCITO.minimo` del backend). */
 export const MINIMO_FORMACION = 3;
-const MINUTO = 60_000;
 
 export const POLITICA: Record<'aceptar' | 'preguntar' | 'rechazar', string> = {
   aceptar: 'abierto: se une quien llegue',
@@ -52,7 +52,7 @@ export function motivoParaUnirse(p: ProyeccionJugador, c: Ejercito): string {
   if (mi.id === c.id) return 'Ya vas en esa columna.';
   if (mi.tipo !== 'personal' || mi.formacion || mi.participantes.length > 1) return 'Solo se une una columna personal: sepárate de la tuya antes.';
   const mia = peticionesVivas(c, p.instante).find((x) => x.heroeId === p.heroeId);
-  if (mia) return `Petición enviada: el Líder tiene ${Math.max(0, Math.ceil((mia.expiraEn - p.instante) / 1000))} s para contestar.`;
+  if (mia) return `Petición enviada: el Líder tiene ${textoEnTiempoReal(mia.expiraEn - p.instante)} para contestar.`;
   if ((c.politicaDeUnion ?? 'rechazar') === 'rechazar') return 'Esa columna no admite a nadie más.';
   const lejos = distancia(mi.posicionActual, c.posicionActual);
   if (lejos > radioDeEncuentro()) return `Estás a ${Math.round(lejos)}: hay que estar a ${radioDeEncuentro()} o menos, uno junto al otro.`;
@@ -64,11 +64,11 @@ function filaEjercito(p: ProyeccionJugador, c: Ejercito, e: Escapar): string {
   const motivo = motivoParaUnirse(p, c);
   const politica = c.politicaDeUnion ?? 'rechazar';
   const lider = c.liderId ? nombreDeHeroe(p, c.liderId) : '—';
-  const minutos = c.formacion ? Math.max(0, Math.ceil((c.formacion.expiraEn - p.instante) / MINUTO)) : 0;
+  const plazo = c.formacion ? textoEnTiempoReal(c.formacion.expiraEn - p.instante) : '';
   const lejos = mi ? ` · a ${Math.round(distancia(mi.posicionActual, c.posicionActual))} de ti` : '';
   return `<div class="ejercito-fila">
     <div><strong>${c.formacion ? 'Formación' : 'Ejército'} de ${e(lider)}</strong>
-      <span>${c.participantes.length} héroe(s)${c.formacion ? ` (hacen falta ${MINIMO_FORMACION}; se deshace en ${minutos} min)` : ` · ${ESTADO[c.estado]}`} · ${POLITICA[politica]}${lejos}</span></div>
+      <span>${c.participantes.length} héroe(s)${c.formacion ? ` (hacen falta ${MINIMO_FORMACION}; se deshace en ${plazo})` : ` · ${ESTADO[c.estado]}`} · ${POLITICA[politica]}${lejos}</span></div>
     <button class="btn-secondary" type="button" data-centrar-ejercito="${e(c.id)}">Ver</button>
     <button class="btn-primary" type="button" data-unirse-ejercito="${e(c.id)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>${politica === 'preguntar' ? 'Pedir unirme' : 'Unirme'}</button>
     ${motivo && mi ? `<small>${e(motivo)}</small>` : ''}</div>`;
@@ -79,8 +79,8 @@ function htmlMiSituacion(p: ProyeccionJugador, mi: Ejercito | undefined, e: Esca
   if (!mi) return '<p class="asent-lado-nota">Estás dentro. Para salir como ejército, usa «Salir» en un campamento o «Salir al mundo» en tu plaza y elige «Ejército».</p>';
   const lider = mi.liderId === p.heroeId;
   if (mi.formacion) {
-    const minutos = Math.max(0, Math.ceil((mi.formacion.expiraEn - p.instante) / MINUTO));
-    return `<p class="asent-lado-nota"><strong>Formación</strong>: ${mi.participantes.length}/${MINIMO_FORMACION} héroes, ${POLITICA[mi.politicaDeUnion ?? 'aceptar']}. Se deshace en ${minutos} min si no llegáis a ${MINIMO_FORMACION}. Te quedas quieto hasta entonces.</p>
+    const plazo = textoEnTiempoReal(mi.formacion.expiraEn - p.instante);
+    return `<p class="asent-lado-nota"><strong>Formación</strong>: ${mi.participantes.length}/${MINIMO_FORMACION} héroes, ${POLITICA[mi.politicaDeUnion ?? 'aceptar']}. Se deshace en ${plazo} si no llegáis a ${MINIMO_FORMACION}: con menos de ${MINIMO_FORMACION} no es un ejército y no se mueve. Te quedas quieto hasta entonces.</p>
       ${lider ? '<button class="btn-secondary" type="button" data-ej="cancelar-formacion">Cancelar la formación</button>' : '<button class="btn-secondary" type="button" data-ej="separarme">Separarme</button>'}`;
   }
   if (mi.tipo === 'ejercito') {
@@ -89,7 +89,7 @@ function htmlMiSituacion(p: ProyeccionJugador, mi: Ejercito | undefined, e: Esca
     return `<p class="asent-lado-nota"><strong>Tu ejército</strong> · ${mi.participantes.length} héroe(s) · ${ESTADO[mi.estado]} · ${POLITICA[mi.politicaDeUnion ?? 'rechazar']}.
         ${mi.destinoPendiente ? (lider ? ' Está formado: haz clic en el mapa para fijar su destino (solo se fija una vez).' : ' Está formado: espera a que su Líder fije el destino.') : ''}</p>
       <ul class="ejercito-lista">${mi.participantes.map((x) => `<li>${e(nombreDeHeroe(p, x.heroeId))}${x.heroeId === mi.liderId ? ' <em>(Líder)</em>' : ''}${x.heroeId === p.heroeId ? ' · tú' : ''}</li>`).join('')}</ul>
-      ${peticiones.length > 0 ? `<strong class="heroe-sub">Piden unirse</strong>${peticiones.map((x) => `<div class="ejercito-fila"><div><strong>${e(nombreDeHeroe(p, x.heroeId))}</strong><span>${Math.max(0, Math.ceil((x.expiraEn - p.instante) / 1000))} s para contestar</span></div>
+      ${peticiones.length > 0 ? `<strong class="heroe-sub">Piden unirse</strong>${peticiones.map((x) => `<div class="ejercito-fila"><div><strong>${e(nombreDeHeroe(p, x.heroeId))}</strong><span>${textoEnTiempoReal(x.expiraEn - p.instante)} para contestar</span></div>
           <button class="btn-primary" type="button" data-peticion="${e(x.heroeId)}" data-aceptar="si">Aceptar</button><button class="btn-secondary" type="button" data-peticion="${e(x.heroeId)}" data-aceptar="no">Rechazar</button></div>`).join('')}` : ''}
       ${lider
         ? `<div class="mapa-seleccion-acciones">

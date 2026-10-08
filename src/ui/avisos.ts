@@ -7,8 +7,8 @@
 // `heroesIds` para saber en qué lado ibas. También avisa de `mercenarios.prestamo_retirado` (te retiran la tropa prestada).
 import { consultarEventos } from '../apiCliente';
 import type { EventoDominio } from '../tiposDominio';
-import { esPeticionNueva } from './ejercitos';
-import { estadoCliente } from './estadoCliente';
+import { esPeticionNueva, MINIMO_FORMACION } from './ejercitos';
+import { estadoCliente, textoEnTiempoReal } from './estadoCliente';
 import { nombreDeHeroe } from './nombres';
 import { informeDeEvento, type InformeDeCombate } from './informeCombate';
 
@@ -125,9 +125,14 @@ function procesar(e: EventoDominio, heroeId: string, modo: 'vivo' | 'recuperado'
     const proy = estadoCliente.proyeccionUltima;
     const quien = proy && p?.heroeId ? nombreDeHeroe(proy, p.heroeId) : 'Un héroe';
     let texto: string | null = null;
-    if (e.codigo === 'columna.union_pedida' && p?.liderId === heroeId && p.heroeId !== heroeId && esPeticionNueva(p.heroeId ?? '', p.expiraEn ?? 0)) texto = `${quien} pide unirse a tu ejército: tienes 10 s para contestar (botón ⚑ del mapa).`;
+    if (e.codigo === 'columna.union_pedida' && p?.liderId === heroeId && p.heroeId !== heroeId && esPeticionNueva(p.heroeId ?? '', p.expiraEn ?? 0)) texto = `${quien} pide unirse a tu ejército: tienes ${textoEnTiempoReal((p.expiraEn ?? 0) - (proy?.instante ?? 0))} para contestar (botón ⚑ del mapa).`;
     else if (e.codigo === 'columna.union_rechazada' && p?.heroeId === heroeId) texto = 'El Líder ha rechazado tu petición de unirte al ejército.';
-    else if (e.codigo === 'columna.union_en_campo' && p?.heroeId === heroeId) texto = 'Te has unido al ejército: ahora sigues su destino.';
+    else if (e.codigo === 'columna.union_en_campo' && p?.heroeId === heroeId) {
+      const mia = proy?.ejercitos.find((c) => c.participantes.some((x) => x.heroeId === heroeId));
+      texto = mia?.formacion
+        ? `Te has unido a la formación (${mia.participantes.length}/${MINIMO_FORMACION}): aún no es un ejército, hacen falta ${MINIMO_FORMACION} héroes antes de que se deshaga (${textoEnTiempoReal(mia.formacion.expiraEn - (proy?.instante ?? 0))}).`
+        : 'Te has unido al ejército: ahora sigues su destino.';
+    }
     if (!texto) return;
     historial.unshift({ version: e.version, momento: e.momento, texto, clase: 'mirada' });
     if (modo !== 'historico') noLeidos++;

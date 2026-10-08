@@ -3,6 +3,13 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.21.1] — 2026-10-08 · los plazos de ejército en tiempo real y el aviso de la formación
+
+### Corregido
+- Reproducido con dos cuentas en la partida viva: «el ejército se destruye» porque una **formación** (con menos de 3 héroes) se deshace a los 10 min de MUNDO, y ese mundo corre a ~114×: dura unos 6 s reales. Es un plazo del backend (pedida su corrección); desde el cliente, los plazos (formación, petición de unión) se enseñan ahora en **segundos reales**, midiendo el ritmo del mundo entre sondeos (`medirRitmoDeMundo`).
+- Al unirte a una formación el aviso decía «ahora sigues su destino»; ahora dice que aún no es un ejército, que hacen falta 3 héroes y cuánto queda.
+- El panel ⚑ de una formación avisa de que con menos de 3 héroes no se mueve.
+
 ## [0.21.0] — 2026-10-08 · formar y unirse a ejércitos · sync con `BronzeAgeFase0@74413b0` (`main`, sin push)
 
 ### Añadido
