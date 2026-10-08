@@ -10,6 +10,7 @@ import {
   cerrarPresencia,
   fijarCanalesTiempoReal,
   loginConClave,
+  capacidadDeViveres,
   costoDeRefundacion,
   nivelesBandidos,
   registrarCuenta,
@@ -1046,22 +1047,57 @@ function renderPanelRiel(): void {
 /** Pantalla MAPA: el mundo a pantalla completa como fondo, con zoom (rueda y botones) y arrastre acotados
  * (T3), y movimiento por clic + panel de Selección (T4). El terreno lo pinta `dibujarPantallaSegunModo`
  * sobre el mismo canvas `#mapa` de siempre; el zoom es solo `transform` CSS encima. */
-/** El trigo más alto que ha llevado la columna en el viaje: la barra de comida se vacía respecto a él al irse consumiendo (sube si se recarga). */
-let trigoMaximo = 0;
+/** El selector «añadir a víveres» (abierto o no, y la cantidad que va eligiendo): vive entre repintados, porque el sondeo de 3 s rehace la barra. */
+let selectorViveres: { abierto: boolean; cantidad: number } = { abierto: false, cantidad: 1 };
 
-/** Barra inferior del mundo abierto: el trigo que queda en el carro de tu columna (el que se come con la marcha). */
+/**
+ * Barra inferior del mundo abierto: los VÍVERES de tu héroe (backend Doc 5.13, 2026-10-08): el trigo que come tu columna, siempre contigo y nunca
+ * descargable, hasta `LOGISTICA.capacidadViveresPorHeroe`. El carro ya no se come; de él se pasa trigo con «`pasarAViveres`» (solo el Líder, solo lo que
+ * cabe). En un ejército el backend suma los víveres de todos, pero la proyección solo trae los tuyos: aquí, los tuyos frente a lo que cabe a un héroe.
+ */
 function pintarComida(p: ProyeccionJugador): void {
   const caja = document.querySelector<HTMLElement>('.mapa-comida');
   if (!caja) return;
   const columna = p.ejercitos.find((x) => x.participantes.some((y) => y.heroeId === p.heroeId));
-  if (!columna) { caja.hidden = true; trigoMaximo = 0; return; }
-  const trigo = Math.floor(columna.suministro?.['trigo'] ?? 0);
-  trigoMaximo = Math.max(trigoMaximo, trigo);
-  const fraccion = trigoMaximo > 0 ? trigo / trigoMaximo : 0;
+  if (!columna) { caja.hidden = true; selectorViveres.abierto = false; return; }
+  if (selectorViveres.abierto && caja.contains(document.activeElement) && document.activeElement?.tagName === 'INPUT') return; // se está escribiendo una cantidad
+  const capacidad = capacidadDeViveres(() => { delete caja.dataset.pintado; pintarComida(p); });
+  const viveres = Math.floor(p.heroe.viveres ?? 0);
+  const hueco = Math.max(0, capacidad - viveres);
+  const enElCarro = Math.floor(columna.suministro?.['trigo'] ?? 0);
+  const maximo = Math.min(enElCarro, hueco);
+  const esLider = columna.liderId === p.heroeId;
+  const motivo = !esLider ? 'Solo el Líder de la columna pasa trigo del carro a los víveres.' : enElCarro < 1 ? 'El carro no lleva trigo.' : hueco < 1 ? 'Tus víveres están llenos.' : '';
+  if (motivo) selectorViveres.abierto = false;
+  selectorViveres.cantidad = Math.max(1, Math.min(selectorViveres.cantidad, maximo || 1));
+  const fraccion = capacidad > 0 ? Math.min(1, viveres / capacidad) : 0;
+  const html = `<span>🌾 Víveres</span><div class="mapa-comida-barra"><i style="width:${(fraccion * 100).toFixed(1)}%"></i></div><strong>${viveres} / ${capacidad}</strong>
+    <button type="button" class="btn-secondary" data-viveres="abrir"${motivo ? ' disabled' : ''} title="${escaparHtml(motivo || 'Pasa trigo del carro a tus víveres: lo que cabe.')}">＋ desde el carro</button>
+    ${selectorViveres.abierto ? `<div class="mapa-comida-selector"><span>Trigo del carro: ${enElCarro} · cabe ${hueco}</span><input type="range" min="1" max="${maximo}" value="${selectorViveres.cantidad}" data-viveres="barra" /><input type="number" class="form-input" min="1" max="${maximo}" value="${selectorViveres.cantidad}" data-viveres="cantidad" /><button type="button" class="btn-primary" data-viveres="confirmar">Pasar a víveres</button><p class="faction-error" data-campo="error-viveres" role="alert"></p></div>` : ''}`;
   caja.hidden = false;
   caja.classList.toggle('poca', fraccion < 0.25);
-  caja.title = 'Trigo en el carro de tu columna: la marcha lo consume. Sin trigo, la moral cae y la tropa deserta.';
-  caja.innerHTML = `<span>🌾 Comida</span><div class="mapa-comida-barra"><i style="width:${(fraccion * 100).toFixed(1)}%"></i></div><strong>${trigo}</strong>`;
+  caja.title = 'Víveres: el trigo que come tu columna mientras marcha. Sin víveres, la moral cae y la tropa deserta. Siempre van contigo.';
+  if (caja.dataset.pintado === html) return;
+  caja.innerHTML = html;
+  caja.dataset.pintado = html;
+  const valor = (): number => Math.max(1, Math.min(maximo, Math.floor(Number(caja.querySelector<HTMLInputElement>('input[data-viveres="cantidad"]')?.value ?? 1)) || 1));
+  caja.querySelector('[data-viveres="abrir"]')?.addEventListener('click', () => { selectorViveres = { abierto: !selectorViveres.abierto, cantidad: maximo || 1 }; delete caja.dataset.pintado; pintarComida(p); });
+  caja.querySelector<HTMLInputElement>('input[data-viveres="barra"]')?.addEventListener('input', (ev) => {
+    selectorViveres.cantidad = Number((ev.target as HTMLInputElement).value);
+    const n = caja.querySelector<HTMLInputElement>('input[data-viveres="cantidad"]'); if (n) n.value = String(selectorViveres.cantidad);
+  });
+  caja.querySelector<HTMLInputElement>('input[data-viveres="cantidad"]')?.addEventListener('input', () => {
+    selectorViveres.cantidad = valor();
+    const b = caja.querySelector<HTMLInputElement>('input[data-viveres="barra"]'); if (b) b.value = String(selectorViveres.cantidad);
+  });
+  caja.querySelector<HTMLButtonElement>('[data-viveres="confirmar"]')?.addEventListener('click', async (ev) => {
+    const boton = ev.currentTarget as HTMLButtonElement;
+    boton.disabled = true;
+    const mensaje = await ejecutarYRefrescar('pasarAViveres', { cantidad: valor() });
+    boton.disabled = false;
+    if (mensaje === null) { selectorViveres.abierto = false; return; }
+    const error = caja.querySelector<HTMLElement>('[data-campo="error-viveres"]'); if (error) error.textContent = mensaje;
+  });
 }
 
 function montarMapa(): void {

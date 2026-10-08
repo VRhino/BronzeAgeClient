@@ -2819,3 +2819,9 @@ kbd {
 .escolta-barra i { display: block; height: 100%; background: #d9b44a; transition: width 0.4s; }
 .escolta-barra.llena i { background: #c0392b; }
 .escolta-cifras { display: block; margin-bottom: 6px; color: var(--text-secondary); }
+
+/* Víveres: selector «añadir desde el carro». */
+.mapa-comida { flex-wrap: wrap; justify-content: center; max-width: 92vw; }
+.mapa-comida > button { padding: 2px 8px; font-size: 12px; }
+.mapa-comida-selector { flex-basis: 100%; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.mapa-comida-selector .form-input { width: 80px; }

@@ -4,7 +4,7 @@
 // tal cual en `#camp-error`. Los menús del jugador (héroe, escuadras, Facción) están en la barra superior (`barraJugador.ts`).
 import { chipLiderazgo } from './liderazgo';
 import { cablearCargaDeSalida, htmlCargaDeSalida, leerCarga } from './cargaDeSalida';
-import { costoDeRefundacion, type ProyeccionJugador } from '../apiCliente';
+import { costoDeRefundacion, unidadesDeTropa, type ProyeccionJugador } from '../apiCliente';
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { CampamentoMercenarios, Escuadron } from '../tiposDominio';
 
@@ -90,12 +90,12 @@ function salir(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): stri
       <button class="btn-primary" type="button" id="btn-salir-campamento">Salir</button>`;
   }
   return `
-    <p class="asent-lado-nota">Elige la tropa que sacas y lo que cargas de tu almacén. Recibes además la ración gratis de trigo.</p>
+    <p class="asent-lado-nota">Elige la tropa que sacas y lo que cargas de tu almacén. La ración gratis de trigo llena tus víveres, que van siempre contigo.</p>
     <div class="mapa-lista">${enCampamento.length > 0
       ? enCampamento.map((s) => `<label class="mapa-lista-item"><div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres</span></div><input type="checkbox" data-salir-escuadra="${e(s.id)}" checked /></label>`).join('')
       : '<p class="asent-lado-nota">No tienes tropa en el campamento.</p>'}</div>
     ${htmlCargaDeSalida(almacen, 'tu almacén personal', e)}
-    <p class="asent-lado-nota">Al volver a entrar en un campamento, lo que quede en el carro regresa solo a tu almacén personal (menos la ración gratis).</p>
+    <p class="asent-lado-nota">Al volver a entrar en un campamento, lo que quede en el carro regresa solo a tu almacén personal. Tus víveres no se descargan.</p>
     <button class="btn-primary" type="button" id="btn-salir-campamento">Salir</button>`;
 }
 
@@ -107,7 +107,7 @@ function tropa(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): stri
     <p class="asent-lado-nota">Gratis, para aprender a usar tropa antes de tener la tuya. No gana experiencia. Se retira si dejas de residir en este campamento.</p>
     <div class="mapa-lista">${TROPAS_PRESTAMO.map(([id, nombre]) => {
       const ya = prestadas.get(id);
-      return `<label class="mapa-lista-item"><div><strong>${nombre}</strong><span>${ya ? `ya la tienes: ${ya.cantidad} hombres, ${dondeEstaLaEscuadra(ya, p)}` : '15 hombres'}</span></div><input type="checkbox" data-prestamo="${id}"${ya ? ' disabled' : ''} /></label>`;
+      return `<label class="mapa-lista-item"><div><strong>${nombre}</strong><span>${ya ? `ya la tienes: ${ya.cantidad} hombres, ${dondeEstaLaEscuadra(ya, p)}` : `${unidadesDeTropa(id, () => { /* se pinta con el siguiente sondeo */ }) ?? '?'} hombres`}</span></div><input type="checkbox" data-prestamo="${id}"${ya ? ' disabled' : ''} /></label>`;
     }).join('')}</div>
     <div class="mapa-seleccion-acciones">
       <button class="btn-secondary" type="button" id="btn-pedir-prestamo">Pedir</button>

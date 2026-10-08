@@ -154,6 +154,7 @@ Una caravana ya no nace lista: se crea un casco vacío, se le montan carros y an
 - [ ] `reservarCaravana` — `caravanaId`, `reservada` (boolean)
 - [x] `asignarEscolta` — `caravanaId`, `heroeId`, `escuadronIds` · panel «Escolta» de la plaza: cede escuadras a una caravana comercial parada en su origen; cupo en puntos de Liderazgo (`caravanas[].escoltaLiderazgo`), `comercio.caravana_invalida` si no cabe (nuevo 2026-10-08, Doc 3.13.4)
 - [x] `quitarEscolta` — `caravanaId`, `heroeId`, `escuadronIds?` · mismo panel: retira las tuyas, vuelven al campamento
+- [x] `pasarAViveres` — `cantidad` · responde `{ movido }` · botón «＋ desde el carro» de la barra de víveres del mundo abierto: pasa trigo del carro a TUS víveres, solo lo que cabe (350 por héroe); solo el Líder de la columna (nuevo 2026-10-08, Doc 5.13)
 - [ ] `prepararCaravana` — `caravanaId`, `heroeId`, `destinoAsentamientoId`, `carga` (recurso→cantidad); opcional: `escoltaEscuadronIds` — lanzamiento manual con preparación (escolta sin héroe, Doc 3.13.4)
 - [ ] `cancelarCaravana` — `caravanaId`
 - [ ] `moverCargaCaravanaAparcada` — `heroeId`, `caravanaId`, `asentamientoId`, `recurso`, `cantidad`, `sentido` (`cargar` \| `descargar`) (nuevo 2026-09-09, Doc 3.13.7) · intercambia carga entre una caravana `'aparcada'` tras `guarnecer` y el almacén de la plaza anfitriona

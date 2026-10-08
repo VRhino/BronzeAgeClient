@@ -40,9 +40,9 @@ export function estadosActivos(p: ProyeccionJugador): Estado[] {
   const enCampana = h.escuadrones.filter((s) => s.contenedor.tipo === 'ejercito' && s.cantidad > 0);
   const peor = enCampana.reduce<number | null>((min, s) => (min === null || s.moral < min ? s.moral : min), null);
   if (peor !== null && peor <= 0) {
-    lista.push({ id: 'desercion', icono: 'moral', nombre: 'Deserción', descripcion: 'Una escuadra de tu columna tiene la moral a 0 por falta de ración: cada minuto deserta un 5 % de sus hombres. Lleva trigo en el carro.' });
+    lista.push({ id: 'desercion', icono: 'moral', nombre: 'Deserción', descripcion: 'Una escuadra de tu columna tiene la moral a 0 por falta de víveres: cada minuto deserta un 5 % de sus hombres. Pasa trigo del carro a tus víveres.' });
   } else if (peor !== null && peor < 50) {
-    lista.push({ id: 'sin-racion', icono: 'moral', nombre: `Moral baja (${Math.round(peor)})`, descripcion: 'Tu columna se queda sin ración: la moral baja 20 por minuto sin trigo y sube 5 con él. A 0, las escuadras empiezan a desertar.' });
+    lista.push({ id: 'sin-racion', icono: 'moral', nombre: `Moral baja (${Math.round(peor)})`, descripcion: 'Tu columna se queda sin víveres: la moral baja 20 por minuto sin trigo y sube 5 con él. A 0, las escuadras empiezan a desertar.' });
   }
   const plaza = p.asentamientos[0];
   if (plaza?.ocupacionHasta !== undefined && plaza.ocupacionHasta > p.instante) {

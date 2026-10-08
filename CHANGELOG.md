@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.20.0] — 2026-10-08 · víveres · sync con el backend sin commit de `BronzeAgeFase0` (BALANCE_VERSION 13)
+
+### Cambiado
+- **La barra de comida es ahora la de VÍVERES**: `heroe.viveres` frente a lo que cabe a un héroe (`LOGISTICA.capacidadViveresPorHeroe`, 350, del balance público). Los víveres son el trigo que come la columna, van siempre contigo y no se descargan. En un ejército el backend suma los de todos, pero la proyección solo trae los tuyos: se enseñan los tuyos.
+- **«＋ desde el carro»** al final de la barra: abre un selector (barra y número, hasta el menor entre el trigo del carro y el hueco de tus víveres) y envía `pasarAViveres { cantidad }`. Se desactiva, con el motivo en el tooltip, si no eres el Líder, el carro no lleva trigo o los víveres están llenos.
+- El carro ya no se come: es solo carga, y todo su trigo se puede guardar (desaparece la «ración gratis» no guardable, `Ejercito.racion`). Textos de moral, deserción y salida de campamento hablan de víveres.
+- Las escuadras prestadas salen completas: el tamaño sale de `unidadesPorDefecto` del balance, no del «15 hombres» fijo.
+
 ## [0.19.1] — 2026-10-08 · «Aceptar» una solicitud no hacía nada
 
 ### Corregido

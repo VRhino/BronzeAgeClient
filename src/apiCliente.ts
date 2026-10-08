@@ -344,8 +344,8 @@ export async function consultarEventos(gameId: string, desde: number): Promise<E
 
 /** El balance público (`GET /v1/balance`): se pide una vez, en segundo plano, y avisa con `alCargar` cuando llega. */
 interface BalancePublico {
-  catalogos?: { EDIFICIO_CATALOGO?: Record<string, { costo?: Record<string, number> }> };
-  mundoYMilitar?: { FUNDACION?: { materialesIniciales?: Record<string, number>; viviendasIniciales?: number; costoMaderaExtraCaravana?: number }; MERCENARIOS?: { refundacion?: { porcentajeCoste?: number } } };
+  catalogos?: { EDIFICIO_CATALOGO?: Record<string, { costo?: Record<string, number> }>; TROPAS_RECLUTABLES?: { id: string; unidadesPorDefecto: number }[] };
+  mundoYMilitar?: { LOGISTICA?: { capacidadViveresPorHeroe?: number }; FUNDACION?: { materialesIniciales?: Record<string, number>; viviendasIniciales?: number; costoMaderaExtraCaravana?: number }; MERCENARIOS?: { refundacion?: { porcentajeCoste?: number } } };
   internas?: { CAMPAMENTOS_BANDIDOS?: { niveles?: Record<string, NivelDeBandidos> } };
 }
 let balancePublico: BalancePublico | null = null;
@@ -366,6 +366,16 @@ export interface NivelDeBandidos { poder: number; unidades: number; oroPorHeroe:
 /** Los niveles de bandidos si ya se leyeron; la primera vez los pide al backend en segundo plano y avisa con `alCargar`. */
 export function nivelesBandidos(alCargar?: () => void): Record<string, NivelDeBandidos> | null {
   return balance(alCargar)?.internas?.CAMPAMENTOS_BANDIDOS?.niveles ?? null;
+}
+
+/** Lo que caben los víveres de un héroe (`LOGISTICA.capacidadViveresPorHeroe`); 350 mientras no llegue el balance. */
+export function capacidadDeViveres(alCargar?: () => void): number {
+  return balance(alCargar)?.mundoYMilitar?.LOGISTICA?.capacidadViveresPorHeroe ?? 350;
+}
+
+/** Los hombres de una escuadra completa de esa tropa (`unidadesPorDefecto`), que es también lo que presta un campamento; `undefined` mientras no llegue el balance. */
+export function unidadesDeTropa(tropaId: string, alCargar?: () => void): number | undefined {
+  return balance(alCargar)?.catalogos?.TROPAS_RECLUTABLES?.find((x) => x.id === tropaId)?.unidadesPorDefecto;
 }
 
 /**

@@ -102,7 +102,7 @@ function avisarDeDesercion(eventos: readonly EventoDominio[], heroeId: string, m
     ultimo = e;
   }
   if (!ultimo) return;
-  const texto = `Desertan por hambre (sin ración, moral a 0): ${[...porEscuadra].map(([n, d]) => `${n} −${d}`).join(', ')}. Lleva trigo en el carro.`;
+  const texto = `Desertan por hambre (sin víveres, moral a 0): ${[...porEscuadra].map(([n, d]) => `${n} −${d}`).join(', ')}. Pasa trigo del carro a tus víveres.`;
   historial.unshift({ version: ultimo.version, momento: ultimo.momento, texto, clase: 'baja' });
   if (modo !== 'historico') noLeidos++;
   if (modo === 'vivo') mostrar(texto, true);
