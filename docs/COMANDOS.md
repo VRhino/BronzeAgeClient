@@ -152,6 +152,8 @@ Una caravana ya no nace lista: se crea un casco vacío, se le montan carros y an
 - [ ] `comprarAnimalCaravana` — `caravanaId`, `carroIndice`, `tipoAnimal` (`buey` \| `caballo` \| `camello`) — el buey cuesta oro (economía del oro, 2026-09-08)
 - [ ] `moverCarroCaravana` — `desdeCaravanaId`, `haciaCaravanaId`, `carroIndice`
 - [ ] `reservarCaravana` — `caravanaId`, `reservada` (boolean)
+- [x] `asignarEscolta` — `caravanaId`, `heroeId`, `escuadronIds` · panel «Escolta» de la plaza: cede escuadras a una caravana comercial parada en su origen; cupo en puntos de Liderazgo (`caravanas[].escoltaLiderazgo`), `comercio.caravana_invalida` si no cabe (nuevo 2026-10-08, Doc 3.13.4)
+- [x] `quitarEscolta` — `caravanaId`, `heroeId`, `escuadronIds?` · mismo panel: retira las tuyas, vuelven al campamento
 - [ ] `prepararCaravana` — `caravanaId`, `heroeId`, `destinoAsentamientoId`, `carga` (recurso→cantidad); opcional: `escoltaEscuadronIds` — lanzamiento manual con preparación (escolta sin héroe, Doc 3.13.4)
 - [ ] `cancelarCaravana` — `caravanaId`
 - [ ] `moverCargaCaravanaAparcada` — `heroeId`, `caravanaId`, `asentamientoId`, `recurso`, `cantidad`, `sentido` (`cargar` \| `descargar`) (nuevo 2026-09-09, Doc 3.13.7) · intercambia carga entre una caravana `'aparcada'` tras `guarnecer` y el almacén de la plaza anfitriona

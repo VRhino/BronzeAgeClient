@@ -3,6 +3,12 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.19.0] — 2026-10-08 · escolta de caravanas · sync con `BronzeAgeFase0@3d884fd` (`main`, sin push)
+
+### Añadido
+- **Panel «Escolta»** en la plaza (`ui/panelEscolta.ts`): por cada caravana comercial de tu plaza, una barra de Liderazgo de la escolta («64/100 pts · quedan 36»; `escoltaLiderazgo { usado, cupo }` lo da el backend, no se calcula aquí), tus escuadras cedidas con «Retirar» y las que puedes ceder con «Ceder» (desactivada, con el motivo, si su coste no cabe). Solo con la caravana parada en su origen y siendo residente; el resto, en solo lectura. Ceder no gasta tu Liderazgo (regla del backend). Comandos `asignarEscolta` y `quitarEscolta`.
+- **Coste de Liderazgo** (♛ N) como marca pequeña junto al nombre de cada escuadra en «Lo que llevas», las listas del campamento (resumen, Tropa, Salir) y la salida de la plaza.
+
 ## [0.18.1] — 2026-10-07 · el fondo de refundación enseña el precio y lo que falta
 
 ### Cambiado

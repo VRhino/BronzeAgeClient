@@ -200,6 +200,10 @@ export interface Caravana {
   origenCampamentoId?: string;
   faccionId?: string;
   titularId?: string;
+  /** Escuadras cedidas como escolta (ids; backend 2026-10-08, Doc 3.13.4). */
+  escoltaIds?: string[];
+  /** Liderazgo que gasta su escolta y cupo que le da el Mercado de su origen: derivado por el backend, solo en las comerciales de una plaza propia. */
+  escoltaLiderazgo?: { usado: number; cupo: number };
 }
 
 /** Copia local de `Ejercito` (motor, Doc 5.12) — los de TU Facción, que la proyección manda completos.

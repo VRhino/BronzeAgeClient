@@ -2809,3 +2809,13 @@ kbd {
 .fondo-barra i { display: block; height: 100%; background: #d9b44a; transition: width 0.4s; }
 .fondo-fila.listo .fondo-barra i { background: #6fae6e; }
 .fondo-barra-total { height: 12px; margin: 6px 0 10px; }
+
+/* Coste de Liderazgo de una escuadra: marca pequeña junto al nombre. */
+.lid-chip { display: inline-block; margin-left: 6px; padding: 0 6px; font-size: 0.68rem; line-height: 1.5; color: #d9b44a; border: 1px solid #6b5a2c; border-radius: 8px; vertical-align: middle; white-space: nowrap; }
+
+/* Escolta de caravanas: barra de Liderazgo usado / cupo. */
+.escolta-caravana { margin: 10px 0; padding: 8px 10px; border: 1px solid #4a4538; border-radius: 6px; }
+.escolta-barra { height: 10px; margin: 6px 0 2px; background: #3a362b; border-radius: 5px; overflow: hidden; }
+.escolta-barra i { display: block; height: 100%; background: #d9b44a; transition: width 0.4s; }
+.escolta-barra.llena i { background: #c0392b; }
+.escolta-cifras { display: block; margin-bottom: 6px; color: var(--text-secondary); }

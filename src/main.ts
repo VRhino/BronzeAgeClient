@@ -41,6 +41,8 @@ import { alCambiarAvisos, alLlegarInforme, avisarDeEventos, avisosNoLeidos, hist
 import { htmlInforme, type InformeDeCombate } from './ui/informeCombate';
 import { htmlAvisos } from './ui/panelAvisos';
 import { cablearCarro, htmlCarro } from './ui/panelCarro';
+import { cablearEscolta, htmlEscolta } from './ui/panelEscolta';
+import { chipLiderazgo } from './ui/liderazgo';
 import { cablearCargaDeSalida, htmlCargaDeSalida, leerCarga } from './ui/cargaDeSalida';
 import { cablearColumna, htmlColumna } from './ui/panelColumna';
 import { cablearPanelIntel, renderPanelIntel } from './ui/panelIntel';
@@ -1160,7 +1162,7 @@ function montarMapa(): void {
 
 // --- PANTALLA ASENTAMIENTO (T6) -----------------------------------------------------------------
 
-type PanelAsent = 'cargos' | 'intel' | 'salir';
+type PanelAsent = 'cargos' | 'intel' | 'salir' | 'escolta';
 let panelAsentAbierto: PanelAsent | null = null;
 
 /** Salir al mundo desde tu residencia (Doc 1.10.2) con la tropa y la carga elegidas en el panel «Salir al mundo». */
@@ -1193,7 +1195,7 @@ function pintarSalidaAsentamiento(panel: HTMLElement, p: ProyeccionJugador, asen
   panel.innerHTML = `<span class="faction-kicker">Salir al mundo</span>
     <strong class="heroe-sub">Tropa que sacas</strong>
     <div class="mapa-lista">${tropa.length > 0
-      ? tropa.map((s) => `<label class="mapa-lista-item"><div><strong>${escaparHtml(s.nombre)}</strong><span>${s.cantidad} hombres</span></div><input type="checkbox" data-salir-escuadra="${escaparHtml(s.id)}" checked /></label>`).join('')
+      ? tropa.map((s) => `<label class="mapa-lista-item"><div><strong>${escaparHtml(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres</span></div><input type="checkbox" data-salir-escuadra="${escaparHtml(s.id)}" checked /></label>`).join('')
       : '<p class="asent-lado-nota">No tienes tropa libre en la plaza (la de guarnición no sale). Puedes salir solo.</p>'}</div>
     ${htmlCargaDeSalida(almacen, 'el almacén de la plaza', escaparHtml)}
     <button class="btn-primary" type="button" data-salir>Salir</button>
@@ -1501,9 +1503,20 @@ function renderPanelAsent(): void {
   barra.querySelectorAll<HTMLButtonElement>('[data-panel-asent]').forEach((boton) => {
     boton.classList.toggle('activo', boton.dataset.panelAsent === panelAsentAbierto);
   });
-  if (panelAsentAbierto === null) { panel.hidden = true; panel.innerHTML = ''; delete panel.dataset.pintado; return; }
+  if (panelAsentAbierto === null) { panel.hidden = true; panel.innerHTML = ''; delete panel.dataset.pintado; delete panel.dataset.pintadoEscolta; return; }
   panel.hidden = false;
   if (panelAsentAbierto !== 'salir') delete panel.dataset.pintado;
+  if (panelAsentAbierto !== 'escolta') delete panel.dataset.pintadoEscolta;
+  if (panelAsentAbierto === 'escolta') {
+    const asentamiento = proyeccion.asentamientos[0];
+    if (!asentamiento) return;
+    const html = htmlEscolta(proyeccion, asentamiento, escaparHtml);
+    if (panel.dataset.pintadoEscolta === html) return;
+    panel.innerHTML = html;
+    panel.dataset.pintadoEscolta = html;
+    cablearEscolta(panel, proyeccion, ejecutarYRefrescar);
+    return;
+  }
   if (panelAsentAbierto === 'salir') {
     const asentamiento = proyeccion.asentamientos[0];
     if (asentamiento) pintarSalidaAsentamiento(panel, proyeccion, asentamiento);
@@ -1595,6 +1608,7 @@ function montarAsentamiento(): void {
       <div class="asent-barra-acciones">
         <button type="button" data-panel-asent="cargos">Cargos</button>
         <button type="button" data-panel-asent="intel">Taberna e intel</button>
+        <button type="button" data-panel-asent="escolta">Escolta</button>
         <button id="btn-salir-mundo" class="btn-primary" type="button">Salir al mundo</button>
       </div>
       <p id="asent-error" class="faction-error" role="alert"></p>

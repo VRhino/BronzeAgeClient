@@ -2,6 +2,7 @@
 // Se organiza como la del asentamiento: la planta a la izquierda y, a la derecha, subpestañas (Resumen · Salir · Tropa · Mercado ·
 // Fondo · Taberna) en vez de una sola columna larga. Aquí no se decide ninguna regla: quien valida es el backend, y su rechazo sale
 // tal cual en `#camp-error`. Los menús del jugador (héroe, escuadras, Facción) están en la barra superior (`barraJugador.ts`).
+import { chipLiderazgo } from './liderazgo';
 import { cablearCargaDeSalida, htmlCargaDeSalida, leerCarga } from './cargaDeSalida';
 import { costoDeRefundacion, type ProyeccionJugador } from '../apiCliente';
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
@@ -54,7 +55,7 @@ function dondeEstaLaEscuadra(s: Escuadron, p: ProyeccionJugador): string {
 }
 
 function filaEscuadra(s: Escuadron, p: ProyeccionJugador, e: Escapar): string {
-  return `<div class="mapa-lista-item"><strong>${e(s.nombre)}</strong><span>${s.cantidad} hombres · ${dondeEstaLaEscuadra(s, p)}${s.prestada ? ' · prestada' : ''}</span></div>`;
+  return `<div class="mapa-lista-item"><div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}</div><span>${s.cantidad} hombres · ${dondeEstaLaEscuadra(s, p)}${s.prestada ? ' · prestada' : ''}</span></div>`;
 }
 
 function resumen(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): string {
@@ -91,7 +92,7 @@ function salir(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): stri
   return `
     <p class="asent-lado-nota">Elige la tropa que sacas y lo que cargas de tu almacén. Recibes además la ración gratis de trigo.</p>
     <div class="mapa-lista">${enCampamento.length > 0
-      ? enCampamento.map((s) => `<label class="mapa-lista-item"><div><strong>${e(s.nombre)}</strong><span>${s.cantidad} hombres</span></div><input type="checkbox" data-salir-escuadra="${e(s.id)}" checked /></label>`).join('')
+      ? enCampamento.map((s) => `<label class="mapa-lista-item"><div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres</span></div><input type="checkbox" data-salir-escuadra="${e(s.id)}" checked /></label>`).join('')
       : '<p class="asent-lado-nota">No tienes tropa en el campamento.</p>'}</div>
     ${htmlCargaDeSalida(almacen, 'tu almacén personal', e)}
     <p class="asent-lado-nota">Al volver a entrar en un campamento, lo que quede en el carro regresa solo a tu almacén personal (menos la ración gratis).</p>
