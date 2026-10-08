@@ -3,6 +3,13 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.19.1] — 2026-10-08 · «Aceptar» una solicitud no hacía nada
+
+### Corregido
+- Los avisos de error de los botones de Facción (aceptar/denegar solicitudes, anexión, fusión, admisión…) solo se pintaban en el mapa: en campamento y plaza se perdían en silencio y el botón parecía muerto. Ahora salen en un aviso flotante en cualquier pantalla.
+- El escudo de la Facción generaba un id nuevo en cada pintado, así que el panel se reconstruía en cada sondeo (3 s) y se llevaba por delante clics y mensajes. El id depende ahora de la forma.
+- Backend: la proyección ya no enseña solicitudes de quien es ciudadano de otra Facción (entró por otra vía); aceptarlas daba `faccion.invalida` y se quedaban para siempre. **Hace falta reiniciar el servidor.**
+
 ## [0.19.0] — 2026-10-08 · escolta de caravanas · sync con `BronzeAgeFase0@3d884fd` (`main`, sin push)
 
 ### Añadido

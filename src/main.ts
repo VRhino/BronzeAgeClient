@@ -37,7 +37,7 @@ import { cablearFusion } from './ui/panelFusion';
 import { cablearAdmision } from './ui/panelAdmision';
 import { cablearFichaBatalla, cablearFichaFormacion, cablearMiColumna, formacionesVisibles, htmlFichaBatalla, htmlFichaFormacion, htmlMiColumna } from './ui/panelBatalla';
 import { instalarZoomPan, type ControlMapa } from './ui/pantallaMapa';
-import { alCambiarAvisos, alLlegarInforme, avisarDeEventos, avisosNoLeidos, historialDeAvisos, marcarAvisosLeidos, reiniciarAvisos } from './ui/avisos';
+import { alCambiarAvisos, alLlegarInforme, avisarDeEventos, avisosNoLeidos, historialDeAvisos, marcarAvisosLeidos, mostrar as mostrarAviso, reiniciarAvisos } from './ui/avisos';
 import { htmlInforme, type InformeDeCombate } from './ui/informeCombate';
 import { htmlAvisos } from './ui/panelAvisos';
 import { cablearCarro, htmlCarro } from './ui/panelCarro';
@@ -467,7 +467,8 @@ let avisoMapaTimer: ReturnType<typeof setTimeout> | undefined;
 
 function avisoMapa(texto: string): void {
   const el = document.querySelector<HTMLElement>('.mapa-aviso');
-  if (!el) return;
+  // Fuera del mapa (campamento, plaza) no hay `.mapa-aviso`: el mensaje se perdía en silencio y el botón parecía no hacer nada.
+  if (!el) { mostrarAviso(texto, true); return; }
   el.textContent = texto;
   el.hidden = false;
   clearTimeout(avisoMapaTimer);

@@ -91,7 +91,6 @@ function haloPara(hex: string): string {
   return 0.299 * r! + 0.587 * g! + 0.114 * b! > 140 ? '#1c1b1a' : '#f4efe4';
 }
 
-let contador = 0;
 
 /** Corona dorada que el Gran Rey lleva sobre su estandarte (marco derivado, no se guarda). */
 function corona(): string {
@@ -110,7 +109,8 @@ export interface OpcionesSigilo {
 export function svgSigilo(sigilo: Sigilo | undefined, ancho = 48, opciones: OpcionesSigilo = {}): string {
   const s = { ...SIGILO_NEUTRO, ...sigilo };
   const forma = FORMAS[s.formaId] ?? FORMAS.clasico!;
-  const id = `sg${contador++}`;
+  // El clip solo depende de la forma: un id por forma (y no un contador) deja el HTML igual entre renders, y el panel no se reconstruye en cada sondeo (perdía clics y avisos).
+  const id = `sg-${s.formaId}`;
   const relleno = colorHex(s.colorEmblemaId);
   const emblema = svgEmblema(s.emblemaId, relleno, haloPara(relleno));
   const escala = forma.s;

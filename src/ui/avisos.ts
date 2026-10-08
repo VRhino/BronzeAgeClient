@@ -63,7 +63,8 @@ function cargar(gameId: string, heroeId: string): number | null {
   }
 }
 
-function mostrar(texto: string, peligro = false): void {
+/** Un aviso flotante que vale en cualquier pantalla (`.aviso-global`). */
+export function mostrar(texto: string, peligro = false): void {
   let el = document.querySelector<HTMLElement>('.aviso-global');
   if (!el) {
     el = document.createElement('div');
