@@ -1,63 +1,87 @@
-// «Salir como ejército»: la elección compartida por la pestaña Salir de un campamento (`salirDelCampamento`) y el panel «Salir al mundo» de tu plaza
-// (`movilizarEjercito`). Sale como COLUMNA PERSONAL (por tu cuenta, rumbo libre) o como EJÉRCITO: con destino fijo desde el primer momento y una política de
-// unión que fija el Líder y no cambia (Doc 5.12.1, 5.14.1). El destino se elige con un clic en el mapa del mundo (`elegirDestino`, lo abre `main.ts`).
-// Lo elegido vive aquí, fuera del HTML, para sobrevivir a los repintados del sondeo; los cambios se aplican al DOM sin repintar (no se pierde lo que
-// ya marcaste de tropa y carga).
-import type { Point } from '../tiposDominio';
+// «Salir como ejército»: la elección compartida por la pestaña Salir de un campamento y el panel «Salir al mundo» de tu plaza. Sale como COLUMNA PERSONAL
+// (por tu cuenta, rumbo libre) o como EJÉRCITO: se convoca (`convocarEjercito`) y los de tu Facción que estén en el mismo lugar se unen
+// (`unirseAConvocatoria`) antes de que el Líder pulse «Salir con el ejército» (ver `ui/convocatoria.ts`). Un ejército NO sale con destino: el Líder lo dirige
+// con clics en el mapa, tantas veces como quiera (backend 2026-10-08). La tropa y la carga las pone el formulario de salida que lo rodea (`leerSeleccion`).
+// Lo elegido vive aquí, fuera del HTML, para sobrevivir a los repintados del sondeo; los cambios se aplican al DOM sin repintar.
+import type { ProyeccionJugador } from '../apiCliente';
+import { htmlConvocatoriasAbiertas } from './convocatoria';
 import { POLITICA } from './ejercitos';
+import type { Ejecutar } from './panelCarro';
 
 type Escapar = (valor: string) => string;
-type Politica = 'aceptar' | 'preguntar' | 'rechazar';
+type Politica = 'aceptar' | 'preguntar';
 
-const eleccion: { ejercito: boolean; politica: Politica; destino: Point | null } = { ejercito: false, politica: 'aceptar', destino: null };
+const eleccion: { ejercito: boolean; politica: Politica } = { ejercito: false, politica: 'aceptar' };
 
-export interface OpcionesSalida {
-  /** Un campamento no admite el ejército «cerrado» (política `rechazar` = columna personal, en su API); una plaza sí. */
-  permiteCerrado: boolean;
-  /** Sin Facción nadie puede unirse: se avisa. */
-  sinFaccion: boolean;
-}
+export interface Seleccion { escuadronIds: string[]; carga: Record<string, number> }
 
-export function htmlSalidaComoEjercito(o: OpcionesSalida, e: Escapar): string {
-  const politicas: Politica[] = o.permiteCerrado ? ['aceptar', 'preguntar', 'rechazar'] : ['aceptar', 'preguntar'];
-  if (!politicas.includes(eleccion.politica)) eleccion.politica = 'aceptar';
+/** El HTML es constante (la lista de convocatorias se rellena aparte con `actualizarConvocatorias`): así el sondeo no repinta la pestaña ni borra lo que has marcado. */
+export function htmlSalidaComoEjercito(p: ProyeccionJugador, e: Escapar): string {
   return `<div class="salida-ejercito">
     <strong class="heroe-sub">Cómo sales</strong>
-    <label class="form-check"><input type="radio" name="salida-modo" value="personal"${eleccion.ejercito ? '' : ' checked'} /> Columna personal: por tu cuenta, con el rumbo libre.</label>
-    <label class="form-check"><input type="radio" name="salida-modo" value="ejercito"${eleccion.ejercito ? ' checked' : ''} /> Ejército: destino fijo desde ya, y otros héroes de tu Facción pueden unirse.</label>
-    <div data-salida-ejercito${eleccion.ejercito ? '' : ' hidden'}>
-      ${o.sinFaccion ? '<p class="asent-lado-nota"><strong>No tienes Facción: nadie podrá unirse a tu ejército.</strong> Un ejército lo componen ciudadanos de una sola Facción.</p>' : ''}
-      <span class="heroe-sub">Quién puede unirse por el camino (no se cambia después)</span>
-      ${politicas.map((k) => `<label class="form-check"><input type="radio" name="salida-politica" value="${k}"${eleccion.politica === k ? ' checked' : ''} /> ${e(POLITICA[k])}</label>`).join('')}
-      <div class="campamento-fila"><span data-salida-destino>${textoDestino()}</span><button class="btn-secondary" type="button" data-salida-elegir>Elegir destino en el mapa</button></div>
-      <p class="asent-lado-nota">Un ejército necesita al menos una escuadra. Se elige un punto del mapa; el ejército marcha hasta allí.</p>
+    <label class="form-check"><input type="radio" name="salida-modo" value="personal" checked /> Columna personal: por tu cuenta, con el rumbo libre.</label>
+    <label class="form-check"><input type="radio" name="salida-modo" value="ejercito" /> Ejército: salís juntos varios héroes de tu Facción; lo dirige su Líder con clics en el mapa.</label>
+    <div data-salida-ejercito hidden>
+      ${p.faccionId ? '' : '<p class="asent-lado-nota"><strong>No tienes Facción: nadie podrá unirse a tu ejército.</strong> Un ejército lo componen ciudadanos de una sola Facción.</p>'}
+      <strong class="heroe-sub">Ejércitos que se están preparando aquí</strong>
+      <div data-lista-convocatorias></div>
+      <p class="asent-lado-nota">Para unirte a uno, pulsa «Unirme»: sales con la tropa y la carga que marques aquí abajo. Para convocar el tuyo, elige quién puede unirse y pulsa «Convocar ejército»:</p>
+      <span class="heroe-sub">Quién puede unirse (se fija al convocar)</span>
+      ${(['aceptar', 'preguntar'] as Politica[]).map((k) => `<label class="form-check"><input type="radio" name="salida-politica" value="${k}"${k === 'aceptar' ? ' checked' : ''} /> ${e(POLITICA[k])}</label>`).join('')}
+      <p class="asent-lado-nota">Un ejército espera dentro, sin límite de tiempo, hasta que su Líder pulse «Salir con el ejército» o cancele. Necesita al menos una escuadra.</p>
     </div></div>`;
 }
 
-function textoDestino(): string {
-  return eleccion.destino ? `Destino: (${Math.round(eleccion.destino.x)}, ${Math.round(eleccion.destino.y)})` : 'Sin destino: elígelo en el mapa.';
-}
-
-/** `elegirDestino` abre el mapa y llama a `alElegir` con el punto del clic. */
-export function cablearSalidaComoEjercito(raiz: ParentNode, elegirDestino: (alElegir: (punto: Point) => void) => void): void {
+/**
+ * `boton` es el de «Salir» del formulario: en modo ejército se intercepta y convoca (`convocarEjercito`) en vez de salir. `leerSeleccion` lee la tropa y la carga marcadas.
+ * Las convocatorias abiertas cambian con el sondeo: `actualizarConvocatorias` repinta solo esa lista.
+ */
+export function cablearSalidaComoEjercito(
+  raiz: ParentNode,
+  p: ProyeccionJugador,
+  boton: HTMLButtonElement | null,
+  textoPersonal: string,
+  leerSeleccion: () => Seleccion,
+  ejecutar: Ejecutar,
+  avisar: (mensaje: string) => void
+): void {
   const bloque = raiz.querySelector<HTMLElement>('[data-salida-ejercito]');
-  const texto = raiz.querySelector<HTMLElement>('[data-salida-destino]');
+  // El HTML es siempre el mismo (si no, el sondeo repintaría la pestaña entera y borraría lo marcado): el estado elegido se aplica al DOM aquí.
+  const poner = (): void => { if (boton) boton.textContent = eleccion.ejercito ? 'Convocar ejército' : textoPersonal; };
+  raiz.querySelectorAll<HTMLInputElement>('input[name="salida-modo"]').forEach((i) => { i.checked = (i.value === 'ejercito') === eleccion.ejercito; });
+  raiz.querySelectorAll<HTMLInputElement>('input[name="salida-politica"]').forEach((i) => { i.checked = i.value === eleccion.politica; });
+  if (bloque) bloque.hidden = !eleccion.ejercito;
+  poner();
   raiz.querySelectorAll<HTMLInputElement>('input[name="salida-modo"]').forEach((i) => i.addEventListener('change', () => {
     eleccion.ejercito = i.value === 'ejercito';
     if (bloque) bloque.hidden = !eleccion.ejercito;
+    poner();
   }));
   raiz.querySelectorAll<HTMLInputElement>('input[name="salida-politica"]').forEach((i) => i.addEventListener('change', () => { eleccion.politica = i.value as Politica; }));
-  raiz.querySelector('[data-salida-elegir]')?.addEventListener('click', () => elegirDestino((punto) => {
-    eleccion.destino = punto;
-    if (texto && texto.isConnected) texto.textContent = textoDestino();
+  const enviar = async (b: HTMLButtonElement, tipo: string, params: object): Promise<void> => {
+    b.disabled = true;
+    const mensaje = await ejecutar(tipo, params);
+    if (mensaje) { b.disabled = false; avisar(mensaje); }
+  };
+  // En modo ejército el botón principal convoca, y el formulario de salida no llega a salir.
+  boton?.addEventListener('click', (ev) => {
+    if (!eleccion.ejercito) return;
+    ev.stopImmediatePropagation();
+    void enviar(boton, 'convocarEjercito', { heroeId: p.heroeId, politicaDeUnion: eleccion.politica, ...leerSeleccion() });
+  }, true);
+}
+
+/** Repinta solo la lista de convocatorias abiertas (las altera el sondeo) sin tocar lo marcado en el formulario. */
+export function actualizarConvocatorias(raiz: ParentNode, p: ProyeccionJugador, leerSeleccion: () => Seleccion, ejecutar: Ejecutar, avisar: (mensaje: string) => void, escapar: Escapar): void {
+  const lista = raiz.querySelector<HTMLElement>('[data-lista-convocatorias]');
+  if (!lista) return;
+  const html = htmlConvocatoriasAbiertas(p, escapar);
+  if (lista.dataset.pintado === html) return;
+  lista.dataset.pintado = html;
+  lista.innerHTML = html;
+  lista.querySelectorAll<HTMLButtonElement>('[data-unirse-conv]').forEach((b) => b.addEventListener('click', async () => {
+    b.disabled = true;
+    const mensaje = await ejecutar('unirseAConvocatoria', { heroeId: p.heroeId, convocatoriaId: b.dataset.unirseConv, ...leerSeleccion() });
+    if (mensaje) { b.disabled = false; avisar(mensaje); }
   }));
 }
-
-/** Lo que se añade a los params de `salirDelCampamento` / `movilizarEjercito`: nada (columna personal), o la política y el rumbo. `error` si falta el destino. */
-export function paramsDeSalida(): { params: { politicaDeUnion?: Politica; objetivo?: { tipo: 'punto'; punto: Point } }; error?: string } {
-  if (!eleccion.ejercito) return { params: {} };
-  if (!eleccion.destino) return { params: {}, error: 'Elige el destino del ejército con un clic en el mapa.' };
-  return { params: { politicaDeUnion: eleccion.politica, objetivo: { tipo: 'punto', punto: eleccion.destino } } };
-}
-
-export const saleComoEjercito = (): boolean => eleccion.ejercito;

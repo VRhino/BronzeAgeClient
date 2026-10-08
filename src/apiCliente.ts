@@ -1,7 +1,7 @@
 // Wrapper `fetch` sobre la superficie `/jugador/*` y `/sesiones` del backend (Fase C3) — sin lógica de negocio, solo I/O.
 import type { MapaGenerado } from './terreno';
 
-import type { AcuerdoTrueque, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, Ejercito, EjercitoAvistado, EscenaCampamento, EvaluacionAscenso, EventoDominio, Faccion, HeroeProyectado, HeroePublico, InformePlaza, MiradaIntel, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, PropuestaAnexion, PropuestaFusion, RelacionPolitica, TarifasIntel, Titulo, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
+import type { AcuerdoTrueque, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, Convocatoria, Ejercito, EjercitoAvistado, EscenaCampamento, EvaluacionAscenso, EventoDominio, Faccion, HeroeProyectado, HeroePublico, InformePlaza, MiradaIntel, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, PropuestaAnexion, PropuestaFusion, RelacionPolitica, TarifasIntel, Titulo, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
 
 export class ApiError extends Error {
   constructor(
@@ -47,6 +47,9 @@ export interface ProyeccionJugador {
   caravanas: Caravana[];
   /** Los ejércitos de tu Facción, completos (Doc 5.12). */
   ejercitos: Ejercito[];
+  /** Los ejércitos en preparación del lugar donde estás (plaza o campamento) y de tu Facción, y la tuya si estás en una. */
+  convocatorias?: Convocatoria[];
+  miConvocatoriaId?: string;
   /** Los ajenos que se estén viendo AHORA —lo que vigilan tus plazas o el radio de visión de una columna
    * tuya—, ya redactados por el servidor (Doc 5.12.7). Entran y salen del array según los pierdas de vista:
    * a diferencia de los asentamientos, de un ejército NO se guarda memoria. Tiene sentido — una ciudad sigue

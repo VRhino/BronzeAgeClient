@@ -76,7 +76,7 @@ function filaEjercito(p: ProyeccionJugador, c: Ejercito, e: Escapar): string {
 
 /** «Mi columna»: lo que toca según el estado de la tuya. */
 function htmlMiSituacion(p: ProyeccionJugador, mi: Ejercito | undefined, e: Escapar): string {
-  if (!mi) return '<p class="asent-lado-nota">Estás dentro. Para salir como ejército, usa «Salir» en un campamento o «Salir al mundo» en tu plaza y elige «Ejército».</p>';
+  if (!mi) return '<p class="asent-lado-nota">Estás dentro. Para salir como ejército, usa «Salir» en un campamento o «Salir al mundo» en tu plaza, elige «Ejército» y convoca uno, o únete al que esté preparando un héroe de tu Facción.</p>';
   const lider = mi.liderId === p.heroeId;
   if (mi.formacion) {
     const plazo = textoEnTiempoReal(mi.formacion.expiraEn - p.instante);
@@ -87,7 +87,7 @@ function htmlMiSituacion(p: ProyeccionJugador, mi: Ejercito | undefined, e: Esca
     const peticiones = lider ? peticionesVivas(mi, p.instante) : [];
     const resto = mi.participantes.filter((x) => x.heroeId !== p.heroeId);
     return `<p class="asent-lado-nota"><strong>Tu ejército</strong> · ${mi.participantes.length} héroe(s) · ${ESTADO[mi.estado]} · ${POLITICA[mi.politicaDeUnion ?? 'rechazar']}.
-        ${mi.destinoPendiente ? (lider ? ' Está formado: haz clic en el mapa para fijar su destino (solo se fija una vez).' : ' Está formado: espera a que su Líder fije el destino.') : ''}</p>
+        ${lider ? ' Tú lo diriges: haz clic en el mapa y marchará hacia allí; cada clic cambia el rumbo.' : ' Lo dirige su Líder con clics en el mapa.'}</p>
       <ul class="ejercito-lista">${mi.participantes.map((x) => `<li>${e(nombreDeHeroe(p, x.heroeId))}${x.heroeId === mi.liderId ? ' <em>(Líder)</em>' : ''}${x.heroeId === p.heroeId ? ' · tú' : ''}</li>`).join('')}</ul>
       ${peticiones.length > 0 ? `<strong class="heroe-sub">Piden unirse</strong>${peticiones.map((x) => `<div class="ejercito-fila"><div><strong>${e(nombreDeHeroe(p, x.heroeId))}</strong><span>${textoEnTiempoReal(x.expiraEn - p.instante)} para contestar</span></div>
           <button class="btn-primary" type="button" data-peticion="${e(x.heroeId)}" data-aceptar="si">Aceptar</button><button class="btn-secondary" type="button" data-peticion="${e(x.heroeId)}" data-aceptar="no">Rechazar</button></div>`).join('')}` : ''}
@@ -115,7 +115,7 @@ export function htmlPanelEjercito(p: ProyeccionJugador, e: Escapar): string {
   return `<span class="faction-kicker">Ejército</span>
     ${htmlMiSituacion(p, mi, e)}
     <strong class="heroe-sub">Ejércitos y formaciones de tu Facción</strong>
-    ${otros.length > 0 ? otros.map((c) => filaEjercito(p, c, e)).join('') : '<p class="asent-lado-nota">No hay ninguno. Se forman con «Organizar ejército» en el mapa, o saliendo como ejército de un campamento o de tu plaza.</p>'}
+    ${otros.length > 0 ? otros.map((c) => filaEjercito(p, c, e)).join('') : '<p class="asent-lado-nota">No hay ninguno. Se forman con «Organizar ejército» en el mapa, o convocándolos dentro de un campamento o de tu plaza.</p>'}
     <p class="faction-error" data-campo="error-ejercito" role="alert"></p>`;
 }
 
@@ -174,7 +174,7 @@ export function htmlFichaEjercito(p: ProyeccionJugador, c: Ejercito, e: Escapar)
       <div><span>Unión</span><strong>${POLITICA[politica]}</strong></div></div>
     <ul class="ejercito-lista">${c.participantes.map((x) => `<li>${e(nombreDeHeroe(p, x.heroeId))}${x.heroeId === c.liderId ? ' <em>(Líder)</em>' : ''}</li>`).join('')}</ul>
     <div class="mapa-seleccion-acciones"><button class="btn-primary" type="button" data-unirse-ejercito="${e(c.id)}"${motivo ? ' disabled' : ''}>${politica === 'preguntar' ? 'Pedir unirme' : 'Unirme'}</button></div>
-    ${motivo ? `<p class="mapa-lista-vacia">${e(motivo)}</p>` : '<p class="mapa-lista-vacia">Estás junto a él con tu columna personal: te unes con lo que llevas encima (tropa y carro) y adoptas su destino, que ya no podrás cambiar.</p>'}
+    ${motivo ? `<p class="mapa-lista-vacia">${e(motivo)}</p>` : '<p class="mapa-lista-vacia">Estás junto a él con tu columna personal: te unes con lo que llevas encima (tropa y carro) y pasas a ir donde lo dirija su Líder.</p>'}
     <p class="faction-error" data-campo="error-ejercito" role="alert"></p>`;
 }
 

@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.22.0] — 2026-10-08 · ejército en preparación y sin destino fijo · sync con `BronzeAgeFase0@468c47b` (`main`, sin push)
+
+### Añadido
+- **Ejército en preparación dentro de un campamento o una plaza** (`ui/convocatoria.ts`): en «Salir» / «Salir al mundo», «Ejército» → convocas (abierto o decide el Líder) y los héroes de tu Facción que estén en ese lugar ven «Ejércitos que se están preparando aquí» y se unen con la tropa y la carga que marquen. Espera sin límite de tiempo: el Líder ve a los integrantes y las peticiones (Aceptar/Rechazar) y pulsa **«Salir con el ejército»** (salen todos juntos) o **«Cancelar la salida»** (nadie se mueve); un integrante puede **separarse** sin salir. Avisos por evento a todos los implicados.
+
+### Cambiado
+- **Sin destino fijo**: el ejército sale quieto en la puerta y su **Líder lo dirige con clics en el mapa**, las veces que quiera. Quitado el selector de destino de las pantallas de salida y el mapa de elegir destino. Un miembro que no es Líder recibe «Solo el Líder decide a dónde va el ejército» al hacer clic; una formación sin 3 héroes avisa de que no se mueve. Textos de «destino que no podrás cambiar» corregidos.
+- «Unirse desde la plaza» respeta la política del ejército: con «cerrado» sale desactivado con el motivo.
+- El HTML de la pestaña Salir ya no depende de lo elegido (modo, política): el sondeo no la repinta ni borra la tropa y la carga marcadas.
+
 ## [0.21.1] — 2026-10-08 · los plazos de ejército en tiempo real y el aviso de la formación
 
 ### Corregido

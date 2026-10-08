@@ -119,6 +119,30 @@ function procesar(e: EventoDominio, heroeId: string, modo: 'vivo' | 'recuperado'
     if (!silencioso) mostrar(e.mensaje);
     return;
   }
+  if (e.codigo.startsWith('convocatoria.')) {
+    // Ejército en preparación dentro de un lugar (backend 2026-10-08): llegan al Líder y a cada integrante (`heroesIds`).
+    const p = e.payload as { heroeId?: string; liderId?: string; heroesIds?: string[]; expiraEn?: number } | undefined;
+    const proy = estadoCliente.proyeccionUltima;
+    const quien = proy && p?.heroeId ? nombreDeHeroe(proy, p.heroeId) : 'Un héroe';
+    const mio = p?.heroeId === heroeId;
+    const meToca = mio || p?.liderId === heroeId || (p?.heroesIds ?? []).includes(heroeId);
+    let texto: string | null = null;
+    switch (e.codigo) {
+      case 'convocatoria.union_pedida':
+        if (p?.liderId === heroeId && !mio && esPeticionNueva(p.heroeId ?? '', p.expiraEn ?? 0)) texto = `${quien} pide unirse a tu ejército en preparación: tienes ${textoEnTiempoReal((p.expiraEn ?? 0) - (proy?.instante ?? 0))} para contestar.`;
+        break;
+      case 'convocatoria.unido': texto = mio ? 'Te has unido al ejército en preparación: esperad a que su Líder pulse «Salir con el ejército».' : meToca ? `${quien} se une al ejército en preparación.` : null; break;
+      case 'convocatoria.union_rechazada': texto = mio ? 'El Líder ha rechazado tu petición de unirte al ejército.' : null; break;
+      case 'convocatoria.separado': texto = !mio && meToca ? `${quien} se separa del ejército en preparación.` : null; break;
+      case 'convocatoria.cancelada': texto = meToca ? 'El Líder ha cancelado la salida del ejército: seguís dentro.' : null; break;
+      case 'convocatoria.partio': texto = meToca ? 'El ejército sale: su Líder lo dirige con clics en el mapa.' : null; break;
+    }
+    if (!texto) return;
+    historial.unshift({ version: e.version, momento: e.momento, texto, clase: 'mirada' });
+    if (modo !== 'historico') noLeidos++;
+    if (!silencioso) mostrar(texto, e.codigo === 'convocatoria.union_pedida' || e.codigo === 'convocatoria.cancelada');
+    return;
+  }
   if (e.codigo === 'columna.union_pedida' || e.codigo === 'columna.union_rechazada' || e.codigo === 'columna.union_en_campo') {
     // Unirse en campo (backend 2026-10-08): al Líder le llega la petición (10 s para contestar) y al solicitante, la respuesta.
     const p = e.payload as { heroeId?: string; liderId?: string; expiraEn?: number } | undefined;

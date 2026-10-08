@@ -232,8 +232,6 @@ export interface Ejercito {
   liderId?: string;
   /** Una formación en campo (Doc 5.14.4): columna quieta que espera a ser tres. Pasado `expiraEn` sin lograrlo se deshace. */
   formacion?: { expiraEn: number };
-  /** Un ejército recién formado en campo que aún no tiene destino: su Líder lo fija una vez con un clic en el mapa. */
-  destinoPendiente?: boolean;
   /** Quién puede unirse en campo (Doc 5.14.1): la fija el Líder al formar y no cambia. */
   politicaDeUnion?: 'rechazar' | 'aceptar' | 'preguntar';
   /** Con política `preguntar`: las peticiones vivas al Líder (caducan a los 10 s; el backend no las borra, se miran contra el instante de mundo). */
@@ -724,3 +722,18 @@ export interface EventoDominio {
   payload?: unknown;
 }
 
+
+/** Un ejército EN PREPARACIÓN dentro de una plaza o de un campamento (backend 2026-10-08, Doc 5.14.5): visible para los de su Facción que están en ese lugar. */
+export interface Convocatoria {
+  id: string;
+  lugar: { tipo: 'asentamiento' | 'campamento'; id: string };
+  liderId: string;
+  politicaDeUnion: 'aceptar' | 'preguntar';
+  creadaEn: number;
+  /** Solo los que siguen dentro, el Líder primero. */
+  integrantes: { heroeId: string; unidoEn: number; escuadronIds: string[]; tropas: { escuadronId: string; tropaId: string; cantidad: number }[]; carga: Record<string, number> }[];
+  /** El Líder las ve todas; cada solicitante, la suya. Las caducadas no se barren solas: se filtran por `expiraEn`. */
+  peticiones: { heroeId: string; pedidoEn: number; expiraEn: number; escuadronIds: string[]; carga: Record<string, number> }[];
+  soyLider: boolean;
+  soyIntegrante: boolean;
+}

@@ -25,7 +25,7 @@ import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisuali
 import { EDIFICIO_COLOR, EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from './paletas';
 import type { Alijo, Asentamiento, BloqueoAscenso, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Edificio, EvaluacionAscenso, ParamsCrearHeroe, ProduccionItem, Sigilo } from './tiposDominio';
 import { svgSigilo } from './sigilo/sigilo';
-import { cablearCampamento, campamentoActual, htmlSeccionCampamento, seccionesDeCampamento, type SeccionCampamento } from './ui/pantallaCampamento';
+import { actualizarSalida, cablearCampamento, campamentoActual, htmlSeccionCampamento, seccionesDeCampamento, type SeccionCampamento } from './ui/pantallaCampamento';
 import { leyendaPlanoCampamento, svgPlanoCampamento } from './ui/planoCampamento';
 import type { MapaGenerado } from './terreno';
 import { estadoCliente, medirRitmoDeMundo, TIPS_FUNDACION } from './ui/estadoCliente';
@@ -38,7 +38,8 @@ import { cablearFusion } from './ui/panelFusion';
 import { cablearAdmision } from './ui/panelAdmision';
 import { cablearFichaBatalla, cablearFichaFormacion, formacionesVisibles, htmlFichaBatalla, htmlFichaFormacion } from './ui/panelBatalla';
 import { cablearPanelEjercito, ejercitosDeLaFaccion, htmlFichaEjercito, htmlPanelEjercito, peticionesNuevas } from './ui/ejercitos';
-import { cablearSalidaComoEjercito, htmlSalidaComoEjercito, paramsDeSalida, saleComoEjercito } from './ui/salidaComoEjercito';
+import { actualizarConvocatorias, cablearSalidaComoEjercito, htmlSalidaComoEjercito } from './ui/salidaComoEjercito';
+import { cablearPreparacion, htmlPreparacion, peticionesNuevasConv } from './ui/convocatoria';
 import { cablearUnirseDesdePlaza, htmlUnirseDesdePlaza } from './ui/unirseDesdePlaza';
 import { instalarZoomPan, type ControlMapa } from './ui/pantallaMapa';
 import { alCambiarAvisos, alLlegarInforme, avisarDeEventos, avisosNoLeidos, historialDeAvisos, marcarAvisosLeidos, mostrar as mostrarAviso, reiniciarAvisos } from './ui/avisos';
@@ -389,11 +390,11 @@ function pintarCampamento(p: ProyeccionJugador, campamento: CampamentoMercenario
       if (estadoCliente.proyeccionUltima) pintarCampamento(estadoCliente.proyeccionUltima, campamento);
     }));
     cablearCampamento(lado, p, campamento, ejecutarYRefrescar, {
-      elegirDestino: elegirDestinoEnMapa,
       ejecutarConDatos: ejecutarConDatosYRefrescar,
       repintar: () => { delete lado.dataset.pintado; if (estadoCliente.proyeccionUltima) pintarCampamento(estadoCliente.proyeccionUltima, campamento); },
     });
   }
+  actualizarSalida(lado, p, ejecutarYRefrescar);
   const taberna = lado.querySelector<HTMLElement>('#camp-taberna');
   if (taberna) pintarIntel(taberna, p, () => pintarCampamento(p, campamento));
 }
@@ -483,6 +484,10 @@ function avisoMapa(texto: string): void {
 async function marcharAObjetivo(objetivo: { tipo: 'punto'; punto: { x: number; y: number } } | { tipo: 'asentamiento'; id: string }): Promise<void> {
   const proyeccion = estadoCliente.proyeccionUltima;
   if (!proyeccion) return;
+  // Un ejército lo dirige su Líder con sus clics (backend 2026-10-08); una formación sin 3 héroes no se mueve. Si el clic abrió una ficha, no se avisa.
+  const mia = miColumna(proyeccion);
+  const impide = mia?.formacion ? 'Una formación espera a ser un ejército (hacen falta 3 héroes): no se mueve.' : mia?.tipo === 'ejercito' && mia.liderId !== proyeccion.heroeId ? 'Solo el Líder decide a dónde va el ejército.' : '';
+  if (impide) { if (seleccionMapa === null) avisoMapa(impide); return; }
   try {
     const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'marcharA', { heroeId: proyeccion.heroeId, objetivo });
     if (!respuesta.resultado.ok) throw errorDeRechazo(respuesta.resultado, 'El servidor rechazó la marcha.');
@@ -942,21 +947,11 @@ function posicionDelHeroe(p: ProyeccionJugador): { x: number; y: number } | null
 
 /** Abre o cierra el mapa del mundo sobre la pantalla de dentro. Es el mismo mapa que el de fuera, con la visión de ahora, pero solo para mirar:
  * un clic no manda marchar a nadie. */
-/** Si no es `null`, el próximo clic en el mapa interior elige el destino de un ejército (lo pide «Salir como ejército») y se llama con ese punto. */
-let eligiendoDestino: ((punto: { x: number; y: number }) => void) | null = null;
-
-/** Abre el mapa del mundo sobre la pantalla de dentro y espera un clic: ese punto es el destino del ejército. */
-function elegirDestinoEnMapa(alElegir: (punto: { x: number; y: number }) => void): void {
-  eligiendoDestino = alElegir;
-  alternarVistaMapa(true);
-}
-
 function alternarVistaMapa(abrir: boolean = !vistaMapaAbierta): void {
   const pantalla = document.querySelector<HTMLElement>('.asent-screen');
   const proyeccion = estadoCliente.proyeccionUltima;
   if (!pantalla || !proyeccion) return;
   vistaMapaAbierta = abrir;
-  if (!abrir) eligiendoDestino = null;
   controlVistaMapa?.destruir();
   controlVistaMapa = null;
   pantalla.querySelector('.mapa-interior')?.remove();
@@ -965,19 +960,9 @@ function alternarVistaMapa(abrir: boolean = !vistaMapaAbierta): void {
       <div class="mapa-lienzo"><canvas id="mapa-interior" width="900" height="900"></canvas></div>
       <div class="mapa-zoom"><button type="button" data-zoom="in" aria-label="Acercar">+</button><button type="button" data-zoom="out" aria-label="Alejar">−</button></div>
       <button class="btn-secondary mapa-interior-cerrar" type="button">Volver</button>
-      ${eligiendoDestino ? '<p class="mapa-interior-aviso">Haz clic en el mapa para elegir el destino del ejército</p>' : ''}
     </div>`);
     const interior = pantalla.querySelector<HTMLElement>('.mapa-interior')!;
-    const alClicarInterior = (evento: PointerEvent): void => {
-      const mapa = estadoCliente.mapaCache?.mapa;
-      const canvas = interior.querySelector<HTMLCanvasElement>('#mapa-interior');
-      if (!eligiendoDestino || !mapa || !canvas) return;
-      const alElegir = eligiendoDestino;
-      eligiendoDestino = null;
-      alElegir(puntoDeMapa(evento, canvas, mapa));
-      alternarVistaMapa(false);
-    };
-    const control = instalarZoomPan(interior, interior.querySelector<HTMLElement>('.mapa-lienzo')!, { zoomInicial: 1.6, alClicar: alClicarInterior });
+    const control = instalarZoomPan(interior, interior.querySelector<HTMLElement>('.mapa-lienzo')!, { zoomInicial: 1.6 });
     controlVistaMapa = control;
     interior.querySelectorAll<HTMLButtonElement>('[data-zoom]').forEach((b) => b.addEventListener('click', () => control.zoomHacia(b.dataset.zoom === 'in' ? 1 : -1)));
     interior.querySelector('.mapa-interior-cerrar')?.addEventListener('click', () => alternarVistaMapa(false));
@@ -1257,12 +1242,7 @@ async function salirAlMundo(escuadronIds: string[], carga: Record<string, number
   const asentamiento = proyeccion?.asentamientos[0];
   if (!proyeccion || !asentamiento) return;
   try {
-    const salida = paramsDeSalida();
-    if (salida.error) throw new Error(salida.error);
-    // Como ejército (`movilizarEjercito`, con `carga` desde el backend 2026-10-08): destino fijo y política de unión; los víveres se llenan aparte.
-    const respuesta = saleComoEjercito()
-      ? await ejecutarComando(estadoCliente.gameIdActivo, 'movilizarEjercito', { asentamientoId: asentamiento.id, heroeId: proyeccion.heroeId, escuadronIds, carga, ...salida.params })
-      : await ejecutarComando(estadoCliente.gameIdActivo, 'salirAlMundo', { asentamientoId: asentamiento.id, heroeId: proyeccion.heroeId, escuadronIds, carga });
+    const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'salirAlMundo', { asentamientoId: asentamiento.id, heroeId: proyeccion.heroeId, escuadronIds, carga });
     if (!respuesta.resultado.ok) throw errorDeRechazo(respuesta.resultado, 'No se pudo salir al mundo.');
     panelAsentAbierto = null;
     await refrescarDatosJuego(); // el router lleva a la pantalla Mapa
@@ -1274,7 +1254,18 @@ async function salirAlMundo(escuadronIds: string[], carga: Record<string, number
 
 /** Panel «Salir al mundo» de la plaza: tropa que sacas y carga del almacén de la plaza (el backend reserva el trigo que necesita la tropa que se queda). */
 function pintarSalidaAsentamiento(panel: HTMLElement, p: ProyeccionJugador, asentamiento: Asentamiento): void {
-  if (panel.dataset.pintado === 'salir') return; // no se repinta con el sondeo: perdería lo que estás eligiendo
+  // En un ejército en preparación solo se ve ese panel (se repinta cuando cambia: llegan integrantes y peticiones).
+  const preparacion = htmlPreparacion(p, escaparHtml);
+  if (preparacion) {
+    if (panel.dataset.pintado === 'prep:' + preparacion) return;
+    panel.dataset.pintado = 'prep:' + preparacion;
+    panel.innerHTML = preparacion;
+    cablearPreparacion(panel, p, ejecutarYRefrescar, avisoMapa);
+    return;
+  }
+  const leerSeleccion = () => ({ escuadronIds: Array.from(panel.querySelectorAll<HTMLInputElement>('input[data-salir-escuadra]:checked')).map((i) => i.dataset.salirEscuadra!), carga: leerCarga(panel) });
+  // El formulario no se repinta con el sondeo (perdería lo que estás eligiendo); solo la lista de ejércitos que se preparan.
+  if (panel.dataset.pintado === 'salir') { actualizarConvocatorias(panel, p, leerSeleccion, ejecutarYRefrescar, avisoMapa, escaparHtml); return; }
   panel.dataset.pintado = 'salir';
   const tropa = p.heroe.escuadrones.filter((s) => s.contenedor.tipo === 'campamento' && !s.enGuarnicion && s.cantidad > 0);
   const almacen = Object.fromEntries(Object.entries(asentamiento.almacen ?? {}).map(([r, v]) => [r, v.cantidad]));
@@ -1283,16 +1274,15 @@ function pintarSalidaAsentamiento(panel: HTMLElement, p: ProyeccionJugador, asen
     <div class="mapa-lista">${tropa.length > 0
       ? tropa.map((s) => `<label class="mapa-lista-item"><div><strong>${escaparHtml(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres</span></div><input type="checkbox" data-salir-escuadra="${escaparHtml(s.id)}" checked /></label>`).join('')
       : '<p class="asent-lado-nota">No tienes tropa libre en la plaza (la de guarnición no sale). Puedes salir solo.</p>'}</div>
-    ${htmlSalidaComoEjercito({ permiteCerrado: true, sinFaccion: !p.faccionId }, escaparHtml)}
+    ${htmlSalidaComoEjercito(p, escaparHtml)}
     ${htmlCargaDeSalida(almacen, 'el almacén de la plaza', escaparHtml)}
     <button class="btn-primary" type="button" data-salir>Salir</button>
     <p class="faction-error" data-campo="error-salida" role="alert"></p>`;
   cablearCargaDeSalida(panel);
-  cablearSalidaComoEjercito(panel, elegirDestinoEnMapa);
-  panel.querySelector<HTMLButtonElement>('[data-salir]')?.addEventListener('click', () => {
-    const ids = Array.from(panel.querySelectorAll<HTMLInputElement>('input[data-salir-escuadra]:checked')).map((i) => i.dataset.salirEscuadra!);
-    void salirAlMundo(ids, leerCarga(panel));
-  });
+  const boton = panel.querySelector<HTMLButtonElement>('[data-salir]');
+  boton?.addEventListener('click', () => void salirAlMundo(leerSeleccion().escuadronIds, leerSeleccion().carga));
+  cablearSalidaComoEjercito(panel, p, boton, 'Salir', leerSeleccion, ejecutarYRefrescar, avisoMapa);
+  actualizarConvocatorias(panel, p, leerSeleccion, ejecutarYRefrescar, avisoMapa, escaparHtml);
 }
 
 // --- PANEL DE GESTIÓN DEL ASENTAMIENTO (columna derecha): Resumen · Edificios · Cola ------------
@@ -1983,6 +1973,9 @@ async function refrescarDatosJuego(): Promise<void> {
   if (!respuesta.sinHeroe) {
     abrirPresencia(estadoCliente.gameIdActivo);
     // El Líder de un ejército «decide yo» tiene 10 s para contestar: se le avisa por sondeo hasta que el backend le mande el evento (`columna.union_pedida`).
+    for (const x of peticionesNuevasConv(respuesta)) {
+      mostrarAviso(`${nombreDeHeroe(respuesta, x.heroeId)} pide unirse a tu ejército en preparación (botón «Salir al mundo» / «Salir»).`, true);
+    }
     for (const x of peticionesNuevas(respuesta)) {
       mostrarAviso(`${nombreDeHeroe(respuesta, x.heroeId)} pide unirse a tu ejército: ${Math.max(0, Math.ceil((x.expiraEn - respuesta.instante) / 1000))} s para contestar (botón ⚑ del mapa).`, true);
     }

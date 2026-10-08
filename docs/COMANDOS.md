@@ -165,9 +165,20 @@ Una caravana ya no nace lista: se crea un casco vacío, se le montan carros y an
 - [ ] `reclutarTropa` — `asentamientoId`, `heroeId`, `tropaId`, `origen` (`pesants` \| `artesanos`)
 - [ ] `iniciarAsedio` — `atacanteId`, `defensorId`, `escuadronIds`
 
+### Ejército en preparación (backend 2026-10-08, Doc 5.14.5)
+
+Panel «Salir» de un campamento y «Salir al mundo» de la plaza (`ui/convocatoria.ts`, `ui/salidaComoEjercito.ts`):
+
+- [x] `convocarEjercito` — `heroeId`, `politicaDeUnion` (`aceptar` | `preguntar`), `escuadronIds`, `carga` · convoca dentro del lugar; espera sin caducidad
+- [x] `unirseAConvocatoria` — `heroeId`, `convocatoriaId`, `escuadronIds`, `carga` · misma Facción y mismo lugar
+- [x] `responderPeticionDeConvocatoria` — `heroeId` (Líder), `convocatoriaId`, `solicitanteId`, `aceptar`
+- [x] `separarseDeConvocatoria` — `heroeId` · un integrante no Líder; sigue dentro
+- [x] `cancelarConvocatoria` — `heroeId` · solo el Líder; nadie se mueve
+- [x] `partirConvocatoria` — `heroeId` · solo el Líder; salen todos juntos como UN ejército quieto en la puerta, que dirige el Líder con `marcharA`
+
 ### Ejércitos y logística de campaña
 
-- [x] `movilizarEjercito` — `asentamientoId`, `heroeId`, `escuadronIds`, `objetivo`: `{ tipo: 'asentamiento', id }` o `{ tipo: 'punto', punto: { x, y } }`; opcional: `politicaDeUnion` (`rechazar` \| `aceptar` \| `preguntar`, Doc 5.14.1 — qué hacer con quien pida unirse en campo) · panel «Salir al mundo» de la plaza: opción «Ejército» (destino con clic en el mapa + política de unión + `carga`)
+- [x] `movilizarEjercito` — `asentamientoId`, `heroeId`, `escuadronIds`, `objetivo`: `{ tipo: 'asentamiento', id }` o `{ tipo: 'punto', punto: { x, y } }`; opcional: `politicaDeUnion` (`rechazar` \| `aceptar` \| `preguntar`, Doc 5.14.1 — qué hacer con quien pida unirse en campo) · `objetivo` opcional desde 2026-10-08 (sin él sale quieto); la UI usa la convocatoria + `partirConvocatoria`
 - [x] `unirseAEjercito` — `ejercitoId`, `asentamientoId`, `heroeId`, `escuadronIds` · panel «Ejércitos» de la plaza: sumarte con tropa de tu campamento a un ejército de tu Facción que pasa a ≤ 60 de la plaza
 - [x] `replegarEjercito` — `ejercitoId` · panel ⚑ Ejército del mapa (Líder)
 - [x] `estacionarEjercito` — `ejercitoId` · panel ⚑ Ejército del mapa (Líder, en marcha)
