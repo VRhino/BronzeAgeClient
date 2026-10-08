@@ -6,6 +6,7 @@
 import type { ProyeccionJugador } from '../apiCliente';
 import type { Convocatoria } from '../tiposDominio';
 import { esPeticionNueva, POLITICA } from './ejercitos';
+import { chipLiderazgo } from './liderazgo';
 import { textoEnTiempoReal } from './estadoCliente';
 import { nombreDeHeroe } from './nombres';
 import type { Ejecutar } from './panelCarro';
@@ -19,6 +20,40 @@ export function miConvocatoria(p: ProyeccionJugador): Convocatoria | undefined {
 
 const hombres = (c: Convocatoria['integrantes'][number]): number => c.tropas.reduce((s, t) => s + t.cantidad, 0);
 
+/** Los cambios que llevas hechos en TU selección y aún no has guardado (ids en orden de combate), de esa convocatoria; `null` = lo guardado. Vive entre repintados. */
+let borrador: { convocatoriaId: string; ids: string[] } | null = null;
+
+const filaDeTropa = (t: Convocatoria['integrantes'][number]['tropas'][number], e: Escapar): string =>
+  `<li>${e(t.nombre)} · nivel ${t.nivel} · moral ${Math.round(t.moral)} · ${t.cantidad} hombres</li>`;
+
+/** ¿Resides en el lugar de la convocatoria? Solo entonces eliges tropa; quien visita sale con su columna aparcada y su selección no cuenta. */
+function resideEnElLugar(p: ProyeccionJugador, c: Convocatoria): boolean {
+  if (c.lugar.tipo === 'campamento') return p.campamentosMercenarios.find((x) => x.id === c.lugar.id)?.residentesIds.includes(p.heroeId) ?? false;
+  const a = p.asentamientos.find((x) => x.id === c.lugar.id);
+  return Boolean(a && [...(a.heroesFundadoresIds ?? []), ...(a.casasCompradas ?? [])].includes(p.heroeId));
+}
+
+/** TU tropa: la que sale, en el orden en que entra en combate, con casillas y flechas para cambiarla (`cambiarSeleccionDeConvocatoria`). Solo la tuya. */
+function htmlMiTropa(p: ProyeccionJugador, c: Convocatoria, e: Escapar): string {
+  const mio = c.integrantes.find((x) => x.heroeId === p.heroeId);
+  if (!mio) return '';
+  if (!resideEnElLugar(p, c)) return '<p class="asent-lado-nota">No resides aquí: sales de visita, con tu columna aparcada en la puerta, y tu selección no cuenta.</p>';
+  const guardados = mio.escuadronIds;
+  const ids = borrador?.convocatoriaId === c.id ? borrador.ids : guardados;
+  const propias = p.heroe.escuadrones;
+  const candidatas = propias.filter((s) => ids.includes(s.id) || (s.contenedor.tipo === 'campamento' && !s.enGuarnicion && s.cantidad > 0));
+  const elegidas = ids.map((id) => candidatas.find((s) => s.id === id)).filter((s): s is NonNullable<typeof s> => s !== undefined);
+  const libres = candidatas.filter((s) => !ids.includes(s.id));
+  const cambiado = ids.length !== guardados.length || ids.some((id, i) => id !== guardados[i]);
+  const fila = (s: (typeof propias)[number], pos: number | null): string => `<div class="mapa-lista-item"><div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${pos === null ? 'no sale' : `va en el puesto ${pos + 1}`} · nivel ${s.nivel} · moral ${Math.round(s.moral)} · ${s.cantidad} hombres</span></div>
+      <input type="checkbox" data-conv-sel="${e(s.id)}"${pos === null ? '' : ' checked'} aria-label="Sale con el ejército" />
+      ${pos === null ? '' : `<button class="btn-secondary" type="button" data-conv-mover="${e(s.id)}" data-dir="-1"${pos === 0 ? ' disabled' : ''} aria-label="Subir">↑</button><button class="btn-secondary" type="button" data-conv-mover="${e(s.id)}" data-dir="1"${pos === elegidas.length - 1 ? ' disabled' : ''} aria-label="Bajar">↓</button>`}</div>`;
+  return `<strong class="heroe-sub">Tu tropa (la primera entra primero en combate)</strong>
+    <div class="mapa-lista">${elegidas.map((s, i) => fila(s, i)).join('')}${libres.map((s) => fila(s, null)).join('')}</div>
+    ${elegidas.length === 0 ? '<p class="asent-lado-nota">Sin ninguna escuadra no sales. Marca al menos una.</p>' : ''}
+    <div class="mapa-seleccion-acciones"><button class="btn-primary" type="button" data-conv="guardar-tropa"${cambiado && elegidas.length > 0 ? '' : ' disabled'}>Guardar cambios</button><button class="btn-secondary" type="button" data-conv="descartar-tropa"${cambiado ? '' : ' disabled'}>Descartar</button></div>`;
+}
+
 /** El panel de TU convocatoria (vacío si no estás en ninguna): quiénes van, las peticiones y los botones que le tocan a tu papel. */
 export function htmlPreparacion(p: ProyeccionJugador, e: Escapar): string {
   const c = miConvocatoria(p);
@@ -26,7 +61,8 @@ export function htmlPreparacion(p: ProyeccionJugador, e: Escapar): string {
   const peticiones = c.soyLider ? c.peticiones.filter((x) => x.expiraEn > p.instante) : [];
   return `<span class="faction-kicker">Ejército en preparación</span>
     <p class="asent-lado-nota">${c.soyLider ? 'Tú lo diriges.' : `Lo dirige ${e(nombreDeHeroe(p, c.liderId))}.`} ${e(POLITICA[c.politicaDeUnion])}. Seguís dentro: nada se mueve hasta que el Líder pulse «Salir con el ejército» o cancele. Espera sin límite de tiempo.</p>
-    <ul class="ejercito-lista">${c.integrantes.map((x) => `<li>${e(nombreDeHeroe(p, x.heroeId))}${x.heroeId === c.liderId ? ' <em>(Líder)</em>' : ''}${x.heroeId === p.heroeId ? ' · tú' : ''} — ${x.tropas.length} escuadra(s), ${hombres(x)} hombres</li>`).join('')}</ul>
+    <ul class="ejercito-lista">${c.integrantes.map((x) => `<li><strong>${e(nombreDeHeroe(p, x.heroeId))}</strong>${x.heroeId === c.liderId ? ' <em>(Líder)</em>' : ''}${x.heroeId === p.heroeId ? ' · tú' : ''} — ${x.tropas.length} escuadra(s), ${hombres(x)} hombres${x.heroeId === p.heroeId ? '' : `<ul>${x.tropas.map((t) => filaDeTropa(t, e)).join('')}</ul>`}</li>`).join('')}</ul>
+    ${htmlMiTropa(p, c, e)}
     ${peticiones.length > 0 ? `<strong class="heroe-sub">Piden unirse</strong>${peticiones.map((x) => `<div class="ejercito-fila"><div><strong>${e(nombreDeHeroe(p, x.heroeId))}</strong><span>${e(textoEnTiempoReal(x.expiraEn - p.instante))} para contestar · ${x.escuadronIds.length} escuadra(s)</span></div>
         <button class="btn-primary" type="button" data-conv-peticion="${e(x.heroeId)}" data-aceptar="si">Aceptar</button><button class="btn-secondary" type="button" data-conv-peticion="${e(x.heroeId)}" data-aceptar="no">Rechazar</button></div>`).join('')}` : ''}
     <div class="mapa-seleccion-acciones">${c.soyLider
@@ -35,7 +71,7 @@ export function htmlPreparacion(p: ProyeccionJugador, e: Escapar): string {
     <p class="faction-error" data-campo="error-conv" role="alert"></p>`;
 }
 
-export function cablearPreparacion(raiz: ParentNode, p: ProyeccionJugador, ejecutar: Ejecutar, avisar: (mensaje: string) => void): void {
+export function cablearPreparacion(raiz: ParentNode, p: ProyeccionJugador, ejecutar: Ejecutar, avisar: (mensaje: string) => void, repintar: () => void): void {
   const c = miConvocatoria(p);
   if (!c) return;
   const error = raiz.querySelector<HTMLElement>('[data-campo="error-conv"]');
@@ -44,7 +80,29 @@ export function cablearPreparacion(raiz: ParentNode, p: ProyeccionJugador, ejecu
     const mensaje = await ejecutar(tipo, params);
     if (mensaje) { boton.disabled = false; if (error) error.textContent = mensaje; else avisar(mensaje); }
   };
-  raiz.querySelectorAll<HTMLButtonElement>('[data-conv]').forEach((b) => b.addEventListener('click', () => {
+  const mio = c.integrantes.find((x) => x.heroeId === p.heroeId);
+  const idsActuales = (): string[] => (borrador?.convocatoriaId === c.id ? borrador.ids : mio?.escuadronIds ?? []);
+  const cambiarBorrador = (ids: string[]): void => { borrador = { convocatoriaId: c.id, ids }; repintar(); };
+  raiz.querySelectorAll<HTMLInputElement>('[data-conv-sel]').forEach((i) => i.addEventListener('change', () => {
+    const id = i.dataset.convSel!;
+    cambiarBorrador(i.checked ? [...idsActuales(), id] : idsActuales().filter((x) => x !== id));
+  }));
+  raiz.querySelectorAll<HTMLButtonElement>('[data-conv-mover]').forEach((b) => b.addEventListener('click', () => {
+    const ids = [...idsActuales()];
+    const i = ids.indexOf(b.dataset.convMover!);
+    const j = i + Number(b.dataset.dir);
+    if (i < 0 || j < 0 || j >= ids.length) return;
+    [ids[i], ids[j]] = [ids[j]!, ids[i]!];
+    cambiarBorrador(ids);
+  }));
+  raiz.querySelectorAll<HTMLButtonElement>('[data-conv]').forEach((b) => b.addEventListener('click', async () => {
+    if (b.dataset.conv === 'descartar-tropa') { borrador = null; repintar(); return; }
+    if (b.dataset.conv === 'guardar-tropa') {
+      b.disabled = true;
+      const mensaje = await ejecutar('cambiarSeleccionDeConvocatoria', { heroeId: p.heroeId, escuadronIds: idsActuales(), carga: mio?.carga ?? {} });
+      if (mensaje) { b.disabled = false; if (error) error.textContent = mensaje; else avisar(mensaje); } else borrador = null;
+      return;
+    }
     const tipo = { partir: 'partirConvocatoria', cancelar: 'cancelarConvocatoria', separarme: 'separarseDeConvocatoria' }[b.dataset.conv!];
     if (tipo) void enviar(b, tipo, { heroeId: p.heroeId });
   }));

@@ -731,7 +731,7 @@ export interface Convocatoria {
   politicaDeUnion: 'aceptar' | 'preguntar';
   creadaEn: number;
   /** Solo los que siguen dentro, el Líder primero. */
-  integrantes: { heroeId: string; unidoEn: number; escuadronIds: string[]; tropas: { escuadronId: string; tropaId: string; cantidad: number }[]; carga: Record<string, number> }[];
+  integrantes: { heroeId: string; unidoEn: number; escuadronIds: string[]; tropas: { escuadronId: string; tropaId: string; nombre: string; nivel: number; moral: number; cantidad: number }[]; carga: Record<string, number> }[];
   /** El Líder las ve todas; cada solicitante, la suya. Las caducadas no se barren solas: se filtran por `expiraEn`. */
   peticiones: { heroeId: string; pedidoEn: number; expiraEn: number; escuadronIds: string[]; carga: Record<string, number> }[];
   soyLider: boolean;

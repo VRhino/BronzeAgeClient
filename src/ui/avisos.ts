@@ -132,6 +132,7 @@ function procesar(e: EventoDominio, heroeId: string, modo: 'vivo' | 'recuperado'
         if (p?.liderId === heroeId && !mio && esPeticionNueva(p.heroeId ?? '', p.expiraEn ?? 0)) texto = `${quien} pide unirse a tu ejército en preparación: tienes ${textoEnTiempoReal((p.expiraEn ?? 0) - (proy?.instante ?? 0))} para contestar.`;
         break;
       case 'convocatoria.unido': texto = mio ? 'Te has unido al ejército en preparación: esperad a que su Líder pulse «Salir con el ejército».' : meToca ? `${quien} se une al ejército en preparación.` : null; break;
+      case 'convocatoria.seleccion_cambiada': texto = !mio && meToca ? `${quien} cambia su tropa en el ejército en preparación.` : null; break;
       case 'convocatoria.union_rechazada': texto = mio ? 'El Líder ha rechazado tu petición de unirte al ejército.' : null; break;
       case 'convocatoria.separado': texto = !mio && meToca ? `${quien} se separa del ejército en preparación.` : null; break;
       case 'convocatoria.cancelada': texto = meToca ? 'El Líder ha cancelado la salida del ejército: seguís dentro.' : null; break;
@@ -141,6 +142,16 @@ function procesar(e: EventoDominio, heroeId: string, modo: 'vivo' | 'recuperado'
     historial.unshift({ version: e.version, momento: e.momento, texto, clase: 'mirada' });
     if (modo !== 'historico') noLeidos++;
     if (!silencioso) mostrar(texto, e.codigo === 'convocatoria.union_pedida' || e.codigo === 'convocatoria.cancelada');
+    return;
+  }
+  if (e.codigo === 'ejercito.entra_en_campamento') {
+    // El ejército entra entero en un campamento y se desarma (backend 2026-10-08): cada uno queda dentro, residente o de visita.
+    const p = e.payload as { heroesIds?: string[] } | undefined;
+    if (!(p?.heroesIds ?? []).includes(heroeId)) return;
+    const texto = 'El ejército ha entrado en el campamento y se ha desarmado: cada uno queda dentro (los que no residen, de visita).';
+    historial.unshift({ version: e.version, momento: e.momento, texto, clase: 'mirada' });
+    if (modo !== 'historico') noLeidos++;
+    if (!silencioso) mostrar(texto);
     return;
   }
   if (e.codigo === 'columna.union_pedida' || e.codigo === 'columna.union_rechazada' || e.codigo === 'columna.union_en_campo') {

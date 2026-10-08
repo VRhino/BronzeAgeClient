@@ -499,7 +499,25 @@ async function marcharAObjetivo(objetivo: { tipo: 'punto'; punto: { x: number; y
 
 /** Repinta el panel de Selección según `seleccionMapa`. Se llama al montar el Mapa y en cada refresco (para
  * que "Entrar" refleje si la columna ya llegó a la puerta — el backend es quien de verdad lo valida). */
+/** El último rechazo de una acción de la ficha abierta: la ficha se repinta con cada sondeo y se llevaba el mensaje, así que se guarda aquí y se vuelve a poner. */
+let errorSeleccion: { clave: string; texto: string } | null = null;
+const claveSeleccion = (): string => (seleccionMapa ? `${seleccionMapa.tipo}:${seleccionMapa.id}` : '');
+
+function fijarErrorSeleccion(cont: HTMLElement, texto: string | null): void {
+  errorSeleccion = texto ? { clave: claveSeleccion(), texto } : null;
+  const error = cont.querySelector<HTMLElement>('#mapa-seleccion-error');
+  if (error) error.textContent = texto ?? '';
+}
+
 function renderSeleccionMapa(): void {
+  renderSeleccionMapaCuerpo();
+  const cont = document.querySelector<HTMLElement>('.mapa-seleccion');
+  if (errorSeleccion && errorSeleccion.clave !== claveSeleccion()) errorSeleccion = null;
+  const error = cont?.querySelector<HTMLElement>('#mapa-seleccion-error');
+  if (error && errorSeleccion) error.textContent = errorSeleccion.texto;
+}
+
+function renderSeleccionMapaCuerpo(): void {
   const cont = document.querySelector<HTMLElement>('.mapa-seleccion');
   const proyeccion = estadoCliente.proyeccionUltima;
   if (!cont) return;
@@ -557,6 +575,9 @@ function renderSeleccionMapa(): void {
   const faccion = proyeccion.facciones.find((f) => f.id === asentamiento.faccionId);
   const propio = asentamiento.faccionId === proyeccion.faccionId;
   const ataque = propio ? null : alcanceDeAtaque(proyeccion, asentamiento.posicion);
+  const miCol = miColumna(proyeccion);
+  const entraEjercito = miCol !== undefined && (miCol.tipo === 'ejercito' || miCol.participantes.length > 1);
+  const soyLider = miCol?.liderId === proyeccion.heroeId;
   // Solo un ejército abre un asedio (backend Doc 5.15.1b): una columna personal puede unirse a uno abierto desde su batalla en el mapa.
   if (ataque && !ataque.impide && miColumna(proyeccion)?.tipo === 'personal') ataque.impide = 'Solo un ejército abre un asedio: tu columna personal puede unirse a uno ya abierto.';
   cont.hidden = false;
@@ -572,9 +593,10 @@ function renderSeleccionMapa(): void {
     </div>
     <div class="mapa-seleccion-acciones">
       <button id="btn-marchar-alli" class="btn-secondary" type="button">Marchar aquí</button>
-      <button id="btn-entrar-asent" class="btn-primary" type="button">Entrar</button>
+      <button id="btn-entrar-asent" class="btn-primary" type="button"${entraEjercito && (!propio || !soyLider) ? ' disabled' : ''}>${entraEjercito ? 'Entrar con el ejército' : 'Entrar'}</button>
       ${ataque ? `<button id="btn-atacar-asent" class="btn-primary" type="button"${ataque.impide ? ' disabled' : ''}>Atacar</button>` : ''}
     </div>
+    ${entraEjercito ? `<p class="mapa-lista-vacia">${!propio ? 'Un ejército solo entra entero en una plaza de su Facción.' : soyLider ? 'Tu ejército entra entero y se desarma: los que residen aquí entran como siempre; los demás, de visita. Si lleva caravanas adjuntas, tienen que ser de esta plaza.' : 'Solo el Líder hace entrar al ejército.'}</p>` : ''}
     ${ataque ? `<p class="mapa-lista-vacia">${escaparHtml(ataque.impide || 'Atacar es asediarla: si cae pasa a tu Facción; si aguanta, quedas herido.')}</p>` : ''}
     <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`;
   cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
@@ -582,13 +604,14 @@ function renderSeleccionMapa(): void {
   cont.querySelector<HTMLButtonElement>('#btn-atacar-asent')?.addEventListener('click', (evento) => void atacarPlaza(cont, evento.currentTarget as HTMLButtonElement, asentamiento.id));
   cont.querySelector('#btn-entrar-asent')?.addEventListener('click', async () => {
     try {
-      const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'entrarEnAsentamiento', { asentamientoId: asentamiento.id, heroeId: proyeccion.heroeId });
+      // Un ejército entra entero y se desarma (`guarnecer`); una columna personal, por la puerta de siempre.
+      const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, entraEjercito ? 'guarnecer' : 'entrarEnAsentamiento', { asentamientoId: asentamiento.id, heroeId: proyeccion.heroeId });
       if (!respuesta.resultado.ok) throw errorDeRechazo(respuesta.resultado, 'No se pudo entrar.');
+      errorSeleccion = null;
       seleccionMapa = null;
       await refrescarDatosJuego(); // si entró, el router lleva a la pantalla Asentamiento
     } catch (err) {
-      const error = cont.querySelector<HTMLElement>('#mapa-seleccion-error');
-      if (error) error.textContent = mensajeError(err);
+      fijarErrorSeleccion(cont, mensajeError(err));
     }
   });
 }
@@ -687,8 +710,7 @@ function cablearAccionSeleccion(cont: HTMLElement, selector: string, tipo: strin
     boton.disabled = true;
     const mensaje = await ejecutarYRefrescar(tipo, params);
     boton.disabled = false;
-    const error = cont.querySelector<HTMLElement>('#mapa-seleccion-error');
-    if (error) error.textContent = mensaje ?? '';
+    fijarErrorSeleccion(cont, mensaje);
     if (!mensaje) alAcabar?.();
   });
 }
@@ -698,6 +720,8 @@ function renderSeleccionMercenarios(cont: HTMLElement, proyeccion: ProyeccionJug
   const columna = miColumna(proyeccion);
   const distancia = columna ? Math.round(Math.hypot(columna.posicionActual.x - campamento.posicion.x, columna.posicionActual.y - campamento.posicion.y)) : null;
   const tuyo = campamento.residentesIds.includes(proyeccion.heroeId);
+  const entraEjercito = columna !== undefined && (columna.tipo === 'ejercito' || columna.participantes.length > 1);
+  const soyLider = columna?.liderId === proyeccion.heroeId;
   cont.innerHTML = `
     <button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>
     <span class="faction-kicker">Campamento de mercenarios${tuyo ? ' · tu residencia' : ''}</span>
@@ -708,9 +732,9 @@ function renderSeleccionMercenarios(cont: HTMLElement, proyeccion: ProyeccionJug
     </div>
     <div class="mapa-seleccion-acciones">
       <button id="btn-marchar-alli" class="btn-secondary" type="button">Marchar aquí</button>
-      <button id="btn-entrar-mercenarios" class="btn-primary" type="button">Entrar</button>
+      <button id="btn-entrar-mercenarios" class="btn-primary" type="button"${entraEjercito && !soyLider ? ' disabled' : ''}>${entraEjercito ? 'Entrar con el ejército' : 'Entrar'}</button>
     </div>
-    <p class="mapa-lista-vacia">Se entra con la columna a la puerta, yendo solo. Junto a él nadie inicia un combate.</p>
+    <p class="mapa-lista-vacia">${entraEjercito ? (soyLider ? 'Tu ejército entra entero y se desarma en la puerta: los que residen aquí entran con su tropa y su carro; los demás, de visita, con su columna aparcada. Si lleva caravanas adjuntas, tienen que ser de este lugar.' : 'Solo el Líder hace entrar al ejército.') : 'Se entra con la columna a la puerta.'} Junto al campamento nadie inicia un combate.</p>
     <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`;
   cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
   cont.querySelector('#btn-marchar-alli')?.addEventListener('click', () => void marcharAObjetivo({ tipo: 'punto', punto: campamento.posicion }));
@@ -1260,7 +1284,7 @@ function pintarSalidaAsentamiento(panel: HTMLElement, p: ProyeccionJugador, asen
     if (panel.dataset.pintado === 'prep:' + preparacion) return;
     panel.dataset.pintado = 'prep:' + preparacion;
     panel.innerHTML = preparacion;
-    cablearPreparacion(panel, p, ejecutarYRefrescar, avisoMapa);
+    cablearPreparacion(panel, p, ejecutarYRefrescar, avisoMapa, () => { delete panel.dataset.pintado; const q = estadoCliente.proyeccionUltima; if (q) pintarSalidaAsentamiento(panel, q, asentamiento); });
     return;
   }
   const leerSeleccion = () => ({ escuadronIds: Array.from(panel.querySelectorAll<HTMLInputElement>('input[data-salir-escuadra]:checked')).map((i) => i.dataset.salirEscuadra!), carga: leerCarga(panel) });

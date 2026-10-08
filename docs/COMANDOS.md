@@ -174,6 +174,7 @@ Panel «Salir» de un campamento y «Salir al mundo» de la plaza (`ui/convocato
 - [x] `responderPeticionDeConvocatoria` — `heroeId` (Líder), `convocatoriaId`, `solicitanteId`, `aceptar`
 - [x] `separarseDeConvocatoria` — `heroeId` · un integrante no Líder; sigue dentro
 - [x] `cancelarConvocatoria` — `heroeId` · solo el Líder; nadie se mueve
+- [x] `cambiarSeleccionDeConvocatoria` — `heroeId`, `escuadronIds` (en orden de combate), `carga` · «Tu tropa» del panel de preparación: casillas y flechas, solo la propia
 - [x] `partirConvocatoria` — `heroeId` · solo el Líder; salen todos juntos como UN ejército quieto en la puerta, que dirige el Líder con `marcharA`
 
 ### Ejércitos y logística de campaña
@@ -187,7 +188,7 @@ Panel «Salir» de un campamento y «Salir al mundo» de la plaza (`ui/convocato
 - [ ] `soltarCaravana` — `ejercitoId`, `caravanaId`, `heroeId`
 - [ ] `cargarCaravana` — `ejercitoId`, `caravanaId`, `asentamientoId`, `recurso`, `cantidad`
 - [ ] `entregarDeCaravana` — `ejercitoId`, `caravanaId`, `acuerdoId`
-- [ ] `guarnecer` — `asentamientoId`, `heroeId` (nuevo 2026-09-09, Doc 5.12.4 / Ocupacion §2.3) · un ejército en la puerta de una plaza de su Facción donde residen todos los que van en él se deshace: la tropa vuelve a sus campamentos y el carro al almacén; los héroes quedan DENTRO (2026-09-14). Las caravanas adjuntas pasan a `'aparcada'` en esa plaza
+- [x] `guarnecer` — `asentamientoId`, `heroeId` (nuevo 2026-09-09, Doc 5.12.4 / Ocupacion §2.3) · un ejército en la puerta de una plaza de su Facción donde residen todos los que van en él se deshace: la tropa vuelve a sus campamentos y el carro al almacén; los héroes quedan DENTRO (2026-09-14). Las caravanas adjuntas pasan a `'aparcada'` en esa plaza · botón «Entrar con el ejército» de la ficha de una plaza propia (backend 2026-10-08: el ejército se desarma; residentes entran normal, el resto de visita; las caravanas adjuntas deben ser del lugar)
 
 ### Presencia del jugador (Doc 1.10)
 

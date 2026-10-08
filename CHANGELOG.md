@@ -3,6 +3,15 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.23.0] — 2026-10-08 · un ejército entra entero en un campamento o plaza, y tu tropa en la preparación · sync con `BronzeAgeFase0@e26f167` (`main`, sin push)
+
+### Añadido
+- **Entrar con el ejército**: en la ficha de un campamento de mercenarios o de una plaza de tu Facción, el Líder pulsa «Entrar con el ejército» (`entrarEnCampamento` / `guarnecer`): el ejército se desarma en la puerta, los que residen entran con su tropa y su carro y los demás, de visita. Un no Líder lo ve desactivado con el motivo; la ficha avisa de que las caravanas adjuntas tienen que ser del lugar. Aviso a todos los del ejército.
+- **Ejército en preparación**: se ve la tropa de **cada integrante** (nombre, nivel, moral, hombres) y la tuya es editable: casillas para elegir qué escuadras salen y flechas para su orden de combate, con «Guardar cambios» / «Descartar» (`cambiarSeleccionDeConvocatoria`). Las de los demás, solo lectura. Aviso a los demás cuando alguien cambia su tropa.
+
+### Corregido
+- El rechazo de una acción de la ficha de selección (entrar en un campamento o plaza, etc.) se borraba al siguiente sondeo y el botón parecía no hacer nada: ahora el mensaje se conserva mientras la ficha siga abierta.
+
 ## [0.22.0] — 2026-10-08 · ejército en preparación y sin destino fijo · sync con `BronzeAgeFase0@468c47b` (`main`, sin push)
 
 ### Añadido

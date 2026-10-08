@@ -368,7 +368,7 @@ export function cablearCampamento(root: HTMLElement, p: ProyeccionJugador, c: Ca
   const leerSeleccion = () => ({ escuadronIds: marcados('data-salir-escuadra'), carga: leerCarga(root) });
   cablearSalidaComoEjercito(root, p, root.querySelector<HTMLButtonElement>('#btn-salir-campamento'), 'Salir', leerSeleccion, ejecutar, avisarEnError);
   actualizarSalida(root, p, ejecutar);
-  cablearPreparacion(root, p, ejecutar, avisarEnError);
+  cablearPreparacion(root, p, ejecutar, avisarEnError, opciones.repintar);
   conBoton('#btn-pedir-prestamo', 'pedirPrestamo', () => ({ tropaIds: marcados('data-prestamo') }));
   conBoton('#btn-reponer-prestamo', 'reponerPrestamo', () => ({}));
   cablearMercado(root, c, opciones);
