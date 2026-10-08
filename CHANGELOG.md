@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.24.0] — 2026-10-08 · repintado mínimo de los paneles y cambiar tu base a una plaza
+
+### Añadido
+- **«Hacer de esta plaza mi base»** en la barra de la plaza (`cambiarResidencia`, que el backend ya tenía y el cliente no usaba): solo en una plaza de tu Facción donde no resides. Pide confirmación diciendo qué pierdes (la tropa prestada del campamento anterior, la guarnición) y el backend valida puerta y enfriamiento. En un campamento ya estaba «Residir aquí» (pestaña Resumen).
+
+### Cambiado
+- **Repintado mínimo de todos los paneles** (`ui/repintado.ts`, `pintar`): cada panel que se rehacía con el sondeo de 3 s pasa por una sola función que (1) **no toca el DOM si el HTML no cambió** —los botones siguen siendo los mismos nodos— y (2) si cambió, devuelve al jugador lo suyo: el valor de los controles que **tocó** (casillas, cantidades, listas, texto), el foco con su cursor y el scroll; lo que no tocó toma el valor nuevo del servidor. Cada pestaña o panel es un «ámbito» y empieza limpio. Cubre fichas de selección del mapa, panel del jugador (héroe, carro, avisos, Facción), riel del mapa (lo que llevas, ejército, mis cosas, fundar), barra de víveres, las pestañas del campamento, los paneles flotantes de la plaza (cargos, intel, salida, escolta, ejércitos), la columna de edificios, los recursos de la ciudad y la lista de ejércitos en preparación. Se retiran los parches `dataset.pintado*` y las reglas «no repintes mientras hay un campo con foco».
+
 ## [0.23.0] — 2026-10-08 · un ejército entra entero en un campamento o plaza, y tu tropa en la preparación · sync con `BronzeAgeFase0@e26f167` (`main`, sin push)
 
 ### Añadido

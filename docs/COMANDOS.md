@@ -97,7 +97,7 @@ Los cinco siguientes no llevan `heroeId`: el actor es su propio héroe. Wrapper 
 - [x] `unirseAFaccion` — `faccionId` · pestaña Facción, lista buscable
 - [ ] `dejarFaccion` — sin parámetros (`{}`); el actor solo puede dejar la suya
 - [ ] `comprarCasa` — `asentamientoId`, `heroeId` · segunda vía de entrar en una Facción, abierta a quien no tenga ninguna
-- [ ] `cambiarResidencia` — `destinoId`, `heroeId` (nuevo 2026-09-08, Doc 2.5) · atómico: deja la residencia actual (libera vivienda, vacía cargos locales viejos) + toma una nueva en otra plaza de tu Facción con hueco y permiso; tu campamento se muda contigo y tu guarnición se suelta (2026-09-14). Prerrequisito de consolidar una conquista
+- [x] `cambiarResidencia` — `destinoId`, `heroeId` (nuevo 2026-09-08, Doc 2.5) · atómico: deja la residencia actual (libera vivienda, vacía cargos locales viejos) + toma una nueva en otra plaza de tu Facción con hueco y permiso; tu campamento se muda contigo y tu guarnición se suelta (2026-09-14). Prerrequisito de consolidar una conquista · botón «Hacer de esta plaza mi base» en la barra de la plaza (solo en una plaza de tu Facción donde no resides)
 
 ### Cargos y políticas
 

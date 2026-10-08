@@ -6,6 +6,7 @@
 import { asignarGuarnicion, borrarLoadout, guardarLoadout, repartirPuntos, retirarGuarnicion, type ProyeccionJugador, type RespuestaComando } from '../apiCliente';
 import type { AtributoHeroe, HeroeProyectado, Loadout } from '../tiposDominio';
 import { estadoCliente } from './estadoCliente';
+import { invalidar, pintar } from './repintado';
 
 /** Manda el comando, comprueba `resultado.ok` y refresca; devuelve el mensaje de error o `null`. Lo pone `main.ts`. */
 export type Aplicar = (peticion: Promise<RespuestaComando>) => Promise<string | null>;
@@ -20,8 +21,6 @@ let pestana: Pestana = 'ficha';
 /** El loadout que se está editando (`loadoutId` ausente = uno nuevo), o `null`. Mientras exista, el sondeo de 3 s no
  * repinta el panel: se llevaría por delante lo escrito. */
 let borrador: { loadoutId?: string; displayName: string; squadIds: Set<string>; activo: boolean } | null = null;
-/** Lo último pintado en cada panel. Si el refresco no cambia nada, no se toca el DOM (ni el foco ni los inputs). */
-const pintado = new WeakMap<HTMLElement, string>();
 
 /** Lo abre la barra superior en la pestaña «Escuadras» sin que el jugador la busque. */
 export function elegirPestanaHeroe(nombre: Pestana): void {
@@ -143,10 +142,8 @@ export function pintarPanelHeroe(panel: HTMLElement, proyeccion: ProyeccionJugad
     ${cuerpo}
     <p class="faction-error" data-campo="error" role="alert"></p>
   </div>`;
-  if (!forzar && pintado.get(panel) === html && panel.querySelector('.heroe-panel')) return;
-  panel.innerHTML = html;
-  pintado.set(panel, html);
-  cablear(panel, h, e, aplicar);
+  if (forzar) invalidar(panel);
+  pintar(panel, html, () => cablear(panel, h, e, aplicar), `heroe:${pestana}`);
 }
 
 function cablear(panel: HTMLElement, h: HeroeProyectado, e: Escapar, aplicar: Aplicar): void {

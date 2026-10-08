@@ -38,6 +38,7 @@ import { cablearFusion } from './ui/panelFusion';
 import { cablearAdmision } from './ui/panelAdmision';
 import { cablearFichaBatalla, cablearFichaFormacion, formacionesVisibles, htmlFichaBatalla, htmlFichaFormacion } from './ui/panelBatalla';
 import { cablearPanelEjercito, ejercitosDeLaFaccion, htmlFichaEjercito, htmlPanelEjercito, peticionesNuevas } from './ui/ejercitos';
+import { invalidar, olvidarEdicion, pintar, vaciar } from './ui/repintado';
 import { actualizarConvocatorias, cablearSalidaComoEjercito, htmlSalidaComoEjercito } from './ui/salidaComoEjercito';
 import { cablearPreparacion, htmlPreparacion, peticionesNuevasConv } from './ui/convocatoria';
 import { cablearUnirseDesdePlaza, htmlUnirseDesdePlaza } from './ui/unirseDesdePlaza';
@@ -352,7 +353,7 @@ function montarCampamento(): void {
   const contenedor = app.querySelector<HTMLElement>('.asent-screen')!;
   cablearMenuEsquina(contenedor);
   cablearBarraJugador(contenedor);
-  contenedor.querySelector('#btn-salir-mundo')?.addEventListener('click', () => { seccionCamp = 'salir'; const lado = contenedor.querySelector<HTMLElement>('.camp-lado'); if (lado) delete lado.dataset.pintado; refrescarPantalla('campamento'); });
+  contenedor.querySelector('#btn-salir-mundo')?.addEventListener('click', () => { seccionCamp = 'salir'; const lado = contenedor.querySelector<HTMLElement>('.camp-lado'); if (lado) invalidar(lado); refrescarPantalla('campamento'); });
   // Sin tiempo real de datos, el campamento (mercado, fondo, avisos) se pone al día con el mismo sondeo suave que el asentamiento.
   let sondeando = false;
   const sondeo = setInterval(() => {
@@ -375,25 +376,23 @@ function pintarCampamento(p: ProyeccionJugador, campamento: CampamentoMercenario
   const residencia = app.querySelector<HTMLElement>('#camp-residencia');
   if (residencia) residencia.textContent = campamento.residentesIds.includes(p.heroeId) ? 'Tu residencia' : 'De paso';
 
-  costoDeRefundacion(() => { delete lado.dataset.pintado; if (estadoCliente.proyeccionUltima) pintarCampamento(estadoCliente.proyeccionUltima, campamento); });
+  costoDeRefundacion(() => { invalidar(lado); if (estadoCliente.proyeccionUltima) pintarCampamento(estadoCliente.proyeccionUltima, campamento); });
   const secciones = seccionesDeCampamento(p);
   if (!secciones.some((x) => x.id === seccionCamp)) seccionCamp = 'resumen';
   const html = `<div class="asent-tabs asent-tabs-ancho">${secciones.map((x) => `<button class="asent-tab${x.id === seccionCamp ? ' activo' : ''}" type="button" data-seccion="${x.id}">${x.etiqueta}</button>`).join('')}</div>
     <div class="asent-lado-cuerpo">${htmlSeccionCampamento(seccionCamp, p, campamento, escaparHtml)}</div>
     <p id="camp-error" class="faction-error" role="alert"></p>`;
-  if (lado.dataset.pintado !== html) {
-    lado.innerHTML = html;
-    lado.dataset.pintado = html;
+  // Solo se repinta si cambió el HTML, y lo que el jugador tenía marcado o escrito vuelve a su sitio (`ui/repintado.ts`); cada pestaña es un ámbito.
+  pintar(lado, html, () => {
     lado.querySelectorAll<HTMLButtonElement>('.asent-tab').forEach((boton) => boton.addEventListener('click', () => {
       seccionCamp = boton.dataset.seccion as SeccionCampamento;
-      delete lado.dataset.pintado;
       if (estadoCliente.proyeccionUltima) pintarCampamento(estadoCliente.proyeccionUltima, campamento);
     }));
     cablearCampamento(lado, p, campamento, ejecutarYRefrescar, {
       ejecutarConDatos: ejecutarConDatosYRefrescar,
-      repintar: () => { delete lado.dataset.pintado; if (estadoCliente.proyeccionUltima) pintarCampamento(estadoCliente.proyeccionUltima, campamento); },
+      repintar: () => { olvidarEdicion(lado); if (estadoCliente.proyeccionUltima) pintarCampamento(estadoCliente.proyeccionUltima, campamento); },
     });
-  }
+  }, seccionCamp);
   actualizarSalida(lado, p, ejecutarYRefrescar);
   const taberna = lado.querySelector<HTMLElement>('#camp-taberna');
   if (taberna) pintarIntel(taberna, p, () => pintarCampamento(p, campamento));
@@ -524,7 +523,7 @@ function renderSeleccionMapaCuerpo(): void {
   const batalla = seleccionMapa?.tipo === 'batalla' ? proyeccion?.batallas?.find((b) => b.battleId === seleccionMapa!.id) : undefined;
   if (proyeccion && batalla) {
     cont.hidden = false;
-    cont.innerHTML = htmlFichaBatalla(proyeccion, batalla, alcanceDeAtaque(proyeccion, batalla.punto).impide, escaparHtml);
+    if (!pintar(cont, htmlFichaBatalla(proyeccion, batalla, alcanceDeAtaque(proyeccion, batalla.punto).impide, escaparHtml), undefined, claveSeleccion())) return;
     cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
     cablearFichaBatalla(cont, proyeccion, batalla, ejecutarYRefrescar, avisoMapa);
     return;
@@ -532,7 +531,7 @@ function renderSeleccionMapaCuerpo(): void {
   const formacion = seleccionMapa?.tipo === 'formacion' ? (proyeccion ? formacionesVisibles(proyeccion) : []).find((e) => e.id === seleccionMapa!.id) : undefined;
   if (proyeccion && formacion) {
     cont.hidden = false;
-    cont.innerHTML = htmlFichaFormacion(proyeccion, formacion, escaparHtml);
+    if (!pintar(cont, htmlFichaFormacion(proyeccion, formacion, escaparHtml), undefined, claveSeleccion())) return;
     cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
     cablearFichaFormacion(cont, proyeccion, formacion, ejecutarYRefrescar, avisoMapa);
     return;
@@ -540,7 +539,7 @@ function renderSeleccionMapaCuerpo(): void {
   const ejercito = seleccionMapa?.tipo === 'ejercito' ? proyeccion?.ejercitos.find((x) => x.id === seleccionMapa!.id) : undefined;
   if (proyeccion && ejercito) {
     cont.hidden = false;
-    cont.innerHTML = htmlFichaEjercito(proyeccion, ejercito, escaparHtml);
+    if (!pintar(cont, htmlFichaEjercito(proyeccion, ejercito, escaparHtml), undefined, claveSeleccion())) return;
     cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
     cablearPanelEjercito(cont, proyeccion, ejecutarYRefrescar, avisoMapa);
     return;
@@ -569,7 +568,7 @@ function renderSeleccionMapaCuerpo(): void {
   if (!asentamiento || !proyeccion) {
     seleccionMapa = null;
     cont.hidden = true;
-    cont.innerHTML = '';
+    vaciar(cont);
     return;
   }
   const faccion = proyeccion.facciones.find((f) => f.id === asentamiento.faccionId);
@@ -581,7 +580,7 @@ function renderSeleccionMapaCuerpo(): void {
   // Solo un ejército abre un asedio (backend Doc 5.15.1b): una columna personal puede unirse a uno abierto desde su batalla en el mapa.
   if (ataque && !ataque.impide && miColumna(proyeccion)?.tipo === 'personal') ataque.impide = 'Solo un ejército abre un asedio: tu columna personal puede unirse a uno ya abierto.';
   cont.hidden = false;
-  cont.innerHTML = `
+  if (!pintar(cont, `
     <button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>
     <span class="faction-kicker">${propio ? 'Tu asentamiento' : 'Asentamiento'}${asentamiento.recordado !== null ? ' · recordado' : ''}</span>
     <h3>${escaparHtml(asentamiento.nombre ?? asentamiento.id)}</h3>
@@ -598,7 +597,7 @@ function renderSeleccionMapaCuerpo(): void {
     </div>
     ${entraEjercito ? `<p class="mapa-lista-vacia">${!propio ? 'Un ejército solo entra entero en una plaza de su Facción.' : soyLider ? 'Tu ejército entra entero y se desarma: los que residen aquí entran como siempre; los demás, de visita. Si lleva caravanas adjuntas, tienen que ser de esta plaza.' : 'Solo el Líder hace entrar al ejército.'}</p>` : ''}
     ${ataque ? `<p class="mapa-lista-vacia">${escaparHtml(ataque.impide || 'Atacar es asediarla: si cae pasa a tu Facción; si aguanta, quedas herido.')}</p>` : ''}
-    <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`;
+    <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`, undefined, claveSeleccion())) return;
   cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
   cont.querySelector('#btn-marchar-alli')?.addEventListener('click', () => void marcharAObjetivo({ tipo: 'asentamiento', id: asentamiento.id }));
   cont.querySelector<HTMLButtonElement>('#btn-atacar-asent')?.addEventListener('click', (evento) => void atacarPlaza(cont, evento.currentTarget as HTMLButtonElement, asentamiento.id));
@@ -666,7 +665,7 @@ function renderSeleccionCampamento(cont: HTMLElement, proyeccion: ProyeccionJuga
   const acosa = campamento.asentamientoId
     ? `a ${escaparHtml(asentamientosDelMapa(proyeccion).find((a) => a.id === campamento.asentamientoId)?.nombre ?? campamento.asentamientoId)}`
     : campamento.campamentoMercenariosId ? `al campamento ${escaparHtml(campamento.campamentoMercenariosId)}` : '';
-  cont.innerHTML = `
+  if (!pintar(cont, `
     <button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>
     <span class="faction-kicker">Campamento de bandidos</span>
     <h3>Bandidos · nivel ${campamento.nivel}</h3>
@@ -685,7 +684,7 @@ function renderSeleccionCampamento(cont: HTMLElement, proyeccion: ProyeccionJuga
       <button id="btn-atacar-campamento" class="btn-primary" type="button"${impide ? ' disabled' : ''}>Atacar</button>
     </div>
     <p class="mapa-lista-vacia">${escaparHtml(impide || 'Si cae, ganas su oro de botín (a salvo: no va en el carro). Si aguanta, quedas herido y pierdes la mitad del carro.')}</p>
-    <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`;
+    <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`, undefined, claveSeleccion())) return;
   cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
   cont.querySelector('#btn-marchar-alli')?.addEventListener('click', () => void marcharAObjetivo({ tipo: 'punto', punto: campamento.posicion }));
   cont.querySelector<HTMLButtonElement>('#btn-atacar-campamento')?.addEventListener('click', async (evento) => {
@@ -722,7 +721,7 @@ function renderSeleccionMercenarios(cont: HTMLElement, proyeccion: ProyeccionJug
   const tuyo = campamento.residentesIds.includes(proyeccion.heroeId);
   const entraEjercito = columna !== undefined && (columna.tipo === 'ejercito' || columna.participantes.length > 1);
   const soyLider = columna?.liderId === proyeccion.heroeId;
-  cont.innerHTML = `
+  if (!pintar(cont, `
     <button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>
     <span class="faction-kicker">Campamento de mercenarios${tuyo ? ' · tu residencia' : ''}</span>
     <h3>${escaparHtml(campamento.id)}</h3>
@@ -735,7 +734,7 @@ function renderSeleccionMercenarios(cont: HTMLElement, proyeccion: ProyeccionJug
       <button id="btn-entrar-mercenarios" class="btn-primary" type="button"${entraEjercito && !soyLider ? ' disabled' : ''}>${entraEjercito ? 'Entrar con el ejército' : 'Entrar'}</button>
     </div>
     <p class="mapa-lista-vacia">${entraEjercito ? (soyLider ? 'Tu ejército entra entero y se desarma en la puerta: los que residen aquí entran con su tropa y su carro; los demás, de visita, con su columna aparcada. Si lleva caravanas adjuntas, tienen que ser de este lugar.' : 'Solo el Líder hace entrar al ejército.') : 'Se entra con la columna a la puerta.'} Junto al campamento nadie inicia un combate.</p>
-    <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`;
+    <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`, undefined, claveSeleccion())) return;
   cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
   cont.querySelector('#btn-marchar-alli')?.addEventListener('click', () => void marcharAObjetivo({ tipo: 'punto', punto: campamento.posicion }));
   cablearAccionSeleccion(cont, '#btn-entrar-mercenarios', 'entrarEnCampamento', { campamentoId: campamento.id, heroeId: proyeccion.heroeId }, () => { seleccionMapa = null; });
@@ -743,7 +742,7 @@ function renderSeleccionMercenarios(cont: HTMLElement, proyeccion: ProyeccionJug
 
 /** Ficha de un alijo de exploración (Doc 1.9b): se abre estando en el sitio, y su oro va al oro de botín. */
 function renderSeleccionAlijo(cont: HTMLElement, alijo: Alijo): void {
-  cont.innerHTML = `
+  if (!pintar(cont, `
     <button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>
     <span class="faction-kicker">Alijo</span>
     <h3>${alijo.oro} de oro</h3>
@@ -752,7 +751,7 @@ function renderSeleccionAlijo(cont: HTMLElement, alijo: Alijo): void {
       <button id="btn-abrir-alijo" class="btn-primary" type="button">Abrir</button>
     </div>
     <p class="mapa-lista-vacia">Hay que estar en el sitio. El oro va a tu oro de botín.</p>
-    <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`;
+    <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`, undefined, claveSeleccion())) return;
   cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
   cont.querySelector('#btn-marchar-alli')?.addEventListener('click', () => void marcharAObjetivo({ tipo: 'punto', punto: alijo.posicion }));
   cablearAccionSeleccion(cont, '#btn-abrir-alijo', 'abrirAlijo', { alijoId: alijo.id }, () => { seleccionMapa = null; avisoMapa(`Alijo abierto: ${alijo.oro} de oro de botín.`); });
@@ -764,10 +763,7 @@ function renderSeleccionAlijo(cont: HTMLElement, alijo: Alijo): void {
  * toca el DOM, para no llevarse lo que se está escribiendo con el sondeo de 3 s. `repintar` es cómo se vuelve a pintar en ese sitio. */
 function pintarIntel(cont: HTMLElement, p: ProyeccionJugador, repintar: () => void): void {
   const html = renderPanelIntel(p, escaparHtml);
-  if (cont.dataset.pintadoIntel === html && cont.childElementCount > 0) return;
-  cont.innerHTML = html;
-  cont.dataset.pintadoIntel = html;
-  cablearPanelIntel(cont, p, ejecutarYRefrescar, () => { delete cont.dataset.pintadoIntel; repintar(); });
+  pintar(cont, html, () => cablearPanelIntel(cont, p, ejecutarYRefrescar, () => { olvidarEdicion(cont); invalidar(cont); repintar(); }), 'intel');
 }
 
 // --- RIEL DE ICONOS Y MENÚ DE ESQUINA DEL MAPA (T5) ---------------------------------------------
@@ -879,37 +875,30 @@ function renderPanelJugador(forzar = false): void {
   });
   barra.querySelector('[data-ver-mapa]')?.classList.toggle('activo', vistaMapaAbierta);
   pintarAlertas(barra, proyeccion);
-  if (panelJugador !== 'faccion') delete panel.dataset.pintado;
-  if (panelJugador !== 'carro' && panelJugador !== 'avisos') delete panel.dataset.pintadoLista;
-  if (panelJugador === null) { panel.hidden = true; panel.innerHTML = ''; return; }
+  if (panelJugador === null) { panel.hidden = true; vaciar(panel); return; }
   panel.hidden = false;
+  if (forzar) invalidar(panel);
   if (panelJugador === 'carro' || panelJugador === 'avisos') {
     const html = panelJugador === 'carro' ? htmlCarro(proyeccion, escaparHtml) : htmlAvisos(historialDeAvisos(), escaparHtml);
-    const clave = `${panelJugador}|${html}`;
-    if (panel.dataset.pintadoLista === clave && !forzar) return;
-    // En marcha la ración baja cada tick y el carro cambia: no se repinta mientras se escribe una cantidad.
-    if (!forzar && panel.dataset.pintadoLista && panel.contains(document.activeElement) && document.activeElement?.tagName === 'INPUT') return;
-    panel.innerHTML = html;
-    panel.dataset.pintadoLista = clave;
-    if (panelJugador === 'carro') cablearCarro(panel, ejecutarYRefrescar);
-    else {
-      panel.querySelectorAll<HTMLButtonElement>('[data-aviso]').forEach((b) => b.addEventListener('click', () => {
-        const informe = historialDeAvisos()[Number(b.dataset.aviso)]?.informe;
-        if (informe) mostrarInforme(informe);
-      }));
-      marcarAvisosLeidos();
-    }
+    const esCarro = panelJugador === 'carro';
+    // En marcha el carro y la ración cambian con cada tick: se repinta solo si cambió, devolviendo lo que se estaba escribiendo.
+    pintar(panel, html, () => {
+      if (esCarro) cablearCarro(panel, ejecutarYRefrescar);
+      else {
+        panel.querySelectorAll<HTMLButtonElement>('[data-aviso]').forEach((b) => b.addEventListener('click', () => {
+          const informe = historialDeAvisos()[Number(b.dataset.aviso)]?.informe;
+          if (informe) mostrarInforme(informe);
+        }));
+        marcarAvisosLeidos();
+      }
+    }, panelJugador);
     return;
   }
   if (panelJugador === 'faccion') {
     // Creando una Facción o buscando a cuál pedir ingreso, el formulario es del jugador: solo se repinta al cambiar de modo (`forzar`).
     if (!forzar && proyeccion.faccionId === null && panel.querySelector('#form-crear-faccion, #input-buscar-faccion')) return;
     const html = `<div class="mapa-panel-jugador">${escaparHtml(proyeccion.heroe.displayName)}</div>${renderPestanaFaccion(proyeccion, escaparHtml)}`;
-    if (panel.dataset.pintado !== html || forzar) {
-      panel.innerHTML = html;
-      panel.dataset.pintado = html;
-      cablearFaccion(panel, proyeccion, () => { delete panel.dataset.pintado; renderPanelJugador(true); });
-    }
+    pintar(panel, html, () => cablearFaccion(panel, proyeccion, () => renderPanelJugador(true)), 'faccion');
     return;
   }
   pintarPanelHeroe(panel, proyeccion, escaparHtml, aplicarYRefrescar, forzar);
@@ -1026,32 +1015,19 @@ function renderPanelRiel(): void {
   });
   riel.querySelector('[data-panel="fundar"]')?.classList.toggle('destaca', puedeFundar && !tieneAsentamientoPropio(proyeccion));
 
-  if (panelMapaAbierto !== 'columna') delete panel.dataset.pintadoColumna;
-  if (panelMapaAbierto !== 'ejercito') delete panel.dataset.pintadoEjercito;
-  if (panelMapaAbierto === null) { panel.hidden = true; panel.innerHTML = ''; return; }
+  if (panelMapaAbierto === null) { panel.hidden = true; vaciar(panel); return; }
   panel.hidden = false;
   if (panelMapaAbierto === 'columna') {
-    // Como el carro: no se repinta si nada cambió ni mientras se escribe una cantidad.
-    const html = htmlColumna(proyeccion, escaparHtml);
-    if (panel.dataset.pintadoColumna === html) return;
-    if (panel.dataset.pintadoColumna && panel.contains(document.activeElement) && document.activeElement?.tagName === 'INPUT') return;
-    panel.innerHTML = html;
-    panel.dataset.pintadoColumna = html;
-    cablearColumna(panel, proyeccion, ejecutarYRefrescar);
+    pintar(panel, htmlColumna(proyeccion, escaparHtml), () => cablearColumna(panel, proyeccion, ejecutarYRefrescar), 'columna');
   } else if (panelMapaAbierto === 'ejercito') {
-    const html = htmlPanelEjercito(proyeccion, escaparHtml);
-    if (panel.dataset.pintadoEjercito === html) return;
-    if (panel.dataset.pintadoEjercito && panel.contains(document.activeElement) && ['INPUT', 'SELECT'].includes(document.activeElement?.tagName ?? '')) return;
-    panel.innerHTML = html;
-    panel.dataset.pintadoEjercito = html;
-    cablearPanelEjercito(panel, proyeccion, ejecutarYRefrescar, avisoMapa, (punto) => {
+    pintar(panel, htmlPanelEjercito(proyeccion, escaparHtml), () => cablearPanelEjercito(panel, proyeccion, ejecutarYRefrescar, avisoMapa, (punto) => {
       const mapa = estadoCliente.mapaCache?.mapa;
       if (mapa && controlMapaActivo) controlMapaActivo.centrar(punto, mapa.config.ancho, mapa.config.alto);
-    });
+    }), 'ejercito');
   } else if (panelMapaAbierto === 'cosas') {
     const asentamientos = asentamientosDelMapa(proyeccion).filter((a) => a.faccionId === proyeccion.faccionId);
     const columnas = proyeccion.ejercitos;
-    panel.innerHTML = `
+    const htmlCosas = `
       <span class="faction-kicker">Mis cosas</span>
       <div class="mapa-lista">
         <strong>Asentamientos</strong>
@@ -1064,17 +1040,17 @@ function renderPanelRiel(): void {
           ? columnas.map((e) => `<button class="mapa-lista-item" type="button" data-centrar-x="${e.posicionActual.x}" data-centrar-y="${e.posicionActual.y}">${e.participantes.some((p) => p.heroeId === proyeccion.heroeId) ? 'Tu columna' : escaparHtml(e.id)}<span>${e.estado}</span></button>`).join('')
           : '<p class="mapa-lista-vacia">Ninguna.</p>'}
       </div>`;
-    panel.querySelectorAll<HTMLButtonElement>('.mapa-lista-item').forEach((boton) => {
+    pintar(panel, htmlCosas, () => panel.querySelectorAll<HTMLButtonElement>('.mapa-lista-item').forEach((boton) => {
       boton.addEventListener('click', () => {
         const mapa = estadoCliente.mapaCache?.mapa;
         if (mapa && controlMapaActivo) controlMapaActivo.centrar({ x: Number(boton.dataset.centrarX), y: Number(boton.dataset.centrarY) }, mapa.config.ancho, mapa.config.alto);
       });
-    });
+    }), 'cosas');
   } else {
     // fundar: solo con una Caravana de Fundación enganchada, y donde se está (Doc 1.3, 1.8)
     const caravana = caravanaDeFundacion(proyeccion);
     const enganchada = Boolean(caravana && columna?.caravanasAdjuntasIds?.includes(caravana.id));
-    panel.innerHTML = `
+    const htmlFundar = `
       <span class="faction-kicker">Fundar asentamiento</span>
       ${!caravana
         ? '<p>Se funda con una Caravana de Fundación. Tu Facción la compra en un campamento de mercenarios con el fondo de sus héroes, y quien la compra la lleva.</p>'
@@ -1085,12 +1061,14 @@ function renderPanelRiel(): void {
           : `<p>Tu Caravana de Fundación espera en su campamento. Lleva tu columna a la puerta y engánchala.</p>
             <button id="btn-enganchar-caravana" class="btn-primary" type="button">Enganchar caravana</button>`}
       <p id="mapa-fundar-error" class="faction-error" role="alert"></p>`;
-    panel.querySelector('#btn-fundar-aqui')?.addEventListener('click', () => void fundarAqui());
-    panel.querySelector('#btn-enganchar-caravana')?.addEventListener('click', async () => {
-      const mensaje = await ejecutarYRefrescar('adjuntarCaravana', { ejercitoId: columna?.id, caravanaId: caravana?.id, heroeId: proyeccion.heroeId });
-      const error = document.querySelector<HTMLElement>('#mapa-fundar-error');
-      if (error) error.textContent = mensaje ?? '';
-    });
+    pintar(panel, htmlFundar, () => {
+      panel.querySelector('#btn-fundar-aqui')?.addEventListener('click', () => void fundarAqui());
+      panel.querySelector('#btn-enganchar-caravana')?.addEventListener('click', async () => {
+        const mensaje = await ejecutarYRefrescar('adjuntarCaravana', { ejercitoId: columna?.id, caravanaId: caravana?.id, heroeId: proyeccion.heroeId });
+        const error = document.querySelector<HTMLElement>('#mapa-fundar-error');
+        if (error) error.textContent = mensaje ?? '';
+      });
+    }, 'fundar');
   }
 }
 
@@ -1110,8 +1088,7 @@ function pintarComida(p: ProyeccionJugador): void {
   if (!caja) return;
   const columna = p.ejercitos.find((x) => x.participantes.some((y) => y.heroeId === p.heroeId));
   if (!columna) { caja.hidden = true; selectorViveres.abierto = false; return; }
-  if (selectorViveres.abierto && caja.contains(document.activeElement) && document.activeElement?.tagName === 'INPUT') return; // se está escribiendo una cantidad
-  const capacidad = capacidadDeViveres(() => { delete caja.dataset.pintado; pintarComida(p); });
+  const capacidad = capacidadDeViveres(() => { invalidar(caja); pintarComida(p); });
   const viveres = Math.floor(p.heroe.viveres ?? 0);
   const hueco = Math.max(0, capacidad - viveres);
   const enElCarro = Math.floor(columna.suministro?.['trigo'] ?? 0);
@@ -1127,27 +1104,26 @@ function pintarComida(p: ProyeccionJugador): void {
   caja.hidden = false;
   caja.classList.toggle('poca', fraccion < 0.25);
   caja.title = 'Víveres: el trigo que come tu columna: en marcha, media ración; acampada, una décima parte de eso. Sin víveres, la moral cae y la tropa deserta. Siempre van contigo.';
-  if (caja.dataset.pintado === html) return;
-  caja.innerHTML = html;
-  caja.dataset.pintado = html;
   const valor = (): number => Math.max(1, Math.min(maximo, Math.floor(Number(caja.querySelector<HTMLInputElement>('input[data-viveres="cantidad"]')?.value ?? 1)) || 1));
-  caja.querySelector('[data-viveres="abrir"]')?.addEventListener('click', () => { selectorViveres = { abierto: !selectorViveres.abierto, cantidad: maximo || 1 }; delete caja.dataset.pintado; pintarComida(p); });
-  caja.querySelector<HTMLInputElement>('input[data-viveres="barra"]')?.addEventListener('input', (ev) => {
-    selectorViveres.cantidad = Number((ev.target as HTMLInputElement).value);
-    const n = caja.querySelector<HTMLInputElement>('input[data-viveres="cantidad"]'); if (n) n.value = String(selectorViveres.cantidad);
-  });
-  caja.querySelector<HTMLInputElement>('input[data-viveres="cantidad"]')?.addEventListener('input', () => {
-    selectorViveres.cantidad = valor();
-    const b = caja.querySelector<HTMLInputElement>('input[data-viveres="barra"]'); if (b) b.value = String(selectorViveres.cantidad);
-  });
-  caja.querySelector<HTMLButtonElement>('[data-viveres="confirmar"]')?.addEventListener('click', async (ev) => {
-    const boton = ev.currentTarget as HTMLButtonElement;
-    boton.disabled = true;
-    const mensaje = await ejecutarYRefrescar('pasarAViveres', { cantidad: valor() });
-    boton.disabled = false;
-    if (mensaje === null) { selectorViveres.abierto = false; return; }
-    const error = caja.querySelector<HTMLElement>('[data-campo="error-viveres"]'); if (error) error.textContent = mensaje;
-  });
+  pintar(caja, html, () => {
+    caja.querySelector('[data-viveres="abrir"]')?.addEventListener('click', () => { selectorViveres = { abierto: !selectorViveres.abierto, cantidad: maximo || 1 }; pintarComida(p); });
+    caja.querySelector<HTMLInputElement>('input[data-viveres="barra"]')?.addEventListener('input', (ev) => {
+      selectorViveres.cantidad = Number((ev.target as HTMLInputElement).value);
+      const n = caja.querySelector<HTMLInputElement>('input[data-viveres="cantidad"]'); if (n) n.value = String(selectorViveres.cantidad);
+    });
+    caja.querySelector<HTMLInputElement>('input[data-viveres="cantidad"]')?.addEventListener('input', () => {
+      selectorViveres.cantidad = valor();
+      const b = caja.querySelector<HTMLInputElement>('input[data-viveres="barra"]'); if (b) b.value = String(selectorViveres.cantidad);
+    });
+    caja.querySelector<HTMLButtonElement>('[data-viveres="confirmar"]')?.addEventListener('click', async (ev) => {
+      const boton = ev.currentTarget as HTMLButtonElement;
+      boton.disabled = true;
+      const mensaje = await ejecutarYRefrescar('pasarAViveres', { cantidad: valor() });
+      boton.disabled = false;
+      if (mensaje === null) { selectorViveres.abierto = false; return; }
+      const error = caja.querySelector<HTMLElement>('[data-campo="error-viveres"]'); if (error) error.textContent = mensaje;
+    });
+  }, 'viveres');
 }
 
 function montarMapa(): void {
@@ -1260,6 +1236,38 @@ function montarMapa(): void {
 type PanelAsent = 'cargos' | 'intel' | 'salir' | 'escolta' | 'ejercito';
 let panelAsentAbierto: PanelAsent | null = null;
 
+/** ¿Resides en la plaza donde estás? (fundadores y quienes compraron casa: así lo cuenta la proyección). */
+function resideEnLaPlaza(p: ProyeccionJugador, a: Asentamiento): boolean {
+  return [...(a.heroesFundadoresIds ?? []), ...(a.casasCompradas ?? [])].includes(p.heroeId);
+}
+
+/** «Hacer de esta plaza mi base» solo se ofrece en una plaza de tu Facción donde aún no resides. */
+function actualizarBotonResidencia(): void {
+  const boton = document.querySelector<HTMLButtonElement>('#btn-mudarme');
+  const p = estadoCliente.proyeccionUltima;
+  const a = p?.asentamientos[0];
+  if (!boton || !p || !a) return;
+  boton.hidden = !p.faccionId || a.faccionId !== p.faccionId || resideEnLaPlaza(p, a);
+}
+
+/**
+ * Mudar tu base a esta plaza (`cambiarResidencia`, Doc 2.5): atómico, deja la residencia actual (otra plaza de tu Facción o el campamento de mercenarios donde vivas)
+ * y toma esta; tu campamento se muda contigo, tu guarnición se suelta y hay un enfriamiento antes de volver a mudarte. El backend valida Facción, puerta y
+ * enfriamiento, y su motivo se enseña tal cual.
+ */
+async function mudarseAEstaPlaza(): Promise<void> {
+  const p = estadoCliente.proyeccionUltima;
+  const a = p?.asentamientos[0];
+  if (!p || !a) return;
+  const prestadas = p.heroe.escuadrones.filter((s) => s.prestada);
+  const guarnicion = p.heroe.escuadrones.some((s) => s.enGuarnicion);
+  const aviso = `Vas a hacer de ${a.nombre ?? a.id} tu base: dejas de residir donde vives ahora y tu campamento se muda contigo.${prestadas.length > 0 ? ` Se te retira la tropa prestada por tu campamento anterior (${prestadas.map((s) => `${s.nombre}: ${s.cantidad}`).join(', ')}).` : ''}${guarnicion ? ' Tu guarnición se suelta.' : ''} Después hay que esperar un tiempo para volver a mudarte. ¿Seguro?`;
+  const error = document.querySelector<HTMLElement>('#asent-error');
+  if (!confirm(aviso)) return;
+  const mensaje = await ejecutarYRefrescar('cambiarResidencia', { destinoId: a.id, heroeId: p.heroeId });
+  if (error) error.textContent = mensaje ?? '';
+}
+
 /** Salir al mundo desde tu residencia (Doc 1.10.2) con la tropa y la carga elegidas en el panel «Salir al mundo». */
 async function salirAlMundo(escuadronIds: string[], carga: Record<string, number>): Promise<void> {
   const proyeccion = estadoCliente.proyeccionUltima;
@@ -1278,22 +1286,17 @@ async function salirAlMundo(escuadronIds: string[], carga: Record<string, number
 
 /** Panel «Salir al mundo» de la plaza: tropa que sacas y carga del almacén de la plaza (el backend reserva el trigo que necesita la tropa que se queda). */
 function pintarSalidaAsentamiento(panel: HTMLElement, p: ProyeccionJugador, asentamiento: Asentamiento): void {
-  // En un ejército en preparación solo se ve ese panel (se repinta cuando cambia: llegan integrantes y peticiones).
+  const repintarSalida = (): void => { const q = estadoCliente.proyeccionUltima; if (q) pintarSalidaAsentamiento(panel, q, asentamiento); };
+  // En un ejército en preparación solo se ve ese panel (cambia cuando llegan integrantes, peticiones o cambios de tropa).
   const preparacion = htmlPreparacion(p, escaparHtml);
   if (preparacion) {
-    if (panel.dataset.pintado === 'prep:' + preparacion) return;
-    panel.dataset.pintado = 'prep:' + preparacion;
-    panel.innerHTML = preparacion;
-    cablearPreparacion(panel, p, ejecutarYRefrescar, avisoMapa, () => { delete panel.dataset.pintado; const q = estadoCliente.proyeccionUltima; if (q) pintarSalidaAsentamiento(panel, q, asentamiento); });
+    pintar(panel, preparacion, () => cablearPreparacion(panel, p, ejecutarYRefrescar, avisoMapa, repintarSalida), 'preparacion');
     return;
   }
   const leerSeleccion = () => ({ escuadronIds: Array.from(panel.querySelectorAll<HTMLInputElement>('input[data-salir-escuadra]:checked')).map((i) => i.dataset.salirEscuadra!), carga: leerCarga(panel) });
-  // El formulario no se repinta con el sondeo (perdería lo que estás eligiendo); solo la lista de ejércitos que se preparan.
-  if (panel.dataset.pintado === 'salir') { actualizarConvocatorias(panel, p, leerSeleccion, ejecutarYRefrescar, avisoMapa, escaparHtml); return; }
-  panel.dataset.pintado = 'salir';
   const tropa = p.heroe.escuadrones.filter((s) => s.contenedor.tipo === 'campamento' && !s.enGuarnicion && s.cantidad > 0);
   const almacen = Object.fromEntries(Object.entries(asentamiento.almacen ?? {}).map(([r, v]) => [r, v.cantidad]));
-  panel.innerHTML = `<span class="faction-kicker">Salir al mundo</span>
+  const html = `<span class="faction-kicker">Salir al mundo</span>
     <strong class="heroe-sub">Tropa que sacas</strong>
     <div class="mapa-lista">${tropa.length > 0
       ? tropa.map((s) => `<label class="mapa-lista-item"><div><strong>${escaparHtml(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres</span></div><input type="checkbox" data-salir-escuadra="${escaparHtml(s.id)}" checked /></label>`).join('')
@@ -1302,10 +1305,13 @@ function pintarSalidaAsentamiento(panel: HTMLElement, p: ProyeccionJugador, asen
     ${htmlCargaDeSalida(almacen, 'el almacén de la plaza', escaparHtml)}
     <button class="btn-primary" type="button" data-salir>Salir</button>
     <p class="faction-error" data-campo="error-salida" role="alert"></p>`;
-  cablearCargaDeSalida(panel);
-  const boton = panel.querySelector<HTMLButtonElement>('[data-salir]');
-  boton?.addEventListener('click', () => void salirAlMundo(leerSeleccion().escuadronIds, leerSeleccion().carga));
-  cablearSalidaComoEjercito(panel, p, boton, 'Salir', leerSeleccion, ejecutarYRefrescar, avisoMapa);
+  // El almacén de la plaza cambia con el sondeo: se repinta solo si cambió y lo marcado (tropa, carga, modo) vuelve a su sitio.
+  pintar(panel, html, () => {
+    cablearCargaDeSalida(panel);
+    const boton = panel.querySelector<HTMLButtonElement>('[data-salir]');
+    boton?.addEventListener('click', () => void salirAlMundo(leerSeleccion().escuadronIds, leerSeleccion().carga));
+    cablearSalidaComoEjercito(panel, p, boton, 'Salir', leerSeleccion, ejecutarYRefrescar, avisoMapa);
+  }, 'salir');
   actualizarConvocatorias(panel, p, leerSeleccion, ejecutarYRefrescar, avisoMapa, escaparHtml);
 }
 
@@ -1375,7 +1381,7 @@ function renderPanelEdificios(): void {
     .map((s) => `<button class="asent-tab${s === seccionAsent ? ' activo' : ''}" type="button" data-seccion="${s}">${ETIQUETA_SECCION[s]}</button>`)
     .join('');
 
-  contenedor.innerHTML = `
+  const htmlLado = `
     <div class="asent-tabs">${tabs}</div>
     <div class="asent-lado-cuerpo">${
       seccionAsent === 'resumen'
@@ -1389,10 +1395,13 @@ function renderPanelEdificios(): void {
     ${!puedeConstruir && (seccionAsent === 'edificios' || seccionAsent === 'cola') ? '<p class="asent-lado-nota">Necesitas ser Gobernador o Maestro de Obras para gestionar la construcción.</p>' : ''}
     <p id="asent-lado-error" class="faction-error" role="alert"></p>`;
 
-  contenedor.querySelectorAll<HTMLButtonElement>('.asent-tab').forEach((boton) => {
-    boton.addEventListener('click', () => { seccionAsent = boton.dataset.seccion as SeccionAsent; renderPanelEdificios(); });
-  });
-  cablearAccionesAsentLado(contenedor, asentamiento, cargo);
+  // Solo se repinta si cambió (la ciudad produce a cada tick), y lo elegido en los formularios vuelve a su sitio.
+  pintar(contenedor, htmlLado, () => {
+    contenedor.querySelectorAll<HTMLButtonElement>('.asent-tab').forEach((boton) => {
+      boton.addEventListener('click', () => { seccionAsent = boton.dataset.seccion as SeccionAsent; renderPanelEdificios(); });
+    });
+    cablearAccionesAsentLado(contenedor, asentamiento, cargo);
+  }, seccionAsent);
 }
 
 function seccionResumen(a: Asentamiento): string {
@@ -1578,11 +1587,11 @@ function renderPanelRecursos(): void {
     .sort(([a], [b]) => a.localeCompare(b));
   if (items.length === 0) {
     contenedor.hidden = true;
-    contenedor.innerHTML = '';
+    vaciar(contenedor);
     return;
   }
   contenedor.hidden = false;
-  contenedor.innerHTML = items
+  const htmlRecursos = items
     .map(([recurso, { cantidad, capacidad }]) => {
       const llenado = capacidad > 0 ? Math.min(100, Math.round((cantidad / capacidad) * 100)) : 0;
       const casiLleno = llenado >= 90;
@@ -1594,6 +1603,7 @@ function renderPanelRecursos(): void {
       </span>`;
     })
     .join('');
+  pintar(contenedor, htmlRecursos, undefined, 'recursos');
 }
 
 /** Pinta el panel flotante de la barra (Facción / Ejército) según `panelAsentAbierto`. */
@@ -1605,29 +1615,18 @@ function renderPanelAsent(): void {
   barra.querySelectorAll<HTMLButtonElement>('[data-panel-asent]').forEach((boton) => {
     boton.classList.toggle('activo', boton.dataset.panelAsent === panelAsentAbierto);
   });
-  if (panelAsentAbierto === null) { panel.hidden = true; panel.innerHTML = ''; delete panel.dataset.pintado; delete panel.dataset.pintadoEscolta; delete panel.dataset.pintadoEjercito; return; }
+  if (panelAsentAbierto === null) { panel.hidden = true; vaciar(panel); return; }
   panel.hidden = false;
-  if (panelAsentAbierto !== 'salir') delete panel.dataset.pintado;
-  if (panelAsentAbierto !== 'escolta') delete panel.dataset.pintadoEscolta;
-  if (panelAsentAbierto !== 'ejercito') delete panel.dataset.pintadoEjercito;
   if (panelAsentAbierto === 'ejercito') {
     const asentamiento = proyeccion.asentamientos[0];
     if (!asentamiento) return;
-    const html = htmlUnirseDesdePlaza(proyeccion, asentamiento, escaparHtml);
-    if (panel.dataset.pintadoEjercito === html) return;
-    panel.innerHTML = html;
-    panel.dataset.pintadoEjercito = html;
-    cablearUnirseDesdePlaza(panel, proyeccion, asentamiento, ejecutarYRefrescar);
+    pintar(panel, htmlUnirseDesdePlaza(proyeccion, asentamiento, escaparHtml), () => cablearUnirseDesdePlaza(panel, proyeccion, asentamiento, ejecutarYRefrescar), 'ejercito');
     return;
   }
   if (panelAsentAbierto === 'escolta') {
     const asentamiento = proyeccion.asentamientos[0];
     if (!asentamiento) return;
-    const html = htmlEscolta(proyeccion, asentamiento, escaparHtml);
-    if (panel.dataset.pintadoEscolta === html) return;
-    panel.innerHTML = html;
-    panel.dataset.pintadoEscolta = html;
-    cablearEscolta(panel, proyeccion, ejecutarYRefrescar);
+    pintar(panel, htmlEscolta(proyeccion, asentamiento, escaparHtml), () => cablearEscolta(panel, proyeccion, ejecutarYRefrescar), 'escolta');
     return;
   }
   if (panelAsentAbierto === 'salir') {
@@ -1639,8 +1638,8 @@ function renderPanelAsent(): void {
     pintarIntel(panel, proyeccion, renderPanelAsent);
     return;
   }
-  panel.innerHTML = renderCargosAsentamiento(proyeccion.asentamientos[0], proyeccion) || '<span class="faction-kicker">Cargos</span><p class="mapa-lista-vacia">No tienes cargos que asignar en esta plaza: el Rey nombra al Gobernador y el Gobernador, al resto.</p>';
-  cablearCargosAsentamiento(panel, proyeccion.asentamientos[0]);
+  const htmlCargos = renderCargosAsentamiento(proyeccion.asentamientos[0], proyeccion) || '<span class="faction-kicker">Cargos</span><p class="mapa-lista-vacia">No tienes cargos que asignar en esta plaza: el Rey nombra al Gobernador y el Gobernador, al resto.</p>';
+  pintar(panel, htmlCargos, () => cablearCargosAsentamiento(panel, proyeccion.asentamientos[0]), 'cargos');
 }
 
 /** Sección "Cargos" del panel de Facción, acotada al asentamiento que se pisa. Solo aparecen los cargos que
@@ -1723,6 +1722,7 @@ function montarAsentamiento(): void {
         <button type="button" data-panel-asent="intel">Taberna e intel</button>
         <button type="button" data-panel-asent="escolta">Escolta</button>
         <button type="button" data-panel-asent="ejercito">Ejércitos</button>
+        <button id="btn-mudarme" class="btn-secondary" type="button" hidden title="Hacer de esta plaza tu base: tu campamento se muda contigo">Hacer de esta plaza mi base</button>
         <button id="btn-salir-mundo" class="btn-primary" type="button">Salir al mundo</button>
       </div>
       <p id="asent-error" class="faction-error" role="alert"></p>
@@ -1748,6 +1748,7 @@ function montarAsentamiento(): void {
       renderPanelAsent();
     });
   });
+  contenedor.querySelector('#btn-mudarme')?.addEventListener('click', () => void mudarseAEstaPlaza());
   contenedor.querySelector('#btn-salir-mundo')?.addEventListener('click', () => {
     panelAsentAbierto = panelAsentAbierto === 'salir' ? null : 'salir';
     menuEsquinaAbierto = false;
@@ -2067,7 +2068,7 @@ function refrescarPantalla(pantalla: Pantalla): void {
   }
   if (pantalla === 'mapa') { pintarComida(proyeccion); void dibujarPantallaSegunModo(proyeccion); renderSeleccionMapa(); renderPanelRiel(); return; }
   if (pantalla === 'campamento') { const c = campamentoActual(proyeccion); if (c) pintarCampamento(proyeccion, c); return; }
-  if (pantalla === 'asentamiento') { void dibujarPantallaSegunModo(proyeccion); renderPanelEdificios(); renderPanelRecursos(); renderPanelAsent(); return; }
+  if (pantalla === 'asentamiento') { actualizarBotonResidencia(); void dibujarPantallaSegunModo(proyeccion); renderPanelEdificios(); renderPanelRecursos(); renderPanelAsent(); return; }
   if (pantalla !== 'legacy') return;
   renderizarPanelInteraccion(proyeccion);
   void dibujarPantallaSegunModo(proyeccion);

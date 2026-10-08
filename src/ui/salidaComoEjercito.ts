@@ -6,6 +6,7 @@
 import type { ProyeccionJugador } from '../apiCliente';
 import { htmlConvocatoriasAbiertas } from './convocatoria';
 import { POLITICA } from './ejercitos';
+import { pintar } from './repintado';
 import type { Ejecutar } from './panelCarro';
 
 type Escapar = (valor: string) => string;
@@ -76,12 +77,9 @@ export function actualizarConvocatorias(raiz: ParentNode, p: ProyeccionJugador, 
   const lista = raiz.querySelector<HTMLElement>('[data-lista-convocatorias]');
   if (!lista) return;
   const html = htmlConvocatoriasAbiertas(p, escapar);
-  if (lista.dataset.pintado === html) return;
-  lista.dataset.pintado = html;
-  lista.innerHTML = html;
-  lista.querySelectorAll<HTMLButtonElement>('[data-unirse-conv]').forEach((b) => b.addEventListener('click', async () => {
+  pintar(lista, html, () => lista.querySelectorAll<HTMLButtonElement>('[data-unirse-conv]').forEach((b) => b.addEventListener('click', async () => {
     b.disabled = true;
     const mensaje = await ejecutar('unirseAConvocatoria', { heroeId: p.heroeId, convocatoriaId: b.dataset.unirseConv, ...leerSeleccion() });
     if (mensaje) { b.disabled = false; avisar(mensaje); }
-  }));
+  })));
 }
