@@ -1076,7 +1076,7 @@ function pintarComida(p: ProyeccionJugador): void {
     ${selectorViveres.abierto ? `<div class="mapa-comida-selector"><span>Trigo del carro: ${enElCarro} · cabe ${hueco}</span><input type="range" min="1" max="${maximo}" value="${selectorViveres.cantidad}" data-viveres="barra" /><input type="number" class="form-input" min="1" max="${maximo}" value="${selectorViveres.cantidad}" data-viveres="cantidad" /><button type="button" class="btn-primary" data-viveres="confirmar">Pasar a víveres</button><p class="faction-error" data-campo="error-viveres" role="alert"></p></div>` : ''}`;
   caja.hidden = false;
   caja.classList.toggle('poca', fraccion < 0.25);
-  caja.title = 'Víveres: el trigo que come tu columna mientras marcha. Sin víveres, la moral cae y la tropa deserta. Siempre van contigo.';
+  caja.title = 'Víveres: el trigo que come tu columna: en marcha, media ración; acampada, una décima parte de eso. Sin víveres, la moral cae y la tropa deserta. Siempre van contigo.';
   if (caja.dataset.pintado === html) return;
   caja.innerHTML = html;
   caja.dataset.pintado = html;
