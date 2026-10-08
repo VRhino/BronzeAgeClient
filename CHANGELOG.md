@@ -3,6 +3,17 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.21.0] — 2026-10-08 · formar y unirse a ejércitos · sync con `BronzeAgeFase0@74413b0` (`main`, sin push)
+
+### Añadido
+- **Panel ⚑ «Ejército»** en el riel del mapa (`ui/ejercitos.ts`), con lo que toca según tu columna: personal (organizar un ejército o unirte), formación (cancelar / separarme), ejército (Líder: responder peticiones, acampar, replegar, ceder el mando; el resto: separarme). Lista los ejércitos y formaciones de tu Facción con Líder, héroes, estado, política de unión y distancia; «Unirme» se desactiva con el motivo (lejos, columna no personal, cerrado, sin Facción, petición ya enviada).
+- **Unirse a un ejército ya formado** (antes solo se podía a las formaciones): desde el panel o seleccionándolo en el mapa (ficha). Con política «decide el Líder» el solicitante ve «Petición enviada» y el **Líder recibe el aviso al momento** (evento `columna.union_pedida` con `liderId`, y sondeo de respaldo) con Aceptar/Rechazar y cuenta atrás. Avisos de aceptada/rechazada al solicitante.
+- **Salir como ejército** desde un campamento (`salirDelCampamento` con política y destino) y desde tu plaza (`movilizarEjercito`, con `carga` del carro): «Columna personal / Ejército», política (abierto, decide el Líder; cerrado solo desde la plaza) y destino elegido con un clic en el mapa del mundo (`ui/salidaComoEjercito.ts`).
+- **Unirse desde tu plaza** (`unirseAEjercito`): botón «Ejércitos» en la plaza, con la tropa que aportas y los ejércitos de tu Facción a ≤ 60 de ella (`ui/unirseDesdePlaza.ts`). El backend aún no aplica la política de unión desde la plaza, y el cliente tampoco la oculta.
+
+### Cambiado
+- «Mi columna» sale de «Mis cosas» y vive en el panel ⚑.
+
 ## [0.20.0] — 2026-10-08 · víveres · sync con `BronzeAgeFase0@b7c097a` (`main`, sin push; BALANCE_VERSION 13)
 
 ### Cambiado

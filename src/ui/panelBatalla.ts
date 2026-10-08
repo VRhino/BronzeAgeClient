@@ -2,14 +2,12 @@
 // «Mi columna» de «Mis cosas». Aquí no se decide ninguna regla: el backend valida quién puede unirse y a qué bando; este panel solo ofrece
 // los botones que tienen sentido y deja su rechazo (`batalla.invalida`, `movilizacion.invalida`…) en el propio panel.
 import type { ProyeccionJugador } from '../apiCliente';
-import type { BatallaVisible, Ejercito, EjercitoAvistado } from '../tiposDominio';
+import type { BatallaVisible, EjercitoAvistado } from '../tiposDominio';
 import { crearEnvio, type Ejecutar } from './panelAnexion';
+import { MINIMO_FORMACION } from './ejercitos';
 
 type Escapar = (valor: string) => string;
 
-const MINUTO = 60_000;
-/** Héroes que hacen falta para que una formación sea un ejército (`FORMACION_EJERCITO.minimo` del backend). */
-export const MINIMO_FORMACION = 3;
 
 /** Qué clase de batalla es, con la palabra que usa el canon (Doc 5.15.1b). */
 export function nombreDeBatalla(batalla: BatallaVisible): string {
@@ -97,35 +95,4 @@ export function cablearFichaFormacion(raiz: ParentNode, proyeccion: ProyeccionJu
   const enviar = crearEnvio(raiz, 'mapa-seleccion-error', ejecutar, avisar);
   const boton = raiz.querySelector<HTMLButtonElement>('#btn-unirse-formacion');
   boton?.addEventListener('click', () => void enviar(boton, 'unirseEnCampo', { ejercitoId: formacion.id, heroeId: proyeccion.heroeId }));
-}
-
-/** «Mi columna» en «Mis cosas»: organizar un ejército en campo, o lo que toca según el estado de la formación. Vacío sin columna. */
-export function htmlMiColumna(proyeccion: ProyeccionJugador, columna: Ejercito | undefined): string {
-  if (!columna) return '';
-  const lider = columna.liderId === proyeccion.heroeId;
-  const kicker = '<strong>Mi columna</strong>';
-  if (columna.formacion) {
-    const minutos = Math.max(0, Math.ceil((columna.formacion.expiraEn - proyeccion.instante) / MINUTO));
-    return `${kicker}<div class="mapa-lista"><p class="mapa-lista-vacia">Formación: ${columna.participantes.length}/${MINIMO_FORMACION} héroes. Se deshace en ${minutos} min si no llegáis a ${MINIMO_FORMACION}.</p>
-      ${lider ? '<button id="btn-cancelar-formacion" class="btn-secondary" type="button">Cancelar la formación</button>' : '<button id="btn-separarme" class="btn-secondary" type="button">Separarme</button>'}</div>`;
-  }
-  if (columna.destinoPendiente) {
-    return `${kicker}<p class="mapa-lista-vacia">${lider ? 'Tu ejército está formado: haz clic en el mapa para fijar su destino. Solo se fija una vez.' : 'El ejército está formado: espera a que su Líder fije el destino.'}</p>`;
-  }
-  if (columna.tipo === 'personal' && columna.participantes.length === 1) {
-    return `${kicker}<div class="mapa-lista"><p class="mapa-lista-vacia">Con otros dos héroes de tu Facción puedes formar un ejército aquí, sin pasar por una plaza. Te quedas quieto hasta que se unan.</p>
-      <button id="btn-organizar" class="btn-secondary" type="button" data-politica="aceptar">Organizar ejército (abierto)</button>
-      <button id="btn-organizar-pregunta" class="btn-secondary" type="button" data-politica="preguntar">Organizar ejército (decido yo)</button></div>`;
-  }
-  return '';
-}
-
-export function cablearMiColumna(raiz: ParentNode, proyeccion: ProyeccionJugador, ejecutar: Ejecutar, avisar: (mensaje: string) => void): void {
-  const enviar = crearEnvio(raiz, 'mapa-cosas-error', ejecutar, avisar);
-  raiz.querySelectorAll<HTMLButtonElement>('[data-politica]').forEach((b) =>
-    b.addEventListener('click', () => void enviar(b, 'organizarEjercito', { heroeId: proyeccion.heroeId, politicaDeUnion: b.dataset.politica })));
-  const cancelar = raiz.querySelector<HTMLButtonElement>('#btn-cancelar-formacion');
-  cancelar?.addEventListener('click', () => void enviar(cancelar, 'cancelarFormacion', { heroeId: proyeccion.heroeId }));
-  const separar = raiz.querySelector<HTMLButtonElement>('#btn-separarme');
-  separar?.addEventListener('click', () => void enviar(separar, 'separarseDelEjercito', { heroeId: proyeccion.heroeId }));
 }

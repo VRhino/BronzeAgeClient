@@ -234,6 +234,10 @@ export interface Ejercito {
   formacion?: { expiraEn: number };
   /** Un ejército recién formado en campo que aún no tiene destino: su Líder lo fija una vez con un clic en el mapa. */
   destinoPendiente?: boolean;
+  /** Quién puede unirse en campo (Doc 5.14.1): la fija el Líder al formar y no cambia. */
+  politicaDeUnion?: 'rechazar' | 'aceptar' | 'preguntar';
+  /** Con política `preguntar`: las peticiones vivas al Líder (caducan a los 10 s; el backend no las borra, se miran contra el instante de mundo). */
+  peticionesDeUnion?: { heroeId: string; pedidoEn: number; expiraEn: number }[];
 }
 
 /**

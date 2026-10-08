@@ -36,7 +36,10 @@ import { renderPestanaFaccion } from './ui/pestanaFaccion';
 import { cablearAnexion } from './ui/panelAnexion';
 import { cablearFusion } from './ui/panelFusion';
 import { cablearAdmision } from './ui/panelAdmision';
-import { cablearFichaBatalla, cablearFichaFormacion, cablearMiColumna, formacionesVisibles, htmlFichaBatalla, htmlFichaFormacion, htmlMiColumna } from './ui/panelBatalla';
+import { cablearFichaBatalla, cablearFichaFormacion, formacionesVisibles, htmlFichaBatalla, htmlFichaFormacion } from './ui/panelBatalla';
+import { cablearPanelEjercito, ejercitosDeLaFaccion, htmlFichaEjercito, htmlPanelEjercito, peticionesNuevas } from './ui/ejercitos';
+import { cablearSalidaComoEjercito, htmlSalidaComoEjercito, paramsDeSalida, saleComoEjercito } from './ui/salidaComoEjercito';
+import { cablearUnirseDesdePlaza, htmlUnirseDesdePlaza } from './ui/unirseDesdePlaza';
 import { instalarZoomPan, type ControlMapa } from './ui/pantallaMapa';
 import { alCambiarAvisos, alLlegarInforme, avisarDeEventos, avisosNoLeidos, historialDeAvisos, marcarAvisosLeidos, mostrar as mostrarAviso, reiniciarAvisos } from './ui/avisos';
 import { htmlInforme, type InformeDeCombate } from './ui/informeCombate';
@@ -386,6 +389,7 @@ function pintarCampamento(p: ProyeccionJugador, campamento: CampamentoMercenario
       if (estadoCliente.proyeccionUltima) pintarCampamento(estadoCliente.proyeccionUltima, campamento);
     }));
     cablearCampamento(lado, p, campamento, ejecutarYRefrescar, {
+      elegirDestino: elegirDestinoEnMapa,
       ejecutarConDatos: ejecutarConDatosYRefrescar,
       repintar: () => { delete lado.dataset.pintado; if (estadoCliente.proyeccionUltima) pintarCampamento(estadoCliente.proyeccionUltima, campamento); },
     });
@@ -463,7 +467,7 @@ function puntoDeMapa(evento: { clientX: number; clientY: number }, canvas: HTMLC
 
 /** Lo seleccionado en el mapa —un asentamiento o un campamento de bandidos— (abre el panel de Selección). Fuera del
  * `estadoCliente` porque solo vive mientras la pantalla Mapa está montada. */
-let seleccionMapa: { tipo: 'asentamiento' | 'campamento' | 'mercenarios' | 'alijo' | 'batalla' | 'formacion'; id: string } | null = null;
+let seleccionMapa: { tipo: 'asentamiento' | 'campamento' | 'mercenarios' | 'alijo' | 'batalla' | 'formacion' | 'ejercito'; id: string } | null = null;
 let avisoMapaTimer: ReturnType<typeof setTimeout> | undefined;
 
 function avisoMapa(texto: string): void {
@@ -508,6 +512,14 @@ function renderSeleccionMapa(): void {
     cont.innerHTML = htmlFichaFormacion(proyeccion, formacion, escaparHtml);
     cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
     cablearFichaFormacion(cont, proyeccion, formacion, ejecutarYRefrescar, avisoMapa);
+    return;
+  }
+  const ejercito = seleccionMapa?.tipo === 'ejercito' ? proyeccion?.ejercitos.find((x) => x.id === seleccionMapa!.id) : undefined;
+  if (proyeccion && ejercito) {
+    cont.hidden = false;
+    cont.innerHTML = htmlFichaEjercito(proyeccion, ejercito, escaparHtml);
+    cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
+    cablearPanelEjercito(cont, proyeccion, ejecutarYRefrescar, avisoMapa);
     return;
   }
   const campamento = seleccionMapa?.tipo === 'campamento' ? proyeccion?.campamentosBandidos.find((c) => c.id === seleccionMapa!.id) : undefined;
@@ -731,7 +743,7 @@ function pintarIntel(cont: HTMLElement, p: ProyeccionJugador, repintar: () => vo
 
 // --- RIEL DE ICONOS Y MENÚ DE ESQUINA DEL MAPA (T5) ---------------------------------------------
 
-type PanelRiel = 'columna' | 'cosas' | 'fundar';
+type PanelRiel = 'columna' | 'ejercito' | 'cosas' | 'fundar';
 let panelMapaAbierto: PanelRiel | null = null;
 let menuEsquinaAbierto = false;
 let controlMapaActivo: ControlMapa | null = null;
@@ -930,11 +942,21 @@ function posicionDelHeroe(p: ProyeccionJugador): { x: number; y: number } | null
 
 /** Abre o cierra el mapa del mundo sobre la pantalla de dentro. Es el mismo mapa que el de fuera, con la visión de ahora, pero solo para mirar:
  * un clic no manda marchar a nadie. */
+/** Si no es `null`, el próximo clic en el mapa interior elige el destino de un ejército (lo pide «Salir como ejército») y se llama con ese punto. */
+let eligiendoDestino: ((punto: { x: number; y: number }) => void) | null = null;
+
+/** Abre el mapa del mundo sobre la pantalla de dentro y espera un clic: ese punto es el destino del ejército. */
+function elegirDestinoEnMapa(alElegir: (punto: { x: number; y: number }) => void): void {
+  eligiendoDestino = alElegir;
+  alternarVistaMapa(true);
+}
+
 function alternarVistaMapa(abrir: boolean = !vistaMapaAbierta): void {
   const pantalla = document.querySelector<HTMLElement>('.asent-screen');
   const proyeccion = estadoCliente.proyeccionUltima;
   if (!pantalla || !proyeccion) return;
   vistaMapaAbierta = abrir;
+  if (!abrir) eligiendoDestino = null;
   controlVistaMapa?.destruir();
   controlVistaMapa = null;
   pantalla.querySelector('.mapa-interior')?.remove();
@@ -943,9 +965,19 @@ function alternarVistaMapa(abrir: boolean = !vistaMapaAbierta): void {
       <div class="mapa-lienzo"><canvas id="mapa-interior" width="900" height="900"></canvas></div>
       <div class="mapa-zoom"><button type="button" data-zoom="in" aria-label="Acercar">+</button><button type="button" data-zoom="out" aria-label="Alejar">−</button></div>
       <button class="btn-secondary mapa-interior-cerrar" type="button">Volver</button>
+      ${eligiendoDestino ? '<p class="mapa-interior-aviso">Haz clic en el mapa para elegir el destino del ejército</p>' : ''}
     </div>`);
     const interior = pantalla.querySelector<HTMLElement>('.mapa-interior')!;
-    const control = instalarZoomPan(interior, interior.querySelector<HTMLElement>('.mapa-lienzo')!, { zoomInicial: 1.6 });
+    const alClicarInterior = (evento: PointerEvent): void => {
+      const mapa = estadoCliente.mapaCache?.mapa;
+      const canvas = interior.querySelector<HTMLCanvasElement>('#mapa-interior');
+      if (!eligiendoDestino || !mapa || !canvas) return;
+      const alElegir = eligiendoDestino;
+      eligiendoDestino = null;
+      alElegir(puntoDeMapa(evento, canvas, mapa));
+      alternarVistaMapa(false);
+    };
+    const control = instalarZoomPan(interior, interior.querySelector<HTMLElement>('.mapa-lienzo')!, { zoomInicial: 1.6, alClicar: alClicarInterior });
     controlVistaMapa = control;
     interior.querySelectorAll<HTMLButtonElement>('[data-zoom]').forEach((b) => b.addEventListener('click', () => control.zoomHacia(b.dataset.zoom === 'in' ? 1 : -1)));
     interior.querySelector('.mapa-interior-cerrar')?.addEventListener('click', () => alternarVistaMapa(false));
@@ -986,6 +1018,7 @@ function renderPanelRiel(): void {
   riel.querySelector('[data-panel="fundar"]')?.classList.toggle('destaca', puedeFundar && !tieneAsentamientoPropio(proyeccion));
 
   if (panelMapaAbierto !== 'columna') delete panel.dataset.pintadoColumna;
+  if (panelMapaAbierto !== 'ejercito') delete panel.dataset.pintadoEjercito;
   if (panelMapaAbierto === null) { panel.hidden = true; panel.innerHTML = ''; return; }
   panel.hidden = false;
   if (panelMapaAbierto === 'columna') {
@@ -996,6 +1029,16 @@ function renderPanelRiel(): void {
     panel.innerHTML = html;
     panel.dataset.pintadoColumna = html;
     cablearColumna(panel, proyeccion, ejecutarYRefrescar);
+  } else if (panelMapaAbierto === 'ejercito') {
+    const html = htmlPanelEjercito(proyeccion, escaparHtml);
+    if (panel.dataset.pintadoEjercito === html) return;
+    if (panel.dataset.pintadoEjercito && panel.contains(document.activeElement) && ['INPUT', 'SELECT'].includes(document.activeElement?.tagName ?? '')) return;
+    panel.innerHTML = html;
+    panel.dataset.pintadoEjercito = html;
+    cablearPanelEjercito(panel, proyeccion, ejecutarYRefrescar, avisoMapa, (punto) => {
+      const mapa = estadoCliente.mapaCache?.mapa;
+      if (mapa && controlMapaActivo) controlMapaActivo.centrar(punto, mapa.config.ancho, mapa.config.alto);
+    });
   } else if (panelMapaAbierto === 'cosas') {
     const asentamientos = asentamientosDelMapa(proyeccion).filter((a) => a.faccionId === proyeccion.faccionId);
     const columnas = proyeccion.ejercitos;
@@ -1006,14 +1049,12 @@ function renderPanelRiel(): void {
         ${asentamientos.length > 0
           ? asentamientos.map((a) => `<button class="mapa-lista-item" type="button" data-centrar-x="${a.posicion.x}" data-centrar-y="${a.posicion.y}">${escaparHtml(a.nombre ?? a.id)}<span>Nivel ${a.nivel}${a.recordado !== null ? ' · recordado' : ''}</span></button>`).join('')
           : '<p class="mapa-lista-vacia">Ninguno a la vista.</p>'}
-        ${htmlMiColumna(proyeccion, columna)}
         <p id="mapa-cosas-error" class="faction-error" role="alert"></p>
         <strong>Columnas</strong>
         ${columnas.length > 0
           ? columnas.map((e) => `<button class="mapa-lista-item" type="button" data-centrar-x="${e.posicionActual.x}" data-centrar-y="${e.posicionActual.y}">${e.participantes.some((p) => p.heroeId === proyeccion.heroeId) ? 'Tu columna' : escaparHtml(e.id)}<span>${e.estado}</span></button>`).join('')
           : '<p class="mapa-lista-vacia">Ninguna.</p>'}
       </div>`;
-    cablearMiColumna(panel, proyeccion, ejecutarYRefrescar, avisoMapa);
     panel.querySelectorAll<HTMLButtonElement>('.mapa-lista-item').forEach((boton) => {
       boton.addEventListener('click', () => {
         const mapa = estadoCliente.mapaCache?.mapa;
@@ -1112,6 +1153,7 @@ function montarMapa(): void {
     ${htmlBarraJugador(proyeccion, false, escaparHtml)}
     <nav class="mapa-riel" aria-label="Paneles del mapa">
       <button type="button" data-panel="columna" title="Lo que llevas: tropa y carro" aria-label="Lo que llevas: tropa y carro">⚔</button>
+      <button type="button" data-panel="ejercito" title="Ejército: formar uno o unirte a uno" aria-label="Ejército">⚑</button>
       <button type="button" data-panel="cosas" title="Mis cosas" aria-label="Mis cosas">📍</button>
       <button type="button" data-panel="fundar" title="Fundar asentamiento" aria-label="Fundar asentamiento" hidden>⌂</button>
     </nav>
@@ -1138,6 +1180,13 @@ function montarMapa(): void {
       seleccionMapa = batalla ? { tipo: 'batalla', id: batalla.battleId } : { tipo: 'formacion', id: formacion!.id };
       renderSeleccionMapa();
       void marcharAObjetivo({ tipo: 'punto', punto: batalla ? batalla.punto : formacion!.posicionActual });
+      return;
+    }
+    const delEjercito = cercano(ejercitosDeLaFaccion(proy).filter((x) => !x.formacion).map((x) => ({ ...x, posicion: x.posicionActual })), punto, 20);
+    if (delEjercito) {
+      seleccionMapa = { tipo: 'ejercito', id: delEjercito.id };
+      renderSeleccionMapa();
+      void marcharAObjetivo({ tipo: 'punto', punto: delEjercito.posicionActual });
       return;
     }
     const alijo = cercano(proy.alijos ?? [], punto, 15);
@@ -1199,7 +1248,7 @@ function montarMapa(): void {
 
 // --- PANTALLA ASENTAMIENTO (T6) -----------------------------------------------------------------
 
-type PanelAsent = 'cargos' | 'intel' | 'salir' | 'escolta';
+type PanelAsent = 'cargos' | 'intel' | 'salir' | 'escolta' | 'ejercito';
 let panelAsentAbierto: PanelAsent | null = null;
 
 /** Salir al mundo desde tu residencia (Doc 1.10.2) con la tropa y la carga elegidas en el panel «Salir al mundo». */
@@ -1208,18 +1257,18 @@ async function salirAlMundo(escuadronIds: string[], carga: Record<string, number
   const asentamiento = proyeccion?.asentamientos[0];
   if (!proyeccion || !asentamiento) return;
   try {
-    const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'salirAlMundo', {
-      asentamientoId: asentamiento.id,
-      heroeId: proyeccion.heroeId,
-      escuadronIds,
-      carga,
-    });
+    const salida = paramsDeSalida();
+    if (salida.error) throw new Error(salida.error);
+    // Como ejército (`movilizarEjercito`, con `carga` desde el backend 2026-10-08): destino fijo y política de unión; los víveres se llenan aparte.
+    const respuesta = saleComoEjercito()
+      ? await ejecutarComando(estadoCliente.gameIdActivo, 'movilizarEjercito', { asentamientoId: asentamiento.id, heroeId: proyeccion.heroeId, escuadronIds, carga, ...salida.params })
+      : await ejecutarComando(estadoCliente.gameIdActivo, 'salirAlMundo', { asentamientoId: asentamiento.id, heroeId: proyeccion.heroeId, escuadronIds, carga });
     if (!respuesta.resultado.ok) throw errorDeRechazo(respuesta.resultado, 'No se pudo salir al mundo.');
     panelAsentAbierto = null;
     await refrescarDatosJuego(); // el router lleva a la pantalla Mapa
   } catch (err) {
     const error = document.querySelector<HTMLElement>('.asent-panel [data-campo="error-salida"]') ?? document.querySelector<HTMLElement>('#asent-error');
-    if (error) error.textContent = mensajeError(err);
+    if (error) error.textContent = err instanceof ApiError ? mensajeError(err) : (err as Error).message;
   }
 }
 
@@ -1234,10 +1283,12 @@ function pintarSalidaAsentamiento(panel: HTMLElement, p: ProyeccionJugador, asen
     <div class="mapa-lista">${tropa.length > 0
       ? tropa.map((s) => `<label class="mapa-lista-item"><div><strong>${escaparHtml(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres</span></div><input type="checkbox" data-salir-escuadra="${escaparHtml(s.id)}" checked /></label>`).join('')
       : '<p class="asent-lado-nota">No tienes tropa libre en la plaza (la de guarnición no sale). Puedes salir solo.</p>'}</div>
+    ${htmlSalidaComoEjercito({ permiteCerrado: true, sinFaccion: !p.faccionId }, escaparHtml)}
     ${htmlCargaDeSalida(almacen, 'el almacén de la plaza', escaparHtml)}
     <button class="btn-primary" type="button" data-salir>Salir</button>
     <p class="faction-error" data-campo="error-salida" role="alert"></p>`;
   cablearCargaDeSalida(panel);
+  cablearSalidaComoEjercito(panel, elegirDestinoEnMapa);
   panel.querySelector<HTMLButtonElement>('[data-salir]')?.addEventListener('click', () => {
     const ids = Array.from(panel.querySelectorAll<HTMLInputElement>('input[data-salir-escuadra]:checked')).map((i) => i.dataset.salirEscuadra!);
     void salirAlMundo(ids, leerCarga(panel));
@@ -1540,10 +1591,21 @@ function renderPanelAsent(): void {
   barra.querySelectorAll<HTMLButtonElement>('[data-panel-asent]').forEach((boton) => {
     boton.classList.toggle('activo', boton.dataset.panelAsent === panelAsentAbierto);
   });
-  if (panelAsentAbierto === null) { panel.hidden = true; panel.innerHTML = ''; delete panel.dataset.pintado; delete panel.dataset.pintadoEscolta; return; }
+  if (panelAsentAbierto === null) { panel.hidden = true; panel.innerHTML = ''; delete panel.dataset.pintado; delete panel.dataset.pintadoEscolta; delete panel.dataset.pintadoEjercito; return; }
   panel.hidden = false;
   if (panelAsentAbierto !== 'salir') delete panel.dataset.pintado;
   if (panelAsentAbierto !== 'escolta') delete panel.dataset.pintadoEscolta;
+  if (panelAsentAbierto !== 'ejercito') delete panel.dataset.pintadoEjercito;
+  if (panelAsentAbierto === 'ejercito') {
+    const asentamiento = proyeccion.asentamientos[0];
+    if (!asentamiento) return;
+    const html = htmlUnirseDesdePlaza(proyeccion, asentamiento, escaparHtml);
+    if (panel.dataset.pintadoEjercito === html) return;
+    panel.innerHTML = html;
+    panel.dataset.pintadoEjercito = html;
+    cablearUnirseDesdePlaza(panel, proyeccion, asentamiento, ejecutarYRefrescar);
+    return;
+  }
   if (panelAsentAbierto === 'escolta') {
     const asentamiento = proyeccion.asentamientos[0];
     if (!asentamiento) return;
@@ -1646,6 +1708,7 @@ function montarAsentamiento(): void {
         <button type="button" data-panel-asent="cargos">Cargos</button>
         <button type="button" data-panel-asent="intel">Taberna e intel</button>
         <button type="button" data-panel-asent="escolta">Escolta</button>
+        <button type="button" data-panel-asent="ejercito">Ejércitos</button>
         <button id="btn-salir-mundo" class="btn-primary" type="button">Salir al mundo</button>
       </div>
       <p id="asent-error" class="faction-error" role="alert"></p>
@@ -1918,6 +1981,10 @@ async function refrescarDatosJuego(): Promise<void> {
   if (respuesta.sinHeroe) campamentosParaElegir = respuesta.campamentos ?? [];
   if (!respuesta.sinHeroe) {
     abrirPresencia(estadoCliente.gameIdActivo);
+    // El Líder de un ejército «decide yo» tiene 10 s para contestar: se le avisa por sondeo hasta que el backend le mande el evento (`columna.union_pedida`).
+    for (const x of peticionesNuevas(respuesta)) {
+      mostrarAviso(`${nombreDeHeroe(respuesta, x.heroeId)} pide unirse a tu ejército: ${Math.max(0, Math.ceil((x.expiraEn - respuesta.instante) / 1000))} s para contestar (botón ⚑ del mapa).`, true);
+    }
     fijarCanalesTiempoReal(canalesDe(respuesta));
     void avisarDeEventos(estadoCliente.gameIdActivo, respuesta.version);
   }

@@ -7,7 +7,9 @@
 // `heroesIds` para saber en qué lado ibas. También avisa de `mercenarios.prestamo_retirado` (te retiran la tropa prestada).
 import { consultarEventos } from '../apiCliente';
 import type { EventoDominio } from '../tiposDominio';
+import { esPeticionNueva } from './ejercitos';
 import { estadoCliente } from './estadoCliente';
+import { nombreDeHeroe } from './nombres';
 import { informeDeEvento, type InformeDeCombate } from './informeCombate';
 
 /** Los eventos de «alguien te ha mirado»: el backend los emite sin decir quién. */
@@ -115,6 +117,21 @@ function procesar(e: EventoDominio, heroeId: string, modo: 'vivo' | 'recuperado'
     historial.unshift({ version: e.version, momento: e.momento, texto: e.mensaje, clase: 'mirada' });
     if (modo !== 'historico') noLeidos++;
     if (!silencioso) mostrar(e.mensaje);
+    return;
+  }
+  if (e.codigo === 'columna.union_pedida' || e.codigo === 'columna.union_rechazada' || e.codigo === 'columna.union_en_campo') {
+    // Unirse en campo (backend 2026-10-08): al Líder le llega la petición (10 s para contestar) y al solicitante, la respuesta.
+    const p = e.payload as { heroeId?: string; liderId?: string; expiraEn?: number } | undefined;
+    const proy = estadoCliente.proyeccionUltima;
+    const quien = proy && p?.heroeId ? nombreDeHeroe(proy, p.heroeId) : 'Un héroe';
+    let texto: string | null = null;
+    if (e.codigo === 'columna.union_pedida' && p?.liderId === heroeId && p.heroeId !== heroeId && esPeticionNueva(p.heroeId ?? '', p.expiraEn ?? 0)) texto = `${quien} pide unirse a tu ejército: tienes 10 s para contestar (botón ⚑ del mapa).`;
+    else if (e.codigo === 'columna.union_rechazada' && p?.heroeId === heroeId) texto = 'El Líder ha rechazado tu petición de unirte al ejército.';
+    else if (e.codigo === 'columna.union_en_campo' && p?.heroeId === heroeId) texto = 'Te has unido al ejército: ahora sigues su destino.';
+    if (!texto) return;
+    historial.unshift({ version: e.version, momento: e.momento, texto, clase: 'mirada' });
+    if (modo !== 'historico') noLeidos++;
+    if (!silencioso) mostrar(texto, e.codigo !== 'columna.union_en_campo');
     return;
   }
   if (e.codigo === 'mercenarios.prestamo_retirado') {

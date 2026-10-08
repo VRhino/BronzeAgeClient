@@ -3,6 +3,7 @@
 // Fondo · Taberna) en vez de una sola columna larga. Aquí no se decide ninguna regla: quien valida es el backend, y su rechazo sale
 // tal cual en `#camp-error`. Los menús del jugador (héroe, escuadras, Facción) están en la barra superior (`barraJugador.ts`).
 import { chipLiderazgo } from './liderazgo';
+import { cablearSalidaComoEjercito, htmlSalidaComoEjercito, paramsDeSalida } from './salidaComoEjercito';
 import { cablearCargaDeSalida, htmlCargaDeSalida, leerCarga } from './cargaDeSalida';
 import { costoDeRefundacion, unidadesDeTropa, type ProyeccionJugador } from '../apiCliente';
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
@@ -94,6 +95,7 @@ function salir(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): stri
     <div class="mapa-lista">${enCampamento.length > 0
       ? enCampamento.map((s) => `<label class="mapa-lista-item"><div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres</span></div><input type="checkbox" data-salir-escuadra="${e(s.id)}" checked /></label>`).join('')
       : '<p class="asent-lado-nota">No tienes tropa en el campamento.</p>'}</div>
+    ${htmlSalidaComoEjercito({ permiteCerrado: false, sinFaccion: !p.faccionId }, e)}
     ${htmlCargaDeSalida(almacen, 'tu almacén personal', e)}
     <p class="asent-lado-nota">Al volver a entrar en un campamento, lo que quede en el carro regresa solo a tu almacén personal. Tus víveres no se descargan.</p>
     <button class="btn-primary" type="button" id="btn-salir-campamento">Salir</button>`;
@@ -266,6 +268,8 @@ export function htmlSeccionCampamento(seccion: SeccionCampamento, p: ProyeccionJ
 /** Cablea los botones de la subpestaña pintada. Tras un éxito refresca `ejecutar`, y el router decide la pantalla. */
 /** Lo que el mercado necesita además de `ejecutar`: comprar sabiendo cuánto se sirvió (`datos` del comando) y repintar la pestaña al elegir. */
 export interface OpcionesMercado {
+  /** Abre el mapa del mundo para elegir con un clic el destino de un ejército (`salidaComoEjercito`). */
+  elegirDestino: (alElegir: (punto: { x: number; y: number }) => void) => void;
   ejecutarConDatos: (tipo: string, params: object) => Promise<{ error: string | null; datos?: unknown }>;
   repintar: () => void;
 }
@@ -342,13 +346,23 @@ export function cablearCampamento(root: HTMLElement, p: ProyeccionJugador, c: Ca
     }, true);
   }
   conBoton('#btn-residir', 'residirEnCampamento', () => ({ heroeId, campamentoId: c.id }));
+  // Sin destino no hay ejército: se avisa antes de mandar nada.
+  root.querySelector('#btn-salir-campamento')?.addEventListener('click', (ev) => {
+    const salida = paramsDeSalida();
+    if (!salida.error) return;
+    ev.stopImmediatePropagation();
+    const error = root.querySelector<HTMLElement>('#camp-error');
+    if (error) error.textContent = salida.error;
+  }, true);
   conBoton('#btn-salir-campamento', 'salirDelCampamento', () => ({
     campamentoId: c.id,
     heroeId,
     escuadronIds: marcados('data-salir-escuadra'),
     carga: leerCarga(root),
+    ...paramsDeSalida().params,
   }));
   cablearCargaDeSalida(root);
+  cablearSalidaComoEjercito(root, opciones.elegirDestino);
   conBoton('#btn-pedir-prestamo', 'pedirPrestamo', () => ({ tropaIds: marcados('data-prestamo') }));
   conBoton('#btn-reponer-prestamo', 'reponerPrestamo', () => ({}));
   cablearMercado(root, c, opciones);
