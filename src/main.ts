@@ -55,9 +55,9 @@ import { cablearCargos } from './ui/panelCargos';
 import { cablearDiplomacia } from './ui/panelDiplomacia';
 import { instalarZoomPan, type ControlMapa } from './ui/pantallaMapa';
 import { guardarVistaMapa, leerVistaMapa } from './ui/vistaMapaGuardada';
-import { alCambiarAvisos, alLlegarInforme, avisarDeEventos, avisosNoLeidos, historialDeAvisos, marcarAvisosLeidos, mostrar as mostrarAviso, reiniciarAvisos } from './ui/avisos';
+import { alCambiarAvisos, alLlegarInforme, avisarDeEventos, avisosNoLeidos, hayPeligroSinLeer, historialDeAvisos, mostrar as mostrarAviso, reiniciarAvisos } from './ui/avisos';
 import { htmlInforme, type InformeDeCombate } from './ui/informeCombate';
-import { htmlAvisos } from './ui/panelAvisos';
+import { cablearAvisos, htmlAvisos } from './ui/panelAvisos';
 import { cablearCarro, htmlCarro } from './ui/panelCarro';
 import { cablearTecnologia, htmlTecnologia } from './ui/panelTecnologia';
 import { chipLiderazgo } from './ui/liderazgo';
@@ -923,13 +923,7 @@ function renderPanelJugador(forzar = false): void {
     // En marcha el carro y la ración cambian con cada tick: se repinta solo si cambió, devolviendo lo que se estaba escribiendo.
     pintar(panel, html, () => {
       if (esCarro) cablearCarro(panel, ejecutarYRefrescar);
-      else {
-        panel.querySelectorAll<HTMLButtonElement>('[data-aviso]').forEach((b) => b.addEventListener('click', () => {
-          const informe = historialDeAvisos()[Number(b.dataset.aviso)]?.informe;
-          if (informe) mostrarInforme(informe);
-        }));
-        marcarAvisosLeidos();
-      }
+      else cablearAvisos(panel, () => renderPanelJugador(), mostrarInforme);
     }, panelJugador);
     return;
   }
@@ -968,7 +962,7 @@ function pintarAlertas(barra: HTMLElement, p: ProyeccionJugador): void {
     const n = avisosNoLeidos();
     badge.hidden = n === 0;
     badge.textContent = String(n);
-    badge.classList.toggle('peligro', historialDeAvisos().slice(0, n).some((a) => a.clase === 'peligro'));
+    badge.classList.toggle('peligro', hayPeligroSinLeer());
   }
 }
 

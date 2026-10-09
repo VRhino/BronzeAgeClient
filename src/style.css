@@ -2734,6 +2734,15 @@ kbd {
 .jugador-badge[hidden] { display: none; }
 .aviso-global.peligro { border-color: var(--terracota); }
 .aviso-peligro { border-color: var(--terracota); }
+.avisos-grupos { display: flex; flex-direction: column; gap: 10px; }
+.avisos-seccion { display: flex; flex-direction: column; gap: 4px; }
+.avisos-cab { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
+.avisos-plegar { flex: 1; text-align: left; background: none; border: none; color: inherit; font: inherit; font-weight: 600; cursor: pointer; padding: 2px 0; }
+.avisos-leer { font-size: 0.72rem; padding: 1px 8px; }
+.avisos-urgentes .avisos-cab { color: var(--terracota); }
+.avisos-urgentes .avisos-cab strong { flex: 1; }
+.aviso-urgente { border-left: 3px solid var(--terracota); }
+.aviso-nuevo strong { color: var(--bronce); }
 .briefing-fondo { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.55); }
 .briefing { position: relative; width: min(460px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow-y: auto; padding: 22px; display: flex; flex-direction: column; gap: 10px; background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg)); border: 1px solid var(--bronce); border-radius: 3px; box-shadow: var(--placa); }
 .briefing-titulo { font-family: var(--fuente-titulo); font-size: 1.05rem; }
