@@ -35,7 +35,9 @@ export interface SubpestanaPlaza {
 
 /** Subpestañas EXTRA de Centro urbano, después de Resumen · Edificios · Producción · Cola · Cargos. */
 export const SUBPESTANAS_CENTRO_EXTRA: SubpestanaPlaza[] = [
-  // --- hueco bloque A (plaza › Centro urbano: muralla, puerta y veto, residencia, tesorero, caravana de fundación)
+  // --- hueco bloque A1 (plaza › Centro urbano: muralla, puerta y veto, residencia y capital)
+
+  // --- hueco bloque A2 (plaza › Centro urbano: tesorero y caravana de fundación)
 
   // --- hueco bloque F (vista de la ciudad: recetas)
 ];
