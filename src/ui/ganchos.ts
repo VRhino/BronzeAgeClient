@@ -4,6 +4,8 @@
 import type { ProyeccionJugador } from '../apiCliente';
 import type { Asentamiento } from '../tiposDominio';
 import type { Ejecutar } from './panelCarro';
+import { cablearFundacionDePlaza, htmlFundacionDePlaza } from './panelFundacionDePlaza';
+import { cablearTesoreria, htmlTesoreria } from './panelTesoreria';
 
 type Escapar = (valor: string) => string;
 
@@ -38,6 +40,8 @@ export const SUBPESTANAS_CENTRO_EXTRA: SubpestanaPlaza[] = [
   // --- hueco bloque A1 (plaza › Centro urbano: muralla, puerta y veto, residencia y capital)
 
   // --- hueco bloque A2 (plaza › Centro urbano: tesorero y caravana de fundación)
+  { id: 'tesoreria', etiqueta: 'Tesorería', html: htmlTesoreria, cablear: cablearTesoreria },
+  { id: 'fundacion', etiqueta: 'Fundación', html: htmlFundacionDePlaza, cablear: cablearFundacionDePlaza },
 
   // --- hueco bloque F (vista de la ciudad: recetas)
 ];
