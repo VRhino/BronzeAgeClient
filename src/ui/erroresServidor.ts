@@ -21,6 +21,8 @@ const MENSAJES: Record<string, string> = {
   'fusion.invalida': 'La fusión no es posible ahora.',
   'fusion.no_existe': 'Esa propuesta de fusión ya no existe.',
   'fusion.caducada': 'La propuesta de fusión caducó.',
+  'relacion.propuesta_no_existe': 'Esa propuesta ya no existe (la retiraron o la contestaron).',
+  'relacion.propuesta_caducada': 'La propuesta caducó.',
   'diplomacia.invalida': 'La diplomacia no admite esa acción ahora.',
   'diplomacia.relacion_no_indicada': 'Falta indicar la relación.',
   'politica.invalida': 'Esa política no se puede adoptar ahora.',

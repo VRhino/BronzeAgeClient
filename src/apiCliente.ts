@@ -1,7 +1,7 @@
 // Wrapper `fetch` sobre la superficie `/jugador/*` y `/sesiones` del backend (Fase C3) — sin lógica de negocio, solo I/O.
 import type { MapaGenerado } from './terreno';
 
-import type { AcuerdoTrueque, AedaAvistado, AedaResidenteProyectado, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, CaravanaAvistada, Convocatoria, Ejercito, EjercitoAvistado, EscenaCampamento, EvaluacionAscenso, EventoDominio, Faccion, HeroeProyectado, HeroePublico, InformeDeInspeccion, InformePlaza, MiradaIntel, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, PropuestaAnexion, PropuestaFusion, RelacionPolitica, TarifasIntel, TecnologiaJugador, Titulo, TrazadoAsentamiento, ZonaFaccion } from './tiposDominio';
+import type { AcuerdoTrueque, AedaAvistado, AedaResidenteProyectado, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, CaravanaAvistada, Convocatoria, Ejercito, EjercitoAvistado, EscenaCampamento, EvaluacionAscenso, EventoDominio, Faccion, HeroeProyectado, HeroePublico, InformeDeInspeccion, InformePlaza, MiradaIntel, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, PropuestaAnexion, PropuestaFusion, PropuestaRelacion, RelacionPolitica, TarifasIntel, TecnologiaJugador, Titulo, TrazadoAsentamiento, ZonaFaccion } from './tiposDominio';
 
 export class ApiError extends Error {
   constructor(
@@ -97,6 +97,7 @@ export interface ProyeccionJugador {
   tarifasIntel: TarifasIntel;
   /** Las propuestas de anexión vigentes de tu Facción, ofrecidas o recibidas (backend 2026-10-06, Doc 2.6). Ausente en un backend anterior. */
   propuestasAnexion?: PropuestaAnexion[];
+  propuestasRelacion?: PropuestaRelacion[];
   /** Las propuestas de fusión vigentes de tu Facción, hechas o recibidas (backend 2026-10-06, Doc 2.6). Ausente en un backend anterior. */
   propuestasFusion?: PropuestaFusion[];
   zonasFusionadas: ZonaFaccion[];

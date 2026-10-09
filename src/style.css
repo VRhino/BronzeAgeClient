@@ -584,6 +584,12 @@ body {
   overflow-y: auto;
 }
 
+/* Diplomacia: lista con relaciones, propuestas y formulario; no cabe en 330px sin esconder el formulario. */
+.faction-list.faction-list-libre {
+  max-height: none;
+  overflow-y: visible;
+}
+
 .faction-list-item {
   align-items: center;
   background: rgba(255, 255, 255, 0.035);
@@ -606,6 +612,15 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Filas con frase larga (propuestas de alianza o vasallaje): el texto baja de línea y los botones pasan debajo si no caben. */
+.faction-list-item.faction-list-item-texto {
+  flex-wrap: wrap;
+}
+
+.faction-list-item-texto strong {
+  white-space: normal;
 }
 
 .btn-join-faction {
