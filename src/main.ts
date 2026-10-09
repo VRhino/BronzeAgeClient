@@ -46,6 +46,7 @@ import { FICHAS_MAPA_EXTRA, SELECTORES_MAPA_EXTRA, SUBPESTANAS_CENTRO_EXTRA, SUB
 import { montarPartidas } from './ui/pantallaPartidas';
 import { cablearCaravanas, cablearOrdenes, htmlCaravanas, htmlOrdenes } from './ui/panelMercado';
 import { cablearReclutamiento, htmlReclutamiento } from './ui/reclutamiento';
+import { ayuda } from './ui/ayuda';
 import { actualizarConvocatorias, cablearSalidaComoEjercito, htmlSalidaComoEjercito } from './ui/salidaComoEjercito';
 import { cablearPreparacion, htmlPreparacion, peticionesNuevasConv } from './ui/convocatoria';
 import { cablearUnirseDesdePlaza, htmlUnirseDesdePlaza } from './ui/unirseDesdePlaza';
@@ -1452,7 +1453,8 @@ function renderPanelEdificios(): void {
   const tabs = PESTANAS_EDIFICIO.map((t) => abierta(t.id)
     ? `<button class="asent-tab${t.id === edificioAsent ? ' activo' : ''}" type="button" data-edificio="${t.id}">${t.etiqueta}</button>`
     : `<button class="asent-tab bloqueada" type="button" disabled title="Necesitas construir ${t.requiere!.nombre}">${t.etiqueta} 🔒</button>`).join('');
-  const faltan = PESTANAS_EDIFICIO.filter((t) => !abierta(t.id)).map((t) => `<p class="asent-lado-nota">🔒 ${t.etiqueta}: necesitas construir ${t.requiere!.nombre}.</p>`).join('');
+  const bloqueadas = PESTANAS_EDIFICIO.filter((t) => !abierta(t.id)).map((t) => `🔒 ${t.etiqueta}: necesitas construir ${t.requiere!.nombre}.`);
+  const faltan = bloqueadas.length ? `<p class="asent-lado-nota">Pestañas bloqueadas ${ayuda('plaza:pestanas-bloqueadas', bloqueadas.join('<br>'))}</p>` : '';
   pintar(tabsEl, `<div class="asent-tabs asent-tabs-ancho">${tabs}</div>${faltan}`, () => {
     tabsEl.querySelectorAll<HTMLButtonElement>('[data-edificio]').forEach((boton) => boton.addEventListener('click', () => { edificioAsent = boton.dataset.edificio as EdificioAsent; renderPanelEdificios(); }));
   }, 'edificios');
@@ -1471,7 +1473,7 @@ function renderPanelEdificios(): void {
     const extra = SUBPESTANAS_CENTRO_EXTRA.find((s) => s.id === seccionAsent);
     const puedeMudarme = Boolean(proyeccion.faccionId) && asentamiento.faccionId === proyeccion.faccionId && !resideEnLaPlaza(proyeccion, asentamiento);
     const formNombre = resideEnLaPlaza(proyeccion, asentamiento)
-      ? `<div class="asent-renombrar"><span class="faction-kicker">Nombre de la ciudad</span><div class="mercado-acciones"><input class="form-input" type="text" maxlength="40" data-campo="nombre-plaza" value="${escaparHtml(asentamiento.nombre ?? '')}" placeholder="${escaparHtml(asentamiento.id)}" /><button id="btn-renombrar" class="btn-secondary" type="button">Cambiar nombre</button></div><p class="asent-lado-nota">Vacío = vuelve a mostrarse el identificador.</p></div>`
+      ? `<div class="asent-renombrar"><span class="faction-kicker">Nombre de la ciudad ${ayuda('plaza:nombre', 'Vacío = vuelve a mostrarse el identificador.')}</span><div class="mercado-acciones"><input class="form-input" type="text" maxlength="40" data-campo="nombre-plaza" value="${escaparHtml(asentamiento.nombre ?? '')}" placeholder="${escaparHtml(asentamiento.id)}" /><button id="btn-renombrar" class="btn-secondary" type="button">Cambiar nombre</button></div></div>`
       : '';
     const contenido = extra ? extra.html(ctxPlaza) : seccionAsent === 'resumen'
       ? seccionResumen(asentamiento) + formNombre + seccionAscenso(asentamiento, proyeccion.ascensoDeAsentamiento, cargo === 'gobernador')
@@ -1479,7 +1481,7 @@ function renderPanelEdificios(): void {
       : seccionAsent === 'edificios' ? seccionEdificios(asentamiento, cargo)
         : seccionAsent === 'produccion' ? seccionProduccion(proyeccion.produccionDeAsentamiento)
           : seccionAsent === 'cola' ? seccionCola(edificios, cargo)
-            : renderCargosAsentamiento(asentamiento, proyeccion) || '<p class="mapa-lista-vacia">No tienes cargos que asignar en esta plaza: el Rey nombra al Gobernador y el Gobernador, al resto.</p>';
+            : renderCargosAsentamiento(asentamiento, proyeccion) || `<p class="mapa-lista-vacia">No tienes cargos que asignar en esta plaza. ${ayuda('plaza:cargos', 'El Rey nombra al Gobernador y el Gobernador, al resto.')}</p>`;
     html = `${subpestanas(SECCIONES, seccionAsent)}<div class="asent-lado-cuerpo">${contenido}</div>
       ${!cargo && (seccionAsent === 'edificios' || seccionAsent === 'cola') ? '<p class="asent-lado-nota">Necesitas ser Gobernador o Maestro de Obras para gestionar la construcción.</p>' : ''}${pie}`;
     ambito = `centro:${seccionAsent}`;
@@ -1556,9 +1558,9 @@ const MOTIVO_BLOQUEO_ASCENSO: Record<BloqueoAscenso, string> = {
 /** Subida de nivel (Doc 4.5): ya no sube sola al cumplir los requisitos; la pide el Gobernador, se paga entera del
  * almacén y tarda una obra. La evaluación (bloqueos, coste, solvencia) la calcula el servidor. */
 function seccionAscenso(a: Asentamiento, evaluacion: EvaluacionAscenso | undefined, soyGobernador: boolean): string {
-  const cabecera = '<div class="asent-lado-cabecera"><span class="faction-kicker">Subida de nivel</span></div>';
+  const cabecera = `<div class="asent-lado-cabecera"><span class="faction-kicker">Subida de nivel ${ayuda('plaza:ascenso', 'La subida de nivel no es automática: la pide el Gobernador, se paga entera del almacén y tarda una obra. Si conquistan la plaza durante la obra, se pierde.')}</span></div>`;
   if (a.ascenso) {
-    return `${cabecera}<p class="asent-lado-nota">Obra en curso hacia el nivel ${a.ascenso.nivelObjetivo} · ${cuentaAtras(a.ascenso.completaEn)}. Si conquistan la plaza, se pierde.</p>`;
+    return `${cabecera}<p class="asent-lado-nota">Obra en curso hacia el nivel ${a.ascenso.nivelObjetivo} · ${cuentaAtras(a.ascenso.completaEn)}.</p>`;
   }
   if (!evaluacion || evaluacion.nivelObjetivo === null) return '';
   const costo = Object.entries(evaluacion.costo)
@@ -1639,9 +1641,8 @@ function seccionProduccion(items: ProduccionItem[] | undefined): string {
     )
     .join('');
   return `
-    <div class="asent-lado-cabecera"><span class="faction-kicker">Producción</span></div>
-    <div class="asent-edif-lista">${filas || '<p class="mapa-lista-vacia">Sin edificios productores activos.</p>'}</div>
-    <p class="asent-lado-nota">Por minuto de mundo, con la mano de obra y los yacimientos actuales.</p>`;
+    <div class="asent-lado-cabecera"><span class="faction-kicker">Producción ${ayuda('plaza:produccion', 'Por minuto de mundo, con la mano de obra y los yacimientos actuales.')}</span></div>
+    <div class="asent-edif-lista">${filas || '<p class="mapa-lista-vacia">Sin edificios productores activos.</p>'}</div>`;
 }
 
 function seccionCola(edificios: Edificio[], cargo: 'gobernador' | 'maestroObras' | null): string {

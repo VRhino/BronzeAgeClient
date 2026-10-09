@@ -5,6 +5,7 @@
 import type { ProyeccionJugador } from '../apiCliente';
 import { nivelesDeEdificio } from '../apiCliente';
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
+import { ayuda } from './ayuda';
 import { edificioBajoCursor, type SeleccionEdificio } from '../render';
 import type { Asentamiento, Edificio } from '../tiposDominio';
 import { textoEnTiempoReal } from './estadoCliente';
@@ -94,7 +95,7 @@ function htmlFicha(p: ProyeccionJugador, a: Asentamiento, edificio: Edificio, e:
     <div class="asent-ficha-grid"><div><span>Nivel</span><strong>${nivel}</strong></div><div><span>Estado</span><strong>${e(estado)}</strong></div></div>
     ${notas.length ? `<p class="asent-lado-nota">${e(notas.join(' · '))}</p>` : ''}
     ${prod ? `<span class="faction-kicker">Producción</span><ul class="asent-ficha-lista">${prod}</ul>` : ''}
-    ${recetas ? `<span class="faction-kicker">Recetas de este nivel</span><ul class="asent-ficha-lista">${recetas}</ul><p class="asent-lado-nota">Consumo por edificio: no lo publica el servidor.</p>` : ''}
+    ${recetas ? `<span class="faction-kicker">Recetas de este nivel ${ayuda('plaza:ficha-recetas', 'Consumo por edificio: no lo publica el servidor.')}</span><ul class="asent-ficha-lista">${recetas}</ul>` : ''}
     ${acciones}
     <p class="faction-error" role="alert" data-ficha-error></p>`;
 }
@@ -213,9 +214,9 @@ function htmlRecetas(c: ContextoPlaza): string {
       <span class="asent-edif-nota">${talleres || 'sin taller activo'}${r.porMinuto ? ` · hasta ${fmt(r.porMinuto)}/min` : ''}${Object.keys(r.insumos).length ? ` · insumos por unidad: ${costeTexto(r.insumos, e)}` : ''}${falta ? ` · ${falta}` : ''}</span>
     </div>`;
   }).join('');
-  return `<div class="asent-lado-cabecera"><span class="faction-kicker">Recetas</span></div>
+  return `<div class="asent-lado-cabecera"><span class="faction-kicker">Recetas ${ayuda('plaza:recetas', 'Parar una receta la detiene en todos los talleres de la plaza.')}</span></div>
     <div class="asent-edif-lista">${filas || '<p class="mapa-lista-vacia">Ningún taller activo con recetas.</p>'}</div>
-    <p class="asent-lado-nota">Parar una receta la detiene en todos los talleres de la plaza.${c.cargo ? '' : ' Solo el Gobernador o el Maestro de Obras pueden cambiarlo.'}</p>`;
+    ${c.cargo ? '' : '<p class="asent-lado-nota">Solo el Gobernador o el Maestro de Obras pueden cambiarlo.</p>'}`;
 }
 
 function cablearRecetas(c: ContextoPlaza): void {

@@ -6,6 +6,7 @@ import type { ProyeccionJugador } from '../apiCliente';
 import { tropasReclutables, type TropaReclutable } from '../apiCliente';
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { Asentamiento } from '../tiposDominio';
+import { ayuda } from './ayuda';
 import type { Ejecutar } from './panelCarro';
 
 type Escapar = (valor: string) => string;
@@ -62,9 +63,9 @@ export function htmlReclutamiento(p: ProyeccionJugador, a: Asentamiento, e: Esca
   const reside = resideAqui(p, a);
   const porEdificio = ORDEN_EDIFICIO.map((tipo) => [tipo, disponibles.filter((t) => t.edificio === tipo).sort((x, y) => x.escalon - y.escalon)] as const).filter(([, l]) => l.length > 0);
   const pob = a.poblacion;
-  return `<span class="faction-kicker">Reclutamiento</span>
-    <p class="asent-lado-nota">Los militares de la plaza, juntos. Reclutas con el equipo del almacén; si ya tienes una escuadra de esa tropa, solo la repones hasta completarla. Aquí solo salen las tropas que tu Facción ya puede formar: otras llegan con más tecnología o edificios militares mejores.</p>
-    ${pob ? `<p class="asent-lado-nota">Gente libre: ${Math.floor(pob.pesants)} pesants · ${Math.floor(pob.artesanos)} artesanos · ${Math.floor(pob.nobleza)} nobleza. El servidor no deja reclutar si dejaría la producción sin brazos.</p>` : ''}
+  const info = ayuda('plaza:reclutamiento', 'Los militares de la plaza, juntos. Reclutas con el equipo del almacén; si ya tienes una escuadra de esa tropa, solo la repones hasta completarla. Aquí solo salen las tropas que tu Facción ya puede formar: otras llegan con más tecnología o edificios militares mejores.<br>El servidor no deja reclutar si dejaría la producción sin brazos.');
+  return `<span class="faction-kicker">Reclutamiento ${info}</span>
+    ${pob ? `<p class="asent-lado-nota">Gente libre: ${Math.floor(pob.pesants)} pesants · ${Math.floor(pob.artesanos)} artesanos · ${Math.floor(pob.nobleza)} nobleza.</p>` : ''}
     ${porEdificio.length === 0
       ? '<p class="mapa-lista-vacia">Aún no puedes reclutar ninguna tropa: hace falta la tecnología y el edificio militar de cada una.</p>'
       : porEdificio.map(([tipo, lista]) => `<strong class="heroe-sub">${e(EDIFICIO_NOMBRE[tipo] ?? tipo)} · nivel ${nivelDe(tipo)}</strong><div class="mapa-lista">${lista.map((t) => fila(t, p, a, reside, e)).join('')}</div>`).join('')}
