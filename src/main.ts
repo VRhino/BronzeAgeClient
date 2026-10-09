@@ -49,6 +49,7 @@ import { actualizarConvocatorias, cablearSalidaComoEjercito, htmlSalidaComoEjerc
 import { cablearPreparacion, htmlPreparacion, peticionesNuevasConv } from './ui/convocatoria';
 import { cablearUnirseDesdePlaza, htmlUnirseDesdePlaza } from './ui/unirseDesdePlaza';
 import { instalarZoomPan, type ControlMapa } from './ui/pantallaMapa';
+import { guardarVistaMapa, leerVistaMapa } from './ui/vistaMapaGuardada';
 import { alCambiarAvisos, alLlegarInforme, avisarDeEventos, avisosNoLeidos, historialDeAvisos, marcarAvisosLeidos, mostrar as mostrarAviso, reiniciarAvisos } from './ui/avisos';
 import { htmlInforme, type InformeDeCombate } from './ui/informeCombate';
 import { htmlAvisos } from './ui/panelAvisos';
@@ -1153,8 +1154,12 @@ function montarMapa(): void {
   const proyeccion = estadoCliente.proyeccionUltima;
   if (!proyeccion) { montar('cargando'); return; }
   estadoCliente.modoVista = 'mundo';
-  seleccionMapa = null;
-  panelMapaAbierto = null;
+  // Vista guardada de ESTA partida (vistaMapaGuardada.ts). La selección se restaura tal cual y
+  // `renderSeleccionMapa` la descarta sola si ya no existe en la proyección; restaurar no manda nada al servidor.
+  const gameId = estadoCliente.gameIdActivo;
+  const vista = leerVistaMapa(gameId);
+  seleccionMapa = (vista?.seleccion as typeof seleccionMapa) ?? null;
+  panelMapaAbierto = vista?.panel ?? null;
   menuEsquinaAbierto = false;
   app.innerHTML = `<div class="mapa-screen">
     <div class="mapa-lienzo"><canvas id="mapa" width="900" height="900"></canvas></div>
@@ -1227,7 +1232,7 @@ function montarMapa(): void {
       void marcharAObjetivo({ tipo: 'punto', punto });
     }
   };
-  const control = instalarZoomPan(contenedor, lienzo, { zoomInicial: columna ? 1.6 : 1, alClicar });
+  const control = instalarZoomPan(contenedor, lienzo, { zoomInicial: vista?.zoom ?? (columna ? 1.6 : 1), panInicial: vista ? { x: vista.panX, y: vista.panY } : undefined, alClicar });
   controlMapaActivo = control;
   // El mundo solo avanza por tick y este cliente aún no tiene tiempo real (`WS .../tiempo-real`): sin esto el
   // mapa sería una foto y la columna nunca parecería moverse. Sondeo suave mientras la pantalla Mapa esté
@@ -1238,7 +1243,11 @@ function montarMapa(): void {
     sondeando = true;
     void refrescarDatosJuego().catch(() => {}).finally(() => { sondeando = false; });
   }, 3000);
+  const guardarVista = (): void => guardarVistaMapa(gameId, { ...control.estado(), panel: panelMapaAbierto === 'fundar' ? null : panelMapaAbierto, seleccion: seleccionMapa });
+  addEventListener('pagehide', guardarVista); // recarga o cierre de pestaña
   limpiarPantalla = () => {
+    guardarVista(); // salir del mapa (plaza, campamento, otra partida, cerrar sesión)
+    removeEventListener('pagehide', guardarVista);
     clearInterval(sondeo);
     control.destruir();
     controlMapaActivo = null;
@@ -1256,9 +1265,11 @@ function montarMapa(): void {
   cablearBarraJugador(contenedor);
 
   renderPanelRiel();
+  if (seleccionMapa) renderSeleccionMapa();
   void dibujarPantallaSegunModo(proyeccion).then(() => {
     const mapa = estadoCliente.mapaCache?.mapa;
-    if (columna && mapa) control.centrar(columna.posicionActual, mapa.config.ancho, mapa.config.alto);
+    // Con vista guardada manda ella; la primera vez, centrado en tu columna.
+    if (!vista && columna && mapa) control.centrar(columna.posicionActual, mapa.config.ancho, mapa.config.alto);
   });
 }
 
