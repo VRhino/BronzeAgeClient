@@ -4,6 +4,7 @@
 import type { ProyeccionJugador } from '../apiCliente';
 import type { Asentamiento } from '../tiposDominio';
 import type { Ejecutar } from './panelCarro';
+import { FICHA_CARAVANA_AJENA, FICHA_COLUMNA_AJENA, seleccionarAjeno } from './interaccionAjena';
 
 type Escapar = (valor: string) => string;
 
@@ -55,6 +56,10 @@ export interface ContextoFicha {
   ejecutar: Ejecutar;
   /** Un aviso breve sobre el mapa. */
   aviso: (texto: string) => void;
+  /** Como `ejecutar`, devolviendo también los `datos` del comando (p. ej. lo que se ve al inspeccionar). */
+  ejecutarConDatos: (tipo: string, params: object) => Promise<{ error: string | null; datos?: unknown }>;
+  /** Repinta la ficha abierta (tras guardar algo que ella pinta). */
+  repintar: () => void;
   /** Cierra la selección y repinta. */
   cerrar: () => void;
   escapar: Escapar;
@@ -70,6 +75,8 @@ export interface FichaMapaExtra {
 
 export const FICHAS_MAPA_EXTRA: FichaMapaExtra[] = [
   // --- hueco bloque C1 (columnas y caravanas ajenas, héroes ajenos)
+  FICHA_COLUMNA_AJENA,
+  FICHA_CARAVANA_AJENA,
 
 ];
 
@@ -81,5 +88,6 @@ export interface ObjetoBajoElClic {
 }
 export const SELECTORES_MAPA_EXTRA: ((p: ProyeccionJugador, punto: { x: number; y: number }) => ObjetoBajoElClic | null)[] = [
   // --- hueco bloque C1
+  seleccionarAjeno,
 
 ];

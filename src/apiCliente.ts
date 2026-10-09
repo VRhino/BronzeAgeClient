@@ -1,7 +1,7 @@
 // Wrapper `fetch` sobre la superficie `/jugador/*` y `/sesiones` del backend (Fase C3) — sin lógica de negocio, solo I/O.
 import type { MapaGenerado } from './terreno';
 
-import type { AcuerdoTrueque, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, Convocatoria, Ejercito, EjercitoAvistado, EscenaCampamento, EvaluacionAscenso, EventoDominio, Faccion, HeroeProyectado, HeroePublico, InformePlaza, MiradaIntel, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, PropuestaAnexion, PropuestaFusion, RelacionPolitica, TarifasIntel, Titulo, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
+import type { AcuerdoTrueque, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, CaravanaAvistada, Convocatoria, Ejercito, EjercitoAvistado, EscenaCampamento, EvaluacionAscenso, EventoDominio, Faccion, HeroeProyectado, HeroePublico, InformePlaza, MiradaIntel, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, PropuestaAnexion, PropuestaFusion, RelacionPolitica, TarifasIntel, Titulo, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
 
 export class ApiError extends Error {
   constructor(
@@ -55,6 +55,8 @@ export interface ProyeccionJugador {
    * a diferencia de los asentamientos, de un ejército NO se guarda memoria. Tiene sentido — una ciudad sigue
    * donde estaba, una columna en marcha no. */
   ejercitosAvistados: EjercitoAvistado[];
+  /** Las caravanas ajenas que se ven AHORA, redactadas (backend Doc 5.12.3): qué llevan, no cuánto. Ausente en un backend anterior. */
+  caravanasAvistadas?: CaravanaAvistada[];
   /** Tu héroe, completo (backend 2026-09-14). El backend lo tipa `| null`, pero la ruta HTTP responde
    * `PartidaSinHeroe` antes de proyectar a una membresía sin héroe: aquí siempre llega. */
   heroe: HeroeProyectado;

@@ -242,6 +242,8 @@ export interface Ejercito {
   politicaDeUnion?: 'rechazar' | 'aceptar' | 'preguntar';
   /** Con política `preguntar`: las peticiones vivas al Líder (caducan a los 10 s; el backend no las borra, se miran contra el instante de mundo). */
   peticionesDeUnion?: { heroeId: string; pedidoEn: number; expiraEn: number }[];
+  /** A quién persigue (Doc 5.12.3): un objetivo móvil en vez de un punto. Ausente = nadie. */
+  persiguiendo?: { tipo: 'ejercito' | 'caravana'; id: string };
 }
 
 /**
@@ -262,6 +264,18 @@ export interface EjercitoAvistado {
   heroeIds: string[];
   /** Va tras una columna tuya (backend 2026-10-06): lo único de su intención que se revela, y solo a quien persigue. */
   teSigue?: true;
+}
+
+/**
+ * Una caravana AJENA que se ve AHORA, redactada (Doc 5.12.3): QUÉ lleva, nunca cuánto. `escoltada` = va adjunta a un ejército (entonces se ataca al ejército).
+ */
+export interface CaravanaAvistada {
+  id: string;
+  posicionActual: Point;
+  /** De quién es, por su plaza de origen; ausente si esa plaza ya no existe. */
+  faccionId?: string;
+  escoltada: boolean;
+  recursos: string[];
 }
 
 /**

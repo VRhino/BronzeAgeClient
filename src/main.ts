@@ -573,7 +573,7 @@ function renderSeleccionMapaCuerpo(): void {
     const objeto = ficha.buscar(proyeccion, seleccionMapa.id);
     if (objeto === undefined || objeto === null) break; // ya no está: se cierra más abajo
     cont.hidden = false;
-    const ctx = { ejecutar: ejecutarYRefrescar, aviso: avisoMapa, cerrar: () => { seleccionMapa = null; renderSeleccionMapa(); }, escapar: escaparHtml };
+    const ctx = { ejecutar: ejecutarYRefrescar, ejecutarConDatos: ejecutarConDatosYRefrescar, repintar: renderSeleccionMapa, aviso: avisoMapa, cerrar: () => { seleccionMapa = null; renderSeleccionMapa(); }, escapar: escaparHtml };
     if (!pintar(cont, ficha.html(proyeccion, objeto as never, ctx), undefined, claveSeleccion())) return;
     cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', ctx.cerrar);
     ficha.cablear?.(cont, proyeccion, objeto as never, ctx);
@@ -934,7 +934,10 @@ function pintarAlertas(barra: HTMLElement, p: ProyeccionJugador): void {
     alerta.hidden = sigue.length === 0;
     const quien = sigue.map((x) => `${p.facciones.find((f) => f.id === x.faccionId)?.nombre ?? 'sin Facción'}: ${x.heroeIds.map((id) => nombreDeHeroe(p, id)).join(', ') || `${x.participantes} héroes`}`).join(' · ');
     alerta.textContent = sigue.length === 0 ? '' : `⚠ Te persigue${sigue.length === 1 ? ' una columna' : `n ${sigue.length} columnas`} (${quien})`;
-    alerta.title = 'Una columna ajena va tras la tuya.';
+    alerta.title = 'Una columna ajena va tras la tuya. En el mapa, púlsalo para abrir su ficha (huir o plantar cara).';
+    // En el mapa el aviso lleva a la ficha de quien te persigue (`ui/interaccionAjena.ts`).
+    alerta.style.cursor = sigue.length === 0 ? '' : 'pointer';
+    alerta.onclick = sigue.length === 0 ? null : () => { if (!document.querySelector('.mapa-seleccion')) return; seleccionMapa = { tipo: 'ejercitoAjeno', id: sigue[0]!.id }; renderSeleccionMapa(); };
   }
   const badge = barra.querySelector<HTMLElement>('.jugador-badge');
   if (badge) {
