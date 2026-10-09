@@ -863,16 +863,26 @@ export function pintarPrevisualizacionFundacion(
 
 const BIOMA_TIERRA_PLANA = '#93c26b';
 
-/** Radio del recorte cuadrado de la vista de asentamiento, en unidades locales — el canon
- * (`REJILLA_ASENTAMIENTO.radioMapa` del backend, el mismo que usa el cliente admin). El espacio de la vista
- * es ESTÁTICO: no crece con el asentamiento, deja sitio para que crezca. */
-const RADIO_MAPA_ASENTAMIENTO = 220;
+/** Radio MÍNIMO de la vista de asentamiento, en unidades locales: una plaza pequeña no se ve diminuta en un lienzo de 220. */
+const RADIO_MINIMO_ASENTAMIENTO = 60;
+
+/** Radio de la vista: el extremo real de los edificios y las murallas (con margen), en pasos de 20 para que no salte con cada
+ * edificio, y nunca menos que `RADIO_MINIMO_ASENTAMIENTO`. No se topa en el canon (`REJILLA_ASENTAMIENTO.radioMapa` = 220): si la
+ * plaza llega más lejos, la vista crece — recortar un edificio es peor que verlo pequeño. */
+function radioDeVista(trazado: TrazadoAsentamiento | undefined): number {
+  let extremo = 0;
+  const abarcar = (r: RectanguloLocal): void => {
+    extremo = Math.max(extremo, Math.abs(r.x), Math.abs(r.y), Math.abs(r.x + r.ancho), Math.abs(r.y + r.alto));
+  };
+  Object.values(trazado?.huellas ?? {}).forEach(abarcar);
+  for (const m of trazado?.murallas ?? []) [m.muro, m.puertas, m.torres, m.planificado].forEach((rs) => (rs ?? []).forEach(abarcar));
+  return Math.max(RADIO_MINIMO_ASENTAMIENTO, Math.ceil((extremo * 1.08 + 6) / 20) * 20);
+}
 
 /** Escala px/unidad-local y centro del canvas, para convertir entre coords locales del trazado y píxeles.
- * Lo comparten el dibujo (`pintarAsentamiento`) y el hit-test del tooltip (`edificioBajoCursor`). Misma
- * fórmula que `cliente/` admin: el borde del lienzo cae en `±radioMapa` locales. */
-function proyeccionAsentamiento(width: number): { escala: number; centro: number } {
-  return { escala: (width * 0.92) / (RADIO_MAPA_ASENTAMIENTO * 2), centro: width / 2 };
+ * Lo comparten el dibujo (`pintarAsentamiento`) y el hit-test del tooltip (`edificioBajoCursor`): el borde del lienzo cae en `±radio` locales. */
+function proyeccionAsentamiento(width: number, trazado: TrazadoAsentamiento | undefined): { escala: number; centro: number } {
+  return { escala: (width * 0.92) / (radioDeVista(trazado) * 2), centro: width / 2 };
 }
 
 /**
@@ -890,7 +900,7 @@ export function edificioBajoCursor(
   const rect = canvas.getBoundingClientRect();
   const pixelX = (evento.clientX - rect.left) * (canvas.width / rect.width);
   const pixelY = (evento.clientY - rect.top) * (canvas.height / rect.height);
-  const { escala, centro } = proyeccionAsentamiento(canvas.width);
+  const { escala, centro } = proyeccionAsentamiento(canvas.width, trazado);
   const localX = (pixelX - centro) / escala;
   const localY = (pixelY - canvas.height / 2) / escala;
   for (const edificio of [...(asentamiento.edificios ?? [])].reverse()) {
@@ -985,10 +995,14 @@ function dibujarEdificioLocal(
   }
 }
 
+/** Qué edificio se resalta: el elegido (`id`) con trazo fuerte y los demás de su tipo con trazo fino. */
+export interface SeleccionEdificio { id: string; tipo: string }
+
 export function pintarAsentamiento(
   ctx: CanvasRenderingContext2D,
   asentamiento: Asentamiento,
-  trazado: TrazadoAsentamiento | undefined
+  trazado: TrazadoAsentamiento | undefined,
+  seleccion?: SeleccionEdificio | null
 ): void {
   const width = ctx.canvas.width;
   const height = ctx.canvas.height;
@@ -1000,7 +1014,7 @@ export function pintarAsentamiento(
   ctx.fillRect(0, 0, width, height);
 
   const tamanoCelda = 5;
-  const { escala, centro: cx } = proyeccionAsentamiento(width);
+  const { escala, centro: cx } = proyeccionAsentamiento(width, trazado);
   const cy = height / 2;
   const aPantalla = (p: Point): Point => ({ x: cx + p.x * escala, y: cy + p.y * escala });
 
@@ -1046,6 +1060,17 @@ export function pintarAsentamiento(
   for (const edificio of [...internos.filter((e) => e.tipo === 'vivienda'), ...internos.filter((e) => e.tipo !== 'vivienda')]) {
     const huella = enPantalla(edificio.id);
     if (huella) dibujarEdificioLocal(ctx, edificio, huella);
+  }
+
+  if (seleccion) {
+    for (const edificio of internos.filter((e) => e.tipo === seleccion.tipo)) {
+      const huella = enPantalla(edificio.id);
+      if (!huella) continue;
+      const elegido = edificio.id === seleccion.id;
+      ctx.strokeStyle = elegido ? '#ffd24a' : 'rgba(255, 210, 74, 0.7)';
+      ctx.lineWidth = elegido ? 3 : 1.5;
+      ctx.strokeRect(huella.x - 2, huella.y - 2, huella.ancho + 4, huella.alto + 4);
+    }
   }
 
   // Muralla ENCIMA de todo: es lo que hay que juzgar de un vistazo (Consideraciones/Murallas_Definicion.md).

@@ -40,6 +40,7 @@ import { cablearAdmision } from './ui/panelAdmision';
 import { cablearFichaBatalla, cablearFichaFormacion, formacionesVisibles, htmlFichaBatalla, htmlFichaFormacion } from './ui/panelBatalla';
 import { cablearPanelEjercito, ejercitosDeLaFaccion, htmlFichaEjercito, htmlPanelEjercito, peticionesNuevas } from './ui/ejercitos';
 import { invalidar, olvidarEdicion, pintar, vaciar } from './ui/repintado';
+import { cablearVistaCiudad, edificioSeleccionado, htmlTooltipEdificio, repintarFicha, tipoSeleccionado } from './ui/vistaCiudad';
 import { FICHAS_MAPA_EXTRA, SELECTORES_MAPA_EXTRA, SUBPESTANAS_CENTRO_EXTRA, SUBPESTANAS_MERCADO_EXTRA, type ContextoPlaza } from './ui/ganchos';
 import { montarPartidas } from './ui/pantallaPartidas';
 import { cablearCaravanas, cablearOrdenes, htmlCaravanas, htmlOrdenes } from './ui/panelMercado';
@@ -1423,6 +1424,7 @@ function renderPanelEdificios(): void {
   pintar(tabsEl, `<div class="asent-tabs asent-tabs-ancho">${tabs}</div>${faltan}`, () => {
     tabsEl.querySelectorAll<HTMLButtonElement>('[data-edificio]').forEach((boton) => boton.addEventListener('click', () => { edificioAsent = boton.dataset.edificio as EdificioAsent; renderPanelEdificios(); }));
   }, 'edificios');
+  repintarFicha();
 
   const cargo = cargoConstructor(asentamiento, proyeccion.heroeId);
   const pie = '<p id="asent-lado-error" class="faction-error" role="alert"></p>';
@@ -1569,7 +1571,7 @@ function seccionEdificios(a: Asentamiento, cargo: 'gobernador' | 'maestroObras' 
       const objetivoMejora = lista
         .filter((e) => e.estado === 'activo' && !e.mejora)
         .sort((e1, e2) => (e1.nivelInterno ?? 1) - (e2.nivelInterno ?? 1))[0];
-      return `<div class="asent-edif-item" style="--swatch:${EDIFICIO_COLOR[tipo] ?? '#888'}">
+      return `<div class="asent-edif-item${tipoSeleccionado() === tipo ? ' sel' : ''}" data-fila-tipo="${escaparHtml(tipo)}" style="--swatch:${EDIFICIO_COLOR[tipo] ?? '#888'}">
         <span class="asent-edif-nombre">${escaparHtml(EDIFICIO_NOMBRE[tipo] ?? tipo)}</span>
         <span class="asent-edif-meta">${escaparHtml(meta)}</span>
         ${cargo && objetivoMejora && tipo !== 'centroUrbano' ? `<button class="asent-edif-mejora" type="button" data-mejorar="${escaparHtml(objetivoMejora.id)}" title="Mejorar el de menor nivel">⬆</button>` : ''}
@@ -1826,6 +1828,11 @@ function montarAsentamiento(): void {
   cablearMenuEsquina(contenedor);
   cablearBarraJugador(contenedor);
   cablearTooltipEdificios(contenedor);
+  cablearVistaCiudad(contenedor, {
+    proyeccion: () => estadoCliente.proyeccionUltima ?? undefined, ejecutar: ejecutarYRefrescar, escapar: escaparHtml,
+    redibujar: () => { if (estadoCliente.proyeccionUltima) void dibujarPantallaSegunModo(estadoCliente.proyeccionUltima); },
+    repintarLista: renderPanelEdificios,
+  });
   // La ciudad tiene vida (almacén, producción, población) aunque el jugador no toque nada: mismo sondeo
   // suave que el mapa, hasta que exista el canal de tiempo real.
   let sondeando = false;
@@ -1855,12 +1862,7 @@ function cablearTooltipEdificios(contenedor: HTMLElement): void {
     const edificio = edificioBajoCursor(canvas, evento, asentamiento, proyeccion.trazadoPorAsentamiento?.[asentamiento.id]);
     if (!edificio) { tooltip.hidden = true; return; }
 
-    const estado = edificio.estado === 'activo' ? 'Activo' : edificio.estado === 'en_construccion' ? 'En construcción' : 'En cola';
-    const notas = [
-      edificio.danado ? 'dañado (reconstrucción)' : null,
-      edificio.pausadoPorAlmacenLleno ? 'parado — almacén lleno' : null,
-    ].filter(Boolean).join(' · ');
-    tooltip.innerHTML = `<strong>${escaparHtml(EDIFICIO_NOMBRE[edificio.tipo] ?? edificio.tipo)}</strong><span>Nivel ${edificio.nivelInterno ?? 1} · ${estado}</span>${notas ? `<span>${escaparHtml(notas)}</span>` : ''}`;
+    tooltip.innerHTML = htmlTooltipEdificio(proyeccion, edificio, escaparHtml);
     tooltip.hidden = false;
     tooltip.style.left = `${Math.min(window.innerWidth - tooltip.offsetWidth - 8, evento.clientX + 14)}px`;
     tooltip.style.top = `${Math.min(window.innerHeight - tooltip.offsetHeight - 8, evento.clientY + 14)}px`;
@@ -2024,7 +2026,7 @@ async function dibujarPantallaSegunModo(proyeccion: ProyeccionJugador): Promise<
   } else {
     if (titulo) titulo.textContent = 'Vista de Asentamiento (Geometría Urbana T2a)';
     const asentamiento = proyeccion.asentamientos[0];
-    if (asentamiento) pintarAsentamiento(ctx, asentamiento, proyeccion.trazadoPorAsentamiento?.[asentamiento.id]);
+    if (asentamiento) pintarAsentamiento(ctx, asentamiento, proyeccion.trazadoPorAsentamiento?.[asentamiento.id], edificioSeleccionado());
     else { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillText('No perteneces a ningún asentamiento aún.', 20, 40); }
   }
   if (estadoCliente.modoFundacionActivo && estadoCliente.posicionFundacion && estadoCliente.mapaCache?.mapa) {

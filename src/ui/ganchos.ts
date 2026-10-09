@@ -4,6 +4,7 @@
 import type { ProyeccionJugador } from '../apiCliente';
 import type { Asentamiento } from '../tiposDominio';
 import type { Ejecutar } from './panelCarro';
+import { SUBPESTANA_INFORMACION, SUBPESTANA_RECETAS } from './vistaCiudad';
 
 type Escapar = (valor: string) => string;
 
@@ -39,7 +40,9 @@ export const SUBPESTANAS_CENTRO_EXTRA: SubpestanaPlaza[] = [
 
   // --- hueco bloque A2 (plaza › Centro urbano: tesorero y caravana de fundación)
 
-  // --- hueco bloque F (vista de la ciudad: recetas)
+  // --- hueco bloque F (vista de la ciudad: recetas, glosario)
+  SUBPESTANA_RECETAS,
+  SUBPESTANA_INFORMACION,
 ];
 
 /** Subpestañas EXTRA de Mercado, después de Órdenes · Caravanas · Escolta. */

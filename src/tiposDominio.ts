@@ -125,6 +125,8 @@ export interface Asentamiento {
   edificios: Edificio[];
   /** Auto-construcción congelada: el motor deja de comprometer necesidades nuevas. Ausente = activa. */
   autoConstruccionPausada?: boolean;
+  /** Recetas de transformación paradas por el Gobernador o el Maestro de Obras (`alternarReceta`, Doc 4.2.1), por el recurso que producen. Ausente = todas en marcha. */
+  recetasPausadas?: string[];
   /** Reserva de recursos calibrada por el Tesorero (0-999 por recurso). */
   reservaManual?: Record<string, number>;
   /** Héroes residentes que llegaron fundando · comprando casa (Doc 2.5). */
