@@ -63,6 +63,7 @@ import { cablearCargaDeSalida, htmlCargaDeSalida, leerCarga } from './ui/cargaDe
 import { cablearColumna, htmlColumna } from './ui/panelColumna';
 import { cablearPanelIntel, renderPanelIntel } from './ui/panelIntel';
 import { cablearMercadoDePlaza, htmlMercadoDePlaza } from './ui/mercadoDePlaza';
+import { ayuda } from './ui/ayuda';
 import { svgPlanoBandidos } from './ui/planoBandidos';
 import { explicarError } from './ui/erroresServidor';
 import { motivosParaCrearFaccion } from './ui/validarFaccion';
@@ -606,9 +607,17 @@ function renderSeleccionMapaCuerpo(): void {
   // Solo un ejército abre un asedio (backend Doc 5.15.1b): una columna personal puede unirse a uno abierto desde su batalla en el mapa.
   if (ataque && !ataque.impide && miColumna(proyeccion)?.tipo === 'personal') ataque.impide = 'Solo un ejército abre un asedio: tu columna personal puede unirse a uno ya abierto.';
   cont.hidden = false;
+  // Lo largo (cómo entra un ejército, qué es atacar) va tras ⓘ; el motivo de una línea de un botón apagado se queda a la vista.
+  const motivoEntrada = !entraEjercito ? '' : !propio ? 'Un ejército solo entra entero en una plaza de su Facción.' : soyLider ? '' : 'Solo el Líder hace entrar al ejército.';
+  const motivoAtaque = ataque ? ataque.impide : '';
+  const ayudaPlaza = [
+    entraEjercito && propio && soyLider ? 'Tu ejército entra entero y se desarma: los que residen aquí entran como siempre; los demás, de visita. Si lleva caravanas adjuntas, tienen que ser de esta plaza.' : '',
+    ataque && !motivoAtaque ? 'Atacar es asediarla: si cae pasa a tu Facción; si aguanta, quedas herido.' : '',
+    motivoAtaque.length > 70 ? motivoAtaque : '',
+  ].filter(Boolean).map(escaparHtml).join('<br>');
   if (!pintar(cont, `
     <button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>
-    <span class="faction-kicker">${propio ? 'Tu asentamiento' : 'Asentamiento'}${asentamiento.recordado !== null ? ' · recordado' : ''}</span>
+    <span class="faction-kicker">${propio ? 'Tu asentamiento' : 'Asentamiento'}${asentamiento.recordado !== null ? ' · recordado' : ''}${ayudaPlaza ? ayuda('mapa:ficha-plaza', ayudaPlaza) : ''}</span>
     <h3>${escaparHtml(asentamiento.nombre ?? asentamiento.id)}</h3>
     <div class="mapa-seleccion-datos">
       <div><span>Facción</span><strong>${escaparHtml(faccion?.nombre ?? asentamiento.faccionId)}</strong></div>
@@ -618,11 +627,11 @@ function renderSeleccionMapaCuerpo(): void {
     </div>
     <div class="mapa-seleccion-acciones">
       <button id="btn-marchar-alli" class="btn-secondary" type="button">Marchar aquí</button>
-      <button id="btn-entrar-asent" class="btn-primary" type="button"${entraEjercito && (!propio || !soyLider) ? ' disabled' : ''}>${entraEjercito ? 'Entrar con el ejército' : 'Entrar'}</button>
-      ${ataque ? `<button id="btn-atacar-asent" class="btn-primary" type="button"${ataque.impide ? ' disabled' : ''}>Atacar</button>` : ''}
+      <button id="btn-entrar-asent" class="btn-primary" type="button"${entraEjercito && (!propio || !soyLider) ? ` disabled title="${escaparHtml(motivoEntrada)}"` : ''}>${entraEjercito ? 'Entrar con el ejército' : 'Entrar'}</button>
+      ${ataque ? `<button id="btn-atacar-asent" class="btn-primary" type="button"${ataque.impide ? ` disabled title="${escaparHtml(ataque.impide)}"` : ''}>Atacar</button>` : ''}
     </div>
-    ${entraEjercito ? `<p class="mapa-lista-vacia">${!propio ? 'Un ejército solo entra entero en una plaza de su Facción.' : soyLider ? 'Tu ejército entra entero y se desarma: los que residen aquí entran como siempre; los demás, de visita. Si lleva caravanas adjuntas, tienen que ser de esta plaza.' : 'Solo el Líder hace entrar al ejército.'}</p>` : ''}
-    ${ataque ? `<p class="mapa-lista-vacia">${escaparHtml(ataque.impide || 'Atacar es asediarla: si cae pasa a tu Facción; si aguanta, quedas herido.')}</p>` : ''}
+    ${motivoEntrada ? `<p class="mapa-lista-vacia">${motivoEntrada}</p>` : ''}
+    ${motivoAtaque && motivoAtaque.length <= 70 ? `<p class="mapa-lista-vacia">${escaparHtml(motivoAtaque)}</p>` : ''}
     ${htmlMercadoDePlaza(proyeccion, asentamiento.id, escaparHtml)}
     <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`, undefined, claveSeleccion())) return;
   cablearMercadoDePlaza(cont, asentamiento.id, { ejecutarConDatos: ejecutarConDatosYRefrescar, aviso: avisoMapa }, proyeccion.heroeId);
@@ -695,7 +704,7 @@ function renderSeleccionCampamento(cont: HTMLElement, proyeccion: ProyeccionJuga
     : campamento.campamentoMercenariosId ? `al campamento ${escaparHtml(campamento.campamentoMercenariosId)}` : '';
   if (!pintar(cont, `
     <button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>
-    <span class="faction-kicker">Campamento de bandidos</span>
+    <span class="faction-kicker">Campamento de bandidos${ayuda('mapa:ficha-bandidos', `Plano esquemático: el servidor no publica el trazado de los campamentos de bandidos. El botín decrece si se destruyen muchos en un día. ${impide.length > 70 ? `${escaparHtml(impide)} ` : ''}Si cae, ganas su oro de botín (a salvo: no va en el carro). Si aguanta, quedas herido y pierdes la mitad del carro.`)}</span>
     <h3>Bandidos · nivel ${campamento.nivel}</h3>
     <div class="bandidos-nivel" title="Nivel ${campamento.nivel} de 3">${[1, 2, 3].map((n) => `<i${n <= campamento.nivel ? ' class="on"' : ''}></i>`).join('')}<span>Nivel ${campamento.nivel} de 3</span></div>
     ${svgPlanoBandidos(campamento)}
@@ -706,12 +715,11 @@ function renderSeleccionCampamento(cont: HTMLElement, proyeccion: ProyeccionJuga
       ${distancia !== null ? `<div><span>Distancia</span><strong>${distancia}</strong></div>` : ''}
       ${acosa ? `<div><span>Acosa</span><strong>${acosa}</strong></div>` : ''}
     </div>
-    <p class="mapa-lista-vacia">Plano esquemático: el servidor no publica el trazado de los campamentos de bandidos. El botín decrece si se destruyen muchos en un día.</p>
     <div class="mapa-seleccion-acciones">
       <button id="btn-marchar-alli" class="btn-secondary" type="button">Marchar aquí</button>
-      <button id="btn-atacar-campamento" class="btn-primary" type="button"${impide ? ' disabled' : ''}>Atacar</button>
+      <button id="btn-atacar-campamento" class="btn-primary" type="button"${impide ? ` disabled title="${escaparHtml(impide)}"` : ''}>Atacar</button>
     </div>
-    <p class="mapa-lista-vacia">${escaparHtml(impide || 'Si cae, ganas su oro de botín (a salvo: no va en el carro). Si aguanta, quedas herido y pierdes la mitad del carro.')}</p>
+    ${impide && impide.length <= 70 ? `<p class="mapa-lista-vacia">${escaparHtml(impide)}</p>` : ''}
     <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`, undefined, claveSeleccion())) return;
   cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
   cont.querySelector('#btn-marchar-alli')?.addEventListener('click', () => void marcharAObjetivo({ tipo: 'punto', punto: campamento.posicion }));
@@ -751,7 +759,7 @@ function renderSeleccionMercenarios(cont: HTMLElement, proyeccion: ProyeccionJug
   const soyLider = columna?.liderId === proyeccion.heroeId;
   if (!pintar(cont, `
     <button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>
-    <span class="faction-kicker">Campamento de mercenarios${tuyo ? ' · tu residencia' : ''}</span>
+    <span class="faction-kicker">Campamento de mercenarios${tuyo ? ' · tu residencia' : ''}${ayuda('mapa:ficha-mercenarios', `${entraEjercito ? (soyLider ? 'Tu ejército entra entero y se desarma en la puerta: los que residen aquí entran con su tropa y su carro; los demás, de visita, con su columna aparcada. Si lleva caravanas adjuntas, tienen que ser de este lugar.' : 'Solo el Líder hace entrar al ejército.') : 'Se entra con la columna a la puerta.'} Junto al campamento nadie inicia un combate.`)}</span>
     <h3>${escaparHtml(campamento.id)}</h3>
     <div class="mapa-seleccion-datos">
       <div><span>Residentes</span><strong>${campamento.residentesIds.length}</strong></div>
@@ -759,9 +767,9 @@ function renderSeleccionMercenarios(cont: HTMLElement, proyeccion: ProyeccionJug
     </div>
     <div class="mapa-seleccion-acciones">
       <button id="btn-marchar-alli" class="btn-secondary" type="button">Marchar aquí</button>
-      <button id="btn-entrar-mercenarios" class="btn-primary" type="button"${entraEjercito && !soyLider ? ' disabled' : ''}>${entraEjercito ? 'Entrar con el ejército' : 'Entrar'}</button>
+      <button id="btn-entrar-mercenarios" class="btn-primary" type="button"${entraEjercito && !soyLider ? ' disabled title="Solo el Líder hace entrar al ejército."' : ''}>${entraEjercito ? 'Entrar con el ejército' : 'Entrar'}</button>
     </div>
-    <p class="mapa-lista-vacia">${entraEjercito ? (soyLider ? 'Tu ejército entra entero y se desarma en la puerta: los que residen aquí entran con su tropa y su carro; los demás, de visita, con su columna aparcada. Si lleva caravanas adjuntas, tienen que ser de este lugar.' : 'Solo el Líder hace entrar al ejército.') : 'Se entra con la columna a la puerta.'} Junto al campamento nadie inicia un combate.</p>
+    ${entraEjercito && !soyLider ? '<p class="mapa-lista-vacia">Solo el Líder hace entrar al ejército.</p>' : ''}
     <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`, undefined, claveSeleccion())) return;
   cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
   cont.querySelector('#btn-marchar-alli')?.addEventListener('click', () => void marcharAObjetivo({ tipo: 'punto', punto: campamento.posicion }));
@@ -772,13 +780,12 @@ function renderSeleccionMercenarios(cont: HTMLElement, proyeccion: ProyeccionJug
 function renderSeleccionAlijo(cont: HTMLElement, alijo: Alijo): void {
   if (!pintar(cont, `
     <button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>
-    <span class="faction-kicker">Alijo</span>
+    <span class="faction-kicker">Alijo${ayuda('mapa:ficha-alijo', 'Hay que estar en el sitio. El oro va a tu oro de botín.')}</span>
     <h3>${alijo.oro} de oro</h3>
     <div class="mapa-seleccion-acciones">
       <button id="btn-marchar-alli" class="btn-secondary" type="button">Marchar aquí</button>
       <button id="btn-abrir-alijo" class="btn-primary" type="button">Abrir</button>
     </div>
-    <p class="mapa-lista-vacia">Hay que estar en el sitio. El oro va a tu oro de botín.</p>
     <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`, undefined, claveSeleccion())) return;
   cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
   cont.querySelector('#btn-marchar-alli')?.addEventListener('click', () => void marcharAObjetivo({ tipo: 'punto', punto: alijo.posicion }));
@@ -1088,11 +1095,13 @@ function renderPanelRiel(): void {
     const caravana = caravanaDeFundacion(proyeccion);
     const enganchada = Boolean(caravana && columna?.caravanasAdjuntasIds?.includes(caravana.id));
     const htmlFundar = `
-      <span class="faction-kicker">Fundar asentamiento</span>
+      <span class="faction-kicker">Fundar asentamiento${!caravana
+        ? ayuda('mapa:fundar', 'Una Facción sin plaza la compra en un campamento de mercenarios con el fondo de sus héroes; con plaza, se lanza desde Centro urbano › Fundación. Quien la compra o la lanza la lleva.')
+        : enganchada ? ayuda('mapa:fundar', 'Se funda donde está ahora tu columna, no en agua ni a menos de 100 de un campamento.') : ''}</span>
       ${!caravana
-        ? '<p>Se funda con una Caravana de Fundación. Una Facción sin plaza la compra en un campamento de mercenarios con el fondo de sus héroes; con plaza, se lanza desde Centro urbano › Fundación. Quien la compra o la lanza la lleva.</p>'
+        ? '<p>Se funda con una Caravana de Fundación.</p>'
         : enganchada
-          ? `<p>Se funda donde está ahora tu columna (no en agua ni a menos de 100 de un campamento). Estos son los recursos a tu alcance:</p>
+          ? `<p>Se funda donde está ahora tu columna. Estos son los recursos a tu alcance:</p>
             <div id="mapa-fundar-recursos">${resumenRecursosFundacion(escaparHtml)}</div>
             <button id="btn-fundar-aqui" class="btn-primary" type="button">Fundar aquí</button>`
           : `<p>Tu Caravana de Fundación espera en ${caravana.origenCampamentoId ? 'su campamento' : 'su plaza'}. Lleva tu columna a la puerta y engánchala.</p>

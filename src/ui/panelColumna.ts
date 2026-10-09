@@ -3,6 +3,7 @@
 // `ordenarEscuadras` (backend 2026-10-07) pone las tuyas en el orden pedido. En un ejército con más héroes solo se ordenan las tuyas.
 import type { ProyeccionJugador } from '../apiCliente';
 import type { Escuadron } from '../tiposDominio';
+import { ayuda } from './ayuda';
 import { cablearCaravanasAdjuntas, htmlCaravanasAdjuntas } from './caravanasAdjuntas';
 import { chipLiderazgo } from './liderazgo';
 import { cablearCarro, htmlCarro, type Ejecutar } from './panelCarro';
@@ -33,7 +34,7 @@ export function htmlColumna(p: ProyeccionJugador, e: Escapar): string {
       <div><span>Hombres</span><strong>${total}</strong></div>
       <div><span>Columna</span><strong>${columna.tipo === 'ejercito' ? `ejército · ${columna.participantes.length}` : 'personal'}</strong></div>
     </div>
-    <strong class="heroe-sub">Tropa, en orden de combate</strong>
+    <strong class="heroe-sub">Tropa, en orden de combate${ayuda('columna:tropa', 'La primera entra primero en combate. Se reordenan con las flechas. En un ejército con más héroes solo se ordenan las tuyas; el orden de las demás lo pone cada uno.')}</strong>
     ${mias.length === 0
       ? '<p class="mapa-lista-vacia">Tu columna no lleva tropa tuya.</p>'
       : `<ol class="columna-orden">${mias
@@ -41,8 +42,7 @@ export function htmlColumna(p: ProyeccionJugador, e: Escapar): string {
             <button class="btn-secondary" type="button" data-mover="${i}" data-dir="-1" aria-label="Subir ${e(s.nombre)}"${i === 0 ? ' disabled' : ''}>↑</button>
             <button class="btn-secondary" type="button" data-mover="${i}" data-dir="1" aria-label="Bajar ${e(s.nombre)}"${i === mias.length - 1 ? ' disabled' : ''}>↓</button></li>`)
           .join('')}</ol>`}
-    ${deOtros > 0 ? `<p class="asent-lado-nota">Además van ${deOtros} escuadras de los otros héroes del ejército: su orden lo pone cada uno.</p>` : ''}
-    <p class="asent-lado-nota">La primera entra primero en combate.</p>
+    ${deOtros > 0 ? `<p class="asent-lado-nota">Además van ${deOtros} escuadras de los otros héroes del ejército.</p>` : ''}
     <p class="faction-error" data-campo="error-orden" role="alert"></p>
     ${htmlCarro(p, e, false)}
     ${htmlCaravanasAdjuntas(p, e)}`;

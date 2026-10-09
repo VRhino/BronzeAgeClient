@@ -4,6 +4,7 @@
 // Aquí solo se avisa de lo evidente (sin columna, lejos, no Líder, caducada): el que decide es el servidor y su rechazo se enseña tal cual.
 import type { ProyeccionJugador } from '../apiCliente';
 import { RECURSO_NOMBRE } from '../paletas';
+import { ayuda } from './ayuda';
 
 type Escapar = (valor: string) => string;
 
@@ -41,16 +42,18 @@ export function htmlMercadoDePlaza(p: ProyeccionJugador, plazaId: string, e: Esc
     const pendiente = o.cantidad - o.cantidadCumplida;
     const caducada = p.instante >= o.expiraEn;
     const motivo = general || (caducada ? 'La orden ha caducado.' : '');
+    const titulo = motivo ? ` title="${e(motivo)}"` : '';
     const nombre = e(RECURSO_NOMBRE[o.recurso] ?? o.recurso);
     return `<div class="mapa-lista-item" data-orden-fila="${e(o.id)}">
       <div><strong>${o.tipo === 'venta' ? 'Vende' : 'Compra'} ${nombre}</strong><br><span>${num(pendiente)} pendientes · ${o.precioUnitario.toFixed(2)} de oro c/u · caduca en ${falta(o.expiraEn - p.instante)}</span></div>
-      <input class="form-input" type="number" min="1" step="1" value="${Math.max(1, Math.floor(pendiente))}" data-orden-cantidad="${e(o.id)}" aria-label="Cantidad" ${motivo ? 'disabled' : ''} />
-      <button class="btn-primary" type="button" data-orden-tomar="${e(o.id)}"${motivo ? ' disabled' : ''}>${o.tipo === 'venta' ? 'Comprar' : 'Vender'}</button>
-      ${motivo ? `<p class="mapa-lista-vacia">${e(motivo)}</p>` : ''}
+      <input class="form-input" type="number" min="1" step="1" value="${Math.max(1, Math.floor(pendiente))}" data-orden-cantidad="${e(o.id)}" aria-label="Cantidad" ${motivo ? 'disabled' : ''}${titulo} />
+      <button class="btn-primary" type="button" data-orden-tomar="${e(o.id)}"${motivo ? ' disabled' : ''}${titulo}>${o.tipo === 'venta' ? 'Comprar' : 'Vender'}</button>
+      ${motivo && !general ? `<p class="mapa-lista-vacia">${e(motivo)}</p>` : ''}
     </div>`;
   }).join('');
-  return `<strong class="heroe-sub">Mercado de la plaza</strong>
-    <p class="mapa-lista-vacia">Tomas la orden en persona con tu carro: pagas o cobras en oro del carro, más la comisión de la plaza. Se sirve lo que se pueda.</p>
+  // El motivo general (el mismo para todas las órdenes) sale una vez, no en cada fila.
+  return `<strong class="heroe-sub">Mercado de la plaza${ayuda('mapa:mercado-plaza', 'Tomas la orden en persona con tu carro: pagas o cobras en oro del carro, más la comisión de la plaza. Se sirve lo que se pueda.')}</strong>
+    ${general ? `<p class="mapa-lista-vacia">${e(general)}</p>` : ''}
     <div class="mapa-lista">${filas}</div>`;
 }
 

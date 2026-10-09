@@ -13,6 +13,7 @@ import { radioDeEncuentro, tropasReclutables } from '../apiCliente';
 import { RADIO_PROTECCION_MERCENARIOS } from '../render';
 import { RECURSO_NOMBRE } from '../paletas';
 import type { CaravanaAvistada, EjercitoAvistado } from '../tiposDominio';
+import { ayuda } from './ayuda';
 import { estadoCliente, textoEnTiempoReal } from './estadoCliente';
 import { ejercitosDeLaFaccion, miColumna } from './ejercitos';
 import type { FichaMapaExtra, ObjetoBajoElClic } from './ganchos';
@@ -148,14 +149,18 @@ function htmlFicha(p: ProyeccionJugador, o: Objetivo, kicker: string, e: Escapar
   const d = mi ? Math.round(distancia(mi.posicionActual, o.posicion)) : null;
   const faccion = o.faccionId ? p.facciones.find((f) => f.id === o.faccionId)?.nombre ?? o.faccionId : 'Sin Facción';
   const acciones = estados(p, o);
-  const botones = acciones.map((a) => `<button class="btn-primary" type="button" data-ajeno="${a.accion}"${a.motivo ? ' disabled' : ''}>${a.etiqueta}</button>`).join('');
-  const motivos = acciones.filter((a) => a.motivo).map((a) => `<p class="mapa-lista-vacia">${a.etiqueta}: ${e(a.motivo)}</p>`).join('');
+  const botones = acciones.map((a) => `<button class="btn-primary" type="button" data-ajeno="${a.accion}"${a.motivo ? ` disabled title="${e(a.motivo)}"` : ''}>${a.etiqueta}</button>`).join('');
+  // Los motivos de una línea se quedan a la vista; todos (también los largos) están en la ayuda y en el `title` de su botón.
+  const apagadas = acciones.filter((a) => a.motivo);
+  const agrupados = (lista: Estado[]): [string, string][] => [...new Set(lista.map((a) => a.motivo))].map((m) => [lista.filter((a) => a.motivo === m).map((a) => a.etiqueta).join(' y '), m]);
+  const motivos = agrupados(apagadas.filter((a) => a.motivo.length <= 70)).map(([etiquetas, m]) => `<p class="mapa-lista-vacia">${etiquetas}: ${e(m)}</p>`).join('')
+    + (apagadas.length > 0 ? `<p class="mapa-lista-vacia">Por qué no se puede${ayuda('ajeno:motivos',agrupados(apagadas).map(([etiquetas, m]) => `<strong>${etiquetas}</strong>: ${e(m)}`).join('<br>'), 'Por qué no se puede')}</p>` : '');
   const heroes = (o.heroeIds ?? []).length > 0 ? `<strong class="heroe-sub">Héroes que van</strong><div class="mapa-lista">${o.heroeIds!.map((id) => htmlHeroe(p, id, e)).join('')}</div>` : '';
   const datos = o.tipo === 'ejercito'
     ? `<div><span>Héroes</span><strong>${(o.heroeIds ?? []).length}</strong></div>`
     : `<div><span>Escolta</span><strong>${o.escoltada ? 'Sí' : 'No'}</strong></div><div><span>Lleva</span><strong>${o.recursos?.map((r) => e(RECURSO_NOMBRE[r] ?? r)).join(', ') || 'nada'}</strong></div>`;
   const persecucion = o.teSigue
-    ? `<p class="faction-error">⚠ Va tras tu columna.</p><p class="mapa-lista-vacia">Puedes huir —marcha a otro sitio: si eres más rápido no te alcanza, y entrar en una plaza o campamento la suelta— o plantarle cara con «Plantar cara» cuando esté a ${radioDeEncuentro()}.</p>`
+    ? `<p class="faction-error">⚠ Va tras tu columna.${ayuda('ajeno:persecucion', `Puedes huir —marcha a otro sitio: si eres más rápido no te alcanza, y entrar en una plaza o campamento la suelta— o plantarle cara con «Plantar cara» cuando esté a ${radioDeEncuentro()}.`)}</p>`
     : '';
   return `
     <button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>

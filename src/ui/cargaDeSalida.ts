@@ -2,6 +2,7 @@
 // (`salirDelCampamento.carga` / `salirAlMundo.carga`, mapa recurso → cantidad). El carro de una columna nueva admite `LOGISTICA.capacidadCarroPorJugador`
 // del backend (copiado: el backend no lo publica antes de que exista la columna; si cambiara, el rechazo del backend lo dice).
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
+import { ayuda } from './ayuda';
 
 export const CAPACIDAD_CARRO_SALIDA = 500;
 
@@ -11,8 +12,7 @@ type Escapar = (valor: string) => string;
 export function htmlCargaDeSalida(disponible: Record<string, number>, de: string, e: Escapar): string {
   const filas = Object.entries(disponible).filter(([r, n]) => n >= 1 && r !== 'oro');
   return `
-    <strong class="heroe-sub">Carga del carro <span data-carga-total>0 / ${CAPACIDAD_CARRO_SALIDA}</span></strong>
-    <p class="asent-lado-nota">Lo que metas en el carro sale contigo, de ${e(de)}. Es lo que llevas para comer o gastar fuera, y lo que se arriesga si pierdes un combate (se pierde la mitad). El oro de botín no va en el carro.</p>
+    <strong class="heroe-sub">Carga del carro <span data-carga-total>0 / ${CAPACIDAD_CARRO_SALIDA}</span>${ayuda('salida:carga', `Lo que metas en el carro sale contigo, de ${e(de)}. Es lo que llevas para comer o gastar fuera, y lo que se arriesga si pierdes un combate (se pierde la mitad). El oro de botín no va en el carro.`)}</strong>
     ${filas.length === 0
       ? `<p class="asent-lado-nota">No hay nada que cargar en ${e(de)}.</p>`
       : filas.map(([r, n]) => `<div class="carro-fila"><span>${RECURSO_ICONO[r] ?? '📦'} ${e(RECURSO_NOMBRE[r] ?? r)}</span><small>hay ${Math.floor(n)}</small><input class="form-input" type="number" min="0" max="${Math.floor(n)}" value="0" data-carga="${e(r)}" /><button class="btn-secondary" type="button" data-carga-todo="${e(r)}">Todo</button></div>`).join('')}`;

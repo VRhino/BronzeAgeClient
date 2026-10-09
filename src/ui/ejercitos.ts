@@ -9,6 +9,7 @@
 import type { ProyeccionJugador } from '../apiCliente';
 import { radioDeEncuentro } from '../apiCliente';
 import type { Ejercito } from '../tiposDominio';
+import { ayuda } from './ayuda';
 import { nombreDeHeroe } from './nombres';
 import { textoEnTiempoReal } from './estadoCliente';
 import type { Ejecutar } from './panelCarro';
@@ -76,19 +77,19 @@ function filaEjercito(p: ProyeccionJugador, c: Ejercito, e: Escapar): string {
 
 /** «Mi columna»: lo que toca según el estado de la tuya. */
 function htmlMiSituacion(p: ProyeccionJugador, mi: Ejercito | undefined, e: Escapar): string {
-  if (!mi) return '<p class="asent-lado-nota">Estás dentro. Para salir como ejército, usa «Salir» en un campamento o «Salir al mundo» en tu plaza, elige «Ejército» y convoca uno, o únete al que esté preparando un héroe de tu Facción.</p>';
+  if (!mi) return `<p class="asent-lado-nota">Estás dentro.${ayuda('ejercito:dentro', 'Para salir como ejército, usa «Salir» en un campamento o «Salir al mundo» en tu plaza, elige «Ejército» y convoca uno, o únete al que esté preparando un héroe de tu Facción.')}</p>`;
   const lider = mi.liderId === p.heroeId;
   if (mi.formacion) {
     const plazo = textoEnTiempoReal(mi.formacion.expiraEn - p.instante);
-    return `<p class="asent-lado-nota"><strong>Formación</strong>: ${mi.participantes.length}/${MINIMO_FORMACION} héroes, ${POLITICA[mi.politicaDeUnion ?? 'aceptar']}. Se deshace en ${plazo} si no llegáis a ${MINIMO_FORMACION}: con menos de ${MINIMO_FORMACION} no es un ejército y no se mueve. Te quedas quieto hasta entonces.</p>
+    return `<p class="asent-lado-nota"><strong>Formación</strong>: ${mi.participantes.length}/${MINIMO_FORMACION} héroes, ${POLITICA[mi.politicaDeUnion ?? 'aceptar']}. Se deshace en ${plazo}.${ayuda('ejercito:formacion', `Se deshace si no llegáis a ${MINIMO_FORMACION}: con menos de ${MINIMO_FORMACION} no es un ejército y no se mueve. Te quedas quieto hasta entonces.`)}</p>
       ${lider ? '<button class="btn-secondary" type="button" data-ej="cancelar-formacion">Cancelar la formación</button>' : '<button class="btn-secondary" type="button" data-ej="separarme">Separarme</button>'}`;
   }
   if (mi.tipo === 'ejercito') {
     const peticiones = lider ? peticionesVivas(mi, p.instante) : [];
     const resto = mi.participantes.filter((x) => x.heroeId !== p.heroeId);
     return `<p class="asent-lado-nota"><strong>Tu ejército</strong> · ${mi.participantes.length} héroe(s) · ${ESTADO[mi.estado]} · ${POLITICA[mi.politicaDeUnion ?? 'rechazar']}.
-        ${lider ? ' Tú lo diriges: haz clic en el mapa y marchará hacia allí; cada clic cambia el rumbo.' : ' Lo dirige su Líder con clics en el mapa.'}</p>
-      ${(mi.caravanasAdjuntasIds?.length ?? 0) > 0 ? `<p class="asent-lado-nota">Lleva ${mi.caravanasAdjuntasIds!.length} caravana(s) enganchada(s): se cargan, entregan y sueltan en «Lo que llevas» (⚔).</p>` : ''}
+        ${ayuda(lider ? 'ejercito:lider' : 'ejercito:integrante', `${lider ? 'Tú lo diriges: haz clic en el mapa y marchará hacia allí; cada clic cambia el rumbo.' : 'Lo dirige su Líder con clics en el mapa.'}${(mi.caravanasAdjuntasIds?.length ?? 0) > 0 ? ' Las caravanas enganchadas se cargan, entregan y sueltan en «Lo que llevas» (⚔).' : ''}${lider && resto.length > 0 ? ' El Líder no puede separarse: para irse tiene que ceder el mando antes.' : ''}${lider ? '' : ' Si te separas, te llevas lo tuyo y vuelves a ser una columna personal donde estés.'}`)}</p>
+      ${(mi.caravanasAdjuntasIds?.length ?? 0) > 0 ? `<p class="asent-lado-nota">Lleva ${mi.caravanasAdjuntasIds!.length} caravana(s) enganchada(s).</p>` : ''}
       <ul class="ejercito-lista">${mi.participantes.map((x) => `<li>${e(nombreDeHeroe(p, x.heroeId))}${x.heroeId === mi.liderId ? ' <em>(Líder)</em>' : ''}${x.heroeId === p.heroeId ? ' · tú' : ''}</li>`).join('')}</ul>
       ${peticiones.length > 0 ? `<strong class="heroe-sub">Piden unirse</strong>${peticiones.map((x) => `<div class="ejercito-fila"><div><strong>${e(nombreDeHeroe(p, x.heroeId))}</strong><span>${textoEnTiempoReal(x.expiraEn - p.instante)} para contestar</span></div>
           <button class="btn-primary" type="button" data-peticion="${e(x.heroeId)}" data-aceptar="si">Aceptar</button><button class="btn-secondary" type="button" data-peticion="${e(x.heroeId)}" data-aceptar="no">Rechazar</button></div>`).join('')}` : ''}
@@ -96,13 +97,12 @@ function htmlMiSituacion(p: ProyeccionJugador, mi: Ejercito | undefined, e: Esca
         ? `<div class="mapa-seleccion-acciones">
             ${mi.estado === 'marchando' ? '<button class="btn-secondary" type="button" data-ej="estacionar">Acampar aquí</button>' : ''}
             <button class="btn-secondary" type="button" data-ej="replegar">Replegar (cancelar y volver)</button></div>
-          ${resto.length > 0 ? `<div class="campamento-fila"><select class="form-input" id="ej-sucesor">${resto.map((x) => `<option value="${e(x.heroeId)}">${e(nombreDeHeroe(p, x.heroeId))}</option>`).join('')}</select><button class="btn-secondary" type="button" data-ej="ceder">Ceder el mando</button></div>
-          <p class="asent-lado-nota">El Líder no puede separarse: para irse tiene que ceder el mando antes.</p>` : ''}`
-        : '<button class="btn-secondary" type="button" data-ej="separarme">Separarme del ejército</button><p class="asent-lado-nota">Te llevas lo tuyo y vuelves a ser una columna personal donde estés.</p>'}`;
+          ${resto.length > 0 ? `<div class="campamento-fila"><select class="form-input" id="ej-sucesor">${resto.map((x) => `<option value="${e(x.heroeId)}">${e(nombreDeHeroe(p, x.heroeId))}</option>`).join('')}</select><button class="btn-secondary" type="button" data-ej="ceder">Ceder el mando</button></div>` : ''}`
+        : '<button class="btn-secondary" type="button" data-ej="separarme">Separarme del ejército</button>'}`;
   }
   // Columna personal
   if (mi.participantes.length === 1) {
-    return `<p class="asent-lado-nota">Vas por tu cuenta. Con otros dos héroes de tu Facción puedes formar un ejército aquí, sin pasar por una plaza: te quedas quieto hasta que se unan.</p>
+    return `<p class="asent-lado-nota">Vas por tu cuenta.${ayuda('ejercito:personal', 'Con otros dos héroes de tu Facción puedes formar un ejército aquí, sin pasar por una plaza: te quedas quieto hasta que se unan.')}</p>
       ${p.faccionId ? '' : '<p class="asent-lado-nota"><strong>Sin Facción nadie podrá unirse a ti</strong>: un ejército lo componen ciudadanos de una sola Facción.</p>'}
       <div class="mapa-seleccion-acciones"><button class="btn-secondary" type="button" data-ej="organizar" data-politica="aceptar">Organizar ejército (abierto)</button>
       <button class="btn-secondary" type="button" data-ej="organizar" data-politica="preguntar">Organizar ejército (decido yo)</button></div>`;
@@ -115,8 +115,8 @@ export function htmlPanelEjercito(p: ProyeccionJugador, e: Escapar): string {
   const otros = ejercitosDeLaFaccion(p);
   return `<span class="faction-kicker">Ejército</span>
     ${htmlMiSituacion(p, mi, e)}
-    <strong class="heroe-sub">Ejércitos y formaciones de tu Facción</strong>
-    ${otros.length > 0 ? otros.map((c) => filaEjercito(p, c, e)).join('') : '<p class="asent-lado-nota">No hay ninguno. Se forman con «Organizar ejército» en el mapa, o convocándolos dentro de un campamento o de tu plaza.</p>'}
+    <strong class="heroe-sub">Ejércitos y formaciones de tu Facción${ayuda('ejercito:otros', 'Se forman con «Organizar ejército» en el mapa, o convocándolos dentro de un campamento o de tu plaza.')}</strong>
+    ${otros.length > 0 ? otros.map((c) => filaEjercito(p, c, e)).join('') : '<p class="asent-lado-nota">No hay ninguno.</p>'}
     <p class="faction-error" data-campo="error-ejercito" role="alert"></p>`;
 }
 
@@ -167,7 +167,7 @@ export function htmlFichaEjercito(p: ProyeccionJugador, c: Ejercito, e: Escapar)
   const motivo = motivoParaUnirse(p, c);
   return `
     <button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>
-    <span class="faction-kicker">${c.formacion ? 'Formación' : 'Ejército'} de tu Facción</span>
+    <span class="faction-kicker">${c.formacion ? 'Formación' : 'Ejército'} de tu Facción${motivo ? '' : ayuda('ejercito:ficha', 'Estás junto a él con tu columna personal: te unes con lo que llevas encima (tropa y carro) y pasas a ir donde lo dirija su Líder.')}</span>
     <h3>${e(c.liderId ? nombreDeHeroe(p, c.liderId) : c.id)}</h3>
     <div class="mapa-seleccion-datos">
       <div><span>Héroes</span><strong>${c.participantes.length}</strong></div>
@@ -175,7 +175,7 @@ export function htmlFichaEjercito(p: ProyeccionJugador, c: Ejercito, e: Escapar)
       <div><span>Unión</span><strong>${POLITICA[politica]}</strong></div></div>
     <ul class="ejercito-lista">${c.participantes.map((x) => `<li>${e(nombreDeHeroe(p, x.heroeId))}${x.heroeId === c.liderId ? ' <em>(Líder)</em>' : ''}</li>`).join('')}</ul>
     <div class="mapa-seleccion-acciones"><button class="btn-primary" type="button" data-unirse-ejercito="${e(c.id)}"${motivo ? ' disabled' : ''}>${politica === 'preguntar' ? 'Pedir unirme' : 'Unirme'}</button></div>
-    ${motivo ? `<p class="mapa-lista-vacia">${e(motivo)}</p>` : '<p class="mapa-lista-vacia">Estás junto a él con tu columna personal: te unes con lo que llevas encima (tropa y carro) y pasas a ir donde lo dirija su Líder.</p>'}
+    ${motivo ? `<p class="mapa-lista-vacia">${e(motivo)}</p>` : ''}
     <p class="faction-error" data-campo="error-ejercito" role="alert"></p>`;
 }
 

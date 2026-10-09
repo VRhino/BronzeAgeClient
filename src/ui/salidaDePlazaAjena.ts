@@ -2,13 +2,14 @@
 // De tu residencia se sale con `salirAlMundo` (tropa y carga a elegir). El servidor valida (p. ej. si ya no tienes columna) y su rechazo se enseña tal cual.
 import type { ProyeccionJugador } from '../apiCliente';
 import type { Asentamiento } from '../tiposDominio';
+import { ayuda } from './ayuda';
 import type { Ejecutar } from './panelCarro';
 
 export function htmlSalidaDePlazaAjena(p: ProyeccionJugador, a: Asentamiento, escapar: (v: string) => string): string {
   const columna = p.ejercitos.find((e) => e.participantes.some((x) => x.heroeId === p.heroeId));
   const carga = Object.values(columna?.suministro ?? {}).reduce((s, n) => s + n, 0);
   return `<span class="faction-kicker">Salir de ${escapar(a.nombre ?? a.id)}</span>
-    <p class="asent-lado-nota">No resides aquí: al entrar, tu columna se quedó aparcada a la puerta. Salir la retoma tal cual la dejaste, con su tropa y su carro (${columna ? `${carga} de carga` : 'no se ve ninguna columna'}); no hay nada que elegir. Para equipar tropa y carga hay que salir desde tu propia residencia.</p>
+    <p class="asent-lado-nota">No resides aquí. Tu columna: ${columna ? `${carga} de carga` : 'no se ve ninguna columna'}.${ayuda('plaza:salir-ajena', 'Al entrar, tu columna se quedó aparcada a la puerta. Salir la retoma tal cual la dejaste, con su tropa y su carro; no hay nada que elegir. Para equipar tropa y carga hay que salir desde tu propia residencia.')}</p>
     <button class="btn-primary" type="button" data-salir-ajena>Salir y retomar mi columna</button>
     <p class="faction-error" data-campo="error-salida" role="alert"></p>`;
 }
