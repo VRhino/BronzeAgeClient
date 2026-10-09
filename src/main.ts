@@ -35,6 +35,8 @@ import { renderPestanaFaccion } from './ui/pestanaFaccion';
 import { cablearAnexion } from './ui/panelAnexion';
 import { cablearFusion } from './ui/panelFusion';
 import { cablearAdmision } from './ui/panelAdmision';
+import { cablearCargos } from './ui/panelCargos';
+import { cablearDiplomacia } from './ui/panelDiplomacia';
 import { cablearFichaBatalla, cablearFichaFormacion, cablearMiColumna, formacionesVisibles, htmlFichaBatalla, htmlFichaFormacion, htmlMiColumna } from './ui/panelBatalla';
 import { instalarZoomPan, type ControlMapa } from './ui/pantallaMapa';
 import { alCambiarAvisos, alLlegarInforme, avisarDeEventos, avisosNoLeidos, historialDeAvisos, marcarAvisosLeidos, mostrar as mostrarAviso, reiniciarAvisos } from './ui/avisos';
@@ -271,6 +273,8 @@ function cablearFaccion(root: ParentNode, proyeccion: ProyeccionJugador, rerende
   cablearAnexion(root, proyeccion, ejecutarYRefrescar, avisoMapa);
   cablearFusion(root, proyeccion, ejecutarYRefrescar, avisoMapa);
   cablearAdmision(root, proyeccion, ejecutarYRefrescar, avisoMapa);
+  cablearCargos(root, proyeccion, ejecutarYRefrescar, avisoMapa);
+  cablearDiplomacia(root, proyeccion, ejecutarYRefrescar, avisoMapa);
 }
 
 /** Punto de entrada de la creación de héroe, para la pantalla provisional y para la definitiva. Con el héroe

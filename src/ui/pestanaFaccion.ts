@@ -7,6 +7,8 @@ import { nombreDeHeroe } from './nombres';
 import { htmlAnexion } from './panelAnexion';
 import { htmlFusion } from './panelFusion';
 import { htmlAdmision } from './panelAdmision';
+import { htmlCargos, htmlDejarFaccion } from './panelCargos';
+import { htmlDiplomacia } from './panelDiplomacia';
 
 /** «Nombre del Rey (Facción)» del Gran Rey de una Liga: el Gran Rey es la Facción señora, y quien la manda es su Rey. */
 function granRey(p: ProyeccionJugador, faccionId: string): string {
@@ -50,6 +52,8 @@ export function renderPestanaFaccion(
             .map((id) => `<div class="faction-list-item"><div><strong>${escaparHtml(nombreDeHeroe(proyeccion, id))}</strong></div><button class="btn-secondary" type="button" data-solicitud="${escaparHtml(id)}" data-aceptar="si">Aceptar</button><button class="btn-secondary" type="button" data-solicitud="${escaparHtml(id)}" data-aceptar="no">Denegar</button></div>`)
             .join('')}</div>`
         : ''}
+      ${htmlCargos(proyeccion, faccion, escaparHtml)}
+      ${htmlDiplomacia(proyeccion, faccion, escaparHtml)}
       ${htmlAnexion(proyeccion, faccion, escaparHtml)}
       ${htmlFusion(proyeccion, faccion, escaparHtml)}
       ${htmlAdmision(proyeccion, faccion)}
@@ -63,6 +67,7 @@ export function renderPestanaFaccion(
         <span class="faction-kicker">Títulos del servidor</span>
         ${htmlTitulos(proyeccion.titulos ?? [], proyeccion.facciones, faccion.id, escaparHtml)}
       </div>
+      ${htmlDejarFaccion(proyeccion, faccion)}
     `;
   }
 

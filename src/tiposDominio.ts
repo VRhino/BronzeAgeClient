@@ -25,6 +25,10 @@ export interface RelacionPolitica {
   faccionAId: string;
   faccionBId: string;
   estado: 'activa' | 'rota' | string;
+  /** Solo en vasallaje: A es la señora, B la vasalla. */
+  tributo?: { recurso: string; cantidadPorMinuto: number };
+  /** Solo en guerra: la Facción que ya ofreció la paz (la guerra acaba cuando la ofrece la otra). */
+  pazPropuestaPor?: string;
 }
 
 /** Título de prestigio del servidor (backend Doc 2.9): `tituloId` es estable y da su insignia; `nombre` es solo texto. */
