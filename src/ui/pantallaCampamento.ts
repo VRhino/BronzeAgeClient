@@ -144,8 +144,8 @@ function reclutar(p: ProyeccionJugador, e: Escapar): string {
     return `<div class="mapa-lista-item"><div><strong>${e(t.nombre)}</strong>
         <span>${e(EDIFICIO_RECLUTA[t.edificio] ?? t.edificio)} · ${t.unidadesPorDefecto} hombres · escalón ${t.escalon} · equipo (ya en el precio): ${e(equipo(t))}</span>
         <span>${ya ? `ya la tienes: ${ya.cantidad}/${t.unidadesPorDefecto}, ${dondeEstaLaEscuadra(ya, p)}` : 'aún no la tienes'}</span>
-        ${faltan > 0 && o.desbloqueada ? `<span>🪙 ${formatoPrecio(o.precioPorSoldado)} por soldado · <strong>${oro} de oro</strong> por ${faltan}</span>` : ''}
-        ${motivo ? `<small class="asent-lado-nota">${e(motivo)}</small>` : ''}</div>
+        ${faltan > 0 && o.desbloqueada ? `<div class="recl-costes"><span class="recl-coste${oro > oroOrigen ? ' falta' : ''}">🪙 ${formatoPrecio(o.precioPorSoldado)} por soldado · <strong>${oro} de oro</strong> por ${faltan}</span></div>` : ''}
+        ${motivo ? `<div><small class="asent-lado-nota">${e(motivo)}</small></div>` : ''}</div>
       <button class="btn-secondary" type="button" data-reclutar="${e(t.id)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>${ya ? (faltan > 0 ? `Reponer ${faltan}` : 'Completa') : 'Reclutar'}</button></div>`;
   }).join('');
   return `
