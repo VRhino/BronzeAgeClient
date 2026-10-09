@@ -51,8 +51,8 @@ Contrastado contra el canon y el código del servidor en [`Peticion_Backend.md`]
 1. **Publicar en el balance** lo que hoy solo está en `constants.ts`: catálogos de carros y animales, oro por soldado del reclutamiento, `MOVIMIENTO` (radios), `CAPITAL`, `PUERTA`, y el precio y las tropas desbloqueadas del campamento.
 2. **Catálogo de tecnología y Aedas** (Doc 6), la Era de cada tecnología, la capital de la Facción, el progreso de los hitos y qué admite épica.
 3. **Contra el canon:** una vasalla puede llamar a `romperRelacion` sobre su vasallaje (Doc 2.4 no lo contempla); `perseguir` no rechaza aliados, ejército→caravana ni a un no‑Líder (Doc 5.12.3).
-4. **Comodidades:** resultado de `inspeccionar` en la proyección, almacén de tus plazas desde el mundo, nombre y estado de partida, evento de posición, trazado de bandidos.
-5. **Pregunta de diseño al autor:** alianza y vasallaje se aceptan al instante; ¿hace falta aceptación (`responderRelacion`)?
+4. **Comodidades:** resultado de `inspeccionar` en la proyección, almacén de tus plazas desde el mundo, nombre y estado de partida, evento de posición.
+5. **Aceptación de alianza y vasallaje** (decidido por el autor, como anexión y fusión): `responderRelacion` y `propuestasRelacion` en la proyección. Cuando existan, el cliente construye propuestas recibidas (Aceptar o Rechazar) y enviadas (Retirar).
 
 ## 4. Sin verificar en vivo
 

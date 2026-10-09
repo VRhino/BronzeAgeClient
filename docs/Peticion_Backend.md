@@ -1,10 +1,19 @@
-# Petición al Backend — borrador contrastado (2026-10-09)
+# Petición al Backend (2026-10-09)
 
-**Borrador sin enviar.** Reúne lo que los bloques de 0.26.0 anotaron como «necesita Backend», **contrastado contra el canon (`Docs/Game`) y el código del servidor (`BronzeAgeFase0@1e5351c`)**. Requiere el permiso del usuario antes de mandarse a la sesión de Backend.
+**Enviada a la sesión de Backend el 2026-10-09 con permiso del usuario.** Reúne lo que los bloques de 0.26.0 anotaron como «necesita Backend», **contrastado contra el canon (`Docs/Game`) y el código del servidor (`BronzeAgeFase0@1e5351c`)**.
 
 Se descartó lo que el cliente ya puede resolver solo y lo que el canon no pide (ver «Descartado»).
 
 ## A. Peticiones (el cliente no puede resolverlas solo)
+
+### A0. Aceptación de alianza y vasallaje, como anexión y fusión · decidido por el autor
+Hoy `proponerRelacion` deja la relación `activa` al instante («Fase 0 acepta la propuesta al instante», `engine/diplomacia.ts`): un vasallaje se impone sin consentimiento. **El autor decide que hace falta aceptar**, tal cual lo tienen anexión y fusión (Doc 2.6):
+- `proponerRelacion` (alianza o vasallaje) deja una **propuesta pendiente**; la proponen el Rey o el Embajador de la Facción que propone, y la contesta **el Rey de la otra** con un comando nuevo `responderRelacion { propuestaId, aceptar }`; el proponente puede retirarla (`retirarRelacion { propuestaId }`, como `retirarAnexion`/`retirarFusion`).
+- Aceptar la ejecuta en el acto (nace la relación `activa`, con el tributo pactado en el vasallaje). **Caduca** a los N días de mundo como la anexión, y entre dos Facciones una sola propuesta pendiente en cualquier sentido (a decidir por Backend: lo más coherente es seguir el patrón de `ANEXION`).
+- Reglas a revalidar al aceptar (patrón de anexión/fusión): ambas Facciones existen y siguen teniendo Rey, ninguna es ya vasalla de un tercero para un vasallaje, sin batalla abierta, sin guerra entre ambas.
+- La proyección debe traer las propuestas de relación vigentes (como `propuestasAnexion`/`propuestasFusion`: `propuestasRelacion`, hechas o recibidas por mi Facción), con `tipo`, facciones, tributo y `expiraEn`.
+- `declararGuerra` y `proponerPaz` no cambian.
+El cliente construirá la interfaz (propuestas recibidas con Aceptar y Rechazar, enviadas con Retirar) en cuanto estén el comando y el campo de la proyección.
 
 ### A1. Publicar en `GET /v1/balance` lo que hoy solo está en `constants.ts` · prioridad alta
 El cliente copia a mano o no puede mostrar precios y topes que el canon define.
@@ -31,11 +40,12 @@ Doc 5.12.3 (tabla de interacciones) y 5.14: no se persigue a aliados (dos column
 - **`caravanasAvistadas.escoltada`** solo significa «adjunta a un ejército»; una caravana con escolta cedida sin héroe (`escoltaIds`) llega como no escoltada.
 - **Almacén de tus plazas desde el mundo:** con la columna a la puerta de tu plaza, la plaza llega como avistada sin almacén; `cargarCaravana` lo exige y el selector no puede decir cuánto hay. Y `permiteReabastecerAliados` de plazas aliadas, por si el almacén de una aliada se abre. (Pregunta de diseño: el canon de 2.5 pide estar dentro para construir y comerciar, pero `cargarCaravana` desde la puerta ya está permitido.)
 - **Lista de partidas** (`GET /jugador/partidas`): nombre y estado de partida (hoy solo `gameId` y `estado: 'activa'`).
-- **Evento de posición** (o un tick por el canal) para quitar el sondeo de 3 s; **trazado** de los campamentos de bandidos.
+- **Evento de posición** (o un tick por el canal) para quitar el sondeo de 3 s.
 
-## B. Preguntas de diseño al autor (no son peticiones)
+## B. Decisiones del autor ya tomadas
 
-1. **Alianza y vasallaje se aceptan al instante** (`engine/diplomacia.ts`: «Fase 0 acepta la propuesta al instante»). El canon dice «propuesta diplomática — protección a cambio de tributo» (2.4) pero no dice si la otra Facción debe aceptar. Hoy un vasallaje se impone sin consentimiento. ¿Se queda así en Fase 0, o hace falta un estado «propuesta» y un comando de respuesta (`responderRelacion`), como ya tienen anexión y fusión?
+1. **Alianza y vasallaje exigen aceptación** → ver A0.
+2. **El trazado de los campamentos de bandidos no existe** en el canon: se descarta (el cliente conserva el plano esquemático y no lo espera).
 
 ## C. Descartado tras contrastar (el cliente ya lo resuelve o el canon no lo pide)
 
@@ -46,6 +56,7 @@ Doc 5.12.3 (tabla de interacciones) y 5.14: no se persigue a aliados (dos column
 | Si una plaza ajena tiene Mercado activo (D3) | **Ya viaja**: las avistadas llevan `edificios` activos; el cliente puede comprobarlo. |
 | Lista de plazas de la Facción (2.1.7) | Probablemente **ya resuelto**: las plazas propias son ojos de la Facción y salen siempre como avistadas (`seVeAhora`); falta confirmarlo en vivo. |
 | Capacidad de cada caravana como campo | Se cubre con A1 (publicar `CARRO_CATALOGO` y `ANIMAL_CATALOGO`): el cliente la deriva, no hace falta un campo. |
+| Trazado de bandidos (§10.4 antiguo) | No existe en el canon (decisión del autor): se descarta. |
 | Consumo por edificio y producción por edificio individual (F) | El canon no lo pide (el consumo es por receta y población); la producción por tipo basta. No se pide. |
 | `diplomacia.invalida` llega genérico (E1) | No verificado en el servidor; se comprobará antes de pedirlo. |
 
