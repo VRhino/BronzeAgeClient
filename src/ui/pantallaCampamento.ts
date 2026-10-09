@@ -4,7 +4,7 @@
 // tal cual en `#camp-error`. Los menús del jugador (héroe, escuadras, Facción) están en la barra superior (`barraJugador.ts`).
 import { chipLiderazgo } from './liderazgo';
 import { cablearCargaDeSalida, htmlCargaDeSalida, leerCarga } from './cargaDeSalida';
-import { costoDeRefundacion, type ProyeccionJugador } from '../apiCliente';
+import { costoDeRefundacion, tropasReclutables, type ProyeccionJugador } from '../apiCliente';
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { CampamentoMercenarios, Escuadron } from '../tiposDominio';
 
@@ -20,6 +20,10 @@ const ETIQUETA: Record<SeccionCampamento, string> = { resumen: 'Resumen', salir:
 const TROPAS_PRESTAMO: [string, string][] = [['milicia_lanceros', 'Milicia de lanceros'], ['lenadores', 'Leñadores'], ['granjeros', 'Granjeros']];
 
 const nombreRecurso = (r: string): string => RECURSO_NOMBRE[r] ?? r;
+
+/** De dónde sale el oro de «Reclutar»: vive entre repintados, como el bien elegido del mercado. */
+let pagarConElegido: 'almacenPersonal' | 'carro' = 'almacenPersonal';
+const EDIFICIO_RECLUTA: Record<string, string> = { barracon: 'Barracón', galeriaDeTiro: 'Galería de tiro', caballerizas: 'Caballerizas' };
 
 export function campamentoActual(proyeccion: ProyeccionJugador): CampamentoMercenarios | undefined {
   const u = proyeccion.heroe.ubicacion;
@@ -99,11 +103,50 @@ function salir(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): stri
     <button class="btn-primary" type="button" id="btn-salir-campamento">Salir</button>`;
 }
 
+/**
+ * RECLUTAR (backend 2026-10-02, Doc 1.9b): las tropas de los edificios militares del campamento, pagadas SOLO con oro y con la población del
+ * campamento. Qué tecnología tiene desbloqueada el campamento, cuántos reclutas le quedan y el precio final (escalón + caballos + equipo, recargo,
+ * reputación, descuento sin plazas) no viajan en la proyección ni en el balance: lo dice el servidor al rechazar o al cobrar.
+ */
+function reclutar(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): string {
+  const heroe = p.heroe;
+  const catalogo = tropasReclutables();
+  if (!catalogo) return '<p class="asent-lado-nota">Cargando las tropas…</p>';
+  const ofrecidas = catalogo.tropas.filter((t) => t.edificio !== 'centroUrbano' && c.edificios.includes(t.edificio) && t.nivelRequerido <= catalogo.nivelEdificios);
+  if (ofrecidas.length === 0) return '<p class="asent-lado-nota">Este campamento no tiene barracón, galería de tiro ni caballerizas: no ofrece tropa.</p>';
+  const propias = new Map(heroe.escuadrones.filter((s) => !s.prestada).map((s) => [s.tropaId, s] as const));
+  const columna = p.ejercitos.find((x) => x.liderId === heroe.id);
+  const oroAlmacen = Math.floor(heroe.almacenPersonal?.['oro'] ?? 0);
+  const oroCarro = Math.floor(columna?.suministro?.['oro'] ?? 0);
+  if (pagarConElegido === 'carro' && !columna) pagarConElegido = 'almacenPersonal';
+  const equipo = (t: (typeof ofrecidas)[number]): string =>
+    [...Object.entries(t.costoEquipo).map(([r, n]) => `${n} ${nombreRecurso(r)}`), ...(t.caballos ? [`${t.caballos} caballo${t.caballos > 1 ? 's' : ''}`] : [])].join(', ') || 'sin equipo';
+  const filas = ofrecidas.map((t) => {
+    const ya = propias.get(t.id);
+    const faltan = t.unidadesPorDefecto - (ya?.cantidad ?? 0);
+    return `<div class="mapa-lista-item"><div><strong>${e(t.nombre)}</strong>
+        <span>${e(EDIFICIO_RECLUTA[t.edificio] ?? t.edificio)} · ${t.unidadesPorDefecto} hombres · escalón ${t.escalon} · equipo (se cobra en oro): ${e(equipo(t))}</span>
+        <span>${ya ? `ya la tienes: ${ya.cantidad}/${t.unidadesPorDefecto}, ${dondeEstaLaEscuadra(ya, p)}` : 'aún no la tienes'}</span></div>
+      <button class="btn-secondary" type="button" data-reclutar="${e(t.id)}"${faltan <= 0 ? ' disabled' : ''}>${ya ? (faltan > 0 ? `Reponer ${faltan}` : 'Completa') : 'Reclutar'}</button></div>`;
+  }).join('');
+  return `
+    <p class="asent-lado-nota">Se paga solo con oro y con los reclutas del campamento. Solo hay una escuadra por tropa: si ya la tienes, se repone hasta el tope y se cobra lo que falta (la de una columna, con la columna a la puerta). Qué tropas están desbloqueadas lo decide el campamento: si aún no, el servidor lo dirá.</p>
+    <label class="mapa-lista-item"><span>Pagar con</span>
+      <select class="form-input" id="reclutar-pagar-con">
+        <option value="almacenPersonal"${pagarConElegido === 'almacenPersonal' ? ' selected' : ''}>Mi almacén personal (${oroAlmacen} de oro)</option>
+        ${columna ? `<option value="carro"${pagarConElegido === 'carro' ? ' selected' : ''}>El carro de mi columna (${oroCarro} de oro; a la puerta)</option>` : ''}
+      </select></label>
+    <div class="mapa-lista">${filas}</div>`;
+}
+
 function tropa(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): string {
   const heroe = p.heroe;
-  if (!c.residentesIds.includes(heroe.id)) return '<p class="asent-lado-nota">Solo te prestan tropa en el campamento donde resides.</p>';
+  if (!c.residentesIds.includes(heroe.id)) return '<p class="asent-lado-nota">Solo se presta o se recluta tropa en el campamento donde resides: pulsa «Residir aquí» en Resumen.</p>';
   const prestadas = new Map(heroe.escuadrones.filter((s) => s.prestada).map((s) => [s.tropaId, s] as const));
   return `
+    <strong class="heroe-sub">Reclutar</strong>
+    ${reclutar(p, c, e)}
+    <strong class="heroe-sub">Tropa prestada</strong>
     <p class="asent-lado-nota">Gratis, para aprender a usar tropa antes de tener la tuya. No gana experiencia. Se retira si dejas de residir en este campamento.</p>
     <div class="mapa-lista">${TROPAS_PRESTAMO.map(([id, nombre]) => {
       const ya = prestadas.get(id);
@@ -351,6 +394,8 @@ export function cablearCampamento(root: HTMLElement, p: ProyeccionJugador, c: Ca
   cablearCargaDeSalida(root);
   conBoton('#btn-pedir-prestamo', 'pedirPrestamo', () => ({ tropaIds: marcados('data-prestamo') }));
   conBoton('#btn-reponer-prestamo', 'reponerPrestamo', () => ({}));
+  root.querySelector<HTMLSelectElement>('#reclutar-pagar-con')?.addEventListener('change', (ev) => { pagarConElegido = (ev.target as HTMLSelectElement).value as typeof pagarConElegido; });
+  conBoton('[data-reclutar]', 'reclutarEnCampamento', function () { return { tropaId: this.dataset.reclutar!, pagarCon: pagarConElegido }; });
   cablearMercado(root, c, opciones);
   for (const tipo of ['aportarARefundacion', 'retirarDeRefundacion']) {
     conBoton(`[data-fondo="${tipo}"]`, tipo, () => ({

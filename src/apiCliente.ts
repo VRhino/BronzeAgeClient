@@ -344,8 +344,8 @@ export async function consultarEventos(gameId: string, desde: number): Promise<E
 
 /** El balance público (`GET /v1/balance`): se pide una vez, en segundo plano, y avisa con `alCargar` cuando llega. */
 interface BalancePublico {
-  catalogos?: { EDIFICIO_CATALOGO?: Record<string, { costo?: Record<string, number> }> };
-  mundoYMilitar?: { FUNDACION?: { materialesIniciales?: Record<string, number>; viviendasIniciales?: number; costoMaderaExtraCaravana?: number }; MERCENARIOS?: { refundacion?: { porcentajeCoste?: number } } };
+  catalogos?: { EDIFICIO_CATALOGO?: Record<string, { costo?: Record<string, number> }>; TROPAS_RECLUTABLES?: TropaReclutable[] };
+  mundoYMilitar?: { FUNDACION?: { materialesIniciales?: Record<string, number>; viviendasIniciales?: number; costoMaderaExtraCaravana?: number }; MERCENARIOS?: { refundacion?: { porcentajeCoste?: number }; nivelEdificios?: number } };
   internas?: { CAMPAMENTOS_BANDIDOS?: { niveles?: Record<string, NivelDeBandidos> } };
 }
 let balancePublico: BalancePublico | null = null;
@@ -358,6 +358,27 @@ function balance(alCargar?: () => void): BalancePublico | null {
       .catch(() => { balancePedido = false; });
   }
   return balancePublico;
+}
+
+/** Una tropa del catálogo del balance (`TROPAS_RECLUTABLES`). `edificio`: dónde se recluta; los `caballos` por soldado se pagan en oro. */
+export interface TropaReclutable {
+  id: string;
+  nombre: string;
+  tecnologia: string;
+  edificio: 'centroUrbano' | 'barracon' | 'galeriaDeTiro' | 'caballerizas';
+  nivelRequerido: number;
+  costoEquipo: Record<string, number>;
+  unidadesPorDefecto: number;
+  escalon: number;
+  caballos?: number;
+}
+
+/** El catálogo de tropas y el nivel al que están los edificios militares de un campamento; `null` mientras no llegue el balance. */
+export function tropasReclutables(alCargar?: () => void): { tropas: TropaReclutable[]; nivelEdificios: number } | null {
+  const b = balance(alCargar);
+  const tropas = b?.catalogos?.TROPAS_RECLUTABLES;
+  const nivelEdificios = b?.mundoYMilitar?.MERCENARIOS?.nivelEdificios;
+  return tropas && nivelEdificios !== undefined ? { tropas, nivelEdificios } : null;
 }
 
 /** Lo que fija cada nivel de bandidos: su poder, los hombres que defienden y el oro del botín por héroe. */
