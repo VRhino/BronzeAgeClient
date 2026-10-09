@@ -387,7 +387,7 @@ export interface ReglasDePoliticas {
 
 /** El balance público (`GET /v1/balance`): se pide una vez, en segundo plano, y avisa con `alCargar` cuando llega. */
 interface BalancePublico {
-  catalogos?: { EDIFICIO_CATALOGO?: Record<string, { costo?: Record<string, number> }>; TROPAS_RECLUTABLES?: TropaReclutable[]; POLITICA_CATALOGO?: PoliticaDelCatalogo[] };
+  catalogos?: { EDIFICIO_CATALOGO?: Record<string, { costo?: Record<string, number>; niveles?: Record<string, NivelDeEdificio> }>; TROPAS_RECLUTABLES?: TropaReclutable[]; POLITICA_CATALOGO?: PoliticaDelCatalogo[] };
   cuposYNiveles?: { POLITICAS?: ReglasDePoliticas; CAP_FUNDACION_POR_NIVEL?: number[] };
   caravanas?: { CARAVANA_COOLDOWN?: { cooldownMinutos?: number } };
   mundoYMilitar?: { LOGISTICA?: { capacidadViveresPorHeroe?: number; radioEncuentro?: number; radioReabastecimiento?: number }; FUNDACION?: { materialesIniciales?: Record<string, number>; viviendasIniciales?: number; costoMaderaExtraCaravana?: number }; MERCENARIOS?: { refundacion?: { porcentajeCoste?: number } } };
@@ -403,6 +403,16 @@ function balance(alCargar?: () => void): BalancePublico | null {
       .catch(() => { balancePedido = false; });
   }
   return balancePublico;
+}
+
+/** Una receta de transformación de un nivel de edificio: `produccionBase` por minuto con la mano de obra completa; `consumePorUnidad` = insumo por unidad producida. */
+export interface RecetaDeEdificio { produce: string; produccionBase: number; consumePorUnidad: Record<string, number>; requiereTecnologia?: string; requiereEdificio?: { tipo: string; nivel: number } }
+/** Un nivel interno de un edificio del catálogo: qué fabrica y qué pide para llegar a él. */
+export interface NivelDeEdificio { recetas: RecetaDeEdificio[]; costoMejora?: Record<string, number>; requisitoNivelAsentamiento?: number; requiereEdificio?: string; requiereEdificioNivel?: number; requiereTecnologia?: string; obraMinutos?: number }
+
+/** Los niveles internos de un tipo de edificio (`EDIFICIO_CATALOGO[tipo].niveles`); `null` mientras no llegue el balance o si el tipo no tiene niveles. */
+export function nivelesDeEdificio(tipo: string, alCargar?: () => void): Record<string, NivelDeEdificio> | null {
+  return balance(alCargar)?.catalogos?.EDIFICIO_CATALOGO?.[tipo]?.niveles ?? null;
 }
 
 /** Lo que fija cada nivel de bandidos: su poder, los hombres que defienden y el oro del botín por héroe. */

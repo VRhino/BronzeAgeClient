@@ -9,6 +9,7 @@ import { SUBPESTANA_PUERTA } from './panelPuerta';
 import { SUBPESTANA_RESIDENCIA } from './panelResidencia';
 import { cablearFundacionDePlaza, htmlFundacionDePlaza } from './panelFundacionDePlaza';
 import { cablearTesoreria, htmlTesoreria } from './panelTesoreria';
+import { SUBPESTANA_INFORMACION, SUBPESTANA_RECETAS } from './vistaCiudad';
 
 type Escapar = (valor: string) => string;
 
@@ -49,7 +50,9 @@ export const SUBPESTANAS_CENTRO_EXTRA: SubpestanaPlaza[] = [
   { id: 'tesoreria', etiqueta: 'Tesorería', html: htmlTesoreria, cablear: cablearTesoreria },
   { id: 'fundacion', etiqueta: 'Fundación', html: htmlFundacionDePlaza, cablear: cablearFundacionDePlaza },
 
-  // --- hueco bloque F (vista de la ciudad: recetas)
+  // --- hueco bloque F (vista de la ciudad: recetas, glosario)
+  SUBPESTANA_RECETAS,
+  SUBPESTANA_INFORMACION,
 ];
 
 /** Subpestañas EXTRA de Mercado, después de Órdenes · Caravanas · Escolta. */

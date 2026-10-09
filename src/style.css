@@ -2854,3 +2854,30 @@ kbd {
 .partida-heroe div { display: flex; flex-direction: column; }
 .partida-emblema { width: 36px; height: 36px; flex: none; }
 .partidas-pie { position: sticky; bottom: 0; display: flex; flex-direction: column; gap: 6px; align-items: stretch; padding-top: 8px; }
+
+/* Vista de la ciudad (ui/vistaCiudad.ts): ficha flotante del edificio elegido y fila resaltada de la lista. */
+.asent-ficha[hidden] { display: none; }
+.asent-ficha {
+  position: absolute;
+  right: 32px;
+  top: 28px;
+  z-index: 3;
+  width: min(300px, calc(100% - 64px));
+  max-height: calc(100% - 56px);
+  padding: 14px 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg));
+  border: 1px solid var(--bronce);
+  border-radius: 3px;
+  box-shadow: var(--placa);
+}
+.asent-ficha-cerrar { margin-left: auto; background: none; border: 0; color: var(--pergamino); cursor: pointer; }
+.asent-ficha-grid { display: flex; gap: 18px; }
+.asent-ficha-grid div { display: flex; flex-direction: column; font-size: 0.8rem; }
+.asent-ficha-lista { margin: 0; padding-left: 18px; font-size: 0.85rem; }
+.asent-edif-item.sel { border-color: #ffd24a; background: linear-gradient(180deg, rgba(255, 210, 74, 0.2), rgba(60, 44, 26, 0.2)); }
+.asent-edif-item[data-fila-tipo] { cursor: pointer; }
+.asent-edif-item.receta.pausada .asent-edif-nombre { text-decoration: line-through; opacity: 0.7; }
