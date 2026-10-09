@@ -115,7 +115,7 @@ Los cinco siguientes no llevan `heroeId`: el actor es su propio héroe. Wrapper 
 - [x] `alternarAutoConstruccion` — `asentamientoId`, `pausada` · pestaña Resumen
 - [x] `solicitarAscenso` — `asentamientoId` · solo el Gobernador residente, sin `cargo` · pestaña Resumen, «Subir a nivel N», apagado mientras `ascensoDeAsentamiento.puede` sea falso (se listan los bloqueos, el coste, la obra y el déficit de mantenimiento). Rechazo de dominio: `ascenso.invalido`
 - [ ] `calibrarReservaManual` — `asentamientoId`, `recurso`, `valor`
-- [ ] `renombrarAsentamiento` — `asentamientoId`, `nombre` (vacío = volver a mostrar el id)
+- [x] `renombrarAsentamiento` — `asentamientoId`, `nombre` (vacío = volver a mostrar el id) · Centro urbano › Resumen › «Nombre de la ciudad» (solo residentes)
 
 ### Murallas — sistema completo
 

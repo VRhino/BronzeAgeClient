@@ -1389,6 +1389,8 @@ function renderPanelEdificios(): void {
   const asentamiento = proyeccion?.asentamientos[0];
   if (!tabsEl || !cuerpo || !proyeccion || !asentamiento) return;
 
+  const nombreBarra = document.querySelector<HTMLElement>('.asent-nombre');
+  if (nombreBarra) nombreBarra.textContent = asentamiento.nombre ?? asentamiento.id;
   const edificios = asentamiento.edificios ?? [];
   const construido = (tipo: string): boolean => edificios.some((e) => e.tipo === tipo && e.estado === 'activo');
   const abierta = (id: EdificioAsent): boolean => { const t = PESTANAS_EDIFICIO.find((x) => x.id === id)!; return !t.requiere || construido(t.requiere.tipo); };
@@ -1412,8 +1414,11 @@ function renderPanelEdificios(): void {
   if (edificioAsent === 'centro') {
     const SECCIONES: [SeccionAsent, string][] = [['resumen', 'Resumen'], ['edificios', 'Edificios'], ['produccion', 'Producción'], ['cola', 'Cola'], ['cargos', 'Cargos']];
     const puedeMudarme = Boolean(proyeccion.faccionId) && asentamiento.faccionId === proyeccion.faccionId && !resideEnLaPlaza(proyeccion, asentamiento);
+    const formNombre = resideEnLaPlaza(proyeccion, asentamiento)
+      ? `<div class="asent-renombrar"><span class="faction-kicker">Nombre de la ciudad</span><div class="mercado-acciones"><input class="form-input" type="text" maxlength="40" data-campo="nombre-plaza" value="${escaparHtml(asentamiento.nombre ?? '')}" placeholder="${escaparHtml(asentamiento.id)}" /><button id="btn-renombrar" class="btn-secondary" type="button">Cambiar nombre</button></div><p class="asent-lado-nota">Vacío = vuelve a mostrarse el identificador.</p></div>`
+      : '';
     const contenido = seccionAsent === 'resumen'
-      ? seccionResumen(asentamiento) + seccionAscenso(asentamiento, proyeccion.ascensoDeAsentamiento, cargo === 'gobernador')
+      ? seccionResumen(asentamiento) + formNombre + seccionAscenso(asentamiento, proyeccion.ascensoDeAsentamiento, cargo === 'gobernador')
         + (puedeMudarme ? '<button id="btn-mudarme" class="btn-secondary" type="button" title="Hacer de esta plaza tu base: tu campamento se muda contigo">Hacer de esta plaza mi base</button>' : '')
       : seccionAsent === 'edificios' ? seccionEdificios(asentamiento, cargo)
         : seccionAsent === 'produccion' ? seccionProduccion(proyeccion.produccionDeAsentamiento)
@@ -1425,6 +1430,13 @@ function renderPanelEdificios(): void {
     cablear = () => {
       cablearSub((s) => { seccionAsent = s as SeccionAsent; });
       cuerpo.querySelector('#btn-mudarme')?.addEventListener('click', () => void mudarseAEstaPlaza());
+      cuerpo.querySelector('#btn-renombrar')?.addEventListener('click', async () => {
+        const nombre = cuerpo.querySelector<HTMLInputElement>('[data-campo="nombre-plaza"]')?.value ?? '';
+        const mensaje = await ejecutarYRefrescar('renombrarAsentamiento', { asentamientoId: asentamiento.id, nombre });
+        const error = cuerpo.querySelector<HTMLElement>('#asent-lado-error');
+        if (error) error.textContent = mensaje ?? '';
+        if (mensaje === null) olvidarEdicion(cuerpo);
+      });
       cablearAccionesAsentLado(cuerpo, asentamiento, cargo);
       cablearCargosAsentamiento(cuerpo, asentamiento);
     };

@@ -10,6 +10,8 @@ commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend
 - **Reclutamiento** (`ui/reclutamiento.ts`, `reclutarTropa`): una pestaña con todas las tropas militares juntas por edificio. Solo salen las que la Facción puede formar ya (tecnología adoptada y edificio activo del nivel pedido); cada fila dice cuántos hombres, de qué población salen, el coste de equipo (en rojo lo que falta) y por qué no se puede ahora (escuadra al completo, fuera del campamento, no resides). Reclutar o reponer.
 - **Mercado** (`ui/panelMercado.ts`): *Órdenes* (colocar compra/venta con precio opcional y ver las de la plaza, `colocarOrdenMercado`), *Caravanas* (crear casco, añadir carros, comprar animales, mover carros, reservar, preparar viaje con destino y carga, cancelar la preparación) y *Escolta* (el panel que ya existía).
 
+- **Cambiar el nombre de la ciudad** (`renombrarAsentamiento`): en Centro urbano › Resumen, para los residentes; el nombre de la barra se actualiza al momento.
+
 ### Cambiado
 - **La plaza se organiza por edificio** en la columna derecha: *Centro urbano* (resumen, edificios, producción, cola, cargos y «Hacer de esta plaza mi base»), *Reclutamiento*, *Taberna* (intel) y *Mercado*. Taberna y Mercado salen desactivadas con «necesitas construir …» hasta tener el edificio activo. La barra superior queda con «Ejércitos» y «Salir al mundo».
 
