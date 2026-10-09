@@ -4,6 +4,7 @@
 import type { ProyeccionJugador } from '../apiCliente';
 import type { Faccion, RelacionPolitica } from '../tiposDominio';
 import { RECURSO_NOMBRE } from '../paletas';
+import { ayuda } from './ayuda';
 import { crearEnvio, type Ejecutar } from './panelAnexion';
 
 const TRIBUTOS = ['trigo', 'madera', 'piedra', 'cobre', 'estano', 'oro'];
@@ -23,11 +24,11 @@ export function htmlDiplomacia(proyeccion: ProyeccionJugador, faccion: Faccion, 
     const yoSoyA = r.faccionAId === faccion.id;
     const otra = nombreDe(yoSoyA ? r.faccionBId : r.faccionAId);
     if (r.tipo === 'alianza') {
-      return `<div class="faction-list-item"><div><strong>Alianza con ${otra}</strong><span>Romperla sin más cuesta 12 puntos de reputación</span></div>${conAutoridad ? boton('data-dipl-romper', id, 'Romper alianza') : ''}</div>`;
+      return `<div class="faction-list-item"><div><strong>Alianza con ${otra}</strong></div>${conAutoridad ? boton('data-dipl-romper', id, 'Romper alianza').replace('<button ', '<button title="Romperla sin más cuesta 12 puntos de reputación" ') : ''}</div>`;
     }
     if (r.tipo === 'vasallaje') {
       return yoSoyA
-        ? `<div class="faction-list-item"><div><strong>${otra} es tu vasalla</strong><span>Tributo: ${tributo(r)} · liberarla da 6 puntos de reputación</span></div>${conAutoridad ? boton('data-dipl-romper', id, 'Liberar vasallo') : ''}</div>`
+        ? `<div class="faction-list-item"><div><strong>${otra} es tu vasalla</strong><span>Tributo: ${tributo(r)}</span></div>${conAutoridad ? boton('data-dipl-romper', id, 'Liberar vasallo').replace('<button ', '<button title="Liberarla da 6 puntos de reputación" ') : ''}</div>`
         : `<div class="faction-list-item"><div><strong>Eres vasalla de ${otra}</strong><span>Tributo: ${tributo(r)}</span></div>${conAutoridad ? boton('data-dipl-rebelion', id, 'Rebelarse') : ''}</div>`;
     }
     const estado = r.pazPropuestaPor === faccion.id ? 'Has ofrecido la paz: falta que la ofrezca la otra' : r.pazPropuestaPor ? `${otra} ofrece la paz` : 'La paz exige que la ofrezcan las dos';
@@ -40,11 +41,12 @@ export function htmlDiplomacia(proyeccion: ProyeccionJugador, faccion: Faccion, 
       `<select id="tipo-diplomacia" class="form-input"><option value="alianza">Alianza</option><option value="vasallaje">Vasallaje (tú, señora)</option><option value="guerra">Declarar guerra</option></select></div>` +
       `<div class="faction-list-item"><select id="tributo-recurso" class="form-input">${TRIBUTOS.map((t) => `<option value="${t}">${escaparHtml(RECURSO_NOMBRE[t] ?? t)}</option>`).join('')}</select>` +
       `<input id="tributo-cantidad" class="form-input" type="number" min="0" step="1" value="10" aria-label="Tributo por minuto" /><button id="btn-proponer-diplomacia" class="btn-secondary" type="button">Proponer</button></div>` +
-      `<p class="legend-note">Tributo por minuto, solo en vasallaje. Alianza y vasallaje se pactan al instante, sin respuesta de la otra Facción; una Facción con reputación por debajo de −40 no puede proponer alianzas. La guerra es libre y arrastra a señor y vasallos del rival; solo se acaba con la paz de las dos.</p>`
+      ''
     : '';
+  const info = ayuda('faccion:diplomacia', 'Tributo por minuto, solo en vasallaje. Alianza y vasallaje se pactan al instante, sin respuesta de la otra Facción; una Facción con reputación por debajo de −40 no puede proponer alianzas. La guerra es libre y arrastra a señor y vasallos del rival; solo se acaba con la paz de las dos. Romper una alianza sin más cuesta 12 puntos de reputación; liberar a un vasallo da 6.');
 
   if (mias.length === 0 && !formulario) return '';
-  return `<div class="faction-list"><span class="faction-kicker">Diplomacia</span>${mias.map(fila).join('')}${formulario}<p id="error-diplomacia" class="faction-error" role="alert"></p></div>`;
+  return `<div class="faction-list"><span class="faction-kicker">Diplomacia${info}</span>${mias.map(fila).join('')}${formulario}<p id="error-diplomacia" class="faction-error" role="alert"></p></div>`;
 }
 
 /** Cablea los botones de `htmlDiplomacia` tras cada render. */

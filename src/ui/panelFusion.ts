@@ -2,6 +2,7 @@
 // la acepta el Rey de B; su «sí» es su voto. Vive en la pestaña Facción. Quien valida es el backend (vasalla de un tercero, ya hay propuesta…): su rechazo sale tal cual.
 import type { ProyeccionJugador } from '../apiCliente';
 import type { Faccion } from '../tiposDominio';
+import { ayuda } from './ayuda';
 import { caduca, crearEnvio, type Ejecutar } from './panelAnexion';
 
 /** Las propuestas que recibes (Rey: aceptar o rechazar), las que haces (Rey: retirar) y el formulario para proponer. Vacío si no hay nada que hacer. */
@@ -25,11 +26,11 @@ export function htmlFusion(proyeccion: ProyeccionJugador, faccion: Faccion, esca
     ? `<div class="faction-list-item"><select id="sel-fusion" class="form-input">${candidatas.map((f) => `<option value="${escaparHtml(f.id)}" data-rey="${escaparHtml(f.reyId ?? '')}">${escaparHtml(f.nombre)}</option>`).join('')}</select>` +
       `<input id="nombre-fusion" class="form-input" type="text" maxlength="40" placeholder="Nombre de la Facción nueva" />` +
       `<select id="rey-fusion" class="form-input"><option value="yo">Rey: tú</option><option value="otro">Rey: el de la otra Facción</option></select>` +
-      `<button id="btn-proponer-fusion" class="btn-secondary" type="button">Proponer fusión</button></div><p class="legend-note">Si su Rey acepta, las dos Facciones desaparecen y nace una nueva con ese nombre y ese Rey (el otro Rey pasa a ser ciudadano). Hereda tu sigilo, el nivel más alto de las dos y la tecnología de ambas.</p>`
+      `<button id="btn-proponer-fusion" class="btn-secondary" type="button">Proponer fusión</button></div>`
     : '';
 
   if (recibidas.length + hechas.length === 0 && !formulario) return '';
-  return `<div class="faction-list"><span class="faction-kicker">Fusión</span>${recibidas.map(filaRecibida).join('')}${hechas.map(filaHecha).join('')}${formulario}<p id="error-fusion" class="faction-error" role="alert"></p></div>`;
+  return `<div class="faction-list"><span class="faction-kicker">Fusión${ayuda('faccion:fusion', 'Si su Rey acepta, las dos Facciones desaparecen y nace una nueva con ese nombre y ese Rey (el otro Rey pasa a ser ciudadano). Hereda tu sigilo, el nivel más alto de las dos y la tecnología de ambas.')}</span>${recibidas.map(filaRecibida).join('')}${hechas.map(filaHecha).join('')}${formulario}<p id="error-fusion" class="faction-error" role="alert"></p></div>`;
 }
 
 /** Cablea los botones de `htmlFusion` tras cada render. `ejecutar` devuelve el mensaje de rechazo o `null`. */

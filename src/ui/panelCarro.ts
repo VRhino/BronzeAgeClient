@@ -7,6 +7,7 @@
 // lo que cabe en el carro (`ejercitos[].capacidadCarga`) los manda el backend ya calculados; si falta sitio, el rechazo es suyo.
 import type { ProyeccionJugador } from '../apiCliente';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
+import { ayuda } from './ayuda';
 
 type Escapar = (valor: string) => string;
 export type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
@@ -52,14 +53,13 @@ export function htmlCarro(p: ProyeccionJugador, e: Escapar, cabecera = true): st
       : 'Guarda en tu almacén personal lo que quieras conservar. Al entrar en tu campamento se guarda solo. El carro es solo carga: la columna come de tus víveres (barra de abajo del mapa), y de aquí se les pasa trigo.';
   return `
     ${cabecera ? `<div class="mapa-panel-jugador">${e(p.heroe.displayName)} · carro y almacén</div>` : ''}
-    <p class="asent-lado-nota">${nota}</p>
+    <strong class="heroe-sub">Carga${ayuda('jugador:carro', e(nota))}</strong>
     ${columna ? `<strong class="heroe-sub">Carro de tu columna${ocupacion(carro, columna.capacidadCarga)}</strong>${filas(carro, 'guardar', 'Guardar', esLider, e)}` : ''}
     ${aparcadas.map((c) => `<strong class="heroe-sub">Resto del carro, aparcado en la puerta</strong>${filas(c.suministro ?? {}, 'ninguna', '', false, e)}`).join('')}
     <strong class="heroe-sub">Almacén personal${ocupacion(almacen, p.heroe.capacidadAlmacenPersonal)}</strong>
     ${filas(almacen, 'sacar', 'Al carro', Boolean(columna) && esLider, e)}
     <div class="carro-botin">
-      <strong class="heroe-sub">🪙 Oro de botín: ${Math.floor(p.heroe.oroDeBotin ?? 0)}</strong>
-      <p class="asent-lado-nota">Aparte del carro y del almacén: no ocupa sitio y <b>nunca se pierde</b> al perder un combate. Es el oro de bandidos y alijos; solo se gasta en el mercado de un campamento (se usa primero) o en el fondo de refundación.</p>
+      <strong class="heroe-sub">🪙 Oro de botín: ${Math.floor(p.heroe.oroDeBotin ?? 0)}${ayuda('jugador:botin', 'Aparte del carro y del almacén: no ocupa sitio y <b>nunca se pierde</b> al perder un combate. Es el oro de bandidos y alijos; solo se gasta en el mercado de un campamento (se usa primero) o en el fondo de refundación.')}</strong>
     </div>
     <p class="faction-error" data-campo="error-carro" role="alert"></p>`;
 }

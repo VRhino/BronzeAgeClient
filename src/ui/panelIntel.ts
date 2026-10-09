@@ -4,6 +4,7 @@
 // `tarifasIntel` y quien valida es el backend, cuyo rechazo sale tal cual en `#intel-error`.
 import type { ProyeccionJugador } from '../apiCliente';
 import { EDIFICIO_COLOR, EDIFICIO_NOMBRE } from '../paletas';
+import { ayuda } from './ayuda';
 import type { InformePlaza, MiradaIntel, OrigenDeIntel, Point } from '../tiposDominio';
 
 export type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
@@ -130,7 +131,7 @@ function detalleInforme(inf: InformePlaza, p: ProyeccionJugador, e: Escapar): st
   const faccion = p.facciones.find((f) => f.id === inf.faccionId);
   return `
     <section class="intel-informe">
-      <span class="faction-kicker">Informe · foto de hace ${hace(p.instante - inf.conocidoEn)}</span>
+      <span class="faction-kicker">Informe · foto de hace ${hace(p.instante - inf.conocidoEn)}${ayuda('intel:foto', 'Es una foto: no se actualiza. Su almacén no viene en el informe.')}</span>
       <h3>${e(inf.nombre ?? inf.asentamientoId)}</h3>
       <div class="mapa-seleccion-datos"><div><span>Facción</span><strong>${e(faccion?.nombre ?? inf.faccionId)}</strong></div><div><span>Nivel</span><strong>${inf.nivel}</strong></div><div><span>Héroes dentro</span><strong>${inf.heroesIds.length}</strong></div></div>
       ${planoDeInforme(inf)}
@@ -140,7 +141,6 @@ function detalleInforme(inf: InformePlaza, p: ProyeccionJugador, e: Escapar): st
       ${tropas.size > 0 ? `<div class="mapa-seleccion-datos">${[...tropas].map(([t, n]) => `<div><span>${e(t)}</span><strong>${n}</strong></div>`).join('')}</div>` : '<p class="mapa-lista-vacia">Sin guarnición.</p>'}
       <strong>Murallas</strong>
       ${inf.recintos.length > 0 ? inf.recintos.map((r) => `<p class="mapa-lista-vacia">Recinto de nivel ${r.nivel}: ${Math.max(0, r.avance + 1)} de ${r.celdas.length} celdas levantadas, ${r.celdas.filter((c) => c.clase === 'puerta').length} puertas.</p>`).join('') : '<p class="mapa-lista-vacia">Sin recinto.</p>'}
-      <p class="mapa-lista-vacia">Es una foto: no se actualiza. Su almacén no viene en el informe.</p>
     </section>`;
 }
 
@@ -164,22 +164,20 @@ export function renderPanelIntel(p: ProyeccionJugador, e: Escapar, origenId?: st
   const m = p.tarifasIntel.mirada;
 
   const compra = !t
-    ? `<p>La intel se compra en una <strong>taberna</strong>: la de una plaza tuya (nivel 2, la construye el Gobernador; entra en ella) o la de un campamento de mercenarios (dentro, o con tu columna a la puerta).</p>`
+    ? `<p class="mapa-lista-vacia">Sin taberna a mano.${ayuda('intel:taberna', 'La intel se compra en una <strong>taberna</strong>: la de una plaza tuya (nivel 2, la construye el Gobernador; entra en ella) o la de un campamento de mercenarios (dentro, o con tu columna a la puerta).')}</p>`
     : `
       <label class="campamento-fila"><span>Taberna</span><select class="form-input" id="intel-origen">${tabernas.map((x) => `<option value="${e(x.origen.id)}"${x === t ? ' selected' : ''}>${e(x.etiqueta)}</option>`).join('')}</select></label>
       <div class="mapa-seleccion-datos"><div><span>Oro</span><strong>${Math.floor(t.oro)}</strong></div><div><span>Miradas abiertas</span><strong>${abiertas} / ${t.cupo}</strong></div></div>
 
       <section class="campamento-seccion">
-        <span class="faction-kicker">Mirada</span>
-        <p>Un ojo de ${m.radio} de radio durante ${m.duracionMinutos / 60} h sobre cualquier punto: ves en vivo lo que verías con una columna ahí, sin interiores. Lo ven también tus aliados.</p>
+        <span class="faction-kicker">Mirada${ayuda('intel:mirada', `Un ojo de ${m.radio} de radio durante ${m.duracionMinutos / 60} h sobre cualquier punto: ves en vivo lo que verías con una columna ahí, sin interiores. Lo ven también tus aliados.`)}</span>
         <div class="campamento-fila"><select class="form-input" id="intel-cerca"><option value="">Mirar alrededor de…</option>${ajenas.map((a) => `<option value="${a.posicion.x},${a.posicion.y}">${e(a.nombre ?? a.id)}</option>`).join('')}${p.campamentosMercenarios.map((c) => `<option value="${c.posicion.x},${c.posicion.y}">Campamento ${e(c.id)}</option>`).join('')}</select></div>
         <div class="campamento-fila"><input class="form-input" id="intel-x" type="number" min="0" placeholder="x" value="${centro ? Math.round(centro.x) : ''}" /><input class="form-input" id="intel-y" type="number" min="0" placeholder="y" value="${centro ? Math.round(centro.y) : ''}" /></div>
         <button class="btn-primary" type="button" id="intel-comprar-mirada"${centro && abiertas < t.cupo ? '' : ' disabled'}>${abiertas >= t.cupo ? 'Taberna al límite de Miradas' : precio !== null ? `Comprar Mirada · ${precio} de oro` : 'Elige un punto'}</button>
       </section>
 
       <section class="campamento-seccion">
-        <span class="faction-kicker">Informe de plaza</span>
-        <p>La foto, con fecha, del layout y la defensa de una plaza ajena que conoces. Avisa, sin firma, a su Facción.</p>
+        <span class="faction-kicker">Informe de plaza${ayuda('intel:informe', 'La foto, con fecha, del layout y la defensa de una plaza ajena que conoces. Avisa, sin firma, a su Facción.')}</span>
         ${ajenas.length === 0
           ? '<p class="mapa-lista-vacia">No conoces ninguna plaza ajena: mira una zona o explora.</p>'
           : libres.length === 0

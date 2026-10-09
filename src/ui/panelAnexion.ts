@@ -2,6 +2,7 @@
 // pestaña Facción. Quien valida es el backend (B vasalla de un tercero, ya hay propuesta…): su rechazo sale tal cual.
 import type { ProyeccionJugador } from '../apiCliente';
 import type { Faccion } from '../tiposDominio';
+import { ayuda } from './ayuda';
 
 const HORA = 3_600_000;
 
@@ -29,11 +30,11 @@ export function htmlAnexion(proyeccion: ProyeccionJugador, faccion: Faccion, esc
     ? `<button class="btn-secondary" type="button" data-anexion-retirar="${escaparHtml(p.id)}">Retirar</button>`
     : ''}</div>`;
   const formulario = conAutoridad && candidatas.length > 0
-    ? `<div class="faction-list-item"><select id="sel-anexion" class="form-input">${candidatas.map((f) => `<option value="${escaparHtml(f.id)}">${escaparHtml(f.nombre)}</option>`).join('')}</select><button id="btn-proponer-anexion" class="btn-secondary" type="button">Proponer anexión</button></div><p class="legend-note">Si su Rey acepta, su facción desaparece y todo lo suyo pasa a la tuya.</p>`
+    ? `<div class="faction-list-item"><select id="sel-anexion" class="form-input">${candidatas.map((f) => `<option value="${escaparHtml(f.id)}">${escaparHtml(f.nombre)}</option>`).join('')}</select><button id="btn-proponer-anexion" class="btn-secondary" type="button">Proponer anexión</button></div>`
     : '';
 
   if (recibidas.length + ofrecidas.length === 0 && !formulario) return '';
-  return `<div class="faction-list"><span class="faction-kicker">Anexión</span>${recibidas.map(filaRecibida).join('')}${ofrecidas.map(filaOfrecida).join('')}${formulario}<p id="error-anexion" class="faction-error" role="alert"></p></div>`;
+  return `<div class="faction-list"><span class="faction-kicker">Anexión${ayuda('faccion:anexion', 'Si su Rey acepta, su facción desaparece y todo lo suyo pasa a la tuya.')}</span>${recibidas.map(filaRecibida).join('')}${ofrecidas.map(filaOfrecida).join('')}${formulario}<p id="error-anexion" class="faction-error" role="alert"></p></div>`;
 }
 
 export type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
