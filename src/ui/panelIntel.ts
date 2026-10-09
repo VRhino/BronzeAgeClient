@@ -3,10 +3,9 @@
 // campamento de mercenarios —dentro, o con la columna a la puerta—. Aquí no se decide ninguna regla: el precio es una cotización con
 // `tarifasIntel` y quien valida es el backend, cuyo rechazo sale tal cual en `#intel-error`.
 import type { ProyeccionJugador } from '../apiCliente';
+import { ayuda } from './ayuda';
 import { EDIFICIO_COLOR, EDIFICIO_NOMBRE } from '../paletas';
-import { ayuda } from './ayuda';
 import type { InformePlaza, MiradaIntel, OrigenDeIntel, Point } from '../tiposDominio';
-import { ayuda } from './ayuda';
 
 export type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
 type Escapar = (valor: string) => string;
