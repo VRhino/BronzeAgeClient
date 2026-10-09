@@ -9,7 +9,7 @@
 import type { ProyeccionJugador } from '../apiCliente';
 import type { Asentamiento, Recinto } from '../tiposDominio';
 
-const NIVEL_MINIMO_MURALLA = 3;
+export const NIVEL_MINIMO_MURALLA = 3;
 const NIVEL_MAXIMO_MURALLA = 3;
 
 function puertasDe(recinto: Recinto): number {

@@ -49,6 +49,8 @@ export interface Faccion {
   reputacion?: number;
   /** Ajuste del Rey (backend Doc 2.2, 5.15.1b): sus ataques admiten héroes de otras Facciones. Ausente = no. */
   admiteOtrasEnAtaques?: boolean;
+  /** Instante de MUNDO de la última designación de capital (el traslado tiene enfriamiento, Doc 2.2). */
+  capitalDesignadaEn?: number;
   // ... ignoramos otros campos que no impactan el render ...
 }
 
@@ -143,7 +145,15 @@ export interface Asentamiento {
   /** Obra de ascenso de nivel en curso (Doc 4.5, `solicitarAscenso`): al llegar `completaEn`, `nivel` sube a
    * `nivelObjetivo`. Ya pagada; se pierde si conquistan la plaza. Ausente = no hay obra. */
   ascenso?: { nivelObjetivo: number; iniciadoEn: number; completaEn: number };
+  /** La puerta (Doc 1.10.5): grupos a los que se cierra. Ausente = el cierre por defecto (neutrales y enemigos). */
+  puertaCerradaA?: GrupoPuerta[];
+  /** Jugadores vetados por el Gobernador. Ausente = nadie. */
+  vetadosIds?: string[];
+  /** Id de la Facción de la que es capital designada (Doc 2.2). */
+  capitalDeFaccionId?: string;
 }
+
+export type GrupoPuerta = 'neutrales' | 'aliados' | 'enemigos' | 'aedas';
 
 /** Por qué no se puede pedir la subida de nivel (backend `BloqueoAscenso`, `engine/ascenso.ts`). */
 export type BloqueoAscenso =
