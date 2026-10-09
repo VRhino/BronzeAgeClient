@@ -14,6 +14,8 @@ export interface ControlMapa {
    * cuando el contenedor ya tiene tamaño y se conoce el tamaño del mundo, así que da igual llamarlo antes de
    * que el mapa haya cargado. Arrastrar o hacer zoom con rueda lo suelta. */
   centrar(puntoMundo: { x: number; y: number }, anchoMundo: number, altoMundo: number): void;
+  /** Zoom y pan actuales (para guardar la vista). */
+  estado(): { zoom: number; panX: number; panY: number };
   destruir(): void;
 }
 
@@ -22,13 +24,15 @@ export function instalarZoomPan(
   lienzo: HTMLElement,
   opciones: {
     zoomInicial?: number;
+    /** Pan inicial en px (vista guardada); se acota igual que cualquier pan. */
+    panInicial?: { x: number; y: number };
     /** Se dispara en un pointerup que NO fue un arrastre (umbral 5 px): un clic sobre el mapa. */
     alClicar?: (evento: PointerEvent) => void;
   } = {}
 ): ControlMapa {
   let zoom = clampZoom(opciones.zoomInicial ?? 1);
-  let panX = 0;
-  let panY = 0;
+  let panX = opciones.panInicial?.x ?? 0;
+  let panY = opciones.panInicial?.y ?? 0;
   let foco: { x: number; y: number } | null = null;
   let mundoAncho = 0;
   let mundoAlto = 0;
@@ -112,6 +116,7 @@ export function instalarZoomPan(
   aplicar();
 
   return {
+    estado: () => ({ zoom, panX, panY }),
     zoomHacia: (direccion) => zoomA(zoom * (direccion === 1 ? 1.4 : 1 / 1.4), 0, 0),
     centrar: (puntoMundo, anchoMundo, altoMundo) => {
       foco = puntoMundo;
