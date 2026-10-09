@@ -785,3 +785,55 @@ export interface Convocatoria {
   soyLider: boolean;
   soyIntegrante: boolean;
 }
+
+// --- Tecnología y Aedas (backend Doc 6) ---
+
+/** Ids de Era y de tecnología tal como viajan: el catálogo (`TECNOLOGIAS`) NO está en el balance público, así que no hay nombres ni Eras por tecnología. */
+export type EraId = string;
+export type TecnologiaId = string;
+
+/** Una condición del hito de la Facción (Doc 6.3): `edificio` activo en cualquier plaza propia (`nivelInterno` es un mínimo). */
+export type CondicionHito =
+  | { tipo: 'edificio'; edificio: string; nivelInterno?: number }
+  | { tipo: 'tecnologia'; id: TecnologiaId }
+  | { tipo: 'recursoEnCapital'; recurso: string }
+  | { tipo: 'capitalEnNivel'; nivel: number; conEdificio: string }
+  | { tipo: 'yacimientoEnTerritorio'; recurso: string };
+
+/** Lo que sabe el jugador de la tecnología del mundo (`proyeccion.tecnologia`, Doc 6.3-6.4). */
+export interface TecnologiaJugador {
+  era: EraId;
+  eraDesde: number;
+  /** Logros cumplidos, por orden: qué ha pasado en el mundo (`contador` llegó a `umbral`) y cuándo. No dicen qué tecnología abren. */
+  logros: { contador: string; umbral: number; en: number }[];
+  /** `null` sin Facción. */
+  propias: { aparecidas: TecnologiaId[]; adoptadas: TecnologiaId[]; reveladas?: TecnologiaId[] } | null;
+  /** Lo que un Aeda le ha revelado y aún no le ha aparecido: quién la desbloqueó y el hito completo (sin progreso). */
+  reveladas: { tecnologiaId: TecnologiaId; descubridorFaccionId: string; hito: CondicionHito[] }[];
+}
+
+/** Un Aeda residente de una plaza propia, con su épica en curso si la hay (Doc 6.7). */
+export interface AedaResidenteProyectado {
+  id: string;
+  nombre: string;
+  asentamientoId: string;
+  epica?: {
+    tecnologiaId: TecnologiaId;
+    nombre: string;
+    /** Capítulo en curso (desde 0), cuántos hay, cómo se llama y cuántos hechos lleva de los que pide. */
+    capitulo: number;
+    capitulos: number;
+    tituloCapitulo: string;
+    hechos: number;
+    hechosNecesarios: number;
+    /** Instante de mundo del último hecho contado; el siguiente no cuenta hasta pasado el enfriamiento. */
+    ultimoHechoEn?: number;
+  };
+}
+
+/** Un Aeda itinerante a la vista; `enAsentamientoId` = la plaza en que está detenido, donde se le puede comprar. */
+export interface AedaAvistado {
+  id: string;
+  posicion: Point;
+  enAsentamientoId?: string;
+}

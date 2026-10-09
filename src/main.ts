@@ -56,6 +56,7 @@ import { alCambiarAvisos, alLlegarInforme, avisarDeEventos, avisosNoLeidos, hist
 import { htmlInforme, type InformeDeCombate } from './ui/informeCombate';
 import { htmlAvisos } from './ui/panelAvisos';
 import { cablearCarro, htmlCarro } from './ui/panelCarro';
+import { cablearTecnologia, htmlTecnologia } from './ui/panelTecnologia';
 import { cablearEscolta, htmlEscolta } from './ui/panelEscolta';
 import { chipLiderazgo } from './ui/liderazgo';
 import { cablearCargaDeSalida, htmlCargaDeSalida, leerCarga } from './ui/cargaDeSalida';
@@ -924,6 +925,10 @@ function renderPanelJugador(forzar = false): void {
     if (!forzar && proyeccion.faccionId === null && panel.querySelector('#form-crear-faccion, #input-buscar-faccion')) return;
     const html = `<div class="mapa-panel-jugador">${escaparHtml(proyeccion.heroe.displayName)}</div>${renderPestanaFaccion(proyeccion, escaparHtml)}`;
     pintar(panel, html, () => cablearFaccion(panel, proyeccion, () => renderPanelJugador(true)), 'faccion');
+    return;
+  }
+  if (panelJugador === 'tecnologia') {
+    pintar(panel, htmlTecnologia(proyeccion, escaparHtml), () => cablearTecnologia(panel, ejecutarYRefrescar), 'tecnologia');
     return;
   }
   pintarPanelHeroe(panel, proyeccion, escaparHtml, aplicarYRefrescar, forzar);

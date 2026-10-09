@@ -2885,3 +2885,12 @@ kbd {
 .asent-edif-item.sel { border-color: #ffd24a; background: linear-gradient(180deg, rgba(255, 210, 74, 0.2), rgba(60, 44, 26, 0.2)); }
 .asent-edif-item[data-fila-tipo] { cursor: pointer; }
 .asent-edif-item.receta.pausada .asent-edif-nombre { text-decoration: line-through; opacity: 0.7; }
+/* Panel de Tecnología y Aedas. */
+.tec-panel { display: flex; flex-direction: column; gap: 8px; }
+.tec-lista { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 0.82rem; color: var(--text-secondary); }
+.tec-fila { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tec-fila > span { flex: 1; min-width: 180px; }
+.tec-fila small { color: var(--text-muted); font-size: 0.72rem; }
+.tec-hito { margin: 4px 0 0; padding-left: 14px; list-style: none; font-size: 0.76rem; }
+.tec-hito li.cumple { color: var(--oro-claro); }
+.tec-chip { display: inline-block; padding: 1px 8px; border: 1px solid var(--border, #555); border-radius: 10px; font-size: 0.74rem; }
