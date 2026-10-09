@@ -25,7 +25,7 @@ function tarjeta(p: PartidaListada, elegida: boolean, e: Escapar): string {
     ? `${emblema}<div><strong>${e(h.nombre)}</strong><span>${h.faccion ? e(h.faccion.nombre) : 'Sin Facción'} · Nivel ${h.nivel}</span></div>`
     : `<div><span>${p.membresia ? 'Eres miembro, aún sin héroe.' : 'Aún no has entrado en esta partida.'}</span></div>`;
   return `<button type="button" class="partida${elegida ? ' elegida' : ''}" data-partida="${e(p.gameId)}" aria-pressed="${elegida}">
-    <span class="partida-id">${e(p.gameId)}</span><div class="partida-heroe">${cuerpo}</div></button>`;
+    <span class="partida-id">${e(p.nombre ?? p.gameId)}</span>${p.nombre ? `<small class="partida-clave">${e(p.gameId)}</small>` : ''}<div class="partida-heroe">${cuerpo}</div></button>`;
 }
 
 export async function montarPartidas(app: HTMLElement, d: DepsPartidas): Promise<void> {

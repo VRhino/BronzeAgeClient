@@ -2896,6 +2896,7 @@ kbd {
 .partida { display: flex; flex-direction: column; gap: 6px; text-align: left; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; background: transparent; color: inherit; cursor: pointer; font: inherit; }
 .partida.elegida { border-color: #d4a84b; background: rgba(212,168,75,0.12); }
 .partida-id { font-weight: 700; }
+.partida-clave { margin-top: -4px; opacity: 0.6; font-size: 0.75em; }
 .partida-heroe { display: flex; align-items: center; gap: 10px; font-size: 0.9em; }
 .partida-heroe div { display: flex; flex-direction: column; }
 .partida-emblema { width: 36px; height: 36px; flex: none; }

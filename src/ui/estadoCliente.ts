@@ -4,6 +4,8 @@ import type { ProyeccionJugador } from '../apiCliente';
 export interface EstadoClienteJugador {
   usuarioActivo: string;
   gameIdActivo: string;
+  /** El nombre que el administrador le puso a la partida activa; vacío = se usa el `gameId`. */
+  nombrePartidaActiva: string;
   mapaCache: { id: string; mapa: MapaGenerado } | null;
   modoVista: 'mundo' | 'asentamiento';
   proyeccionUltima: ProyeccionJugador | null;
@@ -40,6 +42,7 @@ export function textoEnTiempoReal(msDeMundo: number): string {
 export const estadoCliente: EstadoClienteJugador = {
   usuarioActivo: '',
   gameIdActivo: 'local',
+  nombrePartidaActiva: '',
   mapaCache: null,
   modoVista: 'mundo',
   proyeccionUltima: null,
