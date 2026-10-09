@@ -1,7 +1,7 @@
 // Wrapper `fetch` sobre la superficie `/jugador/*` y `/sesiones` del backend (Fase C3) — sin lógica de negocio, solo I/O.
 import type { MapaGenerado } from './terreno';
 
-import type { AcuerdoTrueque, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, Convocatoria, Ejercito, EjercitoAvistado, EscenaCampamento, EvaluacionAscenso, EventoDominio, Faccion, HeroeProyectado, HeroePublico, InformePlaza, MiradaIntel, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, PropuestaAnexion, PropuestaFusion, RelacionPolitica, TarifasIntel, Titulo, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
+import type { AcuerdoTrueque, AedaAvistado, AedaResidenteProyectado, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, Convocatoria, Ejercito, EjercitoAvistado, EscenaCampamento, EvaluacionAscenso, EventoDominio, Faccion, HeroeProyectado, HeroePublico, InformePlaza, MiradaIntel, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, PropuestaAnexion, PropuestaFusion, RelacionPolitica, TarifasIntel, TecnologiaJugador, Titulo, ZonaFaccion, TrazadoAsentamiento } from './tiposDominio';
 
 export class ApiError extends Error {
   constructor(
@@ -107,6 +107,12 @@ export interface ProyeccionJugador {
   /** Batallas de Unity a la vista o en las que combates (backend 2026-09-15). Vacío si el backend no declara
    * servidores de batalla. Sin interfaz que las pinte todavía (`Features_Pendientes.md` §1.5). */
   batallas: BatallaVisible[];
+  /** La Era, los logros del mundo y las tecnologías propias (backend Doc 6). Ausente en un backend anterior. */
+  tecnologia?: TecnologiaJugador;
+  /** Los Aedas residentes de tus plazas, con su épica. */
+  aedasResidentes?: AedaResidenteProyectado[];
+  /** Los Aedas itinerantes a la vista. */
+  aedasAvistados?: AedaAvistado[];
   [campo: string]: unknown;
 }
 

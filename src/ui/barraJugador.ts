@@ -3,13 +3,14 @@
 // Aquí solo está el HTML y la lista de paneles; quien pinta cada panel y cablea los botones es `main.ts`.
 import type { ProyeccionJugador } from '../apiCliente';
 
-export type PanelJugador = 'heroe' | 'escuadras' | 'carro' | 'faccion' | 'avisos';
+export type PanelJugador = 'heroe' | 'escuadras' | 'carro' | 'faccion' | 'tecnologia' | 'avisos';
 
 const BOTONES: [PanelJugador, string][] = [
   ['heroe', 'Héroe'],
   ['escuadras', 'Escuadras'],
   ['carro', 'Carro'],
   ['faccion', 'Facción'],
+  ['tecnologia', 'Tecnología'],
   ['avisos', 'Avisos'],
 ];
 
