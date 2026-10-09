@@ -40,6 +40,7 @@ import { cablearAdmision } from './ui/panelAdmision';
 import { cablearFichaBatalla, cablearFichaFormacion, formacionesVisibles, htmlFichaBatalla, htmlFichaFormacion } from './ui/panelBatalla';
 import { cablearPanelEjercito, ejercitosDeLaFaccion, htmlFichaEjercito, htmlPanelEjercito, peticionesNuevas } from './ui/ejercitos';
 import { invalidar, olvidarEdicion, pintar, vaciar } from './ui/repintado';
+import { FICHAS_MAPA_EXTRA, SELECTORES_MAPA_EXTRA, SUBPESTANAS_CENTRO_EXTRA, SUBPESTANAS_MERCADO_EXTRA, type ContextoPlaza } from './ui/ganchos';
 import { montarPartidas } from './ui/pantallaPartidas';
 import { cablearCaravanas, cablearOrdenes, htmlCaravanas, htmlOrdenes } from './ui/panelMercado';
 import { cablearReclutamiento, htmlReclutamiento } from './ui/reclutamiento';
@@ -472,7 +473,7 @@ function puntoDeMapa(evento: { clientX: number; clientY: number }, canvas: HTMLC
 
 /** Lo seleccionado en el mapa —un asentamiento o un campamento de bandidos— (abre el panel de Selección). Fuera del
  * `estadoCliente` porque solo vive mientras la pantalla Mapa está montada. */
-let seleccionMapa: { tipo: 'asentamiento' | 'campamento' | 'mercenarios' | 'alijo' | 'batalla' | 'formacion' | 'ejercito'; id: string } | null = null;
+let seleccionMapa: { tipo: string; id: string } | null = null; // 'asentamiento' | 'campamento' | 'mercenarios' | 'alijo' | 'batalla' | 'formacion' | 'ejercito' o el `tipo` de una `FICHAS_MAPA_EXTRA`
 let avisoMapaTimer: ReturnType<typeof setTimeout> | undefined;
 
 function avisoMapa(texto: string): void {
@@ -565,6 +566,17 @@ function renderSeleccionMapaCuerpo(): void {
   if (proyeccion && alijo) {
     cont.hidden = false;
     renderSeleccionAlijo(cont, alijo);
+    return;
+  }
+  for (const ficha of FICHAS_MAPA_EXTRA) {
+    if (!proyeccion || seleccionMapa?.tipo !== ficha.tipo) continue;
+    const objeto = ficha.buscar(proyeccion, seleccionMapa.id);
+    if (objeto === undefined || objeto === null) break; // ya no está: se cierra más abajo
+    cont.hidden = false;
+    const ctx = { ejecutar: ejecutarYRefrescar, aviso: avisoMapa, cerrar: () => { seleccionMapa = null; renderSeleccionMapa(); }, escapar: escaparHtml };
+    if (!pintar(cont, ficha.html(proyeccion, objeto as never, ctx), undefined, claveSeleccion())) return;
+    cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', ctx.cerrar);
+    ficha.cablear?.(cont, proyeccion, objeto as never, ctx);
     return;
   }
   const asentamiento = seleccionMapa?.tipo === 'asentamiento' && proyeccion
@@ -1166,6 +1178,14 @@ function montarMapa(): void {
     const canvas = document.querySelector<HTMLCanvasElement>('#mapa');
     if (!proy || !mapa || !canvas) return;
     const punto = puntoDeMapa(evento, canvas, mapa);
+    for (const selector of SELECTORES_MAPA_EXTRA) {
+      const bajo = selector(proy, punto);
+      if (!bajo) continue;
+      seleccionMapa = { tipo: bajo.tipo, id: bajo.id };
+      renderSeleccionMapa();
+      if (bajo.ir) void marcharAObjetivo(bajo.ir);
+      return;
+    }
     const batalla = cercano((proy.batallas ?? []).map((b) => ({ ...b, posicion: b.punto })), punto, 20);
     const formacion = batalla ? null : cercano(formacionesVisibles(proy).map((e) => ({ ...e, posicion: e.posicionActual })), punto, 20);
     if (batalla || formacion) {
@@ -1317,7 +1337,7 @@ function pintarSalidaAsentamiento(panel: HTMLElement, p: ProyeccionJugador, asen
 // Solo con lo que ya trae la proyección. Las acciones sin dato previo (mejorar, añadir) se mandan y se
 // muestra el error del backend si lo rechaza. Ver docs/Panel_Asentamiento.md.
 
-type SeccionAsent = 'resumen' | 'edificios' | 'produccion' | 'cola' | 'cargos';
+type SeccionAsent = string; // 'resumen' | 'edificios' | 'produccion' | 'cola' | 'cargos' o el id de una subpestaña de `SUBPESTANAS_CENTRO_EXTRA`
 let seccionAsent: SeccionAsent = 'edificios';
 
 /** Edificios que un Gobernador / Maestro de Obras puede añadir a mano (el backend gatea nivel, únicos y
@@ -1364,7 +1384,7 @@ async function ejecutarAccionAsent(tipo: string, params: Record<string, unknown>
 
 type EdificioAsent = 'centro' | 'reclutamiento' | 'taberna' | 'mercado';
 let edificioAsent: EdificioAsent = 'centro';
-type SeccionMercado = 'ordenes' | 'caravanas' | 'escolta';
+type SeccionMercado = string; // 'ordenes' | 'caravanas' | 'escolta' o el id de una subpestaña de `SUBPESTANAS_MERCADO_EXTRA`
 let seccionMercado: SeccionMercado = 'ordenes';
 
 /** Una pestaña por edificio. Taberna y Mercado existen siempre pero se abren al tener el edificio activo (decir qué falta es parte de la interfaz). */
@@ -1406,18 +1426,20 @@ function renderPanelEdificios(): void {
 
   const cargo = cargoConstructor(asentamiento, proyeccion.heroeId);
   const pie = '<p id="asent-lado-error" class="faction-error" role="alert"></p>';
+  const ctxPlaza: ContextoPlaza = { proyeccion, asentamiento, cuerpo, ejecutar: ejecutarYRefrescar, refrescar: renderPanelEdificios, cargo, resideAqui: resideEnLaPlaza(proyeccion, asentamiento), escapar: escaparHtml };
   let html = '';
   let cablear: () => void = () => undefined;
   let ambito: string = edificioAsent;
   const cablearSub = (alCambiar: (sub: string) => void): void => cuerpo.querySelectorAll<HTMLButtonElement>('[data-sub]').forEach((b) => b.addEventListener('click', () => { alCambiar(b.dataset.sub!); renderPanelEdificios(); }));
 
   if (edificioAsent === 'centro') {
-    const SECCIONES: [SeccionAsent, string][] = [['resumen', 'Resumen'], ['edificios', 'Edificios'], ['produccion', 'Producción'], ['cola', 'Cola'], ['cargos', 'Cargos']];
+    const SECCIONES: [SeccionAsent, string][] = [['resumen', 'Resumen'], ['edificios', 'Edificios'], ['produccion', 'Producción'], ['cola', 'Cola'], ['cargos', 'Cargos'], ...SUBPESTANAS_CENTRO_EXTRA.map((s) => [s.id, s.etiqueta] as [string, string])];
+    const extra = SUBPESTANAS_CENTRO_EXTRA.find((s) => s.id === seccionAsent);
     const puedeMudarme = Boolean(proyeccion.faccionId) && asentamiento.faccionId === proyeccion.faccionId && !resideEnLaPlaza(proyeccion, asentamiento);
     const formNombre = resideEnLaPlaza(proyeccion, asentamiento)
       ? `<div class="asent-renombrar"><span class="faction-kicker">Nombre de la ciudad</span><div class="mercado-acciones"><input class="form-input" type="text" maxlength="40" data-campo="nombre-plaza" value="${escaparHtml(asentamiento.nombre ?? '')}" placeholder="${escaparHtml(asentamiento.id)}" /><button id="btn-renombrar" class="btn-secondary" type="button">Cambiar nombre</button></div><p class="asent-lado-nota">Vacío = vuelve a mostrarse el identificador.</p></div>`
       : '';
-    const contenido = seccionAsent === 'resumen'
+    const contenido = extra ? extra.html(ctxPlaza) : seccionAsent === 'resumen'
       ? seccionResumen(asentamiento) + formNombre + seccionAscenso(asentamiento, proyeccion.ascensoDeAsentamiento, cargo === 'gobernador')
         + (puedeMudarme ? '<button id="btn-mudarme" class="btn-secondary" type="button" title="Hacer de esta plaza tu base: tu campamento se muda contigo">Hacer de esta plaza mi base</button>' : '')
       : seccionAsent === 'edificios' ? seccionEdificios(asentamiento, cargo)
@@ -1439,6 +1461,7 @@ function renderPanelEdificios(): void {
       });
       cablearAccionesAsentLado(cuerpo, asentamiento, cargo);
       cablearCargosAsentamiento(cuerpo, asentamiento);
+      extra?.cablear?.(ctxPlaza);
     };
   } else if (edificioAsent === 'reclutamiento') {
     html = `<div class="asent-lado-cuerpo">${htmlReclutamiento(proyeccion, asentamiento, escaparHtml, renderPanelEdificios)}</div>${pie}`;
@@ -1447,15 +1470,17 @@ function renderPanelEdificios(): void {
     html = `${renderPanelIntel(proyeccion, escaparHtml)}${pie}`;
     cablear = () => cablearPanelIntel(cuerpo, proyeccion, ejecutarYRefrescar, () => { olvidarEdicion(cuerpo); invalidar(cuerpo); renderPanelEdificios(); });
   } else {
-    const SECCIONES: [SeccionMercado, string][] = [['ordenes', 'Órdenes'], ['caravanas', 'Caravanas'], ['escolta', 'Escolta']];
-    const contenido = seccionMercado === 'escolta' ? htmlEscolta(proyeccion, asentamiento, escaparHtml)
+    const SECCIONES: [SeccionMercado, string][] = [['ordenes', 'Órdenes'], ['caravanas', 'Caravanas'], ['escolta', 'Escolta'], ...SUBPESTANAS_MERCADO_EXTRA.map((s) => [s.id, s.etiqueta] as [string, string])];
+    const extraMercado = SUBPESTANAS_MERCADO_EXTRA.find((s) => s.id === seccionMercado);
+    const contenido = extraMercado ? extraMercado.html(ctxPlaza) : seccionMercado === 'escolta' ? htmlEscolta(proyeccion, asentamiento, escaparHtml)
       : seccionMercado === 'caravanas' ? htmlCaravanas(proyeccion, asentamiento, escaparHtml)
         : htmlOrdenes(proyeccion, asentamiento, escaparHtml);
     html = `${subpestanas(SECCIONES, seccionMercado)}<div class="asent-lado-cuerpo">${contenido}</div>${pie}`;
     ambito = `mercado:${seccionMercado}`;
     cablear = () => {
       cablearSub((s) => { seccionMercado = s as SeccionMercado; });
-      if (seccionMercado === 'escolta') cablearEscolta(cuerpo, proyeccion, ejecutarYRefrescar);
+      if (extraMercado) extraMercado.cablear?.(ctxPlaza);
+      else if (seccionMercado === 'escolta') cablearEscolta(cuerpo, proyeccion, ejecutarYRefrescar);
       else if (seccionMercado === 'caravanas') cablearCaravanas(cuerpo, proyeccion, asentamiento, ejecutarYRefrescar);
       else cablearOrdenes(cuerpo, asentamiento, ejecutarYRefrescar);
     };
