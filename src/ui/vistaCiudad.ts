@@ -150,7 +150,7 @@ export function cablearVistaCiudad(
   fichaEl = document.createElement('aside');
   fichaEl.className = 'asent-ficha';
   fichaEl.hidden = true;
-  mapa.appendChild(fichaEl);
+  (contenedor.querySelector('.asent-izq') ?? mapa).appendChild(fichaEl);
   alCambiar = () => { o.redibujar(); o.repintarLista(); repintarFicha(); };
 
   canvas.addEventListener('click', (evento) => {

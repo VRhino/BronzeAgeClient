@@ -1667,7 +1667,7 @@ pre#proyeccion {
   margin: 0;
 }
 
-/* Cuerpo: mapa a la izquierda (flex), columna de edificios a la derecha (fija). */
+/* Cuerpo en tres columnas: lo que antes flotaba sobre el mapa (izquierda), el mapa cuadrado (centro) y la lista de edificios (derecha). */
 .asent-cuerpo {
   flex: 1;
   display: flex;
@@ -1678,17 +1678,17 @@ pre#proyeccion {
   position: relative;
   flex: 1;
   min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  container-type: size;
 }
 
+/* El lienzo es el mayor cuadrado que cabe en el espacio del centro (unidades del contenedor: no se deforma). */
 .asent-lienzo {
   aspect-ratio: 1;
-  height: 100%;
-  max-width: 100%;
-  max-height: 100%;
+  width: min(100cqw, 100cqh);
   border: 1px solid rgba(200, 170, 110, 0.22);
   border-radius: 4px;
   overflow: hidden;
@@ -1706,7 +1706,7 @@ pre#proyeccion {
 
 /* Columna derecha: lista de edificios (+ menú Facción/Ejército flotante encima del mapa). */
 .asent-lado {
-  width: clamp(260px, 24vw, 340px);
+  width: clamp(360px, 27vw, 560px);
   flex-shrink: 0;
   overflow-y: auto;
   padding: 20px 18px;
@@ -1965,21 +1965,41 @@ pre#proyeccion {
   font-size: 0.76rem;
 }
 
-/* Panel flotante Facción / Ejército — sobre el mapa, izquierda. */
+/* Columna izquierda: lo que antes flotaba sobre el mapa (Ejércitos / Salir al mundo, ficha del edificio, recursos del almacén,
+   leyenda del campamento). Se oculta sola cuando no tiene nada visible. */
+.asent-izq {
+  width: clamp(280px, 20vw, 420px);
+  flex-shrink: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 16px;
+  background: linear-gradient(0deg, var(--marco-bg-alt), var(--marco-panel));
+  border-right: 3px solid var(--bronce);
+  box-shadow: 8px 0 24px rgba(0, 0, 0, 0.45), inset -6px 0 12px rgba(0, 0, 0, 0.3);
+}
+.asent-izq:not(:has(> :not([hidden], :empty))) { display: none; }
+.asent-izq > * { flex-shrink: 0; }
+.camp-screen .asent-izq { width: clamp(200px, 14vw, 300px); }
+.asent-lado,
+.asent-izq,
+.asent-cuerpo { color-scheme: dark; }
+.asent-barra #asent-error:empty { display: none; }
+
+/* Las dos columnas laterales crecen con el tamaño de la ventana (texto un poco mayor en pantallas grandes). */
+@media (min-width: 1700px) {
+  .asent-lado,
+  .asent-izq { zoom: 1.15; }
+}
+
 .asent-panel[hidden],
 .asent-tooltip[hidden] {
   display: none;
 }
 
 .asent-panel {
-  position: absolute;
-  left: 32px;
-  top: 28px;
-  z-index: 3;
-  width: min(320px, calc(100% - 64px));
-  max-height: calc(100% - 56px);
   padding: 18px;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -2012,10 +2032,21 @@ pre#proyeccion {
   color: var(--text-secondary);
 }
 
-@media (max-width: 820px) {
-  .asent-lado {
-    display: none;
+/* Estrecho: mapa arriba y las columnas debajo, todo con scroll de la pantalla. */
+@media (max-width: 900px) {
+  .asent-cuerpo { flex-direction: column; overflow-y: auto; }
+  .asent-mapa { flex: none; height: min(100vw, 78vh); width: 100%; }
+  .asent-lado,
+  .asent-izq {
+    width: auto;
+    overflow: visible;
+    zoom: 1;
+    border: 0;
+    border-top: 3px solid var(--bronce);
+    box-shadow: none;
   }
+  .asent-izq { order: 1; }
+  .asent-lado { order: 2; }
 }
 
 /* =====================================================================================
@@ -2249,16 +2280,11 @@ body {
   display: none;
 }
 .asent-recursos {
-  position: absolute;
-  bottom: 18px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 3;
+  order: -1;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 6px;
-  max-width: calc(100% - 40px);
   padding: 8px 12px;
   background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg));
   border: 1px solid var(--bronce);
@@ -2654,7 +2680,7 @@ kbd {
   left: 16px;
   top: calc(var(--jugador-alto) + 12px);
   z-index: 5;
-  width: min(340px, calc(100vw - 32px));
+  width: min(clamp(360px, 30vw, 560px), calc(100vw - 32px));
   max-height: calc(100% - var(--jugador-alto) - 28px);
   padding: 18px;
   overflow-y: auto;
@@ -2681,12 +2707,6 @@ kbd {
 .camp-lienzo svg { display: block; width: 100%; height: 100%; }
 .camp-leyenda-caja:empty { display: none; }
 .camp-leyenda-caja {
-  position: absolute;
-  bottom: 18px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 3;
-  max-width: calc(100% - 40px);
   padding: 8px 12px;
   background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg));
   border: 1px solid var(--bronce);
@@ -2862,14 +2882,8 @@ kbd {
 /* Vista de la ciudad (ui/vistaCiudad.ts): ficha flotante del edificio elegido y fila resaltada de la lista. */
 .asent-ficha[hidden] { display: none; }
 .asent-ficha {
-  position: absolute;
-  right: 32px;
-  top: 28px;
-  z-index: 3;
-  width: min(300px, calc(100% - 64px));
-  max-height: calc(100% - 56px);
+  order: -1;
   padding: 14px 16px;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 8px;
