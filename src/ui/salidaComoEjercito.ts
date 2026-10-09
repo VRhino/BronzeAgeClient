@@ -4,6 +4,7 @@
 // con clics en el mapa, tantas veces como quiera (backend 2026-10-08). La tropa y la carga las pone el formulario de salida que lo rodea (`leerSeleccion`).
 // Lo elegido vive aquí, fuera del HTML, para sobrevivir a los repintados del sondeo; los cambios se aplican al DOM sin repintar.
 import type { ProyeccionJugador } from '../apiCliente';
+import { ayuda } from './ayuda';
 import { htmlConvocatoriasAbiertas } from './convocatoria';
 import { POLITICA } from './ejercitos';
 import { pintar } from './repintado';
@@ -19,17 +20,15 @@ export interface Seleccion { escuadronIds: string[]; carga: Record<string, numbe
 /** El HTML es constante (la lista de convocatorias se rellena aparte con `actualizarConvocatorias`): así el sondeo no repinta la pestaña ni borra lo que has marcado. */
 export function htmlSalidaComoEjercito(p: ProyeccionJugador, e: Escapar): string {
   return `<div class="salida-ejercito">
-    <strong class="heroe-sub">Cómo sales</strong>
-    <label class="form-check"><input type="radio" name="salida-modo" value="personal" checked /> Columna personal: por tu cuenta, con el rumbo libre.</label>
-    <label class="form-check"><input type="radio" name="salida-modo" value="ejercito" /> Ejército: salís juntos varios héroes de tu Facción; lo dirige su Líder con clics en el mapa.</label>
+    <strong class="heroe-sub">Cómo sales${ayuda('salida:modo', '<strong>Columna personal</strong>: por tu cuenta, con el rumbo libre.<br><strong>Ejército</strong>: salís juntos varios héroes de tu Facción; lo dirige su Líder con clics en el mapa.<br>Para unirte a uno que se prepara, pulsa «Unirme»: sales con la tropa y la carga que marques aquí abajo. Para convocar el tuyo, elige quién puede unirse y pulsa «Convocar ejército». Un ejército espera dentro, sin límite de tiempo, hasta que su Líder pulse «Salir con el ejército» o cancele. Necesita al menos una escuadra. Un ejército lo componen ciudadanos de una sola Facción.')}</strong>
+    <label class="form-check"><input type="radio" name="salida-modo" value="personal" checked /> Columna personal</label>
+    <label class="form-check"><input type="radio" name="salida-modo" value="ejercito" /> Ejército</label>
     <div data-salida-ejercito hidden>
-      ${p.faccionId ? '' : '<p class="asent-lado-nota"><strong>No tienes Facción: nadie podrá unirse a tu ejército.</strong> Un ejército lo componen ciudadanos de una sola Facción.</p>'}
+      ${p.faccionId ? '' : '<p class="asent-lado-nota"><strong>No tienes Facción: nadie podrá unirse a tu ejército.</strong></p>'}
       <strong class="heroe-sub">Ejércitos que se están preparando aquí</strong>
       <div data-lista-convocatorias></div>
-      <p class="asent-lado-nota">Para unirte a uno, pulsa «Unirme»: sales con la tropa y la carga que marques aquí abajo. Para convocar el tuyo, elige quién puede unirse y pulsa «Convocar ejército»:</p>
       <span class="heroe-sub">Quién puede unirse (se fija al convocar)</span>
       ${(['aceptar', 'preguntar'] as Politica[]).map((k) => `<label class="form-check"><input type="radio" name="salida-politica" value="${k}"${k === 'aceptar' ? ' checked' : ''} /> ${e(POLITICA[k])}</label>`).join('')}
-      <p class="asent-lado-nota">Un ejército espera dentro, sin límite de tiempo, hasta que su Líder pulse «Salir con el ejército» o cancele. Necesita al menos una escuadra.</p>
     </div></div>`;
 }
 

@@ -5,6 +5,7 @@
 // (`responderPeticionDeConvocatoria`). Aquí no se decide ninguna regla: el backend valida todo y su motivo se enseña tal cual.
 import type { ProyeccionJugador } from '../apiCliente';
 import type { Convocatoria } from '../tiposDominio';
+import { ayuda } from './ayuda';
 import { esPeticionNueva, POLITICA } from './ejercitos';
 import { chipLiderazgo } from './liderazgo';
 import { textoEnTiempoReal } from './estadoCliente';
@@ -37,7 +38,7 @@ function resideEnElLugar(p: ProyeccionJugador, c: Convocatoria): boolean {
 function htmlMiTropa(p: ProyeccionJugador, c: Convocatoria, e: Escapar): string {
   const mio = c.integrantes.find((x) => x.heroeId === p.heroeId);
   if (!mio) return '';
-  if (!resideEnElLugar(p, c)) return '<p class="asent-lado-nota">No resides aquí: sales de visita, con tu columna aparcada en la puerta, y tu selección no cuenta.</p>';
+  if (!resideEnElLugar(p, c)) return `<p class="asent-lado-nota">No resides aquí.${ayuda('convocatoria:visita', 'Sales de visita, con tu columna aparcada en la puerta, y tu selección no cuenta.')}</p>`;
   const guardados = mio.escuadronIds;
   const ids = borrador?.convocatoriaId === c.id ? borrador.ids : guardados;
   const propias = p.heroe.escuadrones;
@@ -48,7 +49,7 @@ function htmlMiTropa(p: ProyeccionJugador, c: Convocatoria, e: Escapar): string 
   const fila = (s: (typeof propias)[number], pos: number | null): string => `<div class="mapa-lista-item"><div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${pos === null ? 'no sale' : `va en el puesto ${pos + 1}`} · nivel ${s.nivel} · moral ${Math.round(s.moral)} · ${s.cantidad} hombres</span></div>
       <input type="checkbox" data-conv-sel="${e(s.id)}"${pos === null ? '' : ' checked'} aria-label="Sale con el ejército" />
       ${pos === null ? '' : `<button class="btn-secondary" type="button" data-conv-mover="${e(s.id)}" data-dir="-1"${pos === 0 ? ' disabled' : ''} aria-label="Subir">↑</button><button class="btn-secondary" type="button" data-conv-mover="${e(s.id)}" data-dir="1"${pos === elegidas.length - 1 ? ' disabled' : ''} aria-label="Bajar">↓</button>`}</div>`;
-  return `<strong class="heroe-sub">Tu tropa (la primera entra primero en combate)</strong>
+  return `<strong class="heroe-sub">Tu tropa${ayuda('convocatoria:tropa', 'La primera entra primero en combate. Marca las escuadras que salen y reordénalas con las flechas; los cambios se aplican al guardar.')}</strong>
     <div class="mapa-lista">${elegidas.map((s, i) => fila(s, i)).join('')}${libres.map((s) => fila(s, null)).join('')}</div>
     ${elegidas.length === 0 ? '<p class="asent-lado-nota">Sin ninguna escuadra no sales. Marca al menos una.</p>' : ''}
     <div class="mapa-seleccion-acciones"><button class="btn-primary" type="button" data-conv="guardar-tropa"${cambiado && elegidas.length > 0 ? '' : ' disabled'}>Guardar cambios</button><button class="btn-secondary" type="button" data-conv="descartar-tropa"${cambiado ? '' : ' disabled'}>Descartar</button></div>`;
@@ -60,7 +61,7 @@ export function htmlPreparacion(p: ProyeccionJugador, e: Escapar): string {
   if (!c) return '';
   const peticiones = c.soyLider ? c.peticiones.filter((x) => x.expiraEn > p.instante) : [];
   return `<span class="faction-kicker">Ejército en preparación</span>
-    <p class="asent-lado-nota">${c.soyLider ? 'Tú lo diriges.' : `Lo dirige ${e(nombreDeHeroe(p, c.liderId))}.`} ${e(POLITICA[c.politicaDeUnion])}. Seguís dentro: nada se mueve hasta que el Líder pulse «Salir con el ejército» o cancele. Espera sin límite de tiempo.</p>
+    <p class="asent-lado-nota">${c.soyLider ? 'Tú lo diriges.' : `Lo dirige ${e(nombreDeHeroe(p, c.liderId))}.`} ${e(POLITICA[c.politicaDeUnion])}.${ayuda('convocatoria:espera', 'Seguís dentro: nada se mueve hasta que el Líder pulse «Salir con el ejército» o cancele. Espera sin límite de tiempo.')}</p>
     <ul class="ejercito-lista">${c.integrantes.map((x) => `<li><strong>${e(nombreDeHeroe(p, x.heroeId))}</strong>${x.heroeId === c.liderId ? ' <em>(Líder)</em>' : ''}${x.heroeId === p.heroeId ? ' · tú' : ''} — ${x.tropas.length} escuadra(s), ${hombres(x)} hombres${x.heroeId === p.heroeId ? '' : `<ul>${x.tropas.map((t) => filaDeTropa(t, e)).join('')}</ul>`}</li>`).join('')}</ul>
     ${htmlMiTropa(p, c, e)}
     ${peticiones.length > 0 ? `<strong class="heroe-sub">Piden unirse</strong>${peticiones.map((x) => `<div class="ejercito-fila"><div><strong>${e(nombreDeHeroe(p, x.heroeId))}</strong><span>${e(textoEnTiempoReal(x.expiraEn - p.instante))} para contestar · ${x.escuadronIds.length} escuadra(s)</span></div>

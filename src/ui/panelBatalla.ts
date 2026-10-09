@@ -3,6 +3,7 @@
 // los botones que tienen sentido y deja su rechazo (`batalla.invalida`, `movilizacion.invalida`…) en el propio panel.
 import type { ProyeccionJugador } from '../apiCliente';
 import type { BatallaVisible, EjercitoAvistado } from '../tiposDominio';
+import { ayuda } from './ayuda';
 import { crearEnvio, type Ejecutar } from './panelAnexion';
 import { MINIMO_FORMACION } from './ejercitos';
 
@@ -83,11 +84,11 @@ export function htmlFichaFormacion(proyeccion: ProyeccionJugador, formacion: Eje
   const enUna = !mi || mi.participantes.length > 1 || mi.formacion !== undefined || mi.tipo === 'ejercito';
   return `
     <button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>
-    <span class="faction-kicker">Formación de ejército</span>
+    <span class="faction-kicker">Formación de ejército${mia ? ayuda('batalla:formacion', 'Estás junto a ella con tu columna personal: te unes con lo que llevas encima (tropa y carro).') : ''}</span>
     <h3>${escapar(faccion?.nombre ?? formacion.faccionId)}</h3>
     <div class="mapa-seleccion-datos"><div><span>Héroes</span><strong>${formacion.participantes}/${MINIMO_FORMACION}</strong></div></div>
     <div class="mapa-seleccion-acciones"><button id="btn-unirse-formacion" class="btn-primary" type="button"${mia && !enUna ? '' : ' disabled'}>Unirse</button></div>
-    <p class="mapa-lista-vacia">${mia ? 'Estás junto a ella con tu columna personal: te unes con lo que llevas encima (tropa y carro).' : 'Solo se unen ciudadanos de su Facción.'}</p>
+    ${mia ? '' : '<p class="mapa-lista-vacia">Solo se unen ciudadanos de su Facción.</p>'}
     <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`;
 }
 

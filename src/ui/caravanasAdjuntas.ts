@@ -10,6 +10,7 @@ import type { ProyeccionJugador } from '../apiCliente';
 import { radioDeReabastecimiento } from '../apiCliente';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { AcuerdoTrueque, Caravana, Ejercito, LineaTrueque } from '../tiposDominio';
+import { ayuda } from './ayuda';
 import type { Ejecutar } from './panelCarro';
 
 type Escapar = (valor: string) => string;
@@ -22,6 +23,8 @@ const nombre = (r: string): string => RECURSO_NOMBRE[r] ?? r;
 const icono = (r: string): string => RECURSO_ICONO[r] ?? '📦';
 const distancia = (a: Punto, b: Punto): number => Math.hypot(a.x - b.x, a.y - b.y);
 const cargaTotal = (c: Caravana): number => Object.values(c.contenido ?? {}).reduce((a, b) => a + b, 0);
+/** El motivo de un botón apagado a la vista solo si cabe en una línea; si no, queda en el `title` del botón y en la ayuda. */
+const corto = (motivo: string, e: Escapar): string => (motivo.length <= 70 ? `<small>${e(motivo)}</small>` : '');
 
 /** Tuya si lo dice su `faccionId` o, sin él, si sale de una plaza tuya (la flota comercial). */
 function esDeMiFaccion(p: ProyeccionJugador, c: Caravana): boolean {
@@ -86,7 +89,7 @@ function htmlEnganchada(p: ProyeccionJugador, col: Ejercito, c: Caravana, e: Esc
       : !pos ? 'No ves dónde está el que recibe.'
       : distancia(pos, col.posicionActual) > radio ? `Estás a ${Math.ceil(distancia(pos, col.posicionActual))} de ${nombreDe(p, destinoId)}: hay que estar a ${radio} o menos.` : '';
     return `<div class="carro-fila"><span>Trueque con ${e(nombreDe(p, destinoId))}: faltan ${faltan.map((f) => `${icono(f.recurso)} ${Math.ceil(f.faltante)}`).join(' · ')}</span>
-      <button class="btn-secondary" type="button" data-cc="entregar" data-caravana="${e(c.id)}" data-acuerdo="${e(acuerdo.id)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>Entregar</button>${motivo ? `<small>${e(motivo)}</small>` : ''}</div>`;
+      <button class="btn-secondary" type="button" data-cc="entregar" data-caravana="${e(c.id)}" data-acuerdo="${e(acuerdo.id)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>Entregar</button>${motivo ? corto(motivo, e) : ''}</div>`;
   }).join('');
   const fundacion = c.titularId !== undefined;
   return `<div class="ejercito-fila">
@@ -102,7 +105,7 @@ function htmlSuelta(p: ProyeccionJugador, col: Ejercito, c: Caravana, e: Escapar
   return `<div class="ejercito-fila">
     <div><strong>${c.titularId !== undefined ? 'Caravana de Fundación' : 'Caravana'} ${e(c.id)}</strong><span>${ESTADO[c.estado ?? 'disponible']}${donde} · lleva ${Math.floor(cargaTotal(c))} · a ${Math.round(distancia(c.posicionActual, col.posicionActual))} de ti</span></div>
     <button class="btn-primary" type="button" data-cc="enganchar" data-caravana="${e(c.id)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>Enganchar</button>
-    ${motivo ? `<small>${e(motivo)}</small>` : ''}</div>`;
+    ${motivo ? corto(motivo, e) : ''}</div>`;
 }
 
 /** El bloque «Caravanas» del panel «Lo que llevas»; vacío si no estás en una columna. */
@@ -115,13 +118,11 @@ export function htmlCaravanasAdjuntas(p: ProyeccionJugador, e: Escapar): string 
     .filter((c) => !idsEnganchadas.includes(c.id) && esDeMiFaccion(p, c))
     .sort((a, b) => distancia(a.posicionActual, col.posicionActual) - distancia(b.posicionActual, col.posicionActual) || (a.id < b.id ? -1 : 1));
   return `
-    <strong class="heroe-sub">Caravanas de tu columna</strong>
-    <p class="asent-lado-nota">Una caravana enganchada viaja con la columna (a su velocidad y a su suerte: si el ejército cae, se pierde) y ya no la reparte el comercio automático: tú eliges qué carga y a quién entregas. Sale de tu flota de comercio mientras dure. Cualquiera que vaya en la columna puede gestionarlas.</p>
+    <strong class="heroe-sub">Caravanas de tu columna${ayuda('caravanas:columna', `Una caravana enganchada viaja con la columna (a su velocidad y a su suerte: si el ejército cae, se pierde) y ya no la reparte el comercio automático: tú eliges qué carga y a quién entregas. Sale de tu flota de comercio mientras dure. Cualquiera que vaya en la columna puede gestionarlas. Solo se engancha una caravana suelta o aparcada, no una ya despachada.${enganchadas.length > 0 ? ` <br>Cargar: de una plaza de tu Facción a ${radioDeReabastecimiento()} o menos (no ves su almacén desde fuera: si no hay de eso, el servidor lo dice). Entregar: junto a la plaza que recibe, de lo que lleve la caravana (el menor entre lo cargado y lo que falta; el destino cobra su comisión). Cuánto cabe lo dice el servidor al cargar.` : ''}`)}</strong>
     ${enganchadas.length > 0 ? enganchadas.map((c) => htmlEnganchada(p, col, c, e)).join('') : '<p class="mapa-lista-vacia">Ninguna enganchada.</p>'}
     ${idsEnganchadas.length > enganchadas.length ? '<p class="asent-lado-nota">Alguna caravana enganchada no llega en tu proyección.</p>' : ''}
     <strong class="heroe-sub">Para enganchar</strong>
     ${sueltas.length > 0 ? sueltas.map((c) => htmlSuelta(p, col, c, e)).join('') : '<p class="mapa-lista-vacia">No tienes más caravanas de tu Facción.</p>'}
-    ${enganchadas.length > 0 ? `<p class="asent-lado-nota">Cargar: de una plaza de tu Facción a ${radioDeReabastecimiento()} o menos (no ves su almacén desde fuera: si no hay de eso, el servidor lo dice). Entregar: junto a la plaza que recibe, de lo que lleve la caravana (el menor entre lo cargado y lo que falta; el destino cobra su comisión). Cuánto cabe lo dice el servidor al cargar.</p>` : ''}
     <p class="faction-error" data-campo="error-caravanas" role="alert"></p>`;
 }
 

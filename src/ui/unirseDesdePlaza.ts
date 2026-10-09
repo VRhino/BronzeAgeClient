@@ -5,6 +5,7 @@
 import type { ProyeccionJugador } from '../apiCliente';
 import { radioDeReabastecimiento } from '../apiCliente';
 import type { Asentamiento } from '../tiposDominio';
+import { ayuda } from './ayuda';
 import { ejercitosDeLaFaccion, POLITICA } from './ejercitos';
 import { chipLiderazgo } from './liderazgo';
 import { nombreDeHeroe } from './nombres';
@@ -29,14 +30,13 @@ export function htmlUnirseDesdePlaza(p: ProyeccionJugador, a: Asentamiento, e: E
         <span>${c.participantes.length} héroe(s) · a ${d} de la plaza · ${POLITICA[c.politicaDeUnion ?? 'rechazar']}</span></div>
       <button class="btn-primary" type="button" data-unirse-desde-plaza="${e(c.id)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>Unirme con esta tropa</button>${motivo ? `<small>${e(motivo)}</small>` : ''}</div>`;
   });
-  return `<span class="faction-kicker">Unirse a un ejército</span>
-    <p class="asent-lado-nota">Cuando un ejército de tu Facción pasa cerca de tu plaza (a ${radio} o menos) puedes sumarte a él con tropa fresca de tu campamento. Pasas a ir donde lo dirija su Líder. Unirse en campo, con lo que ya llevas encima, se hace desde el mapa.</p>
+  return `<span class="faction-kicker">Unirse a un ejército${ayuda('plaza:unirse', `Cuando un ejército de tu Facción pasa cerca de tu plaza (a ${radio} o menos) puedes sumarte a él con tropa fresca de tu campamento. Pasas a ir donde lo dirija su Líder. Unirse en campo, con lo que ya llevas encima, se hace desde el mapa. Un ejército se convoca dentro de un campamento o de una plaza (botón «Salir»), o con «Organizar ejército» en el mapa.`)}</span>
     <strong class="heroe-sub">Tropa que aportas</strong>
     ${tropa.length > 0
       ? `<div class="mapa-lista">${tropa.map((s) => `<label class="mapa-lista-item"><div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres</span></div><input type="checkbox" data-aporta="${e(s.id)}"${desmarcadas.has(s.id) ? '' : ' checked'} /></label>`).join('')}</div>`
       : '<p class="asent-lado-nota">No tienes tropa libre en el campamento (la de guarnición no sale).</p>'}
     <strong class="heroe-sub">Ejércitos de tu Facción</strong>
-    ${filas.length > 0 ? filas.join('') : '<p class="mapa-lista-vacia">Ninguno en marcha. Un ejército se convoca dentro de un campamento o de una plaza (botón «Salir»), o con «Organizar ejército» en el mapa.</p>'}
+    ${filas.length > 0 ? filas.join('') : '<p class="mapa-lista-vacia">Ninguno en marcha.</p>'}
     <p class="faction-error" data-campo="error-unirse-plaza" role="alert"></p>`;
 }
 
