@@ -1,5 +1,6 @@
 // Subpestaña «Residencia» de Centro urbano: dejar tu casa sin dejar la Facción (`dejarResidencia`, Doc 2.5) y, si eres el Rey, designar esta plaza capital (`designarCapital`, Doc 2.2).
 // Mudar tu base a esta plaza ya está en Resumen («Hacer de esta plaza mi base»): aquí no se duplica.
+import { diasDeEnfriamientoDeResidencia } from '../apiCliente';
 import type { ContextoPlaza, SubpestanaPlaza } from './ganchos';
 
 const DIA_MS = 86_400_000;
@@ -7,10 +8,16 @@ const DIA_MS = 86_400_000;
 const COOLDOWN_CAPITAL_DIAS = 14;
 const CARGO_NOMBRE: Record<string, string> = { gobernadorId: 'Gobernador', maestroObrasId: 'Maestro de Obras', tesoreroId: 'Tesorero', generalId: 'General', sacerdoteId: 'Sacerdote' };
 
+/** El enfriamiento de residencia sale del balance (`CIUDADANIA.cooldownCambioResidenciaDias`); mientras no llegue, el aviso es genérico. */
+function esperaParaMudarse(c: ContextoPlaza): string {
+  const dias = diasDeEnfriamientoDeResidencia(c.refrescar);
+  return dias === undefined ? 'hay un enfriamiento antes de poder mudarte de nuevo' : `tendrás que esperar ${dias} días de mundo antes de volver a mudarte`;
+}
+
 function seccionResidencia(c: ContextoPlaza): string {
   if (!c.resideAqui) return '<p class="asent-lado-nota">No resides en esta plaza: no hay casa que dejar aquí. Para vivir en ella usa «Hacer de esta plaza mi base» en Resumen.</p>';
   const cargos = Object.entries(c.asentamiento.cargos ?? {}).filter(([, id]) => id === c.proyeccion.heroeId).map(([k]) => CARGO_NOMBRE[k] ?? k);
-  return `<p class="asent-lado-nota">Resides aquí. Dejar la residencia libera tu vivienda y vacía tus cargos locales${cargos.length ? ` (${cargos.join(', ')})` : ''}, suelta tu guarnición y te lleva al campamento de mercenarios más cercano. Sigues en tu Facción. No hay reembolso y hay un enfriamiento antes de poder mudarte de nuevo.</p>
+  return `<p class="asent-lado-nota">Resides aquí. Dejar la residencia libera tu vivienda y vacía tus cargos locales${cargos.length ? ` (${cargos.join(', ')})` : ''}, suelta tu guarnición y te lleva al campamento de mercenarios más cercano. Sigues en tu Facción. No hay reembolso y ${esperaParaMudarse(c)}.</p>
     <button class="btn-secondary" type="button" data-dejar-residencia>Dejar mi residencia</button>`;
 }
 

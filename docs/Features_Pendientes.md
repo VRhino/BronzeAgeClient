@@ -1,6 +1,6 @@
 # Features pendientes
 
-Lo que le falta al cliente‑jugador, **contrastado con el backend** (`BronzeAgeFase0@02bd153`: comandos de `src/session/comandos/registro.ts` y canon de `Docs/Game`). Revisado el **2026-10-09**, versión del cliente **0.26.0**. Con 0.26.0 se construyó todo lo pendiente de la revisión anterior que dependía solo del cliente; lo que queda es verificar en vivo y lo que espera al backend.
+Lo que le falta al cliente‑jugador, **contrastado con el backend** (`BronzeAgeFase0@02bd153`: comandos de `src/session/comandos/registro.ts` y canon de `Docs/Game`). Revisado el **2026-10-09**, versión del cliente **0.26.1**. Con 0.26.0 se construyó todo lo pendiente de la revisión anterior que dependía solo del cliente; lo que queda es verificar en vivo y lo que espera al backend.
 
 - Guía visual (leer antes de diseñar UI nueva): [`Diseno_Interfaz.md`](Diseno_Interfaz.md).
 - Inventario de info y acciones del asentamiento: [`Panel_Asentamiento.md`](Panel_Asentamiento.md).
@@ -29,7 +29,7 @@ Lo que le falta al cliente‑jugador, **contrastado con el backend** (`BronzeAge
   - **Centro urbano:** Resumen, Edificios, Producción, Cola, Cargos, **Muralla, Puerta (puerta y veto), Residencia (dejar residencia, capital), Tesorería (reserva y políticas), Fundación (caravana de fundación de plaza), Recetas, Aliados (reabastecer aliados), Información**.
   - **Reclutamiento**, **Taberna** (intel) y **Mercado:** Órdenes, Caravanas, Escolta, **Trueques, Aparcadas**.
   - **Vista de la ciudad:** clic en un edificio (ficha con mejora y cola), resaltado cruzado con la lista, tooltip con producción, escala derivada del contenido.
-- **Caravanas con ejército:** enganchar, soltar, cargar y entregar (panel «Lo que llevas»).
+- **Caravanas con ejército:** enganchar, soltar, cargar y entregar (panel «Lo que llevas»). **Tope de la flota del Mercado** (caravanas y carros) en Mercado › Caravanas.
 - **Campamentos de mercenarios:** planta, residir, préstamo de leva, **reclutar y reponer pagando oro**, mercado, fondo de refundación, taberna, salir.
 - **Facción:** crear, unirse, solicitar ingreso, cargos locales, anexión, fusión, admisión de otras Facciones, **traspaso del trono, Embajador, dejar la Facción y toda la diplomacia** (alianza, vasallaje con tributo, guerra, paz, romper, rebelión).
 - **Tecnología y Aedas:** era y logros, adoptar, comprar a un Aeda, épicas.
@@ -37,16 +37,12 @@ Lo que le falta al cliente‑jugador, **contrastado con el backend** (`BronzeAge
 ## 2. Pendiente — cliente
 
 1. **Mis asentamientos fuera de visión** (§6.2 antiguo): probablemente ya resuelto en el servidor (las plazas propias son ojos de la Facción y salen siempre como avistadas); falta confirmarlo en vivo.
-2. **Cupo de la flota** (nuevo canon, backend `1e5351c`): mostrar en Mercado › Caravanas los topes del Mercado, `cupoCaravanas` (2/4/6) y `cupoCarros` (3/9/18, Doc 3.13.2), que ya están en `EDIFICIO_CATALOGO.mercado.niveles` del balance, y apagar «＋ Carro» con el motivo cuando la flota esté llena.
-3. **Residencia:** leer `CIUDADANIA.cooldownCambioResidenciaDias` del balance en vez del aviso genérico.
-4. **Ficha de orden ajena:** avisar de «sin Mercado» con los `edificios` de la plaza avistada.
-5. **Tiempo real:** los eventos ya dicen de qué partida son (backend `9ab4e62`); filtrar por `gameId`.
 
 Todo lo demás del cliente está construido; el trabajo abierto es **verificarlo con estado real** (§4) y cuando el backend publique lo de §3 quitar las copias a mano que hay en el cliente.
 
 ## 3. Pendiente — backend
 
-Contrastado contra el canon y el código del servidor en [`Peticion_Backend.md`](Peticion_Backend.md) (**borrador sin enviar**). Resumen:
+Contrastado contra el canon y el código del servidor en [`Peticion_Backend.md`](Peticion_Backend.md) (**enviada a la sesión de Backend el 2026-10-09**). Resumen:
 
 1. **Publicar en el balance** lo que hoy solo está en `constants.ts`: catálogos de carros y animales, oro por soldado del reclutamiento, `MOVIMIENTO` (radios), `CAPITAL`, `PUERTA`, y el precio y las tropas desbloqueadas del campamento.
 2. **Catálogo de tecnología y Aedas** (Doc 6), la Era de cada tecnología, la capital de la Facción, el progreso de los hitos y qué admite épica.

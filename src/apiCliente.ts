@@ -300,7 +300,9 @@ export function abrirPresencia(gameId: string): void {
   socket.addEventListener('open', () => sincronizarCanales());
   socket.addEventListener('message', (mensaje) => {
     try {
-      const datos = JSON.parse(String(mensaje.data)) as { tipo?: string; evento?: EventoDominio };
+      const datos = JSON.parse(String(mensaje.data)) as { tipo?: string; gameId?: string; evento?: EventoDominio };
+      // El servidor dice de qué partida es cada evento (backend 9ab4e62): uno de otra partida no es de este socket.
+      if (datos.gameId !== undefined && datos.gameId !== gameId) return;
       if (datos.tipo === 'evento' && datos.evento) oyenteDeEventos?.(datos.evento);
     } catch {
       // Un mensaje ilegible no rompe nada: el sondeo sigue trayendo la verdad.
@@ -398,7 +400,7 @@ export interface ReglasDePoliticas {
 /** El balance público (`GET /v1/balance`): se pide una vez, en segundo plano, y avisa con `alCargar` cuando llega. */
 interface BalancePublico {
   catalogos?: { EDIFICIO_CATALOGO?: Record<string, { costo?: Record<string, number>; niveles?: Record<string, NivelDeEdificio> }>; TROPAS_RECLUTABLES?: TropaReclutable[]; POLITICA_CATALOGO?: PoliticaDelCatalogo[] };
-  cuposYNiveles?: { POLITICAS?: ReglasDePoliticas; CAP_FUNDACION_POR_NIVEL?: number[] };
+  cuposYNiveles?: { POLITICAS?: ReglasDePoliticas; CAP_FUNDACION_POR_NIVEL?: number[]; CIUDADANIA?: { cooldownCambioResidenciaDias?: number } };
   caravanas?: { CARAVANA_COOLDOWN?: { cooldownMinutos?: number } };
   mundoYMilitar?: { LOGISTICA?: { capacidadViveresPorHeroe?: number; radioEncuentro?: number; radioReabastecimiento?: number }; FUNDACION?: { materialesIniciales?: Record<string, number>; viviendasIniciales?: number; costoMaderaExtraCaravana?: number }; MERCENARIOS?: { refundacion?: { porcentajeCoste?: number }; nivelEdificios?: number } };
   internas?: { CAMPAMENTOS_BANDIDOS?: { niveles?: Record<string, NivelDeBandidos> } };
@@ -418,7 +420,18 @@ function balance(alCargar?: () => void): BalancePublico | null {
 /** Una receta de transformación de un nivel de edificio: `produccionBase` por minuto con la mano de obra completa; `consumePorUnidad` = insumo por unidad producida. */
 export interface RecetaDeEdificio { produce: string; produccionBase: number; consumePorUnidad: Record<string, number>; requiereTecnologia?: string; requiereEdificio?: { tipo: string; nivel: number } }
 /** Un nivel interno de un edificio del catálogo: qué fabrica y qué pide para llegar a él. */
-export interface NivelDeEdificio { recetas: RecetaDeEdificio[]; costoMejora?: Record<string, number>; requisitoNivelAsentamiento?: number; requiereEdificio?: string; requiereEdificioNivel?: number; requiereTecnologia?: string; obraMinutos?: number }
+export interface NivelDeEdificio { recetas: RecetaDeEdificio[]; costoMejora?: Record<string, number>; requisitoNivelAsentamiento?: number; requiereEdificio?: string; requiereEdificioNivel?: number; requiereTecnologia?: string; obraMinutos?: number; cupoCaravanas?: number; cupoCarros?: number }
+
+/** Los topes de flota del Mercado a su nivel interno (`cupoCaravanas` y `cupoCarros`, Doc 3.13.2); `null` mientras no llegue el balance o si ese nivel no existe. */
+export function cupoDeFlota(nivelMercado: number, alCargar?: () => void): { caravanas?: number; carros?: number } | null {
+  const n = nivelesDeEdificio('mercado', alCargar)?.[String(nivelMercado)];
+  return n ? { caravanas: n.cupoCaravanas, carros: n.cupoCarros } : null;
+}
+
+/** Días de mundo que hay que esperar tras mudarte antes de volver a hacerlo (`CIUDADANIA.cooldownCambioResidenciaDias`); `undefined` mientras no llegue el balance. */
+export function diasDeEnfriamientoDeResidencia(alCargar?: () => void): number | undefined {
+  return balance(alCargar)?.cuposYNiveles?.CIUDADANIA?.cooldownCambioResidenciaDias;
+}
 
 /** Los niveles internos de un tipo de edificio (`EDIFICIO_CATALOGO[tipo].niveles`); `null` mientras no llegue el balance o si el tipo no tiene niveles. */
 export function nivelesDeEdificio(tipo: string, alCargar?: () => void): Record<string, NivelDeEdificio> | null {

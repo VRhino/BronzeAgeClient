@@ -2,7 +2,7 @@
 // (`colocarOrdenMercado`, `crearCaravana`, `agregarCarroCaravana`, `comprarAnimalCaravana`, `moverCarroCaravana`, `reservarCaravana`, `prepararCaravana`,
 // `cancelarCaravana`). Los costes de carros y animales, la capacidad y el cupo de flota los valida y los dice el servidor: aquí no se copian, el rechazo se enseña tal cual.
 // Tomar una orden AJENA es otra cosa (`comerciarEnPlaza`: con una columna tuya a la puerta de esa plaza) y no se hace desde dentro de la tuya.
-import type { ProyeccionJugador } from '../apiCliente';
+import { cupoDeFlota, type ProyeccionJugador } from '../apiCliente';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { Asentamiento, Caravana } from '../tiposDominio';
 import type { Ejecutar } from './panelCarro';
@@ -70,13 +70,14 @@ export function cablearOrdenes(raiz: HTMLElement, a: Asentamiento, ejecutar: Eje
 
 // ---------------------------------------------------------------- Caravanas
 
-function tarjeta(c: Caravana, p: ProyeccionJugador, a: Asentamiento, reside: boolean, flota: Caravana[], almacen: Record<string, number>, e: Escapar): string {
+function tarjeta(c: Caravana, p: ProyeccionJugador, a: Asentamiento, reside: boolean, flota: Caravana[], almacen: Record<string, number>, carrosLleno: boolean, e: Escapar): string {
   const destino = c.destinoAsentamientoId ? ` → ${e(p.asentamientosAvistados.find((x) => x.id === c.destinoAsentamientoId)?.nombre ?? p.asentamientosConocidos.find((x) => x.asentamientoId === c.destinoAsentamientoId)?.nombre ?? c.destinoAsentamientoId)}` : '';
   const estado = c.estado ?? 'disponible';
   const carros = c.carros ?? [];
   const parada = estado === 'disponible' && c.origenAsentamientoId === a.id;
   const otras = flota.filter((x) => x.id !== c.id && (x.estado ?? 'disponible') === 'disponible');
   const deshab = reside ? '' : ' disabled';
+  const deshabCarro = carrosLleno ? ' disabled title="La flota ya tiene el tope de carros de tu Mercado"' : '';
   const carrosHtml = carros.length === 0
     ? '<p class="asent-lado-nota">Casco vacío: no puede salir hasta que le montes un carro y un animal.</p>'
     : `<div class="mapa-lista">${carros.map((r, i) => `<div class="mapa-lista-item"><div><strong>${e(CARRO[r.tipoCarro] ?? r.tipoCarro)}</strong> · <span>${r.animal ? e(ANIMAL[r.animal] ?? r.animal) : 'sin animal: no tira'}</span></div>
@@ -92,8 +93,8 @@ function tarjeta(c: Caravana, p: ProyeccionJugador, a: Asentamiento, reside: boo
       .filter((x) => x.id !== a.id);
     const filas = Object.entries(almacen).filter(([r, n]) => n >= 1 && r !== 'oro');
     acciones = `<div class="mercado-acciones">
-        <button class="btn-secondary" type="button" data-carro-nuevo="${e(c.id)}:basico"${deshab}>＋ Carro básico</button>
-        <button class="btn-secondary" type="button" data-carro-nuevo="${e(c.id)}:reforzado"${deshab}>＋ Carro reforzado</button>
+        <button class="btn-secondary" type="button" data-carro-nuevo="${e(c.id)}:basico"${deshab || deshabCarro}>＋ Carro básico</button>
+        <button class="btn-secondary" type="button" data-carro-nuevo="${e(c.id)}:reforzado"${deshab || deshabCarro}>＋ Carro reforzado</button>
         <label class="asent-toggle"><input type="checkbox" data-reservar="${e(c.id)}"${c.reservadaManual ? ' checked' : ''}${deshab} /> Reservada (fuera del reparto automático)</label>
       </div>
       ${hayTraccion && reside ? `<strong class="heroe-sub">Preparar un viaje</strong>
@@ -108,14 +109,22 @@ function tarjeta(c: Caravana, p: ProyeccionJugador, a: Asentamiento, reside: boo
     ${carrosHtml}${acciones}</div>`;
 }
 
-export function htmlCaravanas(p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
+export function htmlCaravanas(p: ProyeccionJugador, a: Asentamiento, e: Escapar, alCargar?: () => void): string {
   const reside = resideAqui(p, a);
   const flota = p.caravanas.filter((c) => c.tipo === 'comercial' && c.origenAsentamientoId === a.id);
   const almacen = Object.fromEntries(Object.entries(a.almacen ?? {}).map(([r, v]) => [r, v.cantidad]));
+  // Topes de la flota (Doc 3.13.2): los pone el nivel interno del Mercado y vienen en el balance; el servidor sigue siendo quien rechaza.
+  const nivelMercado = Math.max(0, ...(a.edificios ?? []).filter((x) => x.tipo === 'mercado' && x.estado === 'activo').map((x) => x.nivelInterno ?? 1));
+  const cupo = nivelMercado > 0 ? cupoDeFlota(nivelMercado, alCargar) : null;
+  const carros = flota.reduce((t, c) => t + (c.carros?.length ?? 0), 0);
+  const carrosLleno = cupo?.carros !== undefined && carros >= cupo.carros;
+  const flotaLlena = cupo?.caravanas !== undefined && flota.length >= cupo.caravanas;
+  const topes = cupo ? `<p class="asent-lado-nota">Flota de tu Mercado (nivel ${nivelMercado}): <strong>${flota.length}${cupo.caravanas !== undefined ? `/${cupo.caravanas}` : ''}</strong> caravanas · <strong>${carros}${cupo.carros !== undefined ? `/${cupo.carros}` : ''}</strong> carros (repartidos como quieras entre las caravanas; mover un carro no gasta cupo).${flotaLlena ? ' No caben más caravanas.' : ''}${carrosLleno ? ' No caben más carros.' : ''}</p>` : '';
   return `<span class="faction-kicker">Caravanas comerciales</span>
     <p class="asent-lado-nota">Tu flota: un casco se arma con carros (que pagas con materiales del almacén) y un animal por carro, y sale a mano hacia otra plaza con la carga que elijas. Solo cuentan los carros con animal. El cupo de flota y los costes los decide el servidor.</p>
-    ${reside ? '<button class="btn-primary" type="button" data-caravana-crear>Crear caravana (casco vacío)</button>' : '<p class="asent-lado-nota">Solo quien reside en esta plaza maneja la flota.</p>'}
-    ${flota.length === 0 ? '<p class="mapa-lista-vacia">No hay caravanas comerciales de esta plaza.</p>' : flota.map((c) => tarjeta(c, p, a, reside, flota, almacen, e)).join('')}
+    ${topes}
+    ${reside ? `<button class="btn-primary" type="button" data-caravana-crear${flotaLlena ? ' disabled title="La flota ya tiene el tope de caravanas de tu Mercado"' : ''}>Crear caravana (casco vacío)</button>` : '<p class="asent-lado-nota">Solo quien reside en esta plaza maneja la flota.</p>'}
+    ${flota.length === 0 ? '<p class="mapa-lista-vacia">No hay caravanas comerciales de esta plaza.</p>' : flota.map((c) => tarjeta(c, p, a, reside, flota, almacen, carrosLleno, e)).join('')}
     <p class="faction-error" data-campo="error-mercado" role="alert"></p>`;
 }
 

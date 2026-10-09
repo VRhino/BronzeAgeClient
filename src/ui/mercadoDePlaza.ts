@@ -25,6 +25,8 @@ function motivoGeneral(p: ProyeccionJugador, plazaId: string): string {
   const columna = p.ejercitos.find((e) => e.participantes.some((x) => x.heroeId === p.heroeId));
   const plaza = [...p.asentamientosAvistados, ...p.asentamientos].find((a) => a.id === plazaId);
   if (!columna || !plaza) return 'Sal al mundo con tu columna y plántala a la puerta de la plaza.';
+  // Las plazas a la vista traen sus edificios activos: sin Mercado activo no hay órdenes que servir.
+  if (plaza.edificios && !plaza.edificios.some((x) => x.tipo === 'mercado' && x.estado === 'activo')) return 'Esa plaza no tiene un Mercado activo.';
   const d = Math.round(Math.hypot(columna.posicionActual.x - plaza.posicion.x, columna.posicionActual.y - plaza.posicion.y));
   if (d > RADIO_PUERTA) return `Acércate a la puerta: estás a ${d} y se comercia a ${RADIO_PUERTA}.`;
   if (columna.liderId !== p.heroeId) return 'Solo el Líder de la columna comercia con su carro.';

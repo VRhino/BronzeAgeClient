@@ -324,6 +324,8 @@ export interface AsentamientoAvistado {
    * la niebla, así que del contorno solo se llega a ver el tramo que cae en tierra explorada — que es
    * exactamente lo que verías: la parte de la frontera por delante de la que has pasado. */
   zona: Point[];
+  /** Sus edificios ACTIVOS (el servidor filtra los demás): con ellos se sabe, p. ej., si tiene Mercado. */
+  edificios?: Edificio[];
 }
 
 /**

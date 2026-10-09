@@ -1507,7 +1507,7 @@ function renderPanelEdificios(): void {
     const SECCIONES: [SeccionMercado, string][] = [['ordenes', 'Órdenes'], ['caravanas', 'Caravanas'], ['escolta', 'Escolta'], ...SUBPESTANAS_MERCADO_EXTRA.map((s) => [s.id, s.etiqueta] as [string, string])];
     const extraMercado = SUBPESTANAS_MERCADO_EXTRA.find((s) => s.id === seccionMercado);
     const contenido = extraMercado ? extraMercado.html(ctxPlaza) : seccionMercado === 'escolta' ? htmlEscolta(proyeccion, asentamiento, escaparHtml)
-      : seccionMercado === 'caravanas' ? htmlCaravanas(proyeccion, asentamiento, escaparHtml)
+      : seccionMercado === 'caravanas' ? htmlCaravanas(proyeccion, asentamiento, escaparHtml, renderPanelEdificios)
         : htmlOrdenes(proyeccion, asentamiento, escaparHtml);
     html = `${subpestanas(SECCIONES, seccionMercado)}<div class="asent-lado-cuerpo">${contenido}</div>${pie}`;
     ambito = `mercado:${seccionMercado}`;

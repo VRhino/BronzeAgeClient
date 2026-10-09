@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.26.1] — 2026-10-09 · tope de la flota, enfriamiento de residencia y filtro por partida
+
+### Añadido
+- **Tope de la flota del Mercado** (backend `1e5351c`, Doc 3.13.2): Mercado › Caravanas dice cuántas caravanas y cuántos carros tiene la plaza frente al tope de su nivel de Mercado (`cupoCaravanas` 2/4/6, `cupoCarros` 3/9/18, leídos del balance) y apaga «Crear caravana» y «＋ Carro» con el motivo cuando la flota está llena. Mover un carro no gasta cupo.
+- **Ficha de orden ajena:** si la plaza a la vista no tiene Mercado activo (las avistadas traen sus edificios activos), lo dice en vez de ofrecer tomar la orden.
+
+### Cambiado
+- **Residencia:** el aviso de «dejar la residencia» dice cuántos días de mundo hay que esperar para volver a mudarse, leídos del balance (`CIUDADANIA.cooldownCambioResidenciaDias`), en vez del aviso genérico.
+- **Tiempo real:** se ignora un evento cuyo `gameId` no es el del socket (el servidor ya lo manda, backend `9ab4e62`).
+
 ## [0.26.0] — 2026-10-09 · pendientes del cliente construidos por bloques · sync con `BronzeAgeFase0@02bd153` (`main`, sin push)
 
 Once bloques en paralelo sobre los ganchos de `ui/ganchos.ts` (subpestañas de la plaza, fichas y selectores del mapa). El detalle de cada uno, con sus comandos y lo que quedó sin verificar en vivo, está en `docs/bloques/`.
