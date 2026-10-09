@@ -3,6 +3,7 @@
 // `ordenarEscuadras` (backend 2026-10-07) pone las tuyas en el orden pedido. En un ejército con más héroes solo se ordenan las tuyas.
 import type { ProyeccionJugador } from '../apiCliente';
 import type { Escuadron } from '../tiposDominio';
+import { cablearCaravanasAdjuntas, htmlCaravanasAdjuntas } from './caravanasAdjuntas';
 import { chipLiderazgo } from './liderazgo';
 import { cablearCarro, htmlCarro, type Ejecutar } from './panelCarro';
 
@@ -43,7 +44,8 @@ export function htmlColumna(p: ProyeccionJugador, e: Escapar): string {
     ${deOtros > 0 ? `<p class="asent-lado-nota">Además van ${deOtros} escuadras de los otros héroes del ejército: su orden lo pone cada uno.</p>` : ''}
     <p class="asent-lado-nota">La primera entra primero en combate.</p>
     <p class="faction-error" data-campo="error-orden" role="alert"></p>
-    ${htmlCarro(p, e, false)}`;
+    ${htmlCarro(p, e, false)}
+    ${htmlCaravanasAdjuntas(p, e)}`;
 }
 
 export function cablearColumna(raiz: HTMLElement, p: ProyeccionJugador, ejecutar: Ejecutar): void {
@@ -65,4 +67,5 @@ export function cablearColumna(raiz: HTMLElement, p: ProyeccionJugador, ejecutar
     })
   );
   cablearCarro(raiz, ejecutar);
+  cablearCaravanasAdjuntas(raiz, p, ejecutar);
 }

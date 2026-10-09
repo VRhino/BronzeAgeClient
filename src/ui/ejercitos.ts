@@ -88,6 +88,7 @@ function htmlMiSituacion(p: ProyeccionJugador, mi: Ejercito | undefined, e: Esca
     const resto = mi.participantes.filter((x) => x.heroeId !== p.heroeId);
     return `<p class="asent-lado-nota"><strong>Tu ejército</strong> · ${mi.participantes.length} héroe(s) · ${ESTADO[mi.estado]} · ${POLITICA[mi.politicaDeUnion ?? 'rechazar']}.
         ${lider ? ' Tú lo diriges: haz clic en el mapa y marchará hacia allí; cada clic cambia el rumbo.' : ' Lo dirige su Líder con clics en el mapa.'}</p>
+      ${(mi.caravanasAdjuntasIds?.length ?? 0) > 0 ? `<p class="asent-lado-nota">Lleva ${mi.caravanasAdjuntasIds!.length} caravana(s) enganchada(s): se cargan, entregan y sueltan en «Lo que llevas» (⚔).</p>` : ''}
       <ul class="ejercito-lista">${mi.participantes.map((x) => `<li>${e(nombreDeHeroe(p, x.heroeId))}${x.heroeId === mi.liderId ? ' <em>(Líder)</em>' : ''}${x.heroeId === p.heroeId ? ' · tú' : ''}</li>`).join('')}</ul>
       ${peticiones.length > 0 ? `<strong class="heroe-sub">Piden unirse</strong>${peticiones.map((x) => `<div class="ejercito-fila"><div><strong>${e(nombreDeHeroe(p, x.heroeId))}</strong><span>${textoEnTiempoReal(x.expiraEn - p.instante)} para contestar</span></div>
           <button class="btn-primary" type="button" data-peticion="${e(x.heroeId)}" data-aceptar="si">Aceptar</button><button class="btn-secondary" type="button" data-peticion="${e(x.heroeId)}" data-aceptar="no">Rechazar</button></div>`).join('')}` : ''}

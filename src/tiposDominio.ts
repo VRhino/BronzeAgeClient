@@ -225,12 +225,12 @@ export interface Caravana {
   carros?: { tipoCarro: 'basico' | 'reforzado'; animal?: 'buey' | 'caballo' | 'camello' }[];
   /** Fuera del reparto automático de trueques. */
   reservadaManual?: boolean;
+  /** Lo que lleva cargado (recurso -> cantidad). */
+  contenido?: Record<string, number>;
+  /** Caravana de Fundación suelta: hasta cuándo espera a alguien que la lleve (instante de mundo). */
+  caducaEn?: number;
   /** Instante de mundo en que sale, solo en `preparando`. */
   preparaHasta?: number;
-  /** Instante de mundo en que caduca la Caravana de Fundación si nadie la lleva (suelta, 48 h): devuelve su coste. */
-  caducaEn?: number;
-  /** Lo que lleva en el carro (recurso -> cantidad). */
-  contenido?: Record<string, number>;
 }
 
 /** Copia local de `Ejercito` (motor, Doc 5.12) — los de TU Facción, que la proyección manda completos.
