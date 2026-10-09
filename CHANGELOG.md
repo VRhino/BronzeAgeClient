@@ -3,6 +3,11 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.28.1] — 2026-10-09 · sigilo completo en la etiqueta de ciudad de los trueques
+
+### Cambiado
+- **Trueques:** la etiqueta de cada ciudad (`ui/etiquetaCiudad.ts`) dibuja el **sigilo completo** de su Facción —escudo, campo, orla y emblema, como en la pestaña Facción y en el mapa— y no solo el símbolo.
+
 ## [0.28.0] — 2026-10-09 · lo que entregó el backend (aceptación de relaciones, balance, tecnología, comodidades de la proyección y tick por WebSocket), avisos agrupados y barra de materiales abajo · sync con `BronzeAgeFase0@4e037c4` (`main`, sin push)
 
 Tercera tanda de bloques en paralelo (detalle en `docs/bloques/`). El backend contestó a la petición de `docs/Peticion_Backend.md` (A0 a A5): el cliente deja de copiar constantes a mano y usa lo publicado.
