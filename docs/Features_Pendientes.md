@@ -1,6 +1,6 @@
 # Features pendientes
 
-Lo que le falta al cliente‑jugador, **contrastado con el backend** (`BronzeAgeFase0@02bd153`: comandos de `src/session/comandos/registro.ts` y canon de `Docs/Game`). Revisado el **2026-10-09**, versión del cliente **0.26.1**. Con 0.26.0 se construyó todo lo pendiente de la revisión anterior que dependía solo del cliente; lo que queda es verificar en vivo y lo que espera al backend.
+Lo que le falta al cliente‑jugador, **contrastado con el backend** (`BronzeAgeFase0@02bd153`: comandos de `src/session/comandos/registro.ts` y canon de `Docs/Game`). Revisado el **2026-10-09**, versión del cliente **0.27.0**. Con 0.26.0 se construyó todo lo pendiente de la revisión anterior que dependía solo del cliente; lo que queda es verificar en vivo y lo que espera al backend.
 
 - Guía visual (leer antes de diseñar UI nueva): [`Diseno_Interfaz.md`](Diseno_Interfaz.md).
 - Inventario de info y acciones del asentamiento: [`Panel_Asentamiento.md`](Panel_Asentamiento.md).
@@ -32,6 +32,7 @@ Lo que le falta al cliente‑jugador, **contrastado con el backend** (`BronzeAge
 - **Caravanas con ejército:** enganchar, soltar, cargar y entregar (panel «Lo que llevas»). **Tope de la flota del Mercado** (caravanas y carros) en Mercado › Caravanas.
 - **Campamentos de mercenarios:** planta, residir, préstamo de leva, **reclutar y reponer pagando oro**, mercado, fondo de refundación, taberna, salir.
 - **Facción:** crear, unirse, solicitar ingreso, cargos locales, anexión, fusión, admisión de otras Facciones, **traspaso del trono, Embajador, dejar la Facción y toda la diplomacia** (alianza, vasallaje con tributo, guerra, paz, romper, rebelión).
+- **Interfaz limpia (0.27.0):** texto explicativo tras un botón «ⓘ» en plaza, mapa, ejércitos, campamento y paneles del jugador; paneles laterales más anchos con tres columnas en plaza y campamento; Mercado con una sola pestaña Caravanas (escolta y aparcadas dentro de cada caravana); emblema de la ciudad en los trueques; sigilo completo de la Facción en el mapa.
 - **Tecnología y Aedas:** era y logros, adoptar, comprar a un Aeda, épicas.
 
 ## 2. Pendiente — cliente
@@ -60,6 +61,8 @@ Todo lo de 0.26.0 se probó con **proyección fabricada** (el servidor rechaza l
 - **Campamento:** pagar con el carro, reponer con bajas, que la escuadra nueva se una a la columna, precio con reputación o sin asentamientos. *(Verificado en vivo: reclutar honderos y escaramuzadores, rechazos por tecnología y por falta de oro.)*
 - **Facción:** rebelión con trueques reales, guerra arrastrada por vasallaje con terceros, sucesión del trono con más de dos ciudadanos, un rechazo de dominio en estos paneles. *(Verificado en vivo con dos cuentas: alianza, guerra, paz, vasallaje, rebelión, Embajador, trono, dejar la Facción.)*
 - **Tecnología:** adoptar, comprar, empezar y abandonar con éxito; botones apagados por cargo.
+
+- **Interfaz (0.27.0):** el ancho real de las columnas nuevas se vio solo en capturas de Chrome propio a cuatro tamaños (el panel integrado del navegador está oculto); la ficha de edificio por clic en el lienzo; las filas de tropas y el formulario de Mirada e Informe de la Taberna en pantalla; Muralla con botones apagados y la vista `#/legacy`; Anexión y Fusión con propuestas; la ayuda de elegir o crear Facción. Y los comandos de Mercado (escolta, aparcadas) con estado real.
 
 ## 5. No aplica
 
