@@ -1,7 +1,7 @@
 // Wrapper `fetch` sobre la superficie `/jugador/*` y `/sesiones` del backend (Fase C3) — sin lógica de negocio, solo I/O.
 import type { MapaGenerado } from './terreno';
 
-import type { AcuerdoTrueque, AedaAvistado, AedaResidenteProyectado, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, CaravanaAvistada, Convocatoria, Ejercito, EjercitoAvistado, EscenaCampamento, EvaluacionAscenso, EventoDominio, Faccion, HeroeProyectado, HeroePublico, InformeDeInspeccion, InformePlaza, MiradaIntel, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, PropuestaAnexion, PropuestaFusion, PropuestaRelacion, RelacionPolitica, TarifasIntel, TecnologiaJugador, Titulo, TrazadoAsentamiento, ZonaFaccion } from './tiposDominio';
+import type { AcuerdoTrueque, AedaAvistado, AedaResidenteProyectado, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, CaravanaAvistada, Convocatoria, Ejercito, EjercitoAvistado, EscenaCampamento, EvaluacionAscenso, EventoDominio, Faccion, HeroeProyectado, HeroePublico, InformeDeInspeccion, InformePlaza, MiradaIntel, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, PropuestaAnexion, PropuestaFusion, PropuestaRelacion, RelacionPolitica, Sigilo, TarifasIntel, TecnologiaJugador, Titulo, TrazadoAsentamiento, ZonaFaccion } from './tiposDominio';
 
 export class ApiError extends Error {
   constructor(
@@ -233,7 +233,7 @@ export interface PartidaListada {
   nombre?: string;
   estado: string;
   membresia: { jugadorId: string } | null;
-  heroe: { id: string; nombre: string; nivel: number; faccion: { id: string; nombre: string; emblemaId: string; colorEmblemaId: string } | null } | null;
+  heroe: { id: string; nombre: string; nivel: number; faccion: { id: string; nombre: string; emblemaId: string; colorEmblemaId: string; /** El sigilo completo de su Facción (backend, a petición); mientras no llegue se dibuja solo el símbolo. */ sigilo?: Sigilo } | null } | null;
 }
 
 export async function listarPartidas(): Promise<PartidaListada[]> {

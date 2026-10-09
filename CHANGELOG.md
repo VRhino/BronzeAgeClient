@@ -3,6 +3,11 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.28.2] — 2026-10-09 · sigilo completo en la lista de partidas (cuando el backend lo mande)
+
+### Cambiado
+- **Partidas:** la tarjeta de tu héroe dibuja el sigilo completo de su Facción si `GET /jugador/partidas` trae `heroe.faccion.sigilo` (pedido al backend: solo el de tu propia Facción, ~100 bytes por partida); mientras no llegue, sigue el símbolo suelto.
+
 ## [0.28.1] — 2026-10-09 · sigilo completo en la etiqueta de ciudad de los trueques
 
 ### Cambiado

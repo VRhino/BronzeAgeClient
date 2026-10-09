@@ -2914,7 +2914,9 @@ kbd {
 .partida-clave { margin-top: -4px; opacity: 0.6; font-size: 0.75em; }
 .partida-heroe { display: flex; align-items: center; gap: 10px; font-size: 0.9em; }
 .partida-heroe div { display: flex; flex-direction: column; }
-.partida-emblema { width: 36px; height: 36px; flex: none; }
+.partida-emblema { display: inline-flex; width: auto; height: 36px; flex: none; }
+.partida-emblema svg { height: 36px; width: auto; }
+svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua del servidor) */
 .partidas-pie { position: sticky; bottom: 0; display: flex; flex-direction: column; gap: 6px; align-items: stretch; padding-top: 8px; }
 
 /* Vista de la ciudad (ui/vistaCiudad.ts): ficha flotante del edificio elegido y fila resaltada de la lista. */

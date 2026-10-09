@@ -2,7 +2,7 @@
 // Se elige una tarjeta y el botón de abajo entra: si aún no eres miembro de esa partida, entrar es unirte. Los datos vienen de `GET /v1/jugador/partidas`.
 import { listarPartidas, type PartidaListada } from '../apiCliente';
 import { svgEmblema } from '../sigilo/emblemas';
-import { colorHex } from '../sigilo/sigilo';
+import { colorHex, svgSigilo } from '../sigilo/sigilo';
 
 type Escapar = (valor: string) => string;
 
@@ -18,8 +18,9 @@ export interface DepsPartidas {
 
 function tarjeta(p: PartidaListada, elegida: boolean, e: Escapar): string {
   const h = p.heroe;
+  // El sigilo completo si el servidor lo manda; si no, solo el símbolo (la respuesta antigua traía únicamente el emblema y su color).
   const emblema = h?.faccion
-    ? `<svg class="partida-emblema" viewBox="0 0 100 100" aria-hidden="true">${svgEmblema(h.faccion.emblemaId, colorHex(h.faccion.colorEmblemaId))}</svg>`
+    ? (h.faccion.sigilo ? `<span class="partida-emblema">${svgSigilo(h.faccion.sigilo, 30)}</span>` : `<svg class="partida-emblema" viewBox="0 0 100 100" aria-hidden="true">${svgEmblema(h.faccion.emblemaId, colorHex(h.faccion.colorEmblemaId))}</svg>`)
     : '';
   const cuerpo = h
     ? `${emblema}<div><strong>${e(h.nombre)}</strong><span>${h.faccion ? e(h.faccion.nombre) : 'Sin Facción'} · Nivel ${h.nivel}</span></div>`
