@@ -1845,11 +1845,13 @@ function montarAsentamiento(): void {
     </header>
     <div class="asent-cuerpo">
       <aside class="asent-izq">
-        <div class="asent-recursos" hidden></div>
         <aside class="asent-panel" hidden></aside>
       </aside>
-      <div class="asent-mapa">
-        <div class="asent-lienzo"><canvas id="mapa" width="900" height="900"></canvas></div>
+      <div class="asent-centro">
+        <div class="asent-mapa">
+          <div class="asent-lienzo"><canvas id="mapa" width="900" height="900"></canvas></div>
+        </div>
+        <div class="asent-recursos" hidden></div>
       </div>
       <aside class="asent-lado"><div class="asent-edificios"><div class="asent-edif-tabs"></div><div class="asent-edif-cuerpo"></div></div></aside>
     </div>
