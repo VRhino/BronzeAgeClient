@@ -798,7 +798,7 @@ function tieneAsentamientoPropio(proyeccion: ProyeccionJugador): boolean {
 
 /** La Caravana de Fundación de campamento de la que eres titular (Doc 1.8/1.9b): la llevas tú y fundas tú. */
 function caravanaDeFundacion(proyeccion: ProyeccionJugador) {
-  return proyeccion.caravanas.find((c) => c.titularId === proyeccion.heroeId && c.origenCampamentoId !== undefined);
+  return proyeccion.caravanas.find((c) => c.titularId === proyeccion.heroeId && c.tipo === 'construccion');
 }
 
 async function fundarAqui(): Promise<void> {
@@ -1072,12 +1072,12 @@ function renderPanelRiel(): void {
     const htmlFundar = `
       <span class="faction-kicker">Fundar asentamiento</span>
       ${!caravana
-        ? '<p>Se funda con una Caravana de Fundación. Tu Facción la compra en un campamento de mercenarios con el fondo de sus héroes, y quien la compra la lleva.</p>'
+        ? '<p>Se funda con una Caravana de Fundación. Una Facción sin plaza la compra en un campamento de mercenarios con el fondo de sus héroes; con plaza, se lanza desde Centro urbano › Fundación. Quien la compra o la lanza la lleva.</p>'
         : enganchada
           ? `<p>Se funda donde está ahora tu columna (no en agua ni a menos de 100 de un campamento). Estos son los recursos a tu alcance:</p>
             <div id="mapa-fundar-recursos">${resumenRecursosFundacion(escaparHtml)}</div>
             <button id="btn-fundar-aqui" class="btn-primary" type="button">Fundar aquí</button>`
-          : `<p>Tu Caravana de Fundación espera en su campamento. Lleva tu columna a la puerta y engánchala.</p>
+          : `<p>Tu Caravana de Fundación espera en ${caravana.origenCampamentoId ? 'su campamento' : 'su plaza'}. Lleva tu columna a la puerta y engánchala.</p>
             <button id="btn-enganchar-caravana" class="btn-primary" type="button">Enganchar caravana</button>`}
       <p id="mapa-fundar-error" class="faction-error" role="alert"></p>`;
     pintar(panel, htmlFundar, () => {

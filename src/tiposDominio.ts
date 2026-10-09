@@ -129,6 +129,10 @@ export interface Asentamiento {
   autoConstruccionPausada?: boolean;
   /** Reserva de recursos calibrada por el Tesorero (0-999 por recurso). */
   reservaManual?: Record<string, number>;
+  /** Políticas de cargo en vigor (Doc 4.4): duran un plazo fijo y no se cancelan. */
+  politicasActivas?: { id: string; politicaId: string; cargo: string; activadaEn: number; expiraEn: number }[];
+  /** Instante de mundo en que esta plaza creó su última caravana (de Fundación o comercial): arranca el cooldown compartido. */
+  ultimaCaravanaCreadaEn?: number;
   /** Héroes residentes que llegaron fundando · comprando casa (Doc 2.5). */
   heroesFundadoresIds?: string[];
   casasCompradas?: string[];
@@ -205,7 +209,8 @@ export interface Caravana {
    * que su ejército dejó en una plaza de la Facción al `guarnecer`: sigue siendo de su origen, no la usa la
    * anfitriona. Sin interfaz que lo lea todavía — el mapa solo pinta la posición. */
   estado?: 'disponible' | 'preparando' | 'adjunta' | 'aparcada' | 'en_transito' | 'retornando';
-  tipo?: 'comercial' | 'fundacion';
+  /** `construccion` = Caravana de Fundación (Doc 1.8): la de un campamento y la que lanza una plaza son la misma entidad. */
+  tipo?: 'comercial' | 'construccion' | 'militar' | 'contrabando';
   /** Caravana de Fundación comprada en un campamento (Doc 1.9b): de dónde salió, su Facción y quién la lleva y funda. */
   origenCampamentoId?: string;
   faccionId?: string;
@@ -220,6 +225,8 @@ export interface Caravana {
   reservadaManual?: boolean;
   /** Instante de mundo en que sale, solo en `preparando`. */
   preparaHasta?: number;
+  /** Instante de mundo en que caduca la Caravana de Fundación si nadie la lleva (suelta, 48 h): devuelve su coste. */
+  caducaEn?: number;
 }
 
 /** Copia local de `Ejercito` (motor, Doc 5.12) — los de TU Facción, que la proyección manda completos.

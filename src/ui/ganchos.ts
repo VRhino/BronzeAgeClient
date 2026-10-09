@@ -7,6 +7,8 @@ import type { Ejecutar } from './panelCarro';
 import { SUBPESTANA_MURALLA } from './panelMuralla';
 import { SUBPESTANA_PUERTA } from './panelPuerta';
 import { SUBPESTANA_RESIDENCIA } from './panelResidencia';
+import { cablearFundacionDePlaza, htmlFundacionDePlaza } from './panelFundacionDePlaza';
+import { cablearTesoreria, htmlTesoreria } from './panelTesoreria';
 
 type Escapar = (valor: string) => string;
 
@@ -44,6 +46,8 @@ export const SUBPESTANAS_CENTRO_EXTRA: SubpestanaPlaza[] = [
   SUBPESTANA_RESIDENCIA,
 
   // --- hueco bloque A2 (plaza › Centro urbano: tesorero y caravana de fundación)
+  { id: 'tesoreria', etiqueta: 'Tesorería', html: htmlTesoreria, cablear: cablearTesoreria },
+  { id: 'fundacion', etiqueta: 'Fundación', html: htmlFundacionDePlaza, cablear: cablearFundacionDePlaza },
 
   // --- hueco bloque F (vista de la ciudad: recetas)
 ];

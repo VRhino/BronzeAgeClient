@@ -375,9 +375,21 @@ export interface TropaReclutable {
   escalon: number;
 }
 
+/** Una política del catálogo (`POLITICA_CATALOGO`): su cargo, su nombre y los efectos (`factor*`, `cupo*`, `perfilTrazado`) como campos sueltos. */
+export interface PoliticaDelCatalogo { id: string; cargo: string; nombre: string; [efecto: string]: string | number | undefined }
+/** `POLITICAS` del balance: slots por cargo, el extra del Gobernador por nivel de Facción y la duración de toda política. */
+export interface ReglasDePoliticas {
+  slotsPorCargo: Record<string, { base: number; maximo: number }>;
+  nivelFaccionPorSlotExtraGobernador: number;
+  slotSalaConsejo: number;
+  duracionMinutosPorDefecto: number;
+}
+
 /** El balance público (`GET /v1/balance`): se pide una vez, en segundo plano, y avisa con `alCargar` cuando llega. */
 interface BalancePublico {
-  catalogos?: { EDIFICIO_CATALOGO?: Record<string, { costo?: Record<string, number> }>; TROPAS_RECLUTABLES?: TropaReclutable[] };
+  catalogos?: { EDIFICIO_CATALOGO?: Record<string, { costo?: Record<string, number> }>; TROPAS_RECLUTABLES?: TropaReclutable[]; POLITICA_CATALOGO?: PoliticaDelCatalogo[] };
+  cuposYNiveles?: { POLITICAS?: ReglasDePoliticas; CAP_FUNDACION_POR_NIVEL?: number[] };
+  caravanas?: { CARAVANA_COOLDOWN?: { cooldownMinutos?: number } };
   mundoYMilitar?: { LOGISTICA?: { capacidadViveresPorHeroe?: number; radioEncuentro?: number; radioReabastecimiento?: number }; FUNDACION?: { materialesIniciales?: Record<string, number>; viviendasIniciales?: number; costoMaderaExtraCaravana?: number }; MERCENARIOS?: { refundacion?: { porcentajeCoste?: number } } };
   internas?: { CAMPAMENTOS_BANDIDOS?: { niveles?: Record<string, NivelDeBandidos> } };
 }
@@ -432,16 +444,43 @@ export function unidadesDeTropa(tropaId: string, alCargar?: () => void): number 
  * El backend no lo publica ya calculado, así que se deriva del balance; `null` mientras no llegue.
  */
 export function costoDeRefundacion(alCargar?: () => void): Record<string, number> | null {
+  const porcentaje = balance(alCargar)?.mundoYMilitar?.MERCENARIOS?.refundacion?.porcentajeCoste;
+  const base = costoCompletoDeCaravanaDeFundacion();
+  if (!base || porcentaje === undefined) return null;
+  return Object.fromEntries(Object.entries(base).map(([r, n]) => [r, Math.ceil(n * porcentaje)] as const).filter(([, n]) => n > 0));
+}
+
+/** El coste COMPLETO de la Caravana de Fundación que lanza una plaza (`costoCaravanaFundacion` del backend, Doc 1.8): los materiales iniciales de una fundación +
+ * la granja y las viviendas que nacen con ella + la madera extra. Derivado del balance igual que `costoDeRefundacion`; `null` mientras no llegue. */
+export function costoCompletoDeCaravanaDeFundacion(alCargar?: () => void): Record<string, number> | null {
   const b = balance(alCargar);
   const f = b?.mundoYMilitar?.FUNDACION;
   const cat = b?.catalogos?.EDIFICIO_CATALOGO;
-  const porcentaje = b?.mundoYMilitar?.MERCENARIOS?.refundacion?.porcentajeCoste;
-  if (!f || !cat?.['granja'] || !cat['vivienda'] || porcentaje === undefined) return null;
+  if (!f || !cat?.['granja'] || !cat['vivienda']) return null;
   const costo: Record<string, number> = { ...f.materialesIniciales };
   for (const [r, n] of Object.entries(cat['granja'].costo ?? {})) costo[r] = (costo[r] ?? 0) + n;
   for (const [r, n] of Object.entries(cat['vivienda'].costo ?? {})) costo[r] = (costo[r] ?? 0) + n * (f.viviendasIniciales ?? 0);
   costo['madera'] = (costo['madera'] ?? 0) + (f.costoMaderaExtraCaravana ?? 0);
-  return Object.fromEntries(Object.entries(costo).map(([r, n]) => [r, Math.ceil(n * porcentaje)] as const).filter(([, n]) => n > 0));
+  return Object.fromEntries(Object.entries(costo).filter(([, n]) => n > 0));
+}
+
+/** El cooldown de creación de caravanas (`CARAVANA_COOLDOWN`, minutos de mundo, compartido entre Fundación y comerciales); 10 mientras no llegue el balance. */
+export function cooldownDeCaravanaMinutos(alCargar?: () => void): number {
+  return balance(alCargar)?.caravanas?.CARAVANA_COOLDOWN?.cooldownMinutos ?? 10;
+}
+
+/** El Cap de Fundación de una Facción de ese nivel (`CAP_FUNDACION_POR_NIVEL`, Doc 1.7); `null` mientras no llegue el balance. */
+export function capDeFundacion(nivelFaccion: number, alCargar?: () => void): number | null {
+  const tabla = balance(alCargar)?.cuposYNiveles?.CAP_FUNDACION_POR_NIVEL;
+  return tabla?.length ? (tabla[Math.min(tabla.length, Math.max(1, nivelFaccion)) - 1] ?? tabla[tabla.length - 1] ?? null) : null;
+}
+
+/** El catálogo de políticas de cargo y las reglas de slots/duración (Doc 4.4); `null` mientras no llegue el balance. */
+export function catalogoDePoliticas(alCargar?: () => void): { catalogo: PoliticaDelCatalogo[]; reglas: ReglasDePoliticas } | null {
+  const b = balance(alCargar);
+  const catalogo = b?.catalogos?.POLITICA_CATALOGO;
+  const reglas = b?.cuposYNiveles?.POLITICAS;
+  return catalogo && reglas ? { catalogo, reglas } : null;
 }
 
 /** El mapa como asset (Fase C11a): se pide una sola vez por `mapaId` y se cachea */
