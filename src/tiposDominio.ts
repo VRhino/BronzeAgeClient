@@ -129,6 +129,8 @@ export interface Asentamiento {
   rachaMantenimientoSano?: number;
   almacen?: Record<string, { cantidad: number; capacidad: number }>;
   edificios: Edificio[];
+  /** El almacén está abierto a los ejércitos ALIADOS que pasan (`alternarReabastecerAliados`, Doc 5.13). Ausente = cerrado. */
+  permiteReabastecerAliados?: boolean;
   /** Auto-construcción congelada: el motor deja de comprometer necesidades nuevas. Ausente = activa. */
   autoConstruccionPausada?: boolean;
   /** Recetas de transformación paradas por el Gobernador o el Maestro de Obras (`alternarReceta`, Doc 4.2.1), por el recurso que producen. Ausente = todas en marcha. */

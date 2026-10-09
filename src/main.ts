@@ -20,6 +20,7 @@ import {
   type ProyeccionJugador,
   type RespuestaComando,
 } from './apiCliente';
+import { cablearSalidaDePlazaAjena, htmlSalidaDePlazaAjena } from './ui/salidaDePlazaAjena';
 import { elegirPestanaHeroe, minutosHerido, pintarPanelHeroe } from './ui/panelHeroe';
 import { htmlBarraJugador, type PanelJugador } from './ui/barraJugador';
 import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno, RADIO_PROTECCION_MERCENARIOS } from './render';
@@ -1328,6 +1329,11 @@ async function salirAlMundo(escuadronIds: string[], carga: Record<string, number
 
 /** Panel «Salir al mundo» de la plaza: tropa que sacas y carga del almacén de la plaza (el backend reserva el trigo que necesita la tropa que se queda). */
 function pintarSalidaAsentamiento(panel: HTMLElement, p: ProyeccionJugador, asentamiento: Asentamiento): void {
+  // Fuera de tu residencia no hay nada que equipar: se retoma la columna aparcada (`salirDeAsentamiento`).
+  if (!resideEnLaPlaza(p, asentamiento)) {
+    pintar(panel, htmlSalidaDePlazaAjena(p, asentamiento, escaparHtml), () => cablearSalidaDePlazaAjena(panel, p, asentamiento, ejecutarYRefrescar), 'salir-ajena');
+    return;
+  }
   const repintarSalida = (): void => { const q = estadoCliente.proyeccionUltima; if (q) pintarSalidaAsentamiento(panel, q, asentamiento); };
   // En un ejército en preparación solo se ve ese panel (cambia cuando llegan integrantes, peticiones o cambios de tropa).
   const preparacion = htmlPreparacion(p, escaparHtml);
@@ -1722,6 +1728,9 @@ function renderPanelAsent(): void {
   const barra = document.querySelector<HTMLElement>('.asent-barra');
   const panel = document.querySelector<HTMLElement>('.asent-panel');
   if (!barra || !panel || !proyeccion) return;
+  const botonSalir = barra.querySelector('#btn-salir-mundo');
+  const plazaActual = proyeccion.asentamientos[0];
+  if (botonSalir && plazaActual) botonSalir.textContent = resideEnLaPlaza(proyeccion, plazaActual) ? 'Salir al mundo' : 'Salir';
   barra.querySelectorAll<HTMLButtonElement>('[data-panel-asent]').forEach((boton) => {
     boton.classList.toggle('activo', boton.dataset.panelAsent === panelAsentAbierto);
   });
