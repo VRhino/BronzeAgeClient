@@ -2894,3 +2894,10 @@ kbd {
 .tec-hito { margin: 4px 0 0; padding-left: 14px; list-style: none; font-size: 0.76rem; }
 .tec-hito li.cumple { color: var(--oro-claro); }
 .tec-chip { display: inline-block; padding: 1px 8px; border: 1px solid var(--border, #555); border-radius: 10px; font-size: 0.74rem; }
+
+/* Ayuda «ⓘ» (ui/ayuda.ts): el texto explicativo escondido tras un botón. */
+.ayuda { display: inline; }
+.ayuda-btn { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; padding: 0; margin-left: 6px; vertical-align: middle; border: 1px solid var(--bronce, #8a6d3b); border-radius: 50%; background: transparent; color: var(--pergamino, #d8c7a3); font-size: 0.8rem; line-height: 1; cursor: pointer; opacity: 0.75; }
+.ayuda-btn:hover, .ayuda.abierta .ayuda-btn { opacity: 1; background: rgba(212, 168, 75, 0.15); }
+.ayuda-texto { display: block; margin: 6px 0 4px; padding: 6px 10px; border-left: 2px solid var(--bronce, #8a6d3b); font-size: 0.78rem; font-weight: 400; text-transform: none; letter-spacing: normal; color: var(--text-secondary, #b9a98a); }
+.ayuda-texto[hidden] { display: none; }

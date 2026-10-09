@@ -4,6 +4,7 @@
 //   2. Si cambió, lo reemplaza y devuelve al jugador lo suyo: el valor de los controles que ha TOCADO (los que no tocó toman el valor nuevo del servidor),
 //      el foco con su cursor y el scroll. Los listeners se vuelven a cablear con los datos frescos (`cablear`), por eso no se muta el DOM en sitio.
 // Un panel que cambia de contenido (otra pestaña, otro panel en el mismo contenedor) pasa un `ambito` distinto y empieza limpio.
+import { aplicarAyudas } from './ayuda';
 type Control = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 interface EstadoControl { valor: string; marcado: boolean }
 
@@ -70,6 +71,7 @@ export function pintar(el: HTMLElement, html: string, cablear?: () => void, ambi
 
   el.innerHTML = html;
   cablear?.();
+  aplicarAyudas(el);
 
   // Los controles que el jugador tocó recuperan su valor (los demás se quedan con el de `html`).
   const editados = tocados.get(el);
