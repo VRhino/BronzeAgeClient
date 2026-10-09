@@ -12,6 +12,7 @@ import { cablearTesoreria, htmlTesoreria } from './panelTesoreria';
 import { SUBPESTANA_INFORMACION, SUBPESTANA_RECETAS } from './vistaCiudad';
 import { SUBPESTANA_APARCADAS } from './panelAparcadas';
 import { SUBPESTANA_TRUEQUES } from './panelTrueques';
+import { SUBPESTANA_ALIADOS } from './panelAliados';
 import { FICHA_CARAVANA_AJENA, FICHA_COLUMNA_AJENA, seleccionarAjeno } from './interaccionAjena';
 
 type Escapar = (valor: string) => string;
@@ -56,6 +57,9 @@ export const SUBPESTANAS_CENTRO_EXTRA: SubpestanaPlaza[] = [
   // --- hueco bloque F (vista de la ciudad: recetas, glosario)
   SUBPESTANA_RECETAS,
   SUBPESTANA_INFORMACION,
+
+  // --- hueco bloque C3 (plaza › Centro urbano: reabastecer a los aliados)
+  SUBPESTANA_ALIADOS,
 ];
 
 /** Subpestañas EXTRA de Mercado, después de Órdenes · Caravanas · Escolta. */
