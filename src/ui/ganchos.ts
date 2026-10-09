@@ -10,7 +10,6 @@ import { SUBPESTANA_RESIDENCIA } from './panelResidencia';
 import { cablearFundacionDePlaza, htmlFundacionDePlaza } from './panelFundacionDePlaza';
 import { cablearTesoreria, htmlTesoreria } from './panelTesoreria';
 import { SUBPESTANA_INFORMACION, SUBPESTANA_RECETAS } from './vistaCiudad';
-import { SUBPESTANA_APARCADAS } from './panelAparcadas';
 import { SUBPESTANA_TRUEQUES } from './panelTrueques';
 import { SUBPESTANA_ALIADOS } from './panelAliados';
 import { FICHA_CARAVANA_AJENA, FICHA_COLUMNA_AJENA, seleccionarAjeno } from './interaccionAjena';
@@ -62,11 +61,10 @@ export const SUBPESTANAS_CENTRO_EXTRA: SubpestanaPlaza[] = [
   SUBPESTANA_ALIADOS,
 ];
 
-/** Subpestañas EXTRA de Mercado, después de Órdenes · Caravanas · Escolta. */
+/** Subpestañas EXTRA de Mercado, después de Órdenes · Caravanas. */
 export const SUBPESTANAS_MERCADO_EXTRA: SubpestanaPlaza[] = [
-  // --- hueco bloque D1 (trueques, caravanas aparcadas)
+  // --- hueco bloque D1 (trueques)
   SUBPESTANA_TRUEQUES,
-  SUBPESTANA_APARCADAS,
 
 ];
 

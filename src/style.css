@@ -2818,6 +2818,9 @@ kbd {
 .escolta-barra { height: 10px; margin: 6px 0 2px; background: #3a362b; border-radius: 5px; overflow: hidden; }
 .escolta-barra i { display: block; height: 100%; background: #d9b44a; transition: width 0.4s; }
 .escolta-barra.llena i { background: #c0392b; }
+.caravana-estado { margin-left: 6px; padding: 1px 8px; border: 1px solid #4a4538; border-radius: 10px; font-size: 0.72rem; font-weight: 400; color: var(--text-secondary); }
+.caravana-estado.aparcada { border-color: #d9b44a; color: #d9b44a; }
+[data-escolta-lista][hidden] { display: none; }
 .escolta-cifras { display: block; margin-bottom: 6px; color: var(--text-secondary); }
 
 /* Víveres: selector «añadir desde el carro». */
