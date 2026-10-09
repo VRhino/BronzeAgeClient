@@ -4,6 +4,7 @@
 // `tarifasIntel` y quien valida es el backend, cuyo rechazo sale tal cual en `#intel-error`.
 import type { ProyeccionJugador } from '../apiCliente';
 import { EDIFICIO_COLOR, EDIFICIO_NOMBRE } from '../paletas';
+import { ayuda } from './ayuda';
 import type { InformePlaza, MiradaIntel, OrigenDeIntel, Point } from '../tiposDominio';
 import { ayuda } from './ayuda';
 

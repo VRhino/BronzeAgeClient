@@ -2,6 +2,7 @@
 // Se organiza como la del asentamiento: la planta a la izquierda y, a la derecha, subpestañas (Resumen · Salir · Tropa · Mercado ·
 // Fondo · Taberna) en vez de una sola columna larga. Aquí no se decide ninguna regla: quien valida es el backend, y su rechazo sale
 // tal cual en `#camp-error`. Los menús del jugador (héroe, escuadras, Facción) están en la barra superior (`barraJugador.ts`).
+import { ayuda } from './ayuda';
 import { chipLiderazgo } from './liderazgo';
 import { cablearPreparacion, htmlPreparacion } from './convocatoria';
 import { actualizarConvocatorias, cablearSalidaComoEjercito, htmlSalidaComoEjercito } from './salidaComoEjercito';
@@ -68,15 +69,17 @@ function resumen(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): st
   const heroe = p.heroe;
   const resides = c.residentesIds.includes(heroe.id);
   const edificios = [...new Set(c.edificios)].map((t) => EDIFICIO_NOMBRE[t] ?? t);
+  const info = ayuda('camp:resumen', `${resides
+    ? 'Este campamento es tu residencia: aquí guardas tu almacén, te prestan tropa y compras en el mercado completo.'
+    : 'No resides aquí: sales con la columna con la que entraste y solo te venden trigo. Si te mudas, la tropa prestada por tu campamento anterior se te retira.'}${p.faccionId === null ? '<br>Aún no tienes Facción: abre «Facción» en la barra de arriba para crear una o pedir ingreso.' : ''}`);
   return `
+    <strong class="heroe-sub">Campamento${info}</strong>
     <div class="asent-ficha-grid">
       <div><span>Residentes</span><strong>${c.residentesIds.length}</strong></div>
       <div><span>Oro de botín</span><strong>${Math.floor(heroe.oroDeBotin ?? 0)}</strong></div>
+      <div><span>Resides aquí</span><strong>${resides ? 'Sí' : 'No'}</strong></div>
     </div>
-    ${resides
-      ? '<p class="asent-lado-nota">Este campamento es tu residencia: aquí guardas tu almacén, te prestan tropa y compras en el mercado completo.</p>'
-      : '<button class="btn-secondary" type="button" id="btn-residir">Residir aquí</button><p class="asent-lado-nota">No resides aquí: sales con la columna con la que entraste y solo te venden trigo. Si te mudas, la tropa prestada por tu campamento anterior se te retira.</p>'}
-    ${p.faccionId === null ? '<p class="asent-lado-nota">Aún no tienes Facción: abre «Facción» en la barra de arriba para crear una o pedir ingreso.</p>' : ''}
+    ${resides ? '' : '<button class="btn-secondary" type="button" id="btn-residir">Residir aquí</button>'}
     <strong class="heroe-sub">Tu tropa</strong>
     ${heroe.escuadrones.length > 0 ? `<div class="mapa-lista">${heroe.escuadrones.map((s) => filaEscuadra(s, p, e)).join('')}</div>` : '<p class="asent-lado-nota">No tienes tropa. En la pestaña Tropa te prestan una.</p>'}
     <strong class="heroe-sub">Tu almacén</strong>
@@ -95,18 +98,18 @@ function salir(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): stri
   const preparacion = htmlPreparacion(p, e);
   if (preparacion) return preparacion;
   if (!resides) {
-    return `<p class="asent-lado-nota">Sales con la columna con la que entraste, tal cual${aparcadas.length > 0 ? `: ${aparcadas.map((s) => `${e(s.nombre)} (${s.cantidad})`).join(', ')}` : ''}.</p>
+    return `<strong class="heroe-sub">Salir${ayuda('camp:salir', 'Sales con la columna con la que entraste, tal cual.')}</strong>
+      ${aparcadas.length > 0 ? `<p class="asent-lado-nota">Columna: ${aparcadas.map((s) => `${e(s.nombre)} (${s.cantidad})`).join(', ')}.</p>` : ''}
       ${htmlSalidaComoEjercito(p, e)}
       <button class="btn-primary" type="button" id="btn-salir-campamento">Salir</button>`;
   }
   return `
-    <p class="asent-lado-nota">Elige la tropa que sacas y lo que cargas de tu almacén. La ración gratis de trigo llena tus víveres, que van siempre contigo.</p>
+    <strong class="heroe-sub">Salir${ayuda('camp:salir', 'Elige la tropa que sacas y lo que cargas de tu almacén. La ración gratis de trigo llena tus víveres, que van siempre contigo.<br>Al volver a entrar en un campamento, lo que quede en el carro regresa solo a tu almacén personal. Tus víveres no se descargan.')}</strong>
     <div class="mapa-lista">${enCampamento.length > 0
       ? enCampamento.map((s) => `<label class="mapa-lista-item"><div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres</span></div><input type="checkbox" data-salir-escuadra="${e(s.id)}" checked /></label>`).join('')
       : '<p class="asent-lado-nota">No tienes tropa en el campamento.</p>'}</div>
     ${htmlSalidaComoEjercito(p, e)}
     ${htmlCargaDeSalida(almacen, 'tu almacén personal', e)}
-    <p class="asent-lado-nota">Al volver a entrar en un campamento, lo que quede en el carro regresa solo a tu almacén personal. Tus víveres no se descargan.</p>
     <button class="btn-primary" type="button" id="btn-salir-campamento">Salir</button>`;
 }
 
@@ -137,7 +140,6 @@ function reclutar(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): s
       <button class="btn-secondary" type="button" data-reclutar="${e(t.id)}"${faltan <= 0 ? ' disabled' : ''}>${ya ? (faltan > 0 ? `Reponer ${faltan}` : 'Completa') : 'Reclutar'}</button></div>`;
   }).join('');
   return `
-    <p class="asent-lado-nota">Se paga solo con oro y con los reclutas del campamento. Solo hay una escuadra por tropa: si ya la tienes, se repone hasta el tope y se cobra lo que falta (la de una columna, con la columna a la puerta). Qué tropas están desbloqueadas lo decide el campamento: si aún no, el servidor lo dirá.</p>
     <label class="mapa-lista-item"><span>Pagar con</span>
       <select class="form-input" id="reclutar-pagar-con">
         <option value="almacenPersonal"${pagarConElegido === 'almacenPersonal' ? ' selected' : ''}>Mi almacén personal (${oroAlmacen} de oro)</option>
@@ -151,10 +153,9 @@ function tropa(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): stri
   if (!c.residentesIds.includes(heroe.id)) return '<p class="asent-lado-nota">Solo se presta o se recluta tropa en el campamento donde resides: pulsa «Residir aquí» en Resumen.</p>';
   const prestadas = new Map(heroe.escuadrones.filter((s) => s.prestada).map((s) => [s.tropaId, s] as const));
   return `
-    <strong class="heroe-sub">Reclutar</strong>
+    <strong class="heroe-sub">Reclutar${ayuda('camp:reclutar', 'Se paga solo con oro y con los reclutas del campamento. Solo hay una escuadra por tropa: si ya la tienes, se repone hasta el tope y se cobra lo que falta (la de una columna, con la columna a la puerta). Qué tropas están desbloqueadas lo decide el campamento: si aún no, el servidor lo dirá.')}</strong>
     ${reclutar(p, c, e)}
-    <strong class="heroe-sub">Tropa prestada</strong>
-    <p class="asent-lado-nota">Gratis, para aprender a usar tropa antes de tener la tuya. No gana experiencia. Se retira si dejas de residir en este campamento.</p>
+    <strong class="heroe-sub">Tropa prestada${ayuda('camp:prestamo', 'Gratis, para aprender a usar tropa antes de tener la tuya. No gana experiencia. Se retira si dejas de residir en este campamento.')}</strong>
     <div class="mapa-lista">${TROPAS_PRESTAMO.map(([id, nombre]) => {
       const ya = prestadas.get(id);
       return `<label class="mapa-lista-item"><div><strong>${nombre}</strong><span>${ya ? `ya la tienes: ${ya.cantidad} hombres, ${dondeEstaLaEscuadra(ya, p)}` : `${unidadesDeTropa(id, () => { /* se pinta con el siguiente sondeo */ }) ?? '?'} hombres`}</span></div><input type="checkbox" data-prestamo="${id}"${ya ? ' disabled' : ''} /></label>`;
@@ -182,7 +183,7 @@ function mercado(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): st
   const resides = c.residentesIds.includes(heroe.id);
   const precios = p.mercadoCampamento?.precios;
   const enVenta = Object.entries(c.mercado).filter(([r, n]) => n >= 1 && r !== 'oro' && (resides || r === 'trigo'));
-  const nota = resides ? '' : '<p class="asent-lado-nota">Si no resides aquí, solo te venden trigo, y va al carro de tu columna.</p>';
+  const nota = `<strong class="heroe-sub">Mercado${ayuda('camp:mercado', `${resides ? '' : 'Si no resides aquí, solo te venden trigo, y va al carro de tu columna.<br>'}Se paga primero con el oro de botín y luego con el oro de tu almacén. Si no cabe todo o no te llega, se compra lo que se pueda.`)}</strong>`;
   if (enVenta.length === 0) return `${nota}<p class="asent-lado-nota">Nada en venta.</p>`;
   if (!bienElegido || !enVenta.some(([r]) => r === bienElegido)) bienElegido = enVenta[0]![0];
 
@@ -231,7 +232,6 @@ function mercado(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): st
           </div>
           <button class="btn-primary" type="button" data-comprar="${e(r)}">Comprar</button>`}
       ${ultimaCompra ? `<p class="mercado-hecho">${e(ultimaCompra)}</p>` : ''}
-      <p class="asent-lado-nota">Se paga primero con el oro de botín y luego con el oro de tu almacén. Si no cabe todo o no te llega, se compra lo que se pueda.</p>
     </section>`;
 }
 
@@ -279,14 +279,13 @@ function fondo(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): stri
   const sobrante = Object.entries(fondoDeFaccion).filter(([r, n]) => n > 0 && !(precio && r in precio));
 
   return `
-    <p class="asent-lado-nota">La Caravana de Fundación se compra aquí entre todos los ciudadanos de tu Facción: cada uno aporta lo que quiere a un fondo común. Lo tuyo se puede retirar mientras no se gaste.</p>
-    <strong class="heroe-sub">Precio de la caravana${precio ? ` · reunido ${reunido} / ${total}` : ''}</strong>
+    <strong class="heroe-sub">Precio de la caravana${precio ? ` · reunido ${reunido} / ${total}` : ''}${ayuda('camp:fondo', 'La Caravana de Fundación se compra aquí entre todos los ciudadanos de tu Facción: cada uno aporta lo que quiere a un fondo común. Lo tuyo se puede retirar mientras no se gaste. El fondo se llena con lo de tu almacén personal y con tu oro de botín. Cuando el fondo está completo, sal con tu columna, engancha la caravana en el mapa y funda donde quieras (panel ⌂).')}</strong>
     ${precio ? `<div class="fondo-barra fondo-barra-total"><i style="width:${total > 0 ? ((reunido / total) * 100).toFixed(1) : 0}%"></i></div>` : ''}
     ${necesidad}
     ${sobrante.length > 0 ? `<p class="asent-lado-nota">Además en el fondo: ${sobrante.map(([r, n]) => `${Math.floor(n)} de ${e(nombreRecurso(r))}`).join(', ')}.</p>` : ''}
     <strong class="heroe-sub">Aportar</strong>
     ${recursosAportables.length === 0
-      ? '<p class="asent-lado-nota">No tienes nada que aportar: el fondo se llena con lo de tu almacén personal y con tu oro de botín.</p>'
+      ? '<p class="asent-lado-nota">No tienes nada que aportar.</p>'
       : `<div class="campamento-fila">
       <select class="form-input" id="fondo-recurso">${recursosAportables.map((r) => `<option value="${e(r)}" data-tienes="${tienes(r)}" data-falta="${falta(r)}">${e(nombreRecurso(r))} (tienes ${tienes(r)}${precio && falta(r) > 0 ? `, faltan ${falta(r)}` : ''})</option>`).join('')}</select>
       <input class="form-input" id="fondo-cantidad" type="number" min="1" value="10" />
@@ -298,7 +297,7 @@ function fondo(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): stri
       <button class="btn-primary" type="button" id="btn-comprar-caravana"${caravana || !completo ? ' disabled' : ''}>Comprar caravana</button>
     </div>
     ${!caravana && precio && !completo ? `<p class="asent-lado-nota">Aún no se puede comprar: faltan ${faltantes}.</p>` : ''}
-    ${caravana ? `<p class="asent-lado-nota">Caravana de Fundación lista${caravana.titularId === heroe.id ? ', y la llevas tú' : ''}: sal con tu columna, engánchala en el mapa y funda donde quieras (panel ⌂).</p>` : ''}`;
+    ${caravana ? `<p class="asent-lado-nota">Caravana de Fundación lista${caravana.titularId === heroe.id ? ', y la llevas tú' : ''}.</p>` : ''}`;
 }
 
 /** El HTML de una subpestaña. La Taberna (intel) la pinta `main.ts` en `#camp-taberna`, porque comparte panel con la plaza. */

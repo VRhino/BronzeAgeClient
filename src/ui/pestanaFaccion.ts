@@ -2,6 +2,7 @@ import type { ProyeccionJugador } from '../apiCliente';
 import type { Faccion, Sigilo } from '../tiposDominio';
 import { htmlLiga, htmlTitulos, ligaDe } from '../sigilo/imperio';
 import { CATALOGO_SIGILO, opciones, sigiloAleatorio, svgSigilo } from '../sigilo/sigilo';
+import { ayuda } from './ayuda';
 import { estadoCliente } from './estadoCliente';
 import { nombreDeHeroe } from './nombres';
 import { htmlAnexion } from './panelAnexion';
@@ -75,8 +76,7 @@ export function renderPestanaFaccion(
     return `
       <div class="faction-empty-state">
         <span class="faction-kicker">Organización política</span>
-        <h2>Elige tu facción</h2>
-        <p>Crea una nueva o pide entrar en una existente: su Rey decide.</p>
+        <h2>Elige tu facción${ayuda('faccion:elegir', 'Crea una nueva o pide entrar en una existente: su Rey decide.')}</h2>
         <div class="faction-choice-grid">
           <button id="btn-unirse-faccion" class="faction-choice" type="button"><span class="choice-icon">↗</span><strong>Pedir ingreso</strong><span>Explora las facciones del mundo.</span></button>
           <button id="btn-crear-faccion" class="faction-choice" type="button"><span class="choice-icon">✦</span><strong>Crear facción</strong><span>Funda una nueva casa política.</span></button>
@@ -89,8 +89,7 @@ export function renderPestanaFaccion(
     return `
       <div class="faction-form-view">
         <button class="back-button" id="btn-volver-faccion" type="button" aria-label="Volver a elegir facción">←</button>
-        <span class="faction-kicker">Nueva identidad</span><h2>Crear facción</h2>
-        <p>El nombre será visible para todos los jugadores.</p>
+        <span class="faction-kicker">Nueva identidad</span><h2>Crear facción${ayuda('faccion:crear', 'El nombre será visible para todos los jugadores.')}</h2>
         <form id="form-crear-faccion" class="faction-form">
           <label for="input-nombre-faccion">Nombre de la facción</label>
           <input id="input-nombre-faccion" class="form-input" type="text" maxlength="60" required autocomplete="off" placeholder="Ej. Casa de Micenas" />
@@ -136,6 +135,6 @@ function renderSelectorSigilo(): string {
       ${lista('sigilo-colorEmblema', 'Color del emblema', colores, s.colorEmblemaId, NOMBRE_COLOR)}
       ${lista('sigilo-orla', 'Orla', CATALOGO_SIGILO.orlas, s.orlaId)}
       ${lista('sigilo-colorOrla', 'Color de la orla', colores, s.colorOrlaId, NOMBRE_COLOR)}
-      <small class="sigilo-creditos">Emblemas: <a href="https://game-icons.net" target="_blank" rel="noopener">game-icons.net</a> (CC BY 3.0) — Lorc, Delapouite, Caro Asercion, Cathelineau, Skoll y Willdabeast.</small>
+      <small class="sigilo-creditos">Créditos${ayuda('faccion:creditos', 'Emblemas: <a href="https://game-icons.net" target="_blank" rel="noopener">game-icons.net</a> (CC BY 3.0) — Lorc, Delapouite, Caro Asercion, Cathelineau, Skoll y Willdabeast.')}</small>
     </fieldset>`;
 }

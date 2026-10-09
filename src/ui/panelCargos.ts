@@ -2,6 +2,7 @@
 // puede dejar la Facción (`dejarFaccion`). Vive en la pestaña Facción. Quien valida es el backend: su rechazo sale tal cual.
 import type { ProyeccionJugador } from '../apiCliente';
 import type { Faccion } from '../tiposDominio';
+import { ayuda } from './ayuda';
 import { nombreDeHeroe } from './nombres';
 import { crearEnvio, type Ejecutar } from './panelAnexion';
 
@@ -14,12 +15,13 @@ export function htmlCargos(proyeccion: ProyeccionJugador, faccion: Faccion, esca
   const ciudadanos = faccion.ciudadanosIds ?? [];
   const otros = ciudadanos.filter((id) => id !== proyeccion.heroeId);
   const embajadores = ciudadanos.filter((id) => id !== faccion.embajadorId);
-  return `<div class="faction-list"><span class="faction-kicker">Cargos</span>
+  const info = ayuda('faccion:cargos', `${embajadores.length > 0 ? 'El Embajador propone, con el Rey, alianzas y vasallajes, declara guerra y ofrece la paz. ' : ''}${otros.length > 0 ? 'Al traspasar el trono dejas de ser Rey en el acto; solo el nuevo Rey podría devolvértelo.' : ''}`);
+  return `<div class="faction-list"><span class="faction-kicker">Cargos${info}</span>
     ${embajadores.length > 0
-      ? `<div class="faction-list-item"><select id="sel-embajador" class="form-input">${opciones(embajadores)}</select><button id="btn-embajador" class="btn-secondary" type="button">Designar Embajador</button></div><p class="legend-note">El Embajador propone, con el Rey, alianzas y vasallajes, declara guerra y ofrece la paz.</p>`
+      ? `<div class="faction-list-item"><select id="sel-embajador" class="form-input">${opciones(embajadores)}</select><button id="btn-embajador" class="btn-secondary" type="button">Designar Embajador</button></div>`
       : ''}
     ${otros.length > 0
-      ? `<div class="faction-list-item"><select id="sel-rey" class="form-input">${opciones(otros)}</select><button id="btn-traspasar-trono" class="btn-secondary" type="button">Traspasar el trono</button></div><p class="legend-note">Dejas de ser Rey en el acto; solo el nuevo Rey podría devolvértelo.</p>`
+      ? `<div class="faction-list-item"><select id="sel-rey" class="form-input">${opciones(otros)}</select><button id="btn-traspasar-trono" class="btn-secondary" type="button">Traspasar el trono</button></div>`
       : '<p class="legend-note">Eres el único ciudadano: nadie más puede recibir el trono ni la embajada.</p>'}
     <p id="error-cargos" class="faction-error" role="alert"></p></div>`;
 }
@@ -30,9 +32,8 @@ export function htmlDejarFaccion(proyeccion: ProyeccionJugador, faccion: Faccion
   const cargo = faccion.reyId === proyeccion.heroeId
     ? alguienMas ? ' Eres el Rey: el trono pasa al siguiente ciudadano por orden de ingreso.' : ' Eres el último ciudadano: la Facción se queda sin Rey.'
     : faccion.embajadorId === proyeccion.heroeId ? ' Eres el Embajador: la embajada queda libre.' : '';
-  return `<div class="faction-list"><span class="faction-kicker">Abandonar</span>
+  return `<div class="faction-list"><span class="faction-kicker">Abandonar${ayuda('faccion:abandonar', `Pierdes la ciudadanía, tu casa y tus cargos locales; pasas al campamento de mercenarios más cercano y conservas lo que llevas.${cargo} No podrás crear otra Facción hasta pasados ${DIAS_COOLDOWN_CREACION} días.`)}</span>
     <div class="faction-list-item"><button id="btn-dejar-faccion" class="btn-secondary" type="button">Dejar la Facción</button></div>
-    <p class="legend-note">Pierdes la ciudadanía, tu casa y tus cargos locales; pasas al campamento de mercenarios más cercano y conservas lo que llevas.${cargo} No podrás crear otra Facción hasta pasados ${DIAS_COOLDOWN_CREACION} días.</p>
     <p id="error-dejar-faccion" class="faction-error" role="alert"></p></div>`;
 }
 

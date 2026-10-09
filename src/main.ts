@@ -42,6 +42,7 @@ import { cablearAdmision } from './ui/panelAdmision';
 import { cablearFichaBatalla, cablearFichaFormacion, formacionesVisibles, htmlFichaBatalla, htmlFichaFormacion } from './ui/panelBatalla';
 import { cablearPanelEjercito, ejercitosDeLaFaccion, htmlFichaEjercito, htmlPanelEjercito, peticionesNuevas } from './ui/ejercitos';
 import { invalidar, olvidarEdicion, pintar, vaciar } from './ui/repintado';
+import { aplicarAyudas, ayuda } from './ui/ayuda';
 import { cablearVistaCiudad, edificioSeleccionado, htmlTooltipEdificio, repintarFicha, tipoSeleccionado } from './ui/vistaCiudad';
 import { FICHAS_MAPA_EXTRA, SELECTORES_MAPA_EXTRA, SUBPESTANAS_CENTRO_EXTRA, SUBPESTANAS_MERCADO_EXTRA, type ContextoPlaza } from './ui/ganchos';
 import { montarPartidas } from './ui/pantallaPartidas';
@@ -317,7 +318,7 @@ function montarHeroe(): void {
     .map((c, i) => `<label class="mapa-lista-item"><div><strong>${escaparHtml(c.id)}</strong><span>(${Math.round(c.posicion.x)}, ${Math.round(c.posicion.y)}) · lo eligieron ${c.eligieronComoInicial} · residen ${c.residentes}</span></div><input type="radio" name="campamento" value="${escaparHtml(c.id)}"${i === 0 ? ' checked' : ''} /></label>`)
     .join('');
   app.innerHTML = `<div class="login-container"><div class="login-card">
-    <div class="login-header"><h1 class="login-title">Tu héroe</h1><p class="login-subtitle">Nace dentro de un campamento de mercenarios.</p></div>
+    <div class="login-header"><h1 class="login-title">Tu héroe${ayuda('heroe:crear', 'Nace dentro de un campamento de mercenarios.')}</h1></div>
     <form id="form-crear-heroe">
       <div class="form-group"><label class="form-label" for="input-nombre-heroe">Nombre</label><input type="text" id="input-nombre-heroe" class="form-input" required autocomplete="off" /></div>
       <div class="form-group"><span class="form-label">Campamento</span><div class="mapa-lista">${opciones || '<p class="mapa-lista-vacia">Esta partida no tiene campamentos.</p>'}</div></div>
@@ -325,6 +326,7 @@ function montarHeroe(): void {
       <p id="error-heroe" class="faction-error" role="alert"></p>
     </form>
   </div><button id="btn-partidas" class="text-link" type="button">Cambiar de partida</button> <button id="btn-logout" class="text-link" type="button">Cerrar sesión</button></div>`;
+  aplicarAyudas(app);
   document.querySelector('#btn-partidas')?.addEventListener('click', () => volverALasPartidas());
   document.querySelector('#btn-logout')?.addEventListener('click', () => cerrarSesionYVolverALogin());
   document.querySelector<HTMLFormElement>('#form-crear-heroe')?.addEventListener('submit', async (evento) => {

@@ -5,6 +5,7 @@
 // es el backend (`heroe.invalido`).
 import { asignarGuarnicion, borrarLoadout, guardarLoadout, repartirPuntos, retirarGuarnicion, type ProyeccionJugador, type RespuestaComando } from '../apiCliente';
 import type { AtributoHeroe, HeroeProyectado, Loadout } from '../tiposDominio';
+import { ayuda } from './ayuda';
 import { estadoCliente } from './estadoCliente';
 import { invalidar, pintar } from './repintado';
 
@@ -74,7 +75,7 @@ function renderEscuadras(h: HeroeProyectado, proyeccion: ProyeccionJugador, e: E
   const activo = h.loadouts.find((l) => l.activo);
   // Herido, su loadout no defiende aunque esté dentro (Doc 5.16.4); la guarnición sí.
   const dentro = dentroDeSuResidencia(proyeccion) && minutosHerido(proyeccion) === null;
-  const cabecera = `<p class="heroe-nota">Guarnición: <strong>${h.guarnicionOcupada} / ${h.cupoGuarnicion}</strong> de Liderazgo.${h.cupoGuarnicion === 0 ? ' Tu residencia no da cupo: hace falta un Barracón o una Galería de tiro.' : ''} Del campamento solo defienden la guarnición y, mientras estás dentro, tu loadout activo.</p>`;
+  const cabecera = `<p class="heroe-nota">Guarnición: <strong>${h.guarnicionOcupada} / ${h.cupoGuarnicion}</strong> de Liderazgo.${ayuda('jugador:heroe-escuadras', `${h.cupoGuarnicion === 0 ? 'Tu residencia no da cupo: hace falta un Barracón o una Galería de tiro. ' : ''}Del campamento solo defienden la guarnición y, mientras estás dentro, tu loadout activo.`)}</p>`;
   if (h.escuadrones.length === 0) return `${cabecera}<p class="mapa-lista-vacia">No tienes escuadras: se reclutan en el asentamiento donde resides.</p>`;
   return `${cabecera}<div class="mapa-lista">${h.escuadrones
     .map((s) => {
@@ -117,6 +118,7 @@ function renderEditor(h: HeroeProyectado, e: Escapar): string {
 function renderLoadouts(h: HeroeProyectado, e: Escapar): string {
   if (borrador) return renderEditor(h, e);
   return `
+    <strong class="heroe-sub">Loadouts${ayuda('jugador:heroe-loadouts', 'El loadout activo es el que defiende tu residencia mientras estás dentro. Los perks llegarán con el catálogo de Conquest.')}</strong>
     <div class="mapa-lista">${h.loadouts
       .map((l) => `<div class="mapa-lista-item heroe-fila">
         <div><strong>${e(l.displayName)}${l.activo ? ' <em class="heroe-marca">activo</em>' : ''}</strong><span>${l.squadIds.length} escuadras · ${l.liderazgoTotal} / ${h.liderazgoBase} de Liderazgo</span></div>
@@ -127,8 +129,7 @@ function renderLoadouts(h: HeroeProyectado, e: Escapar): string {
         </div>
       </div>`)
       .join('')}</div>
-    <button type="button" class="btn-secondary" data-accion="nuevo">Nuevo loadout</button>
-    <p class="heroe-nota">El loadout activo es el que defiende tu residencia mientras estás dentro. Los perks llegarán con el catálogo de Conquest.</p>`;
+    <button type="button" class="btn-secondary" data-accion="nuevo">Nuevo loadout</button>`;
 }
 
 /** Pinta el panel del héroe en `panel`. Sin `forzar`, respeta el borrador abierto y no toca el DOM si nada cambió. */

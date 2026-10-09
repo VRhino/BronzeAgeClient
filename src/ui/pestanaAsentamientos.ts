@@ -1,5 +1,6 @@
 import type { ProyeccionJugador } from '../apiCliente';
 import type { Faccion } from '../tiposDominio';
+import { ayuda } from './ayuda';
 import { CAP_FUNDACION_POR_NIVEL, estadoCliente, TIPS_FUNDACION } from './estadoCliente';
 import { renderPestanaMuralla } from './pestanaMuralla';
 
@@ -64,17 +65,16 @@ export function renderPestanaAsentamientos(
         : estadoCliente.asentamientoDetalleTab === 'almacen'
           ? contenidoAlmacen
           : estadoCliente.asentamientoDetalleTab === 'produccion'
-            ? `<div class="settlement-detail-copy"><strong>Producción y recursos</strong><p>La producción se calcula a partir de los edificios activos, la población y los recursos disponibles del asentamiento.</p><span>Edificios activos: ${edificios.filter((edificio) => edificio.estado === 'activo').length}</span></div>`
+            ? `<div class="settlement-detail-copy"><strong>Producción y recursos${ayuda('jugador:asent-produccion', 'La producción se calcula a partir de los edificios activos, la población y los recursos disponibles del asentamiento.')}</strong><span>Edificios activos: ${edificios.filter((edificio) => edificio.estado === 'activo').length}</span></div>`
             : estadoCliente.asentamientoDetalleTab === 'muralla'
               ? renderPestanaMuralla(asentamiento, proyeccion, escaparHtml)
-              : `<div class="settlement-detail-copy"><strong>Defensa y tropas</strong><p>Tus escuadras, tu guarnición y tus loadouts ya llegan en la proyección (<code>heroe</code>); falta su interfaz (docs/Features_Pendientes.md §0.2).</p></div>`
+              : `<div class="settlement-detail-copy"><strong>Defensa y tropas${ayuda('jugador:asent-militar', 'Tus escuadras, tu guarnición y tus loadouts ya llegan en la proyección (<code>heroe</code>); falta su interfaz (docs/Features_Pendientes.md §0.2).')}</strong></div>`
     : '<div class="interaction-empty">Todavía no tienes un asentamiento fundado.</div>';
   return `
     <div class="settlement-panel-view">
       <span class="faction-kicker">Expansión territorial</span><h2>Asentamientos</h2>
       ${puedeFundar ? `<div class="settlement-action ${estadoCliente.modoFundacionActivo ? 'settlement-action-active' : ''}">
-        <div class="settlement-action-heading"><span class="choice-icon">⌂</span><strong>Fundar asentamiento</strong></div>
-        <p>Elige una posición libre en el mapa y revisa el alcance inicial de su zona de influencia.</p>
+        <div class="settlement-action-heading"><span class="choice-icon">⌂</span><strong>Fundar asentamiento</strong>${ayuda('jugador:fundar', 'Elige una posición libre en el mapa y revisa el alcance inicial de su zona de influencia.<br>Un asentamiento necesita una posición libre del mapa. Al fundarlo, tu facción obtiene una nueva zona de influencia y una base para crecer.')}</div>
         <div id="foundation-resource-summary">${resumenRecursosFundacion(escaparHtml)}</div>
         <div class="foundation-actions">
           <button id="btn-fundar-asentamiento" class="btn-primary ${estadoCliente.posicionFundacion ? 'is-confirmation' : ''}" type="button">${estadoCliente.posicionFundacion ? 'Fundar' : estadoCliente.modoFundacionActivo ? 'Selecciona punto de fundación' : 'Presiona aquí para elegir dónde quieres fundar'}</button>
@@ -84,8 +84,7 @@ export function renderPestanaAsentamientos(
       <div class="tips-box"><span class="faction-kicker">Tips</span>
         <div class="tip-carousel" aria-live="polite"><strong id="tip-number" class="tip-number">0${estadoCliente.indiceTip + 1}</strong><p id="tip-text">${TIPS_FUNDACION[estadoCliente.indiceTip]}</p></div>
         <div class="tip-controls"><button id="btn-tip-anterior" class="tip-control" type="button" aria-label="Tip anterior">←</button><span id="tip-counter">${estadoCliente.indiceTip + 1} / ${TIPS_FUNDACION.length}</span><button id="btn-tip-siguiente" class="tip-control" type="button" aria-label="Tip siguiente">→</button></div>
-      </div>
-      <div class="settlement-explanation"><strong>Antes de fundar</strong><p>Un asentamiento necesita una posición libre del mapa. Al fundarlo, tu facción obtiene una nueva zona de influencia y una base para crecer.</p></div>` : contenidoAlmacen}
+      </div>` : contenidoAlmacen}
       ${asentamiento ? `<section class="settlement-detail"><div class="settlement-detail-heading"><span class="faction-kicker">Detalle</span><h3>${escaparHtml(asentamiento.nombre ?? asentamiento.id)}</h3></div><div class="settlement-detail-tabs" role="tablist" aria-label="Detalle del asentamiento">${(['general', 'edificios', 'produccion', 'militar', 'muralla'] as const).map((tab) => `<button class="settlement-detail-tab ${estadoCliente.asentamientoDetalleTab === tab ? 'active' : ''}" data-settlement-detail-tab="${tab}" type="button" role="tab" aria-selected="${estadoCliente.asentamientoDetalleTab === tab}">${tab[0]!.toUpperCase()}${tab.slice(1)}</button>`).join('')}</div><div class="settlement-detail-content">${contenidoDetalle}</div></section>` : ''}
       <button id="btn-ir-informacion" class="text-link" type="button">Consulta la información del mundo →</button>
     </div>

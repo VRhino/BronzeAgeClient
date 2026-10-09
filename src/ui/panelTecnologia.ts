@@ -9,6 +9,7 @@ import type { ProyeccionJugador } from '../apiCliente';
 import type { Asentamiento, CondicionHito, TecnologiaId } from '../tiposDominio';
 import { EDIFICIO_NOMBRE, RECURSO_NOMBRE } from '../paletas';
 import { textoEnTiempoReal } from './estadoCliente';
+import { ayuda } from './ayuda';
 
 type Escapar = (valor: string) => string;
 export type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
@@ -116,26 +117,20 @@ export function htmlTecnologia(p: ProyeccionJugador, e: Escapar): string {
   const itinerantes = [...new Set(detenidos.map((a) => a.enAsentamientoId!))];
 
   return `${cabecera}<div class="tec-panel">
-    <strong class="heroe-sub">Era del mundo: ${e(legible(t.era))} <small>(desde hace ${e(textoEnTiempoReal(p.instante - t.eraDesde))})</small></strong>
-    <p class="asent-lado-nota">Logros del mundo cumplidos (lo que ha pasado entre todas las Facciones; no dicen qué tecnología abren).</p>${logros}
+    <strong class="heroe-sub">Era del mundo: ${e(legible(t.era))} <small>(desde hace ${e(textoEnTiempoReal(p.instante - t.eraDesde))})</small>${ayuda('jugador:tec-era', 'Logros del mundo cumplidos (lo que ha pasado entre todas las Facciones; no dicen qué tecnología abren).')}</strong>
+    ${logros}
 
-    <strong class="heroe-sub">Tus tecnologías</strong>
+    <strong class="heroe-sub">Tus tecnologías${ayuda('jugador:tec-adoptar', `${motivoAdoptar ? e(motivoAdoptar) : 'Eres el Rey: puedes adoptar, estando en la capital.'} La adopción es instantánea y la paga el almacén de la capital. Cuesta según la Era de la tecnología (no se sabe la de cada una desde aquí):<ul class="tec-lista">${TARIFA_ADOPCION.map(([era, coste]) => `<li>${e(legible(era))}: ${e(coste)}</li>`).join('')}</ul>`)}</strong>
     ${propias ? '' : '<p class="asent-lado-nota">Sin Facción no hay tecnología propia.</p>'}
     ${adoptables.length ? `<ul class="tec-lista">${adoptables.map(filaAdoptable).join('')}</ul>` : propias ? '<p class="asent-lado-nota">Ninguna tecnología aparecida a la espera de adoptarse.</p>' : ''}
     ${adoptadas.length ? `<p class="asent-lado-nota">Adoptadas: ${adoptadas.map((id) => `<span class="tec-chip">${e(legible(id))}</span>`).join(' ')}</p>` : ''}
     ${reveladas.length ? `<strong class="heroe-sub">Reveladas por los Aedas (te falta el hito)</strong><ul class="tec-lista">${reveladas.map(filaReveladaHtml).join('')}</ul>` : ''}
     <p class="faction-error" data-campo="error-tecnologia" role="alert"></p>
 
-    <strong class="heroe-sub">Adoptar: quién y cuánto</strong>
-    <p class="asent-lado-nota">${motivoAdoptar ? e(motivoAdoptar) : 'Eres el Rey: puedes adoptar, estando en la capital.'} La adopción es instantánea y la paga el almacén de la capital. Cuesta según la Era de la tecnología (no se sabe la de cada una desde aquí):</p>
-    <ul class="tec-lista">${TARIFA_ADOPCION.map(([era, coste]) => `<li>${e(legible(era))}: ${e(coste)}</li>`).join('')}</ul>
-
-    <strong class="heroe-sub">Aedas residentes de tus plazas</strong>
-    <p class="asent-lado-nota">Una épica sustituye al hito de la Facción (no al logro del mundo), no cuesta oro y avanza con hechos de la plaza o de la Facción, uno cada 6 horas como mucho. Al cumplirla la tecnología aparece, y se adopta como siempre.</p>
+    <strong class="heroe-sub">Aedas residentes de tus plazas${ayuda('jugador:tec-residentes', 'Una épica sustituye al hito de la Facción (no al logro del mundo), no cuesta oro y avanza con hechos de la plaza o de la Facción, uno cada 6 horas como mucho. Al cumplirla la tecnología aparece, y se adopta como siempre.')}</strong>
     ${residentes.length ? `<ul class="tec-lista">${residentes.map(filaResidente).join('')}</ul>` : '<p class="asent-lado-nota">Ninguna plaza tuya tiene un Aeda residente (piden Palacio y nobleza).</p>'}
 
-    <strong class="heroe-sub">Aedas itinerantes en tus plazas</strong>
-    <p class="asent-lado-nota">Compra de una tecnología revelada: ${e(PRECIO_AEDA)}. Te salta el hito, no el logro; luego hay que adoptarla.</p>
+    <strong class="heroe-sub">Aedas itinerantes en tus plazas${ayuda('jugador:tec-itinerantes', `Compra de una tecnología revelada: ${e(PRECIO_AEDA)}. Te salta el hito, no el logro; luego hay que adoptarla.`)}</strong>
     ${itinerantes.length ? `<ul class="tec-lista">${itinerantes.map(filaItinerante).join('')}</ul>` : '<p class="asent-lado-nota">Ningún Aeda itinerante detenido en una plaza tuya ahora mismo.</p>'}
     <p class="faction-error" data-campo="error-tecnologia-aedas" role="alert"></p>
   </div>`;
