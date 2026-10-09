@@ -3,6 +3,41 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.27.0] — 2026-10-09 · paneles más grandes, Mercado unificado, trueques con emblema y interfaces limpias (texto tras «ⓘ»)
+
+Segunda tanda de bloques en paralelo (detalle y mediciones en `docs/bloques/`). **Infraestructura:** `ui/ayuda.ts`: el texto explicativo vive tras un botón ⓘ que lo muestra y lo oculta; el estado abierto o cerrado sobrevive a los repintados y a las recargas (`localStorage`).
+
+### Bloque G1 — emblema de la Facción en el mapa
+- **Mapa**: cada asentamiento (propio, avistado y recordado) se dibuja con el **emblema de su Facción** (relleno con el color de emblema del sigilo, halo que contrasta) sobre un disco de su **color primario**; el recordado va con el disco tenue y el aro del color. Sin sigilo (Facción neutral o sin datos) sigue el punto de siempre. El tamaño es de lienzo, así que escala con el zoom como el punto; el radio de agarre de `asentamientoCercaDe` (unidades de mundo) no cambia.
+- Los marcadores de jugadores (columnas, ejércitos, caravanas) y las zonas de influencia usan siempre `faccionColor` (primario del sigilo); las caravanas y columnas propias sin plaza de origen ya no caen en un ocre/color de reserva sino en el de TU Facción.
+- `sigilo/emblemas.ts`: `pathDeEmblema(id)` devuelve el `Path2D` del emblema, cacheado.
+
+### Bloque G2 — aprovechar el espacio de pantalla (plaza y campamento)
+- Plaza y campamento en tres columnas: columna izquierda nueva (`.asent-izq`) con lo que antes flotaba sobre el mapa (tira de recursos, «Ejércitos»/«Salir al mundo», ficha del edificio elegido, leyenda del campamento), mapa cuadrado centrado (el mayor cuadrado que cabe, sin deformarse) y columna derecha más ancha (`clamp(360px, 27vw, 560px)`, texto +15 % desde 1700 px). La columna izquierda se oculta sola si no tiene nada visible. En ≤ 900 px se apila: mapa arriba, luego izquierda y derecha, con scroll de la pantalla (antes la columna derecha desaparecía a ≤ 820 px).
+- Panel del jugador (`.jugador-panel`) más ancho (hasta 560 px); scrollbars oscuros; sin hueco vacío en la barra de la plaza.
+
+### Bloque G3 — Mercado: una sola pestaña «Caravanas»
+Mercado queda en **Órdenes · Caravanas · Trueques**. «Caravanas» reúne en UNA tarjeta por caravana lo que antes estaba en tres pestañas: estado como etiqueta (parada, preparándose, en camino, de vuelta, enganchada, aparcada), carros y animales, reservar, preparar viaje y cancelar, y la **escolta integrada** (cupo de Liderazgo con barra, escuadras cedidas con «Retirar» y botón «Añadir escolta» que despliega en la tarjeta las escuadras que se pueden ceder con «Ceder»; apagado con el motivo si no se puede). Las caravanas **aparcadas** en la plaza salen en la misma lista tras las de la flota («Aparcada en esta plaza · origen: X»), con su carga, cargar/descargar y «Enviar al origen». Los párrafos explicativos de Órdenes y Caravanas pasan detrás de un botón ⓘ (`mercado:ordenes`, `mercado:caravanas`). Se eliminan `ui/panelEscolta.ts`, `ui/panelAparcadas.ts`, la subpestaña Aparcadas de `ganchos.ts` y la entrada fija Escolta de `main.ts`.
+
+### Bloque G4 — Trueques: etiqueta de ciudad y ayuda ⓘ
+- Pestaña Trueques del Mercado: junto al nombre de cada ciudad va el emblema (con el color) de la Facción dueña y, debajo, más pequeño y tenue, «Facción · Nivel N». Se ve en los dos lados de cada trueque y en la elección de destino del formulario, que pasa de `<select>` a una lista de botones de radio con la etiqueta. Módulo reutilizable `ui/etiquetaCiudad.ts` (`etiquetaCiudad(p, asentamientoId, escapar)`, `datosCiudad`).
+- Regla «ⓘ»: las reglas del canon (caducidad, plazo, reputación) y la nota de líneas por lado pasan tras botones de información (`mercado:trueques`, `mercado:trueques-proponer`).
+
+### Bloque H1 — Interfaz limpia en la plaza (texto tras «ⓘ»)
+- Plaza más limpia: el texto explicativo de Tesorería, Fundación, Recetas y ficha de edificio, Residencia, Puerta, Aliados, Muralla, Reclutamiento, Taberna e intel, y de las secciones Producción, Subida de nivel, Nombre de la ciudad, Cargos y pestañas bloqueadas de Centro urbano vive ahora detrás de un botón «ⓘ» (`ui/ayuda.ts`) junto al título de cada sección. Datos, estados, errores y motivos cortos de botones apagados siguen visibles. Texto visible de las 15 subpestañas medidas (proyección fabricada): 10 776 → 8 296 caracteres (-23 %); sin contar Tesorería (casi todo datos) e Información (no tocada): 6 405 → 4 252 (-34 %).
+- La muralla comparte HTML con `#/legacy`: la ayuda se añadió en `pestanaMuralla.ts` y `panelMuralla.ts` ya no deshabilita el botón ⓘ al apagar los de acción.
+
+### Bloque H2 — Interfaz limpia: mapa, ejércitos y salida al mundo
+- Los paneles del mapa, de los ejércitos y de la salida al mundo muestran sobre todo datos y controles: las explicaciones, reglas y avisos largos viven tras un botón «ⓘ» (`ui/ayuda.ts`) que se abre y se cierra y sobrevive al sondeo. Claves: `mapa:ficha-plaza`, `mapa:ficha-bandidos`, `mapa:ficha-mercenarios`, `mapa:ficha-alijo`, `mapa:fundar`, `mapa:mercado-plaza`, `ejercito:dentro|formacion|lider|integrante|personal|otros|ficha`, `caravanas:columna`, `columna:tropa`, `ajeno:persecucion|motivos`, `plaza:unirse`, `plaza:salir-ajena`, `salida:modo`, `salida:carga`, `convocatoria:espera|visita|tropa`, `batalla:formacion`.
+- Los motivos de botón apagado de una línea (≤ 70 caracteres) siguen visibles; los largos van en el `title` del botón y en la ayuda. El motivo general del Mercado de la plaza sale una vez, no en cada orden.
+
+### Bloque H3 — Interfaz limpia: campamento y paneles del jugador
+- Interfaz limpia en el campamento de mercenarios y en los paneles del jugador: el texto explicativo (introducciones, reglas, avisos largos, notas al pie) vive ahora detrás de un botón «ⓘ» (`ui/ayuda.ts`) junto al título de cada sección; datos, estados, errores y motivos cortos de botón apagado siguen visibles.
+  - Campamento: Resumen (`camp:resumen`), Salir (`camp:salir`), Tropa (`camp:reclutar`, `camp:prestamo`), Mercado (`camp:mercado`), Fondo (`camp:fondo`), Taberna (`intel:taberna`, `intel:mirada`, `intel:informe`, `intel:foto`). El Resumen gana un dato «Resides aquí: Sí/No».
+  - Paneles: Tecnología (`jugador:tec-era`, `jugador:tec-adoptar` con la tarifa de adopción, `jugador:tec-residentes`, `jugador:tec-itinerantes`), Carro (`jugador:carro`, `jugador:botin`), Héroe (`jugador:heroe-escuadras`, `jugador:heroe-loadouts`), Avisos (`jugador:avisos`), Asentamientos (`jugador:fundar`, `jugador:asent-produccion`, `jugador:asent-militar`).
+  - Facción: `faccion:elegir`, `faccion:crear`, `faccion:creditos`, `faccion:cargos`, `faccion:diplomacia` (con los costes de romper alianza / liberar vasallo, que además van en el `title` de su botón), `faccion:anexion`, `faccion:fusion`, `faccion:admision`, `faccion:abandonar`.
+  - Pantalla «Tu héroe» (crear héroe): `heroe:crear`.
+
 ## [0.26.2] — 2026-10-09 · el sigilo completo en el mapa
 
 ### Cambiado
