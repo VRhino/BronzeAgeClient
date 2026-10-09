@@ -1,9 +1,15 @@
 # Índice de comandos del cliente jugador
 
 Fuente, en el repositorio del **backend**: `src/session/comandos/registro.ts` (el catálogo) y
-`src/session/comandos/esquemas.ts` (la forma de los `params`). Última revisión: **2026-09-26**, contra
-`BronzeAgeFase0@8091638` (rama `ritmo-crecimiento`: subida de nivel manual, obras en horas, asedio como orden y
-ciclo de Batalla de Unity).
+`src/session/comandos/esquemas.ts` (la forma de los `params`). Última revisión: **2026-10-09**, contra
+`BronzeAgeFase0@02bd153` (`main`) y el canon de `Docs/Game`.
+
+> **Sync 2026-10-09 — contraste completo con el backend:** el catálogo registrado trae **120 comandos de partida**, todos con el rol `jugador`
+> (`crearFaccionNpc` es solo del admin y ya no está en `registro.ts`). Se añaden a este índice los que faltaban (campamentos de mercenarios,
+> Aedas y tecnología, diplomacia, puerta, residencia, intel, recetas, capital); se retiran `comprarCasa`, `fijarPoliticaDeAcceso`,
+> `fundarAsentamiento` (hoy es `fundar`) y `atacarCampamentoBandidos`, que ya no existen. `vetarJugador` **sí existe** (Doc 1.10.5). Los comandos de
+> **Unity** (batalla, creación completa del héroe, equipo, perks) quedan marcados «no aplica». Hay además un endpoint nuevo:
+> `GET /v1/jugador/partidas` (`02bd153`), al final.
 
 > **Sync 2026-10-07 — batallas con héroes y ejércitos en campo (backend `101c035`):** +`organizarEjercito { heroeId, politicaDeUnion:
 > 'aceptar' | 'preguntar' }`, +`cancelarFormacion { heroeId }` y +`admitirOtrasFacciones { faccionId, admitir }`; `unirseABatalla` acepta `lado`
@@ -16,10 +22,8 @@ ciclo de Batalla de Unity).
 > `intel.invalida`. Esta tabla sigue contando los comandos de la revisión del 2026-09-26: desde entonces el backend ha añadido
 > los de los campamentos de mercenarios, los Aedas y estos dos (el esquema publicado trae 102).
 
-El backend expone **77 comandos de partida**. La matriz de `src/session/comandos/autorizacion.ts` admite el rol
-`jugador` en **76**: el que falta, `crearFaccionNpc`, es solo de administración y no se lista aquí. Nada de lo
-que falta aquí está bloqueado por permisos. La interfaz cablea **23**; el resto solo es alcanzable llamando a
-mano al wrapper `ejecutarComando` de `src/apiCliente.ts`.
+El backend registra **120 comandos de partida** y la matriz admite el rol `jugador` en todos (ver la nota de 2026-10-09 arriba). La interfaz cablea **80 entradas de este índice**; el resto solo es alcanzable llamando a
+mano al wrapper `ejecutarComando` de `src/apiCliente.ts`, o no aplica (Unity).
 
 > **Sync 2026-09-26 — ritmo de crecimiento y asedio como orden:** (1) +`solicitarAscenso`: el nivel de un
 > asentamiento **ya no sube solo** al cumplir población y edificios; eso pasa a ser el requisito para pedirlo. Lo pide
@@ -75,7 +79,7 @@ wrapper definidos no cuenta como aplicado.
 
 ### Héroe
 
-- [x] `crearHeroe` — `displayName`, `classDefinitionId`, `genero` (`masculino` \| `femenino`), `avatar` (`{ cabezaId, peloId, barbaId, cejasId }`) · devuelve `{ heroeId }`; el héroe aparece en el mundo con su columna. Único comando que admite una membresía sin héroe · pantalla Héroe, **provisional**: solo el nombre, con clase, género y avatar fijos (`Features_Pendientes.md` §0.1)
+- [x] `crearHeroe` — `displayName`, `classDefinitionId`, `genero` (`masculino` \| `femenino`), `avatar` (`{ cabezaId, peloId, barbaId, cejasId }`) · devuelve `{ heroeId }`; el héroe aparece en el mundo con su columna. Único comando que admite una membresía sin héroe · pantalla Héroe, **provisional**: solo el nombre, con clase, género y avatar fijos (`Features_Pendientes.md` §0.1) · **Unity:** la creación completa (clase, género y aspecto salen del catálogo de Conquest) no aplica al cliente web
 
 Los cinco siguientes no llevan `heroeId`: el actor es su propio héroe. Wrapper tipado en `src/apiCliente.ts`, y los usa el panel Héroe (`src/ui/panelHeroe.ts`, barra superior del jugador; `Features_Pendientes.md` §0.2). Rechazo de dominio: `heroe.invalido`.
 
@@ -87,8 +91,8 @@ Los cinco siguientes no llevan `heroeId`: el actor es su propio héroe. Wrapper 
 
 ### Fundación y expansión
 
-- [x] `fundarAsentamiento` — **`faccionId`** (2026-09-08: ya NO lleva `posicion`; la posición sale de la columna del fundador) · pestaña Asentamientos
-- [ ] `lanzarCaravanaFundacion` — `origenAsentamientoId`, `destino`, `numJugadores`
+- [x] `fundar` — sin `params` (`{}`; antes `fundarAsentamiento`): se funda DONDE SE ESTÁ, con la Caravana de Fundación enganchada a tu columna; los ciudadanos de la columna son cofundadores, hasta 5 (Doc 1.3) · riel del mapa › Fundar
+- [ ] `lanzarCaravanaFundacion` — `origenAsentamientoId`, `destino`, `numJugadores` · confirmar con el canon: la de un campamento se compra (`comprarCaravanaDeRefundacion`)
 - [ ] `desarmarCaravanaFundacion` — `caravanaId`
 
 ### Facción y ciudadanía
@@ -96,7 +100,6 @@ Los cinco siguientes no llevan `heroeId`: el actor es su propio héroe. Wrapper 
 - [x] `crearFaccion` — `nombre`, `sigilo` (campo, emblema y dos colores del catálogo; no se cambia nunca) · pestaña Facción
 - [x] `unirseAFaccion` — `faccionId` · pestaña Facción, lista buscable
 - [ ] `dejarFaccion` — sin parámetros (`{}`); el actor solo puede dejar la suya
-- [ ] `comprarCasa` — `asentamientoId`, `heroeId` · segunda vía de entrar en una Facción, abierta a quien no tenga ninguna
 - [x] `cambiarResidencia` — `destinoId`, `heroeId` (nuevo 2026-09-08, Doc 2.5) · atómico: deja la residencia actual (libera vivienda, vacía cargos locales viejos) + toma una nueva en otra plaza de tu Facción con hueco y permiso; tu campamento se muda contigo y tu guarnición se suelta (2026-09-14). Prerrequisito de consolidar una conquista · botón «Hacer de esta plaza mi base» en la barra de la plaza (solo en una plaza de tu Facción donde no resides)
 
 ### Cargos y políticas
@@ -119,9 +122,9 @@ Los cinco siguientes no llevan `heroeId`: el actor es su propio héroe. Wrapper 
 
 ### Murallas — sistema completo
 
-- [x] `comprometerRecinto` — `asentamientoId`, `cargo`, `nivel` (1 \| 2 \| 3) · pestaña Muralla
-- [x] `abandonarRecinto` — `asentamientoId`, `recintoId` · pestaña Muralla; solo el Gobernador, sin `cargo`
-- [x] `mejorarRecinto` — `asentamientoId`, `cargo`, `recintoId` · pestaña Muralla
+- [x] `comprometerRecinto` — `asentamientoId`, `cargo`, `nivel` (1 \| 2 \| 3) · pestaña Muralla (solo en `#/legacy`: falta traerla a la plaza)
+- [x] `abandonarRecinto` — `asentamientoId`, `recintoId` · pestaña Muralla (solo en `#/legacy`: falta traerla a la plaza); solo el Gobernador, sin `cargo`
+- [x] `mejorarRecinto` — `asentamientoId`, `cargo`, `recintoId` · pestaña Muralla (solo en `#/legacy`: falta traerla a la plaza)
 
 ### Diplomacia
 
@@ -163,7 +166,7 @@ Una caravana ya no nace lista: se crea un casco vacío, se le montan carros y an
 ### Militar
 
 - [x] `reclutarTropa` — `asentamientoId`, `heroeId`, `tropaId`, `origen` (`pesants` \| `artesanos`) · pestaña Reclutamiento de la plaza: solo las tropas con tecnología adoptada (`tecnologia.propias.adoptadas`) y edificio activo del nivel pedido; `origen` no se envía
-- [ ] `iniciarAsedio` — `atacanteId`, `defensorId`, `escuadronIds`
+- [ ] `iniciarAsedio` — `atacanteId`, `defensorId`, `escuadronIds` · probablemente cubierto por `atacar` (el canon habla de «Atacar» una plaza): confirmar antes de cablearlo
 
 ### Ejército en preparación (backend 2026-10-08, Doc 5.14.5)
 
@@ -201,8 +204,8 @@ columna plantada en algún sitio.
 - [x] `marcharA` — `heroeId`, `objetivo`: `{ tipo: 'asentamiento', id }` o `{ tipo: 'punto', punto: { x, y } }` · rectifica el rumbo de la columna en la que vas, sin límite de veces · clic en el mapa
 - [x] `entrarEnAsentamiento` — `asentamientoId`, `heroeId` · en tu residencia disuelve la columna (tropas a tu campamento, carro al almacén); en cualquier otra la deja aparcada intacta · botón «Entrar» del panel de Selección
 - [ ] `salirDeAsentamiento` — `asentamientoId`, `heroeId` · retoma la columna aparcada en una plaza AJENA, sin pantalla de equipamiento (de tu propia residencia se sale con `salirAlMundo`)
-- [ ] `fijarPoliticaDeAcceso` — `asentamientoId`, `heroeId`, `politica` (`abierto` \| `faccion_y_aliados` \| `solo_faccion` \| `cerrado`) · la puerta de la plaza, solo el Gobernador
-- [ ] `vetarJugador` — `asentamientoId`, `heroeId`, `vetadoId`, `vetar` (boolean)
+- [ ] `fijarPuerta` — `asentamientoId`, `heroeId`, `cerradaA` (lista de `neutrales` \| `aliados` \| `enemigos` \| `aedas`; vacía = abierta a todos) (sustituye a `fijarPoliticaDeAcceso`, Doc 1.10.5) · la puerta de la plaza, plaza por plaza: la fija el Gobernador o el Rey de su Facción, no caduca y es el exilio del Doc 2.8
+- [ ] `vetarJugador` — `asentamientoId`, `heroeId`, `vetadoId`, `vetar` (boolean) · solo el Gobernador; a un residente no se le veta (Doc 1.10.5)
 
 ### Interacción en el mapa (Doc 5.12.3)
 
@@ -226,10 +229,66 @@ Varios jugadores pueden compartir una columna. La política de quién entra la f
 
 ### Batallas de Unity (doc 02 §3.1)
 
-Solo tienen efecto si el backend declara `SERVIDORES_BATALLA` (en Render, hoy no). Sin interfaz: `Features_Pendientes.md` §1.5.
+Solo tienen efecto si el backend declara `SERVIDORES_BATALLA` (en Render, hoy no). **No aplica al cliente web** (Unity): `Features_Pendientes.md`, «No aplica».
 
-- [ ] `unirseABatalla` — `heroeId`, `battleId` · un compañero de Facción a distancia de ataque, mientras el bando no esté lleno
-- [ ] `cancelarBatalla` — `battleId` · solo quien la inició, antes de que empiece
+- [ ] `unirseABatalla` — `heroeId`, `battleId` · un compañero de Facción a distancia de ataque, mientras el bando no esté lleno · **Unity: no aplica**
+- [ ] `cancelarBatalla` — `battleId` · solo quien la inició, antes de que empiece · **Unity: no aplica**
+
+## Comandos que faltaban en este índice (contraste de 2026-10-09)
+
+### Campamentos de mercenarios y almacén personal (Doc 1.9b)
+
+- [x] `residirEnCampamento` — `heroeId`, `campamentoId` · pestaña Resumen del campamento, solo si no resides
+- [ ] `reclutarEnCampamento` — `tropaId`; opcional: `pagarCon` (`almacenPersonal` \| `carro`) · **canon (Doc 5, 2026-10-02)**: reclutar y reponer las tropas de los edificios del campamento donde RESIDES, pagando solo oro y población del campamento; el cliente solo ofrece el préstamo gratuito de leva (`pedirPrestamo`)
+- [x] `pedirPrestamo` — `tropaIds` · pestaña Tropa del campamento (leva comunal prestada)
+- [x] `reponerPrestamo` — sin `params` · pestaña Tropa
+- [x] `abrirAlijo` — `alijoId` · ficha del alijo en el mapa
+- [x] `comprarEnCampamento` — `recurso`, `cantidad`; opcional: `campamentoId` · pestaña Mercado del campamento
+- [x] `aportarARefundacion` — `recurso`, `cantidad`, `lado` (`almacen` \| `carro`) · pestaña Fondo
+- [x] `retirarDeRefundacion` — `recurso`, `cantidad`, `lado` · pestaña Fondo
+- [x] `comprarCaravanaDeRefundacion` — sin `params` · pestaña Fondo
+- [x] `entrarEnCampamento` — `campamentoId`, `heroeId` · ficha del campamento (también con un ejército entero)
+- [x] `salirDelCampamento` — `campamentoId`, `heroeId`, `escuadronIds`, `carga` · pestaña Salir
+- [x] `guardarEnAlmacenPersonal` / `sacarDelAlmacenPersonal` — `recurso`, `cantidad` · panel del Carro
+- [x] `ordenarEscuadras` — `escuadronIds` (orden de combate) · panel de la columna del mapa
+- [x] `pasarAViveres` — ver Caravanas
+
+### Residencia, capital y Facción
+
+- [ ] `dejarResidencia` — `heroeId` · libera la vivienda y vacía los cargos locales sin dejar la Facción; el héroe pasa a residir en un campamento (Doc 2.5)
+- [ ] `designarCapital` — `faccionId`, `asentamientoId`
+- [x] `solicitarIngreso` — `faccionId` · pestaña Facción (la Facción puede exigir solicitud)
+- [x] `responderSolicitud` — `faccionId`, `heroeId`, `aceptar` · pestaña Facción (quien tiene el cargo)
+- [x] `admitirOtrasFacciones` — `faccionId`, `admitir` · `ui/panelAdmision.ts`
+
+### Diplomacia (Doc 2.4)
+
+- [ ] `declararGuerra` — `faccionAId`, `faccionBId`
+- [ ] `proponerPaz` — `relacionId`, `faccionId`
+
+### Gestión local
+
+- [ ] `alternarReceta` — `asentamientoId`, `recurso`, `pausada` · pausa o reanuda una receta de transformación (Doc 4)
+- [x] `comprarMirada` — `origen` (`{ tipo: 'asentamiento' \| 'campamento', id }`), `centro` · pestaña Taberna (Doc 5.12.10)
+- [x] `comprarInformePlaza` — `origen`, `asentamientoId` · pestaña Taberna
+
+### Ejércitos en campo
+
+- [x] `organizarEjercito` — `heroeId`, `politicaDeUnion` (`aceptar` \| `preguntar`) · formación en campo
+- [x] `cancelarFormacion` — `heroeId`
+
+### Tecnología y Aedas (Doc 6)
+
+Sin ninguna interfaz. La proyección trae `tecnologia` (era, logros y `propias`: `aparecidas`, `adoptadas`, `reveladas`); hoy solo se lee `adoptadas` para filtrar el reclutamiento.
+
+- [ ] `adoptarTecnologia` — `faccionId`, `tecnologiaId`
+- [ ] `comprarTecnologiaAeda` — `asentamientoId`, `tecnologiaId`
+- [ ] `empezarEpica` — `asentamientoId`, `aedaId`, `tecnologiaId`
+- [ ] `abandonarEpica` — `asentamientoId`, `aedaId`
+
+### Presencia (no se usan como comando)
+
+`conectarse` y `desconectarse` (`heroeId`) los sustituye el WebSocket de presencia: abrirlo conecta, cerrar el último socket desconecta.
 
 ## Comandos retirados del backend
 
@@ -239,6 +298,10 @@ versiones anteriores de este documento.
 
 - `combateCampoAbierto`
 - `interceptarCaravana`
+- `atacarCampamentoBandidos` (ahora `atacar` con `objetivo: { tipo: 'campamento' }`)
+- `fundarAsentamiento` (ahora `fundar`)
+- `comprarCasa` y `fijarPoliticaDeAcceso` (descartados; la puerta es `fijarPuerta`)
+- `alternarFaccionNpc` (las Facciones NPC las crea el admin)
 
 ## Contrato HTTP común
 
