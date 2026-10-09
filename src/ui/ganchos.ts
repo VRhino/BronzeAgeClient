@@ -4,6 +4,8 @@
 import type { ProyeccionJugador } from '../apiCliente';
 import type { Asentamiento } from '../tiposDominio';
 import type { Ejecutar } from './panelCarro';
+import { SUBPESTANA_APARCADAS } from './panelAparcadas';
+import { SUBPESTANA_TRUEQUES } from './panelTrueques';
 
 type Escapar = (valor: string) => string;
 
@@ -45,6 +47,8 @@ export const SUBPESTANAS_CENTRO_EXTRA: SubpestanaPlaza[] = [
 /** Subpestañas EXTRA de Mercado, después de Órdenes · Caravanas · Escolta. */
 export const SUBPESTANAS_MERCADO_EXTRA: SubpestanaPlaza[] = [
   // --- hueco bloque D1 (trueques, caravanas aparcadas)
+  SUBPESTANA_TRUEQUES,
+  SUBPESTANA_APARCADAS,
 
 ];
 
