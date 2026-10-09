@@ -359,7 +359,8 @@ function montarCampamento(): void {
       <div class="asent-barra-acciones"><button id="btn-salir-mundo" class="btn-primary" type="button">Salir al mundo</button></div>
     </header>
     <div class="asent-cuerpo">
-      <div class="asent-mapa"><div class="asent-lienzo camp-lienzo"></div><div class="camp-leyenda-caja"></div></div>
+      <aside class="asent-izq"><div class="camp-leyenda-caja"></div></aside>
+      <div class="asent-mapa"><div class="asent-lienzo camp-lienzo"></div></div>
       <aside class="asent-lado"><div class="camp-lado"></div></aside>
     </div>
     <aside class="jugador-panel" hidden></aside>
@@ -1834,10 +1835,12 @@ function montarAsentamiento(): void {
       <p id="asent-error" class="faction-error" role="alert"></p>
     </header>
     <div class="asent-cuerpo">
+      <aside class="asent-izq">
+        <div class="asent-recursos" hidden></div>
+        <aside class="asent-panel" hidden></aside>
+      </aside>
       <div class="asent-mapa">
         <div class="asent-lienzo"><canvas id="mapa" width="900" height="900"></canvas></div>
-        <aside class="asent-panel" hidden></aside>
-        <div class="asent-recursos" hidden></div>
       </div>
       <aside class="asent-lado"><div class="asent-edificios"><div class="asent-edif-tabs"></div><div class="asent-edif-cuerpo"></div></div></aside>
     </div>
