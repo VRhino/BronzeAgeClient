@@ -5,6 +5,8 @@
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { AcuerdoTrueque, LineaTrueque } from '../tiposDominio';
 import type { ContextoPlaza, SubpestanaPlaza } from './ganchos';
+import { ayuda } from './ayuda';
+import { datosCiudad, etiquetaCiudad } from './etiquetaCiudad';
 
 const RECURSOS = Object.keys(RECURSO_NOMBRE);
 const FILAS_POR_LADO = 3;
@@ -23,10 +25,7 @@ function falta(hasta: number, instante: number): string {
   return min >= 60 ? `${Math.round(min / 60)} h` : min >= 1 ? `${Math.round(min)} min` : `${Math.round(ms / 1000)} s`;
 }
 
-function nombrePlaza(c: ContextoPlaza, id: string): string {
-  const p = c.proyeccion;
-  return p.asentamientos.find((x) => x.id === id)?.nombre ?? p.asentamientosAvistados.find((x) => x.id === id)?.nombre ?? p.asentamientosConocidos.find((x) => x.asentamientoId === id)?.nombre ?? id;
-}
+const nombrePlaza = (c: ContextoPlaza, id: string): string => datosCiudad(c.proyeccion, id).nombre;
 
 function lineas(ls: LineaTrueque[], activo: boolean, c: ContextoPlaza): string {
   return ls.map((l) => `${RECURSO_ICONO[l.recurso] ?? '📦'} ${c.escapar(RECURSO_NOMBRE[l.recurso] ?? l.recurso)} ${activo ? `${Math.floor(l.cantidadEntregada)}/` : ''}${Math.floor(l.cantidadTotal)}`).join(' · ');
@@ -45,7 +44,7 @@ function tarjeta(a: AcuerdoTrueque, c: ContextoPlaza): string {
         <button class="btn-secondary" type="button" data-trueque-rechazar="${e(a.id)}"${c.resideAqui ? '' : ' disabled title="Solo contestan los residentes de esta plaza"'}>Rechazar</button>
       </div>` : '';
   return `<div class="mapa-lista-item"><div>
-      <strong>${e(nombrePlaza(c, a.asentamientoAId))} ⇄ ${e(nombrePlaza(c, a.asentamientoBId))} · ${ESTADO[a.estado]}</strong>
+      <div class="trueque-lados">${etiquetaCiudad(c.proyeccion, a.asentamientoAId, e)} <span>⇄</span> ${etiquetaCiudad(c.proyeccion, a.asentamientoBId, e)} <strong>· ${ESTADO[a.estado]}</strong></div>
       <span>${e(nombrePlaza(c, a.asentamientoAId))} da: ${lineas(a.lineasA, mostrarProgreso, c)}</span>
       <span>${e(nombrePlaza(c, a.asentamientoBId))} da: ${lineas(a.lineasB, mostrarProgreso, c)}</span>
       ${plazo || quien ? `<span>${[quien, plazo].filter(Boolean).join(' · ')}</span>` : ''}
@@ -66,24 +65,19 @@ function html(c: ContextoPlaza): string {
   const mios = p.acuerdos.filter((x) => x.asentamientoAId === a.id || x.asentamientoBId === a.id);
   const vivos = mios.filter((x) => x.estado === 'propuesto' || x.estado === 'activo');
   const cerrados = mios.filter((x) => x.estado !== 'propuesto' && x.estado !== 'activo');
-  const destinos = [
-    ...p.asentamientos.filter((x) => x.id !== a.id).map((x) => ({ id: x.id, nombre: x.nombre ?? x.id })),
-    ...p.asentamientosAvistados.map((x) => ({ id: x.id, nombre: x.nombre ?? x.id })),
-    ...p.asentamientosConocidos.map((x) => ({ id: x.asentamientoId, nombre: x.nombre ?? x.asentamientoId })),
-  ].filter((x, i, v) => x.id !== a.id && v.findIndex((y) => y.id === x.id) === i);
-  return `<span class="faction-kicker">Trueques</span>
-    <p class="asent-lado-nota">Un trueque es un pacto entre dos plazas: cada una se compromete a entregar sus líneas, que van en caravanas. No obliga a nadie hasta que la otra plaza dice que sí; una propuesta sin contestar caduca sin castigo. Aceptado, el plazo corre desde el sí, y vencer sin cumplir resta reputación a cada lado en proporción a lo que dejó sin entregar (Doc 2.7).</p>
+  const destinos = [...p.asentamientos.map((x) => x.id), ...p.asentamientosAvistados.map((x) => x.id), ...p.asentamientosConocidos.map((x) => x.asentamientoId)]
+    .filter((id, i, v) => id !== a.id && v.indexOf(id) === i);
+  return `<span class="faction-kicker">Trueques${ayuda('mercado:trueques', 'Un trueque es un pacto entre dos plazas: cada una se compromete a entregar sus líneas, que van en caravanas. No obliga a nadie hasta que la otra plaza dice que sí; una propuesta sin contestar caduca sin castigo. Aceptado, el plazo corre desde el sí, y vencer sin cumplir resta reputación a cada lado en proporción a lo que dejó sin entregar (Doc 2.7).')}</span>
     <strong class="heroe-sub">En curso en esta plaza</strong>
     ${vivos.length === 0 ? '<p class="mapa-lista-vacia">No hay trueques propuestos ni en vigor.</p>' : `<div class="mapa-lista">${vivos.map((x) => tarjeta(x, c)).join('')}</div>`}
     ${cerrados.length === 0 ? '' : `<strong class="heroe-sub">Cerrados</strong><div class="mapa-lista">${cerrados.map((x) => tarjeta(x, c)).join('')}</div>`}
-    <strong class="heroe-sub">Proponer un trueque</strong>
+    <strong class="heroe-sub">Proponer un trueque${ayuda('mercado:trueques-proponer', `Hasta ${FILAS_POR_LADO} líneas por lado, sin repetir recurso. Deja en blanco las que no uses.`)}</strong>
     ${!c.resideAqui ? '<p class="asent-lado-nota">Solo quien reside en esta plaza propone trueques en su nombre.</p>'
       : destinos.length === 0 ? '<p class="asent-lado-nota">No conoces otra plaza con la que pactar.</p>'
-        : `<select class="form-input" data-trueque-destino>${destinos.map((x) => `<option value="${c.escapar(x.id)}">${c.escapar(x.nombre)}</option>`).join('')}</select>
+        : `<div class="trueque-destinos" role="radiogroup" data-trueque-destino>${destinos.map((id, i) => `<label class="trueque-destino"><input type="radio" name="trueque-destino" value="${c.escapar(id)}"${i === 0 ? ' checked' : ''} />${etiquetaCiudad(p, id, c.escapar)}</label>`).join('')}</div>
       <strong class="heroe-sub">${c.escapar(a.nombre ?? a.id)} entrega</strong>${filasLado('A')}
       <strong class="heroe-sub">La otra plaza entrega</strong>${filasLado('B')}
-      <button class="btn-primary" type="button" data-trueque-proponer>Proponer trueque</button>
-      <p class="asent-lado-nota">Hasta ${FILAS_POR_LADO} líneas por lado, sin repetir recurso. Deja en blanco las que no uses.</p>`}
+      <button class="btn-primary" type="button" data-trueque-proponer>Proponer trueque</button>`}
     <p class="faction-error" data-campo="error-trueques" role="alert"></p>`;
 }
 
@@ -108,7 +102,7 @@ function cablear(c: ContextoPlaza): void {
     const lineasB = leer('B');
     if ([...lineasA, ...lineasB].some((l) => !l.recurso || !(l.cantidad >= 1))) { if (error) error.textContent = 'Cada línea necesita recurso y una cantidad de 1 o más.'; return; }
     if (lineasA.length === 0 || lineasB.length === 0) { if (error) error.textContent = 'Cada lado tiene que ofrecer al menos una línea.'; return; }
-    void lanzar(proponer, 'proponerTrueque', { asentamientoAId: c.asentamiento.id, lineasA, asentamientoBId: raiz.querySelector<HTMLSelectElement>('[data-trueque-destino]')!.value, lineasB });
+    void lanzar(proponer, 'proponerTrueque', { asentamientoAId: c.asentamiento.id, lineasA, asentamientoBId: raiz.querySelector<HTMLInputElement>('input[name="trueque-destino"]:checked')!.value, lineasB });
   });
 }
 
