@@ -1,15 +1,13 @@
 // Subpestaña «Fundación» de Centro urbano (Doc 1.8): lanzar la Caravana de Fundación desde la plaza (`lanzarCaravanaFundacion`) y desarmarla (`desarmarCaravanaFundacion`).
 // La lanza un residente presente, que pasa a ser su titular; nace parada en la plaza y sin destino: se engancha a la columna y se funda con `fundar` donde se esté (riel «Fundar» del mapa).
 // Gates a la vez (los valida el servidor; aquí se enseñan con su motivo): coste completo en el almacén, nivel 2, cooldown de creación y cupo del Cap de Fundación.
-import { capDeFundacion, cooldownDeCaravanaMinutos, costoCompletoDeCaravanaDeFundacion } from '../apiCliente';
+import { capDeFundacion, cooldownDeCaravanaMinutos, costoCompletoDeCaravanaDeFundacion, radioDePuerta } from '../apiCliente';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import { textoEnTiempoReal } from './estadoCliente';
 import { ayuda } from './ayuda';
 import type { ContextoPlaza } from './ganchos';
 import { nombreDeHeroe } from './nombres';
 
-/** A qué distancia de la puerta de su origen se puede desarmar (`MOVIMIENTO.radioPuerta`). */
-const RADIO_PUERTA = 10;
 const ESTADO: Record<string, string> = {
   disponible: 'suelta',
   adjunta: 'enganchada a una columna',
@@ -55,7 +53,7 @@ export function htmlFundacionDePlaza(c: ContextoPlaza): string {
   const lista = mias.length === 0 ? '<p class="mapa-lista-vacia">Esta plaza no tiene ninguna Caravana de Fundación en pie.</p>' : `<div class="mapa-lista">${mias.map((k) => {
     const estado = k.estado ?? 'disponible';
     const suelta = estado === 'disponible' || estado === 'aparcada';
-    const enLaPuerta = Math.hypot(k.posicionActual.x - a.posicion.x, k.posicionActual.y - a.posicion.y) <= RADIO_PUERTA;
+    const enLaPuerta = Math.hypot(k.posicionActual.x - a.posicion.x, k.posicionActual.y - a.posicion.y) <= radioDePuerta();
     const titular = k.titularId === p.heroeId;
     const desarmar = titular && estado === 'disponible' && enLaPuerta;
     const nota = !titular ? `la lleva ${e(k.titularId ? nombreDeHeroe(p, k.titularId) : '—')}: solo su titular la desarma`

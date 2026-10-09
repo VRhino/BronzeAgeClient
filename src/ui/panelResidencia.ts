@@ -1,12 +1,10 @@
 // Subpestaña «Residencia» de Centro urbano: dejar tu casa sin dejar la Facción (`dejarResidencia`, Doc 2.5) y, si eres el Rey, designar esta plaza capital (`designarCapital`, Doc 2.2).
 // Mudar tu base a esta plaza ya está en Resumen («Hacer de esta plaza mi base»): aquí no se duplica.
-import { diasDeEnfriamientoDeResidencia } from '../apiCliente';
+import { diasDeEnfriamientoDeCapital, diasDeEnfriamientoDeResidencia } from '../apiCliente';
 import { ayuda } from './ayuda';
 import type { ContextoPlaza, SubpestanaPlaza } from './ganchos';
 
 const DIA_MS = 86_400_000;
-// Copiado a mano de `CAPITAL.cooldownDias` (backend, placeholder): el servidor sigue siendo quien rechaza.
-const COOLDOWN_CAPITAL_DIAS = 14;
 const CARGO_NOMBRE: Record<string, string> = { gobernadorId: 'Gobernador', maestroObrasId: 'Maestro de Obras', tesoreroId: 'Tesorero', generalId: 'General', sacerdoteId: 'Sacerdote' };
 
 /** El enfriamiento de residencia sale del balance (`CIUDADANIA.cooldownCambioResidenciaDias`); mientras no llegue, el aviso es genérico. */
@@ -29,12 +27,12 @@ function seccionCapital(c: ContextoPlaza): string {
   const estado = esCapital ? '<p class="asent-lado-nota">Esta plaza es la capital designada de la Facción.</p>' : '';
   if (!faccion || faccion.reyId !== p.heroeId) return `${estado}<p class="asent-lado-nota">La capital la designa el Rey de la Facción, entre las plazas con un Palacio activo.</p>`;
 
-  const libreEn = faccion.capitalDesignadaEn !== undefined ? faccion.capitalDesignadaEn + COOLDOWN_CAPITAL_DIAS * DIA_MS : 0;
+  const libreEn = faccion.capitalDesignadaEn !== undefined ? faccion.capitalDesignadaEn + diasDeEnfriamientoDeCapital() * DIA_MS : 0;
   let bloqueo = '';
   if (esCapital) bloqueo = 'Ya es la capital.';
   else if (!a.edificios.some((e) => e.tipo === 'palacio' && e.estado === 'activo')) bloqueo = 'Necesita un Palacio activo.';
   else if (p.instante < libreEn) bloqueo = `La capital se trasladó hace poco: faltan unos ${Math.ceil((libreEn - p.instante) / DIA_MS)} días de mundo.`;
-  return `${estado}<p class="asent-lado-nota">Como Rey puedes hacer de esta plaza la capital. ${ayuda('plaza:capital', `Es donde se adopta tecnología y el centro del mantenimiento por distancia. No cuesta recursos, pero trasladarla tiene un enfriamiento de ${COOLDOWN_CAPITAL_DIAS} días de mundo.`)}</p>
+  return `${estado}<p class="asent-lado-nota">Como Rey puedes hacer de esta plaza la capital. ${ayuda('plaza:capital', `Es donde se adopta tecnología y el centro del mantenimiento por distancia. No cuesta recursos, pero trasladarla tiene un enfriamiento de ${diasDeEnfriamientoDeCapital()} días de mundo.`)}</p>
     <button class="btn-primary" type="button" data-designar-capital${bloqueo ? ' disabled' : ''}>Designar esta plaza capital</button>
     ${bloqueo ? `<small class="asent-lado-nota">${bloqueo}</small>` : ''}`;
 }

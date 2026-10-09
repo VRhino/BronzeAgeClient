@@ -9,7 +9,7 @@
 // Lo que da `inspeccionar` (composición de la columna, o carga de la caravana) llega en los `datos` de la respuesta, no en la proyección: se guarda
 // aquí, con su instante, mientras la ficha siga abierta.
 import type { ProyeccionJugador } from '../apiCliente';
-import { radioDeEncuentro, tropasReclutables } from '../apiCliente';
+import { radioDeEncuentro, radioDeInspeccion, tropasReclutables } from '../apiCliente';
 import { RADIO_PROTECCION_MERCENARIOS } from '../render';
 import { RECURSO_NOMBRE } from '../paletas';
 import type { CaravanaAvistada, EjercitoAvistado } from '../tiposDominio';
@@ -22,9 +22,6 @@ import { minutosHerido } from './panelHeroe';
 
 type Escapar = (valor: string) => string;
 type Punto = { x: number; y: number };
-
-/** A cuánto se inspecciona (`MOVIMIENTO.radioInspeccion` del backend, que no lo publica en el balance). El que decide es el backend. */
-const RADIO_INSPECCION = 40;
 
 const distancia = (a: Punto, b: Punto): number => Math.hypot(a.x - b.x, a.y - b.y);
 const clase = (tipo?: 'personal' | 'ejercito'): 'personal' | 'ejercito' => tipo ?? 'personal';
@@ -84,7 +81,7 @@ function estados(p: ProyeccionJugador, o: Objetivo): Estado[] {
   const esCaravana = o.tipo === 'caravana';
 
   const inspeccionar = !mi ? 'Sal al mundo con tu columna para mirar de cerca.'
-    : d! > RADIO_INSPECCION ? `Acércate: estás a ${Math.round(d!)} y se inspecciona a ${RADIO_INSPECCION}. El observado recibe un aviso.` : '';
+    : d! > radioDeInspeccion() ? `Acércate: estás a ${Math.round(d!)} y se inspecciona a ${radioDeInspeccion()}. El observado recibe un aviso.` : '';
 
   // Lo común a perseguir y atacar.
   const hostil = !mi ? 'Sal al mundo con tu columna.'
