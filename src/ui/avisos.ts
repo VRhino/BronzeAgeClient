@@ -11,6 +11,7 @@ import { esPeticionNueva, MINIMO_FORMACION } from './ejercitos';
 import { estadoCliente, textoEnTiempoReal } from './estadoCliente';
 import { nombreDeHeroe } from './nombres';
 import { informeDeEvento, type InformeDeCombate } from './informeCombate';
+import { plazo } from './panelDiplomacia';
 
 /** Los eventos de «alguien te ha mirado»: el backend los emite sin decir quién. */
 const CODIGOS_DE_AVISO = new Set(['asentamiento.observado', 'columna.observada', 'caravana.observada', 'asentamiento.informe_pedido']);
@@ -110,6 +111,28 @@ function avisarDeDesercion(eventos: readonly EventoDominio[], heroeId: string, m
   if (modo === 'vivo') mostrar(texto, true);
 }
 
+// --- bloque J1: alianza y vasallaje con aceptación (backend 2026-10-09). Los eventos llegan a todos: solo se avisa a las Facciones implicadas.
+function avisoDeRelacion(e: EventoDominio): { texto: string; pideDecision: boolean } | null {
+  const p = e.payload as { tipo?: string; faccionAId?: string; faccionBId?: string; expiraEn?: number } | undefined;
+  const proy = estadoCliente.proyeccionUltima;
+  if (!proy?.faccionId || !p?.faccionAId || !p.faccionBId || !e.codigo.startsWith('diplomacia.relacion_')) return null;
+  const nombre = (id: string) => proy.facciones.find((f) => f.id === id)?.nombre ?? id;
+  const que = p.tipo === 'alianza' ? 'la alianza' : 'el vasallaje';
+  const soyA = p.faccionAId === proy.faccionId;
+  const soyB = p.faccionBId === proy.faccionId;
+  switch (e.codigo) {
+    case 'diplomacia.relacion_propuesta':
+      return soyB ? { texto: `${nombre(p.faccionAId)} te propone ${p.tipo === 'alianza' ? 'una alianza' : 'un vasallaje'}: decide en la pestaña Facción (solo tu Rey responde)${p.expiraEn ? `, ${plazo(p.expiraEn, proy.instante)}` : ''}.`, pideDecision: true } : null;
+    case 'diplomacia.relacion_aceptada':
+      return soyA || soyB ? { texto: `${nombre(p.faccionBId)} acepta ${que} de ${nombre(p.faccionAId)}.`, pideDecision: false } : null;
+    case 'diplomacia.relacion_rechazada':
+      return soyA ? { texto: `${nombre(p.faccionBId)} rechaza ${que} que le proponías.`, pideDecision: false } : null;
+    case 'diplomacia.relacion_retirada':
+      return soyB ? { texto: `${nombre(p.faccionAId)} retira ${que} que te proponía.`, pideDecision: false } : null;
+    default: return null;
+  }
+}
+
 /** Anota un evento del backend en el historial (y avisa si es nuevo). `silencioso`: lo ocurrido mientras no mirabas, sin toast ni briefing. */
 function procesar(e: EventoDominio, heroeId: string, modo: 'vivo' | 'recuperado' | 'historico'): void {
   const silencioso = modo !== 'vivo';
@@ -182,6 +205,13 @@ function procesar(e: EventoDominio, heroeId: string, modo: 'vivo' | 'recuperado'
     historial.unshift({ version: e.version, momento: e.momento, texto, clase: 'baja' });
     if (modo !== 'historico') noLeidos++;
     if (!silencioso) mostrar(texto, true);
+    return;
+  }
+  const relacion = avisoDeRelacion(e);
+  if (relacion) {
+    historial.unshift({ version: e.version, momento: e.momento, texto: relacion.texto, clase: 'mirada' });
+    if (modo !== 'historico') noLeidos++;
+    if (!silencioso) mostrar(relacion.texto, relacion.pideDecision);
     return;
   }
   const informe = informeDeEvento(e, heroeId);

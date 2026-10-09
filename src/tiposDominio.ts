@@ -683,6 +683,22 @@ export interface PropuestaAnexion {
   expiraEn: number;
 }
 
+// --- Alianza y vasallaje con aceptación (backend 2026-10-09, Doc 2.3 y 2.4) ---
+
+/** Una propuesta de alianza o vasallaje vigente que hace o recibe tu Facción: la relación nace si la acepta el Rey de B. En vasallaje A es la señora. Caduca en `expiraEn`. */
+export interface PropuestaRelacion {
+  id: string;
+  tipo: 'alianza' | 'vasallaje';
+  faccionAId: string;
+  faccionBId: string;
+  /** Solo en vasallaje: lo que pagaría B a A. */
+  tributo?: { recurso: string; cantidadPorMinuto: number };
+  /** El Rey o Embajador de A que la hizo. */
+  propuestaPor: string;
+  creadaEn: number;
+  expiraEn: number;
+}
+
 // --- Fusión con aceptación (backend 2026-10-06, Doc 2.6) ---
 
 /** Una propuesta de fusión vigente que hace o recibe tu Facción: al aceptarla el Rey de B, las dos desaparecen y nace una nueva. Caduca en `expiraEn`. */
