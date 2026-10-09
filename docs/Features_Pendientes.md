@@ -56,13 +56,13 @@ Cada punto dice el comando (ver `COMANDOS.md`) y de dónde sale en el canon.
 16. **Trueques** (Doc 3.2): `proponerTrueque`, `aceptarTrueque` y `rechazarTrueque`.
 17. **Caravanas aparcadas** (Doc 3.13.7): `moverCargaCaravanaAparcada` y `enviarCaravanaAlOrigen`.
 18. **Caravanas adjuntas a un ejército** (Doc 5.13): `adjuntarCaravana`, `soltarCaravana`, `cargarCaravana` y `entregarDeCaravana`.
-19. **Caravana de Fundación de plaza:** `lanzarCaravanaFundacion` y `desarmarCaravanaFundacion`. Confirmar si siguen en el canon: la de un campamento ya se compra.
+19. **Caravana de Fundación desde la plaza** (Doc 1.8, vigente): `lanzarCaravanaFundacion` y `desarmarCaravanaFundacion`. Hoy desde una plaza **no hay forma de crearla** (la de un campamento sí, en el Fondo). Lanzarla: un residente presente, que pasa a ser el titular; la plaza paga el coste completo de su almacén, nivel 2 mínimo, cooldown de 10 min compartido con las comerciales y cupo del Cap de Fundación. Va en Centro urbano (el canon la separa del Mercado, Doc 3.12). Desarmarla: solo el titular, con la caravana suelta y en la puerta de su origen. El texto del riel Fundar («se compra en un campamento») hay que matizarlo para una Facción que ya tiene plaza.
 
 ### 2.4 Facción, diplomacia y tecnología
 20. **Cargos de Facción:** `asignarRey`, `asignarEmbajador` y `dejarFaccion`.
 21. **Relaciones** (Doc 2.4): `proponerRelacion` (vasallaje o alianza, con tributo), `declararGuerra`, `proponerPaz`, `romperRelacion` y `rebelionVasallo`.
 22. **Tecnología y Aedas** (Doc 6): `adoptarTecnologia`, `comprarTecnologiaAeda`, `empezarEpica` y `abandonarEpica`. No hay ninguna interfaz; la proyección ya trae `tecnologia` (era, logros y `propias.aparecidas/adoptadas/reveladas`).
-23. **Dudoso:** `iniciarAsedio`. El canon habla de «Atacar» una plaza y el cliente ya usa `atacar`; probablemente no hace falta.
+23. ~~`iniciarAsedio`~~ **No aplica:** el canon solo reconoce asediar con **Atacar** desde un ejército (Doc 5.12.4); `iniciarAsedio` es una vía directa entre plazas vecinas que el backend conserva sin movilizar, y el cliente ya usa `atacar`.
 
 ## 3. Pendiente — backend
 

@@ -92,8 +92,8 @@ Los cinco siguientes no llevan `heroeId`: el actor es su propio héroe. Wrapper 
 ### Fundación y expansión
 
 - [x] `fundar` — sin `params` (`{}`; antes `fundarAsentamiento`): se funda DONDE SE ESTÁ, con la Caravana de Fundación enganchada a tu columna; los ciudadanos de la columna son cofundadores, hasta 5 (Doc 1.3) · riel del mapa › Fundar
-- [ ] `lanzarCaravanaFundacion` — `origenAsentamientoId`, `destino`, `numJugadores` · confirmar con el canon: la de un campamento se compra (`comprarCaravanaDeRefundacion`)
-- [ ] `desarmarCaravanaFundacion` — `caravanaId`
+- [ ] `lanzarCaravanaFundacion` — `origenAsentamientoId` (sin destino ni `numJugadores`: la caravana nace parada en su origen y se funda con `fundar` donde se esté) · **canon vigente (Doc 1.8)**: la lanza un residente presente, que pasa a ser su titular. Gates a la vez: la plaza **paga el coste completo** de su almacén, **nivel 2** como mínimo, cooldown de creación compartido con las comerciales (`CARAVANA_COOLDOWN`, 10 min) y cupo del Cap de Fundación. **Sin interfaz: desde la plaza no hay forma de crearla** (la de un campamento sí, en el Fondo)
+- [ ] `desarmarCaravanaFundacion` — `caravanaId` · solo su titular, con la caravana **suelta y en la puerta de su origen**; devuelve todo lo que costó (la de una plaza, a su almacén; la de un campamento, a cada aportante). Suelta y sin nadie caduca a las 48 h
 
 ### Facción y ciudadanía
 
@@ -166,7 +166,7 @@ Una caravana ya no nace lista: se crea un casco vacío, se le montan carros y an
 ### Militar
 
 - [x] `reclutarTropa` — `asentamientoId`, `heroeId`, `tropaId`, `origen` (`pesants` \| `artesanos`) · pestaña Reclutamiento de la plaza: solo las tropas con tecnología adoptada (`tecnologia.propias.adoptadas`) y edificio activo del nivel pedido; `origen` no se envía
-- [ ] `iniciarAsedio` — `atacanteId`, `defensorId`, `escuadronIds` · probablemente cubierto por `atacar` (el canon habla de «Atacar» una plaza): confirmar antes de cablearlo
+- [ ] `iniciarAsedio` — `atacanteId`, `defensorId`, `escuadronIds` · **no aplica**: vía directa entre dos asentamientos vecinos que el backend conserva sin movilizar (`ejercitos.ts`), pero el canon (Doc 5.12.3-5.12.4) solo reconoce asediar con **Atacar** desde un ejército a distancia de choque, que es lo que usa el cliente (`atacar`)
 
 ### Ejército en preparación (backend 2026-10-08, Doc 5.14.5)
 
