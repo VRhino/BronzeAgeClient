@@ -792,7 +792,7 @@ export interface Convocatoria {
 
 // --- Tecnología y Aedas (backend Doc 6) ---
 
-/** Ids de Era y de tecnología tal como viajan: el catálogo (`TECNOLOGIAS`) NO está en el balance público, así que no hay nombres ni Eras por tecnología. */
+/** Ids de Era y de tecnología tal como viajan; sus nombres, Eras y tarifas están en el balance (`catalogoDeTecnologia` de `apiCliente.ts`). */
 export type EraId = string;
 export type TecnologiaId = string;
 
@@ -813,7 +813,13 @@ export interface TecnologiaJugador {
   /** `null` sin Facción. */
   propias: { aparecidas: TecnologiaId[]; adoptadas: TecnologiaId[]; reveladas?: TecnologiaId[] } | null;
   /** Lo que un Aeda le ha revelado y aún no le ha aparecido: quién la desbloqueó y el hito completo (sin progreso). */
-  reveladas: { tecnologiaId: TecnologiaId; descubridorFaccionId: string; hito: CondicionHito[] }[];
+  reveladas: { tecnologiaId: TecnologiaId; descubridorFaccionId: string; hito: CondicionHito[]; cumplidas: boolean[] }[];
+  /** La Era de cada tecnología tuya (aparecida, adoptada o revelada). */
+  eraDe?: Partial<Record<TecnologiaId, EraId>>;
+  /** La plaza capital de tu Facción (donde el Rey adopta), o `null`. */
+  capitalId?: string | null;
+  /** Tecnologías cuya épica puede empezar ahora un Aeda residente tuyo. */
+  epicasPosibles?: TecnologiaId[];
 }
 
 /** Un Aeda residente de una plaza propia, con su épica en curso si la hay (Doc 6.7). */

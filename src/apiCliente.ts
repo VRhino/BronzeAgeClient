@@ -403,7 +403,18 @@ interface BalancePublico {
   cuposYNiveles?: { POLITICAS?: ReglasDePoliticas; CAP_FUNDACION_POR_NIVEL?: number[]; CIUDADANIA?: { cooldownCambioResidenciaDias?: number } };
   caravanas?: { CARAVANA_COOLDOWN?: { cooldownMinutos?: number } };
   mundoYMilitar?: { LOGISTICA?: { capacidadViveresPorHeroe?: number; radioEncuentro?: number; radioReabastecimiento?: number }; FUNDACION?: { materialesIniciales?: Record<string, number>; viviendasIniciales?: number; costoMaderaExtraCaravana?: number }; MERCENARIOS?: { refundacion?: { porcentajeCoste?: number }; nivelEdificios?: number } };
+  tecnologia?: CatalogoTecnologia;
   internas?: { CAMPAMENTOS_BANDIDOS?: { niveles?: Record<string, NivelDeBandidos> } };
+}
+import type { CondicionHito } from './tiposDominio';
+/** El grupo `tecnologia` del balance (Doc 6): catálogo de tecnologías, Eras, tarifas de adopción, Aedas y épicas. */
+export interface CatalogoTecnologia {
+  TECNOLOGIAS: Record<string, { nombre: string; era: string; deArranque?: boolean; logro?: { contador: string; umbral: number }; hito: CondicionHito[]; bonusProduccion?: { recurso: string; factor: number } }>;
+  ERAS: Record<string, { orden: number; nombre: string; plazoSemanas: number }>;
+  TARIFA_ADOPCION: Record<string, Record<string, number>>;
+  AEDAS: { epica: { enfriamientoMinutos: number }; venta: { factorOro: number; ordenEraMaximo: number } };
+  EPICAS: Record<string, { nombre: string; capitulos: { hecho: string; cantidad: number; edificio?: string }[] }>;
+  TITULO_CAPITULO: Record<string, string>;
 }
 let balancePublico: BalancePublico | null = null;
 let balancePedido = false;
@@ -522,6 +533,11 @@ export function catalogoDePoliticas(alCargar?: () => void): { catalogo: Politica
   const catalogo = b?.catalogos?.POLITICA_CATALOGO;
   const reglas = b?.cuposYNiveles?.POLITICAS;
   return catalogo && reglas ? { catalogo, reglas } : null;
+}
+
+/** El catálogo de tecnología y Aedas del balance; `null` mientras no llegue (o en un servidor que aún no lo publica). */
+export function catalogoDeTecnologia(alCargar?: () => void): CatalogoTecnologia | null {
+  return balance(alCargar)?.tecnologia ?? null;
 }
 
 /** El mapa como asset (Fase C11a): se pide una sola vez por `mapaId` y se cachea */
