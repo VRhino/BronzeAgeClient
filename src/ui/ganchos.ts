@@ -10,6 +10,8 @@ import { SUBPESTANA_RESIDENCIA } from './panelResidencia';
 import { cablearFundacionDePlaza, htmlFundacionDePlaza } from './panelFundacionDePlaza';
 import { cablearTesoreria, htmlTesoreria } from './panelTesoreria';
 import { SUBPESTANA_INFORMACION, SUBPESTANA_RECETAS } from './vistaCiudad';
+import { SUBPESTANA_APARCADAS } from './panelAparcadas';
+import { SUBPESTANA_TRUEQUES } from './panelTrueques';
 
 type Escapar = (valor: string) => string;
 
@@ -58,6 +60,8 @@ export const SUBPESTANAS_CENTRO_EXTRA: SubpestanaPlaza[] = [
 /** Subpestañas EXTRA de Mercado, después de Órdenes · Caravanas · Escolta. */
 export const SUBPESTANAS_MERCADO_EXTRA: SubpestanaPlaza[] = [
   // --- hueco bloque D1 (trueques, caravanas aparcadas)
+  SUBPESTANA_TRUEQUES,
+  SUBPESTANA_APARCADAS,
 
 ];
 

@@ -229,6 +229,8 @@ export interface Caravana {
   preparaHasta?: number;
   /** Instante de mundo en que caduca la Caravana de Fundación si nadie la lleva (suelta, 48 h): devuelve su coste. */
   caducaEn?: number;
+  /** Lo que lleva en el carro (recurso -> cantidad). */
+  contenido?: Record<string, number>;
 }
 
 /** Copia local de `Ejercito` (motor, Doc 5.12) — los de TU Facción, que la proyección manda completos.
@@ -404,23 +406,26 @@ export interface OrdenMercado {
   estado: 'activa' | 'cumplida' | 'expirada';
 }
 
+/** Una línea de un trueque (motor, `LineaTrueque`): un recurso, lo pactado y lo ya entregado por caravana. */
+export interface LineaTrueque {
+  recurso: string;
+  cantidadTotal: number;
+  cantidadEntregada: number;
+}
+
 /**
  * Copia local de `AcuerdoTrueque` (motor, Doc 3.2): un contrato marco entre DOS ASENTAMIENTOS —no entre
- * jugadores—, cada lado comprometido a entregar su propio recurso. Desde 2026-09-07 nace `'propuesto'` y no
- * obliga a nadie hasta que el lado receptor (B) contesta con `aceptarTrueque`/`rechazarTrueque`; antes de esa
- * fecha nacía `'activo'` directamente. Sin interfaz que lo lea todavía.
+ * jugadores—, cada lado comprometido a entregar sus líneas (trueque compuesto, 2026-10-02). Nace `'propuesto'` y no
+ * obliga a nadie hasta que el lado receptor (B) contesta con `aceptarTrueque`/`rechazarTrueque`.
  */
 export interface AcuerdoTrueque {
   id: string;
   asentamientoAId: string;
   asentamientoBId: string;
-  recursoA: string;
-  recursoB: string;
-  cantidadTotalA: number;
-  cantidadTotalB: number;
-  cantidadEntregadaA: number;
-  cantidadEntregadaB: number;
+  lineasA: LineaTrueque[];
+  lineasB: LineaTrueque[];
   creadoEn: number;
+  /** Propuesto: plazo para contestar; activo: plazo para cumplir (se recuenta desde el sí). */
   expiraEn: number;
   estado: 'propuesto' | 'activo' | 'rechazado' | 'cumplido' | 'expirado';
 }
