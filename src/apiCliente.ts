@@ -1,7 +1,7 @@
 // Wrapper `fetch` sobre la superficie `/jugador/*` y `/sesiones` del backend (Fase C3) — sin lógica de negocio, solo I/O.
 import type { MapaGenerado } from './terreno';
 
-import type { AcuerdoTrueque, AedaAvistado, AedaResidenteProyectado, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, CaravanaAvistada, Convocatoria, Ejercito, EjercitoAvistado, EscenaCampamento, EvaluacionAscenso, EventoDominio, Faccion, HeroeProyectado, HeroePublico, InformePlaza, MiradaIntel, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, PropuestaAnexion, PropuestaFusion, RelacionPolitica, TarifasIntel, TecnologiaJugador, Titulo, TrazadoAsentamiento, ZonaFaccion } from './tiposDominio';
+import type { AcuerdoTrueque, AedaAvistado, AedaResidenteProyectado, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, CaravanaAvistada, Convocatoria, Ejercito, EjercitoAvistado, EscenaCampamento, EvaluacionAscenso, EventoDominio, Faccion, HeroeProyectado, HeroePublico, InformeDeInspeccion, InformePlaza, MiradaIntel, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, PropuestaAnexion, PropuestaFusion, RelacionPolitica, TarifasIntel, TecnologiaJugador, Titulo, TrazadoAsentamiento, ZonaFaccion } from './tiposDominio';
 
 export class ApiError extends Error {
   constructor(
@@ -57,6 +57,8 @@ export interface ProyeccionJugador {
   ejercitosAvistados: EjercitoAvistado[];
   /** Las caravanas ajenas que se ven AHORA, redactadas (backend Doc 5.12.3): qué llevan, no cuánto. Ausente en un backend anterior. */
   caravanasAvistadas?: CaravanaAvistada[];
+  /** Lo último que inspeccionaste (sobrevive a recargar); se filtra por `expiraEn`. Ausente en un backend anterior. */
+  informesDeInspeccion?: InformeDeInspeccion[];
   /** Tu héroe, completo (backend 2026-09-14). El backend lo tipa `| null`, pero la ruta HTTP responde
    * `PartidaSinHeroe` antes de proyectar a una membresía sin héroe: aquí siempre llega. */
   heroe: HeroeProyectado;
@@ -222,6 +224,8 @@ export function guardarSesionLocal(sesionId: string, usuario: string, gameId: st
 /** Una partida abierta del servidor y, si el usuario es miembro, su héroe en ella (`GET /v1/jugador/partidas`, backend 02bd153). */
 export interface PartidaListada {
   gameId: string;
+  /** Si el administrador se lo puso; si no, se usa el `gameId`. */
+  nombre?: string;
   estado: string;
   membresia: { jugadorId: string } | null;
   heroe: { id: string; nombre: string; nivel: number; faccion: { id: string; nombre: string; emblemaId: string; colorEmblemaId: string } | null } | null;

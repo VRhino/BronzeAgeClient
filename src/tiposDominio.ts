@@ -294,7 +294,8 @@ export interface EjercitoAvistado {
 }
 
 /**
- * Una caravana AJENA que se ve AHORA, redactada (Doc 5.12.3): QUÉ lleva, nunca cuánto. `escoltada` = va adjunta a un ejército (entonces se ataca al ejército).
+ * Una caravana AJENA que se ve AHORA, redactada (Doc 5.12.3): QUÉ lleva, nunca cuánto. `escoltada` = va adjunta a un ejército O lleva escuadras cedidas sin héroe
+ * (backend 2026-10-09); de ahí no se saca cuál de las dos (adjunta = viaja pegada a un ejército avistado).
  */
 export interface CaravanaAvistada {
   id: string;
@@ -326,6 +327,24 @@ export interface AsentamientoAvistado {
   zona: Point[];
   /** Sus edificios ACTIVOS (el servidor filtra los demás): con ellos se sabe, p. ej., si tiene Mercado. */
   edificios?: Edificio[];
+  /** Solo de una plaza PROPIA con una columna tuya a su puerta (`radioPuerta`): su almacén. Ausente en el resto. */
+  almacen?: Record<string, { cantidad: number; capacidad: number }>;
+}
+
+/** Lo que dio `inspeccionar` (backend 2026-10-09): composición de una columna, carga de una caravana o defensa de una plaza. */
+export type ContenidoInforme =
+  | { ejercitoId: string; faccionId: string; heroesIds: string[]; escuadrones: { tropaId: string; cantidad: number; heroeId: string }[] }
+  | { caravanaId: string; escoltada: boolean; recursos: string[] }
+  | { asentamientoId: string; faccionId: string; heroesIds: string[]; guarnicion: { tropaId: string; cantidad: number; heroeId: string }[] };
+
+/** Lo último que inspeccionó un héroe tuyo, vigente hasta `expiraEn` (10 min de mundo). Uno por objetivo. */
+export interface InformeDeInspeccion {
+  heroeId: string;
+  objetivo: { tipo: 'ejercito' | 'caravana' | 'asentamiento'; id: string };
+  vistoEn: number;
+  expiraEn: number;
+  donde: Point;
+  contenido: ContenidoInforme;
 }
 
 /**

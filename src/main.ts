@@ -5,6 +5,7 @@ import {
   consultarProyeccion,
   ejecutarComando,
   guardarSesionLocal,
+  listarPartidas,
   recordarPartida,
   abrirPresencia,
   alEventoTiempoReal,
@@ -43,6 +44,7 @@ import { cablearFichaBatalla, cablearFichaFormacion, formacionesVisibles, htmlFi
 import { cablearPanelEjercito, ejercitosDeLaFaccion, htmlFichaEjercito, htmlPanelEjercito, peticionesNuevas } from './ui/ejercitos';
 import { invalidar, olvidarEdicion, pintar, vaciar } from './ui/repintado';
 import { aplicarAyudas, ayuda } from './ui/ayuda';
+import { htmlInformeDeInspeccion, RADIO_INSPECCION } from './ui/interaccionAjena';
 import { cablearVistaCiudad, edificioSeleccionado, htmlTooltipEdificio, repintarFicha, tipoSeleccionado } from './ui/vistaCiudad';
 import { FICHAS_MAPA_EXTRA, SELECTORES_MAPA_EXTRA, SUBPESTANAS_CENTRO_EXTRA, SUBPESTANAS_MERCADO_EXTRA, type ContextoPlaza } from './ui/ganchos';
 import { montarPartidas } from './ui/pantallaPartidas';
@@ -612,6 +614,8 @@ function renderSeleccionMapaCuerpo(): void {
   // Lo largo (cómo entra un ejército, qué es atacar) va tras ⓘ; el motivo de una línea de un botón apagado se queda a la vista.
   const motivoEntrada = !entraEjercito ? '' : !propio ? 'Un ejército solo entra entero en una plaza de su Facción.' : soyLider ? '' : 'Solo el Líder hace entrar al ejército.';
   const motivoAtaque = ataque ? ataque.impide : '';
+  const motivoInspeccion = ataque?.distancia == null ? 'Sal al mundo con tu columna para mirar de cerca.'
+    : ataque.distancia > RADIO_INSPECCION ? `Acércate: estás a ${ataque.distancia} y se inspecciona a ${RADIO_INSPECCION}. Su Facción recibe un aviso.` : '';
   const ayudaPlaza = [
     entraEjercito && propio && soyLider ? 'Tu ejército entra entero y se desarma: los que residen aquí entran como siempre; los demás, de visita. Si lleva caravanas adjuntas, tienen que ser de esta plaza.' : '',
     ataque && !motivoAtaque ? 'Atacar es asediarla: si cae pasa a tu Facción; si aguanta, quedas herido.' : '',
@@ -631,13 +635,21 @@ function renderSeleccionMapaCuerpo(): void {
       <button id="btn-marchar-alli" class="btn-secondary" type="button">Marchar aquí</button>
       <button id="btn-entrar-asent" class="btn-primary" type="button"${entraEjercito && (!propio || !soyLider) ? ` disabled title="${escaparHtml(motivoEntrada)}"` : ''}>${entraEjercito ? 'Entrar con el ejército' : 'Entrar'}</button>
       ${ataque ? `<button id="btn-atacar-asent" class="btn-primary" type="button"${ataque.impide ? ` disabled title="${escaparHtml(ataque.impide)}"` : ''}>Atacar</button>` : ''}
+      ${ataque && asentamiento.recordado === null ? `<button id="btn-inspeccionar-asent" class="btn-secondary" type="button"${motivoInspeccion ? ` disabled title="${escaparHtml(motivoInspeccion)}"` : ''}>Inspeccionar</button>` : ''}
     </div>
+    ${!propio ? htmlInformeDeInspeccion(proyeccion, 'asentamiento', asentamiento.id, escaparHtml) : ''}
     ${motivoEntrada ? `<p class="mapa-lista-vacia">${motivoEntrada}</p>` : ''}
     ${motivoAtaque && motivoAtaque.length <= 70 ? `<p class="mapa-lista-vacia">${escaparHtml(motivoAtaque)}</p>` : ''}
     ${htmlMercadoDePlaza(proyeccion, asentamiento.id, escaparHtml)}
     <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`, undefined, claveSeleccion())) return;
   cablearMercadoDePlaza(cont, asentamiento.id, { ejecutarConDatos: ejecutarConDatosYRefrescar, aviso: avisoMapa }, proyeccion.heroeId);
   cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
+  cont.querySelector<HTMLButtonElement>('#btn-inspeccionar-asent')?.addEventListener('click', async (evento) => {
+    const boton = evento.currentTarget as HTMLButtonElement;
+    boton.disabled = true;
+    const { error } = await ejecutarConDatosYRefrescar('inspeccionar', { heroeId: proyeccion.heroeId, objetivo: { tipo: 'asentamiento', id: asentamiento.id } });
+    if (error) { boton.disabled = false; fijarErrorSeleccion(cont, error); } else avisoMapa('Miras de cerca: su Facción recibe un aviso.');
+  });
   cont.querySelector('#btn-marchar-alli')?.addEventListener('click', () => void marcharAObjetivo({ tipo: 'asentamiento', id: asentamiento.id }));
   cont.querySelector<HTMLButtonElement>('#btn-atacar-asent')?.addEventListener('click', (evento) => void atacarPlaza(cont, evento.currentTarget as HTMLButtonElement, asentamiento.id));
   cont.querySelector('#btn-entrar-asent')?.addEventListener('click', async () => {
@@ -2012,6 +2024,7 @@ function montarPantallaPartidas(): void {
       }
       recordarPartida(partida.gameId);
       estadoCliente.gameIdActivo = partida.gameId;
+      estadoCliente.nombrePartidaActiva = partida.nombre ?? '';
       estadoCliente.proyeccionUltima = null;
       estadoCliente.sinHeroe = false;
       await refrescarDatosJuego();
@@ -2034,7 +2047,7 @@ function volverALasPartidas(): void {
 /** La interfaz ANTERIOR, intacta, servida solo desde `#/legacy` (Doc `twinkly-greeting-peacock.md`). El
  * revamp de pantallas vive fuera de aquí. */
 function montarLegacy(): void {
-  app.innerHTML = `<div class="game-container"><header class="top-bar"><div class="brand-section"><span class="brand-title">Bronze Age Collapse</span><span class="brand-badge">Cliente Jugador</span></div><div class="user-section"><div class="user-info"><div class="user-avatar">${escaparHtml(estadoCliente.usuarioActivo.substring(0, 2).toUpperCase())}</div><div class="details-group"><button id="btn-toggle-proyeccion" class="user-name" type="button" aria-expanded="false" aria-controls="panel-proyeccion">${escaparHtml(estadoCliente.usuarioActivo)}</button><span class="game-id">Partida: <strong>${escaparHtml(estadoCliente.gameIdActivo)}</strong></span></div></div><button id="btn-toggle-vista" class="btn-secondary">🏙️ Ver Ciudad</button><button id="btn-refrescar" class="btn-secondary">🔄 Refrescar</button><button id="btn-logout" class="btn-secondary">Cerrar Sesión</button></div></header><div class="main-content"><div id="panel-interaccion" class="card-panel interaction-panel"><div class="interaction-loading">Cargando opciones de interacción...</div></div><div id="panel-proyeccion" class="card-panel projection-panel" hidden><h2 class="panel-title">Proyección del Jugador (JSON / HTTP)</h2><pre id="proyeccion">Cargando proyección...</pre></div>${renderPanelMapa()}</div></div>`;
+  app.innerHTML = `<div class="game-container"><header class="top-bar"><div class="brand-section"><span class="brand-title">Bronze Age Collapse</span><span class="brand-badge">Cliente Jugador</span></div><div class="user-section"><div class="user-info"><div class="user-avatar">${escaparHtml(estadoCliente.usuarioActivo.substring(0, 2).toUpperCase())}</div><div class="details-group"><button id="btn-toggle-proyeccion" class="user-name" type="button" aria-expanded="false" aria-controls="panel-proyeccion">${escaparHtml(estadoCliente.usuarioActivo)}</button><span class="game-id" title="${escaparHtml(estadoCliente.gameIdActivo)}">Partida: <strong>${escaparHtml(estadoCliente.nombrePartidaActiva || estadoCliente.gameIdActivo)}</strong></span></div></div><button id="btn-toggle-vista" class="btn-secondary">🏙️ Ver Ciudad</button><button id="btn-refrescar" class="btn-secondary">🔄 Refrescar</button><button id="btn-logout" class="btn-secondary">Cerrar Sesión</button></div></header><div class="main-content"><div id="panel-interaccion" class="card-panel interaction-panel"><div class="interaction-loading">Cargando opciones de interacción...</div></div><div id="panel-proyeccion" class="card-panel projection-panel" hidden><h2 class="panel-title">Proyección del Jugador (JSON / HTTP)</h2><pre id="proyeccion">Cargando proyección...</pre></div>${renderPanelMapa()}</div></div>`;
   document.querySelector('#btn-logout')?.addEventListener('click', () => cerrarSesionYVolverALogin());
   document.querySelector('#btn-toggle-proyeccion')?.addEventListener('click', () => {
     const boton = document.querySelector<HTMLButtonElement>('#btn-toggle-proyeccion');
@@ -2218,7 +2231,7 @@ function refrescarPantalla(pantalla: Pantalla): void {
   void dibujarPantallaSegunModo(proyeccion);
   const salida = document.querySelector<HTMLParagraphElement>('#estado');
   const json = document.querySelector<HTMLPreElement>('#proyeccion');
-  if (salida) salida.textContent = `Conectado a '${estadoCliente.gameIdActivo}' — ${fechaDeMundo(proyeccion.instante)} | Modo: ${estadoCliente.modoVista} | Facción: ${proyeccion.faccionId ?? '(Ninguna)'}`;
+  if (salida) salida.textContent = `Conectado a '${estadoCliente.nombrePartidaActiva || estadoCliente.gameIdActivo}' — ${fechaDeMundo(proyeccion.instante)} | Modo: ${estadoCliente.modoVista} | Facción: ${proyeccion.faccionId ?? '(Ninguna)'}`;
   if (json) json.textContent = JSON.stringify(proyeccion, null, 2);
 }
 
@@ -2274,6 +2287,12 @@ function arrancar(): void {
   }
   enrutar();
   if (sesion?.gameId) {
+    // Al recargar el nombre no está en la sesión: se pide a la lista y se pone en la cabecera cuando llega.
+    void listarPartidas().then((lista) => {
+      estadoCliente.nombrePartidaActiva = lista.find((x) => x.gameId === sesion.gameId)?.nombre ?? '';
+      const el = document.querySelector('.game-id strong');
+      if (el) el.textContent = estadoCliente.nombrePartidaActiva || sesion.gameId;
+    }).catch(() => undefined);
     void refrescarDatosJuego().catch(() => cerrarSesionYVolverALogin('La sesión previa expiró o el servidor fue reiniciado.'));
   }
 }
