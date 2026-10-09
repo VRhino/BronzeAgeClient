@@ -48,6 +48,8 @@ import { cablearReclutamiento, htmlReclutamiento } from './ui/reclutamiento';
 import { actualizarConvocatorias, cablearSalidaComoEjercito, htmlSalidaComoEjercito } from './ui/salidaComoEjercito';
 import { cablearPreparacion, htmlPreparacion, peticionesNuevasConv } from './ui/convocatoria';
 import { cablearUnirseDesdePlaza, htmlUnirseDesdePlaza } from './ui/unirseDesdePlaza';
+import { cablearCargos } from './ui/panelCargos';
+import { cablearDiplomacia } from './ui/panelDiplomacia';
 import { instalarZoomPan, type ControlMapa } from './ui/pantallaMapa';
 import { guardarVistaMapa, leerVistaMapa } from './ui/vistaMapaGuardada';
 import { alCambiarAvisos, alLlegarInforme, avisarDeEventos, avisosNoLeidos, historialDeAvisos, marcarAvisosLeidos, mostrar as mostrarAviso, reiniciarAvisos } from './ui/avisos';
@@ -284,6 +286,8 @@ function cablearFaccion(root: ParentNode, proyeccion: ProyeccionJugador, rerende
   cablearAnexion(root, proyeccion, ejecutarYRefrescar, avisoMapa);
   cablearFusion(root, proyeccion, ejecutarYRefrescar, avisoMapa);
   cablearAdmision(root, proyeccion, ejecutarYRefrescar, avisoMapa);
+  cablearCargos(root, proyeccion, ejecutarYRefrescar, avisoMapa);
+  cablearDiplomacia(root, proyeccion, ejecutarYRefrescar, avisoMapa);
 }
 
 /** Punto de entrada de la creación de héroe, para la pantalla provisional y para la definitiva. Con el héroe

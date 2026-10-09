@@ -6,7 +6,7 @@ export interface VistaMapa {
   zoom: number;
   panX: number;
   panY: number;
-  panel: 'columna' | 'cosas' | null;
+  panel: 'columna' | 'ejercito' | 'cosas' | null;
   seleccion: { tipo: string; id: string } | null;
 }
 
@@ -25,7 +25,7 @@ export function leerVistaMapa(gameId: string): VistaMapa | null {
     const s = v.seleccion;
     return {
       zoom: v.zoom, panX: v.panX, panY: v.panY,
-      panel: v.panel === 'columna' || v.panel === 'cosas' ? v.panel : null,
+      panel: v.panel === 'columna' || v.panel === 'ejercito' || v.panel === 'cosas' ? v.panel : null,
       seleccion: s && typeof s.tipo === 'string' && typeof s.id === 'string' ? { tipo: s.tipo, id: s.id } : null,
     };
   } catch { return null; }
