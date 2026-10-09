@@ -63,6 +63,7 @@ import { chipLiderazgo } from './ui/liderazgo';
 import { cablearCargaDeSalida, htmlCargaDeSalida, leerCarga } from './ui/cargaDeSalida';
 import { cablearColumna, htmlColumna } from './ui/panelColumna';
 import { cablearPanelIntel, renderPanelIntel } from './ui/panelIntel';
+import { cablearMercadoDePlaza, htmlMercadoDePlaza } from './ui/mercadoDePlaza';
 import { svgPlanoBandidos } from './ui/planoBandidos';
 import { explicarError } from './ui/erroresServidor';
 import { motivosParaCrearFaccion } from './ui/validarFaccion';
@@ -622,7 +623,9 @@ function renderSeleccionMapaCuerpo(): void {
     </div>
     ${entraEjercito ? `<p class="mapa-lista-vacia">${!propio ? 'Un ejército solo entra entero en una plaza de su Facción.' : soyLider ? 'Tu ejército entra entero y se desarma: los que residen aquí entran como siempre; los demás, de visita. Si lleva caravanas adjuntas, tienen que ser de esta plaza.' : 'Solo el Líder hace entrar al ejército.'}</p>` : ''}
     ${ataque ? `<p class="mapa-lista-vacia">${escaparHtml(ataque.impide || 'Atacar es asediarla: si cae pasa a tu Facción; si aguanta, quedas herido.')}</p>` : ''}
+    ${htmlMercadoDePlaza(proyeccion, asentamiento.id, escaparHtml)}
     <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`, undefined, claveSeleccion())) return;
+  cablearMercadoDePlaza(cont, asentamiento.id, { ejecutarConDatos: ejecutarConDatosYRefrescar, aviso: avisoMapa }, proyeccion.heroeId);
   cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
   cont.querySelector('#btn-marchar-alli')?.addEventListener('click', () => void marcharAObjetivo({ tipo: 'asentamiento', id: asentamiento.id }));
   cont.querySelector<HTMLButtonElement>('#btn-atacar-asent')?.addEventListener('click', (evento) => void atacarPlaza(cont, evento.currentTarget as HTMLButtonElement, asentamiento.id));
