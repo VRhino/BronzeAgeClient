@@ -58,7 +58,6 @@ import { htmlInforme, type InformeDeCombate } from './ui/informeCombate';
 import { htmlAvisos } from './ui/panelAvisos';
 import { cablearCarro, htmlCarro } from './ui/panelCarro';
 import { cablearTecnologia, htmlTecnologia } from './ui/panelTecnologia';
-import { cablearEscolta, htmlEscolta } from './ui/panelEscolta';
 import { chipLiderazgo } from './ui/liderazgo';
 import { cablearCargaDeSalida, htmlCargaDeSalida, leerCarga } from './ui/cargaDeSalida';
 import { cablearColumna, htmlColumna } from './ui/panelColumna';
@@ -1418,7 +1417,7 @@ async function ejecutarAccionAsent(tipo: string, params: Record<string, unknown>
 
 type EdificioAsent = 'centro' | 'reclutamiento' | 'taberna' | 'mercado';
 let edificioAsent: EdificioAsent = 'centro';
-type SeccionMercado = string; // 'ordenes' | 'caravanas' | 'escolta' o el id de una subpestaña de `SUBPESTANAS_MERCADO_EXTRA`
+type SeccionMercado = string; // 'ordenes' | 'caravanas' o el id de una subpestaña de `SUBPESTANAS_MERCADO_EXTRA`
 let seccionMercado: SeccionMercado = 'ordenes';
 
 /** Una pestaña por edificio. Taberna y Mercado existen siempre pero se abren al tener el edificio activo (decir qué falta es parte de la interfaz). */
@@ -1505,9 +1504,9 @@ function renderPanelEdificios(): void {
     html = `${renderPanelIntel(proyeccion, escaparHtml)}${pie}`;
     cablear = () => cablearPanelIntel(cuerpo, proyeccion, ejecutarYRefrescar, () => { olvidarEdicion(cuerpo); invalidar(cuerpo); renderPanelEdificios(); });
   } else {
-    const SECCIONES: [SeccionMercado, string][] = [['ordenes', 'Órdenes'], ['caravanas', 'Caravanas'], ['escolta', 'Escolta'], ...SUBPESTANAS_MERCADO_EXTRA.map((s) => [s.id, s.etiqueta] as [string, string])];
+    const SECCIONES: [SeccionMercado, string][] = [['ordenes', 'Órdenes'], ['caravanas', 'Caravanas'], ...SUBPESTANAS_MERCADO_EXTRA.map((s) => [s.id, s.etiqueta] as [string, string])];
     const extraMercado = SUBPESTANAS_MERCADO_EXTRA.find((s) => s.id === seccionMercado);
-    const contenido = extraMercado ? extraMercado.html(ctxPlaza) : seccionMercado === 'escolta' ? htmlEscolta(proyeccion, asentamiento, escaparHtml)
+    const contenido = extraMercado ? extraMercado.html(ctxPlaza)
       : seccionMercado === 'caravanas' ? htmlCaravanas(proyeccion, asentamiento, escaparHtml, renderPanelEdificios)
         : htmlOrdenes(proyeccion, asentamiento, escaparHtml);
     html = `${subpestanas(SECCIONES, seccionMercado)}<div class="asent-lado-cuerpo">${contenido}</div>${pie}`;
@@ -1515,7 +1514,6 @@ function renderPanelEdificios(): void {
     cablear = () => {
       cablearSub((s) => { seccionMercado = s as SeccionMercado; });
       if (extraMercado) extraMercado.cablear?.(ctxPlaza);
-      else if (seccionMercado === 'escolta') cablearEscolta(cuerpo, proyeccion, ejecutarYRefrescar);
       else if (seccionMercado === 'caravanas') cablearCaravanas(cuerpo, proyeccion, asentamiento, ejecutarYRefrescar);
       else cablearOrdenes(cuerpo, asentamiento, ejecutarYRefrescar);
     };
