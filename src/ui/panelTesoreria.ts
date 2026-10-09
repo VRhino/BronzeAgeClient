@@ -6,6 +6,7 @@ import { catalogoDePoliticas, type PoliticaDelCatalogo } from '../apiCliente';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { Asentamiento } from '../tiposDominio';
 import { textoEnTiempoReal } from './estadoCliente';
+import { ayuda } from './ayuda';
 import type { ContextoPlaza } from './ganchos';
 import { nombreDeHeroe } from './nombres';
 
@@ -61,15 +62,13 @@ export function htmlTesoreria(c: ContextoPlaza): string {
         ? `<input class="form-input" type="number" min="0" max="999" step="1" value="${valor}" data-reserva="${e(r)}" /><button class="btn-secondary" type="button" data-reserva-fijar="${e(r)}">Fijar</button>`
         : `<strong>${valor}</strong>`}</div>`;
   }).join('');
-  const reserva = `<span class="faction-kicker">Reserva de recursos</span>
-    <p class="asent-lado-nota">Lo que la auto-construcción no gasta: se suma a la reserva que ya guarda sola. De 0 a 999 por recurso; no afecta a lo que añades a mano a la cola.</p>
+  const reserva = `<span class="faction-kicker">Reserva de recursos ${ayuda('plaza:tesoreria-reserva', 'Lo que la auto-construcción no gasta: se suma a la reserva que ya guarda sola. De 0 a 999 por recurso; no afecta a lo que añades a mano a la cola.')}</span>
     ${a.cargos?.tesoreroId ? '' : '<p class="asent-lado-nota">Esta plaza no tiene Tesorero: sin él no se puede calibrar la reserva.</p>'}
     ${calibra ? '' : `<p class="asent-lado-nota">${esTesorero ? `${motivo} para calibrarla.` : 'Solo el Tesorero de la plaza calibra la reserva.'}</p>`}
     ${filasReserva || '<p class="mapa-lista-vacia">No hay ninguna reserva fijada.</p>'}`;
 
   const datos = catalogoDePoliticas(c.refrescar);
-  let politicas = '<span class="faction-kicker">Políticas de cargo</span>';
-  if (!datos) politicas += '<p class="asent-lado-nota">Cargando el catálogo de políticas…</p>';
+  let politicas = '<span class="faction-kicker">Políticas de cargo</span>';  if (!datos) politicas += '<p class="asent-lado-nota">Cargando el catálogo de políticas…</p>';
   else {
     const { catalogo, reglas } = datos;
     const nivelFaccion = p.facciones.find((f) => f.id === a.faccionId)?.nivel ?? 1;
@@ -80,7 +79,7 @@ export function htmlTesoreria(c: ContextoPlaza): string {
       if (cargo !== 'gobernador') return cfg.base;
       return Math.min(cfg.maximo, cfg.base + Math.floor(nivelFaccion / reglas.nivelFaccionPorSlotExtraGobernador)) + (sala ? reglas.slotSalaConsejo : 0);
     };
-    politicas += `<p class="asent-lado-nota">Cada cargo activa las políticas de su pool (el Gobernador, cualquiera). Duran ${textoEnTiempoReal(reglas.duracionMinutosPorDefecto * 60_000)} y no se pueden cancelar antes; ocupan un slot del cargo mientras estén en vigor. No tienen coste.</p>`;
+    politicas = `<span class="faction-kicker">Políticas de cargo ${ayuda('plaza:tesoreria-politicas', `Cada cargo activa las políticas de su pool (el Gobernador, cualquiera). Duran ${textoEnTiempoReal(reglas.duracionMinutosPorDefecto * 60_000)} y no se pueden cancelar antes; ocupan un slot del cargo mientras estén en vigor. No tienen coste.`)}</span>`;
     politicas += CARGOS.map(([cargo, nombre, campoId]) => {
       const titular = a.cargos?.[campoId];
       const mio = titular === p.heroeId;

@@ -2,6 +2,7 @@
 // La puerta la fija el Gobernador de la plaza o el Rey de su Facción (manda el último, no cuesta ni caduca); el veto, solo el Gobernador y nunca a un residente.
 // Las plazas de tu Facción traen `puertaCerradaA` y `vetadosIds`; ausente = el cierre por defecto (neutrales y enemigos), copiado a mano de `PUERTA.cerradaAPorDefecto`.
 import type { GrupoPuerta } from '../tiposDominio';
+import { ayuda } from './ayuda';
 import type { ContextoPlaza, SubpestanaPlaza } from './ganchos';
 import { nombreDeHeroe } from './nombres';
 
@@ -18,12 +19,11 @@ function html(c: ContextoPlaza): string {
   const esGobernador = c.cargo === 'gobernador' && c.resideAqui;
   const esRey = p.facciones.find((f) => f.id === a.faccionId)?.reyId === p.heroeId;
   const cerradaA = a.puertaCerradaA ?? CERRADA_POR_DEFECTO;
-  const resumen = `<p class="asent-lado-nota">Puerta ${a.puertaCerradaA ? 'fijada' : 'por defecto'}: ${cerradaA.length ? `cerrada a ${e(cerradaA.join(', '))}` : 'abierta a todos'}. Tu Facción y quien reside aquí entran siempre.</p>`;
+  const resumen = `<p class="asent-lado-nota">Puerta ${a.puertaCerradaA ? 'fijada' : 'por defecto'}: ${cerradaA.length ? `cerrada a ${e(cerradaA.join(', '))}` : 'abierta a todos'}.</p>`;
 
   const fijar = esGobernador || esRey
     ? `<div class="mapa-lista">${GRUPOS.map(([g, t]) => `<label class="asent-toggle"><input type="checkbox" data-puerta-grupo="${g}"${cerradaA.includes(g) ? ' checked' : ''} /> Cerrar a ${e(t)}</label>`).join('')}</div>
-       <button class="btn-primary" type="button" data-puerta-fijar>Fijar la puerta</button>
-       <p class="asent-lado-nota">Sin ninguna casilla, la plaza queda abierta a todos. Es el exilio (Doc 2.8): no caduca, y el Gobernador o el Rey pueden cambiarla cuando quieran.</p>`
+       <button class="btn-primary" type="button" data-puerta-fijar>Fijar la puerta</button>`
     : '<p class="asent-lado-nota">Solo el Gobernador de la plaza o el Rey de su Facción pueden fijar la puerta.</p>';
 
   const residentes = new Set([...(a.heroesFundadoresIds ?? []), ...(a.casasCompradas ?? [])]);
@@ -33,9 +33,10 @@ function html(c: ContextoPlaza): string {
   const veto = esGobernador
     ? `<span class="faction-kicker">Vetos</span>
        ${vetados.length ? `<div class="mapa-lista">${vetados.map((id) => `<div class="mapa-lista-item"><span>${e(nombreDeHeroe(p, id))}</span><button class="btn-secondary" type="button" data-vetar="${e(id)}">Levantar veto</button></div>`).join('')}</div>` : '<p class="mapa-lista-vacia">Nadie vetado.</p>'}
-       ${candidatos.length ? `<div class="mercado-acciones"><select class="form-input" data-campo="vetado">${candidatos.map((id) => `<option value="${e(id)}">${e(nombreDeHeroe(p, id))}</option>`).join('')}</select><button class="btn-secondary" type="button" data-vetar-elegido>Vetar</button></div>` : '<p class="asent-lado-nota">No hay a quién vetar: solo se veta a quien no reside aquí, y solo ves a los ciudadanos de tu Facción y a los héroes que tienes a la vista.</p>'}`
-    : `<p class="asent-lado-nota">Vetar a jugadores concretos es solo del Gobernador de la plaza (a un residente no se le veta).${vetados.length ? ` Vetados: ${vetados.map((id) => e(nombreDeHeroe(p, id))).join(', ')}.` : ''}</p>`;
-  return `<span class="faction-kicker">Puerta de ${e(a.nombre ?? a.id)}</span>${resumen}${fijar}${veto}<p class="faction-error" data-campo="error-puerta" role="alert"></p>`;
+       ${candidatos.length ? `<div class="mercado-acciones"><select class="form-input" data-campo="vetado">${candidatos.map((id) => `<option value="${e(id)}">${e(nombreDeHeroe(p, id))}</option>`).join('')}</select><button class="btn-secondary" type="button" data-vetar-elegido>Vetar</button></div>` : '<p class="asent-lado-nota">No hay a quién vetar.</p>'}`
+    : `<p class="asent-lado-nota">Solo el Gobernador de la plaza veta a jugadores concretos.${vetados.length ? ` Vetados: ${vetados.map((id) => e(nombreDeHeroe(p, id))).join(', ')}.` : ''}</p>`;
+  const info = ayuda('plaza:puerta', 'Tu Facción y quien reside aquí entran siempre. Sin ninguna casilla, la plaza queda abierta a todos. Es el exilio (Doc 2.8): no caduca, y el Gobernador o el Rey pueden cambiarla cuando quieran.<br>Vetar a jugadores concretos es solo del Gobernador de la plaza (a un residente no se le veta): solo se veta a quien no reside aquí, y solo ves a los ciudadanos de tu Facción y a los héroes que tienes a la vista.');
+  return `<span class="faction-kicker">Puerta de ${e(a.nombre ?? a.id)} ${info}</span>${resumen}${fijar}${veto}<p class="faction-error" data-campo="error-puerta" role="alert"></p>`;
 }
 
 function cablear(c: ContextoPlaza): void {

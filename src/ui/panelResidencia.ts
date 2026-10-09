@@ -1,6 +1,7 @@
 // Subpestaña «Residencia» de Centro urbano: dejar tu casa sin dejar la Facción (`dejarResidencia`, Doc 2.5) y, si eres el Rey, designar esta plaza capital (`designarCapital`, Doc 2.2).
 // Mudar tu base a esta plaza ya está en Resumen («Hacer de esta plaza mi base»): aquí no se duplica.
 import { diasDeEnfriamientoDeResidencia } from '../apiCliente';
+import { ayuda } from './ayuda';
 import type { ContextoPlaza, SubpestanaPlaza } from './ganchos';
 
 const DIA_MS = 86_400_000;
@@ -15,9 +16,9 @@ function esperaParaMudarse(c: ContextoPlaza): string {
 }
 
 function seccionResidencia(c: ContextoPlaza): string {
-  if (!c.resideAqui) return '<p class="asent-lado-nota">No resides en esta plaza: no hay casa que dejar aquí. Para vivir en ella usa «Hacer de esta plaza mi base» en Resumen.</p>';
+  if (!c.resideAqui) return `<p class="asent-lado-nota">No resides en esta plaza: no hay casa que dejar aquí. ${ayuda('plaza:residencia-no', 'Para vivir en ella usa «Hacer de esta plaza mi base» en Resumen.')}</p>`;
   const cargos = Object.entries(c.asentamiento.cargos ?? {}).filter(([, id]) => id === c.proyeccion.heroeId).map(([k]) => CARGO_NOMBRE[k] ?? k);
-  return `<p class="asent-lado-nota">Resides aquí. Dejar la residencia libera tu vivienda y vacía tus cargos locales${cargos.length ? ` (${cargos.join(', ')})` : ''}, suelta tu guarnición y te lleva al campamento de mercenarios más cercano. Sigues en tu Facción. No hay reembolso y ${esperaParaMudarse(c)}.</p>
+  return `<p class="asent-lado-nota">Resides aquí${cargos.length ? ` (${cargos.join(', ')})` : ''}. ${ayuda('plaza:residencia', `Dejar la residencia libera tu vivienda y vacía tus cargos locales, suelta tu guarnición y te lleva al campamento de mercenarios más cercano. Sigues en tu Facción. No hay reembolso y ${esperaParaMudarse(c)}.`)}</p>
     <button class="btn-secondary" type="button" data-dejar-residencia>Dejar mi residencia</button>`;
 }
 
@@ -33,7 +34,7 @@ function seccionCapital(c: ContextoPlaza): string {
   if (esCapital) bloqueo = 'Ya es la capital.';
   else if (!a.edificios.some((e) => e.tipo === 'palacio' && e.estado === 'activo')) bloqueo = 'Necesita un Palacio activo.';
   else if (p.instante < libreEn) bloqueo = `La capital se trasladó hace poco: faltan unos ${Math.ceil((libreEn - p.instante) / DIA_MS)} días de mundo.`;
-  return `${estado}<p class="asent-lado-nota">Como Rey puedes hacer de esta plaza la capital: es donde se adopta tecnología y el centro del mantenimiento por distancia. No cuesta recursos, pero trasladarla tiene un enfriamiento de ${COOLDOWN_CAPITAL_DIAS} días de mundo.</p>
+  return `${estado}<p class="asent-lado-nota">Como Rey puedes hacer de esta plaza la capital. ${ayuda('plaza:capital', `Es donde se adopta tecnología y el centro del mantenimiento por distancia. No cuesta recursos, pero trasladarla tiene un enfriamiento de ${COOLDOWN_CAPITAL_DIAS} días de mundo.`)}</p>
     <button class="btn-primary" type="button" data-designar-capital${bloqueo ? ' disabled' : ''}>Designar esta plaza capital</button>
     ${bloqueo ? `<small class="asent-lado-nota">${bloqueo}</small>` : ''}`;
 }

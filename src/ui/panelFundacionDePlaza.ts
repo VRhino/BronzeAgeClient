@@ -4,6 +4,7 @@
 import { capDeFundacion, cooldownDeCaravanaMinutos, costoCompletoDeCaravanaDeFundacion } from '../apiCliente';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import { textoEnTiempoReal } from './estadoCliente';
+import { ayuda } from './ayuda';
 import type { ContextoPlaza } from './ganchos';
 import { nombreDeHeroe } from './nombres';
 
@@ -64,8 +65,7 @@ export function htmlFundacionDePlaza(c: ContextoPlaza): string {
       <button class="btn-secondary" type="button" data-desarmar="${e(k.id)}"${desarmar ? '' : ' disabled'}>Desarmar</button></div>`;
   }).join('')}</div>`;
 
-  return `<span class="faction-kicker">Caravana de Fundación</span>
-    <p class="asent-lado-nota">Fundar un asentamiento nuevo exige una Caravana de Fundación. La plaza paga su coste entero del almacén; quien la lanza es su titular. Nace parada aquí, sin destino: engánchala a tu columna (riel «Fundar» del mapa) y funda donde estés. Si nadie la lleva caduca y el coste vuelve al almacén; desarmarla a mano también lo devuelve.</p>
+  return `<span class="faction-kicker">Caravana de Fundación ${ayuda('plaza:fundacion', 'Fundar un asentamiento nuevo exige una Caravana de Fundación. La plaza paga su coste entero del almacén; quien la lanza es su titular. Nace parada aquí, sin destino: engánchala a tu columna (riel «Fundar» del mapa) y funda donde estés. Si nadie la lleva caduca y el coste vuelve al almacén; desarmarla a mano también lo devuelve.')}</span>
     <strong class="heroe-sub">Coste (sale del almacén de la plaza)</strong>
     ${filas}
     <strong class="heroe-sub">Requisitos</strong>

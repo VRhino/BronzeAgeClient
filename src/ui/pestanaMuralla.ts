@@ -8,6 +8,7 @@
 // esto solo evita mostrar un botón que fallaría siempre).
 import type { ProyeccionJugador } from '../apiCliente';
 import type { Asentamiento, Recinto } from '../tiposDominio';
+import { ayuda } from './ayuda';
 
 export const NIVEL_MINIMO_MURALLA = 3;
 const NIVEL_MAXIMO_MURALLA = 3;
@@ -98,15 +99,13 @@ export function renderPestanaMuralla(asentamiento: Asentamiento, proyeccion: Pro
     : hayRecintoEnObra
       ? '<p class="wall-note">Ya hay un recinto en obra — hay que terminarlo o abandonarlo antes de trazar otro.</p>'
       : `<div class="wall-action">
-          <label for="select-muralla-nivel">Nivel del anillo</label>
+          <label for="select-muralla-nivel">Nivel del anillo</label>${ayuda('plaza:muralla', `Gratis al comprometer — la obra se paga celda a celda con los ticks. Exige nivel de asentamiento ${NIVEL_MINIMO_MURALLA} (nivel operativo actual: ${nivelOperativo}).`)}
           <select id="select-muralla-nivel">
             <option value="1">1 · Empalizada (madera)</option>
             <option value="2">2 · Muro de piedra</option>
             <option value="3">3 · Muralla con adarve</option>
           </select>
-          <button id="btn-muralla-comprometer" class="btn-primary" data-cargo="${cargoParaComprometer}" type="button">${hayExterior ? 'Ampliar recinto' : 'Trazar y comprometer recinto'}</button>
-          <p class="wall-note">Gratis al comprometer — la obra se paga celda a celda con los ticks. Exige nivel de asentamiento ${NIVEL_MINIMO_MURALLA} (nivel operativo actual: ${nivelOperativo}).</p>
-        </div>`;
+          <button id="btn-muralla-comprometer" class="btn-primary" data-cargo="${cargoParaComprometer}" type="button">${hayExterior ? 'Ampliar recinto' : 'Trazar y comprometer recinto'}</button>        </div>`;
 
   return `
     <div class="wall-panel" data-asentamiento-id="${escaparHtml(asentamiento.id)}">

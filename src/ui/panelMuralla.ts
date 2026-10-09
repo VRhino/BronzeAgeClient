@@ -13,7 +13,7 @@ function html(c: ContextoPlaza): string {
   if (nivel < NIVEL_MINIMO_MURALLA && !(a.recintos ?? []).length) motivos.push(`Trazar una muralla exige una plaza de nivel ${NIVEL_MINIMO_MURALLA} (la tuya es de nivel ${nivel}).`);
   if (motivos.length) {
     // Todos los botones del panel son acciones de muralla.
-    h = h.replace(/<button /g, '<button disabled ').replace('<p id="wall-error"', `<p class="asent-lado-nota">${c.escapar(motivos.join(' '))}</p><p id="wall-error"`);
+    h = h.replace(/<button (?!type="button" class="ayuda-btn")/g, '<button disabled ').replace('<p id="wall-error"', `<p class="asent-lado-nota">${c.escapar(motivos.join(' '))}</p><p id="wall-error"`);
   }
   return h;
 }
