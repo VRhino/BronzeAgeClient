@@ -1,9 +1,9 @@
 // Pestaña «RECLUTAMIENTO» de la plaza: reclutar o reponer tropa con `reclutarTropa { asentamientoId, heroeId, tropaId }`. Todos los edificios militares juntos.
 // Solo se ENSEÑA lo que la Facción puede reclutar ya (tecnología adoptada, edificio activo y de nivel suficiente): lo bloqueado por eso se esconde. Lo que depende
 // del momento (residencia, la escuadra que ya tienes, hombres libres, equipo) se dice en la fila. Un héroe tiene como mucho UNA escuadra por tropa en toda la partida:
-// si ya la tiene, reclutar la REPONE y solo donde está. El oro por soldado y los descuentos de política los cobra el servidor (no viajan en el balance): su rechazo se enseña tal cual.
+// si ya la tiene, reclutar la REPONE y solo donde está. El oro por soldado sale del balance como en el motor (escalón + caballos; la tropa del Centro Urbano no paga; «Leva Forzosa» solo toca el equipo); si algo falla, el rechazo del servidor se enseña tal cual.
 import type { ProyeccionJugador } from '../apiCliente';
-import { tropasReclutables, type TropaReclutable } from '../apiCliente';
+import { oroPorSoldado, tropasReclutables, type TropaReclutable } from '../apiCliente';
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { Asentamiento } from '../tiposDominio';
 import { ayuda } from './ayuda';
@@ -30,7 +30,8 @@ function fila(t: TropaReclutable, p: ProyeccionJugador, a: Asentamiento, reside:
   const origen = ORIGEN(t.escalon);
   const libres = a.poblacion?.[origen] ?? 0;
   const almacen = a.almacen ?? {};
-  const coste = Object.entries(t.costoEquipo)
+  const oroUnidad = oroPorSoldado(t) ?? 0;
+  const coste = Object.entries(oroUnidad > 0 ? { ...t.costoEquipo, oro: (t.costoEquipo['oro'] ?? 0) + oroUnidad } : t.costoEquipo)
     .map(([r, n]) => {
       const total = Math.ceil((n ?? 0) * Math.max(falta, 0));
       const hay = Math.floor(almacen[r]?.cantidad ?? 0);

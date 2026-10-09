@@ -9,7 +9,7 @@
 // Lo que da `inspeccionar` (composición de la columna, carga de la caravana o defensa de la plaza) se lee SIEMPRE de `informesDeInspeccion` de la
 // proyección (10 min de mundo): así sobrevive a recargar y a cerrar la ficha.
 import type { ProyeccionJugador } from '../apiCliente';
-import { radioDeEncuentro, tropasReclutables } from '../apiCliente';
+import { radioDeEncuentro, radioDeInspeccion, tropasReclutables } from '../apiCliente';
 import { RADIO_PROTECCION_MERCENARIOS } from '../render';
 import { RECURSO_NOMBRE } from '../paletas';
 import type { CaravanaAvistada, EjercitoAvistado, InformeDeInspeccion } from '../tiposDominio';
@@ -22,9 +22,6 @@ import { minutosHerido } from './panelHeroe';
 
 type Escapar = (valor: string) => string;
 type Punto = { x: number; y: number };
-
-/** A cuánto se inspecciona (`MOVIMIENTO.radioInspeccion` del backend, que no lo publica en el balance). El que decide es el backend. */
-export const RADIO_INSPECCION = 40;
 
 const distancia = (a: Punto, b: Punto): number => Math.hypot(a.x - b.x, a.y - b.y);
 const clase = (tipo?: 'personal' | 'ejercito'): 'personal' | 'ejercito' => tipo ?? 'personal';
@@ -86,7 +83,7 @@ function estados(p: ProyeccionJugador, o: Objetivo): Estado[] {
   const esCaravana = o.tipo === 'caravana';
 
   const inspeccionar = !mi ? 'Sal al mundo con tu columna para mirar de cerca.'
-    : d! > RADIO_INSPECCION ? `Acércate: estás a ${Math.round(d!)} y se inspecciona a ${RADIO_INSPECCION}. El observado recibe un aviso.` : '';
+    : d! > radioDeInspeccion() ? `Acércate: estás a ${Math.round(d!)} y se inspecciona a ${radioDeInspeccion()}. El observado recibe un aviso.` : '';
 
   // Lo común a perseguir y atacar.
   const hostil = !mi ? 'Sal al mundo con tu columna.'

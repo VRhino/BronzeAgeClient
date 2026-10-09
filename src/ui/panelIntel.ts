@@ -2,7 +2,7 @@
 // plaza ajena (foto con fecha de su layout y su defensa). Se compra en la taberna de una plaza propia —estando dentro— o en la de un
 // campamento de mercenarios —dentro, o con la columna a la puerta—. Aquí no se decide ninguna regla: el precio es una cotización con
 // `tarifasIntel` y quien valida es el backend, cuyo rechazo sale tal cual en `#intel-error`.
-import type { ProyeccionJugador } from '../apiCliente';
+import { radioDePuerta, type ProyeccionJugador } from '../apiCliente';
 import { ayuda } from './ayuda';
 import { EDIFICIO_COLOR, EDIFICIO_NOMBRE } from '../paletas';
 import type { InformePlaza, MiradaIntel, OrigenDeIntel, Point } from '../tiposDominio';
@@ -15,9 +15,6 @@ export const estadoIntel: { centro: Point | null; informeAbierto: string | null 
   centro: null,
   informeAbierto: null,
 };
-
-/** A qué distancia de su puerta se actúa en un campamento (`MOVIMIENTO.radioPuerta`). */
-const RADIO_PUERTA = 10;
 
 export interface TabernaDisponible {
   origen: OrigenDeIntel;
@@ -54,7 +51,7 @@ export function tabernasDisponibles(p: ProyeccionJugador): TabernaDisponible[] {
     u.tipo === 'mercenarios'
       ? p.campamentosMercenarios.find((c) => c.id === u.campamentoId)
       : columna
-        ? p.campamentosMercenarios.find((c) => Math.hypot(c.posicion.x - columna.posicionActual.x, c.posicion.y - columna.posicionActual.y) <= RADIO_PUERTA)
+        ? p.campamentosMercenarios.find((c) => Math.hypot(c.posicion.x - columna.posicionActual.x, c.posicion.y - columna.posicionActual.y) <= radioDePuerta())
         : undefined;
   if (campamento && p.faccionId !== null) {
     lista.push({ origen: { tipo: 'campamento', id: campamento.id }, etiqueta: `Taberna del campamento ${campamento.id}`, posicion: campamento.posicion, oro: p.heroe.oroDeBotin ?? 0, cupo: cupos.campamento });

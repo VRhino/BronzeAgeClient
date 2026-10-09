@@ -1,6 +1,7 @@
 // Subpestaña «Puerta» de Centro urbano (Doc 1.10.5 y 2.8): a quién se le cierra la plaza (`fijarPuerta`) y a qué jugadores concretos se veta (`vetarJugador`).
 // La puerta la fija el Gobernador de la plaza o el Rey de su Facción (manda el último, no cuesta ni caduca); el veto, solo el Gobernador y nunca a un residente.
-// Las plazas de tu Facción traen `puertaCerradaA` y `vetadosIds`; ausente = el cierre por defecto (neutrales y enemigos), copiado a mano de `PUERTA.cerradaAPorDefecto`.
+// Las plazas de tu Facción traen `puertaCerradaA` y `vetadosIds`; ausente = el cierre por defecto del balance (`PUERTA.cerradaAPorDefecto`).
+import { puertaCerradaAPorDefecto } from '../apiCliente';
 import type { GrupoPuerta } from '../tiposDominio';
 import { ayuda } from './ayuda';
 import type { ContextoPlaza, SubpestanaPlaza } from './ganchos';
@@ -12,13 +13,12 @@ const GRUPOS: [GrupoPuerta, string][] = [
   ['enemigos', 'Enemigos (en guerra)'],
   ['aedas', 'Aedas (los cronistas viajeros)'],
 ];
-const CERRADA_POR_DEFECTO: GrupoPuerta[] = ['neutrales', 'enemigos'];
 
 function html(c: ContextoPlaza): string {
   const { proyeccion: p, asentamiento: a, escapar: e } = c;
   const esGobernador = c.cargo === 'gobernador' && c.resideAqui;
   const esRey = p.facciones.find((f) => f.id === a.faccionId)?.reyId === p.heroeId;
-  const cerradaA = a.puertaCerradaA ?? CERRADA_POR_DEFECTO;
+  const cerradaA = a.puertaCerradaA ?? (puertaCerradaAPorDefecto() as GrupoPuerta[]);
   const resumen = `<p class="asent-lado-nota">Puerta ${a.puertaCerradaA ? 'fijada' : 'por defecto'}: ${cerradaA.length ? `cerrada a ${e(cerradaA.join(', '))}` : 'abierta a todos'}.</p>`;
 
   const fijar = esGobernador || esRey

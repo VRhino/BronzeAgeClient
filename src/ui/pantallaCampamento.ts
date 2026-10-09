@@ -7,7 +7,7 @@ import { chipLiderazgo } from './liderazgo';
 import { cablearPreparacion, htmlPreparacion } from './convocatoria';
 import { actualizarConvocatorias, cablearSalidaComoEjercito, htmlSalidaComoEjercito } from './salidaComoEjercito';
 import { cablearCargaDeSalida, htmlCargaDeSalida, leerCarga } from './cargaDeSalida';
-import { costoDeRefundacion, tropasDeCampamento, unidadesDeTropa, type ProyeccionJugador } from '../apiCliente';
+import { costoDeRefundacion, tropasReclutables, unidadesDeTropa, type ProyeccionJugador } from '../apiCliente';
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { CampamentoMercenarios, Escuadron } from '../tiposDominio';
 
@@ -115,31 +115,41 @@ function salir(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): stri
 
 /**
  * RECLUTAR (backend 2026-10-02, Doc 1.9b): las tropas de los edificios militares del campamento, pagadas SOLO con oro y con la población del
- * campamento. Qué tecnología tiene desbloqueada el campamento, cuántos reclutas le quedan y el precio final (escalón + caballos + equipo, recargo,
- * reputación, descuento sin plazas) no viajan en la proyección ni en el balance: lo dice el servidor al rechazar o al cobrar.
+ * campamento. El servidor manda, para quien reside, qué tropas hay (`mercadoCampamento.reclutamiento`), su precio por soldado ya con recargo,
+ * reputación y descuento, si están desbloqueadas y los reclutas que quedan: aquí solo se multiplica por lo que falta y se compara con el oro.
  */
-function reclutar(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): string {
+function reclutar(p: ProyeccionJugador, e: Escapar): string {
   const heroe = p.heroe;
-  const catalogo = tropasDeCampamento();
-  if (!catalogo) return '<p class="asent-lado-nota">Cargando las tropas…</p>';
-  const ofrecidas = catalogo.tropas.filter((t) => t.edificio !== 'centroUrbano' && c.edificios.includes(t.edificio) && t.nivelRequerido <= catalogo.nivelEdificios);
+  const oferta = p.mercadoCampamento?.reclutamiento;
+  const catalogo = tropasReclutables();
+  if (!oferta || !catalogo) return '<p class="asent-lado-nota">Cargando las tropas…</p>';
+  const ofrecidas = oferta.tropas.flatMap((o) => { const t = catalogo.find((x) => x.id === o.tropaId); return t ? [{ t, o }] : []; });
   if (ofrecidas.length === 0) return '<p class="asent-lado-nota">Este campamento no tiene barracón, galería de tiro ni caballerizas: no ofrece tropa.</p>';
   const propias = new Map(heroe.escuadrones.filter((s) => !s.prestada).map((s) => [s.tropaId, s] as const));
   const columna = p.ejercitos.find((x) => x.liderId === heroe.id);
   const oroAlmacen = Math.floor(heroe.almacenPersonal?.['oro'] ?? 0);
   const oroCarro = Math.floor(columna?.suministro?.['oro'] ?? 0);
   if (pagarConElegido === 'carro' && !columna) pagarConElegido = 'almacenPersonal';
-  const equipo = (t: (typeof ofrecidas)[number]): string =>
+  const oroOrigen = pagarConElegido === 'carro' ? oroCarro : oroAlmacen;
+  const equipo = (t: (typeof catalogo)[number]): string =>
     [...Object.entries(t.costoEquipo).map(([r, n]) => `${n} ${nombreRecurso(r)}`), ...(t.caballos ? [`${t.caballos} caballo${t.caballos > 1 ? 's' : ''}`] : [])].join(', ') || 'sin equipo';
-  const filas = ofrecidas.map((t) => {
+  const filas = ofrecidas.map(({ t, o }) => {
     const ya = propias.get(t.id);
     const faltan = t.unidadesPorDefecto - (ya?.cantidad ?? 0);
+    const oro = Math.ceil(o.precioPorSoldado * Math.max(faltan, 0));
+    const motivo = !o.desbloqueada ? 'Aún sin desbloquear: falta su tecnología en el campamento.'
+      : faltan <= 0 ? 'Escuadra al completo.'
+        : oferta.poblacion < faltan ? `Faltan reclutas: hay ${Math.floor(oferta.poblacion)} y hacen falta ${faltan}.`
+          : oro > oroOrigen ? `No te llega el oro: ${oro} y tienes ${oroOrigen}.` : '';
     return `<div class="mapa-lista-item"><div><strong>${e(t.nombre)}</strong>
-        <span>${e(EDIFICIO_RECLUTA[t.edificio] ?? t.edificio)} · ${t.unidadesPorDefecto} hombres · escalón ${t.escalon} · equipo (se cobra en oro): ${e(equipo(t))}</span>
-        <span>${ya ? `ya la tienes: ${ya.cantidad}/${t.unidadesPorDefecto}, ${dondeEstaLaEscuadra(ya, p)}` : 'aún no la tienes'}</span></div>
-      <button class="btn-secondary" type="button" data-reclutar="${e(t.id)}"${faltan <= 0 ? ' disabled' : ''}>${ya ? (faltan > 0 ? `Reponer ${faltan}` : 'Completa') : 'Reclutar'}</button></div>`;
+        <span>${e(EDIFICIO_RECLUTA[t.edificio] ?? t.edificio)} · ${t.unidadesPorDefecto} hombres · escalón ${t.escalon} · equipo (ya en el precio): ${e(equipo(t))}</span>
+        <span>${ya ? `ya la tienes: ${ya.cantidad}/${t.unidadesPorDefecto}, ${dondeEstaLaEscuadra(ya, p)}` : 'aún no la tienes'}</span>
+        ${faltan > 0 && o.desbloqueada ? `<div class="recl-costes"><span class="recl-coste${oro > oroOrigen ? ' falta' : ''}">🪙 ${formatoPrecio(o.precioPorSoldado)} por soldado · <strong>${oro} de oro</strong> por ${faltan}</span></div>` : ''}
+        ${motivo ? `<div><small class="asent-lado-nota">${e(motivo)}</small></div>` : ''}</div>
+      <button class="btn-secondary" type="button" data-reclutar="${e(t.id)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>${ya ? (faltan > 0 ? `Reponer ${faltan}` : 'Completa') : 'Reclutar'}</button></div>`;
   }).join('');
   return `
+    <p class="asent-lado-nota">Reclutas del campamento: <strong>${Math.floor(oferta.poblacion)}/${Math.floor(oferta.topePoblacion)}</strong></p>
     <label class="mapa-lista-item"><span>Pagar con</span>
       <select class="form-input" id="reclutar-pagar-con">
         <option value="almacenPersonal"${pagarConElegido === 'almacenPersonal' ? ' selected' : ''}>Mi almacén personal (${oroAlmacen} de oro)</option>
@@ -153,8 +163,8 @@ function tropa(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): stri
   if (!c.residentesIds.includes(heroe.id)) return '<p class="asent-lado-nota">Solo se presta o se recluta tropa en el campamento donde resides: pulsa «Residir aquí» en Resumen.</p>';
   const prestadas = new Map(heroe.escuadrones.filter((s) => s.prestada).map((s) => [s.tropaId, s] as const));
   return `
-    <strong class="heroe-sub">Reclutar${ayuda('camp:reclutar', 'Se paga solo con oro y con los reclutas del campamento. Solo hay una escuadra por tropa: si ya la tienes, se repone hasta el tope y se cobra lo que falta (la de una columna, con la columna a la puerta). Qué tropas están desbloqueadas lo decide el campamento: si aún no, el servidor lo dirá.')}</strong>
-    ${reclutar(p, c, e)}
+    <strong class="heroe-sub">Reclutar${ayuda('camp:reclutar', 'Se paga solo con oro y con los reclutas del campamento. Solo hay una escuadra por tropa: si ya la tienes, se repone hasta el tope y se cobra lo que falta (la de una columna, con la columna a la puerta). Qué tropas están desbloqueadas lo decide el campamento: las que no, salen marcadas y apagadas.')}</strong>
+    ${reclutar(p, e)}
     <strong class="heroe-sub">Tropa prestada${ayuda('camp:prestamo', 'Gratis, para aprender a usar tropa antes de tener la tuya. No gana experiencia. Se retira si dejas de residir en este campamento.')}</strong>
     <div class="mapa-lista">${TROPAS_PRESTAMO.map(([id, nombre]) => {
       const ya = prestadas.get(id);
@@ -413,7 +423,7 @@ export function cablearCampamento(root: HTMLElement, p: ProyeccionJugador, c: Ca
   cablearPreparacion(root, p, ejecutar, avisarEnError, opciones.repintar);
   conBoton('#btn-pedir-prestamo', 'pedirPrestamo', () => ({ tropaIds: marcados('data-prestamo') }));
   conBoton('#btn-reponer-prestamo', 'reponerPrestamo', () => ({}));
-  root.querySelector<HTMLSelectElement>('#reclutar-pagar-con')?.addEventListener('change', (ev) => { pagarConElegido = (ev.target as HTMLSelectElement).value as typeof pagarConElegido; });
+  root.querySelector<HTMLSelectElement>('#reclutar-pagar-con')?.addEventListener('change', (ev) => { pagarConElegido = (ev.target as HTMLSelectElement).value as typeof pagarConElegido; opciones.repintar(); });
   conBoton('[data-reclutar]', 'reclutarEnCampamento', function () { return { tropaId: this.dataset.reclutar!, pagarCon: pagarConElegido }; });
   cablearMercado(root, c, opciones);
   for (const tipo of ['aportarARefundacion', 'retirarDeRefundacion']) {

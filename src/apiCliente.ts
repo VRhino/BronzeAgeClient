@@ -83,7 +83,11 @@ export interface ProyeccionJugador {
   escenaCampamento?: EscenaCampamento;
   /** El mostrador del campamento donde estás (backend 2026-10-07): precio de UNA unidad de cada bien que te venden (n cuestan `ceil(n × precio)`)
    * y lo que te queda del cupo de hoy (sin entrada = sin cupo). Ausente fuera, o con un backend anterior. */
-  mercadoCampamento?: { precios: Record<string, number>; cupoRestante: Record<string, number> };
+  mercadoCampamento?: {
+    precios: Record<string, number>; cupoRestante: Record<string, number>;
+    /** Solo si resides en él: las tropas que permiten sus edificios, con su precio por soldado (recargo, reputación y descuento ya aplicados) y si están desbloqueadas; reclutas disponibles y tope. */
+    reclutamiento?: { tropas: { tropaId: string; precioPorSoldado: number; desbloqueada: boolean }[]; poblacion: number; topePoblacion: number };
+  };
   /** Alijos a la vista de tu columna que aún no abriste (solo si tu Facción no tiene asentamiento). */
   alijos: Alijo[];
   /** Tus Miradas de las tabernas, abiertas o enfriándose (backend 2026-10-05, Doc 5.12.10). Lo que dejan ver llega por las listas de avistados. */
@@ -401,12 +405,18 @@ export interface ReglasDePoliticas {
   duracionMinutosPorDefecto: number;
 }
 
+/** Un carro del catálogo: lo que carga sin animal, lo que cuesta y dónde se fabrica (Doc 3.13.1). */
+export interface CarroDelCatalogo { capacidadBase: number; costo: Record<string, number>; fabrica: string }
+/** Un animal del catálogo: multiplica la capacidad del carro, fija la velocidad de la caravana y se compra con su `costo`. */
+export interface AnimalDelCatalogo { factorCarga: number; velocidad: number; costo: Record<string, number> }
+
 /** El balance público (`GET /v1/balance`): se pide una vez, en segundo plano, y avisa con `alCargar` cuando llega. */
 interface BalancePublico {
   catalogos?: { EDIFICIO_CATALOGO?: Record<string, { costo?: Record<string, number>; niveles?: Record<string, NivelDeEdificio> }>; TROPAS_RECLUTABLES?: TropaReclutable[]; POLITICA_CATALOGO?: PoliticaDelCatalogo[] };
-  cuposYNiveles?: { POLITICAS?: ReglasDePoliticas; CAP_FUNDACION_POR_NIVEL?: number[]; CIUDADANIA?: { cooldownCambioResidenciaDias?: number } };
-  caravanas?: { CARAVANA_COOLDOWN?: { cooldownMinutos?: number } };
-  mundoYMilitar?: { LOGISTICA?: { capacidadViveresPorHeroe?: number; radioEncuentro?: number; radioReabastecimiento?: number }; FUNDACION?: { materialesIniciales?: Record<string, number>; viviendasIniciales?: number; costoMaderaExtraCaravana?: number }; MERCENARIOS?: { refundacion?: { porcentajeCoste?: number }; nivelEdificios?: number } };
+  cuposYNiveles?: { POLITICAS?: ReglasDePoliticas; CAP_FUNDACION_POR_NIVEL?: number[]; CIUDADANIA?: { cooldownCambioResidenciaDias?: number; cooldownCreacionFaccionDias?: number } };
+  caravanas?: { CARAVANA_COOLDOWN?: { cooldownMinutos?: number }; CARRO_CATALOGO?: Record<string, CarroDelCatalogo>; ANIMAL_CATALOGO?: Record<string, AnimalDelCatalogo>; CARAVANA_PREPARACION?: { kPorCarro?: number; maxProgramacionDias?: number }; CARAVANA_ESCOLTA?: { liderazgoPorNivelMercado?: number[] } };
+  politica?: { PUERTA?: { cerradaAPorDefecto?: string[] }; CAPITAL?: { cooldownDias?: number } };
+  mundoYMilitar?: { LOGISTICA?: { capacidadViveresPorHeroe?: number; radioEncuentro?: number; radioReabastecimiento?: number }; FUNDACION?: { materialesIniciales?: Record<string, number>; viviendasIniciales?: number; costoMaderaExtraCaravana?: number }; MERCENARIOS?: { refundacion?: { porcentajeCoste?: number } }; MOVIMIENTO?: { radioPuerta?: number; radioInspeccion?: number }; RECLUTAMIENTO_ORO_POR_ESCALON?: Record<string, number>; ORO_POR_CABALLO?: number };
   tecnologia?: CatalogoTecnologia;
   internas?: { CAMPAMENTOS_BANDIDOS?: { niveles?: Record<string, NivelDeBandidos> } };
 }
@@ -453,12 +463,46 @@ export function nivelesDeEdificio(tipo: string, alCargar?: () => void): Record<s
   return balance(alCargar)?.catalogos?.EDIFICIO_CATALOGO?.[tipo]?.niveles ?? null;
 }
 
-/** El catálogo de tropas y el nivel al que están los edificios militares de un campamento; `null` mientras no llegue el balance. */
-export function tropasDeCampamento(alCargar?: () => void): { tropas: TropaReclutable[]; nivelEdificios: number } | null {
-  const b = balance(alCargar);
-  const tropas = b?.catalogos?.TROPAS_RECLUTABLES;
-  const nivelEdificios = b?.mundoYMilitar?.MERCENARIOS?.nivelEdificios;
-  return tropas && nivelEdificios !== undefined ? { tropas, nivelEdificios } : null;
+/** A qué distancia de la puerta de una plaza o campamento se actúa (`MOVIMIENTO.radioPuerta`); 10 mientras no llegue el balance. */
+export function radioDePuerta(): number {
+  return balance()?.mundoYMilitar?.MOVIMIENTO?.radioPuerta ?? 10;
+}
+
+/** A cuánto se inspecciona a otro (`MOVIMIENTO.radioInspeccion`); 40 mientras no llegue el balance. */
+export function radioDeInspeccion(): number {
+  return balance()?.mundoYMilitar?.MOVIMIENTO?.radioInspeccion ?? 40;
+}
+
+/** Días de mundo entre dos traslados de capital (`CAPITAL.cooldownDias`); 14 mientras no llegue el balance. */
+export function diasDeEnfriamientoDeCapital(): number {
+  return balance()?.politica?.CAPITAL?.cooldownDias ?? 14;
+}
+
+/** Días de mundo sin poder crear otra Facción tras dejar o crear una (`CIUDADANIA.cooldownCreacionFaccionDias`); 7 mientras no llegue el balance. */
+export function diasDeEnfriamientoDeCreacionDeFaccion(): number {
+  return balance()?.cuposYNiveles?.CIUDADANIA?.cooldownCreacionFaccionDias ?? 7;
+}
+
+/** A quién se le cierra una plaza que no fijó su puerta (`PUERTA.cerradaAPorDefecto`); neutrales y enemigos mientras no llegue el balance. */
+export function puertaCerradaAPorDefecto(): string[] {
+  return balance()?.politica?.PUERTA?.cerradaAPorDefecto ?? ['neutrales', 'enemigos'];
+}
+
+/**
+ * Oro por soldado al reclutar en una plaza (Doc 5.8): el del escalón + `ORO_POR_CABALLO` por caballo; la tropa del Centro Urbano no paga oro.
+ * "Leva Forzosa" solo multiplica el equipo, no esto. `null` mientras no llegue el balance.
+ */
+export function oroPorSoldado(t: { escalon: number; edificio: string; caballos?: number }): number | null {
+  const m = balance()?.mundoYMilitar;
+  if (!m?.RECLUTAMIENTO_ORO_POR_ESCALON || m.ORO_POR_CABALLO === undefined) return null;
+  return t.edificio === 'centroUrbano' ? 0 : (m.RECLUTAMIENTO_ORO_POR_ESCALON[t.escalon] ?? 0) + (t.caballos ?? 0) * m.ORO_POR_CABALLO;
+}
+
+/** Los catálogos de carros y animales y la preparación/escolta de las caravanas (Doc 3.13); `null` mientras no llegue el balance. */
+export function catalogoDeCaravanas(alCargar?: () => void): { carros: Record<string, CarroDelCatalogo>; animales: Record<string, AnimalDelCatalogo>; preparacionKPorCarro: number; escoltaPorNivelMercado: number[] } | null {
+  const c = balance(alCargar)?.caravanas;
+  if (!c?.CARRO_CATALOGO || !c.ANIMAL_CATALOGO) return null;
+  return { carros: c.CARRO_CATALOGO, animales: c.ANIMAL_CATALOGO, preparacionKPorCarro: c.CARAVANA_PREPARACION?.kPorCarro ?? 0, escoltaPorNivelMercado: c.CARAVANA_ESCOLTA?.liderazgoPorNivelMercado ?? [] };
 }
 
 /** Lo que fija cada nivel de bandidos: su poder, los hombres que defienden y el oro del botín por héroe. */

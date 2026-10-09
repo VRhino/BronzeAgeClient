@@ -7,6 +7,7 @@ import {
   guardarSesionLocal,
   listarPartidas,
   recordarPartida,
+  radioDeInspeccion,
   abrirPresencia,
   alEventoTiempoReal,
   cerrarPresencia,
@@ -44,7 +45,7 @@ import { cablearFichaBatalla, cablearFichaFormacion, formacionesVisibles, htmlFi
 import { cablearPanelEjercito, ejercitosDeLaFaccion, htmlFichaEjercito, htmlPanelEjercito, peticionesNuevas } from './ui/ejercitos';
 import { invalidar, olvidarEdicion, pintar, vaciar } from './ui/repintado';
 import { aplicarAyudas, ayuda } from './ui/ayuda';
-import { htmlInformeDeInspeccion, RADIO_INSPECCION } from './ui/interaccionAjena';
+import { htmlInformeDeInspeccion } from './ui/interaccionAjena';
 import { cablearVistaCiudad, edificioSeleccionado, htmlTooltipEdificio, repintarFicha, tipoSeleccionado } from './ui/vistaCiudad';
 import { FICHAS_MAPA_EXTRA, SELECTORES_MAPA_EXTRA, SUBPESTANAS_CENTRO_EXTRA, SUBPESTANAS_MERCADO_EXTRA, type ContextoPlaza } from './ui/ganchos';
 import { montarPartidas } from './ui/pantallaPartidas';
@@ -615,7 +616,7 @@ function renderSeleccionMapaCuerpo(): void {
   const motivoEntrada = !entraEjercito ? '' : !propio ? 'Un ejército solo entra entero en una plaza de su Facción.' : soyLider ? '' : 'Solo el Líder hace entrar al ejército.';
   const motivoAtaque = ataque ? ataque.impide : '';
   const motivoInspeccion = ataque?.distancia == null ? 'Sal al mundo con tu columna para mirar de cerca.'
-    : ataque.distancia > RADIO_INSPECCION ? `Acércate: estás a ${ataque.distancia} y se inspecciona a ${RADIO_INSPECCION}. Su Facción recibe un aviso.` : '';
+    : ataque.distancia > radioDeInspeccion() ? `Acércate: estás a ${ataque.distancia} y se inspecciona a ${radioDeInspeccion()}. Su Facción recibe un aviso.` : '';
   const ayudaPlaza = [
     entraEjercito && propio && soyLider ? 'Tu ejército entra entero y se desarma: los que residen aquí entran como siempre; los demás, de visita. Si lleva caravanas adjuntas, tienen que ser de esta plaza.' : '',
     ataque && !motivoAtaque ? 'Atacar es asediarla: si cae pasa a tu Facción; si aguanta, quedas herido.' : '',

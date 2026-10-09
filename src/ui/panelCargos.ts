@@ -1,12 +1,11 @@
 // Cargos de Facción y abandono (backend Doc 2.2 y 2.5): el Rey traspasa el trono (`asignarRey`) y designa al Embajador (`asignarEmbajador`); cualquiera
 // puede dejar la Facción (`dejarFaccion`). Vive en la pestaña Facción. Quien valida es el backend: su rechazo sale tal cual.
-import type { ProyeccionJugador } from '../apiCliente';
+import { diasDeEnfriamientoDeCreacionDeFaccion, type ProyeccionJugador } from '../apiCliente';
 import type { Faccion } from '../tiposDominio';
 import { ayuda } from './ayuda';
 import { nombreDeHeroe } from './nombres';
 import { crearEnvio, type Ejecutar } from './panelAnexion';
 
-const DIAS_COOLDOWN_CREACION = 7; // CIUDADANIA.cooldownCreacionFaccionDias del servidor
 
 /** Los selectores del Rey (traspasar el trono, designar Embajador). Vacío si no eres el Rey. */
 export function htmlCargos(proyeccion: ProyeccionJugador, faccion: Faccion, escaparHtml: (valor: string) => string): string {
@@ -32,7 +31,7 @@ export function htmlDejarFaccion(proyeccion: ProyeccionJugador, faccion: Faccion
   const cargo = faccion.reyId === proyeccion.heroeId
     ? alguienMas ? ' Eres el Rey: el trono pasa al siguiente ciudadano por orden de ingreso.' : ' Eres el último ciudadano: la Facción se queda sin Rey.'
     : faccion.embajadorId === proyeccion.heroeId ? ' Eres el Embajador: la embajada queda libre.' : '';
-  return `<div class="faction-list"><span class="faction-kicker">Abandonar${ayuda('faccion:abandonar', `Pierdes la ciudadanía, tu casa y tus cargos locales; pasas al campamento de mercenarios más cercano y conservas lo que llevas.${cargo} No podrás crear otra Facción hasta pasados ${DIAS_COOLDOWN_CREACION} días.`)}</span>
+  return `<div class="faction-list"><span class="faction-kicker">Abandonar${ayuda('faccion:abandonar', `Pierdes la ciudadanía, tu casa y tus cargos locales; pasas al campamento de mercenarios más cercano y conservas lo que llevas.${cargo} No podrás crear otra Facción hasta pasados ${diasDeEnfriamientoDeCreacionDeFaccion()} días.`)}</span>
     <div class="faction-list-item"><button id="btn-dejar-faccion" class="btn-secondary" type="button">Dejar la Facción</button></div>
     <p id="error-dejar-faccion" class="faction-error" role="alert"></p></div>`;
 }

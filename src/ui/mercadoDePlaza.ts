@@ -2,14 +2,11 @@
 // `Comercio_Fisico_Definicion.md`). Exige una columna PROPIA a la puerta de la plaza y ser su Líder; el servidor «sirve lo que puede»
 // (el tope real sale de la orden, el almacén de la plaza, su oro, tu carro y lo que llevas) y devuelve `{ cantidad, valor, comision }`.
 // Aquí solo se avisa de lo evidente (sin columna, lejos, no Líder, caducada): el que decide es el servidor y su rechazo se enseña tal cual.
-import type { ProyeccionJugador } from '../apiCliente';
+import { radioDePuerta, type ProyeccionJugador } from '../apiCliente';
 import { RECURSO_NOMBRE } from '../paletas';
 import { ayuda } from './ayuda';
 
 type Escapar = (valor: string) => string;
-
-/** A qué distancia de la puerta de una plaza se comercia (`MOVIMIENTO.radioPuerta`). */
-const RADIO_PUERTA = 10;
 
 interface ContextoMercado {
   ejecutarConDatos: (tipo: string, params: object) => Promise<{ error: string | null; datos?: unknown }>;
@@ -29,7 +26,7 @@ function motivoGeneral(p: ProyeccionJugador, plazaId: string): string {
   // Las plazas a la vista traen sus edificios activos: sin Mercado activo no hay órdenes que servir.
   if (plaza.edificios && !plaza.edificios.some((x) => x.tipo === 'mercado' && x.estado === 'activo')) return 'Esa plaza no tiene un Mercado activo.';
   const d = Math.round(Math.hypot(columna.posicionActual.x - plaza.posicion.x, columna.posicionActual.y - plaza.posicion.y));
-  if (d > RADIO_PUERTA) return `Acércate a la puerta: estás a ${d} y se comercia a ${RADIO_PUERTA}.`;
+  if (d > radioDePuerta()) return `Acércate a la puerta: estás a ${d} y se comercia a ${radioDePuerta()}.`;
   if (columna.liderId !== p.heroeId) return 'Solo el Líder de la columna comercia con su carro.';
   return '';
 }
