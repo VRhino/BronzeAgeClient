@@ -36,26 +36,23 @@ Lo que le falta al cliente‑jugador, **contrastado con el backend** (`BronzeAge
 
 ## 2. Pendiente — cliente
 
-1. **Mis asentamientos fuera de visión** (§6.2 antiguo): «Mis cosas» solo lista los propios que están en vista o en memoria. Necesita un campo de la proyección con la lista de plazas de la Facción (ver 3.9): sin él no hay nada que hacer en el cliente.
-2. **`iniciarAsedio`:** no aplica (ver §5); no es tarea.
+1. **Mis asentamientos fuera de visión** (§6.2 antiguo): probablemente ya resuelto en el servidor (las plazas propias son ojos de la Facción y salen siempre como avistadas); falta confirmarlo en vivo.
+2. **Cupo de la flota** (nuevo canon ): mostrar en Mercado › Caravanas los topes del Mercado,  (2/4/6) y  (3/9/18, Doc 3.13.2), que ya están en  del balance, y apagar «＋ Carro» con la flota llena.
+3. **Residencia:** leer  del balance en vez del aviso genérico.
+4. **Ficha de orden ajena:** avisar de «sin Mercado» con los  de la plaza avistada.
+5. **Tiempo real:** los eventos ya dicen de qué partida son (); filtrar por .
 
 Todo lo demás del cliente está construido; el trabajo abierto es **verificarlo con estado real** (§4) y cuando el backend publique lo de §3 quitar las copias a mano que hay en el cliente.
 
 ## 3. Pendiente — backend
 
-Detalle y justificación por bloque en [`Peticion_Backend.md`](Peticion_Backend.md). Resumen:
+Contrastado contra el canon y el código del servidor en [](Peticion_Backend.md) (**borrador sin enviar**). Resumen:
 
-1. **Costes en el balance:** carros y animales (`CARRO_CATALOGO`, `ANIMAL_CATALOGO`), oro por soldado del reclutamiento (`RECLUTAMIENTO_ORO_POR_ESCALON`, `ORO_POR_CABALLO`), y en la proyección del campamento: precio por soldado, tropas desbloqueadas y población (`reclutamiento`, como `mercadoCampamento`).
-2. **Catálogo de tecnología en el balance:** `TECNOLOGIAS` (nombre, Era, logro, hito, bonus), `ERAS`, `TARIFA_ADOPCION`, `AEDAS`, `EPICAS`; la Era de cada tecnología, la capital de la Facción, el progreso de los hitos y qué admite épica.
-3. **Diplomacia:** `proponerRelacion` deja la relación activa al instante, sin aceptación (un vasallaje se impone); decidir si hace falta estado «propuesta» + `responderRelacion`. Y que una vasalla no pueda `romperRelacion` sobre su propio vasallaje.
-4. **Caravanas:** `capacidad` por caravana en la proyección; `escoltada` solo significa «adjunta a un ejército».
-5. **Almacén de tus plazas desde el mundo** (hoy llegan sin almacén) y si una plaza aliada abre el suyo (`permiteReabastecerAliados`).
-6. **Plazas:** estado de la puerta, vetos y capital en la proyección (`puertaCerradaA`, `vetadosIds`, `capitalDeFaccionId`: asumidos, sin confirmar), enfriamiento de residencia, si una plaza ajena tiene Mercado activo.
-7. **Intel:** el resultado de `inspeccionar` no queda en la proyección (se pierde al recargar); `MOVIMIENTO.radioInspeccion` (40) y `radioPuerta` (10) fuera del balance; `perseguir` no valida aliado, ejército→caravana ni Líder.
-8. **Edificios:** consumo por edificio y producción por edificio individual (llega agregada por tipo).
-9. **Proyección:** lista de plazas de la Facción (2.1); evento de posición para quitar el sondeo de 3 s; trazado de los campamentos de bandidos.
-10. **Partidas:** nombre y estado en `GET /jugador/partidas`.
-11. **Mensajes:** `diplomacia.invalida` llega genérico sin `detalleError`.
+1. **Publicar en el balance** lo que hoy solo está en : catálogos de carros y animales, oro por soldado del reclutamiento,  (radios), , , y el precio y las tropas desbloqueadas del campamento.
+2. **Catálogo de tecnología y Aedas** (Doc 6) y la Era de cada tecnología, la capital de la Facción, el progreso de hitos y qué admite épica.
+3. **Contra el canon:** una vasalla puede  sobre su vasallaje (Doc 2.4 no lo contempla);  no rechaza aliados, ejército→caravana ni no‑Líder (Doc 5.12.3).
+4. **Comodidades:** resultado de  en la proyección, almacén de tus plazas desde el mundo, nombre y estado de partida, evento de posición, trazado de bandidos.
+5. **Pregunta de diseño al autor:** alianza y vasallaje se aceptan al instante; ¿hace falta aceptación ()?
 
 ## 4. Sin verificar en vivo
 
