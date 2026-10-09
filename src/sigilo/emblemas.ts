@@ -23,3 +23,16 @@ export function svgEmblema(emblemaId: string, relleno = '#f4efe4', halo = '#1c1b
     + `<path d="${e.d}" fill="${halo}" stroke="${halo}" stroke-width="36" stroke-linejoin="round"/>`
     + `<path d="${e.d}" fill="${relleno}"/></g>`;
 }
+
+const trazados = new Map<string, Path2D | null>();
+
+/** El trazado del emblema (lienzo de 512×512) listo para un canvas, guardado una vez: el mapa se repinta a menudo. Nulo si el id no tiene icono. */
+export function pathDeEmblema(emblemaId: string): Path2D | null {
+  let p = trazados.get(emblemaId);
+  if (p === undefined) {
+    const e = EMBLEMAS[emblemaId];
+    p = e ? new Path2D(e.d) : null;
+    trazados.set(emblemaId, p);
+  }
+  return p;
+}
