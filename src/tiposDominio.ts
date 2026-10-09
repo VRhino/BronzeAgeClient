@@ -208,6 +208,10 @@ export interface Caravana {
   carros?: { tipoCarro: 'basico' | 'reforzado'; animal?: 'buey' | 'caballo' | 'camello' }[];
   /** Fuera del reparto automático de trueques. */
   reservadaManual?: boolean;
+  /** Lo que lleva cargado (recurso -> cantidad). */
+  contenido?: Record<string, number>;
+  /** Caravana de Fundación suelta: hasta cuándo espera a alguien que la lleve (instante de mundo). */
+  caducaEn?: number;
   /** Instante de mundo en que sale, solo en `preparando`. */
   preparaHasta?: number;
 }
@@ -385,22 +389,25 @@ export interface OrdenMercado {
   estado: 'activa' | 'cumplida' | 'expirada';
 }
 
+export interface LineaTrueque {
+  recurso: string;
+  cantidadTotal: number;
+  cantidadEntregada: number;
+}
+
 /**
  * Copia local de `AcuerdoTrueque` (motor, Doc 3.2): un contrato marco entre DOS ASENTAMIENTOS —no entre
  * jugadores—, cada lado comprometido a entregar su propio recurso. Desde 2026-09-07 nace `'propuesto'` y no
  * obliga a nadie hasta que el lado receptor (B) contesta con `aceptarTrueque`/`rechazarTrueque`; antes de esa
- * fecha nacía `'activo'` directamente. Sin interfaz que lo lea todavía.
+ * fecha nacía `'activo'` directamente.
  */
 export interface AcuerdoTrueque {
   id: string;
   asentamientoAId: string;
   asentamientoBId: string;
-  recursoA: string;
-  recursoB: string;
-  cantidadTotalA: number;
-  cantidadTotalB: number;
-  cantidadEntregadaA: number;
-  cantidadEntregadaB: number;
+  /** Lo que se compromete a entregar cada lado, una o varias líneas; lo que falta es `cantidadTotal - cantidadEntregada`. */
+  lineasA: LineaTrueque[];
+  lineasB: LineaTrueque[];
   creadoEn: number;
   expiraEn: number;
   estado: 'propuesto' | 'activo' | 'rechazado' | 'cumplido' | 'expirado';
