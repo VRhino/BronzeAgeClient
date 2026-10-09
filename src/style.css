@@ -1674,6 +1674,15 @@ pre#proyeccion {
   min-height: 0;
 }
 
+/* Columna central de la plaza: el mapa y, debajo, la tira de recursos. */
+.asent-centro {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .asent-mapa {
   position: relative;
   flex: 1;
@@ -2036,6 +2045,7 @@ pre#proyeccion {
 @media (max-width: 900px) {
   .asent-cuerpo { flex-direction: column; overflow-y: auto; }
   .asent-mapa { flex: none; height: min(100vw, 78vh); width: 100%; }
+  .asent-centro { flex: none; }
   .asent-lado,
   .asent-izq {
     width: auto;
@@ -2275,17 +2285,17 @@ body {
   color: var(--oro-claro);
 }
 
-/* Tira de recursos del almacén (abajo, sobre el mapa) — inspiración: barra de recursos de Total War Saga: Troya. */
+/* Tira de recursos del almacén (barra horizontal bajo el mapa, en la columna central) — inspiración: barra de recursos de Total War Saga: Troya. */
 .asent-recursos[hidden] {
   display: none;
 }
 .asent-recursos {
-  order: -1;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 6px;
-  padding: 8px 12px;
+  margin: 0 20px 12px;
+  padding: 6px 10px;
   background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg));
   border: 1px solid var(--bronce);
   border-radius: 3px;
