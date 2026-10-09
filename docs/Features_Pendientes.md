@@ -37,22 +37,22 @@ Lo que le falta al cliente‑jugador, **contrastado con el backend** (`BronzeAge
 ## 2. Pendiente — cliente
 
 1. **Mis asentamientos fuera de visión** (§6.2 antiguo): probablemente ya resuelto en el servidor (las plazas propias son ojos de la Facción y salen siempre como avistadas); falta confirmarlo en vivo.
-2. **Cupo de la flota** (nuevo canon ): mostrar en Mercado › Caravanas los topes del Mercado,  (2/4/6) y  (3/9/18, Doc 3.13.2), que ya están en  del balance, y apagar «＋ Carro» con la flota llena.
-3. **Residencia:** leer  del balance en vez del aviso genérico.
-4. **Ficha de orden ajena:** avisar de «sin Mercado» con los  de la plaza avistada.
-5. **Tiempo real:** los eventos ya dicen de qué partida son (); filtrar por .
+2. **Cupo de la flota** (nuevo canon, backend `1e5351c`): mostrar en Mercado › Caravanas los topes del Mercado, `cupoCaravanas` (2/4/6) y `cupoCarros` (3/9/18, Doc 3.13.2), que ya están en `EDIFICIO_CATALOGO.mercado.niveles` del balance, y apagar «＋ Carro» con el motivo cuando la flota esté llena.
+3. **Residencia:** leer `CIUDADANIA.cooldownCambioResidenciaDias` del balance en vez del aviso genérico.
+4. **Ficha de orden ajena:** avisar de «sin Mercado» con los `edificios` de la plaza avistada.
+5. **Tiempo real:** los eventos ya dicen de qué partida son (backend `9ab4e62`); filtrar por `gameId`.
 
 Todo lo demás del cliente está construido; el trabajo abierto es **verificarlo con estado real** (§4) y cuando el backend publique lo de §3 quitar las copias a mano que hay en el cliente.
 
 ## 3. Pendiente — backend
 
-Contrastado contra el canon y el código del servidor en [](Peticion_Backend.md) (**borrador sin enviar**). Resumen:
+Contrastado contra el canon y el código del servidor en [`Peticion_Backend.md`](Peticion_Backend.md) (**borrador sin enviar**). Resumen:
 
-1. **Publicar en el balance** lo que hoy solo está en : catálogos de carros y animales, oro por soldado del reclutamiento,  (radios), , , y el precio y las tropas desbloqueadas del campamento.
-2. **Catálogo de tecnología y Aedas** (Doc 6) y la Era de cada tecnología, la capital de la Facción, el progreso de hitos y qué admite épica.
-3. **Contra el canon:** una vasalla puede  sobre su vasallaje (Doc 2.4 no lo contempla);  no rechaza aliados, ejército→caravana ni no‑Líder (Doc 5.12.3).
-4. **Comodidades:** resultado de  en la proyección, almacén de tus plazas desde el mundo, nombre y estado de partida, evento de posición, trazado de bandidos.
-5. **Pregunta de diseño al autor:** alianza y vasallaje se aceptan al instante; ¿hace falta aceptación ()?
+1. **Publicar en el balance** lo que hoy solo está en `constants.ts`: catálogos de carros y animales, oro por soldado del reclutamiento, `MOVIMIENTO` (radios), `CAPITAL`, `PUERTA`, y el precio y las tropas desbloqueadas del campamento.
+2. **Catálogo de tecnología y Aedas** (Doc 6), la Era de cada tecnología, la capital de la Facción, el progreso de los hitos y qué admite épica.
+3. **Contra el canon:** una vasalla puede llamar a `romperRelacion` sobre su vasallaje (Doc 2.4 no lo contempla); `perseguir` no rechaza aliados, ejército→caravana ni a un no‑Líder (Doc 5.12.3).
+4. **Comodidades:** resultado de `inspeccionar` en la proyección, almacén de tus plazas desde el mundo, nombre y estado de partida, evento de posición, trazado de bandidos.
+5. **Pregunta de diseño al autor:** alianza y vasallaje se aceptan al instante; ¿hace falta aceptación (`responderRelacion`)?
 
 ## 4. Sin verificar en vivo
 
