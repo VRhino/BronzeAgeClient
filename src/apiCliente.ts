@@ -381,6 +381,8 @@ export interface TropaReclutable {
   costoEquipo: Record<string, number | undefined>;
   unidadesPorDefecto: number;
   escalon: number;
+  /** Caballos por soldado: se pagan en oro. */
+  caballos?: number;
 }
 
 /** Una política del catálogo (`POLITICA_CATALOGO`): su cargo, su nombre y los efectos (`factor*`, `cupo*`, `perfilTrazado`) como campos sueltos. */
@@ -398,7 +400,7 @@ interface BalancePublico {
   catalogos?: { EDIFICIO_CATALOGO?: Record<string, { costo?: Record<string, number>; niveles?: Record<string, NivelDeEdificio> }>; TROPAS_RECLUTABLES?: TropaReclutable[]; POLITICA_CATALOGO?: PoliticaDelCatalogo[] };
   cuposYNiveles?: { POLITICAS?: ReglasDePoliticas; CAP_FUNDACION_POR_NIVEL?: number[] };
   caravanas?: { CARAVANA_COOLDOWN?: { cooldownMinutos?: number } };
-  mundoYMilitar?: { LOGISTICA?: { capacidadViveresPorHeroe?: number; radioEncuentro?: number; radioReabastecimiento?: number }; FUNDACION?: { materialesIniciales?: Record<string, number>; viviendasIniciales?: number; costoMaderaExtraCaravana?: number }; MERCENARIOS?: { refundacion?: { porcentajeCoste?: number } } };
+  mundoYMilitar?: { LOGISTICA?: { capacidadViveresPorHeroe?: number; radioEncuentro?: number; radioReabastecimiento?: number }; FUNDACION?: { materialesIniciales?: Record<string, number>; viviendasIniciales?: number; costoMaderaExtraCaravana?: number }; MERCENARIOS?: { refundacion?: { porcentajeCoste?: number }; nivelEdificios?: number } };
   internas?: { CAMPAMENTOS_BANDIDOS?: { niveles?: Record<string, NivelDeBandidos> } };
 }
 let balancePublico: BalancePublico | null = null;
@@ -421,6 +423,14 @@ export interface NivelDeEdificio { recetas: RecetaDeEdificio[]; costoMejora?: Re
 /** Los niveles internos de un tipo de edificio (`EDIFICIO_CATALOGO[tipo].niveles`); `null` mientras no llegue el balance o si el tipo no tiene niveles. */
 export function nivelesDeEdificio(tipo: string, alCargar?: () => void): Record<string, NivelDeEdificio> | null {
   return balance(alCargar)?.catalogos?.EDIFICIO_CATALOGO?.[tipo]?.niveles ?? null;
+}
+
+/** El catálogo de tropas y el nivel al que están los edificios militares de un campamento; `null` mientras no llegue el balance. */
+export function tropasDeCampamento(alCargar?: () => void): { tropas: TropaReclutable[]; nivelEdificios: number } | null {
+  const b = balance(alCargar);
+  const tropas = b?.catalogos?.TROPAS_RECLUTABLES;
+  const nivelEdificios = b?.mundoYMilitar?.MERCENARIOS?.nivelEdificios;
+  return tropas && nivelEdificios !== undefined ? { tropas, nivelEdificios } : null;
 }
 
 /** Lo que fija cada nivel de bandidos: su poder, los hombres que defienden y el oro del botín por héroe. */
