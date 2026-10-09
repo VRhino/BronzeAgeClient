@@ -3,6 +3,70 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.26.0] — 2026-10-09 · pendientes del cliente construidos por bloques · sync con `BronzeAgeFase0@02bd153` (`main`, sin push)
+
+Once bloques en paralelo sobre los ganchos de `ui/ganchos.ts` (subpestañas de la plaza, fichas y selectores del mapa). El detalle de cada uno, con sus comandos y lo que quedó sin verificar en vivo, está en `docs/bloques/`.
+
+### Bloque A1 — Plaza › Centro urbano: Muralla, Puerta y Residencia
+- Plaza › Centro urbano: tres subpestañas nuevas.
+  - **Muralla**: trazar/ampliar (`comprometerRecinto`), mejorar (`mejorarRecinto`) y abandonar (`abandonarRecinto`) recintos desde la plaza, con el mismo HTML que `#/legacy`. Los botones se desactivan con el motivo cuando no resides o la plaza no llega al nivel mínimo.
+  - **Puerta**: cerrar la plaza por grupos (neutrales, aliados, enemigos, aedas) con `fijarPuerta` (Gobernador o Rey de la Facción) y vetar / levantar el veto a jugadores concretos con `vetarJugador` (solo Gobernador; no se ofrece vetar a residentes).
+  - **Residencia**: `dejarResidencia` con confirmación (dice qué se pierde) y `designarCapital` (solo al Rey; explica Palacio activo y enfriamiento de 14 días de mundo).
+- Tipos: `Asentamiento.puertaCerradaA / vetadosIds / capitalDeFaccionId`, `Faccion.capitalDesignadaEn`.
+
+### Bloque A2 — Tesorería y Caravana de Fundación desde la plaza
+- Plaza › Centro urbano › **Tesorería**: el Tesorero calibra la reserva de recursos de la plaza (0–999 por recurso, `calibrarReservaManual`); y cada cargo (Gobernador, Tesorero, Maestro de Obras, General, Sacerdote) activa las políticas de su pool (`activarPolitica`), con su efecto, los slots usados/máximos, lo que expira cada una en vigor y el motivo cuando no se puede (cargo vacante, otro titular, sin slots, ya activa, no estás presente). El catálogo, los slots y la duración salen de `GET /v1/balance`.
+- Plaza › Centro urbano › **Fundación**: lanzar la Caravana de Fundación desde la plaza (`lanzarCaravanaFundacion`) y desarmarla (`desarmarCaravanaFundacion`). Enseña el coste completo con lo que falta en rojo, los cinco requisitos con su motivo (residente presente, nivel 2, enfriamiento compartido con las comerciales, cupo del Cap de Fundación, coste en el almacén) y las caravanas de fundación de esa plaza con su estado, caducidad y botón de desarmar.
+- Riel «Fundar» del mapa: el texto y la detección de la caravana valen también para la lanzada desde una plaza (antes asumía siempre un campamento).
+- `apiCliente.ts`: accesores del balance `costoCompletoDeCaravanaDeFundacion`, `cooldownDeCaravanaMinutos`, `capDeFundacion`, `catalogoDePoliticas` (`costoDeRefundacion` ahora parte del primero).
+
+### Bloque B — Reclutar y reponer tropa en un campamento de mercenarios
+- Campamento › Tropa: nueva sección «Reclutar». Lista las tropas de los edificios militares del campamento (barracón, galería de tiro, caballerizas, al nivel `MERCENARIOS.nivelEdificios`; no la leva del Centro Urbano) con su edificio, hombres, escalón, equipo que se cobra en oro y lo que ya tienes de cada una. Botón «Reclutar» o «Reponer N» (deshabilitado si la escuadra está completa) y selector «Pagar con» (almacén personal o carro de tu columna, con el oro de cada uno). El rechazo del servidor sale tal cual (sin oro, sin reclutas, tropa no desbloqueada por el campamento, columna lejos…). Si no resides en el campamento, la pestaña explica que hay que residir.
+- `apiCliente.ts`: accesor `tropasReclutables()` (catálogo `TROPAS_RECLUTABLES` + `MERCENARIOS.nivelEdificios` del balance).
+
+### Bloque C1 — columnas, caravanas y héroes ajenos en el mapa
+- **Interacción con lo ajeno en el mapa (Doc 5.12.3).** Un clic cerca de una columna (ejército o columna personal) o de una caravana avistada abre su ficha, sin mandar marchar a tu columna. La ficha enseña la facción, la distancia a tu columna, los héroes que van con su ficha pública (clase, nivel, herida, escuadras y equipo) y los botones del canon: **Inspeccionar** (desde 40; lo que se ve —composición de una columna, carga de una caravana— queda en la ficha con su antigüedad), **Perseguir** / **Dejar de perseguir**, **Atacar** (a una caravana suelta, **Interceptar**). Los botones se apagan con su motivo: lejos, herido, sin columna, ejército contra columna personal, aliado, solo héroes heridos, caravana adjunta a un ejército, un ejército no persigue caravanas, formación que no se mueve, sin soldados, junto a un campamento de mercenarios.
+- **«Te persiguen» con respuesta.** El aviso rojo de la barra abre (en el mapa) la ficha de quien te persigue, con las dos respuestas del canon: huir (marchar a otro sitio o entrar en una plaza/campamento) o **Plantar cara** (atacar al perseguidor a 15).
+- Tipos de la proyección: `CaravanaAvistada`, `ProyeccionJugador.caravanasAvistadas`, `Ejercito.persiguiendo`.
+
+### Bloque C2 — persistir la vista del mapa (Features_Pendientes 2.1.6)
+- El mapa recuerda su vista: zoom, desplazamiento, panel del riel abierto (Lo que llevas / Mis cosas) y la selección. Se conserva al ir a la plaza o al campamento y volver, y al recargar la página. Se guarda en `localStorage` con una clave por partida, así que no se mezcla entre partidas ni al cerrar sesión; sin `localStorage` el mapa funciona igual, sin memoria.
+- La selección guardada solo se restaura si lo seleccionado sigue existiendo (si no, se descarta en silencio) y restaurarla no manda ninguna orden. El zoom y el desplazamiento guardados se vuelven a acotar al tamaño del mapa. La previsualización de Fundar no se restaura.
+- Regla del centrado: con vista guardada manda ella; la primera vez (sin vista), el mapa se centra en tu columna.
+
+### Bloque C3: salir de una plaza ajena y reabastecer a los aliados
+- Plaza donde NO resides: el botón de la barra pasa a «Salir» y abre un panel que explica que tu columna quedó aparcada a la puerta y que salir la retoma tal cual (tropa y carro), sin pantalla de equipamiento (`salirDeAsentamiento`). En tu residencia sigue siendo «Salir al mundo» (`salirAlMundo`, con tropa y carga). Antes, en una plaza ajena el panel ofrecía `salirAlMundo`, que el servidor rechaza («Solo se sale al mundo desde la propia residencia»).
+- Centro urbano › subpestaña «Aliados»: interruptor para abrir o cerrar el almacén de la plaza a los ejércitos aliados que pasan (`alternarReabastecerAliados`). Muestra el estado actual y avisa de quién puede cambiarlo (Gobernador o Tesorero residente y presente); el rechazo del servidor se enseña tal cual.
+
+### Bloque D1 — Trueques y caravanas aparcadas (plaza › Mercado)
+- **Mercado › Trueques** (plaza): lista los acuerdos de trueque de la plaza (en curso y cerrados) con sus líneas (varias por lado, con progreso entregado/pactado cuando está en vigor), estado, plazo y a quién le toca contestar. Los recibidos sin contestar se aceptan o rechazan (`aceptarTrueque`/`rechazarTrueque`, solo residentes del lado que contesta). Formulario para proponer un trueque a otra plaza conocida (hasta 3 líneas por lado, recurso + cantidad). Texto breve con la regla del canon: una propuesta sin contestar caduca sin castigo; el plazo corre desde el sí; vencer sin cumplir resta reputación en proporción a lo no entregado (Doc 2.7).
+- **Mercado › Aparcadas** (plaza): las caravanas `aparcada` de tu Facción que hay en esta plaza, con su carga; cargar/descargar un recurso entre su carro y el almacén de la plaza anfitriona, y enviarla a su origen. Se apagan, con el motivo, si no eres residente del origen de la caravana.
+- Tipos: `AcuerdoTrueque` con `lineasA`/`lineasB` (`LineaTrueque`) como el servidor (antes tenía la forma antigua de un solo recurso); `Caravana.contenido`.
+- `.asent-subtabs` ahora hace salto de línea (con cinco subpestañas en Mercado se cortaba).
+
+### Bloque D2 — Caravanas adjuntas a la columna
+- **Caravanas de tu columna** en el panel «Lo que llevas» (riel del mapa, ⚔): lista de las caravanas enganchadas con su estado y lo que cargan, y botón **Soltar**; lista «Para enganchar» con tus caravanas sueltas o aparcadas, ordenadas por cercanía, y el motivo cuando no se pueden enganchar (otra Facción, ya va con otro ejército, la lleva su titular, ya despachada, demasiado lejos); **Cargar** desde una plaza de tu Facción a tu alcance (plaza, recurso y cantidad); **Entregar** por cada trueque activo en que tu Facción debe algo, con lo que falta y el aviso de por qué no (caravana vacía, lejos de la plaza que recibe). Los rechazos del servidor se ven bajo el bloque.
+- Panel «Ejército»: avisa cuántas caravanas lleva la columna y dónde se gestionan.
+- Tipos: `Caravana` gana `contenido` y `caducaEn`; `AcuerdoTrueque` pasa a `lineasA`/`lineasB` (`LineaTrueque`), que es lo que manda el servidor.
+
+### Bloque D3: tomar una orden de mercado ajena en persona
+- **Mercado de la plaza** en la ficha del mapa de un asentamiento: lista las órdenes activas de esa plaza que trae la proyección (compra/venta, recurso, pendiente, precio, caducidad) y, por cada una, un campo de cantidad y el botón «Comprar» (orden de venta de la plaza) o «Vender» (orden de compra). Se avisa con el motivo cuando no se puede: sin columna en el mundo, a más de 10 de la puerta, no eres el Líder de la columna u orden caducada. Al servirse, el aviso del mapa dice cuánto se sirvió, por cuánto oro y la comisión; si el servidor rechaza, el mensaje sale en la ficha.
+
+### Bloque E1 — Pestaña Facción: cargos, abandono y diplomacia
+- Pestaña **Facción**: el Rey puede **traspasar el trono** y **designar al Embajador** (selectores entre los ciudadanos, con confirmación al traspasar), y cualquier ciudadano puede **dejar la Facción** (confirmación que explica la sucesión del trono, la embajada libre, la pérdida de casa y cargos locales y el enfriamiento de 7 días para crear otra Facción).
+- Nueva sección **Diplomacia** en la pestaña Facción: lista las relaciones activas de tu Facción (alianza, vasallaje como señora o como vasalla con su tributo, guerra con el estado de la paz) y ofrece a Rey y Embajador solo lo que cada relación permite: romper la alianza (avisa de −12 de reputación), liberar a un vasallo (+6), rebelarse siendo vasalla (confirmación explícita: guerra al señor y a sus vasallos, trueques cancelados, −10 de reputación al señor), ofrecer o aceptar la paz. Formulario para proponer alianza, imponer vasallaje (recurso y cantidad de tributo por minuto) o declarar guerra (confirmación: se arrastra a señor y vasallos del rival).
+
+### Bloque E2 — Tecnología y Aedas
+- Nuevo panel **Tecnología** en la barra del jugador (junto a Héroe, Carro, Facción, Avisos): Era del mundo y logros cumplidos; tus tecnologías (aparecidas, con botón *Adoptar*; adoptadas; reveladas por un Aeda con su hito y qué parte ya cumples); quién adopta y cuánto cuesta según la Era; Aedas residentes de tus plazas con su épica (capítulo, hechos, enfriamiento), *Empezar épica* para una tecnología revelada y *Abandonar*; y *Comprar* una tecnología revelada a un Aeda itinerante detenido en una plaza tuya. Los botones se deshabilitan con el motivo (no eres Rey/Gobernador/Sacerdote, no estás en la plaza); el rechazo del servidor se muestra tal cual.
+
+### Bloque F — Vista de la ciudad
+- **Plaza › lienzo de la ciudad:** clic en un edificio abre una ficha flotante (tipo, nivel, estado, producción por minuto, recetas del nivel con sus insumos por unidad) con las acciones que el backend permite de verdad: **Mejorar** (con su coste, requisitos y obra, sacados de `EDIFICIO_CATALOGO`) y **Quitar de la cola** (si está en cola), solo para Gobernador / Maestro de Obras. No hay pausa ni prioridad por edificio en el backend, así que no se ofrecen.
+- **Resaltado cruzado:** elegir una fila de Centro urbano › Edificios resalta en el lienzo todos los edificios de ese tipo (el elegido con trazo fuerte; repetir el clic recorre los de un tipo); elegir uno en el lienzo marca su fila.
+- **Tooltip:** ahora lleva la producción por minuto del edificio (la proyección la da por tipo: se reparte entre los activos, «≈» si hay varios) y avisa de que el consumo por edificio no lo publica el servidor.
+- **Centro urbano › Recetas:** lista las recetas de los talleres activos (una por recurso) con taller, ritmo máximo, insumos por unidad y bloqueo por tecnología; `alternarReceta` para parar/reanudar.
+- **Centro urbano › Información:** el glosario de `#/legacy`, ahora dentro de la plaza.
+- **Escala del lienzo:** el radio de la vista se deriva del extremo real de edificios y murallas (pasos de 20, mínimo 60, sin tope en 220), así una plaza pequeña no se ve diminuta y una grande no se recorta.
+
 ## [0.25.0] — 2026-10-08 · la plaza por edificio, reclutar, mercado y caravanas, y pantalla de partidas · sync con `BronzeAgeFase0@02bd153` (`main`, sin push)
 
 ### Añadido

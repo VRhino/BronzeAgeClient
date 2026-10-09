@@ -1,90 +1,83 @@
 # Features pendientes
 
-Lo que le falta al cliente‑jugador, **contrastado con el backend** (`BronzeAgeFase0@02bd153`: comandos registrados en `src/session/comandos/registro.ts` y canon de `Docs/Game`). Revisado el **2026-10-09**, versión del cliente **0.25.0**. Sustituye a la lista del revamp de pantallas, que estaba desfasada: casi todo lo que pedía ya está hecho.
+Lo que le falta al cliente‑jugador, **contrastado con el backend** (`BronzeAgeFase0@02bd153`: comandos de `src/session/comandos/registro.ts` y canon de `Docs/Game`). Revisado el **2026-10-09**, versión del cliente **0.26.0**. Con 0.26.0 se construyó todo lo pendiente de la revisión anterior que dependía solo del cliente; lo que queda es verificar en vivo y lo que espera al backend.
 
 - Guía visual (leer antes de diseñar UI nueva): [`Diseno_Interfaz.md`](Diseno_Interfaz.md).
 - Inventario de info y acciones del asentamiento: [`Panel_Asentamiento.md`](Panel_Asentamiento.md).
 - Intención de producto / UX a mano: [`notas.md`](notas.md).
-- Catálogo de comandos (qué está cableado y qué no): [`COMANDOS.md`](COMANDOS.md).
+- Catálogo de comandos (qué está cableado): [`COMANDOS.md`](COMANDOS.md).
+- Detalle de cada bloque de 0.26.0 (qué hace, comandos, qué quedó sin verificar): [`bloques/`](bloques/).
+- Lo que hay que pedir al backend, reunido: [`Peticion_Backend.md`](Peticion_Backend.md) (**borrador sin enviar**).
 
 ## Índice
 
 1. [Hecho](#1-hecho)
 2. [Pendiente — cliente](#2-pendiente--cliente)
 3. [Pendiente — backend](#3-pendiente--backend)
-4. [No aplica](#4-no-aplica)
+4. [Sin verificar en vivo](#4-sin-verificar-en-vivo)
+5. [No aplica](#5-no-aplica)
 
 ---
 
 ## 1. Hecho
 
-Para no volver a listarlo como pendiente:
-
-- **Sesión:** login solo con la cuenta y pantalla de **partidas** (lista de partidas abiertas con tu héroe, Facción y nivel; «Cambiar de partida»). 0.25.0.
-- **Héroe y mundo:** barra del jugador (Héroe, Escuadras, Carro, Facción, Avisos), panel Héroe (ficha, escuadras, guarnición, loadouts), tiempo real por WebSocket con sondeo de apoyo, presencia, avisos por eventos, panel del Carro, víveres.
-- **Salir al mundo** con tropa y carga elegidas (campamento y plaza), y **ejércitos**: formar, unirse en campo y desde la plaza, ejército en preparación (convocar, unirse, partir), sin destino fijo (el Líder lo dirige con clics), entrar entero en un campamento o plaza, editar tu tropa en la preparación.
-- **Plaza por edificio** (0.25.0): Centro urbano (resumen, edificios, producción, cola, cargos, ascenso, renombrar la ciudad, «Hacer de esta plaza mi base»), Reclutamiento, Taberna (intel) y Mercado (órdenes, caravanas, escolta). Taberna y Mercado salen bloqueadas con «necesitas construir …».
-- **Campamentos de mercenarios:** planta, residir, préstamo de leva, mercado, fondo de refundación, taberna, salir (también como ejército).
-- **Facción:** crear, unirse, solicitar ingreso, cargos locales, anexión y fusión, admisión de otras Facciones.
-- **Mapa:** fichas de plaza, campamentos (bandidos y mercenarios), alijos y ejércitos; atacar plazas y campamentos de bandidos; riel de columna, ejército, mis cosas y fundar.
-- **Interfaz:** repintado mínimo de todos los paneles (`ui/repintado.ts`) y mapa de códigos de error a mensajes (`ui/erroresServidor.ts`).
+- **Sesión:** login solo con la cuenta y pantalla de partidas (tu héroe, Facción con emblema y nivel; «Cambiar de partida»).
+- **Héroe y mundo:** barra del jugador (Héroe, Escuadras, Carro, Facción, **Tecnología**, Avisos), panel Héroe, tiempo real por WebSocket con sondeo de apoyo, presencia, avisos por eventos, panel del Carro, víveres, repintado mínimo (`ui/repintado.ts`) y mapa de errores (`ui/erroresServidor.ts`). **La vista del mapa persiste** (zoom, pan, panel y selección, por partida).
+- **Salir al mundo** (tropa y carga; como ejército) y **ejércitos** completos: formar, unirse, preparación, sin destino fijo, entrar entero a campamento o plaza. **Salir de una plaza donde no resides** (`salirDeAsentamiento`).
+- **Mapa:** fichas de plaza (con **mercado de la plaza: tomar una orden ajena**), campamentos, alijos, ejércitos propios y **columnas y caravanas ajenas** (inspeccionar, perseguir, atacar/interceptar, dejar de perseguir, plantar cara a quien te persigue, fichas públicas de héroes ajenos).
+- **Plaza por edificio:**
+  - **Centro urbano:** Resumen, Edificios, Producción, Cola, Cargos, **Muralla, Puerta (puerta y veto), Residencia (dejar residencia, capital), Tesorería (reserva y políticas), Fundación (caravana de fundación de plaza), Recetas, Aliados (reabastecer aliados), Información**.
+  - **Reclutamiento**, **Taberna** (intel) y **Mercado:** Órdenes, Caravanas, Escolta, **Trueques, Aparcadas**.
+  - **Vista de la ciudad:** clic en un edificio (ficha con mejora y cola), resaltado cruzado con la lista, tooltip con producción, escala derivada del contenido.
+- **Caravanas con ejército:** enganchar, soltar, cargar y entregar (panel «Lo que llevas»).
+- **Campamentos de mercenarios:** planta, residir, préstamo de leva, **reclutar y reponer pagando oro**, mercado, fondo de refundación, taberna, salir.
+- **Facción:** crear, unirse, solicitar ingreso, cargos locales, anexión, fusión, admisión de otras Facciones, **traspaso del trono, Embajador, dejar la Facción y toda la diplomacia** (alianza, vasallaje con tributo, guerra, paz, romper, rebelión).
+- **Tecnología y Aedas:** era y logros, adoptar, comprar a un Aeda, épicas.
 
 ## 2. Pendiente — cliente
 
-Cada punto dice el comando (ver `COMANDOS.md`) y de dónde sale en el canon.
+1. **Mis asentamientos fuera de visión** (§6.2 antiguo): «Mis cosas» solo lista los propios que están en vista o en memoria. Necesita un campo de la proyección con la lista de plazas de la Facción (ver 3.9): sin él no hay nada que hacer en el cliente.
+2. **`iniciarAsedio`:** no aplica (ver §5); no es tarea.
 
-### 2.1 Mapa y militar
-1. **Columnas ajenas** (Doc 5.12.3): `atacar` con objetivo `ejercito`, `perseguir`, `dejarDePerseguir` e `inspeccionar`. Hoy «te persiguen» avisa pero no hay respuesta (huir o plantar cara).
-2. **Caravanas ajenas** (Doc 5.12.3): inspeccionar e interceptar; las avistadas (`caravanasAvistadas`) solo se pintan.
-3. **Héroes ajenos:** ficha pública al seleccionar una columna propia o avistada (`heroesVisibles`: nombre, clase, nivel, herido, escuadras que lleva).
-4. **Reabastecer aliados:** `alternarReabastecerAliados` (Doc 5, reabastecimiento en ruta).
-5. **`salirDeAsentamiento`:** retomar la columna aparcada en una plaza ajena (Doc 1.10).
-6. **Persistencia de la vista:** zoom, pan, panel del riel abierto y selección se pierden al salir del mapa; conservarlos (`localStorage`).
-7. **Mis asentamientos fuera de visión:** «Mis cosas» solo lista los que están en vista o en memoria. Puede necesitar un campo de la proyección (ver 3.4).
-
-### 2.2 Plaza
-8. **Muralla:** `comprometerRecinto`, `abandonarRecinto` y `mejorarRecinto` solo funcionan en `#/legacy`; la plaza por edificio no tiene la pestaña. Traerla a Centro urbano.
-9. **Puerta y veto** (Doc 1.10.5, Doc 2.8): `fijarPuerta` (`cerradaA`: neutrales, aliados, enemigos, aedas; la fija el Gobernador o el Rey) y `vetarJugador` (solo el Gobernador; a un residente no se le veta). Condicionan quién entra, también un ejército.
-10. **Residencia:** `dejarResidencia` (libera la vivienda sin dejar la Facción) y `designarCapital`.
-11. **Reclutar en un campamento de mercenarios** (Doc 5, 2026-10-02): `reclutarEnCampamento`, solo oro y población del campamento, para quien reside en él. El cliente solo ofrece el préstamo gratuito.
-12. **Interfaz de la ciudad:** clic en un edificio (ficha con mejorar, pausar, prioridad) y resaltado desde la lista; producción y **consumo** en el tooltip; `alternarReceta` (pausar recetas); escala de la vista (`radioMapa = 60` fijo frente al canon `REJILLA_ASENTAMIENTO.radioMapa = 220`: puede recortar plazas grandes).
-13. **Tesorero** (Doc 3, Doc 4): `calibrarReservaManual` y `activarPolitica`.
-14. **Glosario «Información»:** solo en `#/legacy`.
-
-### 2.3 Comercio y caravanas
-15. **Tomar una orden ajena:** `comerciarEnPlaza`, desde el mapa con una columna tuya a la puerta de esa plaza (no se puede desde dentro de la tuya).
-16. **Trueques** (Doc 3.2): `proponerTrueque`, `aceptarTrueque` y `rechazarTrueque`.
-17. **Caravanas aparcadas** (Doc 3.13.7): `moverCargaCaravanaAparcada` y `enviarCaravanaAlOrigen`.
-18. **Caravanas adjuntas a un ejército** (Doc 5.13): `adjuntarCaravana`, `soltarCaravana`, `cargarCaravana` y `entregarDeCaravana`.
-19. **Caravana de Fundación desde la plaza** (Doc 1.8, vigente): `lanzarCaravanaFundacion` y `desarmarCaravanaFundacion`. Hoy desde una plaza **no hay forma de crearla** (la de un campamento sí, en el Fondo). Lanzarla: un residente presente, que pasa a ser el titular; la plaza paga el coste completo de su almacén, nivel 2 mínimo, cooldown de 10 min compartido con las comerciales y cupo del Cap de Fundación. Va en Centro urbano (el canon la separa del Mercado, Doc 3.12). Desarmarla: solo el titular, con la caravana suelta y en la puerta de su origen. El texto del riel Fundar («se compra en un campamento») hay que matizarlo para una Facción que ya tiene plaza.
-
-### 2.4 Facción, diplomacia y tecnología
-20. **Cargos de Facción:** `asignarRey`, `asignarEmbajador` y `dejarFaccion`.
-21. **Relaciones** (Doc 2.4): `proponerRelacion` (vasallaje o alianza, con tributo), `declararGuerra`, `proponerPaz`, `romperRelacion` y `rebelionVasallo`.
-22. **Tecnología y Aedas** (Doc 6): `adoptarTecnologia`, `comprarTecnologiaAeda`, `empezarEpica` y `abandonarEpica`. No hay ninguna interfaz; la proyección ya trae `tecnologia` (era, logros y `propias.aparecidas/adoptadas/reveladas`).
-23. ~~`iniciarAsedio`~~ **No aplica:** el canon solo reconoce asediar con **Atacar** desde un ejército (Doc 5.12.4); `iniciarAsedio` es una vía directa entre plazas vecinas que el backend conserva sin movilizar, y el cliente ya usa `atacar`.
+Todo lo demás del cliente está construido; el trabajo abierto es **verificarlo con estado real** (§4) y cuando el backend publique lo de §3 quitar las copias a mano que hay en el cliente.
 
 ## 3. Pendiente — backend
 
-1. **Costes en el balance:** `GET /v1/balance` no publica el coste de carros y animales (`CARRO_CATALOGO`, `ANIMAL_CATALOGO`) ni el oro por soldado del reclutamiento (`RECLUTAMIENTO_ORO_POR_ESCALON`, `ORO_POR_CABALLO`). Hoy el cliente enseña el rechazo del servidor en vez del precio de antemano.
-2. **Lista de partidas:** `GET /jugador/partidas` no trae nombre de partida ni estado distinto de `activa`.
-3. **Evento de posición:** el sondeo de 3 s existe solo porque el movimiento de las columnas no genera eventos; con un evento de posición (o un tick por el canal) se quitaría.
-4. **Lista de plazas de la Facción:** un asentamiento propio fuera de visión y sin foto en memoria no viaja en la proyección (ver 2.1.7).
-5. **Trazado de los campamentos de bandidos:** esquemático hasta que el backend lo publique.
+Detalle y justificación por bloque en [`Peticion_Backend.md`](Peticion_Backend.md). Resumen:
 
-## 4. No aplica
+1. **Costes en el balance:** carros y animales (`CARRO_CATALOGO`, `ANIMAL_CATALOGO`), oro por soldado del reclutamiento (`RECLUTAMIENTO_ORO_POR_ESCALON`, `ORO_POR_CABALLO`), y en la proyección del campamento: precio por soldado, tropas desbloqueadas y población (`reclutamiento`, como `mercadoCampamento`).
+2. **Catálogo de tecnología en el balance:** `TECNOLOGIAS` (nombre, Era, logro, hito, bonus), `ERAS`, `TARIFA_ADOPCION`, `AEDAS`, `EPICAS`; la Era de cada tecnología, la capital de la Facción, el progreso de los hitos y qué admite épica.
+3. **Diplomacia:** `proponerRelacion` deja la relación activa al instante, sin aceptación (un vasallaje se impone); decidir si hace falta estado «propuesta» + `responderRelacion`. Y que una vasalla no pueda `romperRelacion` sobre su propio vasallaje.
+4. **Caravanas:** `capacidad` por caravana en la proyección; `escoltada` solo significa «adjunta a un ejército».
+5. **Almacén de tus plazas desde el mundo** (hoy llegan sin almacén) y si una plaza aliada abre el suyo (`permiteReabastecerAliados`).
+6. **Plazas:** estado de la puerta, vetos y capital en la proyección (`puertaCerradaA`, `vetadosIds`, `capitalDeFaccionId`: asumidos, sin confirmar), enfriamiento de residencia, si una plaza ajena tiene Mercado activo.
+7. **Intel:** el resultado de `inspeccionar` no queda en la proyección (se pierde al recargar); `MOVIMIENTO.radioInspeccion` (40) y `radioPuerta` (10) fuera del balance; `perseguir` no valida aliado, ejército→caravana ni Líder.
+8. **Edificios:** consumo por edificio y producción por edificio individual (llega agregada por tipo).
+9. **Proyección:** lista de plazas de la Facción (2.1); evento de posición para quitar el sondeo de 3 s; trazado de los campamentos de bandidos.
+10. **Partidas:** nombre y estado en `GET /jugador/partidas`.
+11. **Mensajes:** `diplomacia.invalida` llega genérico sin `detalleError`.
+
+## 4. Sin verificar en vivo
+
+Todo lo de 0.26.0 se probó con **proyección fabricada** (el servidor rechaza los comandos de una plaza que no existe y se comprobó que el rechazo se ve) salvo lo que dice «en vivo». Falta ver con estado real:
+
+- **Plaza:** Muralla, Puerta, Residencia, Tesorería, Fundación (lanzar y desarmar), Recetas, Aliados (el interruptor y la restricción por cargo), mejorar y quitar de cola desde la ficha del edificio; salida real de una plaza ajena con columna aparcada; **Mercado:** órdenes, caravanas, trueques (aceptar y proponer con éxito), aparcadas (cargar y enviar al origen). La ficha de edificio no se vio en captura (el navegador no componía fotogramas).
+- **Mapa:** resultado real de inspeccionar, atacar y perseguir (e informe de combate), «Dejar de perseguir» con un `persiguiendo` real, tomar una orden ajena (cantidad servida), restaurar la selección de plaza o alijo, cambio de partida con la vista guardada, `localStorage` bloqueado.
+- **Caravanas con ejército:** enganchar, soltar, cargar y entregar aceptados por el servidor; la regla «solo el Líder» no se aplica porque el servidor deja a cualquiera de la columna.
+- **Campamento:** pagar con el carro, reponer con bajas, que la escuadra nueva se una a la columna, precio con reputación o sin asentamientos. *(Verificado en vivo: reclutar honderos y escaramuzadores, rechazos por tecnología y por falta de oro.)*
+- **Facción:** rebelión con trueques reales, guerra arrastrada por vasallaje con terceros, sucesión del trono con más de dos ciudadanos, un rechazo de dominio en estos paneles. *(Verificado en vivo con dos cuentas: alianza, guerra, paz, vasallaje, rebelión, Embajador, trono, dejar la Facción.)*
+- **Tecnología:** adoptar, comprar, empezar y abandonar con éxito; botones apagados por cargo.
+
+## 5. No aplica
 
 **Unity** (lo resuelve Conquest, no el cliente web):
-- Creación completa del héroe: clase, género y aspecto (`crearHeroe`; la pantalla provisional solo pide nombre).
-- Equipo, inventario y perks (CQ-004; `equipamiento`, `inventario` y `perksSeleccionados` llegan vacíos).
-- Batallas de Unity: `unirseABatalla`, `cancelarBatalla`, `proyeccion.batallas`, el token de asignación.
+- Creación completa del héroe: clase, género y aspecto (la pantalla provisional solo pide nombre).
+- Equipo, inventario y perks (CQ-004).
+- Batallas de Unity: `unirseABatalla`, `cancelarBatalla`, `proyeccion.batallas`, token de asignación.
 
 **Descartado del canon:**
-- Entrar a una plaza solo con llegar a la puerta: se queda el botón «Entrar» (y el aviso de «ya puedes entrar» no hace falta).
-- `comprarCasa` (ya no existe en el backend).
-- `fijarPoliticaDeAcceso` (lo sustituye `fijarPuerta`, punto 9).
+- Entrar a una plaza solo con llegar a la puerta (se queda el botón «Entrar»).
+- `comprarCasa` (ya no existe) y `fijarPoliticaDeAcceso` (lo sustituye `fijarPuerta`).
+- `iniciarAsedio`: el canon solo reconoce asediar con «Atacar» desde un ejército (Doc 5.12.4); es una vía directa entre plazas vecinas que el backend conserva sin movilizar.
 
-**Resuelto por el backend, ya no es una tarea:**
-- Columna huérfana: el «héroe huérfano» dejó de existir el 2026-10-02 (Doc 0).
-- Fundación grupal: los ciudadanos de la columna del titular son cofundadores, hasta 5 (Doc 1.3).
-- Eventos de combate, tiempo real de datos y nombres de los solicitantes de ingreso (cliente 0.14.1 y 0.15.0).
+**Resuelto por el backend:** columna huérfana (el héroe huérfano ya no existe, Doc 0) y fundación grupal (los ciudadanos de la columna son cofundadores, Doc 1.3).

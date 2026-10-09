@@ -22,7 +22,7 @@ Fuente, en el repositorio del **backend**: `src/session/comandos/registro.ts` (e
 > `intel.invalida`. Esta tabla sigue contando los comandos de la revisión del 2026-09-26: desde entonces el backend ha añadido
 > los de los campamentos de mercenarios, los Aedas y estos dos (el esquema publicado trae 102).
 
-El backend registra **120 comandos de partida** y la matriz admite el rol `jugador` en todos (ver la nota de 2026-10-09 arriba). La interfaz cablea **80 entradas de este índice**; el resto solo es alcanzable llamando a
+El backend registra **120 comandos de partida** y la matriz admite el rol `jugador` en todos (ver la nota de 2026-10-09 arriba). La interfaz cablea **117 entradas de este índice**; el resto solo es alcanzable llamando a
 mano al wrapper `ejecutarComando` de `src/apiCliente.ts`, o no aplica (Unity).
 
 > **Sync 2026-09-26 — ritmo de crecimiento y asedio como orden:** (1) +`solicitarAscenso`: el nivel de un
@@ -92,22 +92,22 @@ Los cinco siguientes no llevan `heroeId`: el actor es su propio héroe. Wrapper 
 ### Fundación y expansión
 
 - [x] `fundar` — sin `params` (`{}`; antes `fundarAsentamiento`): se funda DONDE SE ESTÁ, con la Caravana de Fundación enganchada a tu columna; los ciudadanos de la columna son cofundadores, hasta 5 (Doc 1.3) · riel del mapa › Fundar
-- [ ] `lanzarCaravanaFundacion` — `origenAsentamientoId` (sin destino ni `numJugadores`: la caravana nace parada en su origen y se funda con `fundar` donde se esté) · **canon vigente (Doc 1.8)**: la lanza un residente presente, que pasa a ser su titular. Gates a la vez: la plaza **paga el coste completo** de su almacén, **nivel 2** como mínimo, cooldown de creación compartido con las comerciales (`CARAVANA_COOLDOWN`, 10 min) y cupo del Cap de Fundación. **Sin interfaz: desde la plaza no hay forma de crearla** (la de un campamento sí, en el Fondo)
-- [ ] `desarmarCaravanaFundacion` — `caravanaId` · solo su titular, con la caravana **suelta y en la puerta de su origen**; devuelve todo lo que costó (la de una plaza, a su almacén; la de un campamento, a cada aportante). Suelta y sin nadie caduca a las 48 h
+- [x] `lanzarCaravanaFundacion` — `origenAsentamientoId` · Centro urbano › Fundación
+- [x] `desarmarCaravanaFundacion` — `caravanaId` · Centro urbano › Fundación (titular, caravana suelta y en la puerta de su plaza)
 
 ### Facción y ciudadanía
 
 - [x] `crearFaccion` — `nombre`, `sigilo` (campo, emblema y dos colores del catálogo; no se cambia nunca) · pestaña Facción
 - [x] `unirseAFaccion` — `faccionId` · pestaña Facción, lista buscable
-- [ ] `dejarFaccion` — sin parámetros (`{}`); el actor solo puede dejar la suya
+- [x] `dejarFaccion` — `{}` · Facción › Abandonar (`ui/panelCargos.ts`)
 - [x] `cambiarResidencia` — `destinoId`, `heroeId` (nuevo 2026-09-08, Doc 2.5) · atómico: deja la residencia actual (libera vivienda, vacía cargos locales viejos) + toma una nueva en otra plaza de tu Facción con hueco y permiso; tu campamento se muda contigo y tu guarnición se suelta (2026-09-14). Prerrequisito de consolidar una conquista · botón «Hacer de esta plaza mi base» en la barra de la plaza (solo en una plaza de tu Facción donde no resides)
 
 ### Cargos y políticas
 
-- [ ] `asignarRey` — `faccionId`, `heroeId`
-- [ ] `asignarEmbajador` — `faccionId`, `heroeId`
+- [x] `asignarRey` — `{ faccionId, heroeId }` · Facción › Cargos › Traspasar el trono (`ui/panelCargos.ts`)
+- [x] `asignarEmbajador` — `{ faccionId, heroeId }` · Facción › Cargos › Designar Embajador (`ui/panelCargos.ts`)
 - [x] `asignarCargoLocal` — `asentamientoId`, `cargo`, `heroeId` · panel Facción de la pantalla Asentamiento (el Rey nombra Gobernador; el Gobernador, el resto)
-- [ ] `activarPolitica` — `asentamientoId`, `cargo`, `politicaId`
+- [x] `activarPolitica` — `asentamientoId`, `cargo`, `politicaId` · Centro urbano › Tesorería (cada cargo, las de su pool; el Gobernador, todas)
 
 ### Construcción y gestión local
 
@@ -117,7 +117,7 @@ Los cinco siguientes no llevan `heroeId`: el actor es su propio héroe. Wrapper 
 - [x] `mejorarEdificioAhora` — `asentamientoId`, `cargo`, `edificioId` · arranca la mejora (se paga ya, dura `edificio.mejora.completaEn`, ocupa cuadrilla) · pestaña Edificios (⬆); la mejora en curso sale en la pestaña Cola
 - [x] `alternarAutoConstruccion` — `asentamientoId`, `pausada` · pestaña Resumen
 - [x] `solicitarAscenso` — `asentamientoId` · solo el Gobernador residente, sin `cargo` · pestaña Resumen, «Subir a nivel N», apagado mientras `ascensoDeAsentamiento.puede` sea falso (se listan los bloqueos, el coste, la obra y el déficit de mantenimiento). Rechazo de dominio: `ascenso.invalido`
-- [ ] `calibrarReservaManual` — `asentamientoId`, `recurso`, `valor`
+- [x] `calibrarReservaManual` — `asentamientoId`, `recurso`, `valor` (0–999) · Centro urbano › Tesorería (solo el Tesorero residente presente)
 - [x] `renombrarAsentamiento` — `asentamientoId`, `nombre` (vacío = volver a mostrar el id) · Centro urbano › Resumen › «Nombre de la ciudad» (solo residentes)
 
 ### Murallas — sistema completo
@@ -128,9 +128,9 @@ Los cinco siguientes no llevan `heroeId`: el actor es su propio héroe. Wrapper 
 
 ### Diplomacia
 
-- [ ] `proponerRelacion` — `tipo` (`vasallaje` \| `alianza`), `faccionAId`, `faccionBId`; opcionales: `tributoRecurso`, `tributoCantidad` (solo se usan en vasallaje)
-- [ ] `romperRelacion` — `relacionId`, `iniciadorFaccionId`
-- [ ] `rebelionVasallo` — `relacionId`
+- [x] `proponerRelacion` — `{ tipo: 'vasallaje'|'alianza', faccionAId, faccionBId, tributoRecurso?, tributoCantidad? }` · Facción › Diplomacia (`ui/panelDiplomacia.ts`)
+- [x] `romperRelacion` — `{ relacionId, iniciadorFaccionId }` · Facción › Diplomacia (romper alianza / liberar vasallo)
+- [x] `rebelionVasallo` — `{ relacionId }` · Facción › Diplomacia (solo la vasalla)
 - [x] `proponerAnexion` — `faccionAId` (absorbente), `faccionBId`: Rey o Embajador (pestaña Facción, `ui/panelAnexion.ts`)
 - [x] `responderAnexion` — `propuestaId`, `aceptar`: solo el Rey de la absorbida
 - [x] `retirarAnexion` — `propuestaId`: Rey o Embajador de la absorbente
@@ -140,11 +140,11 @@ Los cinco siguientes no llevan `heroeId`: el actor es su propio héroe. Wrapper 
 
 ### Comercio
 
-- [ ] `proponerTrueque` — `asentamientoAId`, `recursoA`, `cantidadA`, `asentamientoBId`, `recursoB`, `cantidadB` (nace `'propuesto'`; ya no obliga a nadie hasta `aceptarTrueque` — cambio del backend 2026-09-07)
-- [ ] `aceptarTrueque` — `acuerdoId` (solo lo puede aceptar el lado B, el receptor de la propuesta)
-- [ ] `rechazarTrueque` — `acuerdoId`
+- [x] `proponerTrueque` — `{ asentamientoAId, lineasA: [{recurso, cantidad}], asentamientoBId, lineasB }` · Mercado › Trueques (`src/ui/panelTrueques.ts`)
+- [x] `aceptarTrueque` — `{ acuerdoId }` · Mercado › Trueques
+- [x] `rechazarTrueque` — `{ acuerdoId }` · Mercado › Trueques
 - [x] `colocarOrdenMercado` — `asentamientoId`, `tipo` (`compra` \| `venta`), `recurso`, `cantidad`; opcional: `precio` · pestaña Mercado › Órdenes de la plaza (solo residentes); lista las órdenes en pie de la plaza
-- [ ] `comerciarEnPlaza` — `heroeId`, `asentamientoId`, `ordenId`, `cantidad` (toma una orden EN PERSONA: exige tener una columna propia en la puerta de esa plaza y ser su Líder — sustituye al viejo emparejamiento automático entre plazas, ver `Comercio_Fisico_Definicion.md` del backend)
+- [x] `comerciarEnPlaza` — `{ heroeId, asentamientoId, ordenId, cantidad }` → `{ cantidad, valor, comision }` · ficha de plaza del mapa (`src/ui/mercadoDePlaza.ts`)
 
 ### Caravanas — revamp del backend 2026-09-08 (`Revamp_Caravanas_Definicion.md`)
 
@@ -160,8 +160,8 @@ Una caravana ya no nace lista: se crea un casco vacío, se le montan carros y an
 - [x] `pasarAViveres` — `cantidad` · responde `{ movido }` · botón «＋ desde el carro» de la barra de víveres del mundo abierto: pasa trigo del carro a TUS víveres, solo lo que cabe (350 por héroe); solo el Líder de la columna (nuevo 2026-10-08, Doc 5.13)
 - [x] `prepararCaravana` — `caravanaId`, `heroeId`, `destinoAsentamientoId`, `carga` (recurso→cantidad); opcional: `escoltaEscuadronIds` — lanzamiento manual con preparación (escolta sin héroe, Doc 3.13.4) · Mercado › Caravanas: destino y carga del almacén (la escolta se cede en Mercado › Escolta)
 - [x] `cancelarCaravana` — `caravanaId` · Mercado › Caravanas, solo en `preparando`
-- [ ] `moverCargaCaravanaAparcada` — `heroeId`, `caravanaId`, `asentamientoId`, `recurso`, `cantidad`, `sentido` (`cargar` \| `descargar`) (nuevo 2026-09-09, Doc 3.13.7) · intercambia carga entre una caravana `'aparcada'` tras `guarnecer` y el almacén de la plaza anfitriona
-- [ ] `enviarCaravanaAlOrigen` — `heroeId`, `caravanaId`, `asentamientoId` (nuevo 2026-09-09) · saca una caravana `'aparcada'` de vuelta a su origen (vacía al instante; cargada recorre el mapa y vuelca en el almacén de origen al llegar)
+- [x] `moverCargaCaravanaAparcada` — `{ heroeId, caravanaId, asentamientoId, recurso, cantidad, sentido: 'cargar'|'descargar' }` · Mercado › Aparcadas (`src/ui/panelAparcadas.ts`)
+- [x] `enviarCaravanaAlOrigen` — `{ heroeId, caravanaId, asentamientoId }` · Mercado › Aparcadas
 
 ### Militar
 
@@ -186,11 +186,11 @@ Panel «Salir» de un campamento y «Salir al mundo» de la plaza (`ui/convocato
 - [x] `unirseAEjercito` — `ejercitoId`, `asentamientoId`, `heroeId`, `escuadronIds` · panel «Ejércitos» de la plaza: sumarte con tropa de tu campamento a un ejército de tu Facción que pasa a ≤ 60 de la plaza
 - [x] `replegarEjercito` — `ejercitoId` · panel ⚑ Ejército del mapa (Líder)
 - [x] `estacionarEjercito` — `ejercitoId` · panel ⚑ Ejército del mapa (Líder, en marcha)
-- [ ] `alternarReabastecerAliados` — `asentamientoId`, `permitido`
-- [ ] `adjuntarCaravana` — `ejercitoId`, `caravanaId`, `heroeId` (2026-09-09: acepta también una caravana `'aparcada'`)
-- [ ] `soltarCaravana` — `ejercitoId`, `caravanaId`, `heroeId`
-- [ ] `cargarCaravana` — `ejercitoId`, `caravanaId`, `asentamientoId`, `recurso`, `cantidad`
-- [ ] `entregarDeCaravana` — `ejercitoId`, `caravanaId`, `acuerdoId`
+- [x] `alternarReabastecerAliados` — `{ asentamientoId, permitido }` · `src/ui/panelAliados.ts` (subpestaña «Aliados» de Centro urbano)
+- [x] `adjuntarCaravana` — `{ ejercitoId, caravanaId, heroeId }` · «Lo que llevas» › Para enganchar (`src/ui/caravanasAdjuntas.ts`); acepta también `aparcada`. El flujo de la Caravana de Fundación del panel `fundar` sigue igual.
+- [x] `soltarCaravana` — `{ ejercitoId, caravanaId, heroeId }` · «Lo que llevas» › caravana enganchada › Soltar
+- [x] `cargarCaravana` — `{ ejercitoId, caravanaId, asentamientoId, recurso, cantidad }` · «Lo que llevas» › caravana enganchada › Cargar
+- [x] `entregarDeCaravana` — `{ ejercitoId, caravanaId, acuerdoId }` · «Lo que llevas» › caravana enganchada › Entregar
 - [x] `guarnecer` — `asentamientoId`, `heroeId` (nuevo 2026-09-09, Doc 5.12.4 / Ocupacion §2.3) · un ejército en la puerta de una plaza de su Facción donde residen todos los que van en él se deshace: la tropa vuelve a sus campamentos y el carro al almacén; los héroes quedan DENTRO (2026-09-14). Las caravanas adjuntas pasan a `'aparcada'` en esa plaza · botón «Entrar con el ejército» de la ficha de una plaza propia (backend 2026-10-08: el ejército se desarma; residentes entran normal, el resto de visita; las caravanas adjuntas deben ser del lugar)
 
 ### Presencia del jugador (Doc 1.10)
@@ -203,19 +203,19 @@ columna plantada en algún sitio.
 - [x] `salirAlMundo` — `asentamientoId`, `heroeId`, `escuadronIds`, `carga` (mapa recurso → cantidad; puede ir vacío) · única salida con pantalla de equipamiento — sales de tu propia residencia con el roster y el almacén delante · hoy en seco, botón «Salir al mundo» (falta la pantalla de equipamiento, `Features_Pendientes.md` §1.1)
 - [x] `marcharA` — `heroeId`, `objetivo`: `{ tipo: 'asentamiento', id }` o `{ tipo: 'punto', punto: { x, y } }` · rectifica el rumbo de la columna en la que vas, sin límite de veces · clic en el mapa
 - [x] `entrarEnAsentamiento` — `asentamientoId`, `heroeId` · en tu residencia disuelve la columna (tropas a tu campamento, carro al almacén); en cualquier otra la deja aparcada intacta · botón «Entrar» del panel de Selección
-- [ ] `salirDeAsentamiento` — `asentamientoId`, `heroeId` · retoma la columna aparcada en una plaza AJENA, sin pantalla de equipamiento (de tu propia residencia se sale con `salirAlMundo`)
-- [ ] `fijarPuerta` — `asentamientoId`, `heroeId`, `cerradaA` (lista de `neutrales` \| `aliados` \| `enemigos` \| `aedas`; vacía = abierta a todos) (sustituye a `fijarPoliticaDeAcceso`, Doc 1.10.5) · la puerta de la plaza, plaza por plaza: la fija el Gobernador o el Rey de su Facción, no caduca y es el exilio del Doc 2.8
-- [ ] `vetarJugador` — `asentamientoId`, `heroeId`, `vetadoId`, `vetar` (boolean) · solo el Gobernador; a un residente no se le veta (Doc 1.10.5)
+- [x] `salirDeAsentamiento` — `{ asentamientoId, heroeId }` · `src/ui/salidaDePlazaAjena.ts` (panel «Salir» de la plaza, `pintarSalidaAsentamiento` en `main.ts`)
+- [x] `fijarPuerta` — `{ asentamientoId, heroeId, cerradaA[] }` · Centro urbano › Puerta (`ui/panelPuerta.ts`)
+- [x] `vetarJugador` — `{ asentamientoId, heroeId, vetadoId, vetar }` · Centro urbano › Puerta
 
 ### Interacción en el mapa (Doc 5.12.3)
 
 El menú de clic sobre algo en marcha. Los encuentros ya no son automáticos por pasar cerca: hay que haber
 decidido acercarse (`inspeccionar`) o ir a por algo (`atacar`/`perseguir`) para que pase cualquier cosa.
 
-- [ ] `inspeccionar` — `heroeId`, `objetivo`: `{ tipo: 'ejercito', id }` o `{ tipo: 'caravana', id }` · ver de cerca sin comprometerse a nada
+- [x] `inspeccionar` — `{ heroeId, objetivo: { tipo: 'ejercito'|'caravana', id } }` · ficha de columna/caravana ajena (`ui/interaccionAjena.ts`)
 - [x] `atacar` — `heroeId`, `objetivo`: la misma forma que `inspeccionar`, `{ tipo: 'campamento', id }` para un campamento de bandidos (Doc 1.9) o `{ tipo: 'asentamiento', id }` para asediar una plaza de otra Facción (Doc 5.12.4) · panel de Selección del mapa, **campamentos y plazas**; columnas y caravanas pendientes (`Features_Pendientes.md` §1.4). Con servidores de batalla devuelve `{ battleId }`
-- [ ] `perseguir` — `heroeId`, `objetivo` (misma forma) · un objetivo MÓVIL, la ruta se recalcula cada tick hacia donde esté
-- [ ] `dejarDePerseguir` — `heroeId`
+- [x] `perseguir` — `{ heroeId, objetivo: { tipo: 'ejercito'|'caravana', id } }` · ficha de columna/caravana ajena
+- [x] `dejarDePerseguir` — `{ heroeId }` · ficha de la presa que persigues
 
 ### Composición de columna compartida (Doc 5.14)
 
@@ -239,7 +239,7 @@ Solo tienen efecto si el backend declara `SERVIDORES_BATALLA` (en Render, hoy no
 ### Campamentos de mercenarios y almacén personal (Doc 1.9b)
 
 - [x] `residirEnCampamento` — `heroeId`, `campamentoId` · pestaña Resumen del campamento, solo si no resides
-- [ ] `reclutarEnCampamento` — `tropaId`; opcional: `pagarCon` (`almacenPersonal` \| `carro`) · **canon (Doc 5, 2026-10-02)**: reclutar y reponer las tropas de los edificios del campamento donde RESIDES, pagando solo oro y población del campamento; el cliente solo ofrece el préstamo gratuito de leva (`pedirPrestamo`)
+- [x] `reclutarEnCampamento` — `{ tropaId, pagarCon?: 'almacenPersonal'|'carro' }` · Campamento › Tropa › Reclutar (`src/ui/pantallaCampamento.ts`)
 - [x] `pedirPrestamo` — `tropaIds` · pestaña Tropa del campamento (leva comunal prestada)
 - [x] `reponerPrestamo` — sin `params` · pestaña Tropa
 - [x] `abrirAlijo` — `alijoId` · ficha del alijo en el mapa
@@ -255,20 +255,20 @@ Solo tienen efecto si el backend declara `SERVIDORES_BATALLA` (en Render, hoy no
 
 ### Residencia, capital y Facción
 
-- [ ] `dejarResidencia` — `heroeId` · libera la vivienda y vacía los cargos locales sin dejar la Facción; el héroe pasa a residir en un campamento (Doc 2.5)
-- [ ] `designarCapital` — `faccionId`, `asentamientoId`
+- [x] `dejarResidencia` — `{ heroeId }` · Centro urbano › Residencia (`ui/panelResidencia.ts`)
+- [x] `designarCapital` — `{ faccionId, asentamientoId }` · Centro urbano › Residencia
 - [x] `solicitarIngreso` — `faccionId` · pestaña Facción (la Facción puede exigir solicitud)
 - [x] `responderSolicitud` — `faccionId`, `heroeId`, `aceptar` · pestaña Facción (quien tiene el cargo)
 - [x] `admitirOtrasFacciones` — `faccionId`, `admitir` · `ui/panelAdmision.ts`
 
 ### Diplomacia (Doc 2.4)
 
-- [ ] `declararGuerra` — `faccionAId`, `faccionBId`
-- [ ] `proponerPaz` — `relacionId`, `faccionId`
+- [x] `declararGuerra` — `{ faccionAId, faccionBId }` · Facción › Diplomacia (`ui/panelDiplomacia.ts`)
+- [x] `proponerPaz` — `{ relacionId, faccionId }` · Facción › Diplomacia, en cada guerra (`ui/panelDiplomacia.ts`)
 
 ### Gestión local
 
-- [ ] `alternarReceta` — `asentamientoId`, `recurso`, `pausada` · pausa o reanuda una receta de transformación (Doc 4)
+- [x] `alternarReceta` — `asentamientoId`, `recurso`, `pausada` · Centro urbano › Recetas (`ui/vistaCiudad.ts`)
 - [x] `comprarMirada` — `origen` (`{ tipo: 'asentamiento' \| 'campamento', id }`), `centro` · pestaña Taberna (Doc 5.12.10)
 - [x] `comprarInformePlaza` — `origen`, `asentamientoId` · pestaña Taberna
 
@@ -281,10 +281,10 @@ Solo tienen efecto si el backend declara `SERVIDORES_BATALLA` (en Render, hoy no
 
 Sin ninguna interfaz. La proyección trae `tecnologia` (era, logros y `propias`: `aparecidas`, `adoptadas`, `reveladas`); hoy solo se lee `adoptadas` para filtrar el reclutamiento.
 
-- [ ] `adoptarTecnologia` — `faccionId`, `tecnologiaId`
-- [ ] `comprarTecnologiaAeda` — `asentamientoId`, `tecnologiaId`
-- [ ] `empezarEpica` — `asentamientoId`, `aedaId`, `tecnologiaId`
-- [ ] `abandonarEpica` — `asentamientoId`, `aedaId`
+- [x] `adoptarTecnologia` — `{ faccionId, tecnologiaId }` · barra del jugador › Tecnología › Tus tecnologías
+- [x] `comprarTecnologiaAeda` — `{ asentamientoId, tecnologiaId }` · Tecnología › Aedas itinerantes en tus plazas
+- [x] `empezarEpica` — `{ asentamientoId, aedaId, tecnologiaId }` · Tecnología › Aedas residentes
+- [x] `abandonarEpica` — `{ asentamientoId, aedaId }` · Tecnología › Aedas residentes
 
 ### Presencia (no se usan como comando)
 
