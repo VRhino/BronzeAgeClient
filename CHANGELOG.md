@@ -3,6 +3,11 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.26.2] — 2026-10-09 · el sigilo completo en el mapa
+
+### Cambiado
+- **Mapa del mundo:** cada asentamiento se dibuja con el **sigilo completo** de su Facción (escudo, campo, orla y emblema), como lo muestra el cliente de administración, y no solo con el símbolo sobre un disco. El sigilo se rasteriza una vez desde su SVG (`sigilo/lienzo.ts`, `imagenDeSigilo`) y el mapa se repinta al cargar; mientras tanto, y sin sigilo, queda el punto de siempre. El asentamiento recordado va tenue.
+
 ## [0.26.1] — 2026-10-09 · tope de la flota, enfriamiento de residencia y filtro por partida
 
 ### Añadido

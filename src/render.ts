@@ -8,8 +8,7 @@ import {
   RECURSO_COLOR,
   faccionColor,
 } from './paletas';
-import { pathDeEmblema } from './sigilo/emblemas';
-import { colorHex } from './sigilo/sigilo';
+import { imagenDeSigilo } from './sigilo/lienzo';
 
 // --- GENERADOR DETERMINISTA (Para los árboles) ---
 function hashSemilla(texto: string): number {
@@ -136,6 +135,9 @@ function sigiloDe(proyeccion: ProyeccionJugador, faccionId: string): Sigilo | un
   return proyeccion.facciones.find((f) => f.id === faccionId)?.sigilo;
 }
 
+/** Ancho en píxeles de lienzo del sigilo de un asentamiento (el alto es 1,2 veces: el escudo es más alto que ancho). Crece y mengua con el zoom como el punto de antes. */
+const ANCHO_SIGILO = 26;
+
 function dibujarAsentamiento(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -144,37 +146,14 @@ function dibujarAsentamiento(
   relleno: boolean,
   sigilo?: Sigilo
 ): void {
-  const path = sigilo ? pathDeEmblema(sigilo.emblemaId) : null;
-  if (sigilo && path) {
-    // El emblema de la Facción sobre un disco de su color primario; el trazo oscuro lo separa del terreno y del
-    // disco aunque se parezcan. El tamaño es de lienzo, así que crece y mengua con el zoom como el punto de antes.
-    const R = 11;
+  // El sigilo COMPLETO de la Facción (escudo, campo, orla y emblema), como lo dibuja el cliente de administración. Mientras la imagen carga
+  // (o si la Facción no tiene sigilo) queda el punto de siempre con el color de la Facción. Un asentamiento recordado (`!relleno`) va tenue.
+  const imagen = sigilo ? imagenDeSigilo(sigilo, ANCHO_SIGILO * 3) : undefined;
+  if (imagen) {
+    const alto = ANCHO_SIGILO * 1.2;
     ctx.save();
-    ctx.beginPath();
-    ctx.arc(x, y, R, 0, Math.PI * 2);
-    if (relleno) {
-      ctx.fillStyle = color;
-      ctx.fill();
-      ctx.strokeStyle = '#1b1a17';
-      ctx.lineWidth = 1.5;
-    } else {
-      ctx.fillStyle = color + '66';
-      ctx.fill();
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 2;
-    }
-    ctx.stroke();
-    ctx.translate(x - R * 0.7, y - R * 0.7);
-    ctx.scale((R * 1.4) / 512, (R * 1.4) / 512);
-    ctx.lineJoin = 'round';
-    ctx.lineWidth = 36;
-    const colorEmblema = colorHex(sigilo.colorEmblemaId);
-    // Halo claro si el emblema es oscuro y oscuro si es claro: el que contrasta con el relleno.
-    const [r = 0, g = 0, b = 0] = [1, 3, 5].map((i) => parseInt(colorEmblema.slice(i, i + 2), 16));
-    ctx.strokeStyle = 0.299 * r + 0.587 * g + 0.114 * b < 110 ? '#f4efe4' : '#1b1a17';
-    ctx.stroke(path);
-    ctx.fillStyle = colorEmblema;
-    ctx.fill(path);
+    if (!relleno) ctx.globalAlpha = 0.55;
+    ctx.drawImage(imagen, x - ANCHO_SIGILO / 2, y - alto / 2, ANCHO_SIGILO, alto);
     ctx.restore();
     return;
   }

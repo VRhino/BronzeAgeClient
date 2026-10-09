@@ -27,6 +27,7 @@ import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisuali
 import { EDIFICIO_COLOR, EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from './paletas';
 import type { Alijo, Asentamiento, BloqueoAscenso, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Edificio, EvaluacionAscenso, ParamsCrearHeroe, ProduccionItem, Sigilo } from './tiposDominio';
 import { svgSigilo } from './sigilo/sigilo';
+import { alCargarSigilos } from './sigilo/lienzo';
 import { actualizarSalida, cablearCampamento, campamentoActual, htmlSeccionCampamento, seccionesDeCampamento, type SeccionCampamento } from './ui/pantallaCampamento';
 import { leyendaPlanoCampamento, svgPlanoCampamento } from './ui/planoCampamento';
 import type { MapaGenerado } from './terreno';
@@ -2250,6 +2251,7 @@ function alEventoDelServidor(): void {
 
 function arrancar(): void {
   window.addEventListener('hashchange', enrutar);
+  alCargarSigilos(() => { const p = estadoCliente.proyeccionUltima; if (p) void dibujarPantallaSegunModo(p); });
   alEventoTiempoReal(alEventoDelServidor);
   alLlegarInforme(mostrarInforme);
   alCambiarAvisos(() => renderPanelJugador());
