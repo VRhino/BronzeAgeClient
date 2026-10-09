@@ -22,7 +22,7 @@ Fuente, en el repositorio del **backend**: `src/session/comandos/registro.ts` (e
 > `intel.invalida`. Esta tabla sigue contando los comandos de la revisión del 2026-09-26: desde entonces el backend ha añadido
 > los de los campamentos de mercenarios, los Aedas y estos dos (el esquema publicado trae 102).
 
-El backend registra **120 comandos de partida** y la matriz admite el rol `jugador` en todos (ver la nota de 2026-10-09 arriba). La interfaz cablea **117 entradas de este índice**; el resto solo es alcanzable llamando a
+El backend registra **120 comandos de partida** y la matriz admite el rol `jugador` en todos (ver la nota de 2026-10-09 arriba). La interfaz cablea **119 entradas de este índice**; el resto solo es alcanzable llamando a
 mano al wrapper `ejecutarComando` de `src/apiCliente.ts`, o no aplica (Unity).
 
 > **Sync 2026-09-26 — ritmo de crecimiento y asedio como orden:** (1) +`solicitarAscenso`: el nivel de un
@@ -128,7 +128,7 @@ Los cinco siguientes no llevan `heroeId`: el actor es su propio héroe. Wrapper 
 
 ### Diplomacia
 
-- [x] `proponerRelacion` — `{ tipo: 'vasallaje'|'alianza', faccionAId, faccionBId, tributoRecurso?, tributoCantidad? }` · Facción › Diplomacia (`ui/panelDiplomacia.ts`)
+- [x] `proponerRelacion` — `{ tipo: 'alianza'|'vasallaje', faccionAId, faccionBId, tributoRecurso?, tributoCantidad? }` (ahora deja una propuesta pendiente) · `ui/panelDiplomacia.ts`
 - [x] `romperRelacion` — `{ relacionId, iniciadorFaccionId }` · Facción › Diplomacia (romper alianza / liberar vasallo)
 - [x] `rebelionVasallo` — `{ relacionId }` · Facción › Diplomacia (solo la vasalla)
 - [x] `proponerAnexion` — `faccionAId` (absorbente), `faccionBId`: Rey o Embajador (pestaña Facción, `ui/panelAnexion.ts`)
@@ -151,7 +151,7 @@ Los cinco siguientes no llevan `heroeId`: el actor es su propio héroe. Wrapper 
 Una caravana ya no nace lista: se crea un casco vacío, se le montan carros y animales, y se lanza a mano.
 
 - [x] `crearCaravana` — `asentamientoId` (casco vacío) · pestaña Mercado › Caravanas
-- [x] `agregarCarroCaravana` — `caravanaId`, `tipoCarro` (`basico` \| `reforzado`) · Mercado › Caravanas
+- [x] `agregarCarroCaravana`, `comprarAnimalCaravana` — Plaza → Mercado → Caravanas (ahora con precio y motivo)
 - [x] `comprarAnimalCaravana` — `caravanaId`, `carroIndice`, `tipoAnimal` (`buey` \| `caballo` \| `camello`) — el buey cuesta oro (economía del oro, 2026-09-08) · Mercado › Caravanas
 - [x] `moverCarroCaravana` — `desdeCaravanaId`, `haciaCaravanaId`, `carroIndice` · Mercado › Caravanas
 - [x] `reservarCaravana` — `caravanaId`, `reservada` (boolean) · Mercado › Caravanas
@@ -165,7 +165,7 @@ Una caravana ya no nace lista: se crea un casco vacío, se le montan carros y an
 
 ### Militar
 
-- [x] `reclutarTropa` — `asentamientoId`, `heroeId`, `tropaId`, `origen` (`pesants` \| `artesanos`) · pestaña Reclutamiento de la plaza: solo las tropas con tecnología adoptada (`tecnologia.propias.adoptadas`) y edificio activo del nivel pedido; `origen` no se envía
+- [x] `reclutarTropa` — `{ asentamientoId, heroeId, tropaId }` · Plaza → Reclutamiento (ahora con oro por soldado)
 - [ ] `iniciarAsedio` — `atacanteId`, `defensorId`, `escuadronIds` · **no aplica**: vía directa entre dos asentamientos vecinos que el backend conserva sin movilizar (`ejercitos.ts`), pero el canon (Doc 5.12.3-5.12.4) solo reconoce asediar con **Atacar** desde un ejército a distancia de choque, que es lo que usa el cliente (`atacar`)
 
 ### Ejército en preparación (backend 2026-10-08, Doc 5.14.5)
@@ -212,7 +212,7 @@ columna plantada en algún sitio.
 El menú de clic sobre algo en marcha. Los encuentros ya no son automáticos por pasar cerca: hay que haber
 decidido acercarse (`inspeccionar`) o ir a por algo (`atacar`/`perseguir`) para que pase cualquier cosa.
 
-- [x] `inspeccionar` — `{ heroeId, objetivo: { tipo: 'ejercito'|'caravana', id } }` · ficha de columna/caravana ajena (`ui/interaccionAjena.ts`)
+- [x] `inspeccionar` — `{ heroeId, objetivo: { tipo: 'asentamiento', id } }` (además de ejército y caravana) · ficha de plaza ajena del mapa (`main.ts`) + `ui/interaccionAjena.ts`
 - [x] `atacar` — `heroeId`, `objetivo`: la misma forma que `inspeccionar`, `{ tipo: 'campamento', id }` para un campamento de bandidos (Doc 1.9) o `{ tipo: 'asentamiento', id }` para asediar una plaza de otra Facción (Doc 5.12.4) · panel de Selección del mapa, **campamentos y plazas**; columnas y caravanas pendientes (`Features_Pendientes.md` §1.4). Con servidores de batalla devuelve `{ battleId }`
 - [x] `perseguir` — `{ heroeId, objetivo: { tipo: 'ejercito'|'caravana', id } }` · ficha de columna/caravana ajena
 - [x] `dejarDePerseguir` — `{ heroeId }` · ficha de la presa que persigues
@@ -239,7 +239,7 @@ Solo tienen efecto si el backend declara `SERVIDORES_BATALLA` (en Render, hoy no
 ### Campamentos de mercenarios y almacén personal (Doc 1.9b)
 
 - [x] `residirEnCampamento` — `heroeId`, `campamentoId` · pestaña Resumen del campamento, solo si no resides
-- [x] `reclutarEnCampamento` — `{ tropaId, pagarCon?: 'almacenPersonal'|'carro' }` · Campamento › Tropa › Reclutar (`src/ui/pantallaCampamento.ts`)
+- [x] `reclutarEnCampamento` — `{ tropaId, pagarCon }` · Campamento → Tropa → Reclutar (ahora con precio y bloqueos reales)
 - [x] `pedirPrestamo` — `tropaIds` · pestaña Tropa del campamento (leva comunal prestada)
 - [x] `reponerPrestamo` — sin `params` · pestaña Tropa
 - [x] `abrirAlijo` — `alijoId` · ficha del alijo en el mapa
@@ -281,14 +281,19 @@ Solo tienen efecto si el backend declara `SERVIDORES_BATALLA` (en Render, hoy no
 
 Sin ninguna interfaz. La proyección trae `tecnologia` (era, logros y `propias`: `aparecidas`, `adoptadas`, `reveladas`); hoy solo se lee `adoptadas` para filtrar el reclutamiento.
 
-- [x] `adoptarTecnologia` — `{ faccionId, tecnologiaId }` · barra del jugador › Tecnología › Tus tecnologías
-- [x] `comprarTecnologiaAeda` — `{ asentamientoId, tecnologiaId }` · Tecnología › Aedas itinerantes en tus plazas
-- [x] `empezarEpica` — `{ asentamientoId, aedaId, tecnologiaId }` · Tecnología › Aedas residentes
-- [x] `abandonarEpica` — `{ asentamientoId, aedaId }` · Tecnología › Aedas residentes
+- [x] `adoptarTecnologia` — `{ faccionId, tecnologiaId }` · panel «Tecnología» (`src/ui/panelTecnologia.ts`)
+- [x] `comprarTecnologiaAeda` — `{ asentamientoId, tecnologiaId }` · ídem
+- [x] `empezarEpica` — `{ asentamientoId, aedaId, tecnologiaId }` · ídem, ahora solo con `epicasPosibles`
+- [x] `abandonarEpica` — `{ asentamientoId, aedaId }` · ídem
 
 ### Presencia (no se usan como comando)
 
 `conectarse` y `desconectarse` (`heroeId`) los sustituye el WebSocket de presencia: abrirlo conecta, cerrar el último socket desconecta.
+
+### Cableados en 0.28.0 que no estaban listados
+
+- [x] `responderRelacion` — `{ propuestaId, aceptar }` · `ui/panelDiplomacia.ts` (Propuestas recibidas)
+- [x] `retirarRelacion` — `{ propuestaId }` · `ui/panelDiplomacia.ts` (Propuestas enviadas)
 
 ## Comandos retirados del backend
 

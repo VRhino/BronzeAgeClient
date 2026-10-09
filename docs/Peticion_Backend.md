@@ -1,6 +1,6 @@
 # Petición al Backend (2026-10-09)
 
-**Enviada a la sesión de Backend el 2026-10-09 con permiso del usuario.** Reúne lo que los bloques de 0.26.0 anotaron como «necesita Backend», **contrastado contra el canon (`Docs/Game`) y el código del servidor (`BronzeAgeFase0@1e5351c`)**.
+**Enviada a la sesión de Backend el 2026-10-09 con permiso del usuario. Respondida: A0 a A5 están hechos (commits 94b0641 a 4e037c4 del servidor); el cliente los usa desde 0.28.0. Lo que queda abierto está en `Features_Pendientes.md` §3.** Reúne lo que los bloques de 0.26.0 anotaron como «necesita Backend», **contrastado contra el canon (`Docs/Game`) y el código del servidor (`BronzeAgeFase0@1e5351c`)**.
 
 Se descartó lo que el cliente ya puede resolver solo y lo que el canon no pide (ver «Descartado»).
 

@@ -273,6 +273,7 @@ let reintentoPresencia: ReturnType<typeof setTimeout> | undefined;
 let canalesDeseados = new Set<string>();
 const canalesPedidos = new Set<string>();
 let oyenteDeEventos: ((evento: EventoDominio) => void) | null = null;
+let oyenteDeTick: (() => void) | null = null;
 
 function urlTiempoReal(gameId: string, sesionId: string): string {
   const base = import.meta.env.VITE_API_BASE ?? location.origin;
@@ -298,6 +299,16 @@ export function alEventoTiempoReal(cb: (evento: EventoDominio) => void): void {
   oyenteDeEventos = cb;
 }
 
+/** Quién se entera de que el reloj de mundo dio un tick (el servidor lo manda por el socket, sin datos: es la señal para pedir la proyección y no sondear). */
+export function alTickDeMundo(cb: () => void): void {
+  oyenteDeTick = cb;
+}
+
+/** ¿Hay un socket de tiempo real abierto? Con él los ticks avisan solos; sin él hay que sondear. */
+export function tiempoRealVivo(): boolean {
+  return socketPresencia?.readyState === WebSocket.OPEN;
+}
+
 /** Abre el socket de esa partida si no está abierto (idempotente). Si se cae sin que lo pidamos, reintenta a los 3 s. */
 export function abrirPresencia(gameId: string): void {
   presenciaDeseada = gameId;
@@ -312,6 +323,7 @@ export function abrirPresencia(gameId: string): void {
       const datos = JSON.parse(String(mensaje.data)) as { tipo?: string; gameId?: string; evento?: EventoDominio };
       // El servidor dice de qué partida es cada evento (backend 9ab4e62): uno de otra partida no es de este socket.
       if (datos.gameId !== undefined && datos.gameId !== gameId) return;
+      if (datos.tipo === 'tick') { oyenteDeTick?.(); return; }
       if (datos.tipo === 'evento' && datos.evento) oyenteDeEventos?.(datos.evento);
     } catch {
       // Un mensaje ilegible no rompe nada: el sondeo sigue trayendo la verdad.

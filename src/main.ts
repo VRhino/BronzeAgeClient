@@ -7,6 +7,8 @@ import {
   guardarSesionLocal,
   listarPartidas,
   recordarPartida,
+  alTickDeMundo,
+  tiempoRealVivo,
   radioDeInspeccion,
   abrirPresencia,
   alEventoTiempoReal,
@@ -378,7 +380,7 @@ function montarCampamento(): void {
   // Sin tiempo real de datos, el campamento (mercado, fondo, avisos) se pone al día con el mismo sondeo suave que el asentamiento.
   let sondeando = false;
   const sondeo = setInterval(() => {
-    if (sondeando || !document.querySelector('.camp-screen')) return;
+    if (sondeando || !document.querySelector('.camp-screen') || !hayQueSondear()) return;
     sondeando = true;
     void refrescarDatosJuego().catch(() => {}).finally(() => { sondeando = false; });
   }, 3000);
@@ -1270,7 +1272,7 @@ function montarMapa(): void {
   // montada; se corta al cambiar de pantalla (`limpiarPantalla`).
   let sondeando = false;
   const sondeo = setInterval(() => {
-    if (sondeando || !document.querySelector('.mapa-screen')) return;
+    if (sondeando || !document.querySelector('.mapa-screen') || !hayQueSondear()) return;
     sondeando = true;
     void refrescarDatosJuego().catch(() => {}).finally(() => { sondeando = false; });
   }, 3000);
@@ -1893,7 +1895,7 @@ function montarAsentamiento(): void {
   // suave que el mapa, hasta que exista el canal de tiempo real.
   let sondeando = false;
   const sondeo = setInterval(() => {
-    if (sondeando || !document.querySelector('.asent-screen')) return;
+    if (sondeando || !document.querySelector('.asent-screen') || !hayQueSondear()) return;
     sondeando = true;
     void refrescarDatosJuego().catch(() => {}).finally(() => { sondeando = false; });
   }, 3000);
@@ -2141,7 +2143,16 @@ function fechaDeMundo(instante: number | undefined): string {
   return new Date(instante).toLocaleString();
 }
 
+/** Cuándo se pidió la proyección por última vez: con el socket vivo el tick avisa solo y el sondeo es solo de reserva. */
+let ultimoRefresco = 0;
+const RESERVA_SIN_TICK_MS = 30_000;
+/** ¿Toca sondear? Sin socket, siempre; con socket, solo si llevamos mucho sin noticias (por si se perdió un tick). */
+function hayQueSondear(): boolean {
+  return !tiempoRealVivo() || Date.now() - ultimoRefresco > RESERVA_SIN_TICK_MS;
+}
+
 async function refrescarDatosJuego(): Promise<void> {
+  ultimoRefresco = Date.now();
   const respuesta = await consultarProyeccion(estadoCliente.gameIdActivo);
   medirRitmoDeMundo(respuesta.instante);
   estadoCliente.sinHeroe = respuesta.sinHeroe === true;
@@ -2273,6 +2284,7 @@ function arrancar(): void {
   window.addEventListener('hashchange', enrutar);
   alCargarSigilos(() => { const p = estadoCliente.proyeccionUltima; if (p) void dibujarPantallaSegunModo(p); });
   alEventoTiempoReal(alEventoDelServidor);
+  alTickDeMundo(alEventoDelServidor); // el tick del reloj de mundo avisa de que hay que pedir la proyección (backend 4e037c4)
   alLlegarInforme(mostrarInforme);
   alCambiarAvisos(() => renderPanelJugador());
   // Cerrar la pestaña o la ventana cierra el socket de presencia (lo haría el navegador, pero así es explícito y también vale al recargar).

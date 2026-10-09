@@ -1,6 +1,6 @@
 # Features pendientes
 
-Lo que le falta al cliente‑jugador, **contrastado con el backend** (`BronzeAgeFase0@02bd153`: comandos de `src/session/comandos/registro.ts` y canon de `Docs/Game`). Revisado el **2026-10-09**, versión del cliente **0.27.0**. Con 0.26.0 se construyó todo lo pendiente de la revisión anterior que dependía solo del cliente; lo que queda es verificar en vivo y lo que espera al backend.
+Lo que le falta al cliente‑jugador, **contrastado con el backend** (`BronzeAgeFase0@02bd153`: comandos de `src/session/comandos/registro.ts` y canon de `Docs/Game`). Revisado el **2026-10-09**, versión del cliente **0.28.0**. Con 0.26.0 se construyó todo lo pendiente de la revisión anterior que dependía solo del cliente; lo que queda es verificar en vivo y lo que espera al backend.
 
 - Guía visual (leer antes de diseñar UI nueva): [`Diseno_Interfaz.md`](Diseno_Interfaz.md).
 - Inventario de info y acciones del asentamiento: [`Panel_Asentamiento.md`](Panel_Asentamiento.md).
@@ -43,13 +43,13 @@ Todo lo demás del cliente está construido; el trabajo abierto es **verificarlo
 
 ## 3. Pendiente — backend
 
-Contrastado contra el canon y el código del servidor en [`Peticion_Backend.md`](Peticion_Backend.md) (**enviada a la sesión de Backend el 2026-10-09**). Resumen:
+El backend contestó a [`Peticion_Backend.md`](Peticion_Backend.md) (A0 a A5 hechos: aceptación de relaciones, balance, catálogo de tecnología, `romperRelacion` y `perseguir` validados, informes de inspección, `escoltada`, almacén de la plaza a la puerta, nombre de partida y tick por WebSocket) y el cliente ya lo usa. Queda solo:
 
-1. **Publicar en el balance** lo que hoy solo está en `constants.ts`: catálogos de carros y animales, oro por soldado del reclutamiento, `MOVIMIENTO` (radios), `CAPITAL`, `PUERTA`, y el precio y las tropas desbloqueadas del campamento.
-2. **Catálogo de tecnología y Aedas** (Doc 6), la Era de cada tecnología, la capital de la Facción, el progreso de los hitos y qué admite épica.
-3. **Contra el canon:** una vasalla puede llamar a `romperRelacion` sobre su vasallaje (Doc 2.4 no lo contempla); `perseguir` no rechaza aliados, ejército→caravana ni a un no‑Líder (Doc 5.12.3).
-4. **Comodidades:** resultado de `inspeccionar` en la proyección, almacén de tus plazas desde el mundo, nombre y estado de partida, evento de posición.
-5. **Aceptación de alianza y vasallaje** (decidido por el autor, como anexión y fusión): `responderRelacion` y `propuestasRelacion` en la proyección. Cuando existan, el cliente construye propuestas recibidas (Aceptar o Rechazar) y enviadas (Retirar).
+1. **Un campo `adjunta`** en `caravanasAvistadas`: hoy el cliente deduce «va adjunta a un ejército» por posición (pegada a un ejército avistado).
+2. **`permiteReabastecerAliados` de plazas aliadas** (para cargar desde una plaza aliada que abra su almacén): el backend lo dejó fuera a propósito.
+3. **«Leva Forzosa»:** la proyección no trae el factor resuelto del coste de reclutamiento, así que la fila de plaza no lo aplica al equipo.
+4. **Los bots no contestan propuestas de relación** (solo anexión): una propuesta a una Facción de bots solo caduca.
+5. **Avisos que faltan en el cliente** (no son del backend): propuestas de anexión y de fusión recibidas y la caída de una plaza no generan aviso.
 
 ## 4. Sin verificar en vivo
 
@@ -62,6 +62,7 @@ Todo lo de 0.26.0 se probó con **proyección fabricada** (el servidor rechaza l
 - **Facción:** rebelión con trueques reales, guerra arrastrada por vasallaje con terceros, sucesión del trono con más de dos ciudadanos, un rechazo de dominio en estos paneles. *(Verificado en vivo con dos cuentas: alianza, guerra, paz, vasallaje, rebelión, Embajador, trono, dejar la Facción.)*
 - **Tecnología:** adoptar, comprar, empezar y abandonar con éxito; botones apagados por cargo.
 
+- **Tanda 3 (0.28.0):** con dos cuentas en vivo se probó la diplomacia (propuesta, aceptación, rechazo, retirada y caducidad) y reclutar en campamento con precio real; con proyección fabricada, la barra de materiales, la tecnología con catálogo, los informes de inspección, el almacén a la puerta y los avisos agrupados con eventos simulados. Falta ver con estado real: eventos reales de intel y combate en los avisos, un `inspeccionar` real, la vista de un miembro que no es Rey en diplomacia y los comandos de caravana y de reclutar en plaza.
 - **Interfaz (0.27.0):** el ancho real de las columnas nuevas se vio solo en capturas de Chrome propio a cuatro tamaños (el panel integrado del navegador está oculto); la ficha de edificio por clic en el lienzo; las filas de tropas y el formulario de Mirada e Informe de la Taberna en pantalla; Muralla con botones apagados y la vista `#/legacy`; Anexión y Fusión con propuestas; la ayuda de elegir o crear Facción. Y los comandos de Mercado (escolta, aparcadas) con estado real.
 
 ## 5. No aplica

@@ -3,6 +3,47 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.28.0] — 2026-10-09 · lo que entregó el backend (aceptación de relaciones, balance, tecnología, comodidades de la proyección y tick por WebSocket), avisos agrupados y barra de materiales abajo · sync con `BronzeAgeFase0@4e037c4` (`main`, sin push)
+
+Tercera tanda de bloques en paralelo (detalle en `docs/bloques/`). El backend contestó a la petición de `docs/Peticion_Backend.md` (A0 a A5): el cliente deja de copiar constantes a mano y usa lo publicado.
+
+### Bloque J1 — Aceptación de alianza y vasallaje
+- **Alianza y vasallaje ya no se imponen: son propuestas** (backend 2026-10-09, como la anexión). En la pestaña Facción, sección Diplomacia: al proponer sale «Propuesta enviada: caduca en X si su Rey no responde» y la propuesta aparece en **Propuestas enviadas** con Retirar (Rey o Embajador de quien propone). En **Propuestas recibidas** el Rey de la Facción destino ve Aceptar y Rechazar (los demás lo leen, con «solo tu Rey responde»); aceptar un vasallaje pide confirmación explicando tributo y consecuencias. La caducidad se muestra en tiempo real (`textoEnTiempoReal`) cuando el mundo va acelerado y en horas o días de mundo si no.
+- Corregidos los textos que decían que se pacta «al instante»/«se impone sin consentimiento» (ayuda ⓘ de Diplomacia y confirmación de proponer vasallaje).
+- Avisos de `diplomacia.relacion_propuesta` (aviso que pide decisión, solo a la Facción destino), `relacion_aceptada` (a las dos), `relacion_rechazada` (a quien proponía) y `relacion_retirada` (a la destino). Los eventos llegan a todos los jugadores, así que se filtran por Facción.
+- Errores `relacion.propuesta_no_existe` y `relacion.propuesta_caducada` traducidos; las reglas rotas (`diplomacia.invalida`) enseñan el `detalleError` del servidor.
+- `Rebelarse` sigue siendo lo único que ve la vasalla y `Liberar vasallo` lo único que ve la señora (coherente con `romperRelacion` solo para la señora).
+
+### Bloque J2 — usar lo nuevo del balance y la proyección, y quitar copias a mano
+- **Reclutar en el campamento** usa `mercadoCampamento.reclutamiento`: precio real por soldado (ya con recargo, reputación y descuento), oro del escuadrón = `ceil(precio × lo que falta)`, reclutas del campamento `N/tope`, y las tropas sin desbloquear salen marcadas y apagadas con su motivo. «Reclutar»/«Reponer» se apaga con motivo si faltan reclutas o no te llega el oro del origen elegido (almacén personal o carro). Al cambiar el origen se repinta. Se quitaron `tropasDeCampamento` y el filtro por edificios del cliente.
+- **Reclutar en una plaza** muestra el oro por soldado como el motor: `RECLUTAMIENTO_ORO_POR_ESCALON[escalón] + caballos × ORO_POR_CABALLO`; la tropa del Centro Urbano no paga oro (accesor `oroPorSoldado`).
+- **Caravanas**: precio en «＋ Carro básico/reforzado» y en las opciones de «Comprar animal» (carga y velocidad del animal), apagados con motivo si no llega el almacén o falta la Carpintería; capacidad, velocidad y tiempo de preparación de cada caravana derivados de sus carros con animal (con `carga_ampliada` y `rutas_rapidas` si la plaza los tiene activos); cupo de escolta por caravana según el nivel del Mercado (también como respaldo si la caravana no trae `escoltaLiderazgo`).
+- **Copias a mano eliminadas** (ahora del balance, con el mismo valor por defecto mientras no llega): `MOVIMIENTO.radioPuerta` (panelIntel, panelFundacionDePlaza, mercadoDePlaza), `MOVIMIENTO.radioInspeccion` (interaccionAjena), `CAPITAL.cooldownDias` (panelResidencia), `PUERTA.cerradaAPorDefecto` (panelPuerta), `CIUDADANIA.cooldownCreacionFaccionDias` (panelCargos).
+
+### Bloque J3 — Panel «Tecnología» con el catálogo del balance
+- **Panel «Tecnología» sobre el catálogo del servidor.** Lee `tecnologia.{TECNOLOGIAS, ERAS, TARIFA_ADOPCION, AEDAS, EPICAS, TITULO_CAPITULO}` de `GET /v1/balance` (accesor `catalogoDeTecnologia` en `apiCliente.ts`; con `null` mientras no llega el balance, y entonces se muestra el id legible como antes). Desaparecen las tarifas, el precio de los Aedas y las 6 h de enfriamiento copiadas a mano.
+  - Nombres reales y acentuados de tecnologías y Eras, la Era de cada aparecida/adoptada/revelada (`eraDe`) y el coste real de adoptar cada una (`TARIFA_ADOPCION` de su Era). Bonus de producción y Era en el ⓘ de cada tecnología.
+  - «Adoptar» explica el motivo exacto: sin Facción, no eres el Rey, la Facción no tiene capital (`capitalId` nulo) o no estás en la capital (se nombra la plaza).
+  - Reveladas con su progreso real: cada condición del hito con ✓/✗ según `cumplidas[]` (se quita la comprobación a mano de edificios y tecnologías).
+  - Épicas: «Empezar épica» ofrece solo `epicasPosibles` (con el nombre del canto), el capítulo en curso usa `TITULO_CAPITULO` y el enfriamiento sale de `AEDAS.epica.enfriamientoMinutos`.
+  - Aedas itinerantes: cada tecnología revelada se lista con lo que cobraría el Aeda (oro de la tarifa de su Era × `AEDAS.venta.factorOro`); no se ofrecen las de Eras por encima de `ordenEraMaximo`.
+- Tipos nuevos en `tiposDominio.ts`: `eraDe`, `capitalId`, `epicasPosibles` y `cumplidas` en `reveladas[]`.
+
+### Bloque J4 — Avisos agrupados
+- **Avisos agrupados:** los avisos repetidos del mismo tipo y origen (te observaron, pidieron tu plano, movimientos de ejército…) se funden en una línea con contador y rango de horas; los de baja urgencia no hacen toast y solo suman a la insignia de «Avisos» (que ahora cuenta grupos sin leer); los urgentes (ataques, combates, deserción, peticiones de unirse a tu ejército) siguen con toast propio —varios a la vez se funden en un toast con «+N más»— y salen arriba y destacados. El panel «Avisos» tiene grupos plegables por categoría (Combate, Diplomacia, Movimientos, Inteligencia, Economía y tropas) con «Marcar leído» por grupo y ayuda ⓘ.
+
+### Bloque J5 — Tira de recursos otra vez abajo
+- La tira de recursos del almacén (`.asent-recursos`) vuelve a la parte inferior de la pantalla de la plaza: barra horizontal centrada bajo el mapa, con salto de línea ordenado si hay muchos recursos. La columna izquierda queda solo para «Ejércitos»/«Salir al mundo» y la ficha de edificio, y se oculta sola si no tiene nada. En pantallas estrechas (≤ 900 px) la barra queda tras el mapa.
+
+### Bloque J6 — Comodidades de la proyección (backend 2026-10-09)
+- **Informes de inspección que sobreviven**: la ficha de una columna o caravana ajena y la de una plaza ajena leen siempre `informesDeInspeccion` de la proyección (vigentes por `expiraEn`, «visto hace X»), así que el resultado de Inspeccionar no se pierde al recargar ni al cerrar la ficha. La ficha de plaza ajena del mapa gana el botón «Inspeccionar» (a 40, avisa a su Facción) y muestra la defensa (guarnición y héroes dentro).
+- **`escoltada` con su significado nuevo**: «lleva escolta» (adjunta a un ejército o con escuadras cedidas). Ya no se apaga Perseguir/Interceptar por estar «escoltada»: solo cuando va adjunta, que se deduce de ir pegada a un ejército avistado.
+- **Almacén a la puerta**: en «Lo que llevas › Caravanas», al cargar se ve el stock del almacén de la plaza propia a cuya puerta está la columna (`asentamientosAvistados[].almacen`).
+- **Partidas con nombre**: la tarjeta de la pantalla de partidas y la cabecera usan el `nombre` de la partida (con el `gameId` pequeño debajo en la tarjeta).
+
+### Tiempo real: el tick del reloj de mundo avisa (backend `4e037c4`)
+- Por el WebSocket llega a todos los conectados un mensaje `{ tipo: 'tick', gameId, version, instante }` en cada tick del reloj de mundo, sin datos: es la señal para pedir la proyección. El cliente (`alTickDeMundo`, `tiempoRealVivo` en `apiCliente.ts`) pide la proyección al recibirlo y el sondeo de 3 s de mapa, plaza y campamento pasa a ser solo de reserva (a los 30 s sin noticias, o en cuanto se cae el socket). Comprobado en vivo: con el reloj a 8 s, 4 peticiones en 27 s en vez de unas 9.
+
 ## [0.27.0] — 2026-10-09 · paneles más grandes, Mercado unificado, trueques con emblema y interfaces limpias (texto tras «ⓘ»)
 
 Segunda tanda de bloques en paralelo (detalle y mediciones en `docs/bloques/`). **Infraestructura:** `ui/ayuda.ts`: el texto explicativo vive tras un botón ⓘ que lo muestra y lo oculta; el estado abierto o cerrado sobrevive a los repintados y a las recargas (`localStorage`).
