@@ -1,6 +1,6 @@
 import { contornosBosques, evaluarBioma, evaluarElevacion, type MapaGenerado } from './terreno';
 import type { ProyeccionJugador } from './apiCliente';
-import type { Asentamiento, Edificio, MiradaIntel, NieblaProyectada, Point, RectanguloLocal, TrazadoAsentamiento, TrazadoMuralla } from './tiposDominio';
+import type { Asentamiento, Sigilo, Edificio, MiradaIntel, NieblaProyectada, Point, RectanguloLocal, TrazadoAsentamiento, TrazadoMuralla } from './tiposDominio';
 import {
   BIOMA_COLOR_SIMPLE,
   EDIFICIO_COLOR,
@@ -8,6 +8,8 @@ import {
   RECURSO_COLOR,
   faccionColor,
 } from './paletas';
+import { pathDeEmblema } from './sigilo/emblemas';
+import { colorHex } from './sigilo/sigilo';
 
 // --- GENERADOR DETERMINISTA (Para los árboles) ---
 function hashSemilla(texto: string): number {
@@ -130,13 +132,52 @@ function dibujarMarcadorDestino(ctx: CanvasRenderingContext2D, x: number, y: num
  * filtro oscuro que la niebla le echa encima —lo recordado se pinta DEBAJO de la máscara, a propósito— es
  * todo lo que hace falta para que no se confunda con lo que está a la vista.
  */
+function sigiloDe(proyeccion: ProyeccionJugador, faccionId: string): Sigilo | undefined {
+  return proyeccion.facciones.find((f) => f.id === faccionId)?.sigilo;
+}
+
 function dibujarAsentamiento(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   color: string,
-  relleno: boolean
+  relleno: boolean,
+  sigilo?: Sigilo
 ): void {
+  const path = sigilo ? pathDeEmblema(sigilo.emblemaId) : null;
+  if (sigilo && path) {
+    // El emblema de la Facción sobre un disco de su color primario; el trazo oscuro lo separa del terreno y del
+    // disco aunque se parezcan. El tamaño es de lienzo, así que crece y mengua con el zoom como el punto de antes.
+    const R = 11;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, R, 0, Math.PI * 2);
+    if (relleno) {
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = '#1b1a17';
+      ctx.lineWidth = 1.5;
+    } else {
+      ctx.fillStyle = color + '66';
+      ctx.fill();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+    }
+    ctx.stroke();
+    ctx.translate(x - R * 0.7, y - R * 0.7);
+    ctx.scale((R * 1.4) / 512, (R * 1.4) / 512);
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 36;
+    const colorEmblema = colorHex(sigilo.colorEmblemaId);
+    // Halo claro si el emblema es oscuro y oscuro si es claro: el que contrasta con el relleno.
+    const [r = 0, g = 0, b = 0] = [1, 3, 5].map((i) => parseInt(colorEmblema.slice(i, i + 2), 16));
+    ctx.strokeStyle = 0.299 * r + 0.587 * g + 0.114 * b < 110 ? '#f4efe4' : '#1b1a17';
+    ctx.stroke(path);
+    ctx.fillStyle = colorEmblema;
+    ctx.fill(path);
+    ctx.restore();
+    return;
+  }
   ctx.beginPath();
   ctx.arc(x, y, 6, 0, Math.PI * 2);
   if (relleno) {
@@ -485,7 +526,8 @@ export function pintarTerreno(
       conocido.posicion.x * escalaCanvas,
       conocido.posicion.y * escalaCanvas,
       faccionColor(conocido.faccionId, proyeccion.facciones),
-      false
+      false,
+      sigiloDe(proyeccion, conocido.faccionId)
     );
   }
 
@@ -545,7 +587,8 @@ export function pintarTerreno(
       asentamiento.posicion.x * escalaCanvas,
       asentamiento.posicion.y * escalaCanvas,
       faccionColor(asentamiento.faccionId, proyeccion.facciones),
-      true
+      true,
+      sigiloDe(proyeccion, asentamiento.faccionId)
     );
   }
 
@@ -558,7 +601,8 @@ export function pintarTerreno(
       avistado.posicion.x * escalaCanvas,
       avistado.posicion.y * escalaCanvas,
       faccionColor(avistado.faccionId, proyeccion.facciones),
-      true
+      true,
+      sigiloDe(proyeccion, avistado.faccionId)
     );
   }
 
@@ -583,7 +627,7 @@ export function pintarTerreno(
     const y = caravana.posicionActual.y * escalaCanvas;
 
     const origenCaravana = proyeccion.asentamientos.find((a) => a.id === caravana.origenAsentamientoId);
-    const color = origenCaravana ? faccionColor(origenCaravana.faccionId, proyeccion.facciones) : '#f1e6c8';
+    const color = faccionColor(origenCaravana ? origenCaravana.faccionId : (proyeccion.faccionId ?? ''), proyeccion.facciones);
 
     const r = 4.5;
     ctx.beginPath();
@@ -619,7 +663,7 @@ export function pintarTerreno(
     // El color sale del asentamiento de ORIGEN, como en las caravanas, con `faccionId` de reserva por si ese
     // asentamiento ya no existe (a un ejercito se le puede caer la ciudad de la que salio).
     const origen = proyeccion.asentamientos.find((a) => a.id === ejercito.origenAsentamientoId);
-    const color = faccionColor(origen ? origen.faccionId : ejercito.faccionId, proyeccion.facciones);
+    const color = faccionColor(origen ? origen.faccionId : (ejercito.faccionId ?? proyeccion.faccionId ?? ''), proyeccion.facciones);
     const x = ejercito.posicionActual.x * escalaCanvas;
     const y = ejercito.posicionActual.y * escalaCanvas;
     dibujarRacimoDeRombos(ctx, x, y, ejercito.participantes.length, color);
