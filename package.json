@@ -1,16 +1,26 @@
 {
   "name": "bronze-age-cliente-jugador",
-  "version": "0.28.2",
-  "description": "Boilerplate del cliente de jugador. Sin ninguna dependencia del motor (`@motor/*`): habla con el backend solo por red y recalcula el terreno con su propia copia de las funciones puras de worldgen (ver src/terreno/README.md). Fase C10-C11b. Última sincro con el backend: 2026-10-07, `main` de BronzeAgeFase0 (`a0945dd`: detalleError, ordenarEscuadras, botín en el informe, mostrador del campamento; ver CHANGELOG.md).",
+  "version": "0.29.0",
+  "description": "Cliente de jugador. Sin ninguna dependencia de código del motor: habla con él solo por red. Fase 7: pasa del REST del backend TypeScript al WebSocket del contrato 05 del motor en Rust (src/contrato/, generado con buf desde VRhino/BronzeAge; revisión en src/contrato/REVISION).",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.pruebas.json",
+    "contrato": "node scripts/contrato.mjs",
+    "test": "vitest run"
   },
   "devDependencies": {
+    "@bufbuild/buf": "1.73.0",
+    "@bufbuild/protoc-gen-es": "2.16.0",
+    "@types/node": "22.10.2",
     "typescript": "^5.6.3",
-    "vite": "^5.4.10"
+    "vite": "^5.4.10",
+    "vitest": "2.1.9"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "2.16.0",
+    "fzstd": "0.1.1"
   }
 }

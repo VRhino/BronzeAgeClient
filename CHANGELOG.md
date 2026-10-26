@@ -3,6 +3,21 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.29.0] — 2026-10-26 · fase 7, tanda C1: la sesión del contrato 05 · sync con `VRhino/BronzeAge@c7f4e60` (`main`, tras la 7B)
+
+El cliente vuelve como cliente del motor en Rust (fase 7). Esta tanda pone solo la capa de transporte nueva, `src/contrato/`, al lado de
+`apiCliente.ts`; la interfaz todavía habla con el REST viejo y pasará a la sesión nueva por un adaptador (decisión del autor del 2026-10-26).
+
+### Añadido
+- **Contrato generado** con `buf generate` desde `proto/` del motor (`src/contrato/gen/`, `npm run contrato`; la revisión usada queda en `src/contrato/REVISION`).
+- **Acceso** (`src/contrato/acceso.ts`): `POST /v1/registro`, `POST /v1/sesiones` y la descarga del artefacto de mundo por hash.
+- **Sesión** (`src/contrato/sesion.ts`): WebSocket binario con `Hola`/`Bienvenida`, zstd, secuencia sin huecos, `ordenar()` con respuesta causal, crónica por páginas, `VISTA`, reloj de mundo sincronizado por `Ping`/`Pong` y reconexión con reanudación por versión. Abre como `CLIENTE_UNITY` hasta que el contrato tenga un tipo para el cliente web de jugador.
+- **Almacén por ámbito** (`src/contrato/almacen.ts`, `plaza.ts`, `niebla.ts`): puerto del almacén de referencia del motor (`crates/contrato`), con la plaza parcial por máscara y la niebla parcial por tramos.
+- **Pruebas** (`npm test`, vitest): los 88 dorados del contrato, el almacén y, con `BRONZEAGE_URL`, una partida contra un `bronzeage-servidor` real (registro, login, `crear_heroe`, artefacto de mundo, `VISTA` con niebla y reanudación sin novedad).
+
+### Notas
+- El motor ignora por ahora el nombre de `crear_heroe`: el héroe nace como «Héroe N» (valores por defecto hasta el catálogo de Conquest).
+
 ## [0.28.2] — 2026-10-09 · sigilo completo en la lista de partidas (cuando el backend lo mande)
 
 ### Cambiado
