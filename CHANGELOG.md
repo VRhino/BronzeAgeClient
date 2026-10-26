@@ -3,6 +3,35 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.30.0] — 2026-10-26 · fase 7, tanda C3: la interfaz juega contra el motor en Rust · sync con `VRhino/BronzeAge@164235d`
+
+La interfaz de siempre ya no habla con el REST del backend TypeScript: `apiCliente.ts` conserva su superficie y por debajo va por la
+sesión del contrato 05, con un adaptador (decisión del autor del 2026-10-26). Probado en el navegador contra `bronzeage-servidor`:
+registro, entrar, crear el héroe, el campamento, salir al mundo con la columna y el mapa del artefacto.
+
+### Añadido
+- **Adaptador de lectura** (`src/motor/proyeccion.ts`): el almacén por ámbito a la `ProyeccionJugador` de siempre (Facciones, la plaza
+  donde estás con su interior y su trazado, plazas avistadas y recordadas, columnas propias y ajenas con su posición evaluada del plan
+  con el reloj sincronizado, caravanas, héroe con escuadras, campamentos, bandidos, alijos, niebla, zonas, caminos, relaciones, títulos,
+  órdenes de mercado y trueques). Pasa unidades (milésimas → unidades) e instantes (desde 2026-01-01 → época Unix).
+- **Adaptador de escritura** (`src/motor/ordenes.ts`): `ejecutarComando(tipo, params)` → `Orden` del contrato por el descriptor
+  generado: el `tipo` es el caso del `oneof` (`marcharA` ↔ `marchar_a`), cantidades y coordenadas a milésimas, instantes al cero del
+  contrato y los objetivos `{ tipo, id }` al caso de su `oneof`. Un comando que el contrato no tiene responde `comando_desconocido`.
+- La VISTA se pide sola (el mundo entero; el servidor filtra por la niebla) en cuanto hay héroe.
+- Mapa con la proporción del mundo (2.667 × 2.000): el lienzo y el zoom ya no suponen un mundo cuadrado.
+- En `npm run dev`: `?sinNiebla` quita la niebla del mapa y `sesionBronzeAge` en la consola es la sesión.
+
+### Cambiado
+- `apiCliente.ts`: login y registro contra el servicio de acceso del motor; una sola partida («Mundo»); la proyección se calcula del
+  almacén sin viaje de red; el «tick» del tiempo real es cada cambio que llega por la sesión. El servidor se busca en el mismo host,
+  puerto 7878 (`VITE_API_BASE` lo cambia); sin proxy de Vite.
+
+### Pendiente (C4+)
+- El motor no publica el balance (`/v1/balance`): los paneles usan sus valores por defecto.
+- Sin traducir aún: batallas, convocatorias, informes de inspección y de plaza, propuestas diplomáticas, Aedas, tecnología propia,
+  pueblos, avanzadas y obras de mapa. La planta del campamento no viaja en el motor.
+- Revisar panel a panel los parámetros de cada comando contra `Comandos_Parametros.md` del motor.
+
 ## [0.29.1] — 2026-10-26 · fase 7, tanda C2: el mapa desde el artefacto de mundo · sync con `VRhino/BronzeAge@164235d`
 
 ### Añadido

@@ -549,7 +549,9 @@ export function pintarTerreno(
   }
 
   // 8. >>> LA NIEBLA <<<
-  if (proyeccion.exploracion) pintarNiebla(ctx, proyeccion.exploracion, escalaCanvas);
+  // `?sinNiebla` en `npm run dev` la quita, para mirar el terreno entero mientras se desarrolla.
+  const sinNiebla = import.meta.env.DEV && new URLSearchParams(location.search).has('sinNiebla');
+  if (proyeccion.exploracion && !sinNiebla) pintarNiebla(ctx, proyeccion.exploracion, escalaCanvas);
 
   // 9. ZONAS DE INFLUENCIA FUSIONADAS (solo la propia)
   for (const zona of proyeccion.zonasFusionadas || []) {

@@ -79,28 +79,26 @@ El detalle, con checklist, está en
 
 ## Uso
 
-Requiere el backend corriendo aparte, y una partida ya creada por un administrador. Desde el 2026-09-14 tiene
-que ser la rama `heroe-dominio` del backend (modelo de Héroe), hasta que se fusione a `main`:
+Desde la fase 7 (2026-10-26) el cliente habla con el **motor en Rust** (`VRhino/BronzeAge`) por la sesión del contrato 05 (ver
+[`src/contrato/README.md`](src/contrato/README.md)). Requiere el servidor del motor corriendo aparte, con su artefacto de mundo:
 
 ```bash
-ADMINISTRADORES='dev:jefa' npm run server
+# en el motor (la primera vez, el mundo: cd generador && npm ci && npm run generar && npx tsx scripts/generar-mundo.ts 42 salida/mundo)
+CODIGO_REGISTRO_BOTS=dev-bots ADMINISTRADORES=jefa cargo run --release -p servicio   # 127.0.0.1:7878
 ```
 
 ```bash
 npm install
-npm run dev
+npm run dev        # http://127.0.0.1:5174
 ```
 
-El login es con **cuenta local** (nick + contraseña, proveedor `clave` del backend). La primera vez se marca
-"No tengo cuenta — crear una" en la pantalla de login; si el backend arrancó con `CODIGO_REGISTRO`, hay que
-poner ese código. La sesión se guarda en `localStorage`; cuando caduca (12 h) la UI vuelve al login (no hay
-re-login en silencio: la contraseña no se guarda).
+El login es con **cuenta** del servicio de acceso del motor (nick + contraseña). La primera vez se marca "No tengo cuenta — crear una"; si
+el servidor arrancó con `CODIGO_REGISTRO`, hay que poner ese código. El token se guarda en `localStorage`; cuando caduca (12 h) la UI vuelve
+al login. El motor tiene **una sola partida** por servidor: la pantalla de partidas enseña solo «Mundo». La primera vez hay que crear el héroe
+(el motor aún le pone «Héroe N»).
 
-La primera vez que se entra en una partida hay que crear el héroe: hasta entonces el backend no deja hacer nada
-más.
+El servidor sirve en un solo puerto el HTTP de acceso, el artefacto de mundo y el WebSocket, con el CORS abierto: por defecto el cliente lo
+busca en el mismo host, puerto 7878; `VITE_API_BASE=http://<host>:<puerto>` lo apunta a otro (también para `npm run build`).
 
-`vite.config.ts` proxya `/v1` hacia `:3000` para evitar CORS en desarrollo.
-
-Para desplegarlo como sitio estático apuntando a un backend en otro dominio: `VITE_API_BASE=https://<backend>
-npm run build` (el backend debe listar el origen de este cliente en `ORIGENES_PERMITIDOS`). Sin
-`VITE_API_BASE` las peticiones van a `/v1` del mismo origen — lo que vale si el backend sirve este estático.
+En `npm run dev`, `?sinNiebla` en la URL quita la niebla del mapa (para mirar el terreno entero) y `sesionBronzeAge` en la consola es la
+sesión, con su almacén.

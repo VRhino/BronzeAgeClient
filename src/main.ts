@@ -1039,6 +1039,12 @@ function alternarVistaMapa(abrir: boolean = !vistaMapaAbierta): void {
   renderPanelJugador();
 }
 
+/** Da al lienzo del mapa la proporción del mundo (el del motor no es cuadrado); cambiar el alto borra el lienzo, así que solo si hace falta. */
+function ajustarLienzo(canvas: HTMLCanvasElement, ancho: number, alto: number): void {
+  const h = Math.round((canvas.width * alto) / ancho);
+  if (canvas.height !== h) canvas.height = h;
+}
+
 /** Pinta el terreno y lo que se ve en el mapa de la vista interior; `centrar` la lleva al héroe (solo al abrirla). */
 async function pintarVistaMapa(centrar = false): Promise<void> {
   const p = estadoCliente.proyeccionUltima;
@@ -1047,6 +1053,8 @@ async function pintarVistaMapa(centrar = false): Promise<void> {
   if (!p || !canvas || !ctx) return;
   const mapa = await sincronizarMapa(p.mapaId);
   if (document.querySelector('#mapa-interior') !== canvas) return; // se cerró mientras llegaba el mapa
+  ajustarLienzo(canvas, mapa.config.ancho, mapa.config.alto);
+  controlVistaMapa?.fijarMundo(mapa.config.ancho, mapa.config.alto);
   const escala = canvas.width / mapa.config.ancho;
   pintarTerreno(ctx, mapa, p, escala);
   pintarMiradas(ctx, p.miradasIntel ?? [], p.instante, escala);
@@ -2080,11 +2088,14 @@ async function dibujarPantallaSegunModo(proyeccion: ProyeccionJugador): Promise<
   if (estadoCliente.modoVista === 'mundo') {
     if (titulo) titulo.textContent = 'Mapa del Mundo (Evaluación T2a)';
     const mapa = await sincronizarMapa(proyeccion.mapaId);
+    ajustarLienzo(canvas, mapa.config.ancho, mapa.config.alto);
+    controlMapaActivo?.fijarMundo(mapa.config.ancho, mapa.config.alto);
     pintarTerreno(ctx, mapa, proyeccion, canvas.width / mapa.config.ancho);
     pintarMiradas(ctx, proyeccion.miradasIntel ?? [], proyeccion.instante, canvas.width / mapa.config.ancho);
   } else {
     if (titulo) titulo.textContent = 'Vista de Asentamiento (Geometría Urbana T2a)';
     const asentamiento = proyeccion.asentamientos[0];
+    ajustarLienzo(canvas, 1, 1);
     if (asentamiento) pintarAsentamiento(ctx, asentamiento, proyeccion.trazadoPorAsentamiento?.[asentamiento.id], edificioSeleccionado());
     else { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillText('No perteneces a ningún asentamiento aún.', 20, 40); }
   }

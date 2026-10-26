@@ -14,6 +14,8 @@ export interface ControlMapa {
    * cuando el contenedor ya tiene tamaño y se conoce el tamaño del mundo, así que da igual llamarlo antes de
    * que el mapa haya cargado. Arrastrar o hacer zoom con rueda lo suelta. */
   centrar(puntoMundo: { x: number; y: number }, anchoMundo: number, altoMundo: number): void;
+  /** El tamaño del mundo, para que el lienzo tenga su proporción (el del motor es 2.667 × 2.000). Sin llamarlo, cuadrado. */
+  fijarMundo(anchoMundo: number, altoMundo: number): void;
   /** Zoom y pan actuales (para guardar la vista). */
   estado(): { zoom: number; panX: number; panY: number };
   destruir(): void;
@@ -37,20 +39,23 @@ export function instalarZoomPan(
   let mundoAncho = 0;
   let mundoAlto = 0;
 
-  const lado = (): number => ladoBase(contenedor.clientWidth, contenedor.clientHeight);
+  /** Alto del mundo entre su ancho: 1 mientras no se sepa. */
+  const proporcion = (): number => (mundoAncho > 0 && mundoAlto > 0 ? mundoAlto / mundoAncho : 1);
+  const lado = (): number => ladoBase(contenedor.clientWidth, contenedor.clientHeight / proporcion());
 
   function aplicar(): void {
     const l = lado();
     if (l === 0) return; // el contenedor todavía no está maquetado; el ResizeObserver reintentará
+    const alto = l * proporcion();
     lienzo.style.width = `${l}px`;
-    lienzo.style.height = `${l}px`;
+    lienzo.style.height = `${alto}px`;
     if (foco && mundoAncho > 0) {
-      const p = panParaCentrar(foco, mundoAncho, mundoAlto, l, zoom);
+      const p = panParaCentrar(foco, mundoAncho, mundoAlto, l, zoom, alto);
       panX = p.x;
       panY = p.y;
     }
     panX = clampPan(panX, l * zoom, contenedor.clientWidth);
-    panY = clampPan(panY, l * zoom, contenedor.clientHeight);
+    panY = clampPan(panY, alto * zoom, contenedor.clientHeight);
     lienzo.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
   }
 
@@ -120,6 +125,12 @@ export function instalarZoomPan(
     zoomHacia: (direccion) => zoomA(zoom * (direccion === 1 ? 1.4 : 1 / 1.4), 0, 0),
     centrar: (puntoMundo, anchoMundo, altoMundo) => {
       foco = puntoMundo;
+      mundoAncho = anchoMundo;
+      mundoAlto = altoMundo;
+      aplicar();
+    },
+    fijarMundo: (anchoMundo, altoMundo) => {
+      if (anchoMundo === mundoAncho && altoMundo === mundoAlto) return;
       mundoAncho = anchoMundo;
       mundoAlto = altoMundo;
       aplicar();

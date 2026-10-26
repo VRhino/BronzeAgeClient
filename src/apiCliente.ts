@@ -1,5 +1,13 @@
-// Wrapper `fetch` sobre la superficie `/jugador/*` y `/sesiones` del backend (Fase C3) — sin lógica de negocio, solo I/O.
+// La superficie de red del cliente (sin lógica de negocio, solo I/O). Desde la fase 7, sobre la sesión del contrato 05 del motor en Rust.
 import type { MapaGenerado } from './terreno';
+import { entrar, ErrorDeAcceso, registrar } from './contrato/acceso';
+import { ErrorDeSesion, Sesion } from './contrato/sesion';
+import { Resultado } from './contrato/gen/bronzeage/v1/session_pb';
+import { TipoEntidad } from './contrato/gen/bronzeage/v1/common_pb';
+import type { EventoDominio as EventoPb } from './contrato/gen/bronzeage/v1/events_pb';
+import { cargarMundo } from './mundo/artefacto';
+import { instante, proyectar } from './motor/proyeccion';
+import { ComandoDesconocido, traducirOrden } from './motor/ordenes';
 
 import type { AcuerdoTrueque, AedaAvistado, AedaResidenteProyectado, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, CaravanaAvistada, Convocatoria, Ejercito, EjercitoAvistado, EscenaCampamento, EvaluacionAscenso, EventoDominio, Faccion, HeroeProyectado, HeroePublico, InformeDeInspeccion, InformePlaza, MiradaIntel, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, PropuestaAnexion, PropuestaFusion, PropuestaRelacion, RelacionPolitica, Sigilo, TarifasIntel, TecnologiaJugador, Titulo, TrazadoAsentamiento, ZonaFaccion } from './tiposDominio';
 
@@ -164,58 +172,103 @@ export interface RespuestaComando {
   [campo: string]: unknown;
 }
 
-// En dev, Vite proxya `/v1` al backend (mismo origen, sin CORS). En producción, si este cliente se sirve
-// desde un dominio distinto al del backend, `VITE_API_BASE` lleva la URL del backend
-// (p. ej. `https://mi-backend.fly.dev`) — y el backend debe listar este origen en `ORIGENES_PERMITIDOS`.
-const V1 = `${import.meta.env.VITE_API_BASE ?? ''}/v1`;
+// Desde la fase 7 (2026-10-26) esta superficie habla con el motor en Rust y no con el REST del backend TypeScript: por debajo, una sola
+// `Sesion` del contrato 05 (`src/contrato/`) y el adaptador de `src/motor/` (lectura: el almacén a `ProyeccionJugador`; escritura: el
+// comando de siempre a una `Orden`). Los paneles no cambian. El servidor sirve en un puerto el HTTP de acceso, el artefacto de mundo y el
+// WebSocket; `VITE_API_BASE` lo apunta (por defecto, el mismo host en el puerto 7878; el CORS del motor está abierto).
+const BASE = import.meta.env.VITE_API_BASE ?? `${location.protocol}//${location.hostname}:7878`;
+const URL_WS = `${BASE.replace(/^http/, 'ws')}/`;
 const STORAGE_KEY_SESION = 'bac_jugador_sesion_id';
 const STORAGE_KEY_USUARIO = 'bac_jugador_usuario';
 const STORAGE_KEY_GAME_ID = 'bac_jugador_game_id';
+/** El motor tiene una sola partida por servidor: este es su id para la interfaz. */
+const PARTIDA = 'mundo';
+const VERSION_CLIENTE = 'cliente-jugador';
 
 let sesionIdMemoria: string | null = null;
 let usuarioMemoria: string | null = null;
+let cuentaIdMemoria: string | null = null;
+let sesion: Sesion | null = null;
+let abriendo: Promise<Sesion> | null = null;
+let oyenteDeEventos: ((evento: EventoDominio) => void) | null = null;
+let oyenteDeTick: (() => void) | null = null;
+let temporizadorTick: ReturnType<typeof setTimeout> | undefined;
+let mapaCargado: { hash: string; mapa: MapaGenerado } | null = null;
 
-async function fetchJson<T>(url: string, opciones: RequestInit, cabeceraAuth: string): Promise<T> {
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      ...opciones,
-      headers: {
-        ...(cabeceraAuth ? { authorization: cabeceraAuth } : {}),
-        ...(opciones.body ? { 'content-type': 'application/json' } : {}),
-        ...((opciones.headers as Record<string, string>) ?? {}),
-      },
-    });
-  } catch {
-    throw new ApiError(0, 'No se pudo contactar con el servidor. ¿Está corriendo `npm run server` en el backend?');
-  }
-  if (!res.ok) {
-    const cuerpo = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new ApiError(res.status, cuerpo.error ?? `El servidor respondió ${res.status}.`);
-  }
-  return res.json() as Promise<T>;
+function aApiError(e: unknown): ApiError {
+  if (e instanceof ApiError) return e;
+  if (e instanceof ErrorDeAcceso) return new ApiError(e.status, e.message);
+  if (e instanceof ErrorDeSesion) return new ApiError(e.codigo === 'token_invalido' ? 401 : 403, `${e.message} (${e.codigo})`);
+  return new ApiError(0, 'No se pudo contactar con el servidor. ¿Está corriendo `bronzeage-servidor` (cargo run --release -p servicio en el motor)?');
 }
 
-/** Alta de cuenta local en el backend (`POST /v1/registro`, proveedor `clave`). No abre sesión — el cliente
- * hace `loginConClave` a continuación con las mismas credenciales. `codigo` solo si la instancia lo exige. */
-export async function registrarCuenta(nick: string, clave: string, codigo?: string): Promise<void> {
-  await fetchJson<{ nick: string }>(
-    `${V1}/registro`,
-    { method: 'POST', body: JSON.stringify(codigo ? { nick, clave, codigo } : { nick, clave }) },
-    // sin cabecera de auth: el registro es público (o va con `codigo` en el cuerpo)
-    ''
+/** Avisa a la interfaz de que el mundo cambió (como el `tick` del WebSocket viejo), agrupando lo que llega seguido. */
+function avisarTick(): void {
+  if (temporizadorTick) return;
+  temporizadorTick = setTimeout(() => {
+    temporizadorTick = undefined;
+    oyenteDeTick?.();
+  }, 100);
+}
+
+/** La sesión abierta (la abre si hace falta, con el token guardado). */
+async function sesionAbierta(): Promise<Sesion> {
+  if (sesion && sesion.estado !== 'cerrada') return sesion;
+  if (abriendo) return abriendo;
+  if (!sesionIdMemoria && !cargarSesionLocal()) throw new ApiError(401, 'No hay ninguna sesión activa. Inicie sesión primero.');
+  const s = new Sesion({ url: URL_WS, token: sesionIdMemoria!, versionCliente: VERSION_CLIENTE, mundoHash: mapaCargado?.hash });
+  s.alCambiar(() => avisarTick());
+  s.alEvento((_ambito, e) => oyenteDeEventos?.(eventoDeDominio(e)));
+  s.alEstado((estado, error) => {
+    if (estado === 'cerrada' && error?.codigo === 'token_invalido') cerrarSesion();
+  });
+  abriendo = s.abrir().then(
+    () => {
+      sesion = s;
+      // Para depurar desde la consola del navegador (solo en `npm run dev`).
+      if (import.meta.env.DEV) (globalThis as { sesionBronzeAge?: Sesion }).sesionBronzeAge = s;
+      abriendo = null;
+      return s;
+    },
+    (e) => {
+      abriendo = null;
+      if (e instanceof ErrorDeSesion && e.codigo === 'token_invalido') cerrarSesion();
+      throw aApiError(e);
+    },
   );
+  return abriendo;
 }
 
-/** Login con cuenta local: `Authorization: clave <nick>:<contraseña>`. */
+function eventoDeDominio(e: EventoPb): EventoDominio {
+  return {
+    codigo: e.codigo, mensaje: e.codigo, version: Number(e.version), asentamientoId: e.asentamientoId,
+    momento: new Date(instante(e.enMs)!).toISOString(), payload: e.payload,
+  };
+}
+
+/** Alta de cuenta en el servicio de acceso del motor (`POST /v1/registro`). No abre sesión — el cliente hace `loginConClave` a
+ * continuación con las mismas credenciales. `codigo` solo si la instancia lo exige (`CODIGO_REGISTRO`). */
+export async function registrarCuenta(nick: string, clave: string, codigo?: string): Promise<void> {
+  try {
+    await registrar(BASE, nick, clave, codigo ?? '');
+  } catch (e) {
+    throw aApiError(e);
+  }
+}
+
+/** Login (`POST /v1/sesiones`): el token que devuelve es el de `Hola.token`; aquí sigue llamándose `sesionId`. */
 export async function loginConClave(nick: string, clave: string): Promise<RespuestaLogin> {
   const sujeto = nick.trim();
   if (!sujeto || !clave) throw new ApiError(400, 'Nick y contraseña son obligatorios.');
-
-  const res = await fetchJson<RespuestaLogin>(`${V1}/sesiones`, { method: 'POST' }, `clave ${sujeto}:${clave}`);
-  sesionIdMemoria = res.sesionId;
-  usuarioMemoria = sujeto;
-  return res;
+  try {
+    const r = await entrar(BASE, sujeto, clave);
+    sesionIdMemoria = r.token;
+    usuarioMemoria = r.nick;
+    cuentaIdMemoria = r.cuentaId;
+    return { usuarioId: r.cuentaId, sesionId: r.token, expiraEn: new Date(r.expiraMs).toISOString() };
+  } catch (e) {
+    throw aApiError(e);
+  }
 }
 
 export function guardarSesionLocal(sesionId: string, usuario: string, gameId: string): void {
@@ -226,21 +279,27 @@ export function guardarSesionLocal(sesionId: string, usuario: string, gameId: st
   localStorage.setItem(STORAGE_KEY_GAME_ID, gameId);
 }
 
-/** Una partida abierta del servidor y, si el usuario es miembro, su héroe en ella (`GET /v1/jugador/partidas`, backend 02bd153). */
 export interface PartidaListada {
   gameId: string;
-  /** Si el administrador se lo puso; si no, se usa el `gameId`. */
   nombre?: string;
   estado: string;
   membresia: { jugadorId: string } | null;
   heroe: { id: string; nombre: string; nivel: number; faccion: { id: string; nombre: string; emblemaId: string; colorEmblemaId: string; /** El sigilo completo de su Facción (backend, a petición); mientras no llegue se dibuja solo el símbolo. */ sigilo?: Sigilo } | null } | null;
 }
 
+/** El motor tiene una sola partida: la del servidor. Su tarjeta lleva el héroe si la cuenta ya tiene uno. */
 export async function listarPartidas(): Promise<PartidaListada[]> {
-  return (await peticion<{ partidas: PartidaListada[] }>(`${V1}/jugador/partidas`)).partidas;
+  const s = await sesionAbierta();
+  const p = proyeccionActual(s);
+  const heroe = !p.sinHeroe
+    ? (() => {
+        const f = p.facciones.find((x) => x.id === p.faccionId);
+        return { id: p.heroeId, nombre: p.heroe.displayName, nivel: p.heroe.nivel, faccion: f ? { id: f.id, nombre: f.nombre, emblemaId: f.sigilo.emblemaId, colorEmblemaId: f.sigilo.colorEmblemaId, sigilo: f.sigilo } : null };
+      })()
+    : null;
+  return [{ gameId: PARTIDA, nombre: 'Mundo', estado: 'activa', membresia: { jugadorId: cuentaIdMemoria ?? usuarioMemoria ?? '' }, heroe }];
 }
 
-/** Recuerda en qué partida se está (`''` = en ninguna: se vuelve a la lista de partidas). */
 export function recordarPartida(gameId: string): void {
   localStorage.setItem(STORAGE_KEY_GAME_ID, gameId);
 }
@@ -250,7 +309,6 @@ export function cargarSesionLocal(): { sesionId: string; usuario: string; gameId
   const usr = localStorage.getItem(STORAGE_KEY_USUARIO);
   const gid = localStorage.getItem(STORAGE_KEY_GAME_ID) ?? '';
 
-  // Sin `gameId` la sesión sigue viva pero el jugador no está en ninguna partida: va a la pantalla de partidas.
   if (sid && usr) {
     sesionIdMemoria = sid;
     usuarioMemoria = usr;
@@ -259,96 +317,35 @@ export function cargarSesionLocal(): { sesionId: string; usuario: string; gameId
   return null;
 }
 
-// --- TIEMPO REAL (WebSocket) ---------------------------------------------------------------------------
-// Un único WebSocket por jugador (backend `rutas/tiempoReal.ts`, doc 02 §2) con dos papeles:
-//  - PRESENCIA (Doc 1.10.6): tenerlo abierto es estar conectado; cerrar el ÚLTIMO socket del jugador lo desconecta (sale del mundo 2:30 después
-//    si no vuelve). Por eso se cierra al cerrar sesión o la pestaña.
-//  - AVISOS: se suscribe a canales (`mapa/general`, `heroe/<tuId>`, `asentamiento/<id>` de tus plazas) y, cuando llega un evento, avisa a quien
-//    escuche (`alEventoTiempoReal`). El WebSocket solo avisa: el dato se vuelve a pedir por HTTP (proyección y cursor de eventos), que es la verdad.
-// Las suscripciones no sobreviven a una reconexión: al abrirse se mandan todas otra vez.
-let socketPresencia: WebSocket | null = null;
-let presenciaDeseada: string | null = null;
-let reintentoPresencia: ReturnType<typeof setTimeout> | undefined;
-/** Los canales que se quieren tener suscritos, y los que el socket abierto tiene ya pedidos. */
-let canalesDeseados = new Set<string>();
-const canalesPedidos = new Set<string>();
-let oyenteDeEventos: ((evento: EventoDominio) => void) | null = null;
-let oyenteDeTick: (() => void) | null = null;
+/** Los «canales» del WebSocket viejo: el contrato suscribe solo lo que corresponde, así que no hay nada que pedir. */
+export function fijarCanalesTiempoReal(_canales: readonly string[]): void {}
 
-function urlTiempoReal(gameId: string, sesionId: string): string {
-  const base = import.meta.env.VITE_API_BASE ?? location.origin;
-  return `${base.replace(/^http/, 'ws')}/v1/jugador/partidas/${encodeURIComponent(gameId)}/tiempo-real?sesion=${encodeURIComponent(sesionId)}`;
-}
-
-/** Pone al día las suscripciones del socket abierto con `canalesDeseados`. */
-function sincronizarCanales(): void {
-  const socket = socketPresencia;
-  if (!socket || socket.readyState !== WebSocket.OPEN) return;
-  for (const canal of canalesDeseados) if (!canalesPedidos.has(canal)) { socket.send(JSON.stringify({ accion: 'suscribir', canal })); canalesPedidos.add(canal); }
-  for (const canal of [...canalesPedidos]) if (!canalesDeseados.has(canal)) { socket.send(JSON.stringify({ accion: 'desuscribir', canal })); canalesPedidos.delete(canal); }
-}
-
-/** Qué canales escuchar (se llama con cada proyección; si no cambia nada no se manda nada). */
-export function fijarCanalesTiempoReal(canales: readonly string[]): void {
-  canalesDeseados = new Set(canales);
-  sincronizarCanales();
-}
-
-/** Quién recibe los eventos que llegan por el socket (uno solo: `main.ts`). */
 export function alEventoTiempoReal(cb: (evento: EventoDominio) => void): void {
   oyenteDeEventos = cb;
 }
 
-/** Quién se entera de que el reloj de mundo dio un tick (el servidor lo manda por el socket, sin datos: es la señal para pedir la proyección y no sondear). */
 export function alTickDeMundo(cb: () => void): void {
   oyenteDeTick = cb;
 }
 
-/** ¿Hay un socket de tiempo real abierto? Con él los ticks avisan solos; sin él hay que sondear. */
 export function tiempoRealVivo(): boolean {
-  return socketPresencia?.readyState === WebSocket.OPEN;
+  return sesion?.estado === 'abierta';
 }
 
-/** Abre el socket de esa partida si no está abierto (idempotente). Si se cae sin que lo pidamos, reintenta a los 3 s. */
-export function abrirPresencia(gameId: string): void {
-  presenciaDeseada = gameId;
-  if (!sesionIdMemoria || (socketPresencia && socketPresencia.readyState <= WebSocket.OPEN)) return;
-  clearTimeout(reintentoPresencia);
-  const socket = new WebSocket(urlTiempoReal(gameId, sesionIdMemoria));
-  socketPresencia = socket;
-  canalesPedidos.clear();
-  socket.addEventListener('open', () => sincronizarCanales());
-  socket.addEventListener('message', (mensaje) => {
-    try {
-      const datos = JSON.parse(String(mensaje.data)) as { tipo?: string; gameId?: string; evento?: EventoDominio };
-      // El servidor dice de qué partida es cada evento (backend 9ab4e62): uno de otra partida no es de este socket.
-      if (datos.gameId !== undefined && datos.gameId !== gameId) return;
-      if (datos.tipo === 'tick') { oyenteDeTick?.(); return; }
-      if (datos.tipo === 'evento' && datos.evento) oyenteDeEventos?.(datos.evento);
-    } catch {
-      // Un mensaje ilegible no rompe nada: el sondeo sigue trayendo la verdad.
-    }
-  });
-  socket.addEventListener('close', () => {
-    if (socketPresencia === socket) socketPresencia = null;
-    canalesPedidos.clear();
-    if (presenciaDeseada === gameId && sesionIdMemoria) reintentoPresencia = setTimeout(() => abrirPresencia(gameId), 3000);
-  });
+export function abrirPresencia(_gameId: string): void {
+  void sesionAbierta().catch(() => {});
 }
 
-/** Cierra el socket y deja de reabrirlo: así el servidor ve que el jugador se fue. */
 export function cerrarPresencia(): void {
-  presenciaDeseada = null;
-  clearTimeout(reintentoPresencia);
-  socketPresencia?.close(1000, 'sesion cerrada');
-  socketPresencia = null;
-  canalesPedidos.clear();
+  sesion?.cerrar();
+  sesion = null;
 }
 
 export function cerrarSesion(): void {
-  cerrarPresencia(); // antes de olvidar la sesión: es lo que desconecta al héroe en el servidor
+  cerrarPresencia();
   sesionIdMemoria = null;
   usuarioMemoria = null;
+  cuentaIdMemoria = null;
   localStorage.removeItem(STORAGE_KEY_SESION);
   localStorage.removeItem(STORAGE_KEY_USUARIO);
   localStorage.removeItem(STORAGE_KEY_GAME_ID);
@@ -358,43 +355,46 @@ export function getUsuarioActual(): string | null {
   return usuarioMemoria;
 }
 
-async function peticion<T>(url: string, opciones: RequestInit = {}): Promise<T> {
-  if (!sesionIdMemoria) {
-    const local = cargarSesionLocal();
-    if (!local) throw new ApiError(401, 'No hay ninguna sesión activa. Inicie sesión primero.');
+export async function obtenerWhoami(_gameId?: string): Promise<RespuestaWhoami> {
+  return { usuarioId: cuentaIdMemoria ?? '', esAdministradorGlobal: false, gameId: PARTIDA, jugadorId: sesion?.bienvenida?.heroeId ?? null };
+}
+
+/** Con el motor no hace falta unirse: la cuenta entra en la partida del servidor al abrir la sesión. */
+export async function unirseAPartida(_gameId: string): Promise<{ jugadorId: string }> {
+  await sesionAbierta();
+  return { jugadorId: cuentaIdMemoria ?? '' };
+}
+
+function proyeccionActual(s: Sesion): ProyeccionJugador | PartidaSinHeroe {
+  return proyectar({ almacen: s.almacen, bienvenida: s.bienvenida!, ahora: s.ahoraMundo(), gameId: PARTIDA, mapaId: s.bienvenida?.mundo?.hash ?? '' });
+}
+
+/** La proyección, calculada del almacén de la sesión: no hay viaje de red (lo que cambia llega solo). */
+export async function consultarProyeccion(_gameId: string): Promise<ProyeccionJugador | PartidaSinHeroe> {
+  const s = await sesionAbierta();
+  // La VISTA la pide el cliente (en el REST venía sola): en cuanto hay héroe, una vez por héroe. La sesión la vuelve a pedir al reconectar.
+  const heroe = [...s.almacen.ambitos.keys()].find((k) => k.startsWith('HEROE:'));
+  if (heroe && vistaPedidaPara !== heroe) {
+    vistaPedidaPara = heroe;
+    pedirVistaEntera(s);
   }
-
-  try {
-    return await fetchJson<T>(url, opciones, `sesion ${sesionIdMemoria}`);
-  } catch (err) {
-    // Con contraseña no se puede re-autenticar en silencio (no la guardamos): si la sesión caducó, se cierra
-    // y la UI vuelve al login.
-    if (err instanceof ApiError && err.status === 401) cerrarSesion();
-    throw err;
-  }
+  return proyeccionActual(s);
 }
 
-export function obtenerWhoami(gameId?: string): Promise<RespuestaWhoami> {
-  const query = gameId ? `?gameId=${encodeURIComponent(gameId)}` : '';
-  return peticion<RespuestaWhoami>(`${V1}/sesiones/actual${query}`);
+let vistaPedidaPara: string | null = null;
+
+/** La VISTA del mundo entero: el servidor filtra por la niebla, así que pedir todo el rectángulo es lo que hacía el REST. */
+function pedirVistaEntera(s: Sesion): void {
+  const tamano = mapaCargado?.mapa.config;
+  const ancho = BigInt(Math.round((tamano?.ancho ?? 2667) * 1000));
+  const alto = BigInt(Math.round((tamano?.alto ?? 2000) * 1000));
+  s.cambiarVista({ min: { x: 0n, y: 0n }, max: { x: ancho, y: alto } });
 }
 
-/** Une al sujeto actual a la partida como jugador */
-export function unirseAPartida(gameId: string): Promise<{ jugadorId: string }> {
-  return peticion<{ jugadorId: string }>(`${V1}/jugador/partidas/${encodeURIComponent(gameId)}/membresia`, { method: 'POST' });
+/** La crónica de la partida va por páginas en la sesión (`pedirCronica`); los avisos de siempre llegan por `alEventoTiempoReal`. */
+export async function consultarEventos(_gameId: string, _desde: number): Promise<EventoDominio[]> {
+  return [];
 }
-
-export function consultarProyeccion(gameId: string): Promise<ProyeccionJugador | PartidaSinHeroe> {
-  return peticion<ProyeccionJugador | PartidaSinHeroe>(`${V1}/jugador/partidas/${encodeURIComponent(gameId)}`);
-}
-
-/** Los eventos con `version` mayor que `desde`, ya filtrados a lo que este jugador puede ver (cursor de reconexión, doc 02 §4). */
-export async function consultarEventos(gameId: string, desde: number): Promise<EventoDominio[]> {
-  const r = await peticion<{ eventos: EventoDominio[] }>(`${V1}/jugador/partidas/${encodeURIComponent(gameId)}/eventos?desde=${desde}`);
-  return r.eventos;
-}
-
-/** Una tropa del catálogo (`TROPAS_RECLUTABLES`): lo que hace falta para reclutarla y lo que cuesta el equipo de cada soldado. */
 export interface TropaReclutable {
   id: string;
   nombre: string;
@@ -448,9 +448,8 @@ let balancePedido = false;
 function balance(alCargar?: () => void): BalancePublico | null {
   if (!balancePublico && alCargar && !balancePedido) {
     balancePedido = true;
-    void fetchJson<BalancePublico>(`${V1}/balance`, {}, '')
-      .then((b) => { balancePublico = b; alCargar(); })
-      .catch(() => { balancePedido = false; });
+    // El motor aún no publica el balance (el archivo común de datos de juego): se usan los valores por defecto de cada función.
+    void Promise.resolve(null as BalancePublico | null).then((b) => { if (b) { balancePublico = b; alCargar(); } });
   }
   return balancePublico;
 }
@@ -602,19 +601,44 @@ export function catalogoDeTecnologia(alCargar?: () => void): CatalogoTecnologia 
 }
 
 /** El mapa como asset (Fase C11a): se pide una sola vez por `mapaId` y se cachea */
-export function obtenerMapa(gameId: string, mapaId: string): Promise<MapaGenerado> {
-  return peticion<MapaGenerado>(`${V1}/jugador/partidas/${encodeURIComponent(gameId)}/mapa/${encodeURIComponent(mapaId)}`);
+/** El mapa del mundo: el artefacto de la `Bienvenida` (por hash, con caché en IndexedDB), como `MapaGenerado`. */
+export async function obtenerMapa(_gameId: string, mapaId: string): Promise<MapaGenerado> {
+  if (mapaCargado?.hash === mapaId) return mapaCargado.mapa;
+  const s = await sesionAbierta();
+  const mundo = s.bienvenida?.mundo;
+  if (!mundo) throw new ApiError(0, 'el servidor no dijo qué mundo tiene');
+  const { mapa } = await cargarMundo(BASE, mundo.urlArtefacto, mundo.hash);
+  mapaCargado = { hash: mundo.hash, mapa };
+  return mapa;
 }
 
-export function ejecutarComando(gameId: string, tipo: string, params: unknown): Promise<RespuestaComando> {
-  return peticion<RespuestaComando>(`${V1}/jugador/partidas/${encodeURIComponent(gameId)}/comandos`, {
-    method: 'POST',
-    body: JSON.stringify({ tipo, params }),
-  });
+/** Un comando de siempre, como `Orden` del contrato. Cuando llega el resultado, el almacén ya tiene lo que la orden cambió (respuesta
+ * causal), así que la proyección que acompaña a la respuesta ya está al día. */
+export async function ejecutarComando(_gameId: string, tipo: string, params: unknown): Promise<RespuestaComando> {
+  const s = await sesionAbierta();
+  let cuerpo;
+  try {
+    cuerpo = traducirOrden(tipo, params);
+  } catch (e) {
+    if (e instanceof ComandoDesconocido) return { resultado: { ok: false, codigoError: 'comando_desconocido', detalleError: e.message } };
+    throw e;
+  }
+  let r;
+  try {
+    r = await s.ordenar(cuerpo);
+  } catch (e) {
+    throw aApiError(e);
+  }
+  const ok = r.resultado === Resultado.ORDEN_ACEPTADA || r.resultado === Resultado.ORDEN_SIN_CAMBIOS || r.resultado === Resultado.ORDEN_DUPLICADA;
+  const datos = r.datos as Record<string, unknown> | undefined;
+  return {
+    resultado: ok
+      ? { ok, datos: { ...datos, creadas: r.creadas.map((c) => ({ entidad: TipoEntidad[c.entidad], id: c.id })) } }
+      : { ok, codigoError: r.rechazo?.codigo ?? 'rechazada', detalleError: r.rechazo?.mensaje },
+    proyeccion: proyeccionActual(s),
+  };
 }
 
-// Comandos del héroe (backend 2026-09-14). Todavía sin pantalla que los use: docs/Features_Pendientes.md §0.2.
-// Un rechazo de dominio llega como `resultado.codigoError === 'heroe.invalido'`.
 export const repartirPuntos = (gameId: string, params: ParamsRepartirPuntos) => ejecutarComando(gameId, 'repartirPuntos', params);
 export const guardarLoadout = (gameId: string, params: ParamsGuardarLoadout) => ejecutarComando(gameId, 'guardarLoadout', params);
 export const borrarLoadout = (gameId: string, loadoutId: string) => ejecutarComando(gameId, 'borrarLoadout', { loadoutId });

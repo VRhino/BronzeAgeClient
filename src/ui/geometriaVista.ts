@@ -45,10 +45,12 @@ export function panParaCentrar(
   anchoMundo: number,
   altoMundo: number,
   lado: number,
-  zoom: number
+  zoom: number,
+  /** Alto en px del lienzo a zoom 1, si el mundo no es cuadrado (el del motor es 4:3). */
+  ladoAlto: number = lado
 ): { x: number; y: number } {
   const localX = (puntoMundo.x / anchoMundo - 0.5) * lado;
-  const localY = (puntoMundo.y / altoMundo - 0.5) * lado;
+  const localY = (puntoMundo.y / altoMundo - 0.5) * ladoAlto;
   return { x: -localX * zoom, y: -localY * zoom };
 }
 
