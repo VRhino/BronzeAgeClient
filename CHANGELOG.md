@@ -3,6 +3,17 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.30.2] — 2026-10-26 · dependencias sin vulnerabilidades conocidas
+
+### Seguridad
+- `npm audit` daba 7 avisos (2 críticos en `vitest` 2 por `tinypool`, 2 altos en `vite` 5 y `source-map-js`), todos de herramientas de
+  desarrollo. Ahora van `vite` 6.4.4 y `vitest` 4.1.12, fijados sin `^`, y `npm audit` da 0 vulnerabilidades. Las dependencias que llegan
+  al navegador (`@bufbuild/protobuf` 2.16.0, `fzstd` 0.1.1) no tenían avisos y no cambian.
+- El lock se regeneró con `npm install --before=2026-10-19`: ninguna versión tiene menos de una semana publicada, para no instalar una
+  versión recién publicada que pudiera estar comprometida.
+- `.npmrc`: `ignore-scripts=true` (ninguna dependencia ejecuta scripts al instalarse), `save-exact=true` y `legacy-peer-deps=true`
+  (npm 10 se cuelga con los peers opcionales de `vitest` 4).
+
 ## [0.30.1] — 2026-10-26 · alta de cuenta con las reglas del motor · sync con `VRhino/BronzeAge@49e285f`
 
 ### Corregido
