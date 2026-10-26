@@ -76,7 +76,33 @@ export interface MapaGenerado {
   config: WorldConfig;
   bosques: ZonaBosque[];
   nodos: NodoRecurso[];
-  fertilidad: CampoFertilidad;
-  elevacion: CampoElevacion;
+  /** Solo en el mapa del backend TypeScript (el ruido que este cliente recalculaba); el del motor en Rust trae `rasters`. */
+  fertilidad?: CampoFertilidad;
+  elevacion?: CampoElevacion;
   rios: RioZona[];
+  /** Las capas raster del artefacto de mundo (contrato 06), en unidades estratégicas: con ellas no se recalcula nada. */
+  rasters?: RastersDeMundo;
+}
+
+/** Un raster del artefacto de mundo: `columnas × filas` celdas de `celda` unidades, por filas de norte a sur. */
+export interface RasterU8 {
+  columnas: number;
+  filas: number;
+  celda: number;
+  datos: Uint8Array;
+}
+
+export interface RasterU16 {
+  columnas: number;
+  filas: number;
+  celda: number;
+  datos: Uint16Array;
+}
+
+export interface RastersDeMundo {
+  /** `ClaseTerreno` de world.proto: 1 agua, 2 costa, 3 llano, 4 colina, 5 montaña, 6 cima. */
+  terreno?: RasterU8;
+  /** 0..65535 sobre el rango del generador. */
+  altura?: RasterU16;
+  densidadBosque?: RasterU8;
 }

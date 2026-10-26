@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.29.1] — 2026-10-26 · fase 7, tanda C2: el mapa desde el artefacto de mundo · sync con `VRhino/BronzeAge@164235d`
+
+### Añadido
+- **Artefacto de mundo** (`src/mundo/artefacto.ts`): lo baja por hash de `InfoMundo.url_artefacto`, lo guarda en IndexedDB (solo el vigente) y lo convierte al `MapaGenerado` de siempre en unidades estratégicas, con sus rasters (`terreno`, `altura`, `densidad_bosque`), bosques, nodos y ríos.
+- **Render**: con rasters, `pintarBiomas` pinta la clase de terreno del artefacto (una celda por píxel) y el sombreado sale de la altura del artefacto con interpolación bilineal; sin ellos sigue el camino viejo del ruido (`src/terreno/`), que se irá con el REST.
+- Prueba con el artefacto real del motor (`generador/salida/mundo/`, si se ha generado).
+- Contrato regenerado desde `164235d` (el proto no cambia; el almacén de este cliente ya guardaba `NodoRecurso` y `MemoriaFaccion`, el hueco que el motor cerró en el suyo).
+
 ## [0.29.0] — 2026-10-26 · fase 7, tanda C1: la sesión del contrato 05 · sync con `VRhino/BronzeAge@c7f4e60` (`main`, tras la 7B)
 
 El cliente vuelve como cliente del motor en Rust (fase 7). Esta tanda pone solo la capa de transporte nueva, `src/contrato/`, al lado de

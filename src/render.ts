@@ -300,7 +300,30 @@ const BIOMA_RGB_SIMPLE: Record<string, readonly [number, number, number]> = Obje
   Object.entries(BIOMA_COLOR_SIMPLE).map(([k, v]) => [k, hexToRgb(v)])
 );
 
+/** Clase de terreno del artefacto (world.proto `ClaseTerreno`) → bioma de la paleta simple. */
+const BIOMA_DE_CLASE = ['agua', 'agua', 'costa', 'llanuraFertil', 'colina', 'montana', 'cima'] as const;
+
 function pintarBiomas(mapa: MapaGenerado): HTMLCanvasElement {
+  const terreno = mapa.rasters?.terreno;
+  if (terreno) {
+    // Del artefacto: una celda del raster por píxel, sin recalcular nada.
+    const capa = document.createElement('canvas');
+    capa.width = terreno.columnas;
+    capa.height = terreno.filas;
+    const cctx = capa.getContext('2d')!;
+    const img = cctx.createImageData(terreno.columnas, terreno.filas);
+    for (let i = 0; i < terreno.datos.length; i++) {
+      const [r, g, b] = BIOMA_RGB_SIMPLE[BIOMA_DE_CLASE[terreno.datos[i]!] ?? 'agua'] || [0, 0, 0];
+      img.data[i * 4] = r;
+      img.data[i * 4 + 1] = g;
+      img.data[i * 4 + 2] = b;
+      img.data[i * 4 + 3] = 255;
+    }
+    cctx.putImageData(img, 0, 0);
+    return capa;
+  }
+  const elevacion = mapa.elevacion!;
+  const fertilidad = mapa.fertilidad!;
   const capa = document.createElement('canvas');
   capa.width = RES_BIOMA;
   capa.height = RES_BIOMA;
@@ -311,7 +334,7 @@ function pintarBiomas(mapa: MapaGenerado): HTMLCanvasElement {
   for (let fila = 0; fila < RES_BIOMA; fila++) {
     for (let col = 0; col < RES_BIOMA; col++) {
       const punto = { x: (col + 0.5) * paso, y: (fila + 0.5) * paso };
-      const bioma = evaluarBioma(mapa.elevacion, mapa.fertilidad, mapa.rios, punto);
+      const bioma = evaluarBioma(elevacion, fertilidad, mapa.rios, punto);
       const [r, g, b] = BIOMA_RGB_SIMPLE[bioma] || [0, 0, 0];
       const i = (fila * RES_BIOMA + col) * 4;
       img.data[i] = r;
@@ -324,6 +347,21 @@ function pintarBiomas(mapa: MapaGenerado): HTMLCanvasElement {
   return capa;
 }
 
+/** La altura (0..1) en un punto: del raster del artefacto, con interpolación bilineal, o del ruido del mapa viejo. */
+function alturaEn(mapa: MapaGenerado, x: number, y: number): number {
+  const r = mapa.rasters?.altura;
+  if (!r) return evaluarElevacion(mapa.elevacion!, { x, y });
+  const fx = Math.min(r.columnas - 1, Math.max(0, x / r.celda - 0.5));
+  const fy = Math.min(r.filas - 1, Math.max(0, y / r.celda - 0.5));
+  const c0 = Math.floor(fx), f0 = Math.floor(fy);
+  const c1 = Math.min(r.columnas - 1, c0 + 1), f1 = Math.min(r.filas - 1, f0 + 1);
+  const tx = fx - c0, ty = fy - f0;
+  const v = (c: number, f: number) => r.datos[f * r.columnas + c]!;
+  const arriba = v(c0, f0) * (1 - tx) + v(c1, f0) * tx;
+  const abajo = v(c0, f1) * (1 - tx) + v(c1, f1) * tx;
+  return (arriba * (1 - ty) + abajo * ty) / 65535;
+}
+
 function aplicarSombreado(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, mapa: MapaGenerado): void {
   const ancho = canvas.width;
   const alto = canvas.height;
@@ -333,7 +371,7 @@ function aplicarSombreado(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasEleme
   for (let fila = 0; fila < alto; fila++) {
     const y = (fila + 0.5) * paso;
     for (let col = 0; col < ancho; col++) {
-      alturas[fila * ancho + col] = evaluarElevacion(mapa.elevacion, { x: (col + 0.5) * paso, y }) * ESCALA_RELIEVE;
+      alturas[fila * ancho + col] = alturaEn(mapa, (col + 0.5) * paso, y) * ESCALA_RELIEVE;
     }
   }
 
