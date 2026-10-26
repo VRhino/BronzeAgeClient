@@ -173,6 +173,8 @@ body {
   box-shadow: 0 0 0 3px rgba(200, 170, 110, 0.2);
 }
 
+.form-ayuda { display: block; margin-top: 4px; font-size: 0.8rem; opacity: 0.75; }
+
 .form-check {
   display: flex;
   align-items: center;

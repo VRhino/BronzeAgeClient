@@ -197,7 +197,7 @@ let mapaCargado: { hash: string; mapa: MapaGenerado } | null = null;
 
 function aApiError(e: unknown): ApiError {
   if (e instanceof ApiError) return e;
-  if (e instanceof ErrorDeAcceso) return new ApiError(e.status, e.message);
+  if (e instanceof ErrorDeAcceso) return new ApiError(e.status, e.message && e.message !== e.codigo ? e.message : e.codigo);
   if (e instanceof ErrorDeSesion) return new ApiError(e.codigo === 'token_invalido' ? 401 : 403, `${e.message} (${e.codigo})`);
   return new ApiError(0, 'No se pudo contactar con el servidor. ¿Está corriendo `bronzeage-servidor` (cargo run --release -p servicio en el motor)?');
 }

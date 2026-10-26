@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.30.1] — 2026-10-26 · alta de cuenta con las reglas del motor · sync con `VRhino/BronzeAge@49e285f`
+
+### Corregido
+- El formulario pedía una contraseña de 6 caracteres, pero el servicio de acceso del motor exige de 8 a 128 (y un nick de 3 a 32: letras,
+  cifras, «_», «-» o «.»); con menos, el registro fallaba con `datos_invalidos`. Ahora el campo pide 8 (`minlength`), al marcar «crear
+  una» se ven los requisitos, y si el motor devuelve solo el código, la interfaz lo explica (`datos_invalidos`, `nick_repetido`,
+  `credenciales_invalidas`, `codigo_incorrecto`).
+
 ## [0.30.0] — 2026-10-26 · fase 7, tanda C3: la interfaz juega contra el motor en Rust · sync con `VRhino/BronzeAge@164235d`
 
 La interfaz de siempre ya no habla con el REST del backend TypeScript: `apiCliente.ts` conserva su superficie y por debajo va por la

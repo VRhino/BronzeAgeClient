@@ -70,6 +70,11 @@ const MENSAJES: Record<string, string> = {
   'aedas.epica_invalida': 'La épica no es válida.',
   'intel.invalida': 'La compra de intel no es posible: comprueba la taberna, el oro, el cupo de Miradas y el enfriamiento.',
   'reserva.sin_tesorero': 'La plaza no tiene Tesorero.',
+  // Servicio de acceso del motor (`POST /v1/registro` y `/v1/sesiones`), por si llega el código sin su texto.
+  datos_invalidos: 'Nick de 3 a 32 caracteres (letras, cifras, «_», «-» o «.») y contraseña de 8 a 128.',
+  nick_repetido: 'Ese nick ya está registrado.',
+  credenciales_invalidas: 'Nick o contraseña incorrectos.',
+  codigo_incorrecto: 'El código de invitación no es válido.',
 };
 
 /** El mensaje del jugador para un código del backend; si no se conoce, el propio texto. */
