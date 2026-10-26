@@ -391,6 +391,21 @@ function pedirVistaEntera(s: Sesion): void {
   s.cambiarVista({ min: { x: 0n, y: 0n }, max: { x: ancho, y: alto } });
 }
 
+let radioVision: Promise<number> | null = null;
+
+/** El radio de visión de un héroe solo (`VISION.jugadorSolo` de `Movimiento_Ejercitos`), del archivo común de datos de juego del motor
+ * (`GET /v1/datos`, el vigente). Se pide una vez; si no llega, 15, la cifra de hoy. Fija la escala de visión del mapa. */
+export function radioDeVision(): Promise<number> {
+  radioVision ??= fetch(`${BASE}/v1/datos`)
+    .then((r) => (r.ok ? r.json() : null))
+    .then((d) => {
+      const r = Number(d?.documentos?.Movimiento_Ejercitos?.VISION?.jugadorSolo);
+      return r > 0 ? r : 15;
+    })
+    .catch(() => 15);
+  return radioVision;
+}
+
 /** La crónica de la partida va por páginas en la sesión (`pedirCronica`); los avisos de siempre llegan por `alEventoTiempoReal`. */
 export async function consultarEventos(_gameId: string, _desde: number): Promise<EventoDominio[]> {
   return [];

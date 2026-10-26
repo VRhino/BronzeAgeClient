@@ -3,6 +3,21 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.31.0] — 2026-10-26 · el mapa a la escala de visión del jugador · sync con `VRhino/BronzeAge@49e285f`
+
+El mapa del mundo pasa de escalar por CSS una imagen del mundo entero (zoom 1 a 4) a una cámara que repinta la vista. Mismo modelo que
+el cliente de administración (pedido por el autor el 2026-10-26).
+
+### Cambiado
+- Cámara `{ escala, cx, cy }` en unidades (`ui/geometriaVista.ts`, `ui/pantallaMapa.ts`). El zoom va del mundo entero llenando la pantalla
+  a la **escala de visión**: el diámetro de lo que ve el héroe ocupa el lado corto. El mapa arranca ahí, centrado en tu columna. El radio
+  sale de los datos de juego del motor (`GET /v1/datos`, `Movimiento_Ejercitos.VISION.jugadorSolo`, 15 hoy). Rueda: zoom hacia el cursor.
+- Terreno del artefacto (`mundo/pintarArtefacto.ts`). De lejos, una celda por píxel con relieve, bosque y ríos. De cerca (10 px por celda o
+  más), la vista muestreada a media resolución: relieve continuo, bordes de clase orgánicos, árboles sueltos a escala real, ríos con su
+  anchura (1,5 u, 3 navegables) y orilla, parcelas como círculo de 4 u, piedra como roca, y metales y ganado como rombo con nombre.
+- Los marcadores (columnas, plazas, caravanas...) siguen en px fijos. La niebla se compone una vez por proyección.
+- La vista guardada del mapa pasa a `bronze.vistaMapa.v2.<partida>`. La vieja (zoom y pan en px) se ignora.
+
 ## [0.30.2] — 2026-10-26 · dependencias sin vulnerabilidades conocidas
 
 ### Seguridad

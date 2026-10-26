@@ -1,4 +1,4 @@
-import { contornosBosques, evaluarBioma, evaluarElevacion, type MapaGenerado } from './terreno';
+import { contornosBosques, evaluarBioma, type MapaGenerado } from './terreno';
 import type { ProyeccionJugador } from './apiCliente';
 import type { Asentamiento, Sigilo, Edificio, MiradaIntel, NieblaProyectada, Point, RectanguloLocal, TrazadoAsentamiento, TrazadoMuralla } from './tiposDominio';
 import {
@@ -9,6 +9,10 @@ import {
   faccionColor,
 } from './paletas';
 import { imagenDeSigilo } from './sigilo/lienzo';
+import { esDeCerca, hayArtefacto, pintarArbolesDelArtefacto, pintarSueloDelArtefacto, vistaDelLienzo } from './mundo/pintarArtefacto';
+
+/** Recursos sin extensión en el mundo (una veta, un rebaño): de cerca se marcan con rombo y nombre, no con su círculo. */
+const NODOS_PUNTUALES = new Set(['cobre', 'estano', 'oro', 'livestock']);
 
 // --- GENERADOR DETERMINISTA (Para los árboles) ---
 function hashSemilla(texto: string): number {
@@ -248,6 +252,21 @@ export function pintarNiebla(
 ): void {
   const { columnas, filas, tamanoCelda } = niebla;
   if (columnas <= 0 || filas <= 0) return;
+  const capa = capaDeNiebla(niebla);
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(capa, 0, 0, columnas * tamanoCelda * escalaCanvas, filas * tamanoCelda * escalaCanvas);
+  ctx.restore();
+}
+
+/** La última máscara compuesta: el mapa se repinta a cada movimiento de cámara y la niebla solo cambia con la proyección. */
+let ultimaNiebla: { celdas: string; visibles: string; columnas: number; capa: HTMLCanvasElement } | null = null;
+
+function capaDeNiebla(niebla: NieblaProyectada): HTMLCanvasElement {
+  const { columnas, filas } = niebla;
+  if (ultimaNiebla && ultimaNiebla.celdas === niebla.celdas && ultimaNiebla.visibles === niebla.visibles && ultimaNiebla.columnas === columnas) return ultimaNiebla.capa;
 
   const total = columnas * filas;
   const explorado = bytesDeMascara(niebla.celdas, total);
@@ -276,17 +295,12 @@ export function pintarNiebla(
     img.data[p + 3] = alfa;
   }
   cctx.putImageData(img, 0, 0);
-
-  ctx.save();
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(capa, 0, 0, columnas * tamanoCelda * escalaCanvas, filas * tamanoCelda * escalaCanvas);
-  ctx.restore();
+  ultimaNiebla = { celdas: niebla.celdas, visibles: niebla.visibles, columnas, capa };
+  return capa;
 }
 
 // --- RENDER BASE DEL TERRENO (Cacheable) ---
 const RES_BIOMA = 128;
-const ESCALA_RELIEVE = 350;
 
 function hexToRgb(hex: string): readonly [number, number, number] {
   return [
@@ -300,28 +314,7 @@ const BIOMA_RGB_SIMPLE: Record<string, readonly [number, number, number]> = Obje
   Object.entries(BIOMA_COLOR_SIMPLE).map(([k, v]) => [k, hexToRgb(v)])
 );
 
-/** Clase de terreno del artefacto (world.proto `ClaseTerreno`) → bioma de la paleta simple. */
-const BIOMA_DE_CLASE = ['agua', 'agua', 'costa', 'llanuraFertil', 'colina', 'montana', 'cima'] as const;
-
 function pintarBiomas(mapa: MapaGenerado): HTMLCanvasElement {
-  const terreno = mapa.rasters?.terreno;
-  if (terreno) {
-    // Del artefacto: una celda del raster por píxel, sin recalcular nada.
-    const capa = document.createElement('canvas');
-    capa.width = terreno.columnas;
-    capa.height = terreno.filas;
-    const cctx = capa.getContext('2d')!;
-    const img = cctx.createImageData(terreno.columnas, terreno.filas);
-    for (let i = 0; i < terreno.datos.length; i++) {
-      const [r, g, b] = BIOMA_RGB_SIMPLE[BIOMA_DE_CLASE[terreno.datos[i]!] ?? 'agua'] || [0, 0, 0];
-      img.data[i * 4] = r;
-      img.data[i * 4 + 1] = g;
-      img.data[i * 4 + 2] = b;
-      img.data[i * 4 + 3] = 255;
-    }
-    cctx.putImageData(img, 0, 0);
-    return capa;
-  }
   const elevacion = mapa.elevacion!;
   const fertilidad = mapa.fertilidad!;
   const capa = document.createElement('canvas');
@@ -347,62 +340,6 @@ function pintarBiomas(mapa: MapaGenerado): HTMLCanvasElement {
   return capa;
 }
 
-/** La altura (0..1) en un punto: del raster del artefacto, con interpolación bilineal, o del ruido del mapa viejo. */
-function alturaEn(mapa: MapaGenerado, x: number, y: number): number {
-  const r = mapa.rasters?.altura;
-  if (!r) return evaluarElevacion(mapa.elevacion!, { x, y });
-  const fx = Math.min(r.columnas - 1, Math.max(0, x / r.celda - 0.5));
-  const fy = Math.min(r.filas - 1, Math.max(0, y / r.celda - 0.5));
-  const c0 = Math.floor(fx), f0 = Math.floor(fy);
-  const c1 = Math.min(r.columnas - 1, c0 + 1), f1 = Math.min(r.filas - 1, f0 + 1);
-  const tx = fx - c0, ty = fy - f0;
-  const v = (c: number, f: number) => r.datos[f * r.columnas + c]!;
-  const arriba = v(c0, f0) * (1 - tx) + v(c1, f0) * tx;
-  const abajo = v(c0, f1) * (1 - tx) + v(c1, f1) * tx;
-  return (arriba * (1 - ty) + abajo * ty) / 65535;
-}
-
-function aplicarSombreado(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, mapa: MapaGenerado): void {
-  const ancho = canvas.width;
-  const alto = canvas.height;
-  const paso = mapa.config.ancho / ancho;
-
-  const alturas = new Float64Array(ancho * alto);
-  for (let fila = 0; fila < alto; fila++) {
-    const y = (fila + 0.5) * paso;
-    for (let col = 0; col < ancho; col++) {
-      alturas[fila * ancho + col] = alturaEn(mapa, (col + 0.5) * paso, y) * ESCALA_RELIEVE;
-    }
-  }
-
-  const luzX = -0.5;
-  const luzY = -0.5;
-  const luzZ = Math.SQRT1_2;
-  const lambertPlano = luzZ;
-
-  const img = ctx.getImageData(0, 0, ancho, alto);
-  const datos = img.data;
-
-  for (let fila = 0; fila < alto; fila++) {
-    const arriba = Math.max(0, fila - 1) * ancho;
-    const abajo = Math.min(alto - 1, fila + 1) * ancho;
-    const actual = fila * ancho;
-    for (let col = 0; col < ancho; col++) {
-      const dzdx = (alturas[actual + Math.min(ancho - 1, col + 1)]! - alturas[actual + Math.max(0, col - 1)]!) / (2 * paso);
-      const dzdy = (alturas[abajo + col]! - alturas[arriba + col]!) / (2 * paso);
-      const longitud = Math.hypot(dzdx, dzdy, 1);
-      const lambert = Math.max(0, (-dzdx * luzX - dzdy * luzY + luzZ) / longitud);
-      const factor = Math.max(0.35, lambert / lambertPlano);
-
-      const i = (actual + col) * 4;
-      datos[i] = Math.min(255, datos[i]! * factor);
-      datos[i + 1] = Math.min(255, datos[i + 1]! * factor);
-      datos[i + 2] = Math.min(255, datos[i + 2]! * factor);
-    }
-  }
-  ctx.putImageData(img, 0, 0);
-}
-
 // --- RENDER PRINCIPAL DEL MAPA DEL MUNDO ---
 
 export function pintarTerreno(
@@ -411,71 +348,142 @@ export function pintarTerreno(
   proyeccion: ProyeccionJugador,
   escalaCanvas: number
 ): void {
-  const width = mapa.config.ancho * escalaCanvas;
-  const height = mapa.config.alto * escalaCanvas;
+  // La cámara del mapa (`ui/pantallaMapa.ts`) ya dejó en `ctx` su transformación: aquí se pinta en unidades × `escalaCanvas` y la vista
+  // dice qué parte del mundo cae en el lienzo y a qué escala (de lejos o de cerca).
+  const vista = vistaDelLienzo(ctx, escalaCanvas);
+  const artefacto = hayArtefacto(mapa);
+  const cerca = artefacto && esDeCerca(mapa, escalaCanvas);
 
   // 1. DIBUJAR TERRENO BASE
-  ctx.clearRect(0, 0, width, height);
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(pintarBiomas(mapa), 0, 0, width, height);
-  aplicarSombreado(ctx, ctx.canvas, mapa);
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = `rgb(${NIEBLA.color.join(',')})`;
+  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.restore();
+  if (artefacto) {
+    pintarSueloDelArtefacto(ctx, mapa, vista);
+  } else {
+    // Mapa del backend TypeScript (sin rasters): biomas recalculados con el ruido del generador, sin relieve.
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(pintarBiomas(mapa), 0, 0, mapa.config.ancho * escalaCanvas, mapa.config.alto * escalaCanvas);
+  }
 
   // 2. DIBUJAR BOSQUES
-  // Bosques como silueta fusionada (no círculos sueltos), debajo de los ríos — mismo criterio de capas que
-  // el cliente de administración. `nonzero` (el relleno por defecto de canvas) recorta solos los claros que
-  // queden encerrados por una corona de bosques, porque `contornosBosques` los devuelve como lazo opuesto.
-  ctx.fillStyle = 'rgba(27, 94, 32, 0.55)';
-  const lazosBosque = contornosBosques(mapa.bosques, mapa.config.ancho);
-  if (lazosBosque.length > 0) {
-    ctx.beginPath();
-    for (const lazo of lazosBosque) {
-      if (lazo.length < 3) continue;
-      ctx.moveTo(lazo[0]!.x * escalaCanvas, lazo[0]!.y * escalaCanvas);
-      for (const p of lazo.slice(1)) ctx.lineTo(p.x * escalaCanvas, p.y * escalaCanvas);
-      ctx.closePath();
+  if (artefacto) {
+    // Del raster de densidad: de lejos ya van en la imagen del suelo; de cerca, árbol a árbol a escala real.
+    pintarArbolesDelArtefacto(ctx, mapa, vista);
+  } else {
+    // Bosques como silueta fusionada (no círculos sueltos), debajo de los ríos — mismo criterio de capas que
+    // el cliente de administración. `nonzero` (el relleno por defecto de canvas) recorta solos los claros que
+    // queden encerrados por una corona de bosques, porque `contornosBosques` los devuelve como lazo opuesto.
+    ctx.fillStyle = 'rgba(27, 94, 32, 0.55)';
+    const lazosBosque = contornosBosques(mapa.bosques, mapa.config.ancho);
+    if (lazosBosque.length > 0) {
+      ctx.beginPath();
+      for (const lazo of lazosBosque) {
+        if (lazo.length < 3) continue;
+        ctx.moveTo(lazo[0]!.x * escalaCanvas, lazo[0]!.y * escalaCanvas);
+        for (const p of lazo.slice(1)) ctx.lineTo(p.x * escalaCanvas, p.y * escalaCanvas);
+        ctx.closePath();
+      }
+      ctx.fill('nonzero');
     }
-    ctx.fill('nonzero');
+
+    // Árboles con semilla determinista para conservar el detalle visual y la densidad de cada bosque.
+    ctx.fillStyle = 'rgba(22, 62, 24, 0.9)';
+    for (const bosque of mapa.bosques) {
+      const cx = bosque.centro.x * escalaCanvas;
+      const cy = bosque.centro.y * escalaCanvas;
+      const radioPx = bosque.radio * escalaCanvas;
+      const rand = mulberry32(hashSemilla(bosque.id));
+      const numArboles = Math.round(Math.min(60, Math.max(4, (radioPx * radioPx * bosque.densidad) / 22)));
+      for (let i = 0; i < numArboles; i++) {
+        const angulo = rand() * Math.PI * 2;
+        const r = radioPx * Math.sqrt(rand());
+        dibujarGlifoArbol(ctx, cx + Math.cos(angulo) * r, cy + Math.sin(angulo) * r, 2.2);
+      }
+    }
   }
 
-  // Árboles con semilla determinista para conservar el detalle visual y la densidad de cada bosque.
-  ctx.fillStyle = 'rgba(22, 62, 24, 0.9)';
-  for (const bosque of mapa.bosques) {
-    const cx = bosque.centro.x * escalaCanvas;
-    const cy = bosque.centro.y * escalaCanvas;
-    const radioPx = bosque.radio * escalaCanvas;
-    const rand = mulberry32(hashSemilla(bosque.id));
-    const numArboles = Math.round(Math.min(60, Math.max(4, (radioPx * radioPx * bosque.densidad) / 22)));
-    for (let i = 0; i < numArboles; i++) {
-      const angulo = rand() * Math.PI * 2;
-      const r = radioPx * Math.sqrt(rand());
-      dibujarGlifoArbol(ctx, cx + Math.cos(angulo) * r, cy + Math.sin(angulo) * r, 2.2);
-    }
-  }
-
-  // 3. DIBUJAR RÍOS
-  ctx.strokeStyle = 'rgba(38, 90, 145, 0.9)';
+  // 3. DIBUJAR RÍOS. De cerca, a su anchura real (cauce de 1,5 u, 3 si es navegable) y con orilla; de lejos, un trazo fijo en px.
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   for (const rio of mapa.rios) {
     if (rio.puntos.length < 2) continue;
-    ctx.lineWidth = rio.navegable ? 5 : 2.5;
-    ctx.beginPath();
-    rio.puntos.forEach((p, i) => {
-      const x = p.x * escalaCanvas;
-      const y = p.y * escalaCanvas;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    });
-    ctx.stroke();
+    const anchoPx = Math.max(rio.navegable ? 5 : 2.5, (rio.navegable ? 3 : 1.5) * escalaCanvas);
+    const trazo = () => {
+      ctx.beginPath();
+      rio.puntos.forEach((p, i) => {
+        if (i === 0) ctx.moveTo(p.x * escalaCanvas, p.y * escalaCanvas);
+        else ctx.lineTo(p.x * escalaCanvas, p.y * escalaCanvas);
+      });
+      ctx.stroke();
+    };
+    if (cerca) {
+      ctx.strokeStyle = 'rgba(92, 84, 52, 0.55)';
+      ctx.lineWidth = anchoPx + Math.max(2, 0.6 * escalaCanvas);
+      trazo();
+    }
+    ctx.strokeStyle = 'rgba(38, 90, 145, 0.9)';
+    ctx.lineWidth = anchoPx;
+    trazo();
   }
 
-  // 4. DIBUJAR NODOS DE RECURSOS
+  // 4. DIBUJAR NODOS DE RECURSOS. De lejos, un punto; de cerca, a escala: las parcelas como su círculo de 4 u, la piedra como roca y
+  // los metales y el ganado como rombo con su nombre (estos no tienen extensión en el mundo, se marcan en px fijos).
   for (const nodo of mapa.nodos) {
+    const x = nodo.posicion.x * escalaCanvas;
+    const y = nodo.posicion.y * escalaCanvas;
+    const color = RECURSO_COLOR[nodo.tipo] || '#fff';
     ctx.beginPath();
-    ctx.arc(nodo.posicion.x * escalaCanvas, nodo.posicion.y * escalaCanvas, 3, 0, Math.PI * 2);
-    ctx.fillStyle = RECURSO_COLOR[nodo.tipo] || '#fff';
-    ctx.fill();
+    if (!cerca) {
+      ctx.arc(x, y, 3, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+    } else if (nodo.tipo === 'piedra') {
+      const r = Math.max(4, 1.2 * escalaCanvas);
+      for (let k = 0; k < 7; k++) {
+        const a = (k / 7) * Math.PI * 2;
+        const f = 0.75 + 0.25 * Math.sin(k * 2.3 + nodo.posicion.x);
+        if (k === 0) ctx.moveTo(x + Math.cos(a) * r * f, y + Math.sin(a) * r * f);
+        else ctx.lineTo(x + Math.cos(a) * r * f, y + Math.sin(a) * r * f);
+      }
+      ctx.closePath();
+      ctx.fillStyle = '#8d8d8d';
+      ctx.fill();
+      ctx.strokeStyle = '#3b3b3b';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    } else if (NODOS_PUNTUALES.has(nodo.tipo)) {
+      ctx.moveTo(x, y - 6);
+      ctx.lineTo(x + 6, y);
+      ctx.lineTo(x, y + 6);
+      ctx.lineTo(x - 6, y);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = '#1b1a17';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.font = '11px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(10, 14, 23, 0.8)';
+      ctx.strokeText(nodo.tipo, x, y + 8);
+      ctx.fillStyle = '#f4ead2';
+      ctx.fillText(nodo.tipo, x, y + 8);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+    } else {
+      ctx.arc(x, y, Math.max(3, 4 * escalaCanvas), 0, Math.PI * 2);
+      ctx.fillStyle = color + '44';
+      ctx.fill();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
   }
 
   // ---------------------------------------------------------------------------------------------------

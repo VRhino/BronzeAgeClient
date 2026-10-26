@@ -19,6 +19,7 @@ import {
   costoDeRefundacion,
   nivelesBandidos,
   registrarCuenta,
+  radioDeVision,
   obtenerMapa,
   unirseAPartida,
   type ProyeccionJugador,
@@ -479,8 +480,9 @@ function cercano<T extends { posicion: { x: number; y: number } }>(lista: readon
  * mandar la orden. El que decide es el backend. */
 const RADIO_ATAQUE = 15;
 
-/** Punto de MUNDO bajo un clic: `getBoundingClientRect` del canvas ya incluye el `transform` del zoom/pan. */
+/** Punto de MUNDO bajo un clic: el de la cámara del mapa; sin ella, el lienzo con el mundo entero. */
 function puntoDeMapa(evento: { clientX: number; clientY: number }, canvas: HTMLCanvasElement, mapa: MapaGenerado): { x: number; y: number } {
+  if (controlMapaActivo) return controlMapaActivo.aMundo(evento);
   const rect = canvas.getBoundingClientRect();
   return {
     x: ((evento.clientX - rect.left) / rect.width) * mapa.config.ancho,
@@ -1025,13 +1027,14 @@ function alternarVistaMapa(abrir: boolean = !vistaMapaAbierta): void {
   pantalla.querySelector('.mapa-interior')?.remove();
   if (abrir) {
     pantalla.insertAdjacentHTML('beforeend', `<div class="mapa-screen mapa-interior">
-      <div class="mapa-lienzo"><canvas id="mapa-interior" width="900" height="900"></canvas></div>
+      <div class="mapa-lienzo"><canvas id="mapa-interior"></canvas></div>
       <div class="mapa-zoom"><button type="button" data-zoom="in" aria-label="Acercar">+</button><button type="button" data-zoom="out" aria-label="Alejar">−</button></div>
       <button class="btn-secondary mapa-interior-cerrar" type="button">Volver</button>
     </div>`);
     const interior = pantalla.querySelector<HTMLElement>('.mapa-interior')!;
-    const control = instalarZoomPan(interior, interior.querySelector<HTMLElement>('.mapa-lienzo')!, { zoomInicial: 1.6 });
+    const control = instalarZoomPan(interior, interior.querySelector<HTMLElement>('.mapa-lienzo')!, { alCambiar: () => void pintarVistaMapa() });
     controlVistaMapa = control;
+    void radioDeVision().then((r) => control.fijarRadioVision(r));
     interior.querySelectorAll<HTMLButtonElement>('[data-zoom]').forEach((b) => b.addEventListener('click', () => control.zoomHacia(b.dataset.zoom === 'in' ? 1 : -1)));
     interior.querySelector('.mapa-interior-cerrar')?.addEventListener('click', () => alternarVistaMapa(false));
     void pintarVistaMapa(true);
@@ -1053,13 +1056,14 @@ async function pintarVistaMapa(centrar = false): Promise<void> {
   if (!p || !canvas || !ctx) return;
   const mapa = await sincronizarMapa(p.mapaId);
   if (document.querySelector('#mapa-interior') !== canvas) return; // se cerró mientras llegaba el mapa
-  ajustarLienzo(canvas, mapa.config.ancho, mapa.config.alto);
-  controlVistaMapa?.fijarMundo(mapa.config.ancho, mapa.config.alto);
-  const escala = canvas.width / mapa.config.ancho;
-  pintarTerreno(ctx, mapa, p, escala);
-  pintarMiradas(ctx, p.miradasIntel ?? [], p.instante, escala);
   const donde = posicionDelHeroe(p);
   if (centrar && donde) controlVistaMapa?.centrar(donde, mapa.config.ancho, mapa.config.alto);
+  controlVistaMapa?.fijarMundo(mapa.config.ancho, mapa.config.alto);
+  if (!controlVistaMapa) return;
+  const escala = controlVistaMapa.transformar(ctx);
+  pintarTerreno(ctx, mapa, p, escala);
+  pintarMiradas(ctx, p.miradasIntel ?? [], p.instante, escala);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
 /** Pinta el riel (estado activo de cada icono) y el panel lateral abierto. Se llama al montar el Mapa y en
@@ -1203,7 +1207,7 @@ function montarMapa(): void {
   panelMapaAbierto = vista?.panel ?? null;
   menuEsquinaAbierto = false;
   app.innerHTML = `<div class="mapa-screen">
-    <div class="mapa-lienzo"><canvas id="mapa" width="900" height="900"></canvas></div>
+    <div class="mapa-lienzo"><canvas id="mapa"></canvas></div>
     ${htmlBarraJugador(proyeccion, false, escaparHtml)}
     <nav class="mapa-riel" aria-label="Paneles del mapa">
       <button type="button" data-panel="columna" title="Lo que llevas: tropa y carro" aria-label="Lo que llevas: tropa y carro">⚔</button>
@@ -1273,8 +1277,14 @@ function montarMapa(): void {
       void marcharAObjetivo({ tipo: 'punto', punto });
     }
   };
-  const control = instalarZoomPan(contenedor, lienzo, { zoomInicial: vista?.zoom ?? (columna ? 1.6 : 1), panInicial: vista ? { x: vista.panX, y: vista.panY } : undefined, alClicar });
+  const control = instalarZoomPan(contenedor, lienzo, {
+    camaraInicial: vista ? { escala: vista.escala, cx: vista.cx, cy: vista.cy } : undefined,
+    alClicar,
+    alCambiar: () => { const p = estadoCliente.proyeccionUltima; if (p && controlMapaActivo === control) void dibujarPantallaSegunModo(p); },
+  });
   controlMapaActivo = control;
+  // El zoom máximo (y el de arranque) es la escala de visión del héroe: el radio sale de los datos de juego del servidor.
+  void radioDeVision().then((r) => control.fijarRadioVision(r));
   // El mundo solo avanza por tick y este cliente aún no tiene tiempo real (`WS .../tiempo-real`): sin esto el
   // mapa sería una foto y la columna nunca parecería moverse. Sondeo suave mientras la pantalla Mapa esté
   // montada; se corta al cambiar de pantalla (`limpiarPantalla`).
@@ -2087,14 +2097,18 @@ async function dibujarPantallaSegunModo(proyeccion: ProyeccionJugador): Promise<
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
+  let escalaMundo = 1;
   if (estadoCliente.modoVista === 'mundo') {
     if (titulo) titulo.textContent = 'Mapa del Mundo (Evaluación T2a)';
     const mapa = await sincronizarMapa(proyeccion.mapaId);
-    ajustarLienzo(canvas, mapa.config.ancho, mapa.config.alto);
     controlMapaActivo?.fijarMundo(mapa.config.ancho, mapa.config.alto);
-    pintarTerreno(ctx, mapa, proyeccion, canvas.width / mapa.config.ancho);
-    pintarMiradas(ctx, proyeccion.miradasIntel ?? [], proyeccion.instante, canvas.width / mapa.config.ancho);
+    // La cámara pone la transformación; sin ella (no debería), el mundo entero en el lienzo.
+    if (controlMapaActivo) escalaMundo = controlMapaActivo.transformar(ctx);
+    else { ctx.setTransform(1, 0, 0, 1, 0, 0); escalaMundo = canvas.width / mapa.config.ancho; }
+    pintarTerreno(ctx, mapa, proyeccion, escalaMundo);
+    pintarMiradas(ctx, proyeccion.miradasIntel ?? [], proyeccion.instante, escalaMundo);
   } else {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     if (titulo) titulo.textContent = 'Vista de Asentamiento (Geometría Urbana T2a)';
     const asentamiento = proyeccion.asentamientos[0];
     ajustarLienzo(canvas, 1, 1);
@@ -2102,8 +2116,9 @@ async function dibujarPantallaSegunModo(proyeccion: ProyeccionJugador): Promise<
     else { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillText('No perteneces a ningún asentamiento aún.', 20, 40); }
   }
   if (estadoCliente.modoFundacionActivo && estadoCliente.posicionFundacion && estadoCliente.mapaCache?.mapa) {
-    pintarPrevisualizacionFundacion(ctx, estadoCliente.mapaCache.mapa, estadoCliente.posicionFundacion, canvas.width / estadoCliente.mapaCache.mapa.config.ancho);
+    pintarPrevisualizacionFundacion(ctx, estadoCliente.mapaCache.mapa, estadoCliente.posicionFundacion, escalaMundo);
   }
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
 function actualizarModoFundacion(proyeccion: ProyeccionJugador): void {
@@ -2111,7 +2126,7 @@ function actualizarModoFundacion(proyeccion: ProyeccionJugador): void {
   if (!canvas) return;
   if (!estadoCliente.modoFundacionActivo) { canvas.classList.remove('mapa-fundacion-activo'); canvas.onpointermove = null; canvas.onpointerleave = null; canvas.onclick = null; return; }
   canvas.classList.add('mapa-fundacion-activo');
-  const punto = (evento: MouseEvent) => { const rect = canvas.getBoundingClientRect(); const mapa = estadoCliente.mapaCache?.mapa; return mapa ? { x: ((evento.clientX - rect.left) / rect.width) * mapa.config.ancho, y: ((evento.clientY - rect.top) / rect.height) * mapa.config.alto } : { x: 0, y: 0 }; };
+  const punto = (evento: MouseEvent) => { const mapa = estadoCliente.mapaCache?.mapa; return mapa ? puntoDeMapa(evento, canvas, mapa) : { x: 0, y: 0 }; };
   canvas.onpointermove = (evento) => { if (estadoCliente.puntoFundacionFijado) return; estadoCliente.posicionFundacion = punto(evento); actualizarPanelFundacion(); void dibujarPantallaSegunModo(proyeccion); };
   canvas.onpointerleave = () => { if (estadoCliente.puntoFundacionFijado) return; estadoCliente.posicionFundacion = null; actualizarPanelFundacion(); };
   canvas.onclick = (evento) => { if (estadoCliente.puntoFundacionFijado) return; estadoCliente.posicionFundacion = punto(evento); estadoCliente.puntoFundacionFijado = true; actualizarPanelFundacion(); void dibujarPantallaSegunModo(proyeccion); };

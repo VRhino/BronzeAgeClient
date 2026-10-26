@@ -1259,9 +1259,8 @@ pre#proyeccion {
 }
 
 .mapa-lienzo {
-  position: relative;
-  transform-origin: center center;
-  will-change: transform;
+  position: absolute;
+  inset: 0;
   cursor: grab;
   touch-action: none;
 }

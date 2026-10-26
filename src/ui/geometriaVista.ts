@@ -1,82 +1,97 @@
-// Matemática pura del zoom/pan de la pantalla Mapa (T3). Sin DOM: se testea con
+// Matemática pura de la cámara del mapa del mundo. Sin DOM: se testea con
 //   node --experimental-strip-types src/ui/geometriaVista.ts
 //
-// Modelo: el lienzo del mapa es un cuadrado de `ladoBase` px (el mundo entero encajado en el viewport),
-// centrado, y encima lleva `transform: translate(Tx, Ty) scale(zoom)` con `transform-origin: center`. Así Tx
-// y Ty son el desplazamiento en px de pantalla del CENTRO del mapa respecto al centro del viewport.
+// Modelo (el mismo que el cliente de administración): la cámara es `{ escala, cx, cy }`, con `escala` en px de pantalla (CSS) por unidad
+// estratégica y `(cx, cy)` el punto del mundo que cae en el centro del lienzo. Plano: x a la derecha, y hacia abajo.
+//   pantalla = (mundo − origen) · escala,   origen = centro − (mitad del lienzo) / escala
+//
+// Los dos topes del zoom:
+//  * de lejos, el mundo entero llenando el lienzo (`escalaMinima`);
+//  * de cerca, la ESCALA DE VISIÓN: el diámetro de lo que ve un héroe (`VISION.jugadorSolo` de los datos de juego) ocupa el lado corto
+//    del lienzo (`escalaDeVision`). Es el zoom con el que arranca el jugador, centrado en su héroe.
 
-export const ZOOM_MIN = 1;
-export const ZOOM_MAX = 4;
-
-/** Lado en px del lienzo a zoom 1: el mundo (cuadrado) encajado enterito en el viewport. */
-export function ladoBase(anchoViewport: number, altoViewport: number): number {
-  return Math.min(anchoViewport, altoViewport);
+export interface Camara {
+  /** px de pantalla (CSS) por unidad estratégica. */
+  escala: number;
+  /** El punto del mundo en el centro del lienzo, en unidades. */
+  cx: number;
+  cy: number;
 }
 
-export function clampZoom(zoom: number, min = ZOOM_MIN, max = ZOOM_MAX): number {
-  return Math.max(min, Math.min(max, zoom));
+export interface Tamano {
+  ancho: number;
+  alto: number;
 }
 
-/**
- * Clampa el pan de un eje: si a ese zoom el mapa escalado cubre el viewport en ese eje, no se le deja
- * despegar de los bordes (queda pegado como mucho a `±margen`); si NO lo cubre, se fuerza centrado (0).
- */
-export function clampPan(pan: number, ladoEscalado: number, ladoViewport: number): number {
-  if (ladoEscalado <= ladoViewport) return 0;
-  const margen = (ladoEscalado - ladoViewport) / 2;
-  return Math.max(-margen, Math.min(margen, pan));
+/** El mundo entero llenando el lienzo (el lado que más pide manda: no queda fuera del mundo a la vista). */
+export function escalaMinima(lienzo: Tamano, mundo: Tamano): number {
+  return Math.max(lienzo.ancho / mundo.ancho, lienzo.alto / mundo.alto);
 }
 
-/**
- * Nuevo pan de un eje tras cambiar el zoom manteniendo FIJO el punto del mapa que está bajo `foco` (px de
- * pantalla medidos desde el centro del viewport — p.ej. el cursor de la rueda, o 0 para los botones +/−).
- */
-export function panTrasZoom(panViejo: number, zoomViejo: number, zoomNuevo: number, foco: number): number {
-  const puntoMapa = (foco - panViejo) / zoomViejo;
-  return foco - puntoMapa * zoomNuevo;
+/** El diámetro de visión (`2 · radio`) ocupando el lado corto del lienzo. */
+export function escalaDeVision(lienzo: Tamano, radioVision: number): number {
+  return Math.min(lienzo.ancho, lienzo.alto) / (2 * radioVision);
 }
 
-/**
- * Pan que centra en el viewport un punto del mapa dado en coordenadas de mundo. `anchoMundo`/`altoMundo` son
- * `mapa.config.ancho`/`alto`; a zoom 1 el lienzo mide `lado` px y contiene el mundo entero.
- */
-export function panParaCentrar(
-  puntoMundo: { x: number; y: number },
-  anchoMundo: number,
-  altoMundo: number,
-  lado: number,
-  zoom: number,
-  /** Alto en px del lienzo a zoom 1, si el mundo no es cuadrado (el del motor es 4:3). */
-  ladoAlto: number = lado
-): { x: number; y: number } {
-  const localX = (puntoMundo.x / anchoMundo - 0.5) * lado;
-  const localY = (puntoMundo.y / altoMundo - 0.5) * ladoAlto;
-  return { x: -localX * zoom, y: -localY * zoom };
+/** La cámara dentro de sus topes: el zoom entre `min` y `max`, y la vista sin salirse del mundo (centrada si lo cubre entero). */
+export function acotar(c: Camara, lienzo: Tamano, mundo: Tamano, min: number, max: number): Camara {
+  const escala = Math.max(min, Math.min(Math.max(min, max), c.escala));
+  const eje = (centro: number, ladoPx: number, ladoMundo: number): number => {
+    const mitad = ladoPx / 2 / escala;
+    if (mitad * 2 >= ladoMundo) return ladoMundo / 2;
+    return Math.max(mitad, Math.min(ladoMundo - mitad, centro));
+  };
+  return { escala, cx: eje(c.cx, lienzo.ancho, mundo.ancho), cy: eje(c.cy, lienzo.alto, mundo.alto) };
+}
+
+/** El punto del mundo bajo un punto del lienzo, en px medidos desde su CENTRO. */
+export function aMundo(c: Camara, px: number, py: number): { x: number; y: number } {
+  return { x: c.cx + px / c.escala, y: c.cy + py / c.escala };
+}
+
+/** La esquina superior izquierda del lienzo, en el mundo. */
+export function origen(c: Camara, lienzo: Tamano): { x: number; y: number } {
+  return aMundo(c, -lienzo.ancho / 2, -lienzo.alto / 2);
+}
+
+/** Zoom por `factor` manteniendo FIJO el punto del mundo bajo `foco` (px desde el centro del lienzo: el cursor, o 0,0 para los botones). */
+export function zoomHacia(c: Camara, factor: number, focoX: number, focoY: number): Camara {
+  const p = aMundo(c, focoX, focoY);
+  const escala = c.escala * factor;
+  return { escala, cx: p.x - focoX / escala, cy: p.y - focoY / escala };
+}
+
+/** Mover la vista `dx, dy` px de pantalla (arrastre: el mundo sigue al puntero). */
+export function arrastrar(c: Camara, dx: number, dy: number): Camara {
+  return { escala: c.escala, cx: c.cx - dx / c.escala, cy: c.cy - dy / c.escala };
 }
 
 function demo(): void {
   const assert = (cond: boolean, msg: string): void => {
     if (!cond) throw new Error(`FALLO: ${msg}`);
   };
+  const cerca = (a: number, b: number): boolean => Math.abs(a - b) < 1e-9;
+  const lienzo = { ancho: 1200, alto: 800 };
+  const mundo = { ancho: 2667, alto: 2000 };
 
-  assert(ladoBase(1200, 800) === 800, 'ladoBase = min de los dos');
-  assert(clampZoom(0.3) === 1 && clampZoom(9) === 4, 'zoom acotado a [1,4]');
+  const min = escalaMinima(lienzo, mundo);
+  assert(cerca(min, 1200 / 2667), 'el mundo llena el lienzo: manda el lado que más pide (aquí el ancho)');
+  assert(cerca(escalaDeVision(lienzo, 15), 800 / 30), 'el diámetro de visión ocupa el lado corto');
 
-  assert(clampPan(50, 400, 800) === 0, 'mapa sin cubrir el eje -> centrado');
-  assert(clampPan(999, 1200, 800) === 200, 'clamp a +margen');
-  assert(clampPan(-999, 1200, 800) === -200, 'clamp a -margen');
+  const c = acotar({ escala: 0.1, cx: 0, cy: 0 }, lienzo, mundo, min, 26);
+  assert(c.escala === min, 'zoom acotado por abajo');
+  assert(cerca(c.cx, 2667 / 2), 'si la vista cubre el ancho del mundo, centrada en él');
+  assert(cerca(c.cy, 400 / min), 'y en y pegada al borde de arriba (media pantalla en unidades)');
 
-  assert(panTrasZoom(0, 1, 2, 0) === 0, 'zoom hacia el centro no desplaza');
-  assert(panTrasZoom(0, 1, 2, 100) === -100, 'zoom hacia el cursor mantiene el punto bajo el cursor');
-  // ida y vuelta: zoom in y luego out al mismo foco vuelve al pan original
-  const ida = panTrasZoom(0, 1, 2.5, 137);
-  assert(Math.abs(panTrasZoom(ida, 2.5, 1, 137)) < 1e-9, 'zoom in+out al mismo foco es reversible');
+  const z = zoomHacia({ escala: 1, cx: 1000, cy: 1000 }, 2, 100, 0);
+  assert(cerca(aMundo(z, 100, 0).x, 1100), 'el punto bajo el cursor no se mueve al hacer zoom');
+  const vuelta = zoomHacia(z, 0.5, 100, 0);
+  assert(cerca(vuelta.cx, 1000) && cerca(vuelta.escala, 1), 'zoom in y out al mismo foco es reversible');
 
-  // centrar la esquina (0,0) del mundo a zoom 1 empuja el mapa media pantalla abajo-derecha
-  const p = panParaCentrar({ x: 0, y: 0 }, 2000, 2000, 800, 1);
-  assert(p.x === 400 && p.y === 400, 'centrar esquina (0,0) -> pan (+lado/2, +lado/2)');
-  const c = panParaCentrar({ x: 1000, y: 1000 }, 2000, 2000, 800, 3);
-  assert(c.x === 0 && c.y === 0, 'centrar el centro del mundo -> pan 0 a cualquier zoom');
+  const a = arrastrar({ escala: 2, cx: 500, cy: 500 }, 20, -10);
+  assert(cerca(a.cx, 490) && cerca(a.cy, 505), 'arrastrar a la derecha lleva la vista a la izquierda');
+  const o = origen({ escala: 2, cx: 500, cy: 500 }, lienzo);
+  assert(cerca(o.x, 200) && cerca(o.y, 300), 'origen = centro − mitad del lienzo / escala');
 
   console.log('geometriaVista demo OK');
 }

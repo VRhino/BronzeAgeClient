@@ -1,23 +1,30 @@
-// Zoom / pan de la pantalla Mapa (T3). Solo DOM y eventos; la matemática está en `geometriaVista.ts`.
+// La cámara de la pantalla Mapa: solo DOM y eventos; la matemática está en `geometriaVista.ts`.
 //
-// El terreno lo sigue dibujando `render.ts` sobre un canvas de 900×900 sin enterarse del zoom: aquí solo se
-// ESCALA el elemento por CSS (`transform`).
-// ponytail: zoom por CSS transform, techo = resolución del ráster del terreno (canvas 900 + RES_BIOMA 128);
-// si hace falta más detalle al acercar, re-dibujar a un canvas offscreen mayor.
+// El lienzo mide lo que mide el contenedor (por `devicePixelRatio`) y se REPINTA a cada cambio de cámara (`alCambiar`): ya no se escala
+// por CSS una imagen del mundo entero, porque de la vista del mundo a la escala de visión del jugador hay un factor ~80 y la imagen se
+// vería a cuadros. Quien pinta fija `ctx.setTransform` con `transformar(ctx)` y dibuja en unidades × `escala`, como siempre.
 
-import { clampPan, clampZoom, ladoBase, panParaCentrar, panTrasZoom } from './geometriaVista';
+import { acotar, aMundo, arrastrar, escalaDeVision, escalaMinima, origen, zoomHacia, type Camara } from './geometriaVista';
+
+/** Radio de visión de un héroe solo (`VISION.jugadorSolo`) hasta que lleguen los datos de juego del servidor. */
+export const RADIO_VISION_POR_DEFECTO = 15;
 
 export interface ControlMapa {
   /** +1 acerca, -1 aleja (botones +/−); el zoom con rueda va por su cuenta. */
   zoomHacia(direccion: 1 | -1): void;
-  /** Fija un punto de MUNDO que la vista debe mantener centrado (la columna del jugador). Se recalcula solo
-   * cuando el contenedor ya tiene tamaño y se conoce el tamaño del mundo, así que da igual llamarlo antes de
-   * que el mapa haya cargado. Arrastrar o hacer zoom con rueda lo suelta. */
+  /** Fija un punto de MUNDO que la vista debe mantener centrado (la columna del jugador). Da igual llamarlo antes de que el mapa haya
+   * cargado: se aplica en cuanto se conocen el tamaño del lienzo y el del mundo. Arrastrar o hacer zoom con rueda lo suelta. */
   centrar(puntoMundo: { x: number; y: number }, anchoMundo: number, altoMundo: number): void;
-  /** El tamaño del mundo, para que el lienzo tenga su proporción (el del motor es 2.667 × 2.000). Sin llamarlo, cuadrado. */
+  /** El tamaño del mundo (el del motor es 2.667 × 2.000). */
   fijarMundo(anchoMundo: number, altoMundo: number): void;
-  /** Zoom y pan actuales (para guardar la vista). */
-  estado(): { zoom: number; panX: number; panY: number };
+  /** El radio de visión del héroe, que fija el zoom máximo (y el inicial). */
+  fijarRadioVision(radio: number): void;
+  /** La cámara actual (para guardar la vista). */
+  estado(): Camara;
+  /** El punto del mundo bajo un evento del puntero. */
+  aMundo(evento: { clientX: number; clientY: number }): { x: number; y: number };
+  /** Fija en `ctx` la transformación de la cámara (unidades × `escala` → px del lienzo) y devuelve la `escala` con la que pintar. */
+  transformar(ctx: CanvasRenderingContext2D): number;
   destruir(): void;
 }
 
@@ -25,58 +32,65 @@ export function instalarZoomPan(
   contenedor: HTMLElement,
   lienzo: HTMLElement,
   opciones: {
-    zoomInicial?: number;
-    /** Pan inicial en px (vista guardada); se acota igual que cualquier pan. */
-    panInicial?: { x: number; y: number };
+    /** La vista guardada; se acota igual que cualquier otra. Sin ella, a escala de visión. */
+    camaraInicial?: Camara;
     /** Se dispara en un pointerup que NO fue un arrastre (umbral 5 px): un clic sobre el mapa. */
     alClicar?: (evento: PointerEvent) => void;
+    /** La cámara cambió (zoom, arrastre, tamaño): hay que repintar. Agrupado por `requestAnimationFrame`. */
+    alCambiar?: () => void;
   } = {}
 ): ControlMapa {
-  let zoom = clampZoom(opciones.zoomInicial ?? 1);
-  let panX = opciones.panInicial?.x ?? 0;
-  let panY = opciones.panInicial?.y ?? 0;
+  const canvas = lienzo.querySelector('canvas')!;
+  let camara: Camara | null = opciones.camaraInicial ?? null;
   let foco: { x: number; y: number } | null = null;
-  let mundoAncho = 0;
-  let mundoAlto = 0;
+  let mundo = { ancho: 0, alto: 0 };
+  let radioVision = RADIO_VISION_POR_DEFECTO;
 
-  /** Alto del mundo entre su ancho: 1 mientras no se sepa. */
-  const proporcion = (): number => (mundoAncho > 0 && mundoAlto > 0 ? mundoAlto / mundoAncho : 1);
-  const lado = (): number => ladoBase(contenedor.clientWidth, contenedor.clientHeight / proporcion());
+  const tamano = () => ({ ancho: contenedor.clientWidth, alto: contenedor.clientHeight });
+  const topes = (): [number, number] => {
+    const t = tamano();
+    return [escalaMinima(t, mundo), escalaDeVision(t, radioVision)];
+  };
+
+  let pendiente = 0;
+  const avisar = (): void => {
+    if (pendiente) return;
+    pendiente = requestAnimationFrame(() => {
+      pendiente = 0;
+      opciones.alCambiar?.();
+    });
+  };
 
   function aplicar(): void {
-    const l = lado();
-    if (l === 0) return; // el contenedor todavía no está maquetado; el ResizeObserver reintentará
-    const alto = l * proporcion();
-    lienzo.style.width = `${l}px`;
-    lienzo.style.height = `${alto}px`;
-    if (foco && mundoAncho > 0) {
-      const p = panParaCentrar(foco, mundoAncho, mundoAlto, l, zoom, alto);
-      panX = p.x;
-      panY = p.y;
-    }
-    panX = clampPan(panX, l * zoom, contenedor.clientWidth);
-    panY = clampPan(panY, alto * zoom, contenedor.clientHeight);
-    lienzo.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+    const t = tamano();
+    if (t.ancho === 0 || mundo.ancho === 0) return; // sin maquetar o sin mundo: el ResizeObserver o `fijarMundo` reintentarán
+    const dpr = window.devicePixelRatio || 1;
+    const w = Math.round(t.ancho * dpr);
+    const h = Math.round(t.alto * dpr);
+    if (canvas.width !== w) canvas.width = w;
+    if (canvas.height !== h) canvas.height = h;
+    const [min, max] = topes();
+    const base = camara ?? { escala: max, cx: mundo.ancho / 2, cy: mundo.alto / 2 };
+    camara = acotar(foco ? { ...base, cx: foco.x, cy: foco.y } : base, t, mundo, min, max);
+    avisar();
   }
 
-  function zoomA(nuevoZoom: number, focoX: number, focoY: number): void {
-    const z = clampZoom(nuevoZoom);
-    if (z === zoom) return;
-    if (!foco) {
-      panX = panTrasZoom(panX, zoom, z, focoX);
-      panY = panTrasZoom(panY, zoom, z, focoY);
-    }
-    zoom = z;
+  function zoomA(factor: number, focoX: number, focoY: number): void {
+    if (!camara) return;
+    camara = foco ? { ...camara, escala: camara.escala * factor } : zoomHacia(camara, factor, focoX, focoY);
     aplicar();
   }
+
+  const desdeCentro = (evento: { clientX: number; clientY: number }): [number, number] => {
+    const rect = contenedor.getBoundingClientRect();
+    return [evento.clientX - rect.left - rect.width / 2, evento.clientY - rect.top - rect.height / 2];
+  };
 
   const onWheel = (evento: WheelEvent): void => {
     evento.preventDefault();
     foco = null;
-    const rect = contenedor.getBoundingClientRect();
-    const focoX = evento.clientX - rect.left - rect.width / 2;
-    const focoY = evento.clientY - rect.top - rect.height / 2;
-    zoomA(zoom * (evento.deltaY < 0 ? 1.15 : 1 / 1.15), focoX, focoY);
+    const [x, y] = desdeCentro(evento);
+    zoomA(evento.deltaY < 0 ? 1.15 : 1 / 1.15, x, y);
   };
 
   let arrastrando = false;
@@ -92,11 +106,10 @@ export function instalarZoomPan(
     lienzo.setPointerCapture?.(evento.pointerId);
   };
   const onPointerMove = (evento: PointerEvent): void => {
-    if (!arrastrando) return;
+    if (!arrastrando || !camara) return;
     if (Math.hypot(evento.clientX - inicioX, evento.clientY - inicioY) < 5) return; // aún puede ser un clic
     foco = null;
-    panX += evento.clientX - ultimoX;
-    panY += evento.clientY - ultimoY;
+    camara = arrastrar(camara, evento.clientX - ultimoX, evento.clientY - ultimoY);
     ultimoX = evento.clientX;
     ultimoY = evento.clientY;
     aplicar();
@@ -113,29 +126,44 @@ export function instalarZoomPan(
   lienzo.addEventListener('pointermove', onPointerMove);
   lienzo.addEventListener('pointerup', onPointerUp);
 
-  // El contenedor puede no estar maquetado aún cuando se instala esto (innerHTML recién asignado): el
-  // observer dispara la primera vez en cuanto tiene tamaño y en cada cambio posterior — sustituye al listener
-  // de `resize` de window y además cubre el arranque.
+  // El contenedor puede no estar maquetado aún (innerHTML recién asignado): el observer dispara en cuanto tiene tamaño y en cada cambio.
   const observer = new ResizeObserver(() => aplicar());
   observer.observe(contenedor);
-  aplicar();
 
   return {
-    estado: () => ({ zoom, panX, panY }),
-    zoomHacia: (direccion) => zoomA(zoom * (direccion === 1 ? 1.4 : 1 / 1.4), 0, 0),
+    estado: () => camara ?? { escala: 1, cx: mundo.ancho / 2, cy: mundo.alto / 2 },
+    zoomHacia: (direccion) => zoomA(direccion === 1 ? 1.4 : 1 / 1.4, 0, 0),
     centrar: (puntoMundo, anchoMundo, altoMundo) => {
       foco = puntoMundo;
-      mundoAncho = anchoMundo;
-      mundoAlto = altoMundo;
+      mundo = { ancho: anchoMundo, alto: altoMundo };
       aplicar();
     },
     fijarMundo: (anchoMundo, altoMundo) => {
-      if (anchoMundo === mundoAncho && altoMundo === mundoAlto) return;
-      mundoAncho = anchoMundo;
-      mundoAlto = altoMundo;
+      if (anchoMundo === mundo.ancho && altoMundo === mundo.alto) return;
+      mundo = { ancho: anchoMundo, alto: altoMundo };
       aplicar();
     },
+    fijarRadioVision: (radio) => {
+      if (!(radio > 0) || radio === radioVision) return;
+      // Si se estaba a escala de visión, se sigue a la nueva.
+      const enElTope = camara && Math.abs(camara.escala - topes()[1]) < 1e-6;
+      radioVision = radio;
+      if (enElTope && camara) camara = { ...camara, escala: topes()[1] };
+      aplicar();
+    },
+    aMundo: (evento) => {
+      const [x, y] = desdeCentro(evento);
+      return camara ? aMundo(camara, x, y) : { x: 0, y: 0 };
+    },
+    transformar: (ctx) => {
+      const c = camara ?? { escala: canvas.width / Math.max(1, mundo.ancho), cx: mundo.ancho / 2, cy: mundo.alto / 2 };
+      const dpr = canvas.width / Math.max(1, contenedor.clientWidth);
+      const o = origen(c, tamano());
+      ctx.setTransform(dpr, 0, 0, dpr, -o.x * c.escala * dpr, -o.y * c.escala * dpr);
+      return c.escala;
+    },
     destruir: () => {
+      if (pendiente) cancelAnimationFrame(pendiente);
       observer.disconnect();
       contenedor.removeEventListener('wheel', onWheel);
       lienzo.removeEventListener('pointerdown', onPointerDown);
