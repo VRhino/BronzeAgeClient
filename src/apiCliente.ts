@@ -489,27 +489,25 @@ export function radioDeVision(): Promise<number> {
   });
 }
 
-/** Los textos de las misiones (título y texto por id) que publica el motor en un catálogo aparte de `GET /v1/datos`, no en la foto.
- * Se busca cualquier bloque cuyos valores lleven `titulo`; `null` mientras no llegue (o si el motor aún no lo publica). */
-let textosMisiones: Record<string, { titulo: string; texto: string }> | null = null;
+/** Los textos de las misiones que publica el motor en un catálogo aparte de `GET /v1/datos`, no en la foto
+ * (`documentos.Misiones_Textos.TEXTOS_MISIONES`): `misiones.<id>` con título y texto, y `contadores.<contador>` con el nombre de cada barra.
+ * `null` mientras no llegue (o si el motor aún no lo publica). */
+export interface TextosDeMisiones { misiones: Record<string, { titulo: string; texto: string }>; contadores: Record<string, string> }
+let textosMisiones: TextosDeMisiones | null = null;
 let textosMisionesPedidos = false;
 const oyentesTextosMisiones = new Set<() => void>();
-export function textosDeMisiones(alCargar?: () => void): Record<string, { titulo: string; texto: string }> | null {
+export function textosDeMisiones(alCargar?: () => void): TextosDeMisiones | null {
   if (!textosMisiones && alCargar) oyentesTextosMisiones.add(alCargar);
   if (!textosMisiones && !textosMisionesPedidos) {
     textosMisionesPedidos = true;
     void cargarDatosDeJuego().then((d) => {
-      const encontrados: Record<string, { titulo: string; texto: string }> = {};
-      for (const doc of Object.values(d?.documentos ?? {}))
-        for (const bloque of Object.values(doc)) {
-          if (!bloque || typeof bloque !== 'object' || Array.isArray(bloque)) continue;
-          for (const [id, v] of Object.entries(bloque as Record<string, unknown>)) {
-            const t = v as { titulo?: unknown; texto?: unknown } | null;
-            if (t && typeof t === 'object' && typeof t.titulo === 'string') encontrados[id] = { titulo: t.titulo, texto: typeof t.texto === 'string' ? t.texto : '' };
-          }
-        }
-      if (!Object.keys(encontrados).length) return;
-      textosMisiones = encontrados;
+      const bloque = d?.documentos?.Misiones_Textos?.TEXTOS_MISIONES as { misiones?: Record<string, { titulo?: unknown; texto?: unknown }>; contadores?: Record<string, unknown> } | undefined;
+      if (!bloque?.misiones) return;
+      const misiones: TextosDeMisiones['misiones'] = {};
+      for (const [id, t] of Object.entries(bloque.misiones)) if (typeof t?.titulo === 'string') misiones[id] = { titulo: t.titulo, texto: typeof t.texto === 'string' ? t.texto : '' };
+      const contadores: TextosDeMisiones['contadores'] = {};
+      for (const [k, v] of Object.entries(bloque.contadores ?? {})) if (typeof v === 'string') contadores[k] = v;
+      textosMisiones = { misiones, contadores };
       for (const f of oyentesTextosMisiones) f();
       oyentesTextosMisiones.clear();
     });

@@ -736,10 +736,11 @@ export function pintarTerreno(
   ctx.setLineDash([]);
 
   // 14. CARAVANAS (Triángulos identificables por color de origen). Las enganchadas a un ejército van pegadas detrás de él (16); la de
-  // fundación suelta, con su carromato.
-  const adjuntas = new Set((proyeccion.ejercitos || []).flatMap((e) => e.caravanasAdjuntasIds ?? []));
+  // fundación suelta, con su carromato. La de fundación que espera dentro de su plaza o campamento (`disponible`) no está en el mapa.
+  const adjuntas = new Set((proyeccion.ejercitos || []).flatMap((e) => [...(e.caravanasAdjuntasIds ?? []), ...(e.caravanaFundacionId ? [e.caravanaFundacionId] : [])]));
   for (const caravana of proyeccion.caravanas || []) {
     if (adjuntas.has(caravana.id) || caravana.estado === 'adjunta') continue;
+    if (caravana.tipo === 'construccion' && caravana.estado === 'disponible') continue;
     const x = caravana.posicionActual.x * escalaCanvas;
     const y = caravana.posicionActual.y * escalaCanvas;
 
@@ -788,8 +789,8 @@ export function pintarTerreno(
     const x = ejercito.posicionActual.x * escalaCanvas;
     const y = ejercito.posicionActual.y * escalaCanvas;
     const lleva = new Set(ejercito.caravanasAdjuntasIds ?? []);
-    // La de fundación no viene en `caravanasAdjuntasIds`: va enganchada a la columna en la que va su titular.
-    const fundacion = (proyeccion.caravanas || []).some((c) => c.tipo === 'construccion' && (lleva.has(c.id) || (c.estado === 'adjunta' && !!c.titularId && ejercito.participantes.some((x) => x.heroeId === c.titularId))));
+    // La de fundación viene aparte, en `caravanaFundacionId`; de reserva, la `adjunta` cuyo titular va en la columna.
+    const fundacion = !!ejercito.caravanaFundacionId || (proyeccion.caravanas || []).some((c) => c.tipo === 'construccion' && (lleva.has(c.id) || (c.estado === 'adjunta' && !!c.titularId && ejercito.participantes.some((x) => x.heroeId === c.titularId))));
     if (fundacion || lleva.size > 0) dibujarCaravanaDetras(ctx, ejercito, x, y, escalaCanvas, fundacion, k);
     dibujarRacimoDeRombos(ctx, x, y, ejercito.participantes.length, color, k);
 
@@ -825,6 +826,7 @@ export function pintarTerreno(
   // Y sin memoria, a diferencia de los asentamientos: de un ejercito no se guarda "ultimo conocido". Tiene
   // sentido — una ciudad sigue donde estaba, una columna en marcha no.
   for (const avistado of proyeccion.ejercitosAvistados || []) {
+    if (avistado.caravanaFundacionId) dibujarCaravanaDetras(ctx, avistado, avistado.posicionActual.x * escalaCanvas, avistado.posicionActual.y * escalaCanvas, escalaCanvas, true, k);
     dibujarRacimoDeRombos(
       ctx,
       avistado.posicionActual.x * escalaCanvas,

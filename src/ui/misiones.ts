@@ -70,10 +70,15 @@ const CONTADOR: Record<string, string> = {
   conquistas: 'conquistas', epicas: 'épicas',
 };
 
-/** Título y texto de una misión: los del motor si ya los publica, si no los de reserva. */
+/** Título y texto de una misión: los del motor (catálogo de `GET /v1/datos`) si ya los publica, si no los de reserva. */
 export function textoDeMision(id: string): { titulo: string; texto: string } {
   const delMotor = textosDeMisiones(() => estadoCliente.proyeccionUltima && alCambiar?.());
-  return delMotor?.[id] ?? TEXTOS[id] ?? { titulo: id, texto: '' };
+  return delMotor?.misiones[id] ?? TEXTOS[id] ?? { titulo: id, texto: '' };
+}
+
+/** El nombre de un contador bajo su barra: el del motor si ya lo publica, si no el de reserva. */
+function nombreDeContador(c: string): string {
+  return textosDeMisiones()?.contadores[c] ?? CONTADOR[c] ?? c;
 }
 
 const PESTANAS: [DuenoMision, string][] = [['heroe', 'Mías'], ['plaza', 'Mi plaza'], ['faccion', 'Mi Facción']];
@@ -114,7 +119,7 @@ function recompensa(m: Mision): string {
 function barras(m: Mision, e: Escapar, fino = false): string {
   return m.condiciones.map((c) => {
     const k = c.umbral > 0 ? Math.min(1, c.avance / c.umbral) : 1;
-    return `<div class="mision-cond${fino ? ' fino' : ''}"><div class="mision-barra"><span style="width:${Math.round(k * 100)}%"></span></div>${fino ? '' : `<small>${Math.min(c.avance, c.umbral)} / ${c.umbral} ${e(CONTADOR[c.contador] ?? c.contador)}</small>`}</div>`;
+    return `<div class="mision-cond${fino ? ' fino' : ''}"><div class="mision-barra"><span style="width:${Math.round(k * 100)}%"></span></div>${fino ? '' : `<small>${Math.min(c.avance, c.umbral)} / ${c.umbral} ${e(nombreDeContador(c.contador))}</small>`}</div>`;
   }).join('');
 }
 

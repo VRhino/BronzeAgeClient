@@ -271,6 +271,8 @@ export interface Ejercito {
   estado: 'marchando' | 'estacionado' | 'regresando';
   /** Caravanas enganchadas a la columna (Doc 3.13): la de Fundación de un campamento se lleva así hasta `fundar`. */
   caravanasAdjuntasIds?: string[];
+  /** La Caravana de Fundación que lleva enganchada (motor d8ef09c, `Ejercito.caravana_fundacion_id`). */
+  caravanaFundacionId?: string;
   /** El carro: lo de todos sus héroes, ya sumado (recurso -> cantidad). En marcha se come de aquí. */
   suministro?: Record<string, number>;
   /** Lo que cabe en el carro, con sus caravanas (DERIVADO por el backend desde 2026-10-07). */
@@ -306,6 +308,8 @@ export interface EjercitoAvistado {
   heroeIds: string[];
   /** Va tras una columna tuya (backend 2026-10-06): lo único de su intención que se revela, y solo a quien persigue. */
   teSigue?: true;
+  /** Lleva enganchada una Caravana de Fundación (se pinta detrás). */
+  caravanaFundacionId?: string;
 }
 
 /**

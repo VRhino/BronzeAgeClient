@@ -295,7 +295,7 @@ function fondo(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): stri
   const sobrante = Object.entries(fondoDeFaccion).filter(([r, n]) => n > 0 && !(precio && r in precio));
 
   return `
-    <strong class="heroe-sub">Precio de la caravana${precio ? ` · reunido ${reunido} / ${total}` : ''}${ayuda('camp:fondo', 'La Caravana de Fundación se compra aquí entre todos los ciudadanos de tu Facción: cada uno aporta lo que quiere a un fondo común. Lo tuyo se puede retirar mientras no se gaste. El fondo se llena con lo de tu almacén personal y con tu oro de botín. Cuando el fondo está completo, sal con tu columna, engancha la caravana en el mapa y funda donde quieras (panel ⌂).')}</strong>
+    <strong class="heroe-sub">Precio de la caravana${precio ? ` · reunido ${reunido} / ${total}` : ''}${ayuda('camp:fondo', 'La Caravana de Fundación se compra aquí entre todos los ciudadanos de tu Facción: cada uno aporta lo que quiere a un fondo común. Lo tuyo se puede retirar mientras no se gaste. El fondo se llena con lo de tu almacén personal y con tu oro de botín. Cuando el fondo está completo, la caravana espera aquí dentro: sal como ejército (Salir › Convocar ejército) y, al partir, el Líder elige llevársela; luego funda donde quieras (panel ⌂).')}</strong>
     ${precio ? `<div class="fondo-barra fondo-barra-total"><i style="width:${total > 0 ? ((reunido / total) * 100).toFixed(1) : 0}%"></i></div>` : ''}
     ${necesidad}
     ${sobrante.length > 0 ? `<p class="asent-lado-nota">Además en el fondo: ${sobrante.map(([r, n]) => `${Math.floor(n)} de ${e(nombreRecurso(r))}`).join(', ')}.</p>` : ''}
@@ -314,7 +314,7 @@ function fondo(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): stri
       <button class="btn-primary" type="button" id="btn-comprar-caravana"${caravana || !completo ? ' disabled' : ''}>Comprar caravana</button>
     </div>
     ${!caravana && precio && !completo ? `<p class="asent-lado-nota">Aún no se puede comprar: faltan ${faltantes}.</p>` : ''}
-    ${caravana ? `<p class="asent-lado-nota">Caravana de Fundación lista${caravana.titularId === heroe.id ? ', y la llevas tú' : ''}.</p>` : ''}`;
+    ${caravana ? `<p class="asent-lado-nota">Caravana de Fundación lista${caravana.estado === 'disponible' ? ': espera aquí dentro hasta que un ejército de tu Facción se la lleve al salir' : caravana.titularId === heroe.id ? ', y la llevas tú' : ''}.</p>` : ''}`;
 }
 
 /** El HTML de una subpestaña. La Taberna (intel) la pinta `main.ts` en `#camp-taberna`, porque comparte panel con la plaza. */

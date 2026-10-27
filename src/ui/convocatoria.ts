@@ -55,6 +55,26 @@ function htmlMiTropa(p: ProyeccionJugador, c: Convocatoria, e: Escapar): string 
     <div class="mapa-seleccion-acciones"><button class="btn-primary" type="button" data-conv="guardar-tropa"${cambiado && elegidas.length > 0 ? '' : ' disabled'}>Guardar cambios</button><button class="btn-secondary" type="button" data-conv="descartar-tropa"${cambiado ? '' : ' disabled'}>Descartar</button></div>`;
 }
 
+/** Las Caravanas de Fundación de tu Facción que esperan dentro del lugar de la convocatoria (motor d8ef09c): el Líder puede llevársela al partir. */
+function caravanasQueEsperan(p: ProyeccionJugador, c: Convocatoria): { id: string; contenido: string }[] {
+  return (p.caravanas ?? [])
+    .filter((x) => x.tipo === 'construccion' && x.estado === 'disponible' && (c.lugar.tipo === 'campamento' ? x.origenCampamentoId === c.lugar.id : x.origenAsentamientoId === c.lugar.id))
+    .map((x) => ({ id: x.id, contenido: Object.entries(x.contenido ?? {}).filter(([, n]) => n > 0).map(([r, n]) => `${Math.floor(n)} ${r}`).join(', ') }));
+}
+
+/** Qué Caravana de Fundación eligió llevarse el Líder ('' = ninguna), por convocatoria. Vive entre repintados. */
+const caravanaElegida = new Map<string, string>();
+
+/** La pregunta al Líder: si hay una Caravana de Fundación esperando aquí, ¿se la lleva el ejército? */
+function htmlPreguntaCaravana(p: ProyeccionJugador, c: Convocatoria, e: Escapar): string {
+  const esperan = caravanasQueEsperan(p, c);
+  if (!c.soyLider || esperan.length === 0) return '';
+  const elegida = caravanaElegida.get(c.id) ?? '';
+  const opcion = (id: string, texto: string): string => `<label class="conv-caravana"><input type="radio" name="conv-caravana" value="${e(id)}"${id === elegida ? ' checked' : ''} /> ${texto}</label>`;
+  return `<strong class="heroe-sub">¿Os lleváis la Caravana de Fundación?${ayuda('convocatoria:caravana', 'Espera aquí dentro. Si el ejército se la lleva, va enganchada detrás y, si su titular no sale con vosotros, pasas a serlo tú.')}</strong>
+    <div class="conv-caravanas">${opcion('', 'No, se queda aquí')}${esperan.map((x) => opcion(x.id, `Sí, llevar ${e(x.id)}${x.contenido ? ` <small>(${e(x.contenido)})</small>` : ''}`)).join('')}</div>`;
+}
+
 /** El panel de TU convocatoria (vacío si no estás en ninguna): quiénes van, las peticiones y los botones que le tocan a tu papel. */
 export function htmlPreparacion(p: ProyeccionJugador, e: Escapar): string {
   const c = miConvocatoria(p);
@@ -66,6 +86,7 @@ export function htmlPreparacion(p: ProyeccionJugador, e: Escapar): string {
     ${htmlMiTropa(p, c, e)}
     ${peticiones.length > 0 ? `<strong class="heroe-sub">Piden unirse</strong>${peticiones.map((x) => `<div class="ejercito-fila"><div><strong>${e(nombreDeHeroe(p, x.heroeId))}</strong><span>${e(textoEnTiempoReal(x.expiraEn - p.instante))} para contestar · ${x.escuadronIds.length} escuadra(s)</span></div>
         <button class="btn-primary" type="button" data-conv-peticion="${e(x.heroeId)}" data-aceptar="si">Aceptar</button><button class="btn-secondary" type="button" data-conv-peticion="${e(x.heroeId)}" data-aceptar="no">Rechazar</button></div>`).join('')}` : ''}
+    ${htmlPreguntaCaravana(p, c, e)}
     <div class="mapa-seleccion-acciones">${c.soyLider
       ? '<button class="btn-primary" type="button" data-conv="partir">Salir con el ejército</button><button class="btn-secondary" type="button" data-conv="cancelar">Cancelar la salida</button>'
       : '<button class="btn-secondary" type="button" data-conv="separarme">Separarme (sigues dentro)</button>'}</div>
@@ -105,8 +126,12 @@ export function cablearPreparacion(raiz: ParentNode, p: ProyeccionJugador, ejecu
       return;
     }
     const tipo = { partir: 'partirConvocatoria', cancelar: 'cancelarConvocatoria', separarme: 'separarseDeConvocatoria' }[b.dataset.conv!];
-    if (tipo) void enviar(b, tipo, { heroeId: p.heroeId });
+    // Al partir, la Caravana de Fundación elegida (si aún espera aquí) se engancha al ejército.
+    const caravana = caravanaElegida.get(c.id);
+    const conCaravana = b.dataset.conv === 'partir' && caravana && caravanasQueEsperan(p, c).some((x) => x.id === caravana) ? { caravanaFundacionId: caravana } : {};
+    if (tipo) void enviar(b, tipo, { heroeId: p.heroeId, ...conCaravana });
   }));
+  raiz.querySelectorAll<HTMLInputElement>('input[name="conv-caravana"]').forEach((i) => i.addEventListener('change', () => { caravanaElegida.set(c.id, i.value); repintar(); }));
   raiz.querySelectorAll<HTMLButtonElement>('[data-conv-peticion]').forEach((b) => b.addEventListener('click', () =>
     void enviar(b, 'responderPeticionDeConvocatoria', { heroeId: p.heroeId, convocatoriaId: c.id, solicitanteId: b.dataset.convPeticion, aceptar: b.dataset.aceptar === 'si' })));
 }

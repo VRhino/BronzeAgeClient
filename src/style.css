@@ -3010,3 +3010,5 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .rastreador-item strong { display: block; font-size: 0.78rem; font-weight: 600; color: var(--pergamino); }
 .rastreador-item small { font-size: 0.72rem; color: var(--oro); }
 .rastreador-item.cumplida strong { color: var(--oro); }
+.conv-caravanas { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 8px; }
+.conv-caravana { display: flex; gap: 6px; align-items: baseline; font-size: 0.85rem; cursor: pointer; }

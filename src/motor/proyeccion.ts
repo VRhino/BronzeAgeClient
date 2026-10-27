@@ -180,7 +180,7 @@ function ejercito(e: pb.Ejercito, ahora: number): d.Ejercito {
     formacion: e.formacionExpiraEnMs !== undefined ? { expiraEn: instante(e.formacionExpiraEnMs)! } : undefined,
     politicaDeUnion: POLITICA_UNION[e.politicaDeUnion],
     peticionesDeUnion: e.peticionesDeUnion.map((p) => ({ heroeId: p.heroeId, pedidoEn: instante(p.pedidoEnMs)!, expiraEn: instante(p.expiraEnMs)! })),
-    marchaForzada: e.marchaForzada,
+    marchaForzada: e.marchaForzada, caravanaFundacionId: opcional(e.caravanaFundacionId),
     persiguiendo: e.persiguiendo ? { tipo: e.persiguiendo.presaEsCaravana ? 'caravana' : 'ejercito', id: e.persiguiendo.presaId } : undefined,
   };
 }
@@ -483,6 +483,7 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
       id: e.id, tipo: e.tipo === pb.TipoColumna.COLUMNA_EJERCITO ? 'ejercito' : 'personal', enFormacion: e.formacionExpiraEnMs !== undefined ? true : undefined,
       faccionId: e.faccionId, posicionActual: evaluarPlan(e.plan, e.posicion, ahora).posicion, participantes: e.participantes.length,
       heroeIds: e.participantes.map((p) => p.heroeId), teSigue: e.teSigue ? true : undefined,
+      caravanaFundacionId: opcional(e.caravanaFundacionId),
     })),
     caravanasAvistadas: caravanasAjenas.map((x) => ({ id: x.id, posicionActual: evaluarPlan(x.plan, x.posicion, ahora).posicion, faccionId: x.faccionId, escoltada: x.escoltada, recursos: x.recursosAvistados })),
     informesDeInspeccion: [],

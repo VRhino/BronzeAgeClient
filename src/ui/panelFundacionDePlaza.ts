@@ -9,7 +9,7 @@ import type { ContextoPlaza } from './ganchos';
 import { nombreDeHeroe } from './nombres';
 
 const ESTADO: Record<string, string> = {
-  disponible: 'suelta',
+  disponible: 'esperando dentro',
   adjunta: 'enganchada a una columna',
   aparcada: 'aparcada en una plaza',
   en_transito: 'en camino',
@@ -63,7 +63,7 @@ export function htmlFundacionDePlaza(c: ContextoPlaza): string {
       <button class="btn-secondary" type="button" data-desarmar="${e(k.id)}"${desarmar ? '' : ' disabled'}>Desarmar</button></div>`;
   }).join('')}</div>`;
 
-  return `<span class="faction-kicker">Caravana de Fundación ${ayuda('plaza:fundacion', 'Fundar un asentamiento nuevo exige una Caravana de Fundación. La plaza paga su coste entero del almacén; quien la lanza es su titular. Nace parada aquí, sin destino: engánchala a tu columna (riel «Fundar» del mapa) y funda donde estés. Si nadie la lleva caduca y el coste vuelve al almacén; desarmarla a mano también lo devuelve.')}</span>
+  return `<span class="faction-kicker">Caravana de Fundación ${ayuda('plaza:fundacion', 'Fundar un asentamiento nuevo exige una Caravana de Fundación. La plaza paga su coste entero del almacén; quien la lanza es su titular. Espera aquí dentro: cualquiera de tu Facción que salga como ejército puede llevársela (al partir, el Líder elige). Luego funda donde estés. Si nadie la lleva caduca y el coste vuelve al almacén; desarmarla a mano también lo devuelve.')}</span>
     <strong class="heroe-sub">Coste (sale del almacén de la plaza)</strong>
     ${filas}
     <strong class="heroe-sub">Requisitos</strong>

@@ -3,6 +3,18 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.38.1] — 2026-10-27 · la Caravana de Fundación espera dentro y se la lleva el ejército · sync con `VRhino/BronzeAge@52fb7d4`
+
+### Cambiado
+- **Caravana de Fundación** (motor d8ef09c): ya no sale al mapa al lanzarla o comprarla; espera dentro de su plaza o campamento. Al preparar
+  un ejército allí, el Líder ve «¿Os lleváis la Caravana de Fundación?» (No / Sí, llevar car-N con lo que lleva) y, al pulsar «Salir con el
+  ejército», se manda con `partirConvocatoria.caravanaFundacionId`. La que espera dentro no se pinta en el mapa; la enganchada va detrás de
+  su ejército por `Ejercito.caravanaFundacionId`, también en los ejércitos ajenos avistados. Textos del Fondo del campamento y de la pestaña
+  Fundación de la plaza al día; mensajes para `fundacion.no_esta_aqui`, `caravana.desconocida`, `caravana.faccion_ajena` y
+  `columna.personal_sin_caravanas`.
+- **Textos de las misiones** del catálogo del motor (`GET /v1/datos`, `Misiones_Textos.TEXTOS_MISIONES`): títulos, textos y nombres de las
+  barras. Los del cliente quedan de reserva.
+
 ## [0.38.0] — 2026-10-27 · misiones · sync con `VRhino/BronzeAge@7b949f7`
 
 ### Añadido
