@@ -3,6 +3,13 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.34.2] — 2026-10-27 · la pantalla de partidas ve tu héroe · sync con `VRhino/BronzeAge@c5c6111`
+
+### Corregido
+- **«Eres miembro, aún sin héroe» con héroe.** Nada más iniciar sesión se proyectaba antes de que llegase el ámbito `HEROE` (su foto viene
+  justo detrás de la Bienvenida). Si la Bienvenida trae `heroe_id`, ahora se espera a ese ámbito (como mucho 5 s) antes de listar las
+  partidas o de proyectar.
+
 ## [0.34.1] — 2026-10-27 · la pestaña Facción no salta a «sin Facción» · sync con `VRhino/BronzeAge@c5c6111`
 
 ### Corregido

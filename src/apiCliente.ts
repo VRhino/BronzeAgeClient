@@ -326,8 +326,22 @@ export interface PartidaListada {
 }
 
 /** El motor tiene una sola partida: la del servidor. Su tarjeta lleva el héroe si la cuenta ya tiene uno. */
+/** Si la cuenta ya tiene héroe (`Bienvenida.heroe_id`) pero su ámbito `HEROE` aún no ha llegado —la foto viene justo detrás de la
+ * Bienvenida—, espera a que llegue (como mucho `ms`). Sin esto, nada más iniciar sesión se proyectaba como «sin héroe». */
+function esperarHeroe(s: Sesion, ms = 5000): Promise<void> {
+  const id = s.bienvenida?.heroeId;
+  const llegado = (): boolean => !id || s.almacen.ambitos.has(`HEROE:${id}`);
+  if (llegado()) return Promise.resolve();
+  return new Promise((resolver) => {
+    const fin = (): void => { clearTimeout(reloj); quitar(); resolver(); };
+    const quitar = s.alCambiar(() => { if (llegado()) fin(); });
+    const reloj = setTimeout(fin, ms);
+  });
+}
+
 export async function listarPartidas(): Promise<PartidaListada[]> {
   const s = await sesionAbierta();
+  await esperarHeroe(s);
   const p = proyeccionActual(s);
   const heroe = !p.sinHeroe
     ? (() => {
@@ -418,6 +432,7 @@ export function proyeccionAlInstante(): ProyeccionJugador | null {
 /** La proyección, calculada del almacén de la sesión: no hay viaje de red (lo que cambia llega solo). */
 export async function consultarProyeccion(_gameId: string): Promise<ProyeccionJugador | PartidaSinHeroe> {
   const s = await sesionAbierta();
+  await esperarHeroe(s);
   // La VISTA la pide el cliente (en el REST venía sola): en cuanto hay héroe, una vez por héroe. La sesión la vuelve a pedir al reconectar.
   const heroe = [...s.almacen.ambitos.keys()].find((k) => k.startsWith('HEROE:'));
   if (heroe && vistaPedidaPara !== heroe) {
