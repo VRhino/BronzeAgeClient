@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.37.0] — 2026-10-27 · marcha forzada · sync con `VRhino/BronzeAge@6bf35ee`
+
+### Añadido
+- **Marcha forzada** en el panel Ejército (⚑) del mundo: el Líder de la columna (también la personal) la pone o la quita con un botón
+  (`marchaForzada { ejercitoId, activa }`). Va ×1,5 de rápido y, solo mientras marcha, come ×2 de víveres; se queda puesta hasta que se quita.
+  Los demás integrantes ven si está puesta. El plan y el ritmo de víveres ya llegan recalculados del motor.
+
+### Contrato
+- Regenerado desde `6bf35ee` (`Orden.marcha_forzada`, `Ejercito.marcha_forzada`).
+
 ## [0.36.2] — 2026-10-27 · solo se ve la tropa desbloqueada · sync con `VRhino/BronzeAge@3edba48`
 
 ### Cambiado

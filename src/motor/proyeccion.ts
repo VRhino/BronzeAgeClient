@@ -180,6 +180,7 @@ function ejercito(e: pb.Ejercito, ahora: number): d.Ejercito {
     formacion: e.formacionExpiraEnMs !== undefined ? { expiraEn: instante(e.formacionExpiraEnMs)! } : undefined,
     politicaDeUnion: POLITICA_UNION[e.politicaDeUnion],
     peticionesDeUnion: e.peticionesDeUnion.map((p) => ({ heroeId: p.heroeId, pedidoEn: instante(p.pedidoEnMs)!, expiraEn: instante(p.expiraEnMs)! })),
+    marchaForzada: e.marchaForzada,
     persiguiendo: e.persiguiendo ? { tipo: e.persiguiendo.presaEsCaravana ? 'caravana' : 'ejercito', id: e.persiguiendo.presaId } : undefined,
   };
 }

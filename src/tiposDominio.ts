@@ -246,6 +246,8 @@ export interface Caravana {
  * un panel de campaña que los muestre. */
 export interface Ejercito {
   id: string;
+  /** Marcha forzada (motor 6bf35ee): ×1,5 de velocidad y, mientras marcha, ×2 de víveres. Solo se sabe de las columnas propias. */
+  marchaForzada?: boolean;
   faccionId: string;
   origenAsentamientoId: string;
   /** Solo ids (backend 2026-09-14): las escuadras viven en su héroe. Las tuyas están en `proyeccion.heroe.escuadrones`;

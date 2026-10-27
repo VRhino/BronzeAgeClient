@@ -5,6 +5,7 @@
 //   columna personal    `organizarEjercito` (formar con otros dos) o `unirseEnCampo` a un ejército/formación de tu Facción que tengas al lado
 //   formación           `cancelarFormacion` (Líder) / `separarseDelEjercito`
 //   ejército            Líder: `responderPeticionDeUnion`, `cederLiderazgo`, `estacionarEjercito`, `replegarEjercito`; el resto: `separarseDelEjercito`
+//   marcha forzada      el Líder de la columna (también la personal): `marchaForzada { ejercitoId, activa }`, puesta hasta que se quita
 // La política de unión («abierto» = aceptar, «decide el Líder» = preguntar, «cerrado» = rechazar) la fija el Líder al formar y no cambia.
 import type { ProyeccionJugador } from '../apiCliente';
 import { radioDeEncuentro } from '../apiCliente';
@@ -93,6 +94,7 @@ function htmlMiSituacion(p: ProyeccionJugador, mi: Ejercito | undefined, e: Esca
       <ul class="ejercito-lista">${mi.participantes.map((x) => `<li>${e(nombreDeHeroe(p, x.heroeId))}${x.heroeId === mi.liderId ? ' <em>(Líder)</em>' : ''}${x.heroeId === p.heroeId ? ' · tú' : ''}</li>`).join('')}</ul>
       ${peticiones.length > 0 ? `<strong class="heroe-sub">Piden unirse</strong>${peticiones.map((x) => `<div class="ejercito-fila"><div><strong>${e(nombreDeHeroe(p, x.heroeId))}</strong><span>${textoEnTiempoReal(x.expiraEn - p.instante)} para contestar</span></div>
           <button class="btn-primary" type="button" data-peticion="${e(x.heroeId)}" data-aceptar="si">Aceptar</button><button class="btn-secondary" type="button" data-peticion="${e(x.heroeId)}" data-aceptar="no">Rechazar</button></div>`).join('')}` : ''}
+      ${marchaForzadaHtml(mi, lider)}
       ${lider
         ? `<div class="mapa-seleccion-acciones">
             ${mi.estado === 'marchando' ? '<button class="btn-secondary" type="button" data-ej="estacionar">Acampar aquí</button>' : ''}
@@ -104,10 +106,19 @@ function htmlMiSituacion(p: ProyeccionJugador, mi: Ejercito | undefined, e: Esca
   if (mi.participantes.length === 1) {
     return `<p class="asent-lado-nota">Vas por tu cuenta.${ayuda('ejercito:personal', 'Con otros dos héroes de tu Facción puedes formar un ejército aquí, sin pasar por una plaza: te quedas quieto hasta que se unan.')}</p>
       ${p.faccionId ? '' : '<p class="asent-lado-nota"><strong>Sin Facción nadie podrá unirse a ti</strong>: un ejército lo componen ciudadanos de una sola Facción.</p>'}
+      ${marchaForzadaHtml(mi, true)}
       <div class="mapa-seleccion-acciones"><button class="btn-secondary" type="button" data-ej="organizar" data-politica="aceptar">Organizar ejército (abierto)</button>
       <button class="btn-secondary" type="button" data-ej="organizar" data-politica="preguntar">Organizar ejército (decido yo)</button></div>`;
   }
   return '';
+}
+
+/** El interruptor de la marcha forzada para el Líder; los demás solo ven si está puesta. */
+function marchaForzadaHtml(c: Ejercito, lider: boolean): string {
+  const nota = ayuda('ejercito:marcha-forzada', 'La columna entera, caravanas enganchadas incluidas, va 1,5 veces más rápida y, solo mientras marcha, come el doble de víveres. Se queda puesta hasta que la quitas.');
+  if (!lider) return c.marchaForzada ? `<p class="asent-lado-nota"><strong>Marcha forzada</strong>: ×1,5 de velocidad, ×2 de víveres al marchar.${nota}</p>` : '';
+  return `<label class="mapa-lista-item"><span><strong>Marcha forzada</strong> · ×1,5 de velocidad, ×2 de víveres al marchar${nota}</span>
+    <button class="${c.marchaForzada ? 'btn-primary' : 'btn-secondary'}" type="button" data-ej="forzada" aria-pressed="${c.marchaForzada ? 'true' : 'false'}">${c.marchaForzada ? 'Puesta · quitar' : 'Poner'}</button></label>`;
 }
 
 export function htmlPanelEjercito(p: ProyeccionJugador, e: Escapar): string {
@@ -145,6 +156,7 @@ export function cablearPanelEjercito(raiz: ParentNode, p: ProyeccionJugador, eje
       case 'organizar': return void enviar(b, 'organizarEjercito', { heroeId: p.heroeId, politicaDeUnion: b.dataset.politica });
       case 'cancelar-formacion': return void enviar(b, 'cancelarFormacion', { heroeId: p.heroeId });
       case 'separarme': return void enviar(b, 'separarseDelEjercito', { heroeId: p.heroeId });
+      case 'forzada': return void (mi && enviar(b, 'marchaForzada', { ejercitoId: mi.id, activa: !mi.marchaForzada }));
       case 'estacionar': return void (mi && enviar(b, 'estacionarEjercito', { ejercitoId: mi.id }));
       case 'replegar':
         if (mi && confirm('¿Replegar el ejército? Cancela la marcha y todos vuelven a su origen.')) void enviar(b, 'replegarEjercito', { ejercitoId: mi.id });
