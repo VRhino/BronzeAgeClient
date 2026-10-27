@@ -369,6 +369,14 @@ function proyeccionActual(s: Sesion): ProyeccionJugador | PartidaSinHeroe {
   return proyectar({ almacen: s.almacen, bienvenida: s.bienvenida!, ahora: s.ahoraMundo(), gameId: PARTIDA, mapaId: s.bienvenida?.mundo?.hash ?? '' });
 }
 
+/** La proyección recalculada en este instante, sin red y sin esperar a un cambio: las columnas avanzan por su plan (`Plan`) y el servidor no
+ * manda nada mientras marchan, así que el mapa la pide en cada fotograma para que se muevan seguido. `null` sin sesión o sin héroe. */
+export function proyeccionAlInstante(): ProyeccionJugador | null {
+  if (!sesion?.bienvenida || sesion.estado === 'cerrada') return null;
+  const p = proyeccionActual(sesion);
+  return p.sinHeroe ? null : p;
+}
+
 /** La proyección, calculada del almacén de la sesión: no hay viaje de red (lo que cambia llega solo). */
 export async function consultarProyeccion(_gameId: string): Promise<ProyeccionJugador | PartidaSinHeroe> {
   const s = await sesionAbierta();
@@ -391,19 +399,21 @@ function pedirVistaEntera(s: Sesion): void {
   s.cambiarVista({ min: { x: 0n, y: 0n }, max: { x: ancho, y: alto } });
 }
 
-let radioVision: Promise<number> | null = null;
+/** El archivo común de datos de juego del motor (`GET /v1/datos`, el vigente): los bloques de parámetros de `Docs/Mechanics`, por documento. Se pide una vez. */
+let datosDeJuego: Promise<DatosDeJuego | null> | null = null;
+interface DatosDeJuego { documentos?: Record<string, Record<string, unknown>> }
 
-/** El radio de visión de un héroe solo (`VISION.jugadorSolo` de `Movimiento_Ejercitos`), del archivo común de datos de juego del motor
- * (`GET /v1/datos`, el vigente). Se pide una vez; si no llega, 15, la cifra de hoy. Fija la escala de visión del mapa. */
+function cargarDatosDeJuego(): Promise<DatosDeJuego | null> {
+  datosDeJuego ??= fetch(`${BASE}/v1/datos`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  return datosDeJuego;
+}
+
+/** El radio de visión de un héroe solo (`Movimiento_Ejercitos.VISION.jugadorSolo`); si no llega, 15, la cifra de hoy. Fija la escala de visión del mapa. */
 export function radioDeVision(): Promise<number> {
-  radioVision ??= fetch(`${BASE}/v1/datos`)
-    .then((r) => (r.ok ? r.json() : null))
-    .then((d) => {
-      const r = Number(d?.documentos?.Movimiento_Ejercitos?.VISION?.jugadorSolo);
-      return r > 0 ? r : 15;
-    })
-    .catch(() => 15);
-  return radioVision;
+  return cargarDatosDeJuego().then((d) => {
+    const r = Number((d?.documentos?.Movimiento_Ejercitos?.VISION as { jugadorSolo?: number } | undefined)?.jugadorSolo);
+    return r > 0 ? r : 15;
+  });
 }
 
 /** La crónica de la partida va por páginas en la sesión (`pedirCronica`); los avisos de siempre llegan por `alEventoTiempoReal`. */
@@ -444,7 +454,7 @@ interface BalancePublico {
   cuposYNiveles?: { POLITICAS?: ReglasDePoliticas; CAP_FUNDACION_POR_NIVEL?: number[]; CIUDADANIA?: { cooldownCambioResidenciaDias?: number; cooldownCreacionFaccionDias?: number } };
   caravanas?: { CARAVANA_COOLDOWN?: { cooldownMinutos?: number }; CARRO_CATALOGO?: Record<string, CarroDelCatalogo>; ANIMAL_CATALOGO?: Record<string, AnimalDelCatalogo>; CARAVANA_PREPARACION?: { kPorCarro?: number; maxProgramacionDias?: number }; CARAVANA_ESCOLTA?: { liderazgoPorNivelMercado?: number[] } };
   politica?: { PUERTA?: { cerradaAPorDefecto?: string[] }; CAPITAL?: { cooldownDias?: number } };
-  mundoYMilitar?: { LOGISTICA?: { capacidadViveresPorHeroe?: number; radioEncuentro?: number; radioReabastecimiento?: number }; FUNDACION?: { materialesIniciales?: Record<string, number>; viviendasIniciales?: number; costoMaderaExtraCaravana?: number }; MERCENARIOS?: { refundacion?: { porcentajeCoste?: number } }; MOVIMIENTO?: { radioPuerta?: number; radioInspeccion?: number }; RECLUTAMIENTO_ORO_POR_ESCALON?: Record<string, number>; ORO_POR_CABALLO?: number };
+  mundoYMilitar?: { LOGISTICA?: { capacidadViveresPorHeroe?: number; radioEncuentro?: number; radioReabastecimiento?: number }; FUNDACION?: { materialesIniciales?: Record<string, number>; viviendasIniciales?: number; costoMaderaExtraCaravana?: number }; MERCENARIOS?: { refundacion?: { porcentajeCoste?: number }; radioProteccion?: number }; MOVIMIENTO?: { radioPuerta?: number; radioInspeccion?: number }; RECLUTAMIENTO_ORO_POR_ESCALON?: Record<string, number>; ORO_POR_CABALLO?: number };
   tecnologia?: CatalogoTecnologia;
   internas?: { CAMPAMENTOS_BANDIDOS?: { niveles?: Record<string, NivelDeBandidos> } };
 }
@@ -460,11 +470,23 @@ export interface CatalogoTecnologia {
 }
 let balancePublico: BalancePublico | null = null;
 let balancePedido = false;
+const oyentesDelBalance = new Set<() => void>();
 function balance(alCargar?: () => void): BalancePublico | null {
-  if (!balancePublico && alCargar && !balancePedido) {
+  if (!balancePublico && alCargar) oyentesDelBalance.add(alCargar);
+  if (!balancePublico && !balancePedido) {
     balancePedido = true;
-    // El motor aún no publica el balance (el archivo común de datos de juego): se usan los valores por defecto de cada función.
-    void Promise.resolve(null as BalancePublico | null).then((b) => { if (b) { balancePublico = b; alCargar(); } });
+    // El balance del backend TypeScript viene ahora de los datos de juego del motor (`GET /v1/datos`). Allí van los mismos bloques
+    // (`LOGISTICA`, `CAMPAMENTOS_BANDIDOS`, `TROPAS_RECLUTABLES`...) agrupados por documento de Mechanics y no por los grupos del TS, así que
+    // se juntan en uno solo y cada grupo lo ve entero. Si un bloque está en dos documentos, gana el primero.
+    void cargarDatosDeJuego().then((d) => {
+      if (!d?.documentos) return;
+      const bloques: Record<string, unknown> = {};
+      for (const doc of Object.values(d.documentos)) for (const [k, v] of Object.entries(doc)) if (!(k in bloques)) bloques[k] = v;
+      const todo = bloques as never;
+      balancePublico = { catalogos: todo, cuposYNiveles: todo, caravanas: todo, politica: todo, mundoYMilitar: todo, tecnologia: todo, internas: todo };
+      for (const f of oyentesDelBalance) f();
+      oyentesDelBalance.clear();
+    });
   }
   return balancePublico;
 }
@@ -543,6 +565,12 @@ export function nivelesBandidos(alCargar?: () => void): Record<string, NivelDeBa
 /** Lo que caben los víveres de un héroe (`LOGISTICA.capacidadViveresPorHeroe`); 350 mientras no llegue el balance. */
 export function capacidadDeViveres(alCargar?: () => void): number {
   return balance(alCargar)?.mundoYMilitar?.LOGISTICA?.capacidadViveresPorHeroe ?? 350;
+}
+
+/** Alrededor de un campamento de mercenarios nadie inicia un combate (`MERCENARIOS.radioProteccion`); 10 mientras no llegue el balance (el backend
+ * TypeScript usaba 60). */
+export function radioDeProteccionMercenarios(): number {
+  return balance()?.mundoYMilitar?.MERCENARIOS?.radioProteccion ?? 10;
 }
 
 /** A cuánto hay que estar de una columna para unirse a ella en campo (`LOGISTICA.radioEncuentro`); 15 mientras no llegue el balance. */

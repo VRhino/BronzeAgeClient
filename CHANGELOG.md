@@ -3,6 +3,25 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.31.2] — 2026-10-27 · atacar a los bandidos y la marcha fluida · sync con `VRhino/BronzeAge@e11979e`
+
+### Corregido
+- **No se podía atacar un campamento de bandidos.** Había cuatro causas:
+  - La orden llegaba al motor sin objetivo. El `oneof` de los objetivos se llama `tipo`, igual que el `{ tipo, id }` del REST, y el
+    traductor no lo reconocía. Por lo mismo, tampoco funcionaba marchar a una plaza por su id. Lo cubre `pruebas/ordenes.test.ts`.
+  - La protección de los campamentos de mercenarios era de 60, la del backend TypeScript. El motor usa 10 (`MERCENARIOS.radioProteccion`).
+    Los bandidos están a 30-50 de su campamento, así que el botón salía siempre desactivado.
+  - El radio de ataque era 15. El motor exige `LOGISTICA.radioEncuentro`, que hoy vale 3.
+  - Se pedían soldados en la columna. Contra bandidos y columnas el héroe suma su poder y puede atacar solo. Solo el asedio pide soldados.
+- **La columna avanzaba a saltos.** El motor manda el plan de marcha y nada más mientras se anda, y el mapa solo se repintaba con un cambio o
+  con el sondeo de 3 s. Ahora, mientras algo tuyo marcha, se repinta a ~30 fps con la posición del plan en ese instante
+  (`proyeccionAlInstante`). Si no has movido la vista, la cámara sigue a tu columna.
+- La ruta de una columna empieza en su posición actual. Antes, en el último tramo no se dibujaban la ruta ni el aspa del destino.
+
+### Cambiado
+- El «balance» del cliente sale ahora de los datos de juego del motor (`GET /v1/datos`): niveles de bandidos, logística, catálogos y demás.
+  Antes iba vacío y se usaban cifras copiadas del backend TypeScript.
+
 ## [0.31.1] — 2026-10-27 · el clic del mapa mueve, víveres de la columna y contrato al día · sync con `VRhino/BronzeAge@e11979e`
 
 ### Corregido

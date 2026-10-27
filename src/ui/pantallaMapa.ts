@@ -22,6 +22,8 @@ export interface ControlMapa {
   fijarRadioVision(radio: number): void;
   /** La cámara actual (para guardar la vista). */
   estado(): Camara;
+  /** ¿Sigue la vista un punto fijado con `centrar`? (hasta que se arrastra o se hace zoom con la rueda). */
+  siguiendo(): boolean;
   /** El punto del mundo bajo un evento del puntero. */
   aMundo(evento: { clientX: number; clientY: number }): { x: number; y: number };
   /** Fija en `ctx` la transformación de la cámara (unidades × `escala` → px del lienzo) y devuelve la `escala` con la que pintar. */
@@ -134,6 +136,7 @@ export function instalarZoomPan(
 
   return {
     estado: () => camara ?? { escala: 1, cx: mundo.ancho / 2, cy: mundo.alto / 2 },
+    siguiendo: () => foco !== null,
     zoomHacia: (direccion) => zoomA(direccion === 1 ? 1.4 : 1 / 1.4, 0, 0),
     centrar: (puntoMundo, anchoMundo, altoMundo) => {
       foco = puntoMundo;

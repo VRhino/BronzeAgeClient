@@ -9,9 +9,8 @@
 // Lo que da `inspeccionar` (composición de la columna, carga de la caravana o defensa de la plaza) se lee SIEMPRE de `informesDeInspeccion` de la
 // proyección (10 min de mundo): así sobrevive a recargar y a cerrar la ficha.
 import type { ProyeccionJugador } from '../apiCliente';
-import { radioDeEncuentro, radioDeInspeccion, tropasReclutables } from '../apiCliente';
+import { radioDeEncuentro, radioDeInspeccion, radioDeProteccionMercenarios, tropasReclutables } from '../apiCliente';
 import { agarre } from './agarre';
-import { RADIO_PROTECCION_MERCENARIOS } from '../render';
 import { RECURSO_NOMBRE } from '../paletas';
 import type { CaravanaAvistada, EjercitoAvistado, InformeDeInspeccion } from '../tiposDominio';
 import { ayuda } from './ayuda';
@@ -100,14 +99,12 @@ function estados(p: ProyeccionJugador, o: Objetivo): Estado[] {
       : esCaravana && clase(mi!.tipo) === 'ejercito' ? 'Un ejército solo persigue a otro ejército.'
         : esCaravana && o.adjunta ? 'Va adjunta a un ejército: se persigue al ejército.' : '');
 
-  const sinSoldados = mi !== undefined && mi.participantes.length === 1
-    && !p.heroe.escuadrones.some((s) => s.contenedor.tipo === 'ejercito' && s.contenedor.ejercitoId === mi.id && s.cantidad > 0);
-  const protegido = mi && (p.campamentosMercenarios ?? []).find((c) => distancia(c.posicion, mi.posicionActual) <= RADIO_PROTECCION_MERCENARIOS || distancia(c.posicion, o.posicion) <= RADIO_PROTECCION_MERCENARIOS);
+  // Sin soldados también se ataca: cada héroe sano suma su poder (Combate §3 del motor); solo un asedio o un saqueo los piden.
+  const protegido = mi && (p.campamentosMercenarios ?? []).find((c) => distancia(c.posicion, mi.posicionActual) <= radioDeProteccionMercenarios() || distancia(c.posicion, o.posicion) <= radioDeProteccionMercenarios());
   const ataca = hostil
     || (esCaravana && o.adjunta ? 'Va adjunta a un ejército: solo otro ejército la ataca, y lo hace atacando al ejército.'
       : d! > encuentro ? `Acércate: estás a ${Math.round(d!)} y se ataca a ${encuentro}.`
-        : sinSoldados ? 'Tu columna no lleva soldados vivos.'
-          : protegido ? `A menos de ${RADIO_PROTECCION_MERCENARIOS} del campamento de mercenarios ${protegido.id} nadie inicia un combate.` : '');
+        : protegido ? `A menos de ${radioDeProteccionMercenarios()} del campamento de mercenarios ${protegido.id} nadie inicia un combate.` : '');
 
   const siguiendo = mi?.persiguiendo?.tipo === o.tipo && mi.persiguiendo.id === o.id;
   return [

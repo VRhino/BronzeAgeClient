@@ -20,6 +20,9 @@ import {
   nivelesBandidos,
   registrarCuenta,
   radioDeVision,
+  radioDeEncuentro,
+  radioDeProteccionMercenarios,
+  proyeccionAlInstante,
   obtenerMapa,
   unirseAPartida,
   type ProyeccionJugador,
@@ -28,7 +31,7 @@ import {
 import { cablearSalidaDePlazaAjena, htmlSalidaDePlazaAjena } from './ui/salidaDePlazaAjena';
 import { elegirPestanaHeroe, minutosHerido, pintarPanelHeroe } from './ui/panelHeroe';
 import { htmlBarraJugador, type PanelJugador } from './ui/barraJugador';
-import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno, RADIO_PROTECCION_MERCENARIOS } from './render';
+import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
 import { EDIFICIO_COLOR, EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from './paletas';
 import type { Alijo, Asentamiento, BloqueoAscenso, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Edificio, EvaluacionAscenso, ParamsCrearHeroe, ProduccionItem, Sigilo } from './tiposDominio';
 import { svgSigilo } from './sigilo/sigilo';
@@ -477,9 +480,9 @@ function cercano<T extends { posicion: { x: number; y: number } }>(lista: readon
   return lista.filter((c) => distancia(c) < radio).sort((a, b) => distancia(a) - distancia(b))[0] ?? null;
 }
 
-/** A qué distancia se ataca: `LOGISTICA.radioEncuentro` del backend (Doc 5.12.3), copiado aquí para avisar antes de
- * mandar la orden. El que decide es el backend. */
-const RADIO_ATAQUE = 15;
+/** A qué distancia se ataca: `LOGISTICA.radioEncuentro` de los datos de juego del motor (3 hoy; el backend TypeScript usaba 15), para avisar
+ * antes de mandar la orden. El que decide es el motor. */
+const radioDeAtaque = (): number => radioDeEncuentro();
 
 /** Punto de MUNDO bajo un clic: el de la cámara del mapa; sin ella, el lienzo con el mundo entero. */
 function puntoDeMapa(evento: { clientX: number; clientY: number }, canvas: HTMLCanvasElement, mapa: MapaGenerado): { x: number; y: number } {
@@ -610,7 +613,7 @@ function renderSeleccionMapaCuerpo(): void {
   }
   const faccion = proyeccion.facciones.find((f) => f.id === asentamiento.faccionId);
   const propio = asentamiento.faccionId === proyeccion.faccionId;
-  const ataque = propio ? null : alcanceDeAtaque(proyeccion, asentamiento.posicion);
+  const ataque = propio ? null : alcanceDeAtaque(proyeccion, asentamiento.posicion, true);
   const miCol = miColumna(proyeccion);
   const entraEjercito = miCol !== undefined && (miCol.tipo === 'ejercito' || miCol.participantes.length > 1);
   const soyLider = miCol?.liderId === proyeccion.heroeId;
@@ -676,21 +679,23 @@ function renderSeleccionMapaCuerpo(): void {
  * carro; si aguanta, el héroe queda herido y la columna pierde la mitad del carro. */
 /** A qué distancia está tu columna de `punto` y, si no puedes atacarlo, por qué (vacío = puedes). Es solo un aviso:
  * el que decide es el backend. */
-function alcanceDeAtaque(proyeccion: ProyeccionJugador, punto: { x: number; y: number }): { distancia: number | null; impide: string } {
+/** `conSoldados`: solo un asedio pide soldados en la columna (Combate §6 del motor: «un héroe solo no abre un asedio»); contra bandidos el héroe
+ * suma su poder (15) y puede atacar sin tropa. */
+function alcanceDeAtaque(proyeccion: ProyeccionJugador, punto: { x: number; y: number }, conSoldados = false): { distancia: number | null; impide: string } {
   const columna = miColumna(proyeccion);
   const distancia = columna ? Math.round(Math.hypot(columna.posicionActual.x - punto.x, columna.posicionActual.y - punto.y)) : null;
   const herido = minutosHerido(proyeccion);
   // Yendo solo, sin soldados vivos en la columna no hay con qué atacar (en un ejército pueden ponerlos los demás).
-  const sinSoldados = columna !== undefined && columna.participantes.length === 1
+  const sinSoldados = conSoldados && columna !== undefined && columna.participantes.length === 1
     && !proyeccion.heroe.escuadrones.some((s) => s.contenedor.tipo === 'ejercito' && s.contenedor.ejercitoId === columna.id && s.cantidad > 0);
-  const cerca = (a: { x: number; y: number }) => proyeccion.campamentosMercenarios.find((c) => Math.hypot(c.posicion.x - a.x, c.posicion.y - a.y) <= RADIO_PROTECCION_MERCENARIOS);
+  const cerca = (a: { x: number; y: number }) => proyeccion.campamentosMercenarios.find((c) => Math.hypot(c.posicion.x - a.x, c.posicion.y - a.y) <= radioDeProteccionMercenarios());
   const protegido = columna ? cerca(columna.posicionActual) ?? cerca(punto) : undefined;
   const impide =
     herido !== null ? `Estás herido (${herido} min): no puedes atacar.`
       : distancia === null ? 'Sal al mundo con tu columna para atacar.'
-        : distancia > RADIO_ATAQUE ? `Acércate: estás a ${distancia} y se ataca a ${RADIO_ATAQUE}.`
+        : distancia > radioDeAtaque() ? `Acércate: estás a ${distancia} y se ataca a ${radioDeAtaque()}.`
           : sinSoldados ? 'Tu columna no lleva soldados vivos: sal del campamento con tropa para atacar.'
-            : protegido ? `Estás a menos de ${RADIO_PROTECCION_MERCENARIOS} del campamento de mercenarios ${protegido.id}: a su lado nadie inicia un combate.`
+            : protegido ? `Estás a menos de ${radioDeProteccionMercenarios()} del campamento de mercenarios ${protegido.id}: a su lado nadie inicia un combate.`
               : '';
   return { distancia, impide };
 }
@@ -1281,7 +1286,7 @@ function montarMapa(): void {
   const control = instalarZoomPan(contenedor, lienzo, {
     camaraInicial: vista ? { escala: vista.escala, cx: vista.cx, cy: vista.cy } : undefined,
     alClicar,
-    alCambiar: () => { const p = estadoCliente.proyeccionUltima; if (p && controlMapaActivo === control) void dibujarPantallaSegunModo(p); },
+    alCambiar: () => { const p = proyeccionAlInstante() ?? estadoCliente.proyeccionUltima; if (p && controlMapaActivo === control) void dibujarPantallaSegunModo(p); },
   });
   controlMapaActivo = control;
   // El zoom máximo (y el de arranque) es la escala de visión del héroe: el radio sale de los datos de juego del servidor.
@@ -1295,11 +1300,33 @@ function montarMapa(): void {
     sondeando = true;
     void refrescarDatosJuego().catch(() => {}).finally(() => { sondeando = false; });
   }, 3000);
+  // Las columnas avanzan por su plan y el servidor no manda nada mientras marchan: sin esto se verían a saltos (en cada sondeo). Mientras algo
+  // propio está en marcha, el mapa se repinta a ~30 fps con la proyección del instante; con algo ajeno a la vista, a ~5 fps. Si la vista sigue
+  // a tu columna (no la has arrastrado), la cámara va con ella.
+  let fotograma = 0;
+  let ultimoFotograma = 0;
+  const animar = (t: number): void => {
+    fotograma = requestAnimationFrame(animar);
+    if (controlMapaActivo !== control || estadoCliente.modoVista !== 'mundo') return;
+    const p = proyeccionAlInstante();
+    if (!p) return;
+    const marchaPropia = p.ejercitos.some((e) => e.estado !== 'estacionado' && (e.ruta?.length ?? 0) >= 2) || p.caravanas.some((c) => (c.ruta?.length ?? 0) >= 2);
+    const ajenoALaVista = (p.ejercitosAvistados?.length ?? 0) + (p.caravanasAvistadas?.length ?? 0) > 0;
+    if (!marchaPropia && !ajenoALaVista) return;
+    if (t - ultimoFotograma < (marchaPropia ? 33 : 200)) return;
+    ultimoFotograma = t;
+    const mia = miColumna(p);
+    const mapa = estadoCliente.mapaCache?.mapa;
+    if (mia && mapa && control.siguiendo()) control.centrar(mia.posicionActual, mapa.config.ancho, mapa.config.alto); // repinta él (alCambiar)
+    else void dibujarPantallaSegunModo(p);
+  };
+  fotograma = requestAnimationFrame(animar);
   const guardarVista = (): void => guardarVistaMapa(gameId, { ...control.estado(), panel: panelMapaAbierto === 'fundar' ? null : panelMapaAbierto, seleccion: seleccionMapa });
   addEventListener('pagehide', guardarVista); // recarga o cierre de pestaña
   limpiarPantalla = () => {
     guardarVista(); // salir del mapa (plaza, campamento, otra partida, cerrar sesión)
     removeEventListener('pagehide', guardarVista);
+    cancelAnimationFrame(fotograma);
     clearInterval(sondeo);
     control.destruir();
     controlMapaActivo = null;

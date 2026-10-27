@@ -1,5 +1,5 @@
 import { contornosBosques, evaluarBioma, type MapaGenerado } from './terreno';
-import type { ProyeccionJugador } from './apiCliente';
+import { radioDeProteccionMercenarios, type ProyeccionJugador } from './apiCliente';
 import type { Asentamiento, Sigilo, Edificio, MiradaIntel, NieblaProyectada, Point, RectanguloLocal, TrazadoAsentamiento, TrazadoMuralla } from './tiposDominio';
 import {
   BIOMA_COLOR_SIMPLE,
@@ -228,8 +228,7 @@ function bytesDeMascara(hex: string, celdas: number): Uint8Array {
   return bytes;
 }
 
-/** `MERCENARIOS.radioProteccion` del backend (M4/D78), copiado: el cliente no importa el motor. */
-export const RADIO_PROTECCION_MERCENARIOS = 60;
+
 
 /**
  * La niebla de guerra, en una sola capa por encima de la geografía (niebla de guerra, Paso 5).
@@ -795,7 +794,7 @@ export function pintarTerreno(
     const y = campamento.posicion.y * escalaCanvas;
     // Como en el cliente admin: cuadrado azul con el anillo de protección (nadie inicia un combate dentro, D78).
     ctx.beginPath();
-    ctx.arc(x, y, RADIO_PROTECCION_MERCENARIOS * escalaCanvas, 0, Math.PI * 2);
+    ctx.arc(x, y, radioDeProteccionMercenarios() * escalaCanvas, 0, Math.PI * 2);
     ctx.strokeStyle = 'rgba(46, 94, 140, 0.5)';
     ctx.lineWidth = 1;
     ctx.stroke();

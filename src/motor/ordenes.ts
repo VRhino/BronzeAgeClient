@@ -60,7 +60,8 @@ function oneof(desc: DescOneof, o: Record<string, unknown>): { case: string; val
     const v = leer(o, f);
     if (v !== undefined && v !== null) return { case: f.localName, value: valor(f, v) };
   }
-  const x = o[desc.localName];
+  // El `oneof` de los objetivos se llama `tipo`, igual que el discriminante del REST: `{ tipo: 'campamento', id }` llega entonces al mismo nivel.
+  const x = typeof o[desc.localName] === 'string' && desc.localName === 'tipo' ? o : o[desc.localName];
   if (!esObjeto(x) || typeof x.tipo !== 'string') return undefined;
   const t = x.tipo;
   const f = desc.fields.find((c) => c.localName === t || c.localName === `${t}Id`);

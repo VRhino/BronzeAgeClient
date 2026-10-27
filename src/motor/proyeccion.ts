@@ -39,17 +39,19 @@ export function valorDeRitmo(r: Ritmo | undefined, ahora: number): number {
   return v / 1000;
 }
 
-/** Dónde está quien sigue un plan en `ahora` (ms del contrato), y lo que le queda de ruta. */
+/** Dónde está quien sigue un plan en `ahora` (ms del contrato), y lo que le queda de ruta: empieza en la posición de ahora (como la `ruta` del
+ * backend TypeScript), así que en marcha tiene siempre dos puntos o más, también en el último tramo. */
 export function evaluarPlan(plan: pb.Ejercito['plan'], posicion: Punto | undefined, ahora: number): { posicion: d.Point; ruta: d.Point[] } {
   const v = plan?.vertices ?? [];
   if (v.length === 0) return { posicion: punto(posicion), ruta: [] };
   const t = (i: number) => Number(v[i]!.enMs);
-  if (ahora <= t(0)) return { posicion: punto(v[0]!.p), ruta: v.slice(1).map((x) => punto(x.p)) };
+  if (ahora <= t(0)) return { posicion: punto(v[0]!.p), ruta: v.map((x) => punto(x.p)) };
   for (let i = 1; i < v.length; i++) {
     if (ahora < t(i)) {
       const f = (ahora - t(i - 1)) / Math.max(1, t(i) - t(i - 1));
       const a = punto(v[i - 1]!.p), b = punto(v[i]!.p);
-      return { posicion: { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f }, ruta: v.slice(i).map((x) => punto(x.p)) };
+      const aqui = { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f };
+      return { posicion: aqui, ruta: [aqui, ...v.slice(i).map((x) => punto(x.p))] };
     }
   }
   return { posicion: punto(v[v.length - 1]!.p), ruta: [] };
