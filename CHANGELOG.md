@@ -3,6 +3,12 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.38.3] — 2026-10-27 · rastreador de misiones arriba a la derecha · sync con `VRhino/BronzeAge@52fb7d4`
+
+### Cambiado
+- En el mundo, el **rastreador de misiones** pasa de arriba a la izquierda a arriba a la derecha, para no chocar con los menús de ese lado.
+  La ficha de Selección, que abre en la misma esquina, queda por encima. En la plaza y el campamento sigue al principio de la columna izquierda.
+
 ## [0.38.2] — 2026-10-27 · marcha forzada junto a los víveres · sync con `VRhino/BronzeAge@52fb7d4`
 
 ### Cambiado

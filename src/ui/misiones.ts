@@ -5,7 +5,7 @@
 //   panel     el botón «Misiones» de la barra: pestañas Mías · Mi plaza · Mi Facción, con una insignia de las que puedes reclamar
 //   plaza     la subpestaña «Misiones» del Centro urbano (`SUBPESTANA_MISIONES`, en `ganchos.ts`)
 //   Facción   la lista de la Facción al pie de su pestaña
-//   rastreador las seguidas, arriba a la izquierda en el mundo y al principio de la columna izquierda en la plaza y el campamento
+//   rastreador las seguidas, arriba a la derecha en el mundo y al principio de la columna izquierda en la plaza y el campamento
 import { textosDeMisiones, type ProyeccionJugador } from '../apiCliente';
 import type { Mision } from '../tiposDominio';
 import { RECURSO_NOMBRE } from '../paletas';
@@ -267,7 +267,7 @@ export const SUBPESTANA_MISIONES: SubpestanaPlaza = {
 // ---------------------------------------------------------------- rastreador
 
 /**
- * Las seguidas que se ven ahora, con su barra fina; las cumplidas, en dorado. En el mundo flota arriba a la izquierda; en la plaza y el
+ * Las seguidas que se ven ahora, con su barra fina; las cumplidas, en dorado. En el mundo flota arriba a la derecha; en la plaza y el
  * campamento va al principio de su columna izquierda (allí arriba a la izquierda está la leyenda). Plegado, una línea.
  */
 export function pintarRastreador(p: ProyeccionJugador, abrir: (d: DuenoMision) => void, e: Escapar): void {
