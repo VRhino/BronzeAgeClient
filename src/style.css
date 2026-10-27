@@ -3012,3 +3012,6 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .rastreador-item.cumplida strong { color: var(--oro); }
 .conv-caravanas { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 8px; }
 .conv-caravana { display: flex; gap: 6px; align-items: baseline; font-size: 0.85rem; cursor: pointer; }
+.mapa-comida > .mapa-forzada { padding: 3px 10px; font-size: 12px; border-radius: 4px; border: 1px solid #4a4538; background: #2a2620; color: #9a927f; cursor: pointer; }
+.mapa-comida > .mapa-forzada.activa { background: var(--terracota); border-color: #e8806f; color: #fff; box-shadow: 0 0 8px rgba(191, 82, 51, 0.6); }
+.mapa-comida > .mapa-forzada:disabled { cursor: default; opacity: 0.8; }

@@ -3,6 +3,12 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.38.2] — 2026-10-27 · marcha forzada junto a los víveres · sync con `VRhino/BronzeAge@52fb7d4`
+
+### Cambiado
+- **Marcha forzada** también en la barra de víveres del mundo, a su izquierda: botón «» Marcha forzada», encendido (terracota) cuando está
+  puesta y apagado cuando no. Solo el Líder lo pulsa; los demás ven el estado. Sigue también en el panel ⚑.
+
 ## [0.38.1] — 2026-10-27 · la Caravana de Fundación espera dentro y se la lleva el ejército · sync con `VRhino/BronzeAge@52fb7d4`
 
 ### Cambiado

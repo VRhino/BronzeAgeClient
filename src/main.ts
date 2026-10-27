@@ -1203,7 +1203,10 @@ function pintarComida(p: ProyeccionJugador): void {
   if (motivo) selectorViveres.abierto = false;
   selectorViveres.cantidad = Math.max(1, Math.min(selectorViveres.cantidad, maximo || 1));
   const fraccion = capacidad > 0 ? Math.min(1, viveres / capacidad) : 0;
-  const html = `<span>🌾 Víveres</span><div class="mapa-comida-barra"><i style="width:${(fraccion * 100).toFixed(1)}%"></i></div><strong>${viveres} / ${capacidad}</strong>
+  // Marcha forzada a la izquierda de los víveres: encendida o apagada; solo el Líder la cambia (`marchaForzada { ejercitoId, activa }`).
+  const forzada = columna.marchaForzada === true;
+  const botonForzada = `<button type="button" class="mapa-forzada${forzada ? ' activa' : ''}" data-viveres="forzada" aria-pressed="${forzada}"${esLider ? '' : ' disabled'} title="${escaparHtml(`Marcha forzada ${forzada ? 'puesta' : 'quitada'}: ×1,5 de velocidad y, solo mientras marcha, ×2 de víveres.${esLider ? ` Pulsa para ${forzada ? 'quitarla' : 'ponerla'}.` : ' Solo el Líder la cambia.'}`)}">» Marcha forzada</button>`;
+  const html = `${botonForzada}<span>🌾 Víveres</span><div class="mapa-comida-barra"><i style="width:${(fraccion * 100).toFixed(1)}%"></i></div><strong>${viveres} / ${capacidad}</strong>
     <button type="button" class="btn-secondary" data-viveres="abrir"${motivo ? ' disabled' : ''} title="${escaparHtml(motivo || 'Pasa trigo del carro a tus víveres: lo que cabe.')}">＋ desde el carro</button>
     ${selectorViveres.abierto ? `<div class="mapa-comida-selector"><span>Trigo del carro: ${enElCarro} · cabe ${hueco}</span><input type="range" min="1" max="${maximo}" value="${selectorViveres.cantidad}" data-viveres="barra" /><input type="number" class="form-input" min="1" max="${maximo}" value="${selectorViveres.cantidad}" data-viveres="cantidad" /><button type="button" class="btn-primary" data-viveres="confirmar">Pasar a víveres</button><p class="faction-error" data-campo="error-viveres" role="alert"></p></div>` : ''}`;
   caja.hidden = false;
@@ -1211,6 +1214,13 @@ function pintarComida(p: ProyeccionJugador): void {
   caja.title = 'Víveres: el trigo que come tu columna: en marcha, media ración; acampada, una décima parte de eso. Sin víveres, la moral cae y la tropa deserta. Siempre van contigo.';
   const valor = (): number => Math.max(1, Math.min(maximo, Math.floor(Number(caja.querySelector<HTMLInputElement>('input[data-viveres="cantidad"]')?.value ?? 1)) || 1));
   pintar(caja, html, () => {
+    caja.querySelector<HTMLButtonElement>('[data-viveres="forzada"]')?.addEventListener('click', async (ev) => {
+      const boton = ev.currentTarget as HTMLButtonElement;
+      boton.disabled = true;
+      const mensaje = await ejecutarYRefrescar('marchaForzada', { ejercitoId: columna.id, activa: !forzada });
+      boton.disabled = false;
+      if (mensaje) avisoMapa(mensaje);
+    });
     caja.querySelector('[data-viveres="abrir"]')?.addEventListener('click', () => { selectorViveres = { abierto: !selectorViveres.abierto, cantidad: maximo || 1 }; pintarComida(p); });
     caja.querySelector<HTMLInputElement>('input[data-viveres="barra"]')?.addEventListener('input', (ev) => {
       selectorViveres.cantidad = Number((ev.target as HTMLInputElement).value);
