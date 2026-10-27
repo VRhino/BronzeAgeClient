@@ -110,6 +110,8 @@ export interface Recinto {
 }
 
 export interface Asentamiento {
+  /** Su zona de influencia real (polígono recortado por las fronteras, motor `Asentamiento.zona`): donde caben sus pueblos. */
+  zonaReal?: Point[];
   id: string;
   nombre?: string;
   faccionId: string;
@@ -566,6 +568,44 @@ export interface CampamentoMercenarios {
   mercado: Record<string, number>;
   /** Fondo de refundación: `heroeId` -> recurso -> lo que aportó. */
   fondos: Record<string, Record<string, number>>;
+}
+
+/** Un pueblo activo (Economia_Construccion §14): un extractor sobre su nodo o una aldea agrícola en su punto (motor 7086ebc). `propio` = de tu
+ * Facción (llega de `FACCION`/`ASENTAMIENTO` con todo); los ajenos llegan de la `VISTA` solo con dónde están y qué son. */
+export interface PuebloDeMapa {
+  id: string;
+  madreId: string;
+  propio: boolean;
+  /** Id de catálogo del extractor (`cantera`, `minaCobre`…) o `aldeaAgricola`. */
+  tipo: string;
+  nodoId?: string;
+  posicion: Point;
+  /** Lo que guarda su almacén local (500 entre todo): en una aldea, trigo y ganado; en un extractor, su recurso (`recurso` vacío si no se sabe). */
+  almacen: Record<string, number>;
+  capacidad: number;
+  carroId?: string;
+  guarnicionId?: string;
+  batallaId?: string;
+  nivelAldea?: number;
+  /** Fertilidad del punto de la aldea (1 = 1,0). */
+  fertilidad?: number;
+  rebano?: { especie: string; cabezas: number };
+}
+
+/** Una obra de mapa (§14): la de un pueblo o una aldea (pendiente de materiales o levantándose), la subida de nivel de una aldea, o una avanzada. */
+export interface ObraDeMapa {
+  id: string;
+  madreId: string;
+  propia: boolean;
+  tipo: 'pueblo' | 'avanzada' | 'mejoraAvanzada' | 'reparacion' | 'aldea' | 'mejoraAldea';
+  posicion: Point;
+  nodoId?: string;
+  /** La aldea que sube de nivel, o la avanzada que se mejora o repara. */
+  destinoId?: string;
+  requerido: Record<string, number>;
+  entregado: Record<string, number>;
+  /** Presente cuando ya arrancó (todo entregado). */
+  terminaEn?: number;
 }
 
 /** Un alijo de exploración a la vista que aún no abriste (Doc 1.9b): su oro va a tu oro de botín. */

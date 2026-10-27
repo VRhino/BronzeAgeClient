@@ -1,0 +1,357 @@
+// PUEBLOS Y OBRAS DE MAPA (Economia_Construccion §14 y §14.0; motor 7086ebc). Un pueblo es de su plaza madre: un extractor sobre un nodo de piedra
+// o mineral, o una ALDEA AGRÍCOLA en un punto fértil de la zona (granjas, corrales y su rebaño; acarrea trigo y ganado). Se levanta en tres pasos:
+//   1. marcar   desde la plaza madre, su Gobernador o su Maestro de Obras, residente y dentro: `marcarPueblo { nodoId }` o `marcarAldea { punto }`;
+//   2. llevar   la obra queda «pendiente de materiales» en el mapa: una columna de la Facción lleva lo que pide en su carro o en sus caravanas
+//               enganchadas y, a la puerta de la obra, cualquiera de sus ciudadanos lo entrega (`entregarEnObra`);
+//   3. esperar  con todo entregado arranca la obra (4-8 h) y el pueblo queda activo.
+// La aldea sube de nivel igual (`mejorarAldea` deja otra obra de materiales) y sigue produciendo mientras tanto. Aquí no se decide ninguna regla: las
+// cifras salen de `GET /v1/datos` y el motor valida; su rechazo se enseña tal cual.
+//   plaza      la subpestaña «Pueblos» del Centro urbano (`SUBPESTANA_PUEBLOS`): cupo, lista, marcar, mejorar, reponer carro, destruir
+//   mapa       los pueblos y las obras se pintan (`dibujarPueblosYObras`) y se seleccionan (`seleccionarPuebloUObra`, fichas `FICHA_PUEBLO`/`FICHA_OBRA`)
+//   ascenso    la subida de nivel de la plaza con sus requisitos (`htmlAscensoLocal`): el nivel 2 pide ya una aldea activa
+import { bloqueDeDatos, catalogoDeCaravanas, radioDePuerta, type ProyeccionJugador } from '../apiCliente';
+import { estadoCliente, textoEnTiempoReal } from './estadoCliente';
+import { EDIFICIO_NOMBRE, RECURSO_NOMBRE, faccionColor } from '../paletas';
+import type { Asentamiento, ObraDeMapa, Point, PuebloDeMapa } from '../tiposDominio';
+import { ayuda } from './ayuda';
+import { agarre } from './agarre';
+import { miColumna } from './ejercitos';
+import { dibujarIconoMapa } from '../mundo/iconosMapa';
+import type { ContextoPlaza, FichaMapaExtra, ObjetoBajoElClic, SubpestanaPlaza } from './ganchos';
+
+type Escapar = (valor: string) => string;
+
+interface ParamsPueblos {
+  nivelMadreMinimo?: { extractor?: number; aldea?: number };
+  cupoPorNivel?: Record<string, number>;
+  capacidadAlmacenLocal?: number;
+  costeAdicional?: Record<string, number>;
+  aldea?: {
+    fertilidadMinima?: number;
+    separacionMinima?: number;
+    niveles?: Record<string, { granjas: number; corrales: number; coste: Record<string, number>; obraMinutos: number }>;
+  };
+}
+interface Especie { topePorCorral: number; pieDeCriaPorCorral: number; crecimientoPorHora: number; productos: Record<string, number> }
+interface RequisitoNivel { pesants?: number; artesanos?: number; edificios?: string[]; edificiosMinimo?: number; aldeasAgricolas?: number; nivelInternoMinimo?: Record<string, number>; recintoCompletoNivelMinimo?: number }
+
+/** Los tipos de nodo que admiten un pueblo extractor (el ganado ya no: sale de las aldeas). */
+const NODOS_EXTRAIBLES = new Set(['piedra', 'cobre', 'estano', 'hierro', 'oro']);
+const ESPECIE_NOMBRE: Record<string, string> = { vacuno: 'vacuno' };
+
+const distancia = (a: Point, b: Point): number => Math.hypot(a.x - b.x, a.y - b.y);
+const n0 = (v: number): string => String(Math.floor(v));
+const listaRecursos = (r: Record<string, number>): string =>
+  Object.entries(r).filter(([, n]) => n > 0).map(([k, n]) => `${Math.ceil(n)} ${RECURSO_NOMBRE[k] ?? k}`).join(', ');
+/** El carro de acarreo con su buey (un carro básico de la flota), que toda obra de pueblo se lleva además de lo suyo. */
+function costeCarro(): Record<string, number> | undefined {
+  const c = catalogoDeCaravanas(alLlegarDatos);
+  return c ? sumar(c.carros.basico?.costo, c.animales.buey?.costo) : undefined;
+}
+const sumar = (...xs: (Record<string, number> | undefined)[]): Record<string, number> => {
+  const r: Record<string, number> = {};
+  for (const x of xs) for (const [k, n] of Object.entries(x ?? {})) r[k] = (r[k] ?? 0) + n;
+  return r;
+};
+
+export const esAldea = (x: { tipo: string }): boolean => x.tipo === 'aldeaAgricola';
+export function nombreDePueblo(x: PuebloDeMapa): string {
+  return esAldea(x) ? `Aldea agrícola${x.nivelAldea ? ` (nivel ${x.nivelAldea})` : ''}` : EDIFICIO_NOMBRE[x.tipo] ?? x.tipo;
+}
+const NOMBRE_OBRA: Record<ObraDeMapa['tipo'], string> = {
+  pueblo: 'Obra de pueblo', aldea: 'Obra de aldea agrícola', mejoraAldea: 'Mejora de aldea', avanzada: 'Obra de avanzada', mejoraAvanzada: 'Mejora de avanzada', reparacion: 'Reparación de avanzada',
+};
+/** El pueblo de una obra: comparten número (`obra-7` ↔ `pueblo-7`). */
+const puebloDeObra = (obraId: string): string => obraId.replace(/^obra-/, 'pueblo-');
+const faltan = (o: ObraDeMapa): Record<string, number> =>
+  Object.fromEntries(Object.entries(o.requerido).map(([k, n]) => [k, Math.max(0, n - (o.entregado[k] ?? 0))] as const).filter(([, n]) => n > 0));
+
+/** Repinta cuando llegan los datos de juego (la primera vez se piden en segundo plano). */
+const alLlegarDatos = (): void => { if (estadoCliente.proyeccionUltima) alCargarDatos?.(); };
+const params = (): ParamsPueblos | null => bloqueDeDatos<ParamsPueblos>('PUEBLOS_EXTRACTORES', alLlegarDatos);
+let alCargarDatos: (() => void) | undefined;
+
+function nombrePlaza(p: ProyeccionJugador, id: string): string {
+  return p.asentamientos.find((a) => a.id === id)?.nombre ?? p.asentamientosAvistados?.find((a) => a.id === id)?.nombre ?? id;
+}
+
+/** ¿Está `q` dentro del polígono `zona`? (par-impar). */
+function dentro(q: Point, zona: Point[]): boolean {
+  let c = false;
+  for (let i = 0, j = zona.length - 1; i < zona.length; j = i++) {
+    const a = zona[i]!, b = zona[j]!;
+    if (a.y > q.y !== b.y > q.y && q.x < ((b.x - a.x) * (q.y - a.y)) / (b.y - a.y) + a.x) c = !c;
+  }
+  return c;
+}
+
+/** Los de esta plaza: pueblos activos y obras de pueblo o aldea (las de avanzada van aparte). */
+function deLaPlaza(p: ProyeccionJugador, a: Asentamiento): { pueblos: PuebloDeMapa[]; obras: ObraDeMapa[] } {
+  return {
+    pueblos: (p.pueblos ?? []).filter((x) => x.propio && x.madreId === a.id),
+    obras: (p.obrasDeMapa ?? []).filter((o) => o.propia && o.madreId === a.id && (o.tipo === 'pueblo' || o.tipo === 'aldea' || o.tipo === 'mejoraAldea')),
+  };
+}
+
+/** Pueblos que ocupan cupo: los activos y las obras de pueblo o aldea (pendientes o levantándose); la mejora de una aldea no suma. */
+function cupo(p: ProyeccionJugador, a: Asentamiento): { usados: number; total: number | null } {
+  const { pueblos, obras } = deLaPlaza(p, a);
+  const total = params()?.cupoPorNivel?.[String(a.nivelActual ?? a.nivel)];
+  return { usados: pueblos.length + obras.filter((o) => o.tipo !== 'mejoraAldea').length, total: total ?? null };
+}
+
+/** Nodos de piedra o mineral dentro de la zona real de la plaza que aún no tienen pueblo ni obra. */
+function nodosLibres(p: ProyeccionJugador, a: Asentamiento): { id: string; tipo: string; d: number }[] {
+  const zona = a.zonaReal;
+  const nodos = estadoCliente.mapaCache?.mapa.nodos ?? [];
+  if (!zona || zona.length < 3) return [];
+  const ocupados = new Set([...(p.pueblos ?? []).map((x) => x.nodoId), ...(p.obrasDeMapa ?? []).map((o) => o.nodoId)].filter(Boolean));
+  return nodos
+    .filter((n) => NODOS_EXTRAIBLES.has(n.tipo) && !ocupados.has(n.id) && dentro(n.posicion, zona))
+    .map((n) => ({ id: n.id, tipo: n.tipo, d: distancia(n.posicion, a.posicion) }))
+    .sort((x, y) => x.d - y.d);
+}
+
+// ---------------------------------------------------------------- plaza: subpestaña «Pueblos»
+
+function htmlAlmacen(x: PuebloDeMapa): string {
+  const partes = Object.entries(x.almacen).map(([r, n]) => `${n0(n)} ${r ? RECURSO_NOMBRE[r] ?? r : ''}`.trim());
+  return `${partes.join(' · ') || '0'} / ${n0(x.capacidad)}`;
+}
+
+function htmlRebano(x: PuebloDeMapa): string {
+  if (!x.rebano) return '';
+  const especie = bloqueDeDatos<Record<string, Especie>>('ESPECIES', alLlegarDatos)?.[x.rebano.especie];
+  const corrales = params()?.aldea?.niveles?.[String(x.nivelAldea ?? 1)]?.corrales;
+  const tope = especie && corrales ? ` de ${especie.topePorCorral * corrales}` : '';
+  return ` · rebaño ${n0(x.rebano.cabezas)}${tope} cabezas de ${ESPECIE_NOMBRE[x.rebano.especie] ?? x.rebano.especie}`;
+}
+
+function htmlFilaPueblo(x: PuebloDeMapa, gestiona: boolean, obras: ObraDeMapa[], e: Escapar): string {
+  const aldea = esAldea(x);
+  const niveles = params()?.aldea?.niveles ?? {};
+  const siguiente = aldea && x.nivelAldea ? niveles[String(x.nivelAldea + 1)] : undefined;
+  const mejorando = obras.some((o) => o.tipo === 'mejoraAldea' && o.destinoId === x.id);
+  const botones = !gestiona ? '' : `<div class="mapa-seleccion-acciones">
+      ${aldea && siguiente && !mejorando ? `<button class="btn-secondary" type="button" data-pueblo-accion="mejorar" data-pueblo="${e(x.id)}" title="${e(`Al nivel ${x.nivelAldea! + 1}: ${siguiente.granjas} granjas y ${siguiente.corrales} corrales. Pide ${listaRecursos(siguiente.coste)}, que se llevan a la aldea como una obra.`)}">Mejorar a nivel ${x.nivelAldea! + 1}</button>` : ''}
+      ${x.carroId ? '' : `<button class="btn-secondary" type="button" data-pueblo-accion="carro" data-pueblo="${e(x.id)}" title="Compra en la plaza un carro con su buey para el acarreo (si no, la plaza lo repone sola en cuanto puede pagarlo).">Reponer carro</button>`}
+      <button class="btn-secondary" type="button" data-pueblo-accion="destruir" data-pueblo="${e(x.id)}">Destruir</button></div>`;
+  return `<div class="mapa-lista-item pueblo-fila"><div><strong>${e(nombreDePueblo(x))}</strong>
+      <span>almacén ${e(htmlAlmacen(x))}${e(htmlRebano(x))}${x.fertilidad !== undefined ? ` · fertilidad ${x.fertilidad.toFixed(2).replace('.', ',')}` : ''} · ${x.carroId ? 'con carro' : 'sin carro de acarreo'}${x.batallaId ? ' · <strong>¡atacado!</strong>' : ''}</span>
+      ${mejorando ? '<span>Mejora en marcha: mira su obra abajo.</span>' : ''}</div>${botones}</div>`;
+}
+
+function htmlFilaObra(p: ProyeccionJugador, o: ObraDeMapa, gestiona: boolean, e: Escapar): string {
+  const falta = faltan(o);
+  const estado = o.terminaEn !== undefined
+    ? `levantándose · termina en ${textoEnTiempoReal(o.terminaEn - p.instante)}`
+    : Object.keys(falta).length ? `pendiente de materiales · faltan ${listaRecursos(falta)}` : 'materiales completos';
+  const cancelar = gestiona && o.tipo !== 'mejoraAldea' ? `<button class="btn-secondary" type="button" data-pueblo-accion="destruir" data-pueblo="${e(puebloDeObra(o.id))}" title="Cancela la obra: no devuelve lo entregado.">Cancelar</button>` : '';
+  return `<div class="mapa-lista-item pueblo-fila obra"><div><strong>${e(NOMBRE_OBRA[o.tipo])}</strong> <span>${e(estado)}</span></div>${cancelar}</div>`;
+}
+
+function htmlMarcar(p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
+  const pr = params();
+  const nivel = a.nivelActual ?? a.nivel;
+  const { usados, total } = cupo(p, a);
+  const sinCupo = total !== null && usados >= total;
+  const aldea1 = pr?.aldea?.niveles?.['1'];
+  const costeAldea = aldea1 ? listaRecursos(sumar(aldea1.coste, pr?.costeAdicional, costeCarro())) : '';
+  const nivelAldea = pr?.nivelMadreMinimo?.aldea ?? 1, nivelExtractor = pr?.nivelMadreMinimo?.extractor ?? 2;
+  const libres = nivel >= nivelExtractor ? nodosLibres(p, a) : [];
+  if (sinCupo) return '<p class="asent-lado-nota">Cupo lleno: para marcar otro pueblo, sube la plaza de nivel o destruye uno.</p>';
+  return `<strong class="heroe-sub">Marcar un pueblo nuevo</strong>
+    <div class="pueblo-marcar">
+      <div><strong>Aldea agrícola</strong>${ayuda('pueblos:aldea', `Granjas y corrales en un punto fértil de la zona (fertilidad ${pr?.aldea?.fertilidadMinima ?? 0.3} o más, a ${pr?.aldea?.separacionMinima ?? 3} de toda plaza y todo pueblo, con camino hasta la plaza). Acarrea trigo y ganado; su rebaño crece solo. El nivel 2 de la plaza pide una aldea activa.`)}
+        <span class="asent-lado-nota">${nivel < nivelAldea ? `Desde el nivel ${nivelAldea} de la plaza.` : `Obra: ${e(costeAldea || '—')} (con el carro de acarreo y su buey), que se llevan al sitio.`}</span>
+        <button class="btn-primary" type="button" data-pueblo-accion="elegir-aldea"${nivel < nivelAldea ? ' disabled' : ''}>Elegir el sitio en el mapa</button></div>
+      <div><strong>Extractor</strong>${ayuda('pueblos:extractor', 'Una cantera o una mina sobre un nodo libre de la zona. Pide su edificio, 50 de madera y el carro de acarreo con su buey, que se llevan al sitio.')}
+        ${nivel < nivelExtractor ? `<span class="asent-lado-nota">Desde el nivel ${nivelExtractor} de la plaza.</span>`
+          : libres.length === 0 ? '<span class="asent-lado-nota">No hay nodos de piedra ni de mineral libres en la zona.</span>'
+            : `<div class="campamento-fila"><select class="form-input" data-pueblo-nodo>${libres.map((n) => `<option value="${e(n.id)}">${e(RECURSO_NOMBRE[n.tipo] ?? n.tipo)} · a ${n0(n.d)}</option>`).join('')}</select>
+              <button class="btn-primary" type="button" data-pueblo-accion="marcar-nodo">Marcar</button></div>`}</div>
+    </div>`;
+}
+
+function htmlPueblos(c: ContextoPlaza): string {
+  const { proyeccion: p, asentamiento: a, escapar: e } = c;
+  const { pueblos, obras } = deLaPlaza(p, a);
+  const gestiona = c.cargo !== null && c.resideAqui;
+  const { usados, total } = cupo(p, a);
+  return `<span class="faction-kicker">Pueblos ${ayuda('plaza:pueblos', 'Un pueblo es de la plaza: se marca aquí, una columna de tu Facción lleva sus materiales hasta la obra en el mapa y los entrega a su puerta (cualquier ciudadano de la columna), y con todo entregado se levanta. Su carro acarrea lo que produce a la plaza.')}</span>
+    <p class="asent-lado-nota">Cupo ${usados} / ${total ?? '—'} (por el nivel de la plaza).</p>
+    ${pueblos.length + obras.length === 0 ? '<p class="mapa-lista-vacia">Esta plaza aún no tiene pueblos.</p>'
+      : `<div class="mapa-lista">${pueblos.map((x) => htmlFilaPueblo(x, gestiona, obras, e)).join('')}${obras.map((o) => htmlFilaObra(p, o, gestiona, e)).join('')}</div>`}
+    ${gestiona ? htmlMarcar(p, a, e) : '<p class="asent-lado-nota">Los pueblos los marca, mejora y destruye el Gobernador o el Maestro de Obras, residente y dentro de la plaza.</p>'}
+    <p class="faction-error" data-pueblo-error role="alert"></p>`;
+}
+
+/** Quien abre el mapa para elegir un punto (lo pone `main.ts`): `alElegir` devuelve el error del motor, o `null` si salió bien (y el mapa se cierra). */
+export const selectorDePunto: { abrir: ((texto: string, centro: Point, zona: Point[] | undefined, alElegir: (q: Point) => Promise<string | null>) => void) | null } = { abrir: null };
+
+function cablearPueblos(c: ContextoPlaza): void {
+  const { proyeccion: p, asentamiento: a, cuerpo } = c;
+  alCargarDatos = c.refrescar;
+  const error = cuerpo.querySelector<HTMLElement>('[data-pueblo-error]');
+  const enviar = async (b: HTMLButtonElement, tipo: string, params: object): Promise<void> => {
+    b.disabled = true;
+    const mensaje = await c.ejecutar(tipo, params);
+    b.disabled = false;
+    if (error) error.textContent = mensaje ?? '';
+  };
+  cuerpo.querySelectorAll<HTMLButtonElement>('[data-pueblo-accion]').forEach((b) => b.addEventListener('click', () => {
+    const puebloId = b.dataset.pueblo ?? '';
+    switch (b.dataset.puebloAccion) {
+      case 'mejorar': return void enviar(b, 'mejorarAldea', { heroeId: p.heroeId, puebloId });
+      case 'carro': return void enviar(b, 'reponerCarroDeAcarreo', { heroeId: p.heroeId, puebloId });
+      case 'destruir':
+        if (confirm(puebloId.startsWith('pueblo-') && (p.pueblos ?? []).some((x) => x.id === puebloId) ? '¿Destruir el pueblo? No se recupera nada de lo que guarda ni de lo que costó.' : '¿Cancelar la obra? Lo entregado no se devuelve.')) void enviar(b, 'destruirPueblo', { heroeId: p.heroeId, puebloId });
+        return;
+      case 'marcar-nodo': {
+        const nodoId = cuerpo.querySelector<HTMLSelectElement>('[data-pueblo-nodo]')?.value;
+        if (nodoId) void enviar(b, 'marcarPueblo', { asentamientoId: a.id, heroeId: p.heroeId, nodoId });
+        return;
+      }
+      case 'elegir-aldea':
+        selectorDePunto.abrir?.('Pulsa en el mapa donde levantar la aldea agrícola: tierra fértil dentro de la zona de la plaza.', a.posicion, a.zonaReal,
+          (punto) => c.ejecutar('marcarAldea', { asentamientoId: a.id, heroeId: p.heroeId, punto }));
+        return;
+    }
+  }));
+}
+
+export const SUBPESTANA_PUEBLOS: SubpestanaPlaza = { id: 'pueblos', etiqueta: 'Pueblos', html: htmlPueblos, cablear: cablearPueblos };
+
+// ---------------------------------------------------------------- subida de nivel de la plaza
+
+/**
+ * La subida de nivel con sus requisitos, calculados con `NIVEL_ASENTAMIENTO` y `ASCENSO_ASENTAMIENTO` de los datos (el motor no proyecta su evaluación):
+ * población, edificios, aldea activa y coste en el almacén. El cupo de la Facción y la solvencia los comprueba el motor al pedirla.
+ */
+export function htmlAscensoLocal(p: ProyeccionJugador, a: Asentamiento, soyGobernador: boolean, e: Escapar, alCargar?: () => void): string {
+  if (alCargar) alCargarDatos = alCargar;
+  const reqs = bloqueDeDatos<{ nivelMaximo?: number; requisitos?: Record<string, RequisitoNivel> }>('NIVEL_ASENTAMIENTO', alLlegarDatos);
+  const asc = bloqueDeDatos<{ porNivelObjetivo?: Record<string, { costo: Record<string, number>; obraMinutos: number }>; nivelTechoProvisional?: number }>('ASCENSO_ASENTAMIENTO', alLlegarDatos);
+  if (!reqs || !asc) return '';
+  const objetivo = a.nivel + 1;
+  const techo = Math.min(reqs.nivelMaximo ?? 5, asc.nivelTechoProvisional ?? 5);
+  const cabecera = `<div class="asent-lado-cabecera"><span class="faction-kicker">Subida de nivel ${ayuda('plaza:ascenso', 'La subida de nivel no es automática: la pide el Gobernador, se paga entera del almacén y tarda una obra. Si conquistan la plaza durante la obra, se pierde.')}</span></div>`;
+  if (objetivo > techo) return `${cabecera}<p class="asent-lado-nota">La plaza está en el nivel más alto que se puede alcanzar hoy.</p>`;
+  const r = reqs.requisitos?.[String(objetivo)] ?? {};
+  const coste = asc.porNivelObjetivo?.[String(objetivo)];
+  const pob = a.poblacion ?? { pesants: 0, artesanos: 0, nobleza: 0 };
+  const activos = (tipo: string): boolean => a.edificios.some((x) => x.tipo === tipo && x.estado === 'activo' && (x.nivelInterno ?? 1) >= (r.nivelInternoMinimo?.[tipo] ?? 1));
+  const hechos = (r.edificios ?? []).filter(activos);
+  const minimo = r.edificiosMinimo ?? (r.edificios ?? []).length;
+  const aldeas = (p.pueblos ?? []).filter((x) => x.propio && x.madreId === a.id && esAldea(x)).length;
+  const almacen = a.almacen ?? {};
+  const faltaPagar = Object.entries(coste?.costo ?? {}).filter(([k, n]) => (almacen[k]?.cantidad ?? 0) < n);
+  const filas: [boolean, string][] = [
+    [Math.floor(pob.pesants) >= (r.pesants ?? 0), `${r.pesants ?? 0} pesants (tiene ${n0(pob.pesants)})`],
+    ...((r.artesanos ?? 0) > 0 ? [[Math.floor(pob.artesanos) >= r.artesanos!, `${r.artesanos} artesanos (tiene ${n0(pob.artesanos)})`] as [boolean, string]] : []),
+    ...((r.edificios ?? []).length ? [[hechos.length >= minimo, `${minimo === (r.edificios ?? []).length ? 'Todos' : `${minimo}`} de: ${(r.edificios ?? []).map((t) => EDIFICIO_NOMBRE[t] ?? t).join(', ')} (${hechos.length ? `activos: ${hechos.map((t) => EDIFICIO_NOMBRE[t] ?? t).join(', ')}` : 'ninguno activo'})`] as [boolean, string]] : []),
+    ...((r.aldeasAgricolas ?? 0) > 0 ? [[aldeas >= r.aldeasAgricolas!, `Una aldea agrícola activa (pestaña Pueblos)${aldeas ? '' : ': aún no tiene'}`] as [boolean, string]] : []),
+    ...(r.recintoCompletoNivelMinimo ? [[true, `Un recinto de muralla completo de nivel ${r.recintoCompletoNivelMinimo} o más (lo comprueba el servidor)`] as [boolean, string]] : []),
+    [faltaPagar.length === 0, `En el almacén: ${listaRecursos(coste?.costo ?? {}) || 'sin coste'}${faltaPagar.length ? ` (faltan ${faltaPagar.map(([k, n]) => `${Math.ceil(n - (almacen[k]?.cantidad ?? 0))} ${RECURSO_NOMBRE[k] ?? k}`).join(', ')})` : ''}`],
+  ];
+  const puede = !a.ascenso && filas.every(([ok]) => ok);
+  if (a.ascenso) return `${cabecera}<p class="asent-lado-nota">Obra en curso hacia el nivel ${a.ascenso.nivelObjetivo} · termina en ${textoEnTiempoReal(a.ascenso.completaEn - p.instante)}.</p>`;
+  return `${cabecera}
+    <p class="asent-lado-nota">Al nivel ${objetivo}${coste ? ` · obra de ${Math.round(coste.obraMinutos / 60)} h` : ''}:</p>
+    <ul class="ascenso-requisitos">${filas.map(([ok, t]) => `<li class="${ok ? 'ok' : 'falta'}">${ok ? '✓' : '✗'} ${e(t)}</li>`).join('')}</ul>
+    <p class="asent-lado-nota">El servidor comprueba además el cupo de tu Facción y que los ingresos cubran el mantenimiento del nivel nuevo.</p>
+    ${soyGobernador
+      ? `<button id="btn-solicitar-ascenso" class="btn-primary" type="button"${puede ? '' : ' disabled'}>Subir a nivel ${objetivo}</button>`
+      : '<p class="asent-lado-nota">Solo el Gobernador puede pedir la subida.</p>'}`;
+}
+
+// ---------------------------------------------------------------- mapa: pintar, seleccionar y fichas
+
+const COLOR_AJENO = '#9a927f';
+
+/** Pinta pueblos (casa; granero si es aldea) y obras (martillo, más tenue). Los propios en el color de tu Facción. */
+export function dibujarPueblosYObras(ctx: CanvasRenderingContext2D, p: ProyeccionJugador, escala: number, k: number): void {
+  const color = (madreId: string, propio: boolean): string => {
+    if (!propio) {
+      const f = p.asentamientosAvistados?.find((a) => a.id === madreId)?.faccionId;
+      return f ? faccionColor(f, p.facciones) : COLOR_AJENO;
+    }
+    return faccionColor(p.faccionId ?? '', p.facciones);
+  };
+  for (const x of p.pueblos ?? []) {
+    dibujarIconoMapa(ctx, esAldea(x) ? 'aldea' : 'pueblo', x.posicion.x * escala, x.posicion.y * escala, 14 * k, color(x.madreId, x.propio));
+  }
+  ctx.save();
+  for (const o of p.obrasDeMapa ?? []) {
+    if (o.tipo === 'mejoraAldea') continue; // la aldea ya se pinta; su mejora se ve en su ficha
+    ctx.globalAlpha = o.terminaEn !== undefined ? 0.9 : 0.6;
+    dibujarIconoMapa(ctx, 'obra', o.posicion.x * escala, o.posicion.y * escala, 13 * k, color(o.madreId, o.propia));
+  }
+  ctx.restore();
+}
+
+/** Qué pueblo u obra hay bajo el clic. A una obra propia, el clic además lleva tu columna (para entregar a su puerta). */
+export function seleccionarPuebloUObra(p: ProyeccionJugador, punto: Point): ObjetoBajoElClic | null {
+  const candidatos = [
+    ...(p.obrasDeMapa ?? []).filter((o) => o.tipo !== 'mejoraAldea').map((o) => ({ tipo: 'obraMapa', id: o.id, d: distancia(o.posicion, punto), o })),
+    ...(p.pueblos ?? []).map((x) => ({ tipo: 'puebloMapa', id: x.id, d: distancia(x.posicion, punto), o: undefined })),
+  ].filter((c) => c.d < agarre(12)).sort((a, b) => a.d - b.d);
+  const c = candidatos[0];
+  if (!c) return null;
+  const ir = c.o?.propia && !c.o.terminaEn && miColumna(p) ? { tipo: 'punto' as const, punto: c.o.posicion } : undefined;
+  return { tipo: c.tipo, id: c.id, ...(ir ? { ir } : {}) };
+}
+
+export const FICHA_PUEBLO: FichaMapaExtra = {
+  tipo: 'puebloMapa',
+  buscar: (p, id) => (p.pueblos ?? []).find((x) => x.id === id),
+  html: (p, x: PuebloDeMapa, c) => {
+    const e = c.escapar;
+    const mejora = (p.obrasDeMapa ?? []).find((o) => o.tipo === 'mejoraAldea' && o.destinoId === x.id);
+    return `<span class="faction-kicker">${x.propio ? 'Pueblo de tu Facción' : 'Pueblo ajeno'}</span>
+      <h3>${e(nombreDePueblo(x))}</h3>
+      <p class="asent-lado-nota">De ${e(nombrePlaza(p, x.madreId))}.${x.batallaId ? ' <strong>Lo están atacando.</strong>' : ''}</p>
+      ${x.propio ? `<p class="asent-lado-nota">Almacén ${e(htmlAlmacen(x))}${e(htmlRebano(x))}${x.fertilidad !== undefined ? ` · fertilidad ${x.fertilidad.toFixed(2).replace('.', ',')}` : ''}. ${x.carroId ? 'Su carro acarrea a la plaza.' : 'Sin carro de acarreo.'}</p>` : ''}
+      ${mejora ? htmlEntrega(p, mejora, c) : ''}`;
+  },
+  cablear: (cont, p, x: PuebloDeMapa, c) => {
+    const mejora = (p.obrasDeMapa ?? []).find((o) => o.tipo === 'mejoraAldea' && o.destinoId === x.id);
+    if (mejora) cablearEntrega(cont, p, mejora, c);
+  },
+};
+
+function htmlEntrega(p: ProyeccionJugador, o: ObraDeMapa, c: { escapar: Escapar }): string {
+  const e = c.escapar;
+  const falta = faltan(o);
+  const mi = miColumna(p);
+  const d = mi ? distancia(mi.posicionActual, o.posicion) : null;
+  const puerta = radioDePuerta();
+  const motivo = o.terminaEn !== undefined ? '' : !o.propia ? '' : !mi ? 'Hace falta una columna tuya con los materiales en su carro o en sus caravanas.'
+    : d! > puerta ? `Acerca tu columna a la obra: está a ${n0(d!)} y se entrega a ${puerta} o menos (un clic en la obra la lleva).` : '';
+  return `<p class="asent-lado-nota">${o.terminaEn !== undefined ? `Levantándose: termina en ${e(textoEnTiempoReal(o.terminaEn - p.instante))}.`
+      : `Pide ${e(listaRecursos(o.requerido))}. Entregado: ${e(listaRecursos(o.entregado) || 'nada')}.${Object.keys(falta).length ? ` Faltan ${e(listaRecursos(falta))}.` : ''}`}</p>
+    ${o.propia && o.terminaEn === undefined ? `<div class="mapa-seleccion-acciones"><button class="btn-primary" type="button" data-obra-entregar="${e(o.id)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>Entregar materiales</button></div>
+      ${motivo ? `<p class="asent-lado-nota">${e(motivo)}</p>` : '<p class="asent-lado-nota">Se entrega lo que falta de lo que lleve tu columna: primero el carro, luego las caravanas enganchadas.</p>'}
+      <p class="faction-error" data-obra-error role="alert"></p>` : ''}`;
+}
+
+function cablearEntrega(cont: HTMLElement, p: ProyeccionJugador, o: ObraDeMapa, c: { ejecutar: (tipo: string, params: object) => Promise<string | null> }): void {
+  const b = cont.querySelector<HTMLButtonElement>(`[data-obra-entregar="${o.id}"]`);
+  b?.addEventListener('click', async () => {
+    b.disabled = true;
+    const mensaje = await c.ejecutar('entregarEnObra', { heroeId: p.heroeId, obraId: o.id, materiales: {} });
+    b.disabled = false;
+    const err = cont.querySelector<HTMLElement>('[data-obra-error]');
+    if (err) err.textContent = mensaje ?? '';
+  });
+}
+
+export const FICHA_OBRA: FichaMapaExtra = {
+  tipo: 'obraMapa',
+  buscar: (p, id) => (p.obrasDeMapa ?? []).find((o) => o.id === id),
+  html: (p, o: ObraDeMapa, c) => `<span class="faction-kicker">${o.propia ? 'Obra de tu Facción' : 'Obra ajena'}</span>
+    <h3>${c.escapar(NOMBRE_OBRA[o.tipo])}</h3>
+    <p class="asent-lado-nota">De ${c.escapar(nombrePlaza(p, o.madreId))}.${o.propia ? '' : ' Pendiente, se ve pero no se puede atacar.'}</p>
+    ${o.propia ? htmlEntrega(p, o, c) : ''}`,
+  cablear: (cont, p, o: ObraDeMapa, c) => cablearEntrega(cont, p, o, c),
+};

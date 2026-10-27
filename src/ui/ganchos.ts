@@ -13,6 +13,7 @@ import { SUBPESTANA_INFORMACION, SUBPESTANA_RECETAS } from './vistaCiudad';
 import { SUBPESTANA_TRUEQUES } from './panelTrueques';
 import { SUBPESTANA_ALIADOS } from './panelAliados';
 import { SUBPESTANA_MISIONES } from './misiones';
+import { FICHA_OBRA, FICHA_PUEBLO, SUBPESTANA_PUEBLOS, seleccionarPuebloUObra } from './pueblos';
 import { FICHA_CARAVANA_AJENA, FICHA_COLUMNA_AJENA, seleccionarAjeno } from './interaccionAjena';
 
 type Escapar = (valor: string) => string;
@@ -63,6 +64,9 @@ export const SUBPESTANAS_CENTRO_EXTRA: SubpestanaPlaza[] = [
 
   // --- hueco misiones (plaza › Centro urbano: las misiones de la plaza)
   SUBPESTANA_MISIONES,
+
+  // --- hueco pueblos (plaza › Centro urbano: pueblos extractores y aldea agrícola)
+  SUBPESTANA_PUEBLOS,
 ];
 
 /** Subpestañas EXTRA de Mercado, después de Órdenes · Caravanas. */
@@ -101,6 +105,9 @@ export const FICHAS_MAPA_EXTRA: FichaMapaExtra[] = [
   FICHA_COLUMNA_AJENA,
   FICHA_CARAVANA_AJENA,
 
+  // --- hueco pueblos (pueblos y obras de mapa)
+  FICHA_PUEBLO,
+  FICHA_OBRA,
 ];
 
 /** Qué hay bajo un clic del mapa: se prueban antes que los selectores propios de `main.ts`; el primero que devuelva algo gana. `ir` = adónde marchar (opcional). */
@@ -113,4 +120,6 @@ export const SELECTORES_MAPA_EXTRA: ((p: ProyeccionJugador, punto: { x: number; 
   // --- hueco bloque C1
   seleccionarAjeno,
 
+  // --- hueco pueblos
+  seleccionarPuebloUObra,
 ];

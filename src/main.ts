@@ -82,6 +82,7 @@ import { explicarError } from './ui/erroresServidor';
 import { motivosParaCrearFaccion } from './ui/validarFaccion';
 import { nombreDeHeroe } from './ui/nombres';
 import { htmlEstados } from './ui/estados';
+import { htmlAscensoLocal, selectorDePunto } from './ui/pueblos';
 import { actualizarSeguimiento, cablearMisiones, elegirPestanaMisiones, htmlListaMisiones, htmlPanelMisiones, misionesPorReclamar, pintarRastreador } from './ui/misiones';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
@@ -935,6 +936,12 @@ let panelJugador: PanelJugador | null = null;
 /** ¿Está abierto el mapa «desde dentro» (botón Mapa de la barra) sobre el campamento o el asentamiento? */
 let vistaMapaAbierta = false;
 let controlVistaMapa: ControlMapa | null = null;
+/** Elegir un punto en el modo mapa (la aldea agrícola, `ui/pueblos.ts`): el clic lo manda en vez de solo mirar. Se olvida al cerrar el mapa. */
+let eleccionEnMapa: { texto: string; zona?: { x: number; y: number }[]; alElegir: (q: { x: number; y: number }) => Promise<string | null> } | null = null;
+selectorDePunto.abrir = (texto, centro, zona, alElegir) => {
+  eleccionEnMapa = { texto, zona, alElegir };
+  alternarVistaMapa(true, centro);
+};
 
 /** Pinta el botón activo de la barra y el panel abierto (`.jugador-panel`). Se llama al montar y en cada refresco; si nada cambió no toca el
  * DOM, o el sondeo de 3 s se llevaría lo que se está escribiendo. */
@@ -1070,16 +1077,31 @@ function alternarVistaMapa(abrir: boolean = !vistaMapaAbierta, centro?: { x: num
       <div class="mapa-lienzo"><canvas id="mapa-interior"></canvas></div>
       <div class="mapa-zoom"><button type="button" data-zoom="in" aria-label="Acercar">+</button><button type="button" data-zoom="out" aria-label="Alejar">−</button></div>
       <button class="btn-secondary mapa-interior-cerrar" type="button">Volver</button>
+      ${eleccionEnMapa ? `<div class="mapa-eleccion" role="status"><span>${escaparHtml(eleccionEnMapa.texto)}</span><p class="faction-error" data-eleccion-error role="alert"></p></div>` : ''}
     </div>`);
     const interior = pantalla.querySelector<HTMLElement>('.mapa-interior')!;
+    // Eligiendo un punto, el clic lo manda; si el motor lo rechaza se dice por qué y se puede probar otro sitio.
+    const alClicar = (evento: PointerEvent): void => {
+      const eleccion = eleccionEnMapa;
+      if (!eleccion || !controlVistaMapa) return;
+      const q = controlVistaMapa.aMundo(evento);
+      const error = interior.querySelector<HTMLElement>('[data-eleccion-error]');
+      if (error) error.textContent = 'Enviando…';
+      void eleccion.alElegir(q).then((mensaje) => {
+        if (mensaje) { if (error) error.textContent = mensaje; return; }
+        eleccionEnMapa = null;
+        alternarVistaMapa(false);
+      });
+    };
     // Arranca a un cuarto de la escala de visión (cuatro veces lo que ves de radio); de ahí, hasta el mundo entero o hasta la visión.
-    const control = instalarZoomPan(interior, interior.querySelector<HTMLElement>('.mapa-lienzo')!, { alCambiar: () => void pintarVistaMapa(), factorInicial: 0.25 });
+    const control = instalarZoomPan(interior, interior.querySelector<HTMLElement>('.mapa-lienzo')!, { alCambiar: () => void pintarVistaMapa(), factorInicial: eleccionEnMapa ? 1 : 0.25, alClicar });
     controlVistaMapa = control;
     void radioDeVision().then((r) => control.fijarRadioVision(r));
     interior.querySelectorAll<HTMLButtonElement>('[data-zoom]').forEach((b) => b.addEventListener('click', () => control.zoomHacia(b.dataset.zoom === 'in' ? 1 : -1)));
     interior.querySelector('.mapa-interior-cerrar')?.addEventListener('click', () => alternarVistaMapa(false));
     void pintarVistaMapa(centro ?? true);
   } else {
+    eleccionEnMapa = null;
     // De vuelta al modo mundo, que dejó de pintarse mientras el mapa lo tapaba (y la escala de agarre de sus clics es la suya).
     const p = proyeccionAlInstante() ?? proyeccion;
     if (controlMapaActivo) void dibujarPantallaSegunModo(p);
@@ -1108,6 +1130,20 @@ async function pintarVistaMapa(centrar: boolean | { x: number; y: number } = fal
   const escala = controlVistaMapa.transformar(ctx);
   pintarTerreno(ctx, mapa, p, escala);
   pintarMiradas(ctx, p.miradasIntel ?? [], p.instante, escala);
+  // Eligiendo el sitio de una aldea: la zona de la plaza, que es donde cabe.
+  const zona = eleccionEnMapa?.zona;
+  if (zona && zona.length > 2) {
+    ctx.beginPath();
+    zona.forEach((q, i) => (i === 0 ? ctx.moveTo(q.x * escala, q.y * escala) : ctx.lineTo(q.x * escala, q.y * escala)));
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(216, 184, 120, 0.12)';
+    ctx.fill();
+    ctx.strokeStyle = '#d8b878';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
@@ -1591,7 +1627,7 @@ function renderPanelEdificios(): void {
       ? `<div class="asent-renombrar"><span class="faction-kicker">Nombre de la ciudad ${ayuda('plaza:nombre', 'Vacío = vuelve a mostrarse el identificador.')}</span><div class="mercado-acciones"><input class="form-input" type="text" maxlength="40" data-campo="nombre-plaza" value="${escaparHtml(asentamiento.nombre ?? '')}" placeholder="${escaparHtml(asentamiento.id)}" /><button id="btn-renombrar" class="btn-secondary" type="button">Cambiar nombre</button></div></div>`
       : '';
     const contenido = extra ? extra.html(ctxPlaza) : seccionAsent === 'resumen'
-      ? seccionResumen(asentamiento) + formNombre + seccionAscenso(asentamiento, proyeccion.ascensoDeAsentamiento, cargo === 'gobernador')
+      ? seccionResumen(asentamiento) + formNombre + (proyeccion.ascensoDeAsentamiento ? seccionAscenso(asentamiento, proyeccion.ascensoDeAsentamiento, cargo === 'gobernador') : htmlAscensoLocal(proyeccion, asentamiento, cargo === 'gobernador', escaparHtml, renderPanelEdificios))
         + (puedeMudarme ? '<button id="btn-mudarme" class="btn-secondary" type="button" title="Hacer de esta plaza tu base: tu campamento se muda contigo">Hacer de esta plaza mi base</button>' : '')
       : seccionAsent === 'edificios' ? seccionEdificios(asentamiento, cargo)
         : seccionAsent === 'produccion' ? seccionProduccion(proyeccion.produccionDeAsentamiento)
@@ -2319,6 +2355,7 @@ function montar(pantalla: Pantalla): void {
   limpiarPantalla = null;
   panelJugador = null;
   vistaMapaAbierta = false;
+  eleccionEnMapa = null;
   controlVistaMapa?.destruir();
   controlVistaMapa = null;
   switch (pantalla) {

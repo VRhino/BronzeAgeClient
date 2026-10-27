@@ -12,6 +12,7 @@ import {
 import { dibujarIconoMapa } from './mundo/iconosMapa';
 import { imagenDeSigilo } from './sigilo/lienzo';
 import { esDeCerca, hayArtefacto, pintarArbolesDelArtefacto, pintarSueloDelArtefacto, vistaDelLienzo } from './mundo/pintarArtefacto';
+import { dibujarPueblosYObras } from './ui/pueblos';
 
 /** px de pantalla por unidad con la que los glifos de las columnas salen a su tamaño de diseño (≈ la escala de visión en un portátil).
  * El héroe no tiene tamaño en el mundo, así que su glifo y su ruta se escalan con el zoom (`factorDeGlifo`) entre un mínimo y un máximo:
@@ -734,6 +735,9 @@ export function pintarTerreno(
   }
 
   ctx.setLineDash([]);
+
+  // 13b. PUEBLOS Y OBRAS DE MAPA (extractores, aldeas agrícolas y sus obras): `ui/pueblos.ts`.
+  dibujarPueblosYObras(ctx, proyeccion, escalaCanvas, k);
 
   // 14. CARAVANAS (Triángulos identificables por color de origen). Las enganchadas a un ejército van pegadas detrás de él (16); la de
   // fundación suelta, con su carromato. La de fundación que espera dentro de su plaza o campamento (`disponible`) no está en el mapa.

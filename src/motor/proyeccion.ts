@@ -110,6 +110,7 @@ function recinto(r: pb.Recinto): d.Recinto {
 function asentamiento(a: pb.Asentamiento, ahora: number): d.Asentamiento {
   return {
     id: a.id, nombre: a.nombre, faccionId: a.faccionId, posicion: punto(a.posicion), nivel: a.nivel, nivelActual: a.nivelActual,
+    zonaReal: a.zona.length ? a.zona.map(punto) : undefined,
     medidorMantenimiento: a.medidorMantenimiento ? valorDeRitmo(a.medidorMantenimiento, ahora) : undefined,
     ocupacionHasta: instante(a.ocupacionHastaMs),
     poblacion: a.poblacion
@@ -192,6 +193,27 @@ function caravana(c: pb.Caravana, ahora: number): d.Caravana {
     estado: ESTADO_CARAVANA[c.estado], tipo: TIPO_CARAVANA[c.tipo], origenCampamentoId: c.origenCampamentoId, faccionId: c.faccionId, titularId: c.titularId,
     escoltaIds: c.escoltaIds, carros: c.carros.map((x) => ({ tipoCarro: x.tipoCarro as 'basico' | 'reforzado', animal: x.animal as 'buey' | 'caballo' | 'camello' | undefined })),
     reservadaManual: c.reservadaManual, contenido: cantidades(c.contenido), caducaEn: instante(c.caducaEnMs), preparaHasta: instante(c.preparaHastaMs),
+  };
+}
+
+const TIPO_OBRA: Record<number, d.ObraDeMapa['tipo']> = { 1: 'pueblo', 2: 'avanzada', 3: 'mejoraAvanzada', 4: 'reparacion', 5: 'aldea', 6: 'mejoraAldea' };
+
+function pueblo(x: pb.Pueblo, propio: boolean, ahora: number): d.PuebloDeMapa {
+  const almacen: Record<string, number> = {};
+  for (const [r, e] of Object.entries(x.almacenPorRecurso)) almacen[r] = valorDeRitmo(e.cantidad, ahora);
+  if (Object.keys(almacen).length === 0 && x.almacenLocal) almacen[''] = valorDeRitmo(x.almacenLocal.cantidad, ahora);
+  return {
+    id: x.id, madreId: x.asentamientoMadreId, propio, tipo: x.tipoExtractor, nodoId: opcional(x.nodoId), posicion: punto(x.posicion),
+    almacen, capacidad: mil(x.almacenLocal?.capacidad), carroId: opcional(x.carroAcarreoId), guarnicionId: opcional(x.guarnicionEscuadronId),
+    batallaId: opcional(x.batallaId), nivelAldea: x.nivelAldea, fertilidad: x.fertilidad === undefined ? undefined : mil(x.fertilidad),
+    rebano: x.rebanoEspecie ? { especie: x.rebanoEspecie, cabezas: mil(x.rebanoCabezas) } : undefined,
+  };
+}
+
+function obraDeMapa(o: pb.ObraDeMapa, propia: boolean): d.ObraDeMapa {
+  return {
+    id: o.id, madreId: o.asentamientoMadreId, propia, tipo: TIPO_OBRA[o.tipo] ?? 'pueblo', posicion: punto(o.posicion), nodoId: opcional(o.nodoId),
+    destinoId: opcional(o.destinoId), requerido: cantidades(o.requerido), entregado: cantidades(o.entregado), terminaEn: instante(o.terminaEnMs),
   };
 }
 
@@ -530,6 +552,17 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
     })(),
     escenasCampamento: deAmbito('CAMPAMENTO:', 'campamentoMercenarios').map(escenaCampamento).filter((e): e is d.EscenaCampamento => Boolean(e)),
     mercadoCampamento: mercadoCampamento(deAmbito('CAMPAMENTO:', 'campamentoMercenarios'), h, ahora),
+    pueblos: (() => {
+      const propios = [...deAmbito('FACCION:', 'pueblo'), ...deAmbito('ASENTAMIENTO:', 'pueblo')];
+      const ids = new Set(propios.map((x) => x.id));
+      // El de ASENTAMIENTO (refrescado cada minuto) gana al de FACCION.
+      const porId = new Map(propios.map((x) => [x.id, x]));
+      return [...[...porId.values()].map((x) => pueblo(x, true, ahora)), ...deAmbito('VISTA:', 'pueblo').filter((x) => !ids.has(x.id)).map((x) => pueblo(x, false, ahora))];
+    })(),
+    obrasDeMapa: (() => {
+      const propias = new Map([...deAmbito('FACCION:', 'obra'), ...deAmbito('ASENTAMIENTO:', 'obra')].map((x) => [x.id, x]));
+      return [...[...propias.values()].map((x) => obraDeMapa(x, true)), ...deAmbito('VISTA:', 'obra').filter((x) => !propias.has(x.id)).map((x) => obraDeMapa(x, false))];
+    })(),
     alijos: deAmbito('HEROE:', 'alijo').map((x) => ({ id: x.id, posicion: punto(x.posicion), oro: mil(x.oro) })),
     miradasIntel: deAmbito('VISTA:', 'mirada').map((m) => ({
       id: m.id, faccionId: m.faccionId, origenId: m.origenId, centro: punto(m.centro), radio: mil(m.radio),

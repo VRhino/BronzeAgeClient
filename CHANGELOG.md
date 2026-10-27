@@ -3,6 +3,20 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.39.0] — 2026-10-27 · pueblos y aldea agrícola · sync con `VRhino/BronzeAge@7086ebc`
+
+### Añadido
+- **Pestaña «Pueblos»** del Centro urbano: cupo por nivel de la plaza, lista de pueblos (almacén, rebaño, fertilidad, carro) y de obras
+  (pendiente de materiales, levantándose), con **Mejorar** la aldea, **Reponer carro**, **Destruir** y **Cancelar** obra. Con cupo libre,
+  el Gobernador o el Maestro de Obras residentes marcan una **aldea agrícola** (eligiendo el sitio en el mapa, con la zona de la plaza
+  resaltada) o un **extractor** sobre un nodo libre de piedra o mineral de la zona (desde el nivel 2). El coste que se enseña incluye el
+  carro de acarreo con su buey.
+- **Obras y pueblos en el mapa**: icono de aldea, de pueblo y de obra. La ficha de una obra dice qué pide, qué falta y cuándo termina, y
+  trae **«Entregar materiales»**, que entrega lo que lleve la columna (primero el carro, luego las caravanas) si está a la puerta; si no,
+  «Ir» la lleva hasta ella.
+- **Subida de nivel** en el Resumen: requisitos del nivel siguiente (pesants, edificios activos, aldea activa, coste en el almacén) con
+  ✓/✗ y el botón para pedirla.
+
 ## [0.38.5] — 2026-10-27 · contrato de la aldea agrícola y la cría · sync con `VRhino/BronzeAge@7086ebc`
 
 ### Cambiado

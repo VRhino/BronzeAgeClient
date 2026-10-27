@@ -3015,3 +3015,15 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .mapa-comida > .mapa-forzada { padding: 3px 10px; font-size: 12px; border-radius: 4px; border: 1px solid #4a4538; background: #2a2620; color: #9a927f; cursor: pointer; }
 .mapa-comida > .mapa-forzada.activa { background: var(--terracota); border-color: #e8806f; color: #fff; box-shadow: 0 0 8px rgba(191, 82, 51, 0.6); }
 .mapa-comida > .mapa-forzada:disabled { cursor: default; opacity: 0.8; }
+
+/* --- Pueblos y aldea agrícola --- */
+.pueblo-fila { flex-wrap: wrap; }
+.pueblo-fila.obra strong { color: var(--oro); }
+.pueblo-marcar { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+.pueblo-marcar > div { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border: 1px solid var(--bronce-osc); border-radius: 3px; }
+.ascenso-requisitos { margin: 4px 0 8px; padding-left: 4px; list-style: none; font-size: 0.82rem; display: flex; flex-direction: column; gap: 3px; }
+.ascenso-requisitos li.ok { color: #9fd49a; }
+.ascenso-requisitos li.falta { color: #e8a08f; }
+.mapa-eleccion { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 4; max-width: min(560px, calc(100% - 32px)); padding: 8px 14px; background: rgba(20, 16, 12, 0.92); border: 1px solid var(--oro); border-radius: 4px; color: var(--pergamino); font-size: 0.85rem; text-align: center; }
+.mapa-eleccion .faction-error:empty { display: none; }
+.mapa-interior:has(.mapa-eleccion) canvas { cursor: crosshair; }
