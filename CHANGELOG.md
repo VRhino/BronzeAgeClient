@@ -3,6 +3,13 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.38.5] — 2026-10-27 · contrato de la aldea agrícola y la cría · sync con `VRhino/BronzeAge@7086ebc`
+
+### Cambiado
+- Contrato regenerado de 7086ebc (foto BAN47: hace falta partida nueva y el artefacto de mundo nuevo, sin nodos de ganado). Mensajes para
+  los rechazos nuevos: `ascenso.falta_aldea` (el nivel 2 pide una aldea agrícola activa), `obra.solo_en_aldea` (el Corral va en la aldea) y
+  los de marcar y mejorar la aldea (`pueblo.*`). La interfaz de pueblos y de la aldea aún no está en el cliente.
+
 ## [0.38.4] — 2026-10-27 · fundar con la Caravana de Fundación enganchada · sync con `VRhino/BronzeAge@52fb7d4`
 
 ### Arreglado
