@@ -31,7 +31,7 @@ import {
 import { cablearSalidaDePlazaAjena, htmlSalidaDePlazaAjena } from './ui/salidaDePlazaAjena';
 import { elegirPestanaHeroe, minutosHerido, pintarPanelHeroe } from './ui/panelHeroe';
 import { htmlBarraJugador, type PanelJugador } from './ui/barraJugador';
-import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
+import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno, recortarAZona } from './render';
 import { EDIFICIO_COLOR, EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from './paletas';
 import type { Alijo, Asentamiento, BloqueoAscenso, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Edificio, EvaluacionAscenso, ParamsCrearHeroe, ProduccionItem, Sigilo } from './tiposDominio';
 import { svgSigilo } from './sigilo/sigilo';
@@ -364,7 +364,7 @@ function montarCampamento(): void {
   menuEsquinaAbierto = false;
   seccionCamp = 'resumen';
   app.innerHTML = `<div class="asent-screen camp-screen">
-    ${htmlBarraJugador(proyeccion, true, escaparHtml)}
+    ${htmlBarraJugador(proyeccion, escaparHtml)}
     <header class="asent-barra">
       <span class="asent-nombre">Campamento ${escaparHtml(campamento.id)}</span>
       <span class="asent-nivel" id="camp-residencia"></span>
@@ -1021,10 +1021,10 @@ function posicionDelHeroe(p: ProyeccionJugador): { x: number; y: number } | null
   return miColumna(p)?.posicionActual ?? campamentoActual(p)?.posicion ?? p.asentamientos[0]?.posicion ?? null;
 }
 
-/** Abre o cierra el mapa del mundo sobre la pantalla de dentro. Es el mismo mapa que el de fuera, con la visión de ahora, pero solo para mirar:
- * un clic no manda marchar a nadie. */
-function alternarVistaMapa(abrir: boolean = !vistaMapaAbierta): void {
-  const pantalla = document.querySelector<HTMLElement>('.asent-screen');
+/** Abre o cierra el MODO MAPA (botón Mapa de la barra, en cualquier pantalla): el mapa del mundo con la visión de ahora y zoom libre, pero
+ * solo para mirar: un clic no manda marchar a nadie. Se abre centrado en el héroe, o en `centro` («Mis cosas», el panel de ejército). */
+function alternarVistaMapa(abrir: boolean = !vistaMapaAbierta, centro?: { x: number; y: number }): void {
+  const pantalla = document.querySelector<HTMLElement>('.asent-screen') ?? document.querySelector<HTMLElement>('.mapa-screen:not(.mapa-interior)');
   const proyeccion = estadoCliente.proyeccionUltima;
   if (!pantalla || !proyeccion) return;
   vistaMapaAbierta = abrir;
@@ -1038,12 +1038,17 @@ function alternarVistaMapa(abrir: boolean = !vistaMapaAbierta): void {
       <button class="btn-secondary mapa-interior-cerrar" type="button">Volver</button>
     </div>`);
     const interior = pantalla.querySelector<HTMLElement>('.mapa-interior')!;
-    const control = instalarZoomPan(interior, interior.querySelector<HTMLElement>('.mapa-lienzo')!, { alCambiar: () => void pintarVistaMapa() });
+    // Arranca a un cuarto de la escala de visión (cuatro veces lo que ves de radio); de ahí, hasta el mundo entero o hasta la visión.
+    const control = instalarZoomPan(interior, interior.querySelector<HTMLElement>('.mapa-lienzo')!, { alCambiar: () => void pintarVistaMapa(), factorInicial: 0.25 });
     controlVistaMapa = control;
     void radioDeVision().then((r) => control.fijarRadioVision(r));
     interior.querySelectorAll<HTMLButtonElement>('[data-zoom]').forEach((b) => b.addEventListener('click', () => control.zoomHacia(b.dataset.zoom === 'in' ? 1 : -1)));
     interior.querySelector('.mapa-interior-cerrar')?.addEventListener('click', () => alternarVistaMapa(false));
-    void pintarVistaMapa(true);
+    void pintarVistaMapa(centro ?? true);
+  } else {
+    // De vuelta al modo mundo, que dejó de pintarse mientras el mapa lo tapaba (y la escala de agarre de sus clics es la suya).
+    const p = proyeccionAlInstante() ?? proyeccion;
+    if (controlMapaActivo) void dibujarPantallaSegunModo(p);
   }
   renderPanelJugador();
 }
@@ -1054,16 +1059,16 @@ function ajustarLienzo(canvas: HTMLCanvasElement, ancho: number, alto: number): 
   if (canvas.height !== h) canvas.height = h;
 }
 
-/** Pinta el terreno y lo que se ve en el mapa de la vista interior; `centrar` la lleva al héroe (solo al abrirla). */
-async function pintarVistaMapa(centrar = false): Promise<void> {
-  const p = estadoCliente.proyeccionUltima;
+/** Pinta el terreno y lo que se ve en el modo mapa; `centrar` (solo al abrirlo) lo lleva al héroe, o al punto dado. */
+async function pintarVistaMapa(centrar: boolean | { x: number; y: number } = false): Promise<void> {
+  const p = proyeccionAlInstante() ?? estadoCliente.proyeccionUltima;
   const canvas = document.querySelector<HTMLCanvasElement>('#mapa-interior');
   const ctx = canvas?.getContext('2d');
   if (!p || !canvas || !ctx) return;
   const mapa = await sincronizarMapa(p.mapaId);
   if (document.querySelector('#mapa-interior') !== canvas) return; // se cerró mientras llegaba el mapa
-  const donde = posicionDelHeroe(p);
-  if (centrar && donde) controlVistaMapa?.centrar(donde, mapa.config.ancho, mapa.config.alto);
+  const donde = typeof centrar === 'object' ? centrar : centrar ? posicionDelHeroe(p) : null;
+  if (donde) controlVistaMapa?.centrar(donde, mapa.config.ancho, mapa.config.alto);
   controlVistaMapa?.fijarMundo(mapa.config.ancho, mapa.config.alto);
   if (!controlVistaMapa) return;
   const escala = controlVistaMapa.transformar(ctx);
@@ -1093,10 +1098,8 @@ function renderPanelRiel(): void {
   if (panelMapaAbierto === 'columna') {
     pintar(panel, htmlColumna(proyeccion, escaparHtml), () => cablearColumna(panel, proyeccion, ejecutarYRefrescar), 'columna');
   } else if (panelMapaAbierto === 'ejercito') {
-    pintar(panel, htmlPanelEjercito(proyeccion, escaparHtml), () => cablearPanelEjercito(panel, proyeccion, ejecutarYRefrescar, avisoMapa, (punto) => {
-      const mapa = estadoCliente.mapaCache?.mapa;
-      if (mapa && controlMapaActivo) controlMapaActivo.centrar(punto, mapa.config.ancho, mapa.config.alto);
-    }), 'ejercito');
+    // El modo mundo no se separa del héroe: ver otro sitio es abrir el modo mapa allí.
+    pintar(panel, htmlPanelEjercito(proyeccion, escaparHtml), () => cablearPanelEjercito(panel, proyeccion, ejecutarYRefrescar, avisoMapa, (punto) => alternarVistaMapa(true, punto)), 'ejercito');
   } else if (panelMapaAbierto === 'cosas') {
     const asentamientos = asentamientosDelMapa(proyeccion).filter((a) => a.faccionId === proyeccion.faccionId);
     const columnas = proyeccion.ejercitos;
@@ -1114,10 +1117,7 @@ function renderPanelRiel(): void {
           : '<p class="mapa-lista-vacia">Ninguna.</p>'}
       </div>`;
     pintar(panel, htmlCosas, () => panel.querySelectorAll<HTMLButtonElement>('.mapa-lista-item').forEach((boton) => {
-      boton.addEventListener('click', () => {
-        const mapa = estadoCliente.mapaCache?.mapa;
-        if (mapa && controlMapaActivo) controlMapaActivo.centrar({ x: Number(boton.dataset.centrarX), y: Number(boton.dataset.centrarY) }, mapa.config.ancho, mapa.config.alto);
-      });
+      boton.addEventListener('click', () => alternarVistaMapa(true, { x: Number(boton.dataset.centrarX), y: Number(boton.dataset.centrarY) }));
     }), 'cosas');
   } else {
     // fundar: solo con una Caravana de Fundación enganchada, y donde se está (Doc 1.3, 1.8)
@@ -1214,7 +1214,7 @@ function montarMapa(): void {
   menuEsquinaAbierto = false;
   app.innerHTML = `<div class="mapa-screen">
     <div class="mapa-lienzo"><canvas id="mapa"></canvas></div>
-    ${htmlBarraJugador(proyeccion, false, escaparHtml)}
+    ${htmlBarraJugador(proyeccion, escaparHtml)}
     <nav class="mapa-riel" aria-label="Paneles del mapa">
       <button type="button" data-panel="columna" title="Lo que llevas: tropa y carro" aria-label="Lo que llevas: tropa y carro">⚔</button>
       <button type="button" data-panel="ejercito" title="Ejército: formar uno o unirte a uno" aria-label="Ejército">⚑</button>
@@ -1231,7 +1231,6 @@ function montarMapa(): void {
   </div>`;
   const contenedor = document.querySelector<HTMLElement>('.mapa-screen')!;
   const lienzo = document.querySelector<HTMLElement>('.mapa-lienzo')!;
-  const columna = miColumna(proyeccion);
   const alClicar = (evento: PointerEvent): void => {
     const proy = estadoCliente.proyeccionUltima;
     const mapa = estadoCliente.mapaCache?.mapa;
@@ -1283,13 +1282,15 @@ function montarMapa(): void {
       void marcharAObjetivo({ tipo: 'punto', punto });
     }
   };
+  // MODO MUNDO: la vista va pegada al héroe con dos zooms, la visión llenando la pantalla y 1,5 veces la visión, y solo se pinta el círculo
+  // de 1,5 veces la visión a su alrededor. Mirar más lejos es el modo mapa (botón Mapa). La vista guardada solo aporta panel y selección.
   const control = instalarZoomPan(contenedor, lienzo, {
-    camaraInicial: vista ? { escala: vista.escala, cx: vista.cx, cy: vista.cy } : undefined,
+    niveles: [1, 1 / 1.5],
     alClicar,
     alCambiar: () => { const p = proyeccionAlInstante() ?? estadoCliente.proyeccionUltima; if (p && controlMapaActivo === control) void dibujarPantallaSegunModo(p); },
   });
   controlMapaActivo = control;
-  // El zoom máximo (y el de arranque) es la escala de visión del héroe: el radio sale de los datos de juego del servidor.
+  // Los zooms son múltiplos de la escala de visión del héroe: el radio sale de los datos de juego del servidor.
   void radioDeVision().then((r) => control.fijarRadioVision(r));
   // El mundo solo avanza por tick y este cliente aún no tiene tiempo real (`WS .../tiempo-real`): sin esto el
   // mapa sería una foto y la columna nunca parecería moverse. Sondeo suave mientras la pantalla Mapa esté
@@ -1301,8 +1302,8 @@ function montarMapa(): void {
     void refrescarDatosJuego().catch(() => {}).finally(() => { sondeando = false; });
   }, 3000);
   // Las columnas avanzan por su plan y el servidor no manda nada mientras marchan: sin esto se verían a saltos (en cada sondeo). Mientras algo
-  // propio está en marcha, el mapa se repinta a ~30 fps con la proyección del instante; con algo ajeno a la vista, a ~5 fps. Si la vista sigue
-  // a tu columna (no la has arrastrado), la cámara va con ella.
+  // propio está en marcha, el mapa se repinta a ~30 fps con la proyección del instante; con algo ajeno a la vista, a ~5 fps. La cámara va con
+  // tu columna (`dibujarPantallaSegunModo`). Con el modo mapa abierto encima, el mundo no se pinta y el mapa se repinta a ~5 fps.
   let fotograma = 0;
   let ultimoFotograma = 0;
   const animar = (t: number): void => {
@@ -1310,15 +1311,18 @@ function montarMapa(): void {
     if (controlMapaActivo !== control || estadoCliente.modoVista !== 'mundo') return;
     const p = proyeccionAlInstante();
     if (!p) return;
+    if (vistaMapaAbierta) {
+      if (t - ultimoFotograma < 200) return;
+      ultimoFotograma = t;
+      void pintarVistaMapa();
+      return;
+    }
     const marchaPropia = p.ejercitos.some((e) => e.estado !== 'estacionado' && (e.ruta?.length ?? 0) >= 2) || p.caravanas.some((c) => (c.ruta?.length ?? 0) >= 2);
     const ajenoALaVista = (p.ejercitosAvistados?.length ?? 0) + (p.caravanasAvistadas?.length ?? 0) > 0;
     if (!marchaPropia && !ajenoALaVista) return;
     if (t - ultimoFotograma < (marchaPropia ? 33 : 200)) return;
     ultimoFotograma = t;
-    const mia = miColumna(p);
-    const mapa = estadoCliente.mapaCache?.mapa;
-    if (mia && mapa && control.siguiendo()) control.centrar(mia.posicionActual, mapa.config.ancho, mapa.config.alto); // repinta él (alCambiar)
-    else void dibujarPantallaSegunModo(p);
+    void dibujarPantallaSegunModo(p);
   };
   fotograma = requestAnimationFrame(animar);
   const guardarVista = (): void => guardarVistaMapa(gameId, { ...control.estado(), panel: panelMapaAbierto === 'fundar' ? null : panelMapaAbierto, seleccion: seleccionMapa });
@@ -1345,11 +1349,7 @@ function montarMapa(): void {
 
   renderPanelRiel();
   if (seleccionMapa) renderSeleccionMapa();
-  void dibujarPantallaSegunModo(proyeccion).then(() => {
-    const mapa = estadoCliente.mapaCache?.mapa;
-    // Con vista guardada manda ella; la primera vez, centrado en tu columna.
-    if (!vista && columna && mapa) control.centrar(columna.posicionActual, mapa.config.ancho, mapa.config.alto);
-  });
+  void dibujarPantallaSegunModo(proyeccion);
 }
 
 // --- PANTALLA ASENTAMIENTO (T6) -----------------------------------------------------------------
@@ -1888,7 +1888,7 @@ function montarAsentamiento(): void {
   panelAsentAbierto = null;
   menuEsquinaAbierto = false;
   app.innerHTML = `<div class="asent-screen">
-    ${htmlBarraJugador(proyeccion, true, escaparHtml)}
+    ${htmlBarraJugador(proyeccion, escaparHtml)}
     <header class="asent-barra">
       <span class="asent-nombre">${escaparHtml(asentamiento.nombre ?? asentamiento.id)}</span>
       <span class="asent-nivel">Nivel ${asentamiento.nivel}</span>
@@ -2130,11 +2130,18 @@ async function dibujarPantallaSegunModo(proyeccion: ProyeccionJugador): Promise<
     if (titulo) titulo.textContent = 'Mapa del Mundo (Evaluación T2a)';
     const mapa = await sincronizarMapa(proyeccion.mapaId);
     controlMapaActivo?.fijarMundo(mapa.config.ancho, mapa.config.alto);
+    // Modo mundo: la cámara, pegada al héroe, y solo el círculo de su zona.
+    const donde = posicionDelHeroe(proyeccion);
+    if (donde) controlMapaActivo?.seguir(donde);
+    const zona = controlMapaActivo?.zona() ?? undefined;
     // La cámara pone la transformación; sin ella (no debería), el mundo entero en el lienzo.
     if (controlMapaActivo) escalaMundo = controlMapaActivo.transformar(ctx);
     else { ctx.setTransform(1, 0, 0, 1, 0, 0); escalaMundo = canvas.width / mapa.config.ancho; }
-    pintarTerreno(ctx, mapa, proyeccion, escalaMundo);
+    ctx.save();
+    if (zona) recortarAZona(ctx, zona, escalaMundo);
+    pintarTerreno(ctx, mapa, proyeccion, escalaMundo, zona);
     pintarMiradas(ctx, proyeccion.miradasIntel ?? [], proyeccion.instante, escalaMundo);
+    ctx.restore();
   } else {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     if (titulo) titulo.textContent = 'Vista de Asentamiento (Geometría Urbana T2a)';
@@ -2287,7 +2294,7 @@ function refrescarPantalla(pantalla: Pantalla): void {
     renderPanelJugador();
     if (vistaMapaAbierta) void pintarVistaMapa();
   }
-  if (pantalla === 'mapa') { pintarComida(proyeccion); void dibujarPantallaSegunModo(proyeccion); renderSeleccionMapa(); renderPanelRiel(); return; }
+  if (pantalla === 'mapa') { pintarComida(proyeccion); if (!vistaMapaAbierta) void dibujarPantallaSegunModo(proyeccion); renderSeleccionMapa(); renderPanelRiel(); return; }
   if (pantalla === 'campamento') { const c = campamentoActual(proyeccion); if (c) pintarCampamento(proyeccion, c); return; }
   if (pantalla === 'asentamiento') { void dibujarPantallaSegunModo(proyeccion); renderPanelEdificios(); renderPanelRecursos(); renderPanelAsent(); return; }
   if (pantalla !== 'legacy') return;

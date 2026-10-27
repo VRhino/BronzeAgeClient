@@ -4,7 +4,9 @@
 //    sombreado de ladera con luz del noroeste, bosque por densidad y ríos), escalada con `drawImage`;
 //  * de CERCA: no se amplía esa imagen (se vería a cuadros). Se pinta la vista a media resolución de pantalla: relieve con la altura
 //    interpolada, bordes de clase orgánicos (la clase se mira en un punto desplazado por ruido determinista) y suelo de bosque oscurecido;
-//    encima, árboles sueltos a escala real. Se guarda por cámara: solo se recalcula al mover o hacer zoom.
+//    encima, árboles sueltos a escala real. Se guarda por cámara: solo se recalcula al mover o hacer zoom;
+//  * en el MODO MUNDO (`zona`): el mismo muestreo de cerca, pero por baldosas de mundo fijas y solo las del círculo alrededor del héroe,
+//    para que seguirle al marchar no rehaga el suelo en cada fotograma.
 //
 // Todo se pinta con la transformación de la cámara ya puesta en `ctx` (unidades × `escala`), como el resto del mapa.
 import type { MapaGenerado, RasterU8 } from '../terreno';
@@ -196,10 +198,86 @@ function imagenDeCerca(mapa: MapaGenerado, v: VistaDelMundo): HTMLCanvasElement 
   const alto = Math.max(1, Math.round(((v.y1 - v.y0) * v.escala) / 2));
   const clave = [v.x0, v.y0, v.escala, ancho, alto].map((n) => n.toFixed(4)).join('|');
   if (cacheCerca && cacheCerca.mapa === mapa && cacheCerca.clave === clave) return cacheCerca.capa;
+  const capa = cacheCerca?.capa ?? document.createElement('canvas');
+  muestrear(mapa, capa, v.x0, v.y0, v.x1, v.y1, ancho, alto);
+  cacheCerca = { mapa, clave, capa };
+  return capa;
+}
+
+/** Lado en unidades de las baldosas del suelo del modo mundo, y su resolución (px de imagen por unidad, fija: cambiar entre los dos zooms
+ * del modo mundo no rehace nada). El relieve se muestrea a la mitad (`PX_POR_UNIDAD_RELIEVE`) y se amplía; los árboles se pintan encima a
+ * resolución entera, así que van DENTRO de la baldosa y no se trazan uno a uno en cada fotograma. */
+const LADO_BALDOSA = 8;
+const PX_POR_UNIDAD_ZONA = 24;
+const PX_POR_UNIDAD_RELIEVE = 12;
+/** Baldosas guardadas como mucho (una zona de radio 22,5 pide ~49). */
+const MAX_BALDOSAS = 120;
+const baldosas = new Map<string, HTMLCanvasElement>();
+let mapaDeLasBaldosas: MapaGenerado | null = null;
+
+/** Una baldosa del suelo (`tx, ty` en múltiplos de `LADO_BALDOSA`), hecha una vez: al marchar solo se muestrean las que entran en la zona
+ * por delante, una fila cada 8 u, y no la vista entera en cada fotograma como haría la vista de cerca al seguir al héroe. */
+function baldosa(mapa: MapaGenerado, tx: number, ty: number): HTMLCanvasElement {
+  if (mapaDeLasBaldosas !== mapa) { baldosas.clear(); mapaDeLasBaldosas = mapa; }
+  const clave = `${tx},${ty}`;
+  const hecha = baldosas.get(clave);
+  if (hecha) {
+    baldosas.delete(clave); // al final: la más reciente
+    baldosas.set(clave, hecha);
+    return hecha;
+  }
+  const x0 = tx * LADO_BALDOSA;
+  const y0 = ty * LADO_BALDOSA;
+  const relieve = document.createElement('canvas');
+  const pxRelieve = LADO_BALDOSA * PX_POR_UNIDAD_RELIEVE;
+  muestrear(mapa, relieve, x0, y0, x0 + LADO_BALDOSA, y0 + LADO_BALDOSA, pxRelieve, pxRelieve);
+  const capa = document.createElement('canvas');
+  capa.width = capa.height = LADO_BALDOSA * PX_POR_UNIDAD_ZONA;
+  const cctx = capa.getContext('2d')!;
+  cctx.imageSmoothingEnabled = true;
+  cctx.imageSmoothingQuality = 'high';
+  cctx.drawImage(relieve, 0, 0, capa.width, capa.height);
+  // Los árboles, con la misma rejilla del mundo que de cerca: los que asoman de la vecina se pintan también aquí, y casan en la junta.
+  cctx.setTransform(1, 0, 0, 1, -x0 * PX_POR_UNIDAD_ZONA, -y0 * PX_POR_UNIDAD_ZONA);
+  pintarArboles(cctx, mapa, { x0: x0 - 1, y0: y0 - 1, x1: x0 + LADO_BALDOSA + 1, y1: y0 + LADO_BALDOSA + 1, escala: PX_POR_UNIDAD_ZONA, dpr: 1 });
+  baldosas.set(clave, capa);
+  if (baldosas.size > MAX_BALDOSAS) baldosas.delete(baldosas.keys().next().value!);
+  return capa;
+}
+
+/** Pinta las baldosas que tocan el círculo de la zona (y caen en la vista). */
+function pintarZona(ctx: CanvasRenderingContext2D, mapa: MapaGenerado, zona: Zona, v: VistaDelMundo): void {
+  const x0 = Math.max(v.x0, zona.centro.x - zona.radio, 0);
+  const y0 = Math.max(v.y0, zona.centro.y - zona.radio, 0);
+  const x1 = Math.min(v.x1, zona.centro.x + zona.radio, mapa.config.ancho);
+  const y1 = Math.min(v.y1, zona.centro.y + zona.radio, mapa.config.alto);
+  // Media px de imagen de solape entre baldosas vecinas: sin él, el suavizado deja una raya en las juntas.
+  const solape = 0.5 / PX_POR_UNIDAD_ZONA;
+  for (let ty = Math.floor(y0 / LADO_BALDOSA); ty * LADO_BALDOSA < y1; ty++) {
+    for (let tx = Math.floor(x0 / LADO_BALDOSA); tx * LADO_BALDOSA < x1; tx++) {
+      const bx = tx * LADO_BALDOSA;
+      const by = ty * LADO_BALDOSA;
+      // La esquina de la baldosa más cercana al centro, fuera del círculo: no se ve.
+      const dx = Math.max(bx - zona.centro.x, 0, zona.centro.x - bx - LADO_BALDOSA);
+      const dy = Math.max(by - zona.centro.y, 0, zona.centro.y - by - LADO_BALDOSA);
+      if (dx * dx + dy * dy > zona.radio * zona.radio) continue;
+      ctx.drawImage(baldosa(mapa, tx, ty), (bx - solape) * v.escala, (by - solape) * v.escala, (LADO_BALDOSA + 2 * solape) * v.escala, (LADO_BALDOSA + 2 * solape) * v.escala);
+    }
+  }
+}
+
+/** El círculo de mundo que pinta el modo mundo (`ControlMapa.zona`). */
+export interface Zona {
+  centro: { x: number; y: number };
+  radio: number;
+}
+
+/** Rellena `capa` (`ancho` × `alto` px) con el rectángulo de mundo `x0,y0 – x1,y1`, muestreando los rasters punto a punto. */
+function muestrear(mapa: MapaGenerado, capa: HTMLCanvasElement, x0: number, y0: number, x1: number, y1: number, ancho: number, alto: number): void {
+  const v = { x0, y0, x1, y1 };
   const t = mapa.rasters!.terreno!;
   const alt = mapa.rasters!.altura!;
   const bosque = mapa.rasters!.densidadBosque;
-  const capa = cacheCerca?.capa ?? document.createElement('canvas');
   capa.width = ancho;
   capa.height = alto;
   const cctx = capa.getContext('2d')!;
@@ -228,8 +306,6 @@ function imagenDeCerca(mapa: MapaGenerado, v: VistaDelMundo): HTMLCanvasElement 
     }
   }
   cctx.putImageData(img, 0, 0);
-  cacheCerca = { mapa, clave, capa };
-  return capa;
 }
 
 /** Árboles sueltos: uno cada ~1,2 u con probabilidad = densidad, en sitios fijos por hash de la posición. Solo de cerca. */
@@ -258,10 +334,15 @@ function pintarArboles(ctx: CanvasRenderingContext2D, mapa: MapaGenerado, v: Vis
   ctx.fill();
 }
 
-/** El suelo del mundo en la vista: de lejos la imagen de celdas; de cerca la vista muestreada y los árboles. */
-export function pintarSueloDelArtefacto(ctx: CanvasRenderingContext2D, mapa: MapaGenerado, v: VistaDelMundo): void {
+/** El suelo del mundo en la vista: de lejos la imagen de celdas; de cerca la vista muestreada y los árboles. Con `zona` (modo mundo), solo
+ * la imagen de la zona: quien llama ya ha recortado el lienzo a su círculo. */
+export function pintarSueloDelArtefacto(ctx: CanvasRenderingContext2D, mapa: MapaGenerado, v: VistaDelMundo, zona?: Zona): void {
   ctx.save();
-  if (!esDeCerca(mapa, v.escala)) {
+  if (zona) {
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    pintarZona(ctx, mapa, zona, v);
+  } else if (!esDeCerca(mapa, v.escala)) {
     ctx.imageSmoothingEnabled = v.escala * mapa.rasters!.terreno!.celda < 2;
     ctx.drawImage(imagenDeLejos(mapa), 0, 0, mapa.config.ancho * v.escala, mapa.config.alto * v.escala);
   } else {

@@ -9,7 +9,30 @@ import {
   faccionColor,
 } from './paletas';
 import { imagenDeSigilo } from './sigilo/lienzo';
-import { esDeCerca, hayArtefacto, pintarArbolesDelArtefacto, pintarSueloDelArtefacto, vistaDelLienzo } from './mundo/pintarArtefacto';
+import { esDeCerca, hayArtefacto, pintarArbolesDelArtefacto, pintarSueloDelArtefacto, vistaDelLienzo, type Zona } from './mundo/pintarArtefacto';
+
+/** px de pantalla por unidad con la que los glifos de las columnas salen a su tamaño de diseño (≈ la escala de visión en un portátil).
+ * El héroe no tiene tamaño en el mundo, así que su glifo y su ruta se escalan con el zoom (`factorDeGlifo`) entre un mínimo y un máximo:
+ * a px fijos, de cerca la columna quedaba enorme al lado de su ruta y de lejos tapaba media comarca. */
+const ESCALA_GLIFO = 26;
+
+/** Cuánto se escalan los glifos de columna, mira, destino y ruta a esta escala (0,5 de lejos, 1,4 como mucho de cerca). */
+export function factorDeGlifo(escala: number): number {
+  return Math.max(0.5, Math.min(1.4, escala / ESCALA_GLIFO));
+}
+
+/** Prepara el lienzo del MODO MUNDO: lo rellena del color de la niebla y lo recorta al círculo de la zona (`ControlMapa.zona`), con la
+ * transformación de la cámara ya puesta. Quien llama hace `ctx.save()` antes y `ctx.restore()` al acabar de pintar. */
+export function recortarAZona(ctx: CanvasRenderingContext2D, zona: Zona, escala: number): void {
+  const m = ctx.getTransform();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = `rgb(${NIEBLA.color.join(',')})`;
+  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.setTransform(m);
+  ctx.beginPath();
+  ctx.arc(zona.centro.x * escala, zona.centro.y * escala, zona.radio * escala, 0, Math.PI * 2);
+  ctx.clip();
+}
 
 /** Recursos sin extensión en el mundo (una veta, un rebaño): de cerca se marcan con rombo y nombre, no con su círculo. */
 const NODOS_PUNTUALES = new Set(['cobre', 'estano', 'oro', 'livestock']);
@@ -62,9 +85,10 @@ function dibujarRacimoDeRombos(
   cx: number,
   cy: number,
   participantes: number,
-  color: string
+  color: string,
+  k = 1
 ): void {
-  const r = 5;
+  const r = 5 * k;
   const inicio = ((participantes - 1) * r) / 2;
   for (let i = participantes - 1; i >= 0; i--) {
     const x = cx - inicio + i * r;
@@ -86,22 +110,22 @@ const MARCADOR_COLOR = '#f1d38b'; // el mismo ocre que la previsualización de f
 
 /** El "aquí estás tú": una mira sobre la columna del propio jugador, para no perderse en el mapa. Se pinta
  * ENCIMA de su racimo de rombos, que sigue diciendo cuánta gente marcha con él. */
-function dibujarMarcadorJugador(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+function dibujarMarcadorJugador(ctx: CanvasRenderingContext2D, x: number, y: number, k = 1): void {
   ctx.save();
   ctx.strokeStyle = MARCADOR_COLOR;
-  ctx.lineWidth = 2.5;
+  ctx.lineWidth = Math.max(1.2, 2 * k);
   ctx.beginPath();
-  ctx.arc(x, y, 13, 0, Math.PI * 2);
+  ctx.arc(x, y, 10 * k, 0, Math.PI * 2);
   ctx.stroke();
-  ctx.lineWidth = 2;
+  ctx.lineWidth = Math.max(1, 1.6 * k);
   for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]] as const) {
     ctx.beginPath();
-    ctx.moveTo(x + dx * 9, y + dy * 9);
-    ctx.lineTo(x + dx * 17, y + dy * 17);
+    ctx.moveTo(x + dx * 7 * k, y + dy * 7 * k);
+    ctx.lineTo(x + dx * 13 * k, y + dy * 13 * k);
     ctx.stroke();
   }
   ctx.beginPath();
-  ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+  ctx.arc(x, y, 2 * k, 0, Math.PI * 2);
   ctx.fillStyle = MARCADOR_COLOR;
   ctx.fill();
   ctx.restore();
@@ -109,20 +133,21 @@ function dibujarMarcadorJugador(ctx: CanvasRenderingContext2D, x: number, y: num
 
 /** El destino fijado: un aspa dentro de un anillo punteado en el punto al que marcha la columna. La estela
  * hasta aquí ya la pinta el paso 15 (`ejercito.ruta`). */
-function dibujarMarcadorDestino(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+function dibujarMarcadorDestino(ctx: CanvasRenderingContext2D, x: number, y: number, k = 1): void {
   ctx.save();
   ctx.strokeStyle = MARCADOR_COLOR;
-  ctx.lineWidth = 2;
-  ctx.setLineDash([4, 3]);
+  ctx.lineWidth = Math.max(1.2, 1.8 * k);
+  ctx.setLineDash([4 * k, 3 * k]);
   ctx.beginPath();
-  ctx.arc(x, y, 9, 0, Math.PI * 2);
+  ctx.arc(x, y, 8 * k, 0, Math.PI * 2);
   ctx.stroke();
   ctx.setLineDash([]);
+  const a = 3.5 * k;
   ctx.beginPath();
-  ctx.moveTo(x - 4, y - 4);
-  ctx.lineTo(x + 4, y + 4);
-  ctx.moveTo(x + 4, y - 4);
-  ctx.lineTo(x - 4, y + 4);
+  ctx.moveTo(x - a, y - a);
+  ctx.lineTo(x + a, y + a);
+  ctx.moveTo(x + a, y - a);
+  ctx.lineTo(x - a, y + a);
   ctx.stroke();
   ctx.restore();
 }
@@ -341,26 +366,56 @@ function pintarBiomas(mapa: MapaGenerado): HTMLCanvasElement {
 
 // --- RENDER PRINCIPAL DEL MAPA DEL MUNDO ---
 
+/** La caja de cada río, calculada una vez: para no recorrer sus vértices cuando no cae en la vista. */
+const cajasDeRio = new WeakMap<object, { x0: number; y0: number; x1: number; y1: number }>();
+function rioALaVista(rio: { puntos: Point[] }, v: { x0: number; y0: number; x1: number; y1: number }): boolean {
+  let c = cajasDeRio.get(rio);
+  if (!c) {
+    c = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+    for (const p of rio.puntos) { c.x0 = Math.min(c.x0, p.x); c.y0 = Math.min(c.y0, p.y); c.x1 = Math.max(c.x1, p.x); c.y1 = Math.max(c.y1, p.y); }
+    cajasDeRio.set(rio, c);
+  }
+  const m = 4; // la anchura del cauce y su orilla
+  return c.x1 + m >= v.x0 && c.x0 - m <= v.x1 && c.y1 + m >= v.y0 && c.y0 - m <= v.y1;
+}
+
 export function pintarTerreno(
   ctx: CanvasRenderingContext2D, 
   mapa: MapaGenerado, 
   proyeccion: ProyeccionJugador,
-  escalaCanvas: number
+  escalaCanvas: number,
+  zona?: Zona
 ): void {
   // La cámara del mapa (`ui/pantallaMapa.ts`) ya dejó en `ctx` su transformación: aquí se pinta en unidades × `escalaCanvas` y la vista
-  // dice qué parte del mundo cae en el lienzo y a qué escala (de lejos o de cerca).
-  const vista = vistaDelLienzo(ctx, escalaCanvas);
+  // dice qué parte del mundo cae en el lienzo y a qué escala (de lejos o de cerca). En el modo mundo (`zona`) el lienzo ya viene recortado
+  // al círculo alrededor del héroe (`recortarAZona`) y solo se mira lo que cae en él.
+  const vistaEntera = vistaDelLienzo(ctx, escalaCanvas);
+  const vista = zona
+    ? {
+        ...vistaEntera,
+        x0: Math.max(vistaEntera.x0, zona.centro.x - zona.radio),
+        y0: Math.max(vistaEntera.y0, zona.centro.y - zona.radio),
+        x1: Math.min(vistaEntera.x1, zona.centro.x + zona.radio),
+        y1: Math.min(vistaEntera.y1, zona.centro.y + zona.radio),
+      }
+    : vistaEntera;
+  /** ¿Cae `p` en lo que se pinta, con `margen` unidades de holgura? Lo de fuera ni se recorre: con el mundo entero son miles de vértices. */
+  const aLaVista = (p: Point, margen = 0): boolean =>
+    p.x >= vista.x0 - margen && p.x <= vista.x1 + margen && p.y >= vista.y0 - margen && p.y <= vista.y1 + margen;
   const artefacto = hayArtefacto(mapa);
   const cerca = artefacto && esDeCerca(mapa, escalaCanvas);
+  const k = factorDeGlifo(escalaCanvas);
 
   // 1. DIBUJAR TERRENO BASE
-  ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.fillStyle = `rgb(${NIEBLA.color.join(',')})`;
-  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-  ctx.restore();
+  if (!zona) {
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = `rgb(${NIEBLA.color.join(',')})`;
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.restore();
+  }
   if (artefacto) {
-    pintarSueloDelArtefacto(ctx, mapa, vista);
+    pintarSueloDelArtefacto(ctx, mapa, vista, zona);
   } else {
     // Mapa del backend TypeScript (sin rasters): biomas recalculados con el ruido del generador, sin relieve.
     ctx.imageSmoothingEnabled = true;
@@ -371,7 +426,7 @@ export function pintarTerreno(
   // 2. DIBUJAR BOSQUES
   if (artefacto) {
     // Del raster de densidad: de lejos ya van en la imagen del suelo; de cerca, árbol a árbol a escala real.
-    pintarArbolesDelArtefacto(ctx, mapa, vista);
+    if (!zona) pintarArbolesDelArtefacto(ctx, mapa, vista); // en el modo mundo ya van en las baldosas del suelo
   } else {
     // Bosques como silueta fusionada (no círculos sueltos), debajo de los ríos — mismo criterio de capas que
     // el cliente de administración. `nonzero` (el relleno por defecto de canvas) recorta solos los claros que
@@ -409,7 +464,7 @@ export function pintarTerreno(
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   for (const rio of mapa.rios) {
-    if (rio.puntos.length < 2) continue;
+    if (rio.puntos.length < 2 || !rioALaVista(rio, vista)) continue;
     const anchoPx = Math.max(rio.navegable ? 5 : 2.5, (rio.navegable ? 3 : 1.5) * escalaCanvas);
     const trazo = () => {
       ctx.beginPath();
@@ -432,6 +487,7 @@ export function pintarTerreno(
   // 4. DIBUJAR NODOS DE RECURSOS. De lejos, un punto; de cerca, a escala: las parcelas como su círculo de 4 u, la piedra como roca y
   // los metales y el ganado como rombo con su nombre (estos no tienen extensión en el mundo, se marcan en px fijos).
   for (const nodo of mapa.nodos) {
+    if (!aLaVista(nodo.posicion, 6)) continue;
     const x = nodo.posicion.x * escalaCanvas;
     const y = nodo.posicion.y * escalaCanvas;
     const color = RECURSO_COLOR[nodo.tipo] || '#fff';
@@ -632,9 +688,12 @@ export function pintarTerreno(
     );
   }
 
-  // 13. RUTAS EN TRÁNSITO (Rastros tenues)
+  // 13. RUTAS EN TRÁNSITO (Rastros tenues, discontinuos). El grosor y el trazo van con el zoom, como el glifo de la columna.
+  const anchoRuta = Math.max(1.2, 2.2 * k);
+  const trazoRuta = [7 * k, 5 * k];
   ctx.strokeStyle = 'rgba(241, 230, 200, 0.35)';
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = anchoRuta;
+  ctx.setLineDash(trazoRuta);
   for (const caravana of proyeccion.caravanas || []) {
     if (!caravana.ruta || caravana.ruta.length < 2) continue;
     ctx.beginPath();
@@ -647,6 +706,8 @@ export function pintarTerreno(
     ctx.stroke();
   }
 
+  ctx.setLineDash([]);
+
   // 14. CARAVANAS (Triángulos identificables por color de origen)
   for (const caravana of proyeccion.caravanas || []) {
     const x = caravana.posicionActual.x * escalaCanvas;
@@ -655,7 +716,7 @@ export function pintarTerreno(
     const origenCaravana = proyeccion.asentamientos.find((a) => a.id === caravana.origenAsentamientoId);
     const color = faccionColor(origenCaravana ? origenCaravana.faccionId : (proyeccion.faccionId ?? ''), proyeccion.facciones);
 
-    const r = 4.5;
+    const r = 4.5 * k;
     ctx.beginPath();
     ctx.moveTo(x, y - r);
     ctx.lineTo(x + r, y + r);
@@ -668,9 +729,10 @@ export function pintarTerreno(
     ctx.stroke();
   }
 
-  // 15. EJERCITOS PROPIOS: rastro de su ruta, igual que las caravanas
-  ctx.strokeStyle = 'rgba(241, 230, 200, 0.35)';
-  ctx.lineWidth = 1.5;
+  // 15. EJERCITOS PROPIOS: rastro de su ruta, discontinuo como el de las caravanas pero más visible (es por donde vas a ir)
+  ctx.strokeStyle = 'rgba(241, 230, 200, 0.6)';
+  ctx.lineWidth = anchoRuta;
+  ctx.setLineDash(trazoRuta);
   for (const ejercito of proyeccion.ejercitos || []) {
     // Estacionado acampo: no tiene trayecto pendiente que ensenar. Marchando y regresando si.
     if (ejercito.estado === 'estacionado' || !ejercito.ruta || ejercito.ruta.length < 2) continue;
@@ -684,6 +746,8 @@ export function pintarTerreno(
     ctx.stroke();
   }
 
+  ctx.setLineDash([]);
+
   // 16. EJERCITOS (racimos de rombos, uno por jugador de la columna) + de quien es la tierra que pisan
   for (const ejercito of proyeccion.ejercitos || []) {
     // El color sale del asentamiento de ORIGEN, como en las caravanas, con `faccionId` de reserva por si ese
@@ -692,7 +756,7 @@ export function pintarTerreno(
     const color = faccionColor(origen ? origen.faccionId : (ejercito.faccionId ?? proyeccion.faccionId ?? ''), proyeccion.facciones);
     const x = ejercito.posicionActual.x * escalaCanvas;
     const y = ejercito.posicionActual.y * escalaCanvas;
-    dibujarRacimoDeRombos(ctx, x, y, ejercito.participantes.length, color);
+    dibujarRacimoDeRombos(ctx, x, y, ejercito.participantes.length, color, k);
 
     // "Estas en tierra de Troya". Solo cuando la tierra es AJENA: marcharse por la propia o por campo
     // abierto no es noticia, y una etiqueta bajo cada columna en todo momento seria ruido. Lo dice el
@@ -709,9 +773,9 @@ export function pintarTerreno(
       // etiqueta se pierde en la mitad de los fondos.
       ctx.lineWidth = 3;
       ctx.strokeStyle = 'rgba(10, 14, 23, 0.85)';
-      ctx.strokeText(etiqueta, x, y + 9);
+      ctx.strokeText(etiqueta, x, y + 9 * k);
       ctx.fillStyle = faccionColor(duena, proyeccion.facciones);
-      ctx.fillText(etiqueta, x, y + 9);
+      ctx.fillText(etiqueta, x, y + 9 * k);
       ctx.lineWidth = 1;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'alphabetic';
@@ -731,7 +795,8 @@ export function pintarTerreno(
       avistado.posicionActual.x * escalaCanvas,
       avistado.posicionActual.y * escalaCanvas,
       avistado.participantes,
-      faccionColor(avistado.faccionId, proyeccion.facciones)
+      faccionColor(avistado.faccionId, proyeccion.facciones),
+      k
     );
   }
 
@@ -740,7 +805,7 @@ export function pintarTerreno(
   const formaciones = [...(proyeccion.ejercitos || []).filter((e) => e.formacion), ...(proyeccion.ejercitosAvistados || []).filter((e) => e.enFormacion)];
   for (const f of formaciones) {
     ctx.beginPath();
-    ctx.arc(f.posicionActual.x * escalaCanvas, f.posicionActual.y * escalaCanvas, 11, 0, Math.PI * 2);
+    ctx.arc(f.posicionActual.x * escalaCanvas, f.posicionActual.y * escalaCanvas, 11 * k, 0, Math.PI * 2);
     ctx.setLineDash([3, 3]);
     ctx.strokeStyle = faccionColor(f.faccionId, proyeccion.facciones);
     ctx.lineWidth = 1.5;
@@ -818,10 +883,10 @@ export function pintarTerreno(
   // vistazo) y, si va en marcha, un aspa en el punto al que se dirige — el último vértice de su ruta.
   const miColumna = (proyeccion.ejercitos || []).find((ejercito) => ejercito.participantes.some((p) => p.heroeId === proyeccion.heroeId));
   if (miColumna) {
-    dibujarMarcadorJugador(ctx, miColumna.posicionActual.x * escalaCanvas, miColumna.posicionActual.y * escalaCanvas);
+    dibujarMarcadorJugador(ctx, miColumna.posicionActual.x * escalaCanvas, miColumna.posicionActual.y * escalaCanvas, k);
     if (miColumna.estado !== 'estacionado' && miColumna.ruta && miColumna.ruta.length >= 2) {
       const destino = miColumna.ruta[miColumna.ruta.length - 1]!;
-      dibujarMarcadorDestino(ctx, destino.x * escalaCanvas, destino.y * escalaCanvas);
+      dibujarMarcadorDestino(ctx, destino.x * escalaCanvas, destino.y * escalaCanvas, k);
     }
   }
 }

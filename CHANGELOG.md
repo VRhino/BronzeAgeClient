@@ -3,6 +3,22 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.32.0] — 2026-10-27 · modo mundo y modo mapa, ruta discontinua · sync con `VRhino/BronzeAge@e11979e`
+
+### Cambiado
+- **Modo mundo** (la pantalla donde está tu columna, la de mover con clic e interactuar):
+  - Tiene dos zooms: tu visión llenando la pantalla y 1,5 veces tu visión. La rueda y los botones +/− saltan de uno a otro.
+  - La vista va siempre pegada a tu columna y no se arrastra.
+  - Solo se pinta el círculo de 1,5 veces tu visión a tu alrededor. De lo que cae fuera no se recorre nada: terreno, ríos ni nodos.
+  - El suelo se hace por baldosas fijas de 8 u, con los árboles dentro, y se guardan. Al marchar solo se calculan las que entran por
+    delante. Antes se volvía a muestrear la vista entera y se trazaban los árboles uno a uno en cada fotograma.
+- **Modo mapa**: el botón «Mapa» de la barra sale ahora en todas las pantallas, también en el mundo. Abre el mapa grande con zoom libre
+  (desde el mundo entero hasta tu visión) y arrastre, solo para mirar: un clic no manda marchar. Mientras está abierto, el mundo de debajo
+  no se pinta. «Mis cosas» y el panel de ejército abren el modo mapa en el sitio elegido, en vez de mover la vista del mundo.
+- **La ruta de las columnas y las caravanas es discontinua.** Su grosor, el trazo y el glifo de la columna (racimo, mira, aspa del destino)
+  se escalan con el zoom entre un mínimo y un máximo (`factorDeGlifo`). Antes iban en px fijos, y la columna quedaba enorme al lado de su
+  ruta.
+
 ## [0.31.2] — 2026-10-27 · atacar a los bandidos y la marcha fluida · sync con `VRhino/BronzeAge@e11979e`
 
 ### Corregido
