@@ -2259,7 +2259,9 @@ function pantallaActual(): Pantalla {
   const proyeccion = estadoCliente.proyeccionUltima;
   if (!proyeccion) return 'cargando';
   // Sin Facción ya no hay pantalla aparte: se nace en un campamento y desde él (o desde el riel del Mapa) se crea o se pide.
-  if (proyeccion.heroe.ubicacion.tipo === 'mercenarios') return 'campamento';
+  // Dentro de un campamento cuyo ámbito aún no ha llegado (al recargar, `CAMPAMENTO` viene justo detrás de `HEROE`): se espera. Montar el
+  // campamento sin él dejaba «Cargando partida…» para siempre, con la pantalla ya marcada como montada.
+  if (proyeccion.heroe.ubicacion.tipo === 'mercenarios') return campamentoActual(proyeccion) ? 'campamento' : 'cargando';
   if (proyeccion.asentamientos.length > 0) return 'asentamiento';
   return 'mapa';
 }

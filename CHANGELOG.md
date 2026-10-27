@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.34.3] — 2026-10-27 · recargar la página no se queda en «Cargando partida» · sync con `VRhino/BronzeAge@f3b8226`
+
+### Corregido
+- **Al recargar con la sesión abierta, «Cargando partida…» para siempre.** Desde la 0.34.2 la primera proyección llega en cuanto está el
+  héroe, y el ámbito `CAMPAMENTO` viene justo detrás. Si el héroe estaba en un campamento, se montaba su pantalla sin él: caía en
+  «Cargando» pero quedaba marcada como montada y ya no se volvía a montar. Ahora, mientras falte el campamento, la pantalla es «Cargando» y
+  se monta el campamento en cuanto llega.
+
 ## [0.34.2] — 2026-10-27 · la pantalla de partidas ve tu héroe · sync con `VRhino/BronzeAge@c5c6111`
 
 ### Corregido
