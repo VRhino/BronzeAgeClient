@@ -806,6 +806,8 @@ export interface EventoDominio {
   mensaje: string;
   version: number;
   asentamientoId?: string;
+  /** Los héroes que nombra el hecho (los de la columna que combate, por ejemplo). */
+  heroesIds?: string[];
   /** Fecha de mundo del evento (ISO). */
   momento?: string;
   payload?: unknown;

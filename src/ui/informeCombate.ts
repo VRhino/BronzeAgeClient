@@ -9,7 +9,13 @@ import { nombreDeHeroe } from './nombres';
 import { RECURSO_NOMBRE } from '../paletas';
 
 export interface BajaDeEscuadra { escuadronId: string; tropaId: string; antes: number; despues: number }
-export interface LadoDelInforme { poder: number; heroesIds: string[]; bajas: BajaDeEscuadra[] }
+export interface LadoDelInforme {
+  poder: number;
+  heroesIds: string[];
+  bajas: BajaDeEscuadra[];
+  /** Las bajas en total, cuando no vienen por escuadra (el motor, contra bandidos). */
+  bajasTotales?: number;
+}
 
 export interface InformeDeCombate {
   version: number;
@@ -75,7 +81,7 @@ export function informeDeEvento(e: EventoDominio, heroeId: string): InformeDeCom
 }
 
 function tablaBajas(lado: LadoDelInforme, nombre: (b: BajaDeEscuadra) => string, e: (s: string) => string): string {
-  if (lado.bajas.length === 0) return '<p class="mapa-lista-vacia">Sin escuadras.</p>';
+  if (lado.bajas.length === 0) return `<p class="mapa-lista-vacia">${lado.bajasTotales ? `${lado.bajasTotales} bajas en total (sin detalle por escuadra).` : 'Sin escuadras.'}</p>`;
   return `<table class="briefing-bajas"><thead><tr><th>Escuadra</th><th>Antes</th><th>Después</th><th>Bajas</th></tr></thead><tbody>${lado.bajas
     .map((b) => `<tr><td>${e(nombre(b))}</td><td>${b.antes}</td><td>${b.despues}</td><td class="${b.antes - b.despues > 0 ? 'baja' : ''}">${b.antes - b.despues > 0 ? `−${b.antes - b.despues}` : '0'}</td></tr>`)
     .join('')}</tbody></table>`;
@@ -85,7 +91,7 @@ function tablaBajas(lado: LadoDelInforme, nombre: (b: BajaDeEscuadra) => string,
 export function htmlInforme(i: InformeDeCombate, p: ProyeccionJugador, e: (s: string) => string): string {
   const mia = (b: BajaDeEscuadra): string => p.heroe.escuadrones.find((s) => s.id === b.escuadronId)?.nombre ?? nombreTropa(b.tropaId);
   const heroes = (l: LadoDelInforme): string => (l.heroesIds.length > 0 ? l.heroesIds.map((id) => e(nombreDeHeroe(p, id))).join(', ') : 'sin héroes');
-  const total = (l: LadoDelInforme): string => `${l.bajas.reduce((s, b) => s + b.antes - b.despues, 0)} bajas`;
+  const total = (l: LadoDelInforme): string => `${l.bajasTotales ?? l.bajas.reduce((s, b) => s + b.antes - b.despues, 0)} bajas`;
   return `
     <span class="faction-kicker">Informe de combate${i.momento ? ` · ${e(new Date(i.momento).toLocaleString())}` : ''}</span>
     <h3 class="briefing-titulo ${i.resultado}">${i.resultado === 'victoria' ? 'Victoria' : 'Derrota'} · ${e(i.titulo)}</h3>

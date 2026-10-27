@@ -3,6 +3,17 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.32.2] — 2026-10-27 · vuelven los avisos y el informe de combate · sync con `VRhino/BronzeAge@2150620`
+
+### Corregido
+- **No salía ningún aviso ni el informe al atacar un campamento de bandidos.** Los avisos leían los eventos con el cursor del REST
+  (`consultarEventos`), y en el paso al motor esa función se quedó devolviendo siempre una lista vacía. Ahora los eventos que llegan en las
+  `Delta` de la sesión se guardan al llegar, se cuentan una sola vez aunque lleguen por dos ámbitos, y los avisos los recogen en cada refresco.
+- El informe contra bandidos usa la forma del motor:
+  - El poder y el oro llegan en milésimas.
+  - Las bajas llegan en total, no por escuadra.
+  - Los héroes que iban salen del `heroes_ids` del evento.
+
 ## [0.32.1] — 2026-10-27 · sin parpadeos y el mundo con niebla · sync con `VRhino/BronzeAge@2150620`
 
 ### Corregido

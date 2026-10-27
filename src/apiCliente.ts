@@ -218,7 +218,11 @@ async function sesionAbierta(): Promise<Sesion> {
   if (!sesionIdMemoria && !cargarSesionLocal()) throw new ApiError(401, 'No hay ninguna sesión activa. Inicie sesión primero.');
   const s = new Sesion({ url: URL_WS, token: sesionIdMemoria!, versionCliente: VERSION_CLIENTE, mundoHash: mapaCargado?.hash });
   s.alCambiar(() => avisarTick());
-  s.alEvento((_ambito, e) => oyenteDeEventos?.(eventoDeDominio(e)));
+  s.alEvento((_ambito, e) => {
+    const evento = eventoDeDominio(e);
+    guardarEvento(evento);
+    oyenteDeEventos?.(evento);
+  });
   s.alEstado((estado, error) => {
     if (estado === 'cerrada' && error?.codigo === 'token_invalido') cerrarSesion();
   });
@@ -240,10 +244,44 @@ async function sesionAbierta(): Promise<Sesion> {
 }
 
 function eventoDeDominio(e: EventoPb): EventoDominio {
+  const heroesIds = [...e.heroesIds];
   return {
-    codigo: e.codigo, mensaje: e.codigo, version: Number(e.version), asentamientoId: e.asentamientoId,
-    momento: new Date(instante(e.enMs)!).toISOString(), payload: e.payload,
+    codigo: e.codigo, mensaje: e.codigo, version: Number(e.version), asentamientoId: e.asentamientoId, heroesIds,
+    momento: new Date(instante(e.enMs)!).toISOString(), payload: payloadDelCliente(e.codigo, e.payload as Record<string, unknown> | undefined, heroesIds),
   };
+}
+
+/** El payload del motor con la forma que esperan los avisos (la del backend TypeScript), en los códigos donde no coinciden. El motor manda las
+ * cifras en milésimas y planas (`poderAtacante`, `oro`, `bajasAtacante`...); el informe de combate quiere `atacante: { poder, heroesIds, bajas }`. */
+function payloadDelCliente(codigo: string, p: Record<string, unknown> | undefined, heroesIds: string[]): unknown {
+  if (!p) return p;
+  if (codigo === 'combate.campamento_destruido' || codigo === 'combate.ataque_campamento_fallido') {
+    const num = (k: string): number => Number(p[k] ?? 0) / 1000;
+    const oro = num('oro');
+    return {
+      ...p,
+      nivelCampamento: Number(p.nivel ?? 0),
+      poderCampamento: num('poderCampamento'),
+      // El motor da las bajas en total, no por escuadra.
+      atacante: { poder: num('poderAtacante'), heroesIds, bajas: [], bajasTotales: Number(p.bajasAtacante ?? 0) },
+      // El oro es el de toda la columna: a cada héroe que iba, el total (con un héroe solo, lo suyo).
+      oroPorHeroe: Object.fromEntries(heroesIds.map((h) => [h, Math.floor(oro / Math.max(1, heroesIds.length))])),
+      carroPerdido: { recursos: num('carroPerdido') },
+    };
+  }
+  return p;
+}
+
+/** Los eventos que han llegado por la sesión y aún no se han avisado (`consultarEventos` los entrega y vacía). Un mismo hecho puede llegar por
+ * más de un ámbito (`HEROE` y `FACCION`): se cuenta una vez. */
+const eventosPorAvisar: EventoDominio[] = [];
+const eventosVistos = new Set<string>();
+function guardarEvento(e: EventoDominio): void {
+  const k = `${e.version}|${e.codigo}|${JSON.stringify(e.payload)}`;
+  if (eventosVistos.has(k)) return;
+  if (eventosVistos.size > 2000) eventosVistos.clear();
+  eventosVistos.add(k);
+  eventosPorAvisar.push(e);
 }
 
 /** Alta de cuenta en el servicio de acceso del motor (`POST /v1/registro`). No abre sesión — el cliente hace `loginConClave` a
@@ -417,8 +455,10 @@ export function radioDeVision(): Promise<number> {
 }
 
 /** La crónica de la partida va por páginas en la sesión (`pedirCronica`); los avisos de siempre llegan por `alEventoTiempoReal`. */
+/** Los eventos llegados por la sesión desde la última consulta. El motor no tiene un cursor de eventos como el REST (`GET .../eventos?desde=`):
+ * llegan en las `Delta` y se guardan al llegar (`guardarEvento`). Antes esto devolvía siempre nada y no salía ningún aviso ni informe. */
 export async function consultarEventos(_gameId: string, _desde: number): Promise<EventoDominio[]> {
-  return [];
+  return eventosPorAvisar.splice(0);
 }
 export interface TropaReclutable {
   id: string;
