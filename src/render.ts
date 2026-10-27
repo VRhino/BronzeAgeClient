@@ -98,6 +98,40 @@ function dibujarRacimoDeRombos(
   }
 }
 
+const COLOR_CARAVANA_FUNDACION = '#e8c27a';
+
+/** Lo que un ejército lleva enganchado, pegado DETRÁS de él (al lado contrario de hacia donde marcha; parado, abajo a la izquierda) y
+ * movido con él: el carromato si es la Caravana de Fundación, un triángulo pequeño si son caravanas comerciales. */
+function dibujarCaravanaDetras(ctx: CanvasRenderingContext2D, ejercito: { posicionActual: { x: number; y: number }; ruta?: { x: number; y: number }[] }, x: number, y: number, escalaCanvas: number, fundacion: boolean, k: number): void {
+  const siguiente = ejercito.ruta?.find((p) => Math.hypot(p.x - ejercito.posicionActual.x, p.y - ejercito.posicionActual.y) > 0.01);
+  let dx = -0.7, dy = 0.7;
+  if (siguiente) {
+    const vx = siguiente.x * escalaCanvas - x, vy = siguiente.y * escalaCanvas - y, n = Math.hypot(vx, vy) || 1;
+    dx = -vx / n; dy = -vy / n;
+  }
+  const d = 17 * k, cx = x + dx * d, cy = y + dy * d;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(241, 230, 200, 0.7)';
+  ctx.lineWidth = Math.max(1, 1.2 * k);
+  ctx.beginPath();
+  ctx.moveTo(x + dx * 7 * k, y + dy * 7 * k);
+  ctx.lineTo(cx - dx * 6 * k, cy - dy * 6 * k);
+  ctx.stroke();
+  ctx.restore();
+  if (fundacion && dibujarIconoMapa(ctx, 'caravanaFundacion', cx, cy, 18 * k, COLOR_CARAVANA_FUNDACION)) return;
+  const r = 3.5 * k;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - r);
+  ctx.lineTo(cx + r, cy + r);
+  ctx.lineTo(cx - r, cy + r);
+  ctx.closePath();
+  ctx.fillStyle = '#f1e6c8';
+  ctx.fill();
+  ctx.strokeStyle = '#1b1a17';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+}
+
 const MARCADOR_COLOR = '#f1d38b'; // el mismo ocre que la previsualización de fundación
 
 /** El "aquí estás tú": una mira sobre la columna del propio jugador, para no perderse en el mapa. Se pinta
@@ -701,13 +735,17 @@ export function pintarTerreno(
 
   ctx.setLineDash([]);
 
-  // 14. CARAVANAS (Triángulos identificables por color de origen)
+  // 14. CARAVANAS (Triángulos identificables por color de origen). Las enganchadas a un ejército van pegadas detrás de él (16); la de
+  // fundación suelta, con su carromato.
+  const adjuntas = new Set((proyeccion.ejercitos || []).flatMap((e) => e.caravanasAdjuntasIds ?? []));
   for (const caravana of proyeccion.caravanas || []) {
+    if (adjuntas.has(caravana.id) || caravana.estado === 'adjunta') continue;
     const x = caravana.posicionActual.x * escalaCanvas;
     const y = caravana.posicionActual.y * escalaCanvas;
 
     const origenCaravana = proyeccion.asentamientos.find((a) => a.id === caravana.origenAsentamientoId);
     const color = faccionColor(origenCaravana ? origenCaravana.faccionId : (proyeccion.faccionId ?? ''), proyeccion.facciones);
+    if (caravana.tipo === 'construccion' && dibujarIconoMapa(ctx, 'caravanaFundacion', x, y, 16 * k, COLOR_CARAVANA_FUNDACION)) continue;
 
     const r = 4.5 * k;
     ctx.beginPath();
@@ -749,6 +787,10 @@ export function pintarTerreno(
     const color = faccionColor(origen ? origen.faccionId : (ejercito.faccionId ?? proyeccion.faccionId ?? ''), proyeccion.facciones);
     const x = ejercito.posicionActual.x * escalaCanvas;
     const y = ejercito.posicionActual.y * escalaCanvas;
+    const lleva = new Set(ejercito.caravanasAdjuntasIds ?? []);
+    // La de fundación no viene en `caravanasAdjuntasIds`: va enganchada a la columna en la que va su titular.
+    const fundacion = (proyeccion.caravanas || []).some((c) => c.tipo === 'construccion' && (lleva.has(c.id) || (c.estado === 'adjunta' && !!c.titularId && ejercito.participantes.some((x) => x.heroeId === c.titularId))));
+    if (fundacion || lleva.size > 0) dibujarCaravanaDetras(ctx, ejercito, x, y, escalaCanvas, fundacion, k);
     dibujarRacimoDeRombos(ctx, x, y, ejercito.participantes.length, color, k);
 
     // "Estas en tierra de Troya". Solo cuando la tierra es AJENA: marcharse por la propia o por campo

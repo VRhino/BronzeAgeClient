@@ -20,4 +20,4 @@ entrada del emblema y actualiza `autor` e `icono`. Si el autor es nuevo, añáde
 existir antes en el catálogo del backend (`CATALOGO_SIGILO` en BronzeAgeFase0) y en `catalogoSigilos.json`.
 
 Los iconos del mapa del mundo (`src/mundo/iconosMapa.json`: campamentos de bandidos y de mercenarios, columnas, nodos de
-recurso y alijos) salen del mismo repositorio y se cambian igual; cada entrada lleva también su `autor` e `icono`.
+recurso, alijos, pueblos, avanzadas y la Caravana de Fundación) salen del mismo repositorio y se cambian igual; cada entrada lleva también su `autor` e `icono`.

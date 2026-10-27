@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.37.1] — 2026-10-27 · el ejército con la Caravana de Fundación la lleva pegada detrás · sync con `VRhino/BronzeAge@6bf35ee`
+
+### Añadido
+- **Caravana enganchada, pegada detrás de su columna en el mapa**: un carromato (`delapouite/caravan`, icono `caravanaFundacion`) si es la
+  Caravana de Fundación, un triángulo pequeño si son comerciales; va al lado contrario de hacia donde marcha y se mueve con ella. Ya no se
+  pinta encima de la columna como una caravana suelta. La de fundación no viene en `caravanasAdjuntasIds`: se reconoce por estar `adjunta`
+  con su titular en la columna. La de fundación suelta también se pinta con el carromato.
+
 ## [0.37.0] — 2026-10-27 · marcha forzada · sync con `VRhino/BronzeAge@6bf35ee`
 
 ### Añadido
