@@ -104,12 +104,12 @@ function salir(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): stri
       <button class="btn-primary" type="button" id="btn-salir-campamento">Salir</button>`;
   }
   return `
-    <strong class="heroe-sub">Salir${ayuda('camp:salir', 'Elige la tropa que sacas y lo que cargas de tu almacén. La ración gratis de trigo llena tus víveres, que van siempre contigo.<br>Al volver a entrar en un campamento, lo que quede en el carro regresa solo a tu almacén personal. Tus víveres no se descargan.')}</strong>
+    <strong class="heroe-sub">Salir${ayuda('camp:salir', 'Elige la tropa que sacas y lo que cargas de tu almacén. La ración gratis de trigo llena tus víveres, que van siempre contigo.<br>Lo que ya traías en el carro sale contigo. Al volver a tu residencia el carro sigue contigo: para guardarlo, «Pasar al almacén» en el panel Carro. Tus víveres no se descargan.')}</strong>
     <div class="mapa-lista">${enCampamento.length > 0
       ? enCampamento.map((s) => `<label class="mapa-lista-item"><div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres</span></div><input type="checkbox" data-salir-escuadra="${e(s.id)}" checked /></label>`).join('')
       : '<p class="asent-lado-nota">No tienes tropa en el campamento.</p>'}</div>
     ${htmlSalidaComoEjercito(p, e)}
-    ${htmlCargaDeSalida(almacen, 'tu almacén personal', e)}
+    ${htmlCargaDeSalida(almacen, 'tu almacén personal', e, heroe.carro)}
     <button class="btn-primary" type="button" id="btn-salir-campamento">Salir</button>`;
 }
 

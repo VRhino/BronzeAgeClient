@@ -948,7 +948,7 @@ function renderPanelJugador(forzar = false): void {
     const esCarro = panelJugador === 'carro';
     // En marcha el carro y la ración cambian con cada tick: se repinta solo si cambió, devolviendo lo que se estaba escribiendo.
     pintar(panel, html, () => {
-      if (esCarro) cablearCarro(panel, ejecutarYRefrescar);
+      if (esCarro) cablearCarro(panel, ejecutarYRefrescar, proyeccion.heroeId);
       else cablearAvisos(panel, () => renderPanelJugador(), mostrarInforme);
     }, panelJugador);
     return;
@@ -1422,7 +1422,7 @@ function pintarSalidaAsentamiento(panel: HTMLElement, p: ProyeccionJugador, asen
       ? tropa.map((s) => `<label class="mapa-lista-item"><div><strong>${escaparHtml(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres</span></div><input type="checkbox" data-salir-escuadra="${escaparHtml(s.id)}" checked /></label>`).join('')
       : '<p class="asent-lado-nota">No tienes tropa libre en la plaza (la de guarnición no sale). Puedes salir solo.</p>'}</div>
     ${htmlSalidaComoEjercito(p, escaparHtml)}
-    ${htmlCargaDeSalida(almacen, 'el almacén de la plaza', escaparHtml)}
+    ${htmlCargaDeSalida(almacen, 'el almacén de la plaza', escaparHtml, p.heroe.carro)}
     <button class="btn-primary" type="button" data-salir>Salir</button>
     <p class="faction-error" data-campo="error-salida" role="alert"></p>`;
   // El almacén de la plaza cambia con el sondeo: se repinta solo si cambió y lo marcado (tropa, carga, modo) vuelve a su sitio.

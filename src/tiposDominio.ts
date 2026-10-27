@@ -633,6 +633,9 @@ export interface HeroeProyectado {
   almacenPersonal?: Record<string, number>;
   /** Tope del almacén personal (DERIVADO por el backend desde 2026-10-07). */
   capacidadAlmacenPersonal?: number;
+  /** El carro que el héroe trae consigo dentro de su residencia (`Heroe.fuera_carro` del motor): entrar no lo vacía; `vaciarCarro` lo pasa al
+   * almacén personal y al salir va con él. */
+  carro?: Record<string, number>;
   /** Oro de bandidos y alijos: solo se gasta en el mercado de un campamento o en el fondo de refundación (Doc 1.9). */
   oroDeBotin?: number;
   /** Víveres (backend 2026-10-08, Doc 5.13): el trigo que come tu columna. Siempre contigo, hasta `LOGISTICA.capacidadViveresPorHeroe`; ausente = 0. */

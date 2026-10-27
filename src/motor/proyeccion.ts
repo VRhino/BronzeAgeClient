@@ -234,7 +234,7 @@ function heroe(h: pb.Heroe, escuadrones: pb.Escuadron[], ahora: number): d.Heroe
     genero: h.femenino ? 'femenino' : 'masculino',
     avatar: { cabezaId: h.avatar?.cabezaId ?? '', peloId: h.avatar?.peloId ?? '', barbaId: h.avatar?.barbaId ?? '', cejasId: h.avatar?.cejasId ?? '' },
     liderazgoBase: h.liderazgoBase, ubicacion: ubicacion(h.ubicacion),
-    almacenPersonal: cantidades(h.almacenPersonal), capacidadAlmacenPersonal: mil(h.capacidadAlmacenPersonal),
+    almacenPersonal: cantidades(h.almacenPersonal), capacidadAlmacenPersonal: mil(h.capacidadAlmacenPersonal), carro: cantidades(h.fueraCarro),
     viveres: h.viveres ? valorDeRitmo(h.viveres, ahora) : undefined,
     escuadrones: propias.map((e) => escuadron(e, ahora)),
     nivel: h.nivel, experienciaHaciaSiguienteNivel: Number(h.experienciaHaciaSiguienteNivel),

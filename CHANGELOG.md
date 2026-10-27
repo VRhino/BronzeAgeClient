@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.32.3] — 2026-10-27 · el carro dentro de tu campamento · sync con `VRhino/BronzeAge@2150620`
+
+### Corregido
+- **Dentro del campamento el carro salía vacío, aunque fuera llevaba el oro del botín.** En el motor, al entrar en tu residencia el carro sigue
+  contigo (`Heroe.fuera_carro`) y no pasa solo al almacén. El cliente no leía ese campo.
+  - El panel Carro enseña ahora «Tu carro» con lo que traes y un botón «Pasar al almacén» (orden `vaciarCarro`). Lo que no cabe en el
+    almacén se queda en el carro.
+  - La carga de salida, del campamento o de una plaza, cuenta lo que ya llevas en el carro: «132 / 500» y «Ya llevas en el carro, y sale
+    contigo: 132 Oro».
+
 ## [0.32.2] — 2026-10-27 · vuelven los avisos y el informe de combate · sync con `VRhino/BronzeAge@2150620`
 
 ### Corregido

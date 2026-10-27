@@ -2,12 +2,14 @@
 // en tu almacén personal (`heroe.almacenPersonal`). Los comandos que mueven cosas entre uno y otro ya existen:
 //   guardarEnAlmacenPersonal { recurso, cantidad }   del carro al almacén personal (lo que cabe hasta el tope)
 //   sacarDelAlmacenPersonal  { recurso, cantidad }   del almacén personal al carro (lo que cabe en el carro)
-//   entrarEnCampamento       devuelve solo lo del carro al almacén personal; salirDelCampamento { carga } carga el carro desde el almacén
+//   vaciarCarro { heroeId }  dentro de tu residencia, del carro que traes contigo al almacén personal (el motor no lo vacía al entrar)
+//   salirDelCampamento { carga } carga el carro desde el almacén; lo que ya traías en el carro sale contigo
 // Ambos exigen ser el LÍDER de la columna (el carro es común) y estar en ella. El tope del almacén personal (`heroe.capacidadAlmacenPersonal`) y
 // lo que cabe en el carro (`ejercitos[].capacidadCarga`) los manda el backend ya calculados; si falta sitio, el rechazo es suyo.
 import type { ProyeccionJugador } from '../apiCliente';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import { ayuda } from './ayuda';
+import { CAPACIDAD_CARRO_SALIDA } from './cargaDeSalida';
 
 type Escapar = (valor: string) => string;
 export type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
@@ -46,8 +48,11 @@ export function htmlCarro(p: ProyeccionJugador, e: Escapar, cabecera = true): st
   const carro = columna?.suministro ?? {};
   // El resto del carro que se queda aparcado en la puerta de un campamento al entrar sin poder guardarlo todo.
   const aparcadas = p.ejercitos.filter((c) => c !== columna && c.liderId === p.heroeId && Object.values(c.suministro ?? {}).some((n) => n >= 1));
+  // Dentro de tu residencia el carro sigue contigo (`heroe.carro`): entrar no lo vacía.
+  const carroContigo = !columna ? (p.heroe.carro ?? {}) : {};
+  const hayCarroContigo = Object.values(carroContigo).some((n) => n >= 1);
   const nota = !columna
-    ? 'Tu carro viaja con tu columna. Al entrar en tu campamento lo que llevas pasa a tu almacén personal (hasta su tope); al salir, eliges qué cargas en la pestaña Salir.'
+    ? 'Dentro de tu residencia el carro sigue contigo: entrar no lo vacía. «Pasar al almacén» lo guarda en tu almacén personal hasta su tope, y lo que no quepa se queda en el carro. Al salir, lo que haya en el carro sale contigo y en la pestaña Salir eliges qué más cargas.'
     : !esLider
       ? 'Solo el Líder de la columna mueve lo del carro: el carro es común a todos los que van en ella.'
       : 'Guarda en tu almacén personal lo que quieras conservar. Al entrar en tu campamento se guarda solo. El carro es solo carga: la columna come de tus víveres (barra de abajo del mapa), y de aquí se les pasa trigo.';
@@ -55,6 +60,7 @@ export function htmlCarro(p: ProyeccionJugador, e: Escapar, cabecera = true): st
     ${cabecera ? `<div class="mapa-panel-jugador">${e(p.heroe.displayName)} · carro y almacén</div>` : ''}
     <strong class="heroe-sub">Carga${ayuda('jugador:carro', e(nota))}</strong>
     ${columna ? `<strong class="heroe-sub">Carro de tu columna${ocupacion(carro, columna.capacidadCarga)}</strong>${filas(carro, 'guardar', 'Guardar', esLider, e)}` : ''}
+    ${!columna ? `<strong class="heroe-sub">Tu carro${ocupacion(carroContigo, CAPACIDAD_CARRO_SALIDA)}</strong>${filas(carroContigo, 'ninguna', '', false, e)}${hayCarroContigo ? '<button class="btn-secondary" type="button" data-vaciar-carro>Pasar al almacén</button>' : ''}` : ''}
     ${aparcadas.map((c) => `<strong class="heroe-sub">Resto del carro, aparcado en la puerta</strong>${filas(c.suministro ?? {}, 'ninguna', '', false, e)}`).join('')}
     <strong class="heroe-sub">Almacén personal${ocupacion(almacen, p.heroe.capacidadAlmacenPersonal)}</strong>
     ${filas(almacen, 'sacar', 'Al carro', Boolean(columna) && esLider, e)}
@@ -64,8 +70,15 @@ export function htmlCarro(p: ProyeccionJugador, e: Escapar, cabecera = true): st
     <p class="faction-error" data-campo="error-carro" role="alert"></p>`;
 }
 
-export function cablearCarro(raiz: HTMLElement, ejecutar: Ejecutar): void {
+export function cablearCarro(raiz: HTMLElement, ejecutar: Ejecutar, heroeId?: string): void {
   const error = raiz.querySelector<HTMLElement>('[data-campo="error-carro"]');
+  raiz.querySelector<HTMLButtonElement>('[data-vaciar-carro]')?.addEventListener('click', async (ev) => {
+    const boton = ev.currentTarget as HTMLButtonElement;
+    boton.disabled = true;
+    const mensaje = await ejecutar('vaciarCarro', { heroeId });
+    boton.disabled = false;
+    if (error) error.textContent = mensaje ?? '';
+  });
   raiz.querySelectorAll<HTMLButtonElement>('[data-carro]').forEach((boton) =>
     boton.addEventListener('click', async () => {
       const recurso = boton.dataset.recurso!;
