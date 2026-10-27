@@ -9,7 +9,7 @@ import { cargarMundo } from './mundo/artefacto';
 import { instante, proyectar } from './motor/proyeccion';
 import { ComandoDesconocido, traducirOrden } from './motor/ordenes';
 
-import type { AcuerdoTrueque, AedaAvistado, AedaResidenteProyectado, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, CaravanaAvistada, Convocatoria, Ejercito, EjercitoAvistado, EscenaCampamento, EvaluacionAscenso, EventoDominio, Faccion, HeroeProyectado, HeroePublico, InformeDeInspeccion, InformePlaza, MiradaIntel, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, PropuestaAnexion, PropuestaFusion, PropuestaRelacion, RelacionPolitica, Sigilo, TarifasIntel, TecnologiaJugador, Titulo, TrazadoAsentamiento, ZonaFaccion } from './tiposDominio';
+import type { AcuerdoTrueque, AedaAvistado, AedaResidenteProyectado, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, CaravanaAvistada, Convocatoria, Ejercito, EjercitoAvistado, EscenaCampamento, EvaluacionAscenso, EventoDominio, Faccion, HeroeProyectado, HeroePublico, InformeDeInspeccion, InformePlaza, MiradaIntel, Mision, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, PropuestaAnexion, PropuestaFusion, PropuestaRelacion, RelacionPolitica, Sigilo, TarifasIntel, TecnologiaJugador, Titulo, TrazadoAsentamiento, ZonaFaccion } from './tiposDominio';
 
 export class ApiError extends Error {
   constructor(
@@ -128,6 +128,8 @@ export interface ProyeccionJugador {
   tecnologia?: TecnologiaJugador;
   /** Las tecnologías adoptadas por tu Facción (`TecnologiasFaccion.adoptadas` del ámbito FACCION, con las de arranque); vacío sin Facción. */
   tecnologiasAdoptadas?: string[];
+  /** Las misiones de cada dueño que se ven: las tuyas, las de la plaza donde estás dentro y las de tu Facción. */
+  misiones?: { heroe: Mision[]; plaza: Mision[]; plazaId?: string; faccion: Mision[] };
   /** Los Aedas residentes de tus plazas, con su épica. */
   aedasResidentes?: AedaResidenteProyectado[];
   /** Los Aedas itinerantes a la vista. */
@@ -485,6 +487,34 @@ export function radioDeVision(): Promise<number> {
     const r = Number((d?.documentos?.Movimiento_Ejercitos?.VISION as { jugadorSolo?: number } | undefined)?.jugadorSolo);
     return r > 0 ? r : 15;
   });
+}
+
+/** Los textos de las misiones (título y texto por id) que publica el motor en un catálogo aparte de `GET /v1/datos`, no en la foto.
+ * Se busca cualquier bloque cuyos valores lleven `titulo`; `null` mientras no llegue (o si el motor aún no lo publica). */
+let textosMisiones: Record<string, { titulo: string; texto: string }> | null = null;
+let textosMisionesPedidos = false;
+const oyentesTextosMisiones = new Set<() => void>();
+export function textosDeMisiones(alCargar?: () => void): Record<string, { titulo: string; texto: string }> | null {
+  if (!textosMisiones && alCargar) oyentesTextosMisiones.add(alCargar);
+  if (!textosMisiones && !textosMisionesPedidos) {
+    textosMisionesPedidos = true;
+    void cargarDatosDeJuego().then((d) => {
+      const encontrados: Record<string, { titulo: string; texto: string }> = {};
+      for (const doc of Object.values(d?.documentos ?? {}))
+        for (const bloque of Object.values(doc)) {
+          if (!bloque || typeof bloque !== 'object' || Array.isArray(bloque)) continue;
+          for (const [id, v] of Object.entries(bloque as Record<string, unknown>)) {
+            const t = v as { titulo?: unknown; texto?: unknown } | null;
+            if (t && typeof t === 'object' && typeof t.titulo === 'string') encontrados[id] = { titulo: t.titulo, texto: typeof t.texto === 'string' ? t.texto : '' };
+          }
+        }
+      if (!Object.keys(encontrados).length) return;
+      textosMisiones = encontrados;
+      for (const f of oyentesTextosMisiones) f();
+      oyentesTextosMisiones.clear();
+    });
+  }
+  return textosMisiones;
 }
 
 /** La crónica de la partida va por páginas en la sesión (`pedirCronica`); los avisos de siempre llegan por `alEventoTiempoReal`. */

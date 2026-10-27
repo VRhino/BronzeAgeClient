@@ -3,6 +3,20 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.38.0] — 2026-10-27 · misiones · sync con `VRhino/BronzeAge@7b949f7`
+
+### Añadido
+- **Misiones** (mecánica 49 del motor; hace falta partida nueva, foto BAN46). Botón **Misiones** en la barra con pestañas Mías, Mi plaza y
+  Mi Facción: cada misión con su texto, su recompensa y una barra por condición. Las siguientes son sorpresa: solo se ven al activarse, con
+  un aviso «Nueva misión» y la marca «nueva». **Reclamar** (`reclamarRecompensa { duenoId, misionId }`) cuando está cumplida, solo quien
+  puede: las tuyas tú, las de la plaza su Gobernador (o un residente si no hay), las de la Facción el Rey; a los demás se les dice quién.
+- **Rastreador** de hasta 3 misiones seguidas (Seguir / Dejar de seguir, guardado en este navegador): flota arriba a la izquierda en el
+  mundo y va al principio de la columna izquierda en la plaza y el campamento; se pliega, y al pulsar una abre el panel en su pestaña. Las
+  tuyas nuevas entran solas mientras haya hueco; las reclamadas salen.
+- Contador de cumplidas por reclamar en el botón Misiones; avisos `mision.cumplida` (urgente) y `mision.reclamada`.
+- Subpestaña **Misiones** en el Centro urbano de la plaza y lista de misiones al final de la pestaña Facción.
+- Textos: los publicará el motor en un catálogo de `GET /v1/datos` (se usa en cuanto llegue); mientras, el cliente lleva los del diseño.
+
 ## [0.37.1] — 2026-10-27 · el ejército con la Caravana de Fundación la lleva pegada detrás · sync con `VRhino/BronzeAge@6bf35ee`
 
 ### Añadido

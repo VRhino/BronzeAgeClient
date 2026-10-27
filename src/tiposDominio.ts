@@ -244,6 +244,17 @@ export interface Caravana {
 /** Copia local de `Ejercito` (motor, Doc 5.12) — los de TU Facción, que la proyección manda completos.
  * Solo los campos que pinta el mapa; el resto (suministro, objetivo, caravanas adjuntas) llegará cuando haya
  * un panel de campaña que los muestre. */
+/** Una misión (motor f859ef5, `Docs/Mechanics/Misiones.md`): de un héroe, de una plaza o de una Facción. Solo llegan las activas, las cumplidas
+ * (por reclamar) y las reclamadas. Los contadores van en unidades; la recompensa, en unidades (oro o recursos) o en experiencia de Facción. */
+export interface Mision {
+  id: string;
+  estado: 'activa' | 'cumplida' | 'reclamada';
+  condiciones: { contador: string; avance: number; umbral: number }[];
+  previa?: string;
+  recompensa: Record<string, number>;
+  recompensaExperiencia: number;
+}
+
 export interface Ejercito {
   id: string;
   /** Marcha forzada (motor 6bf35ee): ×1,5 de velocidad y, mientras marcha, ×2 de víveres. Solo se sabe de las columnas propias. */

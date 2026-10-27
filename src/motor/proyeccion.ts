@@ -195,6 +195,16 @@ function caravana(c: pb.Caravana, ahora: number): d.Caravana {
   };
 }
 
+const ESTADO_MISION: Record<number, d.Mision['estado']> = { 1: 'activa', 2: 'cumplida', 3: 'reclamada' };
+
+function mision(m: pb.Mision): d.Mision {
+  return {
+    id: m.id, estado: ESTADO_MISION[m.estado] ?? 'activa', previa: opcional(m.previa),
+    condiciones: m.condiciones.map((c) => ({ contador: c.contador, avance: Number(c.avance), umbral: Number(c.umbral) })),
+    recompensa: cantidades(m.recompensa), recompensaExperiencia: mil(m.recompensaExperiencia),
+  };
+}
+
 function escuadron(e: pb.Escuadron, ahora: number): d.Escuadron {
   const c = e.contenedor?.donde;
   const contenedor: d.Escuadron['contenedor'] =
@@ -487,6 +497,12 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
     heroesVisibles: heroesAjenos.map(heroePublico),
     nombresDeCompaneros: nombres,
     nombresDeDirigentes: {},
+    misiones: {
+      heroe: h.misiones.map(mision),
+      plaza: interior?.misiones.map(mision) ?? [],
+      plazaId: interior?.id,
+      faccion: (faccionId ? todasFacciones.get(faccionId)?.misiones ?? [] : []).map(mision),
+    },
     tecnologiasAdoptadas: deAmbito('FACCION:', 'tecnologias').find((t) => t.faccionId === faccionId)?.adoptadas ?? [],
     // Los tramos ya fundidos (paridad P7); un servidor anterior solo manda las aristas sueltas.
     caminos: !red ? [] : red.tramos.length

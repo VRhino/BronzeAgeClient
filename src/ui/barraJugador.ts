@@ -3,7 +3,7 @@
 // Aquí solo está el HTML y la lista de paneles; quien pinta cada panel y cablea los botones es `main.ts`.
 import type { ProyeccionJugador } from '../apiCliente';
 
-export type PanelJugador = 'heroe' | 'escuadras' | 'carro' | 'faccion' | 'tecnologia' | 'avisos';
+export type PanelJugador = 'heroe' | 'escuadras' | 'carro' | 'faccion' | 'tecnologia' | 'misiones' | 'avisos';
 
 const BOTONES: [PanelJugador, string][] = [
   ['heroe', 'Héroe'],
@@ -11,6 +11,7 @@ const BOTONES: [PanelJugador, string][] = [
   ['carro', 'Carro'],
   ['faccion', 'Facción'],
   ['tecnologia', 'Tecnología'],
+  ['misiones', 'Misiones'],
   ['avisos', 'Avisos'],
 ];
 
@@ -33,7 +34,7 @@ export function htmlBarraJugador(p: ProyeccionJugador, e: (valor: string) => str
     <div class="jugador-estados" aria-label="Estados activos"></div>
     <div class="jugador-alerta" role="status" hidden></div>
     <nav class="jugador-botones" aria-label="Menús del jugador">
-      ${BOTONES.map(([id, nombre]) => `<button type="button" data-panel-jugador="${id}">${nombre}${id === 'avisos' ? '<b class="jugador-badge" hidden></b>' : ''}</button>`).join('')}
+      ${BOTONES.map(([id, nombre]) => `<button type="button" data-panel-jugador="${id}">${nombre}${id === 'avisos' ? '<b class="jugador-badge" hidden></b>' : id === 'misiones' ? '<b class="jugador-badge misiones-badge" hidden title="Misiones cumplidas por reclamar"></b>' : ''}</button>`).join('')}
       <button type="button" data-ver-mapa title="El mapa con la visión que tienes, con zoom libre (solo para mirar)">Mapa</button>
     </nav>
   </header>`;

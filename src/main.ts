@@ -82,6 +82,7 @@ import { explicarError } from './ui/erroresServidor';
 import { motivosParaCrearFaccion } from './ui/validarFaccion';
 import { nombreDeHeroe } from './ui/nombres';
 import { htmlEstados } from './ui/estados';
+import { actualizarSeguimiento, cablearMisiones, elegirPestanaMisiones, htmlListaMisiones, htmlPanelMisiones, misionesPorReclamar, pintarRastreador } from './ui/misiones';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 /** Los campamentos donde se puede nacer, de la última respuesta `sinHeroe` (pantalla Héroe). */
@@ -958,8 +959,18 @@ function renderPanelJugador(forzar = false): void {
   if (panelJugador === 'faccion') {
     // Creando una Facción o buscando a cuál pedir ingreso, el formulario es del jugador: solo se repinta al cambiar de modo (`forzar`).
     if (!forzar && proyeccion.faccionId === null && panel.querySelector('#form-crear-faccion, #input-buscar-faccion')) return;
-    const html = `<div class="mapa-panel-jugador">${escaparHtml(proyeccion.heroe.displayName)}</div>${renderPestanaFaccion(proyeccion, escaparHtml)}`;
-    pintar(panel, html, () => cablearFaccion(panel, proyeccion, () => renderPanelJugador(true)), 'faccion');
+    // Al final, las misiones de la Facción (las reclama el Rey).
+    const misionesFaccion = proyeccion.faccionId ? `<section class="faccion-misiones" data-dueno="faccion"><h3>Misiones de la Facción</h3>${htmlListaMisiones(proyeccion, 'faccion', escaparHtml)}</section>` : '';
+    const html = `<div class="mapa-panel-jugador">${escaparHtml(proyeccion.heroe.displayName)}</div>${renderPestanaFaccion(proyeccion, escaparHtml)}${misionesFaccion}`;
+    pintar(panel, html, () => {
+      cablearFaccion(panel, proyeccion, () => renderPanelJugador(true));
+      const seccion = panel.querySelector<HTMLElement>('.faccion-misiones');
+      if (seccion) cablearMisiones(seccion, proyeccion, ejecutarYRefrescar, () => renderPanelJugador(true));
+    }, 'faccion');
+    return;
+  }
+  if (panelJugador === 'misiones') {
+    pintar(panel, htmlPanelMisiones(proyeccion, escaparHtml), () => cablearMisiones(panel, proyeccion, ejecutarYRefrescar, () => renderPanelJugador(true)), 'misiones');
     return;
   }
   if (panelJugador === 'tecnologia') {
@@ -985,7 +996,13 @@ function pintarAlertas(barra: HTMLElement, p: ProyeccionJugador): void {
     alerta.style.cursor = sigue.length === 0 ? '' : 'pointer';
     alerta.onclick = sigue.length === 0 ? null : () => { if (!document.querySelector('.mapa-seleccion')) return; seleccionMapa = { tipo: 'ejercitoAjeno', id: sigue[0]!.id }; renderSeleccionMapa(); };
   }
-  const badge = barra.querySelector<HTMLElement>('.jugador-badge');
+  const misiones = barra.querySelector<HTMLElement>('.misiones-badge');
+  if (misiones) {
+    const n = misionesPorReclamar(p);
+    misiones.hidden = n === 0;
+    misiones.textContent = String(n);
+  }
+  const badge = barra.querySelector<HTMLElement>('.jugador-badge:not(.misiones-badge)');
   if (badge) {
     const n = avisosNoLeidos();
     badge.hidden = n === 0;
@@ -1004,6 +1021,13 @@ function mostrarInforme(informe: InformeDeCombate): void {
   fondo.innerHTML = `<section class="briefing" role="dialog" aria-label="Informe de combate"><button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar informe">×</button>${htmlInforme(informe, proyeccion, escaparHtml)}</section>`;
   fondo.addEventListener('click', (ev) => { if (ev.target === fondo || (ev.target as HTMLElement).closest('.mapa-seleccion-cerrar')) fondo.remove(); });
   document.body.appendChild(fondo);
+}
+
+/** Desde el rastreador: abre el panel Misiones en la pestaña de ese dueño. */
+function abrirMisiones(d: Parameters<typeof elegirPestanaMisiones>[0]): void {
+  elegirPestanaMisiones(d);
+  panelJugador = 'misiones';
+  renderPanelJugador(true);
 }
 
 function cablearBarraJugador(contenedor: HTMLElement): void {
@@ -2232,6 +2256,7 @@ async function refrescarDatosJuego(): Promise<void> {
     for (const x of peticionesNuevas(respuesta)) {
       mostrarAviso(`${nombreDeHeroe(respuesta, x.heroeId)} pide unirse a tu ejército: ${Math.max(0, Math.ceil((x.expiraEn - respuesta.instante) / 1000))} s para contestar (botón ⚑ del mapa).`, true);
     }
+    actualizarSeguimiento(respuesta, (texto) => mostrarAviso(texto));
     fijarCanalesTiempoReal(canalesDe(respuesta));
     void avisarDeEventos(estadoCliente.gameIdActivo, respuesta.version);
   }
@@ -2296,6 +2321,7 @@ function refrescarPantalla(pantalla: Pantalla): void {
   if (!proyeccion) return;
   if (pantalla === 'mapa' || pantalla === 'campamento' || pantalla === 'asentamiento') {
     renderPanelJugador();
+    pintarRastreador(proyeccion, abrirMisiones, escaparHtml);
     if (vistaMapaAbierta) void pintarVistaMapa();
   }
   if (pantalla === 'mapa') { pintarComida(proyeccion); if (!vistaMapaAbierta) void dibujarPantallaSegunModo(proyeccion); renderSeleccionMapa(); renderPanelRiel(); return; }

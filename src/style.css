@@ -2965,3 +2965,48 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .trueque-lados > span { font-size: 0.8rem; opacity: 0.6; padding-left: 8px; }
 .trueque-destinos { display: flex; flex-direction: column; gap: 4px; margin: 4px 0; }
 .trueque-destino { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+
+/* --- Misiones (panel de la barra, subpestaña de la plaza, Facción y rastreador) --- */
+.misiones-lista, .faccion-misiones { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.faccion-misiones h3 { margin: 12px 0 0; font-family: var(--fuente-titulo); font-size: 0.95rem; color: var(--oro); }
+.mision { padding: 8px 10px; border: 1px solid var(--bronce-osc); border-radius: 3px; background: rgba(0, 0, 0, 0.25); }
+.mision-cumplida { border-color: var(--oro); box-shadow: 0 0 0 1px rgba(216, 184, 120, 0.35) inset; }
+.mision-reclamada { opacity: 0.6; padding: 4px 10px; }
+.mision-cab { display: flex; align-items: baseline; gap: 8px; }
+.mision-cab strong { flex: 1; color: var(--oro-claro); }
+.mision-nueva { padding: 0 6px; font-size: 0.7rem; border-radius: 9px; background: var(--terracota); color: #fff; }
+.mision-premio { font-size: 0.8rem; color: var(--oro); white-space: nowrap; }
+.mision-texto { margin: 4px 0; font-size: 0.82rem; color: var(--text-secondary); }
+.mision-cond { margin-top: 4px; }
+.mision-cond small { font-size: 0.75rem; color: var(--text-secondary); }
+.mision-barra { height: 6px; background: #3a362b; border-radius: 3px; overflow: hidden; }
+.mision-cond.fino .mision-barra { height: 3px; }
+.mision-barra span { display: block; height: 100%; background: var(--bronce); transition: width 0.4s; }
+.mision-acciones { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.mision-acciones button { padding: 3px 10px; font-size: 0.8rem; }
+.mision .faction-error:empty { display: none; }
+.misiones-hechas summary { cursor: pointer; font-size: 0.8rem; color: var(--text-secondary); }
+.misiones-hechas .mision { margin-top: 4px; }
+.mision-cuenta { padding: 0 5px; font-size: 0.7rem; border-radius: 9px; background: var(--oro); color: #201509; }
+
+.misiones-rastreador {
+  position: absolute;
+  left: 16px;
+  top: calc(var(--jugador-alto) + 12px);
+  z-index: 4;
+  width: 230px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  background: rgba(20, 16, 12, 0.85);
+  border: 1px solid var(--bronce-osc);
+  border-radius: 3px;
+}
+.misiones-rastreador.en-columna { position: static; width: auto; margin-bottom: 8px; }
+.misiones-rastreador button { all: unset; box-sizing: border-box; display: block; width: 100%; cursor: pointer; padding: 3px 6px; border-radius: 2px; }
+.misiones-rastreador button:hover { background: rgba(169, 121, 63, 0.18); }
+.rastreador-cab { display: flex !important; justify-content: space-between; font-family: var(--fuente-titulo); font-size: 0.78rem; color: var(--oro); }
+.rastreador-item strong { display: block; font-size: 0.78rem; font-weight: 600; color: var(--pergamino); }
+.rastreador-item small { font-size: 0.72rem; color: var(--oro); }
+.rastreador-item.cumplida strong { color: var(--oro); }

@@ -18,6 +18,7 @@ import { estadoCliente, textoEnTiempoReal } from './estadoCliente';
 import { nombreDeHeroe } from './nombres';
 import { informeDeEvento, type InformeDeCombate } from './informeCombate';
 import { plazo } from './panelDiplomacia';
+import { textoDeMision } from './misiones';
 
 /** Los eventos de «alguien te ha mirado»: el backend los emite sin decir quién. */
 const CODIGOS_DE_AVISO = new Set(['asentamiento.observado', 'columna.observada', 'caravana.observada', 'asentamiento.informe_pedido']);
@@ -224,6 +225,17 @@ export function procesar(e: EventoDominio, heroeId: string, modo: Modo): void {
     // Solo pedir unirse exige decisión; lo demás informa y se agrupa por tipo.
     const urgente = e.codigo === 'convocatoria.union_pedida';
     anotar({ ...base, texto, clase: 'mirada', titulo: 'Ejército en preparación', categoria: 'movimientos', urgente, clave: e.codigo }, modo, urgente);
+    return;
+  }
+  if (e.codigo === 'mision.cumplida' || e.codigo === 'mision.reclamada') {
+    // Misiones (motor, mecánica 49): `mision` y `dueno` (`heroe-N`, `as-N`, `f-N`); al reclamar, `oro` o `xp` en milésimas.
+    const p = e.payload as { mision?: string; dueno?: string; oro?: number; xp?: number } | undefined;
+    const titulo = textoDeMision(p?.mision ?? '').titulo;
+    const deQuien = p?.dueno?.startsWith('as-') ? ' de la plaza' : p?.dueno?.startsWith('f-') ? ' de la Facción' : '';
+    const cumplida = e.codigo === 'mision.cumplida';
+    const premio = p?.oro ? `+${Math.round(p.oro / 1000)} oro` : p?.xp ? `+${Math.round(p.xp / 1000)} XP de Facción` : 'Recompensa';
+    const texto = cumplida ? `¡Misión${deQuien} cumplida: ${titulo}! Reclama la recompensa en Misiones.` : `${premio} por la misión${deQuien} «${titulo}».`;
+    anotar({ ...base, texto, clase: 'mirada', titulo: cumplida ? 'Misión cumplida' : 'Recompensa de misión', categoria: 'economia', urgente: cumplida, clave: `${e.codigo}|${p?.dueno ?? ''}|${p?.mision ?? ''}` }, modo);
     return;
   }
   if (e.codigo === 'ejercito.entra_en_campamento') {
