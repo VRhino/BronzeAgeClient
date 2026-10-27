@@ -605,6 +605,7 @@ body {
 
 .faction-list-item > div {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 3px;
   min-width: 0;

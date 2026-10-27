@@ -3,6 +3,13 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.33.1] — 2026-10-27 · la lista de Facciones enseña el sigilo y los integrantes · sync con `VRhino/BronzeAge@79a754b`
+
+### Cambiado
+- **«Pedir ingreso»**: cada Facción de la lista lleva su sigilo y cuántos integrantes tiene, además del nivel y el Rey.
+  La lista seguirá vacía para un héroe recién creado hasta que el motor mande todas las Facciones (pedido al motor);
+  tampoco el nombre del héroe sale aún (el motor lo descarta y proyecta «Héroe N»; pedido también).
+
 ## [0.33.0] — 2026-10-27 · iconos en el mapa del mundo · sync con `VRhino/BronzeAge@79a754b`
 
 ### Cambiado
