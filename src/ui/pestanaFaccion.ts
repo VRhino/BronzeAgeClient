@@ -26,6 +26,8 @@ export function renderPestanaFaccion(
   escaparHtml: (valor: string) => string
 ): string {
   const faccion = faccionDelJugador(proyeccion);
+  // Con Facción pero sin su ficha todavía: nunca las opciones de quien no la tiene (crear o pedir ingreso).
+  if (!faccion && proyeccion.faccionId) return '<p class="faction-empty-list">Cargando tu Facción…</p>';
   const vista = faccion ? 'detalle' : estadoCliente.modoPanelFaccion;
 
   if (faccion) {

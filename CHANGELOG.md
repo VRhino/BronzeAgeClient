@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.34.1] — 2026-10-27 · la pestaña Facción no salta a «sin Facción» · sync con `VRhino/BronzeAge@c5c6111`
+
+### Corregido
+- **La pestaña Facción alternaba entre tu Facción y las opciones de quien no tiene.** No se reprodujo aquí; la causa posible es que el
+  ámbito `FACCION` falte un momento (una incoherencia lo tira hasta que vuelve como foto, o una reconexión). Ahora la proyección conserva la
+  última ficha de la Facción propia, y si aun así falta, la pestaña dice «Cargando tu Facción…» en vez de ofrecer crear una o pedir
+  ingreso. Si vuelve a pasar, la consola dirá `[sesion] incoherencia` con el motivo.
+
 ## [0.34.0] — 2026-10-27 · nombre del héroe, Facciones para quien no tiene y precios del campamento · sync con `VRhino/BronzeAge@c5c6111`
 
 ### Corregido (con el motor c5c6111)

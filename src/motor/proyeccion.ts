@@ -346,6 +346,9 @@ function sinHeroe(c: Contexto): PartidaSinHeroe {
   };
 }
 
+/** La última ficha completa de la Facción propia que se vio (ver `proyectar`). */
+let ultimaFaccionPropia: pb.Faccion | undefined;
+
 export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
   const { almacen: a, ahora } = c;
   const heroeId = c.bienvenida.heroeId ?? [...a.ambitos.keys()].find((k) => k.startsWith('HEROE:'))?.slice('HEROE:'.length);
@@ -374,6 +377,11 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
   const propiasFacciones = deAmbito('FACCION:', 'faccion');
   const todasFacciones = new Map<string, pb.Faccion>();
   for (const f of [...deAmbito('VISTA:', 'faccion'), ...propiasFacciones]) todasFacciones.set(f.id, f);
+  // La propia viaja en `FACCION`. Si ese ámbito falta un momento (una incoherencia lo tira hasta que vuelve como foto, o una reconexión), se
+  // queda la última que se vio: sin ella, la pestaña Facción saltaba a «sin Facción» y volvía.
+  const propia = faccionId ? todasFacciones.get(faccionId) : undefined;
+  if (propia) ultimaFaccionPropia = propia;
+  else if (faccionId && ultimaFaccionPropia?.id === faccionId) todasFacciones.set(faccionId, ultimaFaccionPropia);
 
   // Las plazas: la del interior (ASENTAMIENTO) gana a la ficha de FACCION y de VISTA.
   const plazas = new Map<string, pb.Asentamiento>();
