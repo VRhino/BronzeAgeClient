@@ -35,7 +35,7 @@ function renderTarjetaRecinto(
   const pct = Math.round(integridad * 100);
   const estadoTexto =
     recinto.mejorandoA !== undefined
-      ? `mejorando a nivel ${recinto.mejorandoA} · obra ${recinto.avance + 1}/${recinto.celdas.length} (${pct}%)`
+      ? `mejorando a nivel ${recinto.mejorandoA} · ${recinto.mejoradas ?? 0}/${recinto.celdas.length} celdas mejoradas`
       : completo
         ? 'completo'
         : `en obra ${recinto.avance + 1}/${recinto.celdas.length} (${pct}%)`;

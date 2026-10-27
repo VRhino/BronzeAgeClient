@@ -3,6 +3,20 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.31.1] — 2026-10-27 · el clic del mapa mueve, víveres de la columna y contrato al día · sync con `VRhino/BronzeAge@e11979e`
+
+### Corregido
+- Con el mapa a escala de visión, un clic no movía al héroe: los radios de agarre (20 a 45 unidades) cubrían media pantalla y el clic caía
+  sobre tu propia columna o el campamento, así que la orden iba a donde ya estabas. Ahora el radio se mantiene en los px que medía antes
+  (`ui/agarre.ts`). Un destino al otro lado del río sigue saliendo como «no hay ruta por tierra hasta el destino», como lo decide el motor.
+- Los víveres salían 0/350 al salir al mundo: el motor los lleva en la columna (`Ejercito.viveres`) y la interfaz los leía del héroe.
+
+### Contrato (paridad P7 del motor)
+- Regenerado desde `e11979e`, sin cambios que rompan nada.
+- La planta del campamento llega del motor (`CampamentoMercenarios.planta`, `trazado` y `empalizada`) y se dibuja con el plano de siempre.
+- Los caminos del mapa usan los tramos ya fundidos (`RedCaminos.tramos`).
+- La muralla en mejora cuenta las celdas ya mejoradas (`Recinto.mejoradas`).
+
 ## [0.31.0] — 2026-10-26 · el mapa a la escala de visión del jugador · sync con `VRhino/BronzeAge@49e285f`
 
 El mapa del mundo pasa de escalar por CSS una imagen del mundo entero (zoom 1 a 4) a una cámara que repinta la vista. Mismo modelo que

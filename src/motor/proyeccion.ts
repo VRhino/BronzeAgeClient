@@ -100,7 +100,7 @@ function edificio(e: pb.Edificio): d.Edificio {
 
 function recinto(r: pb.Recinto): d.Recinto {
   return {
-    id: r.id, nivel: r.nivel, avance: r.avance, mejorandoA: r.mejorandoA, siguienteCeldaEn: instante(r.siguienteCeldaEnMs),
+    id: r.id, nivel: r.nivel, avance: r.avance, mejorandoA: r.mejorandoA, mejoradas: r.mejoradas, siguienteCeldaEn: instante(r.siguienteCeldaEnMs),
     celdas: r.celdas.map((c) => ({ col: c.col, row: c.fila, clase: CLASE_CELDA[c.clase] ?? 'muro' })),
   };
 }
@@ -267,6 +267,27 @@ function campamentoMercenarios(c: pb.CampamentoMercenarios): d.CampamentoMercena
   };
 }
 
+/** La planta de un campamento (paridad P7 del motor, `layoutCampamento`), en la forma que dibuja `ui/planoCampamento.ts`: celdas de 3 unidades locales,
+ * las piezas con su centro en unidades y su huella en celdas, y la empalizada celda a celda (el motor la manda fusionada en rectángulos). */
+function escenaCampamento(c: pb.CampamentoMercenarios): d.EscenaCampamento | undefined {
+  if (c.planta.length === 0) return undefined;
+  const T = c.trazado?.unidadesPorCelda || 3;
+  const celdas = (rects: pb.RectLocal[], clase: 'muro' | 'puerta') =>
+    rects.flatMap((r) => {
+      const fuera: d.EscenaCampamento['empalizada'] = [];
+      for (let col = Math.floor(r.x / T); col < Math.ceil((r.x + r.ancho) / T); col++) {
+        for (let row = Math.floor(r.y / T); row < Math.ceil((r.y + r.alto) / T); row++) fuera.push({ col, row, clase });
+      }
+      return fuera;
+    });
+  return {
+    campamentoId: c.id, origen: c.origen, layoutVersion: c.trazado?.layoutVersion ?? 0, unidadesPorCelda: T,
+    edificios: c.planta.map((e) => ({ edificioId: e.id, tipo: e.tipo, posicion: punto(e.posicion), ancho: e.ancho / T, alto: e.alto / T })),
+    calles: (c.trazado?.calles ?? []).map((r) => ({ col: r.x / T, row: r.y / T, ancho: r.ancho / T, alto: r.alto / T })),
+    empalizada: [...celdas(c.empalizada, 'muro'), ...celdas(c.empalizadaPuerta, 'puerta')],
+  };
+}
+
 function relacion(r: pb.RelacionPolitica): d.RelacionPolitica {
   return {
     id: r.id, tipo: TIPO_RELACION[r.tipo] ?? 'alianza', faccionAId: r.faccionAId, faccionBId: r.faccionBId,
@@ -404,11 +425,20 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
     })),
     caravanasAvistadas: caravanasAjenas.map((x) => ({ id: x.id, posicionActual: evaluarPlan(x.plan, x.posicion, ahora).posicion, faccionId: x.faccionId, escoltada: x.escoltada, recursos: x.recursosAvistados })),
     informesDeInspeccion: [],
-    heroe: heroe(h, escuadrones, ahora),
+    heroe: (() => {
+      // Los víveres viajan en la columna (`Ejercito.viveres`, contract: «en un ejército, los del ejército»); el héroe solo los lleva propios si va sin ella. La interfaz los lee del héroe.
+      const x = heroe(h, escuadrones, ahora);
+      const columna = ejercitosPropios.find((e) => e.participantes.some((p) => p.heroeId === heroeId));
+      if (columna?.viveres) x.viveres = valorDeRitmo(columna.viveres, ahora);
+      return x;
+    })(),
     heroesVisibles: heroesAjenos.map(heroePublico),
     nombresDeCompaneros: nombres,
     nombresDeDirigentes: {},
-    caminos: red ? red.aristas.map((x, i) => ({ id: x, escalon: (red.escalones[i] ?? 1) as 0 | 1 | 2, puntos: arista(x) })) : [],
+    // Los tramos ya fundidos (paridad P7); un servidor anterior solo manda las aristas sueltas.
+    caminos: !red ? [] : red.tramos.length
+      ? red.tramos.map((t) => ({ id: t.id, escalon: Math.min(2, t.escalon) as 0 | 1 | 2, puntos: t.puntos.map(punto) }))
+      : red.aristas.map((x, i) => ({ id: x, escalon: (red.escalones[i] ?? 1) as 0 | 1 | 2, puntos: arista(x) })),
     ordenes: deAmbito('FACCION:', 'ordenMercado').map((o) => ({
       id: o.id, asentamientoId: o.asentamientoId, tipo: o.esCompra ? 'compra' : 'venta', recurso: o.recurso, cantidad: mil(o.cantidad), cantidadCumplida: mil(o.cantidadCumplida),
       precioUnitario: mil(o.precioUnitario), creadoEn: instante(o.creadoEnMs)!, expiraEn: instante(o.expiraEnMs)!, estado: ESTADO_ORDEN[o.estado] ?? 'activa',
@@ -428,6 +458,7 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
       for (const x of [...deAmbito('VISTA:', 'campamentoMercenarios'), ...deAmbito('CAMPAMENTO:', 'campamentoMercenarios')]) m.set(x.id, x);
       return [...m.values()].map(campamentoMercenarios);
     })(),
+    escenaCampamento: deAmbito('CAMPAMENTO:', 'campamentoMercenarios').map(escenaCampamento).find(Boolean),
     alijos: deAmbito('HEROE:', 'alijo').map((x) => ({ id: x.id, posicion: punto(x.posicion), oro: mil(x.oro) })),
     miradasIntel: deAmbito('VISTA:', 'mirada').map((m) => ({
       id: m.id, faccionId: m.faccionId, origenId: m.origenId, centro: punto(m.centro), radio: mil(m.radio),

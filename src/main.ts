@@ -60,6 +60,7 @@ import { cablearUnirseDesdePlaza, htmlUnirseDesdePlaza } from './ui/unirseDesdeP
 import { cablearCargos } from './ui/panelCargos';
 import { cablearDiplomacia } from './ui/panelDiplomacia';
 import { instalarZoomPan, type ControlMapa } from './ui/pantallaMapa';
+import { agarre } from './ui/agarre';
 import { guardarVistaMapa, leerVistaMapa } from './ui/vistaMapaGuardada';
 import { alCambiarAvisos, alLlegarInforme, avisarDeEventos, avisosNoLeidos, hayPeligroSinLeer, historialDeAvisos, mostrar as mostrarAviso, reiniciarAvisos } from './ui/avisos';
 import { htmlInforme, type InformeDeCombate } from './ui/informeCombate';
@@ -451,7 +452,7 @@ function asentamientosDelMapa(proyeccion: ProyeccionJugador): AsentamientoEnMapa
 
 /** El asentamiento más cercano al punto de mapa clicado dentro de un radio de agarre, o `null`. */
 function asentamientoCercaDe(punto: { x: number; y: number }, proyeccion: ProyeccionJugador): AsentamientoEnMapa | null {
-  const RADIO = 45; // unidades de mundo — un pelo más que el glifo del asentamiento
+  const RADIO = agarre(45); // unidades de mundo — un pelo más que el glifo del asentamiento (`ui/agarre.ts`)
   let mejor: AsentamientoEnMapa | null = null;
   let mejorDist = RADIO * RADIO;
   for (const asentamiento of asentamientosDelMapa(proyeccion)) {
@@ -467,7 +468,7 @@ function asentamientoCercaDe(punto: { x: number; y: number }, proyeccion: Proyec
  * son solo los que se ven ahora (no tienen memoria). */
 function campamentoCercaDe(punto: { x: number; y: number }, proyeccion: ProyeccionJugador): CampamentoBandido | null {
   const distancia = (c: CampamentoBandido): number => Math.hypot(c.posicion.x - punto.x, c.posicion.y - punto.y);
-  return proyeccion.campamentosBandidos.filter((c) => distancia(c) < 25).sort((a, b) => distancia(a) - distancia(b))[0] ?? null;
+  return proyeccion.campamentosBandidos.filter((c) => distancia(c) < agarre(25)).sort((a, b) => distancia(a) - distancia(b))[0] ?? null;
 }
 
 /** El elemento de `lista` más cercano al punto clicado, dentro de un radio de agarre, o `null`. */
@@ -1240,23 +1241,23 @@ function montarMapa(): void {
       if (bajo.ir) void marcharAObjetivo(bajo.ir);
       return;
     }
-    const batalla = cercano((proy.batallas ?? []).map((b) => ({ ...b, posicion: b.punto })), punto, 20);
-    const formacion = batalla ? null : cercano(formacionesVisibles(proy).map((e) => ({ ...e, posicion: e.posicionActual })), punto, 20);
+    const batalla = cercano((proy.batallas ?? []).map((b) => ({ ...b, posicion: b.punto })), punto, agarre(20));
+    const formacion = batalla ? null : cercano(formacionesVisibles(proy).map((e) => ({ ...e, posicion: e.posicionActual })), punto, agarre(20));
     if (batalla || formacion) {
       seleccionMapa = batalla ? { tipo: 'batalla', id: batalla.battleId } : { tipo: 'formacion', id: formacion!.id };
       renderSeleccionMapa();
       void marcharAObjetivo({ tipo: 'punto', punto: batalla ? batalla.punto : formacion!.posicionActual });
       return;
     }
-    const delEjercito = cercano(ejercitosDeLaFaccion(proy).filter((x) => !x.formacion).map((x) => ({ ...x, posicion: x.posicionActual })), punto, 20);
+    const delEjercito = cercano(ejercitosDeLaFaccion(proy).filter((x) => !x.formacion).map((x) => ({ ...x, posicion: x.posicionActual })), punto, agarre(20));
     if (delEjercito) {
       seleccionMapa = { tipo: 'ejercito', id: delEjercito.id };
       renderSeleccionMapa();
       void marcharAObjetivo({ tipo: 'punto', punto: delEjercito.posicionActual });
       return;
     }
-    const alijo = cercano(proy.alijos ?? [], punto, 15);
-    const mercenarios = alijo ? null : cercano(proy.campamentosMercenarios ?? [], punto, 30);
+    const alijo = cercano(proy.alijos ?? [], punto, agarre(15));
+    const mercenarios = alijo ? null : cercano(proy.campamentosMercenarios ?? [], punto, agarre(30));
     const campamento = alijo || mercenarios ? null : campamentoCercaDe(punto, proy);
     const asentamiento = alijo || mercenarios || campamento ? null : asentamientoCercaDe(punto, proy);
     if (alijo || mercenarios) {

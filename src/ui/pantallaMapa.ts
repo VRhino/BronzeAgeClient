@@ -4,6 +4,7 @@
 // por CSS una imagen del mundo entero, porque de la vista del mundo a la escala de visión del jugador hay un factor ~80 y la imagen se
 // vería a cuadros. Quien pinta fija `ctx.setTransform` con `transformar(ctx)` y dibuja en unidades × `escala`, como siempre.
 
+import { fijarEscalaDeAgarre } from './agarre';
 import { acotar, aMundo, arrastrar, escalaDeVision, escalaMinima, origen, zoomHacia, type Camara } from './geometriaVista';
 
 /** Radio de visión de un héroe solo (`VISION.jugadorSolo`) hasta que lleguen los datos de juego del servidor. */
@@ -72,6 +73,7 @@ export function instalarZoomPan(
     const [min, max] = topes();
     const base = camara ?? { escala: max, cx: mundo.ancho / 2, cy: mundo.alto / 2 };
     camara = acotar(foco ? { ...base, cx: foco.x, cy: foco.y } : base, t, mundo, min, max);
+    fijarEscalaDeAgarre(camara.escala);
     avisar();
   }
 

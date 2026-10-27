@@ -10,6 +10,7 @@
 // proyección (10 min de mundo): así sobrevive a recargar y a cerrar la ficha.
 import type { ProyeccionJugador } from '../apiCliente';
 import { radioDeEncuentro, radioDeInspeccion, tropasReclutables } from '../apiCliente';
+import { agarre } from './agarre';
 import { RADIO_PROTECCION_MERCENARIOS } from '../render';
 import { RECURSO_NOMBRE } from '../paletas';
 import type { CaravanaAvistada, EjercitoAvistado, InformeDeInspeccion } from '../tiposDominio';
@@ -34,11 +35,11 @@ const nombreTropa = (id: string): string => tropasReclutables()?.find((t) => t.i
 /** Qué columna o caravana ajena hay bajo el clic. No manda marchar (sin `ir`): un clic para mirar no debe mover tu columna. Cede ante lo que ya
  * tiene prioridad (batallas, tus ejércitos); las formaciones siguen por su propia ficha. */
 export function seleccionarAjeno(p: ProyeccionJugador, punto: Punto): ObjetoBajoElClic | null {
-  if ((p.batallas ?? []).some((b) => distancia(b.punto, punto) < 20)) return null;
-  if (ejercitosDeLaFaccion(p).some((x) => !x.formacion && distancia(x.posicionActual, punto) < 20)) return null;
+  if ((p.batallas ?? []).some((b) => distancia(b.punto, punto) < agarre(20))) return null;
+  if (ejercitosDeLaFaccion(p).some((x) => !x.formacion && distancia(x.posicionActual, punto) < agarre(20))) return null;
   const candidatos = [
-    ...(p.ejercitosAvistados ?? []).filter((x) => !x.enFormacion).map((x) => ({ tipo: 'ejercitoAjeno', id: x.id, d: distancia(x.posicionActual, punto), radio: 20 })),
-    ...(p.caravanasAvistadas ?? []).map((c) => ({ tipo: 'caravanaAjena', id: c.id, d: distancia(c.posicionActual, punto), radio: 15 })),
+    ...(p.ejercitosAvistados ?? []).filter((x) => !x.enFormacion).map((x) => ({ tipo: 'ejercitoAjeno', id: x.id, d: distancia(x.posicionActual, punto), radio: agarre(20) })),
+    ...(p.caravanasAvistadas ?? []).map((c) => ({ tipo: 'caravanaAjena', id: c.id, d: distancia(c.posicionActual, punto), radio: agarre(15) })),
   ].filter((c) => c.d < c.radio).sort((a, b) => a.d - b.d);
   return candidatos[0] ? { tipo: candidatos[0].tipo, id: candidatos[0].id } : null;
 }

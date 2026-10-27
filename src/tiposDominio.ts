@@ -102,6 +102,8 @@ export interface Recinto {
   avance: number;
   /** Nivel al que se está mejorando, si hay una mejora en obra (§7). */
   mejorandoA?: number;
+  /** Con una mejora en obra, cuántas celdas (en el orden de `celdas`) ya son del nivel nuevo. */
+  mejoradas?: number;
   /** No se levanta otra celda antes de este instante de mundo (backend 2026-09-26: la muralla va por minutos por
    * celda). Ausente = se puede ya. */
   siguienteCeldaEn?: number;
