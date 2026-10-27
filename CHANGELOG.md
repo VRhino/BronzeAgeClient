@@ -3,6 +3,15 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.32.5] — 2026-10-27 · mercado del campamento sin «—» · sync con `VRhino/BronzeAge@79a754b`
+
+### Corregido
+- **«Pagas» y «Te queda» salían con «—» en el Mercado del campamento.** El motor no manda el precio por unidad de lo que vende el campamento:
+  lo calcula al comprar con el stock de todas las plazas del mundo (precio de referencia × `margen`), que el cliente no ve. Mientras no lo
+  publique, esas dos casillas no se pintan y una nota explica que el precio se cobra al comprar. La compra ya funcionaba.
+- **El cupo de hoy no salía.** Se calcula del contrato: `cupo_diario` del campamento menos lo que el héroe compró hoy (`Heroe.cupo_campamento`,
+  que vuelve a cero al cambiar el día de mundo), solo para el residente.
+
 ## [0.32.4] — 2026-10-27 · el fondo de refundación cuenta lo aportado · sync con `VRhino/BronzeAge@2150620`
 
 ### Corregido

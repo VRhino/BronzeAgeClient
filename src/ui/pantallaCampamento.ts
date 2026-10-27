@@ -236,10 +236,11 @@ function mercado(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): st
             <input type="range" min="1" max="${maximo}" value="${inicial}" data-cantidad-barra />
           </label>
           <div class="mercado-total">
-            <div><span>Pagas</span><strong data-total>${precio ? Math.ceil(inicial * precio) : '—'}</strong><small>de oro</small></div>
-            <div><span>Te queda</span><strong data-resta>${precio ? oro - Math.ceil(inicial * precio) : '—'}</strong><small>de oro</small></div>
+            ${precio ? `<div><span>Pagas</span><strong data-total>${Math.ceil(inicial * precio)}</strong><small>de oro</small></div>
+            <div><span>Te queda</span><strong data-resta>${oro - Math.ceil(inicial * precio)}</strong><small>de oro</small></div>` : ''}
             <div><span>Tendrás</span><strong data-tendras>${tienes(r) + inicial}</strong><small>${e(nombreRecurso(r))}</small></div>
           </div>
+          ${precio ? '' : '<p class="asent-lado-nota">El servidor todavía no publica el precio por unidad: lo cobra al comprar (sale del stock de todo el mundo) y, si no te llega el oro, te vende lo que alcance.</p>'}
           <button class="btn-primary" type="button" data-comprar="${e(r)}">Comprar</button>`}
       ${ultimaCompra ? `<p class="mercado-hecho">${e(ultimaCompra)}</p>` : ''}
     </section>`;

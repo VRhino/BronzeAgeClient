@@ -290,6 +290,20 @@ function escenaCampamento(c: pb.CampamentoMercenarios): d.EscenaCampamento | und
   };
 }
 
+/** El mostrador del campamento donde estás: lo que te queda hoy del cupo de cada bien (`cupo_diario` del campamento menos lo que el héroe compró
+ * hoy, `Heroe.cupo_campamento`, que se reinicia al cambiar el día de mundo, como `CupoDiario::restante` del motor). El precio por unidad no
+ * viaja en el contrato (el motor lo saca del stock global de todas las plazas, que el cliente no ve): `precios` va vacío. */
+function mercadoCampamento(dentro: pb.CampamentoMercenarios[], h: pb.Heroe, ahora: number): ProyeccionJugador['mercadoCampamento'] {
+  const c = dentro.find((x) => x.presentesIds.includes(h.id)) ?? dentro[0];
+  if (!c) return undefined;
+  // Solo el residente compra con cupo; el visitante, no (`comprar_visitante`).
+  if (!c.residentesIds.includes(h.id)) return { precios: {}, cupoRestante: {} };
+  const hoy = Math.floor(ahora / 86_400_000);
+  const comprado = h.cupoCampamento?.dia === hoy ? h.cupoCampamento.comprado : {};
+  const cupoRestante = Object.fromEntries(Object.entries(cantidades(c.cupoDiario)).map(([r, tope]) => [r, Math.max(0, Math.floor(tope - (comprado[r] ?? 0) / 1000))]));
+  return { precios: {}, cupoRestante };
+}
+
 function relacion(r: pb.RelacionPolitica): d.RelacionPolitica {
   return {
     id: r.id, tipo: TIPO_RELACION[r.tipo] ?? 'alianza', faccionAId: r.faccionAId, faccionBId: r.faccionBId,
@@ -461,6 +475,7 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
       return [...m.values()].map(campamentoMercenarios);
     })(),
     escenasCampamento: deAmbito('CAMPAMENTO:', 'campamentoMercenarios').map(escenaCampamento).filter((e): e is d.EscenaCampamento => Boolean(e)),
+    mercadoCampamento: mercadoCampamento(deAmbito('CAMPAMENTO:', 'campamentoMercenarios'), h, ahora),
     alijos: deAmbito('HEROE:', 'alijo').map((x) => ({ id: x.id, posicion: punto(x.posicion), oro: mil(x.oro) })),
     miradasIntel: deAmbito('VISTA:', 'mirada').map((m) => ({
       id: m.id, faccionId: m.faccionId, origenId: m.origenId, centro: punto(m.centro), radio: mil(m.radio),
