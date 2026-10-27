@@ -267,7 +267,7 @@ function cablearFaccion(root: ParentNode, proyeccion: ProyeccionJugador, rerende
     const pintarLista = (): void => {
       const termino = busqueda.value.trim().toLowerCase();
       const facciones = proyeccion.facciones.filter((faccion) => faccion.nombre.toLowerCase().includes(termino));
-      lista.innerHTML = facciones.length > 0 ? facciones.map((faccion) => `<div class="faction-list-item">${svgSigilo(faccion.sigilo, 40)}<div><strong>${escaparHtml(faccion.nombre)}</strong><span>Nivel ${faccion.nivel}${faccion.ciudadanosIds ? ` · ${faccion.ciudadanosIds.length} integrante${faccion.ciudadanosIds.length === 1 ? '' : 's'}` : ''}${faccion.reyId ? ` · Rey: ${escaparHtml(nombreDeHeroe(proyeccion, faccion.reyId))}` : ''}</span></div>${(faccion.solicitudesIds ?? []).includes(proyeccion.heroeId) ? '<span>Pedido: decide su Rey</span>' : `<button class="btn-join-faction" type="button" data-faccion-id="${escaparHtml(faccion.id)}">Pedir ingreso</button>`}</div>`).join('') : '<p class="faction-empty-list">No hay facciones que coincidan.</p>';
+      lista.innerHTML = facciones.length > 0 ? facciones.map((faccion) => `<div class="faction-list-item">${svgSigilo(faccion.sigilo, 40)}<div><strong>${escaparHtml(faccion.nombre)}</strong><span>Nivel ${faccion.nivel}${faccion.ciudadanosIds ? ` · ${faccion.ciudadanosIds.length} integrante${faccion.ciudadanosIds.length === 1 ? '' : 's'}` : ''}${faccion.reyId && nombreDeHeroe(proyeccion, faccion.reyId) !== faccion.reyId ? ` · Rey: ${escaparHtml(nombreDeHeroe(proyeccion, faccion.reyId))}` : ''}</span></div>${(faccion.solicitudesIds ?? []).includes(proyeccion.heroeId) ? '<span>Pedido: decide su Rey</span>' : `<button class="btn-join-faction" type="button" data-faccion-id="${escaparHtml(faccion.id)}">Pedir ingreso</button>`}</div>`).join('') : '<p class="faction-empty-list">No hay facciones que coincidan.</p>';
       lista.querySelectorAll<HTMLButtonElement>('.btn-join-faction').forEach((boton) => boton.addEventListener('click', async () => {
         boton.disabled = true;
         boton.textContent = 'Pidiendo...';
@@ -329,7 +329,7 @@ function montarHeroe(): void {
   app.innerHTML = `<div class="login-container"><div class="login-card">
     <div class="login-header"><h1 class="login-title">Tu héroe${ayuda('heroe:crear', 'Nace dentro de un campamento de mercenarios.')}</h1></div>
     <form id="form-crear-heroe">
-      <div class="form-group"><label class="form-label" for="input-nombre-heroe">Nombre</label><input type="text" id="input-nombre-heroe" class="form-input" required autocomplete="off" /></div>
+      <div class="form-group"><label class="form-label" for="input-nombre-heroe">Nombre</label><input type="text" id="input-nombre-heroe" class="form-input" required maxlength="24" autocomplete="off" /></div>
       <div class="form-group"><span class="form-label">Campamento</span><div class="mapa-lista">${opciones || '<p class="mapa-lista-vacia">Esta partida no tiene campamentos.</p>'}</div></div>
       <button type="submit" id="btn-crear-heroe" class="btn-primary">Crear héroe</button>
       <p id="error-heroe" class="faction-error" role="alert"></p>

@@ -290,18 +290,23 @@ function escenaCampamento(c: pb.CampamentoMercenarios): d.EscenaCampamento | und
   };
 }
 
-/** El mostrador del campamento donde estás: lo que te queda hoy del cupo de cada bien (`cupo_diario` del campamento menos lo que el héroe compró
- * hoy, `Heroe.cupo_campamento`, que se reinicia al cambiar el día de mundo, como `CupoDiario::restante` del motor). El precio por unidad no
- * viaja en el contrato (el motor lo saca del stock global de todas las plazas, que el cliente no ve): `precios` va vacío. */
+/** El mostrador del campamento donde estás (motor c5c6111): el precio por unidad de cada bien para este héroe (`precios_mercado`, millonésimas de oro;
+ * n unidades cuestan ⌈n·p⌉), lo que le queda hoy del cupo (`cupo_diario` menos `Heroe.cupo_campamento`, que vuelve a cero al cambiar el día de mundo,
+ * como `CupoDiario::restante`; solo el residente compra con cupo) y, si reside, las tropas que recluta con su precio por soldado. */
 function mercadoCampamento(dentro: pb.CampamentoMercenarios[], h: pb.Heroe, ahora: number): ProyeccionJugador['mercadoCampamento'] {
   const c = dentro.find((x) => x.presentesIds.includes(h.id)) ?? dentro[0];
   if (!c) return undefined;
-  // Solo el residente compra con cupo; el visitante, no (`comprar_visitante`).
-  if (!c.residentesIds.includes(h.id)) return { precios: {}, cupoRestante: {} };
+  const precios = Object.fromEntries(Object.entries(c.preciosMercado).map(([r, p]) => [r, Number(p) / 1_000_000]));
+  if (!c.residentesIds.includes(h.id)) return { precios, cupoRestante: {} };
   const hoy = Math.floor(ahora / 86_400_000);
   const comprado = h.cupoCampamento?.dia === hoy ? h.cupoCampamento.comprado : {};
   const cupoRestante = Object.fromEntries(Object.entries(cantidades(c.cupoDiario)).map(([r, tope]) => [r, Math.max(0, Math.floor(tope - (comprado[r] ?? 0) / 1000))]));
-  return { precios: {}, cupoRestante };
+  const reclutamiento = {
+    tropas: c.reclutables.map((t) => ({ tropaId: t.tropaId, precioPorSoldado: mil(t.precioPorSoldado), desbloqueada: t.desbloqueada })),
+    poblacion: valorDeRitmo(c.poblacion, ahora),
+    topePoblacion: c.poblacion?.maximo !== undefined ? mil(c.poblacion.maximo) : 0,
+  };
+  return { precios, cupoRestante, reclutamiento };
 }
 
 function relacion(r: pb.RelacionPolitica): d.RelacionPolitica {

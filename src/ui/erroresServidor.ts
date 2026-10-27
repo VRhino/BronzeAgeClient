@@ -30,6 +30,7 @@ const MENSAJES: Record<string, string> = {
   'heroe.invalido': 'El héroe no puede hacer eso (no cabe en el Liderazgo o el cupo, falta algo, o el nombre está vacío).',
   'heroe.ya_existe': 'Ya tienes un héroe en esta partida.',
   'heroe.nombre_vacio': 'Tu héroe necesita un nombre.',
+  'heroe.nombre_invalido': 'El nombre del héroe debe tener de 1 a 24 caracteres, sin espacios al principio ni al final.',
   'heroe.campamento_desconocido': 'Ese campamento de mercenarios no existe.',
   'campamento.desconocido': 'Ese campamento de mercenarios no existe.',
   'campamento.no_existe': 'Ese campamento no existe.',

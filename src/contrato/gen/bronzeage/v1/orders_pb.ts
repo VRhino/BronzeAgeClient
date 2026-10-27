@@ -1314,6 +1314,8 @@ export const OrdenCrearFaccion_SigiloSchema: GenMessage<OrdenCrearFaccion_Sigilo
  */
 export type OrdenCrearHeroe = Message<"bronzeage.v1.OrdenCrearHeroe"> & {
   /**
+   * El nombre del héroe, recortado: de 1 a 24 caracteres sin caracteres de control (`heroe.nombre_invalido`). Vacío deja el héroe sin nombre y se muestra «Héroe N».
+   *
    * @generated from field: string display_name = 1;
    */
   displayName: string;

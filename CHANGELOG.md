@@ -3,6 +3,18 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.34.0] — 2026-10-27 · nombre del héroe, Facciones para quien no tiene y precios del campamento · sync con `VRhino/BronzeAge@c5c6111`
+
+### Corregido (con el motor c5c6111)
+- **El héroe sale con su nombre**, no «Héroe N». El campo admite de 1 a 24 caracteres (`heroe.nombre_invalido` si no). Los héroes creados
+  antes de c5c6111 no tienen nombre en el motor y siguen saliendo «Héroe N».
+- **«Pedir ingreso» lista todas las Facciones** a quien no tiene Facción: el motor las manda en la VISTA, con sigilo, integrantes y nivel.
+  El Rey solo se nombra si se conoce su nombre (el id no dice nada).
+- **Mercado del campamento con precio**: «Pagas», «Te queda» y el precio por unidad salen de `precios_mercado` (millonésimas de oro; n
+  unidades cuestan ⌈n·p⌉), con la reputación ya aplicada.
+- **Reclutar ya no se queda en «Cargando las tropas…»**: las tropas, su precio por soldado y si están desbloqueadas salen de `reclutables`;
+  los reclutas, de `poblacion` (tope = `maximo`).
+
 ## [0.33.1] — 2026-10-27 · la lista de Facciones enseña el sigilo y los integrantes · sync con `VRhino/BronzeAge@79a754b`
 
 ### Cambiado
