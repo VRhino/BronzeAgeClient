@@ -6,8 +6,10 @@ import {
   EDIFICIO_COLOR,
   NIEBLA,
   RECURSO_COLOR,
+  RECURSO_NOMBRE,
   faccionColor,
 } from './paletas';
+import { dibujarIconoMapa } from './mundo/iconosMapa';
 import { imagenDeSigilo } from './sigilo/lienzo';
 import { esDeCerca, hayArtefacto, pintarArbolesDelArtefacto, pintarSueloDelArtefacto, vistaDelLienzo } from './mundo/pintarArtefacto';
 
@@ -23,6 +25,8 @@ export function factorDeGlifo(escala: number): number {
 
 /** Recursos sin extensión en el mundo (una veta, un rebaño): de cerca se marcan con rombo y nombre, no con su círculo. */
 const NODOS_PUNTUALES = new Set(['cobre', 'estano', 'oro', 'livestock']);
+/** El icono de cada nodo de recurso de cerca (`mundo/iconosMapa.ts`): los metales como mena en su color, el ganado y la piedra. */
+const ICONO_DE_NODO: Record<string, string> = { cobre: 'mena', estano: 'mena', oro: 'mena', livestock: 'ganado', piedra: 'piedra' };
 
 // --- GENERADOR DETERMINISTA (Para los árboles) ---
 function hashSemilla(texto: string): number {
@@ -67,6 +71,7 @@ function dibujarGlifoArbol(ctx: CanvasRenderingContext2D, x: number, y: number, 
  * medidas y mismo orden de pintado que el cliente de administracion (`cliente/src/ui/canvas.ts`) — es
  * deliberadamente el MISMO dibujo, no una variante.
  */
+/** Una columna en el mapa: el casco del héroe en el color de su Facción y, si marcha más de uno, cuántos son. */
 function dibujarRacimoDeRombos(
   ctx: CanvasRenderingContext2D,
   cx: number,
@@ -75,21 +80,21 @@ function dibujarRacimoDeRombos(
   color: string,
   k = 1
 ): void {
-  const r = 5 * k;
-  const inicio = ((participantes - 1) * r) / 2;
-  for (let i = participantes - 1; i >= 0; i--) {
-    const x = cx - inicio + i * r;
-    ctx.beginPath();
-    ctx.moveTo(x, cy - r);
-    ctx.lineTo(x + r, cy);
-    ctx.lineTo(x, cy + r);
-    ctx.lineTo(x - r, cy);
-    ctx.closePath();
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.strokeStyle = '#1b1a17';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+  const lado = 20 * k;
+  if (!dibujarIconoMapa(ctx, 'heroe', cx, cy, lado, color)) return;
+  if (participantes > 1) {
+    ctx.save();
+    ctx.font = `bold ${Math.round(Math.max(9, 11 * k))}px system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const x = cx + lado * 0.5;
+    const y = cy - lado * 0.45;
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(10, 14, 23, 0.85)';
+    ctx.strokeText(String(participantes), x, y);
+    ctx.fillStyle = '#f4ead2';
+    ctx.fillText(String(participantes), x, y);
+    ctx.restore();
   }
 }
 
@@ -98,23 +103,20 @@ const MARCADOR_COLOR = '#f1d38b'; // el mismo ocre que la previsualización de f
 /** El "aquí estás tú": una mira sobre la columna del propio jugador, para no perderse en el mapa. Se pinta
  * ENCIMA de su racimo de rombos, que sigue diciendo cuánta gente marcha con él. */
 function dibujarMarcadorJugador(ctx: CanvasRenderingContext2D, x: number, y: number, k = 1): void {
+  // Por fuera del casco de la columna (20 k de lado): el anillo lo rodea sin taparlo.
   ctx.save();
   ctx.strokeStyle = MARCADOR_COLOR;
   ctx.lineWidth = Math.max(1.2, 2 * k);
   ctx.beginPath();
-  ctx.arc(x, y, 10 * k, 0, Math.PI * 2);
+  ctx.arc(x, y, 15 * k, 0, Math.PI * 2);
   ctx.stroke();
   ctx.lineWidth = Math.max(1, 1.6 * k);
   for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]] as const) {
     ctx.beginPath();
-    ctx.moveTo(x + dx * 7 * k, y + dy * 7 * k);
-    ctx.lineTo(x + dx * 13 * k, y + dy * 13 * k);
+    ctx.moveTo(x + dx * 13 * k, y + dy * 13 * k);
+    ctx.lineTo(x + dx * 19 * k, y + dy * 19 * k);
     ctx.stroke();
   }
-  ctx.beginPath();
-  ctx.arc(x, y, 2 * k, 0, Math.PI * 2);
-  ctx.fillStyle = MARCADOR_COLOR;
-  ctx.fill();
   ctx.restore();
 }
 
@@ -472,6 +474,19 @@ export function pintarTerreno(
       ctx.arc(x, y, 3, 0, Math.PI * 2);
       ctx.fillStyle = color;
       ctx.fill();
+    } else if (dibujarIconoMapa(ctx, ICONO_DE_NODO[nodo.tipo] ?? '', x, y, Math.max(14, 16 * k), color)) {
+      ctx.font = '11px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(10, 14, 23, 0.8)';
+      const etiqueta = RECURSO_NOMBRE[nodo.tipo] ?? nodo.tipo;
+      const dy = Math.max(14, 16 * k) / 2 + 2;
+      ctx.strokeText(etiqueta, x, y + dy);
+      ctx.fillStyle = '#f4ead2';
+      ctx.fillText(etiqueta, x, y + dy);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
     } else if (nodo.tipo === 'piedra') {
       const r = Math.max(4, 1.2 * escalaCanvas);
       for (let k = 0; k < 7; k++) {
@@ -814,18 +829,7 @@ export function pintarTerreno(
   for (const campamento of proyeccion.campamentosBandidos || []) {
     const x = campamento.posicion.x * escalaCanvas;
     const y = campamento.posicion.y * escalaCanvas;
-    const r = 6;
-    ctx.beginPath();
-    ctx.moveTo(x, y - r);
-    ctx.lineTo(x + r, y);
-    ctx.lineTo(x, y + r);
-    ctx.lineTo(x - r, y);
-    ctx.closePath();
-    ctx.fillStyle = '#8b1a1a';
-    ctx.fill();
-    ctx.strokeStyle = '#1b1a17';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+    dibujarIconoMapa(ctx, 'bandidos', x, y, 22 * k, '#2a2320', '#c0392b'); // oscuro con halo rojo: el rojo puede ser el color de una Facción
   }
 
   // 18b. CAMPAMENTOS DE MERCENARIOS (tienda parda) y ALIJOS (punto dorado), backend 2026-10-04 (Doc 1.9b). Los
@@ -839,20 +843,10 @@ export function pintarTerreno(
     ctx.strokeStyle = 'rgba(46, 94, 140, 0.5)';
     ctx.lineWidth = 1;
     ctx.stroke();
-    ctx.fillStyle = '#2e5e8c';
-    ctx.fillRect(x - 5, y - 5, 10, 10);
-    ctx.strokeStyle = '#1b1a17';
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(x - 5, y - 5, 10, 10);
+    dibujarIconoMapa(ctx, 'mercenarios', x, y, 24 * k, '#6fa3d6');
   }
   for (const alijo of proyeccion.alijos || []) {
-    ctx.beginPath();
-    ctx.arc(alijo.posicion.x * escalaCanvas, alijo.posicion.y * escalaCanvas, 4, 0, Math.PI * 2);
-    ctx.fillStyle = '#e0b422';
-    ctx.fill();
-    ctx.strokeStyle = '#1b1a17';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    dibujarIconoMapa(ctx, 'alijo', alijo.posicion.x * escalaCanvas, alijo.posicion.y * escalaCanvas, 16 * k, '#e0b422');
   }
 
   // 19. TÚ Y TU DESTINO. Encima de todo: la mira sobre la columna del propio jugador (para ubicarse de un

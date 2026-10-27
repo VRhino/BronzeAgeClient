@@ -3,6 +3,20 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.33.0] — 2026-10-27 · iconos en el mapa del mundo · sync con `VRhino/BronzeAge@79a754b`
+
+### Cambiado
+- **El mapa del mundo pinta iconos de game-icons.net** (la misma librería y licencia CC BY 3.0 que los emblemas del sigilo; trazados en
+  `src/mundo/iconosMapa.json`, se pintan con `mundo/iconosMapa.ts`):
+  - campamento de bandidos: una capucha oscura con halo rojo (`lorc/hood`), en lugar del rombo rojo;
+  - campamento de mercenarios: una tienda de campaña azul (`delapouite/barracks-tent`), con su anillo de protección;
+  - columnas propias y avistadas: un casco con cresta en el color de su Facción (`lorc/crested-helmet`) y, si marchan varios, cuántos son;
+    la mira de tu columna rodea el casco sin taparlo;
+  - nodos de recurso de cerca: mena para cobre, estaño y oro (`faithtoken/ore`), vaca para el ganado y montón de piedras para la piedra,
+    con su nombre en castellano;
+  - alijos: un cofre dorado (`skoll/open-treasure-chest`).
+- Los autores nuevos (Faithtoken) están en `src/sigilo/CREDITOS.md`.
+
 ## [0.32.5] — 2026-10-27 · mercado del campamento sin «—» · sync con `VRhino/BronzeAge@79a754b`
 
 ### Corregido
