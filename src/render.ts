@@ -9,7 +9,7 @@ import {
   faccionColor,
 } from './paletas';
 import { imagenDeSigilo } from './sigilo/lienzo';
-import { esDeCerca, hayArtefacto, pintarArbolesDelArtefacto, pintarSueloDelArtefacto, vistaDelLienzo, type Zona } from './mundo/pintarArtefacto';
+import { esDeCerca, hayArtefacto, pintarArbolesDelArtefacto, pintarSueloDelArtefacto, vistaDelLienzo } from './mundo/pintarArtefacto';
 
 /** px de pantalla por unidad con la que los glifos de las columnas salen a su tamaño de diseño (≈ la escala de visión en un portátil).
  * El héroe no tiene tamaño en el mundo, así que su glifo y su ruta se escalan con el zoom (`factorDeGlifo`) entre un mínimo y un máximo:
@@ -19,19 +19,6 @@ const ESCALA_GLIFO = 26;
 /** Cuánto se escalan los glifos de columna, mira, destino y ruta a esta escala (0,5 de lejos, 1,4 como mucho de cerca). */
 export function factorDeGlifo(escala: number): number {
   return Math.max(0.5, Math.min(1.4, escala / ESCALA_GLIFO));
-}
-
-/** Prepara el lienzo del MODO MUNDO: lo rellena del color de la niebla y lo recorta al círculo de la zona (`ControlMapa.zona`), con la
- * transformación de la cámara ya puesta. Quien llama hace `ctx.save()` antes y `ctx.restore()` al acabar de pintar. */
-export function recortarAZona(ctx: CanvasRenderingContext2D, zona: Zona, escala: number): void {
-  const m = ctx.getTransform();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.fillStyle = `rgb(${NIEBLA.color.join(',')})`;
-  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-  ctx.setTransform(m);
-  ctx.beginPath();
-  ctx.arc(zona.centro.x * escala, zona.centro.y * escala, zona.radio * escala, 0, Math.PI * 2);
-  ctx.clip();
 }
 
 /** Recursos sin extensión en el mundo (una veta, un rebaño): de cerca se marcan con rombo y nombre, no con su círculo. */
@@ -384,21 +371,12 @@ export function pintarTerreno(
   mapa: MapaGenerado, 
   proyeccion: ProyeccionJugador,
   escalaCanvas: number,
-  zona?: Zona
+  modoMundo = false
 ): void {
   // La cámara del mapa (`ui/pantallaMapa.ts`) ya dejó en `ctx` su transformación: aquí se pinta en unidades × `escalaCanvas` y la vista
-  // dice qué parte del mundo cae en el lienzo y a qué escala (de lejos o de cerca). En el modo mundo (`zona`) el lienzo ya viene recortado
-  // al círculo alrededor del héroe (`recortarAZona`) y solo se mira lo que cae en él.
-  const vistaEntera = vistaDelLienzo(ctx, escalaCanvas);
-  const vista = zona
-    ? {
-        ...vistaEntera,
-        x0: Math.max(vistaEntera.x0, zona.centro.x - zona.radio),
-        y0: Math.max(vistaEntera.y0, zona.centro.y - zona.radio),
-        x1: Math.min(vistaEntera.x1, zona.centro.x + zona.radio),
-        y1: Math.min(vistaEntera.y1, zona.centro.y + zona.radio),
-      }
-    : vistaEntera;
+  // dice qué parte del mundo cae en el lienzo y a qué escala (de lejos o de cerca). Lo que cae fuera no se recorre. Lo que el jugador no
+  // ve lo tapa la niebla, como en cualquier otra vista. En el modo mundo el suelo va por baldosas (`pintarArtefacto.ts`).
+  const vista = vistaDelLienzo(ctx, escalaCanvas);
   /** ¿Cae `p` en lo que se pinta, con `margen` unidades de holgura? Lo de fuera ni se recorre: con el mundo entero son miles de vértices. */
   const aLaVista = (p: Point, margen = 0): boolean =>
     p.x >= vista.x0 - margen && p.x <= vista.x1 + margen && p.y >= vista.y0 - margen && p.y <= vista.y1 + margen;
@@ -407,15 +385,13 @@ export function pintarTerreno(
   const k = factorDeGlifo(escalaCanvas);
 
   // 1. DIBUJAR TERRENO BASE
-  if (!zona) {
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.fillStyle = `rgb(${NIEBLA.color.join(',')})`;
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    ctx.restore();
-  }
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = `rgb(${NIEBLA.color.join(',')})`;
+  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.restore();
   if (artefacto) {
-    pintarSueloDelArtefacto(ctx, mapa, vista, zona);
+    pintarSueloDelArtefacto(ctx, mapa, vista, modoMundo && cerca);
   } else {
     // Mapa del backend TypeScript (sin rasters): biomas recalculados con el ruido del generador, sin relieve.
     ctx.imageSmoothingEnabled = true;
@@ -426,7 +402,7 @@ export function pintarTerreno(
   // 2. DIBUJAR BOSQUES
   if (artefacto) {
     // Del raster de densidad: de lejos ya van en la imagen del suelo; de cerca, árbol a árbol a escala real.
-    if (!zona) pintarArbolesDelArtefacto(ctx, mapa, vista); // en el modo mundo ya van en las baldosas del suelo
+    if (!(modoMundo && cerca)) pintarArbolesDelArtefacto(ctx, mapa, vista); // en el modo mundo ya van en las baldosas del suelo
   } else {
     // Bosques como silueta fusionada (no círculos sueltos), debajo de los ríos — mismo criterio de capas que
     // el cliente de administración. `nonzero` (el relleno por defecto de canvas) recorta solos los claros que

@@ -31,7 +31,7 @@ import {
 import { cablearSalidaDePlazaAjena, htmlSalidaDePlazaAjena } from './ui/salidaDePlazaAjena';
 import { elegirPestanaHeroe, minutosHerido, pintarPanelHeroe } from './ui/panelHeroe';
 import { htmlBarraJugador, type PanelJugador } from './ui/barraJugador';
-import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno, recortarAZona } from './render';
+import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
 import { EDIFICIO_COLOR, EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from './paletas';
 import type { Alijo, Asentamiento, BloqueoAscenso, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Edificio, EvaluacionAscenso, ParamsCrearHeroe, ProduccionItem, Sigilo } from './tiposDominio';
 import { svgSigilo } from './sigilo/sigilo';
@@ -398,9 +398,12 @@ function pintarCampamento(p: ProyeccionJugador, campamento: CampamentoMercenario
   const leyenda = app.querySelector<HTMLElement>('.camp-leyenda-caja');
   const lado = app.querySelector<HTMLElement>('.camp-lado');
   if (!lienzo || !lado) return;
-  const escena = p.escenaCampamento?.campamentoId === campamento.id ? p.escenaCampamento : undefined;
+  // La planta de ESTE campamento: el héroe puede tener el ámbito de más de uno (donde reside y donde está), y antes se tomaba el primero que
+  // saliera, que según el orden de llegada era este o el otro: la planta aparecía y desaparecía. Si en un refresco aún no está, se deja la que
+  // hay en vez de vaciar el lienzo.
+  const escena = p.escenasCampamento.find((e) => e.campamentoId === campamento.id);
   const plano = escena ? svgPlanoCampamento(escena) : '';
-  if (lienzo.dataset.pintado !== plano) { lienzo.innerHTML = plano; lienzo.dataset.pintado = plano; if (leyenda) leyenda.innerHTML = escena ? leyendaPlanoCampamento(escena) : ''; }
+  if (plano && lienzo.dataset.pintado !== plano) { lienzo.innerHTML = plano; lienzo.dataset.pintado = plano; if (leyenda && escena) leyenda.innerHTML = leyendaPlanoCampamento(escena); }
   const residencia = app.querySelector<HTMLElement>('#camp-residencia');
   if (residencia) residencia.textContent = campamento.residentesIds.includes(p.heroeId) ? 'Tu residencia' : 'De paso';
 
@@ -1282,8 +1285,8 @@ function montarMapa(): void {
       void marcharAObjetivo({ tipo: 'punto', punto });
     }
   };
-  // MODO MUNDO: la vista va pegada al héroe con dos zooms, la visión llenando la pantalla y 1,5 veces la visión, y solo se pinta el círculo
-  // de 1,5 veces la visión a su alrededor. Mirar más lejos es el modo mapa (botón Mapa). La vista guardada solo aporta panel y selección.
+  // MODO MUNDO: la vista va pegada al héroe con dos zooms, la visión llenando la pantalla y 1,5 veces la visión, y se pinta lo que cabe en
+  // pantalla; lo que no se ve lo tapa la niebla. Mirar más lejos es el modo mapa (botón Mapa). La vista guardada solo aporta panel y selección.
   const control = instalarZoomPan(contenedor, lienzo, {
     niveles: [1, 1 / 1.5],
     alClicar,
@@ -2130,18 +2133,14 @@ async function dibujarPantallaSegunModo(proyeccion: ProyeccionJugador): Promise<
     if (titulo) titulo.textContent = 'Mapa del Mundo (Evaluación T2a)';
     const mapa = await sincronizarMapa(proyeccion.mapaId);
     controlMapaActivo?.fijarMundo(mapa.config.ancho, mapa.config.alto);
-    // Modo mundo: la cámara, pegada al héroe, y solo el círculo de su zona.
+    // Modo mundo: la cámara, pegada al héroe.
     const donde = posicionDelHeroe(proyeccion);
     if (donde) controlMapaActivo?.seguir(donde);
-    const zona = controlMapaActivo?.zona() ?? undefined;
     // La cámara pone la transformación; sin ella (no debería), el mundo entero en el lienzo.
     if (controlMapaActivo) escalaMundo = controlMapaActivo.transformar(ctx);
     else { ctx.setTransform(1, 0, 0, 1, 0, 0); escalaMundo = canvas.width / mapa.config.ancho; }
-    ctx.save();
-    if (zona) recortarAZona(ctx, zona, escalaMundo);
-    pintarTerreno(ctx, mapa, proyeccion, escalaMundo, zona);
+    pintarTerreno(ctx, mapa, proyeccion, escalaMundo, true);
     pintarMiradas(ctx, proyeccion.miradasIntel ?? [], proyeccion.instante, escalaMundo);
-    ctx.restore();
   } else {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     if (titulo) titulo.textContent = 'Vista de Asentamiento (Geometría Urbana T2a)';

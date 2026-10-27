@@ -3,6 +3,24 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.32.1] — 2026-10-27 · sin parpadeos y el mundo con niebla · sync con `VRhino/BronzeAge@2150620`
+
+### Corregido
+- **Los campamentos titilaban en el modo mundo.** Al seguir a la columna, la cámara movía el mundo fracciones de píxel en cada fotograma.
+  El borde suavizado de lo pequeño (campamentos, nodos) cambiaba de uno a otro. Ahora el desplazamiento va a píxel entero.
+- **La planta del campamento de mercenarios desaparecía y volvía.**
+  - Si en un refresco la planta no está, se deja la que hay en vez de vaciar el lienzo.
+  - Se elige la del campamento donde estás, por su id.
+  - Si un ámbito llega incoherente, la sesión tira solo ese ámbito y lo pide de nuevo. Antes vaciaba el almacén entero hasta reconectar,
+    y por un momento no había nada que pintar.
+  - Al reconectar, la `VISTA` anterior se conserva hasta que llega la nueva.
+
+### Cambiado
+- **Modo mundo:** se pinta todo lo que cabe en pantalla y la niebla de guerra tapa lo que no ves, como en el resto del juego. Se quita el
+  recorte en círculo de 1,5 veces la visión. El suelo sigue por baldosas.
+- Contrato regenerado desde el motor 2150620. Los cambios son aditivos: escuadras en avanzadas, almacén de la avanzada por recurso,
+  héroes de campo en `HEROE` y `TAMANOS_MAPA` en los datos de juego.
+
 ## [0.32.0] — 2026-10-27 · modo mundo y modo mapa, ruta discontinua · sync con `VRhino/BronzeAge@e11979e`
 
 ### Cambiado

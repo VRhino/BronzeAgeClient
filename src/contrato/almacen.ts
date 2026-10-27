@@ -36,7 +36,12 @@ export interface Ambito {
 }
 
 /** Lo que el almacén no pudo aplicar porque el contrato no lo permite; la sesión reconecta al verlo. */
-export class Incoherencia extends Error {}
+export class Incoherencia extends Error {
+  /** El ámbito que quedó a medias, si se sabe: basta con tirar ese y pedirlo de nuevo, sin vaciar los demás. */
+  constructor(mensaje: string, readonly ambito?: string) {
+    super(mensaje);
+  }
+}
 
 /** La clave `TIPO:id` de un ámbito del contrato (`HEROE:heroe-3`, `VISTA:f-1`, `ADMIN:`). */
 export function claveDeAmbito(a: AmbitoPb | undefined): string {
@@ -109,6 +114,9 @@ export class Almacen {
       const [t, id] = identidad(e.cuerpo);
       entidades.set(clave(t, id), e.cuerpo);
     }
+    // La VISTA vieja se conserva al reconectar hasta que llega la nueva (ver `Sesion`); la nueva la sustituye, aunque sea de otra perspectiva
+    // (de la del héroe solo a la de su Facción).
+    if (k.startsWith('VISTA:')) for (const otra of [...this.ambitos.keys()]) if (otra.startsWith('VISTA:') && otra !== k) this.ambitos.delete(otra);
     this.ambitos.set(k, { version: f.version, entidades, niebla: f.niebla });
     return k;
   }
@@ -116,9 +124,9 @@ export class Almacen {
   private aplicarDelta(d: Delta): string {
     const k = claveDeAmbito(d.ambito);
     const a = this.ambitos.get(k);
-    if (!a) throw new Incoherencia(`una Delta de ${k}, que el cliente no tiene`);
-    if (d.desde !== a.version) throw new Incoherencia(`la Delta de ${k} empieza en ${d.desde} y el cliente tiene ${a.version} (hueco)`);
-    if (d.hasta < d.desde) throw new Incoherencia(`la Delta de ${k} va hacia atrás`);
+    if (!a) throw new Incoherencia(`una Delta de ${k}, que el cliente no tiene`, k);
+    if (d.desde !== a.version) throw new Incoherencia(`la Delta de ${k} empieza en ${d.desde} y el cliente tiene ${a.version} (hueco)`, k);
+    if (d.hasta < d.desde) throw new Incoherencia(`la Delta de ${k} va hacia atrás`, k);
     for (const c of d.cambios) {
       const e = clave(c.entidad, c.id);
       const datos = c.datos?.cuerpo;
@@ -126,18 +134,18 @@ export class Almacen {
         // Lo que nació y desapareció dentro del tramo se quita sin que el cliente lo llegara a tener: no es un error.
         a.entidades.delete(e);
       } else if (c.reemplaza) {
-        if (!datos || datos.case === undefined) throw new Incoherencia(`ACTUALIZA sin datos en ${k}: ${e}`);
+        if (!datos || datos.case === undefined) throw new Incoherencia(`ACTUALIZA sin datos en ${k}: ${e}`, k);
         a.entidades.set(e, datos);
       } else {
         const destino = a.entidades.get(e);
         if (destino?.case !== 'asentamiento' || datos?.case !== 'asentamiento') {
-          throw new Incoherencia(`en ${k} solo la plaza viaja parcial, y sobre una que el cliente tiene: ${e}`);
+          throw new Incoherencia(`en ${k} solo la plaza viaja parcial, y sobre una que el cliente tiene: ${e}`, k);
         }
         aplicarPlaza(destino.value, datos.value, c.campos);
       }
     }
     if (d.niebla) {
-      if (d.niebla.parcial && !a.niebla) throw new Incoherencia(`niebla parcial en ${k} sin una niebla previa`);
+      if (d.niebla.parcial && !a.niebla) throw new Incoherencia(`niebla parcial en ${k} sin una niebla previa`, k);
       a.niebla = aplicarNiebla(a.niebla, d.niebla);
     }
     a.version = d.hasta;

@@ -189,7 +189,9 @@ export class Sesion {
         if (c.value.reloj) this.ajustarReloj(c.value.reloj, Number.POSITIVE_INFINITY);
         // Lo que reanuda con foto o es nuevo llega en su mensaje; lo que ya no está suscrito se descarta.
         const suscritos = new Set(c.value.ambitos.map((a) => `${a.ambito ? claveCorta(a.ambito.tipo) : ''}:${a.ambito?.id ?? ''}`));
-        for (const k of [...this.almacen.ambitos.keys()]) if (!suscritos.has(k)) this.almacen.ambitos.delete(k);
+        // La VISTA no se reanuda: se vuelve a pedir abajo (`cambiarVista`) y llega como foto. Hasta entonces se queda la de antes, para que el
+        // mapa no se vacíe un momento (los campamentos y las columnas a la vista parpadeaban en cada reconexión).
+        for (const k of [...this.almacen.ambitos.keys()]) if (!suscritos.has(k) && !(k.startsWith('VISTA:') && this.vista)) this.almacen.ambitos.delete(k);
         this.intentos = 0;
         this.fijarEstado('abierta');
         this.iniciarPing();
@@ -209,8 +211,10 @@ export class Sesion {
         } catch (e) {
           if (e instanceof Incoherencia) {
             console.warn('[sesion] incoherencia, se reanuda:', e.message);
-            // Lo que no encaja se tira y se pide de nuevo: el servidor lo manda como foto.
-            this.almacen.vaciar();
+            // Lo que no encaja se tira y se pide de nuevo: el servidor lo manda como foto. Solo ese ámbito, si se sabe cuál: vaciarlo todo
+            // dejaba la pantalla sin nada (sin planta, sin campamentos) hasta la reconexión.
+            if (e.ambito) this.almacen.ambitos.delete(e.ambito);
+            else this.almacen.vaciar();
             this.reiniciarConexion();
             return;
           }

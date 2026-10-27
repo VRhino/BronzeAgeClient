@@ -87,8 +87,8 @@ export interface ProyeccionJugador {
   campamentosBandidos: CampamentoBandido[];
   /** Los campamentos de mercenarios que conoces (como un camino: los explorados, más el tuyo y aquel en que estás). */
   campamentosMercenarios: CampamentoMercenarios[];
-  /** La planta del campamento donde estás (backend D73): solo viaja estando dentro de uno. */
-  escenaCampamento?: EscenaCampamento;
+  /** La planta de cada campamento cuyo ámbito `CAMPAMENTO` tiene el héroe (puede tener más de uno: donde reside y donde está). */
+  escenasCampamento: EscenaCampamento[];
   /** El mostrador del campamento donde estás (backend 2026-10-07): precio de UNA unidad de cada bien que te venden (n cuestan `ceil(n × precio)`)
    * y lo que te queda del cupo de hoy (sin entrada = sin cupo). Ausente fuera, o con un backend anterior. */
   mercadoCampamento?: {

@@ -6,7 +6,7 @@
 //
 // Dos usos:
 //  * el MODO MUNDO (`niveles`): la vista va pegada al héroe y solo tiene unos pocos zooms fijos, en múltiplos de la escala de visión
-//    (1× y 1,5× la visión). No se arrastra: lo que se pinta es la ZONA alrededor del héroe (`zona()`), y nada más lejos;
+//    (1× y 1,5× la visión). No se arrastra;
 //  * el MODO MAPA (sin `niveles`): zoom libre entre el mundo entero y la escala de visión, y arrastre. Solo para mirar.
 
 import { fijarEscalaDeAgarre } from './agarre';
@@ -27,8 +27,6 @@ export interface ControlMapa {
   fijarRadioVision(radio: number): void;
   /** Como `centrar`, pero sin pedir repintado: para quien va a pintar justo después (el modo mundo, en cada fotograma). */
   seguir(puntoMundo: { x: number; y: number }): void;
-  /** Modo mundo: el círculo de mundo que se pinta (el héroe y el alcance del zoom más lejano). Modo mapa: `null`, se pinta todo. */
-  zona(): { centro: { x: number; y: number }; radio: number } | null;
   /** La cámara actual (para guardar la vista). */
   estado(): Camara;
   /** ¿Sigue la vista un punto fijado con `centrar`? (hasta que se arrastra o se hace zoom con la rueda). */
@@ -170,7 +168,6 @@ export function instalarZoomPan(
       foco = puntoMundo;
       aplicar(true);
     },
-    zona: () => (niveles && foco ? { centro: foco, radio: radioVision / niveles[niveles.length - 1]! } : null),
     estado: () => camara ?? { escala: 1, cx: mundo.ancho / 2, cy: mundo.alto / 2 },
     siguiendo: () => foco !== null,
     zoomHacia: (direccion) => zoomA(direccion === 1 ? 1.4 : 1 / 1.4, 0, 0),
@@ -200,7 +197,9 @@ export function instalarZoomPan(
       const c = camara ?? { escala: canvas.width / Math.max(1, mundo.ancho), cx: mundo.ancho / 2, cy: mundo.alto / 2 };
       const dpr = canvas.width / Math.max(1, contenedor.clientWidth);
       const o = origen(c, tamano());
-      ctx.setTransform(dpr, 0, 0, dpr, -o.x * c.escala * dpr, -o.y * c.escala * dpr);
+      // El desplazamiento, a px enteros del lienzo: con la cámara siguiendo a la columna, el mundo se mueve fracciones de px en cada fotograma
+      // y lo pequeño (los campamentos, los nodos) cambiaba de borde suavizado de uno a otro, titilando. Así todo se mueve a la vez, px a px.
+      ctx.setTransform(dpr, 0, 0, dpr, Math.round(-o.x * c.escala * dpr), Math.round(-o.y * c.escala * dpr));
       return c.escala;
     },
     destruir: () => {

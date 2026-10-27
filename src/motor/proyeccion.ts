@@ -460,7 +460,7 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
       for (const x of [...deAmbito('VISTA:', 'campamentoMercenarios'), ...deAmbito('CAMPAMENTO:', 'campamentoMercenarios')]) m.set(x.id, x);
       return [...m.values()].map(campamentoMercenarios);
     })(),
-    escenaCampamento: deAmbito('CAMPAMENTO:', 'campamentoMercenarios').map(escenaCampamento).find(Boolean),
+    escenasCampamento: deAmbito('CAMPAMENTO:', 'campamentoMercenarios').map(escenaCampamento).filter((e): e is d.EscenaCampamento => Boolean(e)),
     alijos: deAmbito('HEROE:', 'alijo').map((x) => ({ id: x.id, posicion: punto(x.posicion), oro: mil(x.oro) })),
     miradasIntel: deAmbito('VISTA:', 'mirada').map((m) => ({
       id: m.id, faccionId: m.faccionId, origenId: m.origenId, centro: punto(m.centro), radio: mil(m.radio),
