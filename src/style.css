@@ -1597,18 +1597,18 @@ pre#proyeccion {
 }
 
 .mapa-aviso {
+  /* Abajo a la izquierda: en el centro quedaba debajo de la barra de víveres y no se veía. */
   position: absolute;
   bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 3;
+  left: 20px;
+  z-index: 4;
   padding: 10px 18px;
   background: rgba(18, 24, 36, 0.92);
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   font-size: 0.85rem;
-  max-width: calc(100vw - 40px);
+  max-width: min(420px, calc(100vw - 40px));
 }
 
 /* --- PANTALLA ASENTAMIENTO (T6, rediseño estilo estrategia) --- */

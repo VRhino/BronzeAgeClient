@@ -3,6 +3,13 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.35.1] — 2026-10-27 · aviso del mundo abajo a la izquierda y víveres del ejército · sync con `VRhino/BronzeAge@f3b8226`
+
+### Corregido
+- **El aviso del mundo quedaba debajo de la barra de víveres** (los dos abajo en el centro). Ahora sale abajo a la izquierda.
+- **Víveres de un ejército: «700 / 350» con dos héroes.** El tope es `capacidadViveresPorHeroe` por cada héroe de la columna, como en el
+  motor (`racion::capacidad_viveres`): ahora sale «700 / 700» y baja a medida que comen.
+
 ## [0.35.0] — 2026-10-27 · convocar ejército funciona, y una cuenta en dos pestañas ya no parpadea · sync con `VRhino/BronzeAge@f3b8226`
 
 ### Corregido

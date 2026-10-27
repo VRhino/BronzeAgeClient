@@ -1168,7 +1168,8 @@ function pintarComida(p: ProyeccionJugador): void {
   if (!caja) return;
   const columna = p.ejercitos.find((x) => x.participantes.some((y) => y.heroeId === p.heroeId));
   if (!columna) { caja.hidden = true; selectorViveres.abierto = false; return; }
-  const capacidad = capacidadDeViveres(() => { invalidar(caja); pintarComida(p); });
+  // Los víveres de una columna son los de todos sus héroes: caben `capacidadViveresPorHeroe` por cada uno (`racion::capacidad_viveres` del motor).
+  const capacidad = capacidadDeViveres(() => { invalidar(caja); pintarComida(p); }) * Math.max(1, columna.participantes.length);
   const viveres = Math.floor(p.heroe.viveres ?? 0);
   const hueco = Math.max(0, capacidad - viveres);
   const enElCarro = Math.floor(columna.suministro?.['trigo'] ?? 0);
