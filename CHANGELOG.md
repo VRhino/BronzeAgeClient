@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.32.4] — 2026-10-27 · el fondo de refundación cuenta lo aportado · sync con `VRhino/BronzeAge@2150620`
+
+### Corregido
+- **Aportar al fondo no movía la barra.** El motor manda el fondo ya sumado por Facción (`fondos` por `f-N`), y el cliente lo buscaba por héroe,
+  así que siempre lo veía vacío. Como lo de cada héroe no viaja, se quita el «tú: N».
+- **El Fondo no veía el carro.**
+  - Se aporta del almacén si resides aquí, o del carro de tu columna si la tienes (de visita). Cada opción dice de dónde sale y el `lado`
+    de la orden va con ella.
+  - El carro que traes dentro de tu residencia el motor no lo deja aportar directamente. El Fondo lo enseña con el botón «Pasar al almacén».
+
 ## [0.32.3] — 2026-10-27 · el carro dentro de tu campamento · sync con `VRhino/BronzeAge@2150620`
 
 ### Corregido

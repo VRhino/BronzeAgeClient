@@ -257,28 +257,33 @@ function formatoPrecio(n: number): string {
 function fondo(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): string {
   const heroe = p.heroe;
   const almacen = heroe.almacenPersonal ?? {};
-  const fondoDeFaccion: Record<string, number> = {};
-  const ciudadanos = new Set(p.facciones.find((f) => f.id === p.faccionId)?.ciudadanosIds ?? []);
-  for (const [heroeId, aporte] of Object.entries(c.fondos)) {
-    if (!ciudadanos.has(heroeId)) continue;
-    for (const [r, n] of Object.entries(aporte)) fondoDeFaccion[r] = (fondoDeFaccion[r] ?? 0) + n;
-  }
-  const mio = c.fondos[heroe.id] ?? {};
+  // El motor manda el fondo ya sumado por Facción (`fondos` por `f-N`), no por héroe: antes se buscaba por héroe y salía siempre vacío, así
+  // que la barra no se movía al aportar. Lo de cada héroe no viaja; al retirar, el motor solo devuelve lo que pusiste tú.
+  const fondoDeFaccion: Record<string, number> = { ...(p.faccionId ? (c.fondos[p.faccionId] ?? {}) : {}) };
   const caravana = p.caravanas.find((k) => k.origenCampamentoId === c.id && k.faccionId === p.faccionId);
   const precio = costoDeRefundacion();
-  const tienes = (r: string): number => Math.floor(r === 'oro' ? (heroe.oroDeBotin ?? 0) + (almacen['oro'] ?? 0) : (almacen[r] ?? 0));
+  // Se aporta del almacén personal (si resides aquí) o del carro de tu columna, si la tienes (de visita, o a la puerta): `lado` de la orden.
+  // El carro que traes contigo dentro de tu residencia (`heroe.carro`) no se aporta directo: primero se pasa al almacén.
+  const resides = c.residentesIds.includes(heroe.id);
+  const columna = p.ejercitos.find((x) => x.liderId === heroe.id);
+  const carroColumna = columna?.suministro ?? {};
+  const carroContigo = heroe.carro ?? {};
+  const hayCarroContigo = !columna && Object.values(carroContigo).some((n) => n >= 1);
   const falta = (r: string): number => Math.max(0, (precio?.[r] ?? 0) - Math.floor(fondoDeFaccion[r] ?? 0));
-  const recursosAportables = [...new Set([...Object.keys(almacen), ...(heroe.oroDeBotin ? ['oro'] : [])])].filter((r) => tienes(r) >= 1);
+  const origenes: { lado: 'almacen' | 'carro'; de: string; recursos: Record<string, number> }[] = [
+    ...(resides ? [{ lado: 'almacen' as const, de: 'almacén', recursos: almacen }] : []),
+    ...(columna ? [{ lado: 'carro' as const, de: 'carro', recursos: carroColumna }] : []),
+  ];
+  const opciones = origenes.flatMap((o) => Object.entries(o.recursos).filter(([, n]) => n >= 1).map(([r, n]) => ({ lado: o.lado, de: o.de, r, tienes: Math.floor(n) })));
 
   const necesidad = precio
     ? Object.entries(precio).map(([r, n]) => {
         const hay = Math.floor(fondoDeFaccion[r] ?? 0);
         const listo = hay >= n;
-        const mioR = Math.floor(mio[r] ?? 0);
         return `<div class="fondo-fila${listo ? ' listo' : ''}"><span>${RECURSO_ICONO[r] ?? '📦'} ${e(nombreRecurso(r))}</span>
           <div class="fondo-barra"><i style="width:${Math.min(100, (hay / n) * 100).toFixed(1)}%"></i></div>
           <strong>${Math.min(hay, n)} / ${n}</strong>
-          <small>${listo ? '✓ completo' : `faltan ${n - hay}`}${mioR > 0 ? ` · tú: ${mioR}` : ''}</small></div>`;
+          <small>${listo ? '✓ completo' : `faltan ${n - hay}`}</small></div>`;
       }).join('')
     : '<p class="asent-lado-nota">Cargando el precio de la caravana…</p>';
   const total = precio ? Object.values(precio).reduce((x, y) => x + y, 0) : 0;
@@ -294,15 +299,16 @@ function fondo(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): stri
     ${necesidad}
     ${sobrante.length > 0 ? `<p class="asent-lado-nota">Además en el fondo: ${sobrante.map(([r, n]) => `${Math.floor(n)} de ${e(nombreRecurso(r))}`).join(', ')}.</p>` : ''}
     <strong class="heroe-sub">Aportar</strong>
-    ${recursosAportables.length === 0
+    ${hayCarroContigo ? `<p class="asent-lado-nota">Traes en el carro ${Object.entries(carroContigo).filter(([, n]) => n >= 1).map(([r, n]) => `${Math.floor(n)} de ${e(nombreRecurso(r))}`).join(', ')}. Para aportarlo, pásalo antes a tu almacén: <button class="btn-secondary" type="button" data-vaciar-carro>Pasar al almacén</button></p>` : ''}
+    ${opciones.length === 0
       ? '<p class="asent-lado-nota">No tienes nada que aportar.</p>'
       : `<div class="campamento-fila">
-      <select class="form-input" id="fondo-recurso">${recursosAportables.map((r) => `<option value="${e(r)}" data-tienes="${tienes(r)}" data-falta="${falta(r)}">${e(nombreRecurso(r))} (tienes ${tienes(r)}${precio && falta(r) > 0 ? `, faltan ${falta(r)}` : ''})</option>`).join('')}</select>
+      <select class="form-input" id="fondo-recurso">${opciones.map((o) => `<option value="${e(o.r)}" data-lado="${o.lado}" data-tienes="${o.tienes}" data-falta="${falta(o.r)}">${e(nombreRecurso(o.r))}, del ${o.de} (tienes ${o.tienes}${precio && falta(o.r) > 0 ? `, faltan ${falta(o.r)}` : ''})</option>`).join('')}</select>
       <input class="form-input" id="fondo-cantidad" type="number" min="1" value="10" />
       <button class="btn-secondary" type="button" id="fondo-lo-que-falta" title="Rellena la cantidad con lo que falta de ese material (o con lo que tienes, si es menos)">Lo que falta</button>
     </div>`}
     <div class="mapa-seleccion-acciones">
-      <button class="btn-secondary" type="button" data-fondo="aportarARefundacion"${recursosAportables.length === 0 ? ' disabled' : ''}>Aportar</button>
+      <button class="btn-secondary" type="button" data-fondo="aportarARefundacion"${opciones.length === 0 ? ' disabled' : ''}>Aportar</button>
       <button class="btn-secondary" type="button" data-fondo="retirarDeRefundacion">Retirar</button>
       <button class="btn-primary" type="button" id="btn-comprar-caravana"${caravana || !completo ? ' disabled' : ''}>Comprar caravana</button>
     </div>
@@ -430,9 +436,10 @@ export function cablearCampamento(root: HTMLElement, p: ProyeccionJugador, c: Ca
     conBoton(`[data-fondo="${tipo}"]`, tipo, () => ({
       recurso: root.querySelector<HTMLSelectElement>('#fondo-recurso')?.value ?? '',
       cantidad: Number(root.querySelector<HTMLInputElement>('#fondo-cantidad')?.value ?? 0),
-      lado: 'almacen',
+      lado: root.querySelector<HTMLSelectElement>('#fondo-recurso')?.selectedOptions[0]?.dataset.lado ?? (c.residentesIds.includes(heroeId) ? 'almacen' : 'carro'),
     }));
   }
+  conBoton('[data-vaciar-carro]', 'vaciarCarro', () => ({ heroeId }));
   conBoton('#btn-comprar-caravana', 'comprarCaravanaDeRefundacion', () => ({}));
   root.querySelector<HTMLButtonElement>('#fondo-lo-que-falta')?.addEventListener('click', () => {
     const opcion = root.querySelector<HTMLSelectElement>('#fondo-recurso')?.selectedOptions[0];
