@@ -406,7 +406,8 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
   // Donde está el héroe (plaza o campamento): las convocatorias que se le enseñan son las de ese lugar, más la suya.
   const lugarDelHeroe = h.ubicacion?.donde?.case === 'campamentoId' || h.ubicacion?.donde?.case === 'asentamientoId' ? h.ubicacion.donde.value : undefined;
   const heroesAjenos = deAmbito('VISTA:', 'heroe').filter((x) => x.id !== heroeId);
-  const nombres: Record<string, string> = { [h.id]: h.displayName };
+  const nombres: Record<string, string> = Object.fromEntries(a.nombresHeroes);
+  nombres[h.id] = h.displayName;
   for (const x of heroesAjenos) nombres[x.id] = x.displayName;
 
   const vista = [...a.ambitos.entries()].find(([k]) => k.startsWith('VISTA:'))?.[1];

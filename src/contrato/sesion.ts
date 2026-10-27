@@ -184,6 +184,7 @@ export class Sesion {
       return;
     }
     this.secuencia = m.secuencia;
+    for (const [id, nombre] of Object.entries(m.nombresHeroes)) this.almacen.nombresHeroes.set(id, nombre);
     const c = m.cuerpo;
     switch (c.case) {
       case 'bienvenida': {

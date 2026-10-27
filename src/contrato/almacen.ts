@@ -95,6 +95,9 @@ export function identidad(c: Cuerpo): [TipoEntidad, string] {
 export class Almacen {
   readonly ambitos = new Map<string, Ambito>();
   readonly hechos: { ambito: string; evento: EventoDominio }[] = [];
+  /** Nombre de cada héroe con nombre que ha salido en algún mensaje (`MensajeDeServidor.nombres_heroes`, motor 3edba48). Los nombres no
+   * cambian, así que solo se añade; un héroe que no está aquí no tiene nombre («Héroe N»). */
+  readonly nombresHeroes = new Map<string, string>();
 
   /** Aplica un mensaje del servidor; devuelve la clave del ámbito que cambió (o `undefined` si no era de un ámbito). */
   aplicar(m: MensajeDeServidor['cuerpo']): string | undefined {

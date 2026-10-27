@@ -3,6 +3,17 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.36.1] — 2026-10-27 · nombres de héroes en vez de ids · sync con `VRhino/BronzeAge@3edba48`
+
+### Corregido
+- **Salían ids de héroe (`heroe-59`) en vez de su nombre** en la Facción (Rey, Embajador, solicitudes), las convocatorias (Líder,
+  integrantes, peticiones), las columnas, los cargos y los avisos. Cada mensaje del servidor trae ahora `nombres_heroes` con el nombre de
+  los héroes que nombra; el cliente los junta en el almacén (`Almacen.nombresHeroes`, solo se añaden) y `nombreDeHeroe` los usa. Un héroe
+  sin nombre (creado antes de c5c6111) sale como «Héroe N», nunca como su id.
+
+### Contrato
+- Regenerado desde `3edba48` (`MensajeDeServidor.nombres_heroes`, campo 12).
+
 ## [0.36.0] — 2026-10-27 · árboles y bosques como el admin · sync con `VRhino/BronzeAge@f3b8226`
 
 ### Cambiado
