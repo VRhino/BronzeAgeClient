@@ -462,15 +462,17 @@ export function pintarTerreno(
     trazo();
   }
 
-  // 4. DIBUJAR NODOS DE RECURSOS. De lejos, un punto; de cerca, a escala: las parcelas como su círculo de 4 u, la piedra como roca y
+  // 4. DIBUJAR NODOS DE RECURSOS. De lejos, su icono pequeño (como el admin); de cerca, a escala: las parcelas como su círculo de 4 u, la piedra como roca y
   // los metales y el ganado como rombo con su nombre (estos no tienen extensión en el mundo, se marcan en px fijos).
   for (const nodo of mapa.nodos) {
     if (!aLaVista(nodo.posicion, 6)) continue;
     const x = nodo.posicion.x * escalaCanvas;
     const y = nodo.posicion.y * escalaCanvas;
-    const color = RECURSO_COLOR[nodo.tipo] || '#fff';
+    const color = nodo.tipo === 'piedra' ? '#b9b4aa' : RECURSO_COLOR[nodo.tipo] || '#fff';
     ctx.beginPath();
-    if (!cerca) {
+    if (!cerca && dibujarIconoMapa(ctx, ICONO_DE_NODO[nodo.tipo] ?? '', x, y, 12, color)) {
+      // De lejos, como el admin: el icono pequeño, sin nombre.
+    } else if (!cerca) {
       ctx.arc(x, y, 3, 0, Math.PI * 2);
       ctx.fillStyle = color;
       ctx.fill();
@@ -840,7 +842,7 @@ export function pintarTerreno(
     // Como en el cliente admin: cuadrado azul con el anillo de protección (nadie inicia un combate dentro, D78).
     ctx.beginPath();
     ctx.arc(x, y, radioDeProteccionMercenarios() * escalaCanvas, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(46, 94, 140, 0.5)';
+    ctx.strokeStyle = 'rgba(46, 94, 140, 0.7)';
     ctx.lineWidth = 1;
     ctx.stroke();
     dibujarIconoMapa(ctx, 'mercenarios', x, y, 24 * k, '#6fa3d6');

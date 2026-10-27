@@ -3,6 +3,15 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.36.0] — 2026-10-27 · árboles y bosques como el admin · sync con `VRhino/BronzeAge@f3b8226`
+
+### Cambiado
+- **Árboles y bosques pintados como el admin web**: de cerca, cada árbol es una copa redonda de verde variable con su sombra y un brillo
+  (antes, triángulos oscuros), ni en el agua ni en las cimas; el suelo del bosque se oscurece según la densidad y, de lejos, el bosque se
+  mezcla con el verde del admin (hasta un 85 %, con la luz de la altura).
+- **Nodos como el admin**: de lejos, su icono pequeño (antes, un punto); la piedra en gris piedra. El anillo de protección de los
+  campamentos de mercenarios, con la misma opacidad que el admin.
+
 ## [0.35.2] — 2026-10-27 · iconos de pueblo y avanzada · sync con `VRhino/BronzeAge@f3b8226`
 
 ### Añadido

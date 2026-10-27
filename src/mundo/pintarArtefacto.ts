@@ -28,7 +28,7 @@ const COLOR_CLASE: readonly (readonly [number, number, number])[] = [
   [128, 116, 98],
   [226, 226, 222],
 ];
-const COLOR_BOSQUE = [36, 76, 34] as const;
+const COLOR_BOSQUE = [38, 92, 52] as const;
 const COLOR_RIO = [38, 90, 145] as const;
 
 export interface VistaDelMundo {
@@ -149,7 +149,11 @@ function imagenDeLejos(mapa: MapaGenerado): HTMLCanvasElement {
       const clase = t.datos[i]!;
       let color: readonly number[] = COLOR_CLASE[clase] ?? COLOR_CLASE[1]!;
       const dens = bosque ? bilineal(bosque, x, y) : 0;
-      if (clase > 2 && dens >= UMBRAL_BOSQUE) color = mezcla(color, COLOR_BOSQUE, 0.35 + 0.45 * (dens / 255));
+      // Como el admin: el verde del bosque, con la luz de la altura, mezclado según la densidad (hasta un 85 %).
+      if (clase > 1 && dens >= UMBRAL_BOSQUE) {
+        const a = 0.85 + 0.3 * (bilineal(alt, x, y) / 65535);
+        color = mezcla(color, COLOR_BOSQUE.map((v) => v * a), Math.min(0.85, (dens / 255) * 1.15));
+      }
       const k = clase <= 1 ? 1 : luz((h(x + t.celda, y) - h(x - t.celda, y)) / (2 * t.celda), (h(x, y + t.celda) - h(x, y - t.celda)) / (2 * t.celda));
       d[i * 4] = Math.min(255, color[0]! * k);
       d[i * 4 + 1] = Math.min(255, color[1]! * k);
@@ -283,9 +287,10 @@ function muestrear(mapa: MapaGenerado, capa: HTMLCanvasElement, x0: number, y0: 
       const x = v.x0 + (i + 0.5) * paso;
       const clase = celdaDe(t, x + desplazamiento(x, y, t.celda, 11), y + desplazamiento(x, y, t.celda, 23));
       let color: readonly number[] = COLOR_CLASE[clase] ?? COLOR_CLASE[1]!;
-      if (bosque && clase > 2) {
+      // El suelo del bosque, más oscuro donde es denso (los árboles van encima), como el admin.
+      if (bosque && clase > 1) {
         const dens = bilineal(bosque, x, y);
-        if (dens >= UMBRAL_BOSQUE) color = mezcla(color, COLOR_BOSQUE, 0.15 + 0.35 * (dens / 255));
+        if (dens >= UMBRAL_BOSQUE) color = mezcla(color, COLOR_BOSQUE.map((v) => v * 1.1), Math.min(0.55, (dens / 255) * 0.7));
       }
       const k = clase <= 1 ? 1 : luz((h(x + dz, y) - h(x - dz, y)) / (2 * dz), (h(x, y + dz) - h(x, y - dz)) / (2 * dz));
       const p = (j * ancho + i) * 4;
@@ -298,30 +303,38 @@ function muestrear(mapa: MapaGenerado, capa: HTMLCanvasElement, x0: number, y0: 
   cctx.putImageData(img, 0, 0);
 }
 
-/** Árboles sueltos: uno cada ~1,2 u con probabilidad = densidad, en sitios fijos por hash de la posición. Solo de cerca. */
+/** Árboles sueltos, como el admin: uno como mucho cada 1,2 u si la densidad lo pide (azar fijo por sitio), copa redonda de verde
+ * variable con su sombra al sureste y un brillo al noroeste. Ni en el agua ni en las cimas. Solo de cerca. */
 function pintarArboles(ctx: CanvasRenderingContext2D, mapa: MapaGenerado, v: VistaDelMundo): void {
   const bosque = mapa.rasters?.densidadBosque;
   const t = mapa.rasters?.terreno;
   const PASO = 1.2;
-  if (!bosque || !t || v.escala * PASO < 6) return;
-  const tamano = Math.max(2, Math.min(PASO * 0.7, 1) * v.escala);
-  ctx.fillStyle = 'rgba(22, 58, 24, 0.9)';
-  ctx.beginPath();
+  if (!bosque || !t || v.escala * PASO < 3) return;
   for (let gy = Math.floor(v.y0 / PASO) - 1; gy <= Math.ceil(v.y1 / PASO); gy++) {
     for (let gx = Math.floor(v.x0 / PASO) - 1; gx <= Math.ceil(v.x1 / PASO); gx++) {
       const x = (gx + 0.15 + 0.7 * hash2(gx, gy, 3)) * PASO;
       const y = (gy + 0.15 + 0.7 * hash2(gx, gy, 5)) * PASO;
+      const clase = celdaDe(t, x, y);
+      if (clase <= 1 || clase === 6) continue;
       const dens = bilineal(bosque, x, y);
-      if (dens < UMBRAL_BOSQUE || hash2(gx, gy, 9) * 255 >= dens || celdaDe(t, x, y) <= 2) continue;
+      if (dens < UMBRAL_BOSQUE || hash2(gx, gy, 9) > (dens / 255) * 1.1) continue;
+      const r = (0.38 + 0.26 * hash2(gx, gy, 14)) * v.escala;
       const px = x * v.escala;
       const py = y * v.escala;
-      ctx.moveTo(px, py - tamano);
-      ctx.lineTo(px + tamano * 0.65, py + tamano * 0.55);
-      ctx.lineTo(px - tamano * 0.65, py + tamano * 0.55);
-      ctx.closePath();
+      ctx.beginPath();
+      ctx.arc(px + r * 0.35, py + r * 0.35, r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(10, 30, 12, 0.35)';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(px, py, r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgb(${30 + hash2(gx, gy, 15) * 25}, ${80 + hash2(gx, gy, 16) * 35}, ${40 + hash2(gx, gy, 17) * 20})`;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(px - r * 0.3, py - r * 0.3, r * 0.45, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(160, 210, 120, 0.25)';
+      ctx.fill();
     }
   }
-  ctx.fill();
 }
 
 /** El suelo del mundo en la vista: de lejos la imagen de celdas; de cerca la vista muestreada y los árboles. Con `porBaldosas` (modo mundo),
