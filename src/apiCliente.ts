@@ -212,9 +212,21 @@ function avisarTick(): void {
 }
 
 /** La sesión abierta (la abre si hace falta, con el token guardado). */
+/** La sesión se cerró porque la partida se abrió en otra pestaña con la misma cuenta (`sesion.reemplazada`): no se reabre sola, o las dos
+ * pestañas se echarían una a la otra sin parar. Se reabre con `retomarSesion` cuando el jugador lo pide. */
+let reemplazada = false;
+let oyenteReemplazo: (() => void) | null = null;
+export function alSesionReemplazada(f: () => void): void {
+  oyenteReemplazo = f;
+}
+export function retomarSesion(): void {
+  reemplazada = false;
+}
+
 async function sesionAbierta(): Promise<Sesion> {
   if (sesion && sesion.estado !== 'cerrada') return sesion;
   if (abriendo) return abriendo;
+  if (reemplazada) throw new ApiError(409, 'La partida está abierta en otra pestaña.');
   if (!sesionIdMemoria && !cargarSesionLocal()) throw new ApiError(401, 'No hay ninguna sesión activa. Inicie sesión primero.');
   const s = new Sesion({ url: URL_WS, token: sesionIdMemoria!, versionCliente: VERSION_CLIENTE, mundoHash: mapaCargado?.hash });
   s.alCambiar(() => avisarTick());
@@ -225,6 +237,10 @@ async function sesionAbierta(): Promise<Sesion> {
   });
   s.alEstado((estado, error) => {
     if (estado === 'cerrada' && error?.codigo === 'token_invalido') cerrarSesion();
+    if (estado === 'cerrada' && error?.codigo === 'sesion_reemplazada') {
+      reemplazada = true;
+      oyenteReemplazo?.();
+    }
   });
   abriendo = s.abrir().then(
     () => {

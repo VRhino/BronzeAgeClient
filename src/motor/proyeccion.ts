@@ -403,6 +403,8 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
   const caravanasPropias = [...caravanasTodas.values()].filter(carPropia);
   const caravanasAjenas = [...caravanasTodas.values()].filter((x) => !carPropia(x));
 
+  // Donde está el héroe (plaza o campamento): las convocatorias que se le enseñan son las de ese lugar, más la suya.
+  const lugarDelHeroe = h.ubicacion?.donde?.case === 'campamentoId' || h.ubicacion?.donde?.case === 'asentamientoId' ? h.ubicacion.donde.value : undefined;
   const heroesAjenos = deAmbito('VISTA:', 'heroe').filter((x) => x.id !== heroeId);
   const nombres: Record<string, string> = { [h.id]: h.displayName };
   for (const x of heroesAjenos) nombres[x.id] = x.displayName;
@@ -446,7 +448,25 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
     territorioPorEjercito,
     caravanas: caravanasPropias.map((x) => caravana(x, ahora)),
     ejercitos: ejercitosPropios.map((e) => ejercito(e, ahora)),
-    convocatorias: [],
+    // Los ejércitos que se preparan dentro (`Convocatoria`, la manda el motor a los de la Facción). La tropa de cada integrante solo se
+    // detalla si sus escuadras se conocen (las tuyas); de las de otro héroe, el número de escuadras.
+    convocatorias: deAmbito('', 'convocatoria').filter((v) => v.lugarId === lugarDelHeroe || v.integrantes.some((i) => i.heroeId === heroeId)).map((v) => {
+      const porId = new Map(escuadrones.map((x) => [x.id, x]));
+      const sel = (x: pb.SeleccionDeSalida | undefined) => ({ escuadronIds: x?.escuadronIds ?? [], carga: cantidades(x?.carga) });
+      return {
+        id: v.id, lugar: { tipo: v.lugarEsCampamento ? 'campamento' : 'asentamiento', id: v.lugarId }, liderId: v.liderId,
+        politicaDeUnion: v.politicaDeUnion === pb.PoliticaUnion.UNION_PREGUNTAR ? 'preguntar' : 'aceptar', creadaEn: instante(v.creadaEnMs)!,
+        integrantes: v.integrantes.map((i) => ({
+          heroeId: i.heroeId, unidoEn: instante(i.unidoEnMs)!, ...sel(i.seleccion),
+          tropas: (i.seleccion?.escuadronIds ?? []).flatMap((id) => {
+            const x = porId.get(id);
+            return x ? [{ escuadronId: id, tropaId: x.tropaId, nombre: x.nombre, nivel: x.nivel, moral: valorDeRitmo(x.moral, ahora), cantidad: x.cantidad }] : [];
+          }),
+        })),
+        peticiones: v.peticiones.map((x) => ({ heroeId: x.heroeId, pedidoEn: instante(x.pedidoEnMs)!, expiraEn: instante(x.expiraEnMs)!, ...sel(x.seleccion) })),
+        soyLider: v.liderId === heroeId, soyIntegrante: v.integrantes.some((i) => i.heroeId === heroeId),
+      };
+    }),
     ejercitosAvistados: ejercitosAjenos.map((e) => ({
       id: e.id, tipo: e.tipo === pb.TipoColumna.COLUMNA_EJERCITO ? 'ejercito' : 'personal', enFormacion: e.formacionExpiraEnMs !== undefined ? true : undefined,
       faccionId: e.faccionId, posicionActual: evaluarPlan(e.plan, e.posicion, ahora).posicion, participantes: e.participantes.length,
@@ -454,6 +474,7 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
     })),
     caravanasAvistadas: caravanasAjenas.map((x) => ({ id: x.id, posicionActual: evaluarPlan(x.plan, x.posicion, ahora).posicion, faccionId: x.faccionId, escoltada: x.escoltada, recursos: x.recursosAvistados })),
     informesDeInspeccion: [],
+    miConvocatoriaId: deAmbito('', 'convocatoria').find((v) => v.integrantes.some((i) => i.heroeId === heroeId))?.id,
     heroe: (() => {
       // Los víveres viajan en la columna (`Ejercito.viveres`, contract: «en un ejército, los del ejército»); el héroe solo los lleva propios si va sin ella. La interfaz los lee del héroe.
       const x = heroe(h, escuadrones, ahora);

@@ -3,6 +3,18 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.35.0] — 2026-10-27 · convocar ejército funciona, y una cuenta en dos pestañas ya no parpadea · sync con `VRhino/BronzeAge@f3b8226`
+
+### Corregido
+- **«Convocar ejército» dejaba el botón apagado y no salía nada.** El motor sí creaba la convocatoria, pero el cliente no leía las
+  `Convocatoria` del contrato (salían siempre vacías). Ahora se proyectan: la tuya (`miConvocatoriaId`) y las de tu Facción en el lugar donde
+  estás, con sus integrantes, peticiones y política. De las escuadras de otro héroe se dice cuántas son; sus hombres, solo si se conocen.
+- **Una cuenta abierta en dos pestañas se echaban una a la otra sin parar.** El motor admite una sola sesión por cuenta y cierra la vieja
+  (`sesion.reemplazada`); el cliente reconectaba solo y echaba a la otra, en bucle. En cada vuelta se vaciaban los ámbitos: la pestaña
+  Facción saltaba a «sin Facción», las convocatorias aparecían y desaparecían. Ahora la pestaña sustituida se queda quieta y lo dice, con
+  un botón «Jugar en esta pestaña».
+- La sesión ya no procesa lo que llega por una conexión vieja tras reiniciarla (su secuencia se tomaba por un hueco y volvía a reiniciar).
+
 ## [0.34.3] — 2026-10-27 · recargar la página no se queda en «Cargando partida» · sync con `VRhino/BronzeAge@f3b8226`
 
 ### Corregido

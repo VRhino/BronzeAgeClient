@@ -168,7 +168,9 @@ export class Sesion {
       });
       this.enviar(create(MensajeDeClienteSchema, { cuerpo: { case: 'hola', value: hola } }));
     };
-    ws.onmessage = (ev) => this.recibir(new Uint8Array(ev.data as ArrayBuffer));
+    // Solo cuenta lo que llega por la conexión vigente: tras `reiniciarConexion`, la vieja aún puede entregar lo que tenía en cola, y su secuencia
+    // no es la de la nueva (se tomaba por un hueco y se reiniciaba otra vez, en bucle: los ámbitos se vaciaban y volvían a cada rato).
+    ws.onmessage = (ev) => { if (ws === this.ws) this.recibir(new Uint8Array(ev.data as ArrayBuffer)); };
     ws.onclose = () => this.alCerrarse(ws);
     ws.onerror = () => {};
   }
@@ -247,6 +249,16 @@ export class Sesion {
       case 'aviso':
         if (c.value.reloj) this.ajustarReloj(c.value.reloj, Number.POSITIVE_INFINITY, true);
         for (const f of this.oyentesAviso) f(c.value);
+        // Otra sesión de la misma cuenta (otra pestaña) la ha sustituido: el servidor cierra esta. Reconectar sola la echaría a su vez, y las dos
+        // se echarían una a la otra sin parar (los ámbitos se vaciaban y volvían a cada rato). Se queda cerrada hasta que el jugador lo pida.
+        if (c.value.codigo === 'sesion.reemplazada') {
+          this.cerradaAPeticion = true;
+          this.pararPing();
+          const error = new ErrorDeSesion('sesion_reemplazada', c.value.mensaje || 'la partida se abrió en otra pestaña', true);
+          this.fallarPendientes(error);
+          this.fijarEstado('cerrada', { codigo: 'sesion_reemplazada', mensaje: error.message, fatal: true } as unknown as ErrorSesion);
+          this.ws?.close();
+        }
         break;
       case 'error': {
         const e = c.value;

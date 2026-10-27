@@ -1,5 +1,7 @@
 import {
   ApiError,
+  alSesionReemplazada,
+  retomarSesion,
   cargarSesionLocal,
   cerrarSesion,
   consultarProyeccion,
@@ -2344,12 +2346,27 @@ function alEventoDelServidor(): void {
   refrescoPorEvento = setTimeout(() => { if (estadoCliente.usuarioActivo) void refrescarDatosJuego().catch(() => {}); }, 250);
 }
 
+/** La partida se abrió en otra pestaña con la misma cuenta: el servidor admite una sola sesión por cuenta y cerró esta. Se queda quieta (si se
+ * reconectara sola, echaría a la otra, y así sin parar) hasta que el jugador elija seguir aquí, lo que a su vez cierra la otra. */
+function mostrarSesionReemplazada(): void {
+  if (document.querySelector('#sesion-reemplazada')) return;
+  document.body.insertAdjacentHTML('beforeend', `<div id="sesion-reemplazada" class="login-container" style="position:fixed;inset:0;z-index:1000;background:rgba(10,8,6,0.85)">
+    <div class="login-card"><p class="login-subtitle">Has abierto la partida en otra pestaña o ventana con esta misma cuenta. El servidor solo admite una a la vez, así que esta se ha desconectado.</p>
+    <button id="btn-seguir-aqui" class="btn-primary" type="button">Jugar en esta pestaña</button></div></div>`);
+  document.querySelector('#btn-seguir-aqui')?.addEventListener('click', () => {
+    document.querySelector('#sesion-reemplazada')?.remove();
+    retomarSesion();
+    void refrescarDatosJuego().catch(() => {});
+  });
+}
+
 function arrancar(): void {
   window.addEventListener('hashchange', enrutar);
   alCargarSigilos(() => { const p = estadoCliente.proyeccionUltima; if (p) void dibujarPantallaSegunModo(p); });
   alEventoTiempoReal(alEventoDelServidor);
   alTickDeMundo(alEventoDelServidor); // el tick del reloj de mundo avisa de que hay que pedir la proyección (backend 4e037c4)
   alLlegarInforme(mostrarInforme);
+  alSesionReemplazada(mostrarSesionReemplazada);
   alCambiarAvisos(() => renderPanelJugador());
   // Cerrar la pestaña o la ventana cierra el socket de presencia (lo haría el navegador, pero así es explícito y también vale al recargar).
   window.addEventListener('pagehide', () => cerrarPresencia());
