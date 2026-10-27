@@ -3,6 +3,15 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.36.2] — 2026-10-27 · solo se ve la tropa desbloqueada · sync con `VRhino/BronzeAge@3edba48`
+
+### Cambiado
+- **Campamento de mercenarios**: la pestaña Tropa ya no enseña las tropas que el campamento no ha desbloqueado (antes salían apagadas).
+  Si no tiene ninguna, lo dice.
+- **Asentamiento**: el reclutamiento escondía lo no adoptado solo si el servidor mandaba la tecnología, y el motor la manda en otra entidad
+  (`TecnologiasFaccion` del ámbito FACCION), así que salía todo. Ahora la proyección lleva `tecnologiasAdoptadas` y se esconde lo que tu
+  Facción no ha adoptado.
+
 ## [0.36.1] — 2026-10-27 · nombres de héroes en vez de ids · sync con `VRhino/BronzeAge@3edba48`
 
 ### Corregido

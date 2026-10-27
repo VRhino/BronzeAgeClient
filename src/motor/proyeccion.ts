@@ -486,6 +486,7 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
     heroesVisibles: heroesAjenos.map(heroePublico),
     nombresDeCompaneros: nombres,
     nombresDeDirigentes: {},
+    tecnologiasAdoptadas: deAmbito('FACCION:', 'tecnologias').find((t) => t.faccionId === faccionId)?.adoptadas ?? [],
     // Los tramos ya fundidos (paridad P7); un servidor anterior solo manda las aristas sueltas.
     caminos: !red ? [] : red.tramos.length
       ? red.tramos.map((t) => ({ id: t.id, escalon: Math.min(2, t.escalon) as 0 | 1 | 2, puntos: t.puntos.map(punto) }))

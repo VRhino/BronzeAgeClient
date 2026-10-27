@@ -126,6 +126,8 @@ export interface ProyeccionJugador {
   batallas: BatallaVisible[];
   /** La Era, los logros del mundo y las tecnologías propias (backend Doc 6). Ausente en un backend anterior. */
   tecnologia?: TecnologiaJugador;
+  /** Las tecnologías adoptadas por tu Facción (`TecnologiasFaccion.adoptadas` del ámbito FACCION, con las de arranque); vacío sin Facción. */
+  tecnologiasAdoptadas?: string[];
   /** Los Aedas residentes de tus plazas, con su épica. */
   aedasResidentes?: AedaResidenteProyectado[];
   /** Los Aedas itinerantes a la vista. */

@@ -21,7 +21,7 @@ function resideAqui(p: ProyeccionJugador, a: Asentamiento): boolean {
 /** Tecnologías que adoptó la Facción propia; `null` si el backend no las manda (entonces no se filtra por tecnología). */
 function adoptadasDe(p: ProyeccionJugador): string[] | null {
   const t = p.tecnologia as { propias?: { adoptadas?: string[] } | null } | undefined;
-  return t?.propias?.adoptadas ?? (t ? [] : null);
+  return t?.propias?.adoptadas ?? p.tecnologiasAdoptadas ?? (t ? [] : null);
 }
 
 function fila(t: TropaReclutable, p: ProyeccionJugador, a: Asentamiento, reside: boolean, e: Escapar): string {
