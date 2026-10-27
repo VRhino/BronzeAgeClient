@@ -3,6 +3,12 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.35.2] — 2026-10-27 · iconos de pueblo y avanzada · sync con `VRhino/BronzeAge@f3b8226`
+
+### Añadido
+- `src/mundo/iconosMapa.json` lleva también `pueblo` (`delapouite/hut`) y `avanzada` (`delapouite/watchtower`), para que el admin web use los
+  mismos iconos. Este cliente aún no pinta pueblos ni avanzadas.
+
 ## [0.35.1] — 2026-10-27 · aviso del mundo abajo a la izquierda y víveres del ejército · sync con `VRhino/BronzeAge@f3b8226`
 
 ### Corregido
