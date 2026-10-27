@@ -855,7 +855,12 @@ async function fundarAqui(): Promise<void> {
   if (!proyeccion) return;
   try {
     const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'fundar', {});
-    if (!respuesta.resultado.ok) throw errorDeRechazo(respuesta.resultado, 'No se pudo fundar aquí.');
+    if (!respuesta.resultado.ok) {
+      // El motor dice el porqué en el código (agua, campamento o plaza demasiado cerca…); el detalle solo trae las coordenadas.
+      const codigo = respuesta.resultado.codigoError ?? '';
+      const explicado = explicarError(codigo);
+      throw new ApiError(409, explicado !== codigo ? explicado : respuesta.resultado.detalleError ?? (codigo || 'No se pudo fundar aquí.'));
+    }
     estadoCliente.modoFundacionActivo = false;
     estadoCliente.posicionFundacion = null;
     panelMapaAbierto = null;
@@ -1150,19 +1155,24 @@ function renderPanelRiel(): void {
     }), 'cosas');
   } else {
     // fundar: solo con una Caravana de Fundación enganchada, y donde se está (Doc 1.3, 1.8)
-    const caravana = caravanaDeFundacion(proyeccion);
-    const enganchada = Boolean(caravana && columna?.caravanasAdjuntasIds?.includes(caravana.id));
+    // La de fundación va en `caravanaFundacionId` de la columna (motor d8ef09c), no en `caravanasAdjuntasIds`; funda el Líder de la columna.
+    const llevada = columna?.caravanaFundacionId;
+    const caravana = (llevada ? proyeccion.caravanas.find((c) => c.id === llevada) : undefined) ?? caravanaDeFundacion(proyeccion);
+    const enganchada = Boolean(llevada || (caravana && columna?.caravanasAdjuntasIds?.includes(caravana.id)));
+    const esLider = !columna?.liderId || columna.liderId === proyeccion.heroeId;
     const htmlFundar = `
-      <span class="faction-kicker">Fundar asentamiento${!caravana
+      <span class="faction-kicker">Fundar asentamiento${!caravana && !enganchada
         ? ayuda('mapa:fundar', 'Una Facción sin plaza la compra en un campamento de mercenarios con el fondo de sus héroes; con plaza, se lanza desde Centro urbano › Fundación. Quien la compra o la lanza la lleva.')
         : enganchada ? ayuda('mapa:fundar', 'Se funda donde está ahora tu columna, no en agua ni a menos de 100 de un campamento.') : ''}</span>
-      ${!caravana
+      ${!caravana && !enganchada
         ? '<p>Se funda con una Caravana de Fundación.</p>'
+        : enganchada && !esLider
+          ? `<p>Tu ejército lleva la Caravana de Fundación. Funda su Líder, ${escaparHtml(nombreDeHeroe(proyeccion, columna!.liderId!))}, donde esté la columna.</p>`
         : enganchada
           ? `<p>Se funda donde está ahora tu columna. Estos son los recursos a tu alcance:</p>
             <div id="mapa-fundar-recursos">${resumenRecursosFundacion(escaparHtml)}</div>
             <button id="btn-fundar-aqui" class="btn-primary" type="button">Fundar aquí</button>`
-          : `<p>Tu Caravana de Fundación espera en ${caravana.origenCampamentoId ? 'su campamento' : 'su plaza'}. Lleva tu columna a la puerta y engánchala.</p>
+          : `<p>Tu Caravana de Fundación espera en ${caravana!.origenCampamentoId ? 'su campamento' : 'su plaza'}. Para llevártela, sal de allí como ejército y, al partir, elige llevarla; o lleva tu ejército a la puerta y engánchala.</p>
             <button id="btn-enganchar-caravana" class="btn-primary" type="button">Enganchar caravana</button>`}
       <p id="mapa-fundar-error" class="faction-error" role="alert"></p>`;
     pintar(panel, htmlFundar, () => {

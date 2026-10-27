@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.38.4] — 2026-10-27 · fundar con la Caravana de Fundación enganchada · sync con `VRhino/BronzeAge@52fb7d4`
+
+### Arreglado
+- **Fundar** (panel ⌂ del mundo): con la Caravana de Fundación enganchada no salía «Fundar aquí», porque se buscaba en
+  `caravanasAdjuntasIds` (las comerciales) y la de fundación viene ahora en `Ejercito.caravanaFundacionId`. Funda el Líder de la columna;
+  a los demás se les dice quién. Si el sitio no vale, se explica por qué (cerca de un campamento o de otra plaza, agua, cima…) en vez de
+  enseñar solo las coordenadas.
+
 ## [0.38.3] — 2026-10-27 · rastreador de misiones arriba a la derecha · sync con `VRhino/BronzeAge@52fb7d4`
 
 ### Cambiado
