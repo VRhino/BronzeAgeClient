@@ -273,25 +273,33 @@ function htmlExtraccion(c: ContextoPlaza): string {
     if (x?.porMinuto === undefined) return '—';
     // Con el almacén lleno lo que se produce de más se pierde y el neto sale 0: se dice, para que no parezca que no produce.
     const lleno = x.capacidad > 0 && x.cantidad >= x.capacidad ? ' (almacén lleno)' : '';
-    return `${x.porMinuto > 0 ? '+' : ''}${fmt(x.porMinuto)}/min${lleno}`;
+    return `${desglose(x)}${lleno}`;
   };
   const filas = [...porTipo.entries()].sort(([x], [y]) => nombreDe(x).localeCompare(nombreDe(y))).map(([tipo, g]) => {
     const parados = g.edificios.filter((x) => x.pausadoPorAlmacenLleno).length;
     const danados = g.edificios.filter((x) => x.danado).length;
-    const resumen = `<span class="plegable-titulo">${e(nombreDe(tipo))}${g.edificios.length > 1 ? ` ×${g.edificios.length}` : ''}</span><span class="plegable-meta${parados ? ' falta' : ''}">${RECURSO_ICONO[g.recurso] ?? '📦'} ${e(RECURSO_NOMBRE[g.recurso] ?? g.recurso)} · neto ${neto(g.recurso)}</span>`;
+    const resumen = `<span class="plegable-titulo">${e(nombreDe(tipo))}${g.edificios.length > 1 ? ` ×${g.edificios.length}` : ''}</span><span class="plegable-meta${parados ? ' falta' : ''}">${RECURSO_ICONO[g.recurso] ?? '📦'} ${e(RECURSO_NOMBRE[g.recurso] ?? g.recurso)} · ${neto(g.recurso)}</span>`;
     const cuerpo = `<ul class="plegable-lista">${g.edificios.map((x) => `<li>Nivel ${x.nivelInterno ?? 1}${x.pausadoPorAlmacenLleno ? ' · <strong>parado: almacén lleno</strong>' : ''}${x.danado ? ' · dañado' : ''}</li>`).join('')}</ul>
       <p class="asent-lado-nota">Base del catálogo: ${fmt(g.base)} en total con la mano de obra completa (${g.trabajadores} trabajadores).${tipo === 'granja' ? ' La fertilidad de la zona la multiplica.' : tipo === 'lenera' ? ' La densidad del bosque la multiplica.' : ''}</p>
       ${parados || danados ? `<p class="asent-lado-nota">${parados ? `${parados} parado(s) por almacén lleno. ` : ''}${danados ? `${danados} dañado(s).` : ''}</p>` : ''}`;
     return plegable(`produccion:${tipo}`, resumen, cuerpo);
   }).join('');
-  const recursos = Object.entries(a.almacen ?? {}).filter(([, x]) => (x.porMinuto ?? 0) !== 0).sort(([, x], [, y]) => (y.porMinuto ?? 0) - (x.porMinuto ?? 0));
+  const recursos = Object.entries(a.almacen ?? {}).filter(([, x]) => (x.porMinuto ?? 0) !== 0 || (x.producido ?? 0) !== 0 || (x.consumido ?? 0) !== 0).sort(([, x], [, y]) => (y.porMinuto ?? 0) - (x.porMinuto ?? 0));
   const balance = recursos.length
-    ? `<ul class="plegable-lista">${recursos.map(([r, x]) => `<li>${RECURSO_ICONO[r] ?? '📦'} ${e(RECURSO_NOMBRE[r] ?? r)}: <strong>${(x.porMinuto ?? 0) > 0 ? '+' : ''}${fmt(x.porMinuto ?? 0)}/min</strong></li>`).join('')}</ul>`
+    ? `<ul class="plegable-lista">${recursos.map(([r, x]) => `<li>${RECURSO_ICONO[r] ?? '📦'} ${e(RECURSO_NOMBRE[r] ?? r)}: <strong>${desglose(x)}</strong></li>`).join('')}</ul>`
     : '<p class="asent-lado-nota">Ningún recurso sube ni baja ahora mismo.</p>';
-  return `<div class="asent-lado-cabecera"><span class="faction-kicker">Producción ${ayuda('plaza:produccion', 'El neto es lo que sube o baja cada recurso en el almacén ahora mismo (producción menos consumo), tal como lo calcula el servidor. El servidor no da lo que rinde cada edificio por separado.')}</span></div>
+  return `<div class="asent-lado-cabecera"><span class="faction-kicker">Producción ${ayuda('plaza:produccion', 'Por recurso, en el último minuto: lo producido (edificios, pueblos, recaudación), lo consumido (comida de la población y la guarnición, insumos de los talleres, mantenimiento) y el neto. Órdenes, comercio, botín y caravanas no cuentan. El servidor no da lo que rinde cada edificio por separado.')}</span></div>
     <p class="asent-lado-nota">Mano de obra: ${pesants} pesants para ${necesarios} puestos${ratio < 1 ? ` (${Math.round(ratio * 100)} %: rinden menos)` : ''}.</p>
     <div class="plegables">${filas || '<p class="mapa-lista-vacia">Sin extractores ni granjas activos.</p>'}
-      ${plegable('produccion:balance', '<span class="plegable-titulo">Balance del almacén</span><span class="plegable-meta">neto por minuto</span>', balance)}</div>`;
+      ${plegable('produccion:balance', '<span class="plegable-titulo">Balance del almacén</span><span class="plegable-meta">por minuto</span>', balance)}</div>`;
+}
+
+/** «+P producido · −C consumido · neto N/min» de un recurso del almacén (solo el neto si el servidor no manda el desglose). */
+function desglose(x: { porMinuto?: number; producido?: number; consumido?: number }): string {
+  const neto = `${(x.porMinuto ?? 0) > 0 ? '+' : ''}${fmt(x.porMinuto ?? 0)}/min`;
+  const p = x.producido ?? 0;
+  const c = x.consumido ?? 0;
+  return p || c ? `+${fmt(p)} producido · −${fmt(c)} consumido · neto ${neto}` : `neto ${neto}`;
 }
 
 /** Subpestaña «Producción»: extractores y granjas y, debajo, las recetas de los talleres; todo en partes plegables. */

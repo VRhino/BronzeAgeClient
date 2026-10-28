@@ -84,6 +84,8 @@ import { motivosParaCrearFaccion } from './ui/validarFaccion';
 import { nombreDeHeroe } from './ui/nombres';
 import { htmlEstados } from './ui/estados';
 import { htmlAscensoLocal, selectorDePunto } from './ui/pueblos';
+import { htmlMiembrosFaccion, htmlResidentesPlaza } from './ui/participacion';
+import { cablearTablon, htmlTablon } from './ui/tablon';
 import { actualizarSeguimiento, cablearMisiones, elegirPestanaMisiones, htmlListaMisiones, htmlPanelMisiones, misionesPorReclamar, pintarRastreador } from './ui/misiones';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
@@ -809,12 +811,13 @@ function renderSeleccionMercenarios(cont: HTMLElement, proyeccion: ProyeccionJug
   cablearAccionSeleccion(cont, '#btn-entrar-mercenarios', 'entrarEnCampamento', { campamentoId: campamento.id, heroeId: proyeccion.heroeId }, () => { seleccionMapa = null; });
 }
 
-/** Ficha de un alijo de exploración (Doc 1.9b): se abre estando en el sitio, y su oro va al carro de la columna. */
+/** Ficha de un alijo de exploración (Doc 1.9b): se abre estando en el sitio, y lo que trae va al carro de la columna. */
 function renderSeleccionAlijo(cont: HTMLElement, alijo: Alijo): void {
+  const contenido = `${alijo.cantidad} de ${(RECURSO_NOMBRE[alijo.recurso] ?? alijo.recurso).toLowerCase()}`;
   if (!pintar(cont, `
     <button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>
-    <span class="faction-kicker">Alijo${ayuda('mapa:ficha-alijo', 'Hay que estar en el sitio. El oro va al carro de tu columna (lo que no quepa se pierde).')}</span>
-    <h3>${alijo.oro} de oro</h3>
+    <span class="faction-kicker">Alijo${ayuda('mapa:ficha-alijo', 'Hay que estar en el sitio. Lo que trae va al carro de tu columna (lo que no quepa se pierde).')}</span>
+    <h3>${escaparHtml(contenido)}</h3>
     <div class="mapa-seleccion-acciones">
       <button id="btn-marchar-alli" class="btn-secondary" type="button">Marchar aquí</button>
       <button id="btn-abrir-alijo" class="btn-primary" type="button">Abrir</button>
@@ -822,7 +825,7 @@ function renderSeleccionAlijo(cont: HTMLElement, alijo: Alijo): void {
     <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`, undefined, claveSeleccion())) return;
   cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
   cont.querySelector('#btn-marchar-alli')?.addEventListener('click', () => void marcharAObjetivo({ tipo: 'punto', punto: alijo.posicion }));
-  cablearAccionSeleccion(cont, '#btn-abrir-alijo', 'abrirAlijo', { alijoId: alijo.id }, () => { seleccionMapa = null; avisoMapa(`Alijo abierto: ${alijo.oro} de oro al carro.`); });
+  cablearAccionSeleccion(cont, '#btn-abrir-alijo', 'abrirAlijo', { alijoId: alijo.id }, () => { seleccionMapa = null; avisoMapa(`Alijo abierto: ${contenido} al carro.`); });
 }
 
 // --- INTEL DE LAS TABERNAS (Doc 5.12.10) ---------------------------------------------------------
@@ -974,11 +977,16 @@ function renderPanelJugador(forzar = false): void {
     if (!forzar && proyeccion.faccionId === null && panel.querySelector('#form-crear-faccion, #input-buscar-faccion')) return;
     // Al final, las misiones de la Facción (las reclama el Rey).
     const misionesFaccion = proyeccion.faccionId ? `<section class="faccion-misiones" data-dueno="faccion"><h3>Misiones de la Facción</h3>${htmlListaMisiones(proyeccion, 'faccion', escaparHtml)}</section>` : '';
-    const html = `<div class="mapa-panel-jugador">${escaparHtml(proyeccion.heroe.displayName)}</div>${renderPestanaFaccion(proyeccion, escaparHtml)}${misionesFaccion}`;
+    const propia = proyeccion.facciones.find((f) => f.id === proyeccion.faccionId);
+    const miembros = propia ? htmlMiembrosFaccion(proyeccion, propia, escaparHtml) : '';
+    const tablonFaccion = propia?.tablon ? `<section class="faccion-tablon"><h3>Tablón de la Facción</h3>${htmlTablon(proyeccion, { tipo: 'faccion', id: propia.id, tablon: propia.tablon }, escaparHtml)}</section>` : '';
+    const html = `<div class="mapa-panel-jugador">${escaparHtml(proyeccion.heroe.displayName)}</div>${renderPestanaFaccion(proyeccion, escaparHtml)}${miembros}${tablonFaccion}${misionesFaccion}`;
     pintar(panel, html, () => {
       cablearFaccion(panel, proyeccion, () => renderPanelJugador(true));
       const seccion = panel.querySelector<HTMLElement>('.faccion-misiones');
       if (seccion) cablearMisiones(seccion, proyeccion, ejecutarYRefrescar, () => renderPanelJugador(true));
+      const tablon = panel.querySelector<HTMLElement>('.faccion-tablon');
+      if (tablon) cablearTablon(tablon, ejecutarYRefrescar, () => renderPanelJugador(true));
     }, 'faccion');
     return;
   }
@@ -1929,7 +1937,8 @@ function renderCargosAsentamiento(asentamiento: Asentamiento | undefined, proyec
       }).join('')}
       ${soyGobernador || soyRey ? '' : '<p class="asent-lado-nota">Solo el Rey (al Gobernador) y el Gobernador (al resto) pueden cambiar los cargos.</p>'}
       <p id="asent-cargo-error" class="faction-error" role="alert"></p>
-    </section>`;
+    </section>
+    ${htmlResidentesPlaza(proyeccion, asentamiento, escaparHtml)}`;
 }
 
 function cablearCargosAsentamiento(panel: HTMLElement, asentamiento: Asentamiento | undefined): void {

@@ -33,10 +33,14 @@ export function medirRitmoDeMundo(instante: number, real = Date.now()): void {
   } else if (!medida) medida = { instante, real };
 }
 
-/** Un plazo de mundo (ms) dicho en tiempo REAL: «5 s», «2 min». */
+/** Un plazo de mundo (ms) dicho en tiempo REAL: «5 s», «2 min», «3 h», «2 d». */
 export function textoEnTiempoReal(msDeMundo: number): string {
   const s = Math.max(0, Math.ceil(msDeMundo / ritmoMundo / 1000));
-  return s < 90 ? `${s} s` : `${Math.ceil(s / 60)} min`;
+  if (s < 90) return `${s} s`;
+  const min = Math.ceil(s / 60);
+  if (min < 120) return `${min} min`;
+  const h = Math.round(min / 60);
+  return h < 48 ? `${h} h` : `${Math.round(h / 24)} d`;
 }
 
 export const estadoCliente: EstadoClienteJugador = {

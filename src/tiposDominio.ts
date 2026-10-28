@@ -55,7 +55,70 @@ export interface Faccion {
   admiteOtrasEnAtaques?: boolean;
   /** Instante de MUNDO de la última designación de capital (el traslado tiene enfriamiento, Doc 2.2). */
   capitalDesignadaEn?: number;
+  /** Solo la propia: un ciudadano por entrada, en orden de ingreso, con sus cargos y su participación sumada en las plazas de la Facción. */
+  miembros?: MiembroFaccion[];
+  /** Solo la propia: el tablón de misiones recurrentes de la Facción. */
+  tablon?: Tablon;
   // ... ignoramos otros campos que no impactan el render ...
+}
+
+export interface MiembroFaccion {
+  heroeId: string;
+  /** La plaza (`as-N`) o el campamento (`camp-N`) donde reside. */
+  residenciaId?: string;
+  /** `rey`, `embajador` y los locales de su plaza de residencia (`gobernador@as-3`). */
+  cargos: string[];
+  participacion: number;
+}
+
+/** Una condición de una misión recurrente: el contador, lo que lleva y lo que pide. */
+export interface CondicionRecurrente { contador: string; avance: number; umbral: number }
+export type EstadoRecurrente = 'en_curso' | 'cumplida' | 'reclamada' | 'caducada';
+
+/** Una misión del catálogo de un tablón (Misiones_Recurrentes): diaria o semanal, individual (se acepta) o grupal (cuenta lo de todos). */
+export interface DefinicionRecurrente {
+  id: string;
+  duracion: 'diaria' | 'semanal';
+  tipo: 'individual' | 'grupal';
+  /** Individual: aceptaciones por semana en el tablón, entre todos. */
+  limiteSemanal: number;
+  /** Solo la acepta el titular de ese cargo. */
+  cargo?: string;
+  condiciones: CondicionRecurrente[];
+  /** Experiencia de Facción (unidades). */
+  experiencia: number;
+  participacion: number;
+  /** Oro al almacén personal (unidades). */
+  oro: number;
+  titulo: string;
+  texto: string;
+  explicacion: string;
+}
+
+export interface MisionRecurrente {
+  definicion: DefinicionRecurrente;
+  desde: number;
+  hasta: number;
+  /** Individual: cada héroe que la aceptó, con su estado y su avance. */
+  aceptaciones: { heroeId: string; estado: EstadoRecurrente; condiciones: CondicionRecurrente[] }[];
+  aceptadasSemana: number;
+  /** Grupal: su estado, el avance de todos y lo que aportó cada héroe. */
+  estado?: EstadoRecurrente;
+  condiciones: CondicionRecurrente[];
+  aportes: Record<string, number>;
+}
+
+/** El tablón de una plaza o de una Facción: lo que hay ahora, lo que sale esta semana, lo elegido para la siguiente y el catálogo. */
+export interface Tablon {
+  misiones: MisionRecurrente[];
+  diariasIds: string[];
+  semanalesIds: string[];
+  conEleccion: boolean;
+  elegidasDiariasIds: string[];
+  elegidasSemanalesIds: string[];
+  renovacionDiaria: number;
+  renovacionSemanal: number;
+  catalogo: DefinicionRecurrente[];
 }
 
 export interface Edificio {
@@ -132,7 +195,8 @@ export interface Asentamiento {
   /** Racha de ticks con mantenimiento sano (para recuperar `nivelActual`). */
   rachaMantenimientoSano?: number;
   /** `porMinuto`: la tendencia neta de ese recurso ahora (producción − consumo), la del ritmo del motor. */
-  almacen?: Record<string, { cantidad: number; capacidad: number; porMinuto?: number }>;
+  /** `porMinuto` es el neto del último paso de minuto; `producido` y `consumido`, lo que entró por los flujos de la plaza y lo que salió (comida, insumos, mantenimiento). */
+  almacen?: Record<string, { cantidad: number; capacidad: number; porMinuto?: number; producido?: number; consumido?: number }>;
   edificios: Edificio[];
   /** El almacén está abierto a los ejércitos ALIADOS que pasan (`alternarReabastecerAliados`, Doc 5.13). Ausente = cerrado. */
   permiteReabastecerAliados?: boolean;
@@ -168,6 +232,10 @@ export interface Asentamiento {
   vetadosIds?: string[];
   /** Id de la Facción de la que es capital designada (Doc 2.2). */
   capitalDeFaccionId?: string;
+  /** Puntos de participación de cada héroe en esta plaza (id de héroe → puntos), resida o no en ella. Solo desde dentro. */
+  participacion?: Record<string, number>;
+  /** El tablón de misiones recurrentes de la plaza. Solo desde dentro. */
+  tablon?: Tablon;
 }
 
 export type GrupoPuerta = 'neutrales' | 'aliados' | 'enemigos' | 'aedas';
@@ -609,11 +677,12 @@ export interface ObraDeMapa {
   terminaEn?: number;
 }
 
-/** Un alijo de exploración a la vista que aún no abriste (Doc 1.9b): su oro va al carro de tu columna. */
+/** Un alijo de exploración a la vista que aún no abriste (Doc 1.9b): trae una sola cosa (oro, madera, piedra o trigo) y va al carro de tu columna. */
 export interface Alijo {
   id: string;
   posicion: Point;
-  oro: number;
+  recurso: string;
+  cantidad: number;
 }
 
 export type AtributoHeroe = 'fuerza' | 'destreza' | 'armadura' | 'vitalidad';

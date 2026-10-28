@@ -1,6 +1,7 @@
 // GANCHOS de extensión de la interfaz: puntos donde un bloque de trabajo añade una pieza nueva SIN editar el resto de `main.ts`.
 // Cada bloque tiene su «hueco» (separado por líneas en blanco) para que dos ramas que añaden a la vez no se pisen al fusionar.
 // Para añadir una pieza: crea su módulo en `src/ui/`, impórtalo aquí y añade UNA entrada en TU hueco.
+import { SUBPESTANA_TABLON } from './tablon';
 import type { ProyeccionJugador } from '../apiCliente';
 import type { Asentamiento } from '../tiposDominio';
 import type { Ejecutar } from './panelCarro';
@@ -60,6 +61,7 @@ export const SUBPESTANAS_CENTRO_EXTRA: SubpestanaPlaza[] = [
 
   // --- hueco misiones (plaza › Centro urbano: las misiones de la plaza)
   SUBPESTANA_MISIONES,
+  SUBPESTANA_TABLON,
 
   // --- hueco pueblos (plaza › Centro urbano: pueblos extractores y aldea agrícola)
   SUBPESTANA_PUEBLOS,

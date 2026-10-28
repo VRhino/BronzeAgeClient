@@ -87,6 +87,32 @@ function faccion(f: pb.Faccion, ahora: number): d.Faccion {
     id: f.id, nombre: f.nombre, sigilo: sigilo(f.sigilo), reyId: f.reyId ?? null, embajadorId: f.embajadorId ?? null, nivel: f.nivel,
     experiencia: mil(f.experiencia), ciudadanosIds: f.ciudadanosIds, solicitudesIds: f.solicitudesIds, reputacion: valorDeRitmo(f.reputacion, ahora),
     admiteOtrasEnAtaques: f.admiteOtrasEnAtaques, capitalDesignadaEn: instante(f.capitalDesignadaEnMs),
+    miembros: f.miembros.length ? f.miembros.map((m) => ({ heroeId: m.heroeId, residenciaId: m.residenciaId, cargos: m.cargos, participacion: Number(m.participacion) })) : undefined,
+    tablon: f.tablon ? tablon(f.tablon) : undefined,
+  };
+}
+
+const ESTADO_RECURRENTE: Record<number, d.EstadoRecurrente> = { 1: 'en_curso', 2: 'cumplida', 3: 'reclamada', 4: 'caducada' };
+const condicionesRecurrentes = (cs: pb.CondicionMision[]): d.CondicionRecurrente[] => cs.map((c) => ({ contador: c.contador, avance: Number(c.avance), umbral: Number(c.umbral) }));
+
+function definicionRecurrente(x: pb.DefinicionMisionRecurrente): d.DefinicionRecurrente {
+  return {
+    id: x.id, duracion: x.duracion === pb.DuracionMision.MISION_SEMANAL ? 'semanal' : 'diaria', tipo: x.tipo === pb.TipoMision.MISION_GRUPAL ? 'grupal' : 'individual',
+    limiteSemanal: x.limiteSemanal, cargo: x.cargo, condiciones: condicionesRecurrentes(x.condiciones), experiencia: mil(x.experiencia),
+    participacion: Number(x.participacion), oro: mil(x.oro), titulo: x.titulo, texto: x.texto, explicacion: x.explicacion,
+  };
+}
+
+function tablon(t: pb.Tablon): d.Tablon {
+  return {
+    misiones: t.misiones.filter((m) => m.definicion).map((m) => ({
+      definicion: definicionRecurrente(m.definicion!), desde: instante(m.desdeMs)!, hasta: instante(m.hastaMs)!,
+      aceptaciones: m.aceptaciones.map((a) => ({ heroeId: a.heroeId, estado: ESTADO_RECURRENTE[a.estado] ?? 'en_curso', condiciones: condicionesRecurrentes(a.condiciones) })),
+      aceptadasSemana: m.aceptadasSemana, estado: ESTADO_RECURRENTE[m.estado], condiciones: condicionesRecurrentes(m.condiciones),
+      aportes: Object.fromEntries(Object.entries(m.aportes).map(([k, v]) => [k, Number(v)])),
+    })),
+    diariasIds: t.diariasIds, semanalesIds: t.semanalesIds, conEleccion: t.conEleccion, elegidasDiariasIds: t.elegidasDiariasIds, elegidasSemanalesIds: t.elegidasSemanalesIds,
+    renovacionDiaria: instante(t.renovacionDiariaMs)!, renovacionSemanal: instante(t.renovacionSemanalMs)!, catalogo: t.catalogo.map(definicionRecurrente),
   };
 }
 
@@ -119,7 +145,7 @@ function asentamiento(a: pb.Asentamiento, ahora: number): d.Asentamiento {
     nutricionPoblacion: a.nutricion ? valorDeRitmo(a.nutricion, ahora) : undefined,
     rachaMantenimientoSano: a.rachaMantenimientoSano,
     almacen: Object.keys(a.almacen).length
-      ? Object.fromEntries(Object.entries(a.almacen).map(([k, x]) => [k, { cantidad: valorDeRitmo(x.cantidad, ahora), capacidad: mil(x.capacidad), porMinuto: mil(x.cantidad?.porMinuto) }]))
+      ? Object.fromEntries(Object.entries(a.almacen).map(([k, x]) => [k, { cantidad: valorDeRitmo(x.cantidad, ahora), capacidad: mil(x.capacidad), porMinuto: mil(x.cantidad?.porMinuto), producido: mil(x.producidoPorMinuto), consumido: mil(x.consumidoPorMinuto) }]))
       : undefined,
     edificios: a.edificios.map(edificio),
     permiteReabastecerAliados: a.permiteReabastecerAliados || undefined,
@@ -138,6 +164,8 @@ function asentamiento(a: pb.Asentamiento, ahora: number): d.Asentamiento {
     puertaCerradaA: a.puertaCerradaA.length ? a.puertaCerradaA.map((g) => GRUPO_PUERTA[g]!).filter(Boolean) : undefined,
     vetadosIds: a.vetadosIds.length ? a.vetadosIds : undefined,
     capitalDeFaccionId: a.capitalDeFaccionId,
+    participacion: Object.keys(a.participacion).length ? Object.fromEntries(Object.entries(a.participacion).map(([k, v]) => [k, Number(v)])) : undefined,
+    tablon: a.tablon ? tablon(a.tablon) : undefined,
   };
 }
 
@@ -563,7 +591,7 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
       const propias = new Map([...deAmbito('FACCION:', 'obra'), ...deAmbito('ASENTAMIENTO:', 'obra')].map((x) => [x.id, x]));
       return [...[...propias.values()].map((x) => obraDeMapa(x, true)), ...deAmbito('VISTA:', 'obra').filter((x) => !propias.has(x.id)).map((x) => obraDeMapa(x, false))];
     })(),
-    alijos: deAmbito('HEROE:', 'alijo').map((x) => ({ id: x.id, posicion: punto(x.posicion), oro: mil(x.oro) })),
+    alijos: deAmbito('HEROE:', 'alijo').map((x) => ({ id: x.id, posicion: punto(x.posicion), recurso: x.recurso || 'oro', cantidad: mil(x.cantidad) })),
     miradasIntel: deAmbito('VISTA:', 'mirada').map((m) => ({
       id: m.id, faccionId: m.faccionId, origenId: m.origenId, centro: punto(m.centro), radio: mil(m.radio),
       compradaEn: instante(m.compradaEnMs)!, expiraEn: instante(m.expiraEnMs)!, libreEn: instante(m.libreEnMs)!,

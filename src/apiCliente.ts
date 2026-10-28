@@ -477,7 +477,9 @@ function pedirVistaEntera(s: Sesion): void {
 
 /** El archivo común de datos de juego del motor (`GET /v1/datos`, el vigente): los bloques de parámetros de `Docs/Mechanics`, por documento. Se pide una vez. */
 let datosDeJuego: Promise<DatosDeJuego | null> | null = null;
-interface DatosDeJuego { documentos?: Record<string, Record<string, unknown>> }
+interface DatosDeJuego { documentos?: Record<string, Record<string, unknown>>; reglas?: { territorio?: { radio_inicial?: number } } }
+/** `reglas` de `/v1/datos` (territorio en milésimas), guardadas al llegar el balance. */
+let reglasDePartida: DatosDeJuego['reglas'] | null = null;
 
 function cargarDatosDeJuego(): Promise<DatosDeJuego | null> {
   datosDeJuego ??= fetch(`${BASE}/v1/datos`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
@@ -495,7 +497,7 @@ export function radioDeVision(): Promise<number> {
 /** Los textos de las misiones que publica el motor en un catálogo aparte de `GET /v1/datos`, no en la foto
  * (`documentos.Misiones_Textos.TEXTOS_MISIONES`): `misiones.<id>` con título y texto, y `contadores.<contador>` con el nombre de cada barra.
  * `null` mientras no llegue (o si el motor aún no lo publica). */
-export interface TextosDeMisiones { misiones: Record<string, { titulo: string; texto: string }>; contadores: Record<string, string> }
+export interface TextosDeMisiones { misiones: Record<string, { titulo: string; texto: string; explicacion?: string }>; contadores: Record<string, string> }
 let textosMisiones: TextosDeMisiones | null = null;
 let textosMisionesPedidos = false;
 const oyentesTextosMisiones = new Set<() => void>();
@@ -504,10 +506,10 @@ export function textosDeMisiones(alCargar?: () => void): TextosDeMisiones | null
   if (!textosMisiones && !textosMisionesPedidos) {
     textosMisionesPedidos = true;
     void cargarDatosDeJuego().then((d) => {
-      const bloque = d?.documentos?.Misiones_Textos?.TEXTOS_MISIONES as { misiones?: Record<string, { titulo?: unknown; texto?: unknown }>; contadores?: Record<string, unknown> } | undefined;
+      const bloque = d?.documentos?.Misiones_Textos?.TEXTOS_MISIONES as { misiones?: Record<string, { titulo?: unknown; texto?: unknown; explicacion?: unknown }>; contadores?: Record<string, unknown> } | undefined;
       if (!bloque?.misiones) return;
       const misiones: TextosDeMisiones['misiones'] = {};
-      for (const [id, t] of Object.entries(bloque.misiones)) if (typeof t?.titulo === 'string') misiones[id] = { titulo: t.titulo, texto: typeof t.texto === 'string' ? t.texto : '' };
+      for (const [id, t] of Object.entries(bloque.misiones)) if (typeof t?.titulo === 'string') misiones[id] = { titulo: t.titulo, texto: typeof t.texto === 'string' ? t.texto : '', ...(typeof t.explicacion === 'string' && t.explicacion ? { explicacion: t.explicacion } : {}) };
       const contadores: TextosDeMisiones['contadores'] = {};
       for (const [k, v] of Object.entries(bloque.contadores ?? {})) if (typeof v === 'string') contadores[k] = v;
       textosMisiones = { misiones, contadores };
@@ -584,6 +586,7 @@ function balance(alCargar?: () => void): BalancePublico | null {
     // se juntan en uno solo y cada grupo lo ve entero. Si un bloque está en dos documentos, gana el primero.
     void cargarDatosDeJuego().then((d) => {
       if (!d?.documentos) return;
+      reglasDePartida = d.reglas ?? null;
       const bloques: Record<string, unknown> = {};
       for (const doc of Object.values(d.documentos)) for (const [k, v] of Object.entries(doc)) if (!(k in bloques)) bloques[k] = v;
       const todo = bloques as never;
@@ -593,6 +596,13 @@ function balance(alCargar?: () => void): BalancePublico | null {
     });
   }
   return balancePublico;
+}
+
+/** Radio con el que nace la zona de una plaza (`reglas.territorio.radio_inicial` de `/v1/datos`); 6, la cifra de hoy, mientras no llegue. */
+export function radioZonaInicial(alCargar?: () => void): number {
+  balance(alCargar);
+  const r = Number(reglasDePartida?.territorio?.radio_inicial) / 1000;
+  return r > 0 ? r : 6;
 }
 
 /** Un bloque de parámetros de `GET /v1/datos` por su nombre (`PUEBLOS_EXTRACTORES`, `NIVEL_ASENTAMIENTO`…); `null` mientras no llegue. */

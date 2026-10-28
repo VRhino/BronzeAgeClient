@@ -34,7 +34,7 @@ interface ParamsPueblos {
   };
 }
 interface Especie { topePorCorral: number; pieDeCriaPorCorral: number; crecimientoPorHora: number; productos: Record<string, number> }
-interface RequisitoNivel { pesants?: number; artesanos?: number; edificios?: string[]; edificiosMinimo?: number; aldeasAgricolas?: number; nivelInternoMinimo?: Record<string, number>; recintoCompletoNivelMinimo?: number }
+interface RequisitoNivel { pesants?: number; artesanos?: number; edificios?: string[]; edificiosMinimo?: number; aldeasAgricolas?: number; nivelInternoMinimo?: Record<string, number>; recintoCompletoNivelMinimo?: number; edificiosConNivel?: Record<string, number> }
 
 /** Los tipos de nodo que admiten un pueblo extractor (el ganado ya no: sale de las aldeas). */
 const NODOS_EXTRAIBLES = new Set(['piedra', 'cobre', 'estano', 'hierro', 'oro']);
@@ -251,6 +251,11 @@ export function htmlAscensoLocal(p: ProyeccionJugador, a: Asentamiento, soyGober
     [Math.floor(pob.pesants) >= (r.pesants ?? 0), `${r.pesants ?? 0} pesants (tiene ${n0(pob.pesants)})`],
     ...((r.artesanos ?? 0) > 0 ? [[Math.floor(pob.artesanos) >= r.artesanos!, `${r.artesanos} artesanos (tiene ${n0(pob.artesanos)})`] as [boolean, string]] : []),
     ...((r.edificios ?? []).length ? [[hechos.length >= minimo, `${minimo === (r.edificios ?? []).length ? 'Todos' : `${minimo}`} de: ${(r.edificios ?? []).map((t) => EDIFICIO_NOMBRE[t] ?? t).join(', ')} (${hechos.length ? `activos: ${hechos.map((t) => EDIFICIO_NOMBRE[t] ?? t).join(', ')}` : 'ninguno activo'})`] as [boolean, string]] : []),
+    // Un edificio activo de ese tipo a ese nivel o más (nivel 2: una Granja a nivel 2).
+    ...Object.entries(r.edificiosConNivel ?? {}).map(([tipo, nivel]) => [
+      a.edificios.some((x) => x.tipo === tipo && x.estado === 'activo' && (x.nivelInterno ?? 1) >= nivel),
+      `${EDIFICIO_NOMBRE[tipo] ?? tipo} a nivel ${nivel} o más, en marcha`,
+    ] as [boolean, string]),
     ...((r.aldeasAgricolas ?? 0) > 0 ? [[aldeas >= r.aldeasAgricolas!, `Una aldea agrícola activa (pestaña Pueblos)${aldeas ? '' : ': aún no tiene'}`] as [boolean, string]] : []),
     ...(r.recintoCompletoNivelMinimo ? [[true, `Un recinto de muralla completo de nivel ${r.recintoCompletoNivelMinimo} o más (lo comprueba el servidor)`] as [boolean, string]] : []),
     [faltaPagar.length === 0, `En el almacén: ${listaRecursos(coste?.costo ?? {}) || 'sin coste'}${faltaPagar.length ? ` (faltan ${faltaPagar.map(([k, n]) => `${Math.ceil(n - (almacen[k]?.cantidad ?? 0))} ${RECURSO_NOMBRE[k] ?? k}`).join(', ')})` : ''}`],

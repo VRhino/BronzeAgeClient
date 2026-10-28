@@ -375,3 +375,9 @@ export function colorDelSueloEn(mapa: MapaGenerado, p: { x: number; y: number })
   const mejor = [...cuenta].sort((a, b) => b[1] - a[1])[0];
   return COLOR_CLASE[mejor?.[0] ?? 3]!;
 }
+
+/** La densidad de bosque (0..1) de la celda donde cae `p`, como la mira el motor al fundar (`fundacion.bosque_denso`); `null` sin la capa. */
+export function densidadBosqueEn(mapa: MapaGenerado, p: { x: number; y: number }): number | null {
+  const b = mapa.rasters?.densidadBosque;
+  return b ? celdaDe(b, p.x, p.y) / 255 : null;
+}

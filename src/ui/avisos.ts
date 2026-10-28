@@ -201,6 +201,18 @@ function avisoDeRelacion(e: EventoDominio): { texto: string; pideDecision: boole
 }
 
 /** Anota un evento del backend en el historial (y avisa si es nuevo). `silencioso`: lo ocurrido mientras no mirabas, sin toast ni briefing. */
+/** El título de una misión recurrente si está en algún tablón a la vista (el de tu plaza o el de tu Facción). */
+function tituloRecurrente(id: string): string | undefined {
+  const p = estadoCliente.proyeccionUltima;
+  if (!p || !id) return undefined;
+  const tablones = [...p.asentamientos.map((a) => a.tablon), ...p.facciones.map((f) => f.tablon)];
+  for (const t of tablones) {
+    const x = t?.catalogo.find((d) => d.id === id) ?? t?.misiones.find((m) => m.definicion.id === id)?.definicion;
+    if (x) return x.titulo || x.id;
+  }
+  return undefined;
+}
+
 export function procesar(e: EventoDominio, heroeId: string, modo: Modo): void {
   const silencioso = modo !== 'vivo';
   const base = { version: e.version, momento: e.momento };
@@ -238,11 +250,13 @@ export function procesar(e: EventoDominio, heroeId: string, modo: Modo): void {
   if (e.codigo === 'mision.cumplida' || e.codigo === 'mision.reclamada') {
     // Misiones (motor, mecánica 49): `mision` y `dueno` (`heroe-N`, `as-N`, `f-N`); al reclamar, `oro` o `xp` en milésimas.
     const p = e.payload as { mision?: string; dueno?: string; oro?: number; xp?: number } | undefined;
-    const titulo = textoDeMision(p?.mision ?? '').titulo;
+    // Una recurrente (mecánica 55) es del tablón de su plaza o Facción: su título viaja en el catálogo del tablón.
+    const recurrente = tituloRecurrente(p?.mision ?? '');
+    const titulo = recurrente ?? textoDeMision(p?.mision ?? '').titulo;
     const deQuien = p?.dueno?.startsWith('as-') ? ' de la plaza' : p?.dueno?.startsWith('f-') ? ' de la Facción' : '';
     const cumplida = e.codigo === 'mision.cumplida';
     const premio = p?.oro ? `+${Math.round(p.oro / 1000)} oro` : p?.xp ? `+${Math.round(p.xp / 1000)} XP de Facción` : 'Recompensa';
-    const texto = cumplida ? `¡Misión${deQuien} cumplida: ${titulo}! Reclama la recompensa en Misiones.` : `${premio} por la misión${deQuien} «${titulo}».`;
+    const texto = cumplida ? `¡Misión${deQuien} cumplida: ${titulo}! Reclama la recompensa en ${recurrente ? 'el Tablón' : 'Misiones'}.` : `${premio} por la misión${deQuien} «${titulo}».`;
     anotar({ ...base, texto, clase: 'mirada', titulo: cumplida ? 'Misión cumplida' : 'Recompensa de misión', categoria: 'economia', urgente: cumplida, clave: `${e.codigo}|${p?.dueno ?? ''}|${p?.mision ?? ''}` }, modo);
     return;
   }

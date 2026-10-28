@@ -3066,3 +3066,19 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 /* Requisitos de la Caravana de Fundación: verde si se cumple, rojo si falta. */
 .fundacion-gate.ok { color: #9fd49a; }
 .fundacion-gate.falta { color: #e8a08f; }
+.mision-explicacion { margin: 2px 0 4px; font-size: 0.8rem; color: var(--text-secondary); }
+.mision-explicacion summary { cursor: pointer; color: var(--bronce); }
+.mision-explicacion p { margin: 4px 0 0; }
+.tablon-columnas { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.tablon-columna { display: flex; flex-direction: column; gap: 6px; }
+.tablon-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.tablon-cab small, .tablon-meta { font-size: 0.75rem; color: var(--text-secondary); }
+.tablon-meta { margin: 2px 0; }
+.tablon-elegir { display: flex; flex-direction: column; gap: 3px; margin: 6px 0; border: 1px solid var(--bronce-osc); border-radius: 3px; padding: 6px 8px; }
+.tablon-elegir label { font-size: 0.82rem; }
+.tablon-elegir small { color: var(--text-secondary); }
+.participacion-lista { list-style: none; margin: 4px 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.participacion-lista li { display: flex; justify-content: space-between; gap: 8px; padding: 3px 6px; border-bottom: 1px solid rgba(107, 74, 41, 0.35); font-size: 0.85rem; }
+.participacion-lista li small { color: var(--text-secondary); }
+.participacion-donde { display: block; }
+.participacion-yo { color: var(--oro-claro); }

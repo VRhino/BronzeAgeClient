@@ -1,5 +1,5 @@
 import { contornosBosques, evaluarBioma, type MapaGenerado } from './terreno';
-import { radioDeProteccionMercenarios, type ProyeccionJugador } from './apiCliente';
+import { radioDeProteccionMercenarios, radioZonaInicial, type ProyeccionJugador } from './apiCliente';
 import type { Asentamiento, Sigilo, Edificio, MiradaIntel, NieblaProyectada, Point, RectanguloLocal, TrazadoAsentamiento, TrazadoMuralla } from './tiposDominio';
 import {
   BIOMA_COLOR_SIMPLE,
@@ -962,10 +962,6 @@ export function pintarMiradas(
   ctx.restore();
 }
 
-/** Radio con el que nace la zona de una plaza (motor: `ReglasTerritorio.radio_inicial`, 6 u). El bloque `ZONA_INFLUENCIA` que publica
- * `/v1/datos` aún trae el 30 del TypeScript (Economia_Construccion §3.1 dice que el vigente es 6), así que no se lee de allí. */
-export const RADIO_ZONA_INICIAL = 6;
-
 export function pintarPrevisualizacionFundacion(
   ctx: CanvasRenderingContext2D,
   mapa: MapaGenerado,
@@ -974,7 +970,8 @@ export function pintarPrevisualizacionFundacion(
 ): void {
   const x = posicion.x * escalaCanvas;
   const y = posicion.y * escalaCanvas;
-  const radio = RADIO_ZONA_INICIAL * escalaCanvas;
+  const radioZona = radioZonaInicial();
+  const radio = radioZona * escalaCanvas;
 
   ctx.save();
   ctx.beginPath();
@@ -994,7 +991,7 @@ export function pintarPrevisualizacionFundacion(
   ctx.lineWidth = 1.5;
   ctx.stroke();
 
-  const radioCuadrado = RADIO_ZONA_INICIAL * RADIO_ZONA_INICIAL;
+  const radioCuadrado = radioZona * radioZona;
   for (const nodo of mapa.nodos) {
     const dx = nodo.posicion.x - posicion.x;
     const dy = nodo.posicion.y - posicion.y;

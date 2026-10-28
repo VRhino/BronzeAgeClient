@@ -3,6 +3,30 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.41.0] — 2026-10-28 · tablón de misiones, participación y cambios del motor del 28-10 · sync con `VRhino/BronzeAge@14e49ae`
+
+Contrato regenerado (`src/contrato/REVISION` = 14e49ae4). Hace falta el mundo nuevo y partida nueva (lo pide el motor).
+
+### Añadido
+- **Tablón de misiones recurrentes** (mecánica 55): pestaña «Tablón» en el Centro urbano y sección en la Facción. Diarias y semanales con lo
+  que falta para renovarse; aceptar las individuales (con su tope semanal y el cargo que piden), avance, quién aporta a las grupales y
+  reclamar. El Gobernador y el Rey eligen hasta 7 diarias y 7 semanales para la semana que viene (`aceptarMision`, `elegirTablon`,
+  `reclamarRecompensa`). Los avisos de una recurrente cumplida llevan su título y mandan al Tablón.
+- **Participación** (mecánica 54): en «Cargos», los residentes de la plaza con su cargo y sus puntos (y quien sumó sin residir); en la
+  Facción, los miembros con cargos, residencia y su suma.
+- **Producción**: por recurso, lo producido y lo consumido en el último minuto además del neto (mecánica 60).
+- **Misiones**: «Más» con la explicación de cada misión que publica el motor.
+- **Fundar**: aviso en rojo si el punto está en bosque cerrado (`FUNDACION.densidadBosqueMaximaParaFundar`) y mensaje para
+  `fundacion.bosque_denso`.
+- Mensajes para los rechazos nuevos `mision.*` y `tablon.*`.
+
+### Cambiado
+- **Alijos**: traen una sola cosa (oro, madera, piedra o trigo); la ficha dice qué y cuánto.
+- **Subida a nivel 2**: los requisitos enseñan la Granja a nivel 2 (`edificiosConNivel`).
+- El radio de la zona inicial (vista previa de Fundar) se lee de `reglas.territorio` de `/v1/datos`.
+- F1 «Una capital»: «Funda la primera plaza de tu Facción».
+- Los plazos largos se dicen en horas o días («3 h», «2 d»), no en cientos de minutos.
+
 ## [0.40.2] — 2026-10-28 · cifras de producción · sync con `VRhino/BronzeAge@f4585ac`
 
 ### Corregido

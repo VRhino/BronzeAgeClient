@@ -1,7 +1,7 @@
-import type { ProyeccionJugador } from '../apiCliente';
+import { bloqueDeDatos, radioZonaInicial, type ProyeccionJugador } from '../apiCliente';
 import type { Faccion } from '../tiposDominio';
 import { ayuda } from './ayuda';
-import { RADIO_ZONA_INICIAL } from '../render';
+import { densidadBosqueEn } from '../mundo/pintarArtefacto';
 import { RECURSO_NOMBRE } from '../paletas';
 import { CAP_FUNDACION_POR_NIVEL, estadoCliente, TIPS_FUNDACION } from './estadoCliente';
 import { renderPestanaMuralla } from './pestanaMuralla';
@@ -10,7 +10,7 @@ export function resumenRecursosFundacion(escaparHtml: (valor: string) => string)
   const posicion = estadoCliente.posicionFundacion;
   const mapa = estadoCliente.mapaCache?.mapa;
   if (!posicion || !mapa) return '';
-  const radio = RADIO_ZONA_INICIAL;
+  const radio = radioZonaInicial();
   const nodos = mapa.nodos.filter((nodo) => {
     const dx = nodo.posicion.x - posicion.x;
     const dy = nodo.posicion.y - posicion.y;
@@ -22,8 +22,13 @@ export function resumenRecursosFundacion(escaparHtml: (valor: string) => string)
     const alcance = radio + bosque.radio;
     return dx * dx + dy * dy <= alcance * alcance;
   });
+  // El motor no deja fundar en bosque cerrado (`fundacion.bosque_denso`): la celda con densidad ≥ `FUNDACION.densidadBosqueMaximaParaFundar`.
+  const maxima = Number(bloqueDeDatos<{ densidadBosqueMaximaParaFundar?: number }>('FUNDACION')?.densidadBosqueMaximaParaFundar ?? 0.7);
+  const densidad = densidadBosqueEn(mapa, posicion);
+  const enBosqueCerrado = densidad !== null && densidad >= maxima;
   return `
     <div class="foundation-resources">
+      ${enBosqueCerrado ? '<span class="fundacion-gate falta">Bosque cerrado: aquí no se puede fundar. Busca la orilla o un claro.</span>' : ''}
       <strong>Recursos en la zona inicial</strong>
       <span class="resource-summary-label">${nodos.length > 0 ? `${nodos.length} nodo${nodos.length === 1 ? '' : 's'} dentro del alcance` : 'Ningún nodo de recurso dentro del alcance'}</span>
       ${nodos.length > 0 ? `<div class="resource-summary-list">${nodos.map((nodo) => `<span><b>${escaparHtml(RECURSO_NOMBRE[nodo.tipo] ?? nodo.tipo)}</b> · ${escaparHtml(nodo.rareza)} · ${nodo.cantidadInicial} uds.</span>`).join('')}</div>` : ''}

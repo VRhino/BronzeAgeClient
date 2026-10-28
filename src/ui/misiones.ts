@@ -46,7 +46,7 @@ const TEXTOS: Record<string, { titulo: string; texto: string }> = {
   A9: { titulo: 'Ciudad', texto: 'Sube la plaza a nivel 3.' },
   A10: { titulo: 'Nobleza', texto: 'Ten algún noble.' },
   A11: { titulo: 'Resistir', texto: 'Resiste un asedio.' },
-  F1: { titulo: 'Una capital', texto: 'Ten capital.' },
+  F1: { titulo: 'Una capital', texto: 'Funda la primera plaza de tu Facción.' },
   F2: { titulo: 'Repartir cargos', texto: 'Nombra un Embajador o un cargo local.' },
   F3: { titulo: 'Expansión', texto: 'Funda 2 plazas.' },
   F4: { titulo: 'Un reino', texto: 'Funda 5 plazas.' },
@@ -71,13 +71,13 @@ const CONTADOR: Record<string, string> = {
 };
 
 /** Título y texto de una misión: los del motor (catálogo de `GET /v1/datos`) si ya los publica, si no los de reserva. */
-export function textoDeMision(id: string): { titulo: string; texto: string } {
+export function textoDeMision(id: string): { titulo: string; texto: string; explicacion?: string } {
   const delMotor = textosDeMisiones(() => estadoCliente.proyeccionUltima && alCambiar?.());
   return delMotor?.misiones[id] ?? TEXTOS[id] ?? { titulo: id, texto: '' };
 }
 
 /** El nombre de un contador bajo su barra: el del motor si ya lo publica, si no el de reserva. */
-function nombreDeContador(c: string): string {
+export function nombreDeContador(c: string): string {
   return textosDeMisiones()?.contadores[c] ?? CONTADOR[c] ?? c;
 }
 
@@ -192,6 +192,7 @@ function tarjeta(p: ProyeccionJugador, d: DuenoMision, m: Mision, e: Escapar): s
   return `<div class="mision mision-${m.estado}" data-mision="${e(k)}">
     <div class="mision-cab"><strong>${e(t.titulo)}</strong>${nueva ? '<span class="mision-nueva">nueva</span>' : ''}<span class="mision-premio">${m.estado === 'cumplida' ? '¡Cumplida! ' : ''}${e(recompensa(m))}</span></div>
     ${t.texto ? `<p class="mision-texto">${e(t.texto)}</p>` : ''}
+    ${t.explicacion ? `<details class="mision-explicacion"><summary>Más</summary><p>${e(t.explicacion)}</p></details>` : ''}
     ${m.estado === 'activa' ? barras(m, e) : ''}
     ${reclamar || seguir ? `<div class="mision-acciones">${reclamar}${seguir}</div>` : ''}
     <p class="faction-error" data-mision-error="${e(m.id)}" role="alert"></p>
