@@ -25,13 +25,24 @@ export const RECURSO_NOMBRE: Record<string, string> = {
   armaduraBasica: 'Armadura básica',
   armaduraIntermedia: 'Armadura intermedia',
   armaduraBronce: 'Armadura de bronce',
+  armaduraBronceCalidad: 'Armadura de bronce de calidad',
+  hierro: 'Hierro',
+  lingoteHierro: 'Lingote de hierro',
+  armaHierro: 'Arma de hierro',
+  armaHierroCalidad: 'Arma de hierro de calidad',
+  carroGuerra: 'Carro de guerra',
+  chatarraCobre: 'Chatarra de cobre',
+  chatarraBronce: 'Chatarra de bronce',
+  chatarraHierro: 'Chatarra de hierro',
 };
 
 export const RECURSO_ICONO: Record<string, string> = {
   madera: '🪵', piedra: '🪨', trigo: '🌾', cobre: '🟠', estano: '⚙️', oro: '🪙', livestock: '🐄',
   lingoteCobre: '🔶', lingoteEstano: '🔩', lingoteBronce: '🟫', cuero: '🟤', cueroCurtido: '🧵',
   cueroCalidad: '✨', armaMadera: '🏹', armaCobre: '🗡️', armaBronce: '⚔️', armaBronceCalidad: '🛡️',
-  armaduraBasica: '🥋', armaduraIntermedia: '🛡️', armaduraBronce: '🛡️',
+  armaduraBasica: '🥋', armaduraIntermedia: '🛡️', armaduraBronce: '🛡️', armaduraBronceCalidad: '🛡️',
+  hierro: '⛓️', lingoteHierro: '🔳', armaHierro: '🗡️', armaHierroCalidad: '⚔️', carroGuerra: '🛞',
+  chatarraCobre: '🔩', chatarraBronce: '🔩', chatarraHierro: '🔩',
 };
 
 export const RECURSO_COLOR: Record<string, string> = {
@@ -55,6 +66,15 @@ export const RECURSO_COLOR: Record<string, string> = {
   armaduraBasica: '#a9a9a9',
   armaduraIntermedia: '#8d8d8d',
   armaduraBronce: '#6b6b6b',
+  armaduraBronceCalidad: '#5a4a3a',
+  hierro: '#9aa3ad',
+  lingoteHierro: '#b4bcc6',
+  armaHierro: '#7d8790',
+  armaHierroCalidad: '#5f6a74',
+  carroGuerra: '#8a6a3c',
+  chatarraCobre: '#8a5a3c',
+  chatarraBronce: '#7a5c3a',
+  chatarraHierro: '#6b6f74',
 };
 
 export const BIOMA_COLOR: Record<string, string> = {

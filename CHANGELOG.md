@@ -3,6 +3,13 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.39.2] — 2026-10-28 · nodos de hierro en el mapa · sync con `VRhino/BronzeAge@f4585ac`
+
+### Arreglado
+- Los **nodos de hierro** salían como un círculo blanco enorme: el mapa no conocía el hierro (ni icono ni color). Ahora se pintan como
+  el cobre y el estaño, con el icono de mena en gris acero y la palabra «Hierro». Añadidos también los nombres, colores e iconos de
+  hierro, lingote, armas de hierro, armadura de bronce de calidad, carro de guerra y chatarras.
+
 ## [0.39.1] — 2026-10-28 · fuera el «oro de botín» · sync con `VRhino/BronzeAge@f4585ac`
 
 ### Quitado

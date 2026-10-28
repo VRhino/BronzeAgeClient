@@ -25,9 +25,9 @@ export function factorDeGlifo(escala: number): number {
 }
 
 /** Recursos sin extensión en el mundo (una veta, un rebaño): de cerca se marcan con rombo y nombre, no con su círculo. */
-const NODOS_PUNTUALES = new Set(['cobre', 'estano', 'oro', 'livestock']);
+const NODOS_PUNTUALES = new Set(['cobre', 'estano', 'hierro', 'oro', 'livestock']);
 /** El icono de cada nodo de recurso de cerca (`mundo/iconosMapa.ts`): los metales como mena en su color, el ganado y la piedra. */
-const ICONO_DE_NODO: Record<string, string> = { cobre: 'mena', estano: 'mena', oro: 'mena', livestock: 'ganado', piedra: 'piedra' };
+const ICONO_DE_NODO: Record<string, string> = { cobre: 'mena', estano: 'mena', hierro: 'mena', oro: 'mena', livestock: 'ganado', piedra: 'piedra' };
 
 // --- GENERADOR DETERMINISTA (Para los árboles) ---
 function hashSemilla(texto: string): number {
