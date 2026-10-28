@@ -62,6 +62,15 @@ function recompensa(x: DefinicionRecurrente): string {
   return partes.join(', ') || 'sin recompensa';
 }
 
+/** La recompensa en etiquetas cortas (para el pie de la tarjeta), con el nombre largo de cada una en el `title`. */
+function etiquetasDeRecompensa(x: DefinicionRecurrente): string {
+  const e: string[] = [];
+  if (x.experiencia > 0) e.push(`<span class="tablon-chip tablon-chip-xp" title="Experiencia de Facción">${Math.round(x.experiencia)} XP</span>`);
+  if (x.participacion > 0) e.push(`<span class="tablon-chip tablon-chip-part" title="Participación en la plaza">${x.participacion} part.</span>`);
+  if (x.oro > 0) e.push(`<span class="tablon-chip tablon-chip-oro" title="Oro a tu almacén personal">${Math.round(x.oro)} oro</span>`);
+  return e.join('') || '<span class="tablon-chip">sin recompensa</span>';
+}
+
 function barras(cs: CondicionRecurrente[], e: Escapar): string {
   return cs.map((c) => {
     const k = c.umbral > 0 ? Math.min(1, c.avance / c.umbral) : 1;
@@ -74,31 +83,37 @@ function tarjeta(p: ProyeccionJugador, d: DuenoTablon, m: MisionRecurrente, e: E
   const vencida = m.hasta <= p.instante;
   const mia = m.aceptaciones.find((a) => a.heroeId === p.heroeId);
   const estado = x.tipo === 'grupal' ? m.estado : mia?.estado;
-  const meta = [
-    x.tipo === 'grupal' ? 'grupal' : `individual · ${m.aceptadasSemana}/${x.limiteSemanal} esta semana`,
-    ...(x.cargo ? [`solo ${CARGO_NOMBRE[x.cargo] ?? x.cargo}`] : []),
-  ].join(' · ');
+  const etiquetas = [
+    x.tipo === 'grupal' ? 'Grupal' : `Individual · ${m.aceptadasSemana}/${x.limiteSemanal} esta semana`,
+    ...(x.cargo ? [`Solo ${CARGO_NOMBRE[x.cargo] ?? x.cargo}`] : []),
+    ...(vencida ? ['Periodo acabado'] : []),
+  ];
   let accion = '';
+  let nota = '';
   if (estado === 'cumplida') {
-    accion = x.tipo === 'individual' || reclamasGrupal(p, d)
-      ? `<button class="btn-primary" type="button" data-tablon-reclamar="${e(x.id)}">Reclamar ${e(recompensa(x))}</button>`
-      : `<small class="asent-lado-nota">${d.tipo === 'faccion' ? 'La reclama el Rey.' : 'La reclama el Gobernador (o un residente si no hay).'}</small>`;
+    if (x.tipo === 'individual' || reclamasGrupal(p, d)) accion = `<button class="btn-primary" type="button" data-tablon-reclamar="${e(x.id)}" title="${e(recompensa(x))}">Reclamar</button>`;
+    else nota = d.tipo === 'faccion' ? 'La reclama el Rey.' : 'La reclama el Gobernador (o un residente si no hay).';
   } else if (x.tipo === 'individual' && !mia && !vencida) {
     const tope = x.limiteSemanal > 0 && m.aceptadasSemana >= x.limiteSemanal;
     const sinCargo = x.cargo !== undefined && !misCargos(p, d).has(x.cargo);
     const motivo = tope ? 'Ya se aceptó todas las veces que permite esta semana.' : sinCargo ? `Solo la acepta el ${CARGO_NOMBRE[x.cargo!] ?? x.cargo}.` : '';
     accion = `<button class="btn-secondary" type="button" data-tablon-aceptar="${e(x.id)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>Aceptar</button>`;
+    if (motivo) nota = motivo;
   }
   const avance = x.tipo === 'grupal' ? m.condiciones : mia?.condiciones ?? [];
   const aportes = Object.entries(m.aportes).filter(([, n]) => n > 0).sort(([, a], [, b]) => b - a);
-  return `<div class="mision${estado === 'cumplida' ? ' mision-cumplida' : estado === 'reclamada' || estado === 'caducada' ? ' mision-reclamada' : ''}">
-    <div class="mision-cab"><strong>${e(x.titulo || x.id)}</strong><span class="mision-premio">${estado ? `${e(ESTADO_TEXTO[estado])} · ` : ''}${e(recompensa(x))}</span></div>
-    <p class="mision-texto">${e(x.texto)}${vencida ? ' <em>(periodo acabado)</em>' : ''}</p>
-    <p class="tablon-meta">${e(meta)}</p>
-    ${x.explicacion ? `<details class="mision-explicacion"><summary>Más</summary><p>${e(x.explicacion)}</p></details>` : ''}
+  const mas = [
+    x.explicacion ? `<p>${e(x.explicacion)}</p>` : '',
+    x.tipo === 'grupal' && aportes.length ? `<p>Aportan: ${aportes.map(([id, n]) => `${e(nombreDeHeroe(p, id))} (${n})`).join(', ')}</p>` : '',
+  ].join('');
+  return `<div class="mision tablon-tarjeta${estado === 'cumplida' ? ' mision-cumplida' : estado === 'reclamada' || estado === 'caducada' ? ' mision-reclamada' : ''}">
+    <div class="tablon-tarjeta-cab"><strong>${e(x.titulo || x.id)}</strong>${estado ? `<span class="tablon-estado tablon-estado-${e(estado)}">${e(ESTADO_TEXTO[estado])}</span>` : ''}</div>
+    <p class="mision-texto">${e(x.texto)}</p>
+    <div class="tablon-etiquetas">${etiquetas.map((t) => `<span class="tablon-chip">${e(t)}</span>`).join('')}</div>
     ${estado === 'en_curso' ? barras(avance, e) : ''}
-    ${x.tipo === 'grupal' && aportes.length ? `<p class="tablon-meta">Aportan: ${aportes.map(([id, n]) => `${e(nombreDeHeroe(p, id))} (${n})`).join(', ')}</p>` : ''}
-    ${accion ? `<div class="mision-acciones">${accion}</div>` : ''}
+    ${mas ? `<details class="mision-explicacion"><summary>Más</summary>${mas}</details>` : ''}
+    <div class="tablon-pie"><div class="tablon-premio">${etiquetasDeRecompensa(x)}</div>${accion}</div>
+    ${nota ? `<small class="tablon-nota">${e(nota)}</small>` : ''}
     <p class="faction-error" data-tablon-error="${e(x.id)}" role="alert"></p>
   </div>`;
 }

@@ -339,13 +339,13 @@ function pintarArboles(ctx: CanvasRenderingContext2D, mapa: MapaGenerado, v: Vis
 
 /** El suelo del mundo en la vista: de lejos la imagen de celdas; de cerca la vista muestreada y los árboles. Con `porBaldosas` (modo mundo),
  * las baldosas fijas, que ya llevan los árboles. */
-export function pintarSueloDelArtefacto(ctx: CanvasRenderingContext2D, mapa: MapaGenerado, v: VistaDelMundo, porBaldosas = false, siempreDeLejos = false): void {
+export function pintarSueloDelArtefacto(ctx: CanvasRenderingContext2D, mapa: MapaGenerado, v: VistaDelMundo, porBaldosas = false): void {
   ctx.save();
   if (porBaldosas) {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     pintarBaldosas(ctx, mapa, v);
-  } else if (siempreDeLejos || !esDeCerca(mapa, v.escala)) {
+  } else if (!esDeCerca(mapa, v.escala)) {
     ctx.imageSmoothingEnabled = v.escala * mapa.rasters!.terreno!.celda < 2;
     ctx.drawImage(imagenDeLejos(mapa), 0, 0, mapa.config.ancho * v.escala, mapa.config.alto * v.escala);
   } else {

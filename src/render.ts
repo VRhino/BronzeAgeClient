@@ -26,6 +26,44 @@ export function factorDeGlifo(escala: number): number {
 }
 
 /** Recursos sin extensión en el mundo (una veta, un rebaño): de cerca se marcan con rombo y nombre, no con su círculo. */
+/** A partir de cuántas unidades de ancho a la vista el modo mapa pasa a la vista general (menos detalle). Se ajusta a ojo. */
+const ANCHO_VISTA_GENERAL = 600;
+/** Píxeles por unidad de la capa de la vista general (con tope de lado para no pasar de una textura razonable). */
+const PX_CAPA_GENERAL = 1;
+
+const capasGenerales = new WeakMap<MapaGenerado, HTMLCanvasElement>();
+
+/** Ríos, vados y nodos del mapa entero en un lienzo, para la vista general: se hace una vez por mapa y luego solo se escala. */
+function capaGeneral(mapa: MapaGenerado): HTMLCanvasElement {
+  const hecha = capasGenerales.get(mapa);
+  if (hecha) return hecha;
+  const k = Math.min(PX_CAPA_GENERAL, 4096 / Math.max(mapa.config.ancho, mapa.config.alto));
+  const capa = document.createElement('canvas');
+  capa.width = Math.ceil(mapa.config.ancho * k);
+  capa.height = Math.ceil(mapa.config.alto * k);
+  const c = capa.getContext('2d')!;
+  c.lineCap = 'round';
+  c.lineJoin = 'round';
+  for (const rio of mapa.rios) {
+    if (rio.puntos.length < 2) continue;
+    c.strokeStyle = 'rgba(38, 90, 145, 0.9)';
+    c.lineWidth = rio.navegable ? 3 : 1.6;
+    c.beginPath();
+    rio.puntos.forEach((p, i) => (i === 0 ? c.moveTo(p.x * k, p.y * k) : c.lineTo(p.x * k, p.y * k)));
+    c.stroke();
+    c.fillStyle = '#d9c79a';
+    for (const v of rio.vados ?? []) c.fillRect(v.x * k - 1.5, v.y * k - 1.5, 3, 3);
+  }
+  for (const nodo of mapa.nodos) {
+    c.fillStyle = nodo.tipo === 'piedra' ? '#b9b4aa' : RECURSO_COLOR[nodo.tipo] || '#fff';
+    c.beginPath();
+    c.arc(nodo.posicion.x * k, nodo.posicion.y * k, 2, 0, Math.PI * 2);
+    c.fill();
+  }
+  capasGenerales.set(mapa, capa);
+  return capa;
+}
+
 const NODOS_PUNTUALES = new Set(['cobre', 'estano', 'hierro', 'oro', 'livestock']);
 /** El icono de cada nodo de recurso de cerca (`mundo/iconosMapa.ts`): los metales como mena en su color, el ganado y la piedra. */
 const ICONO_DE_NODO: Record<string, string> = { cobre: 'mena', estano: 'mena', hierro: 'mena', oro: 'mena', livestock: 'ganado', piedra: 'piedra' };
@@ -430,7 +468,7 @@ export function pintarTerreno(
   proyeccion: ProyeccionJugador,
   escalaCanvas: number,
   modoMundo = false,
-  detalle = true
+  permitirGeneral = true
 ): void {
   // La cámara del mapa (`ui/pantallaMapa.ts`) ya dejó en `ctx` su transformación: aquí se pinta en unidades × `escalaCanvas` y la vista
   // dice qué parte del mundo cae en el lienzo y a qué escala (de lejos o de cerca). Lo que cae fuera no se recorre. Lo que el jugador no
@@ -440,9 +478,10 @@ export function pintarTerreno(
   const aLaVista = (p: Point, margen = 0): boolean =>
     p.x >= vista.x0 - margen && p.x <= vista.x1 + margen && p.y >= vista.y0 - margen && p.y <= vista.y1 + margen;
   const artefacto = hayArtefacto(mapa);
-  // `detalle` falso (el modo mapa): de cerca se sigue pintando como de lejos, con la imagen del mundo ya hecha, sin árboles sueltos ni nombres de nodo.
-  const cerca = artefacto && detalle && esDeCerca(mapa, escalaCanvas);
+  const cerca = artefacto && esDeCerca(mapa, escalaCanvas);
   const k = factorDeGlifo(escalaCanvas);
+  // Vista general (el modo mapa con mucho mundo a la vista): ríos, vados y nodos van en una capa hecha una vez (`capaGeneral`), no uno a uno.
+  const general = permitirGeneral && !modoMundo && vista.x1 - vista.x0 > ANCHO_VISTA_GENERAL;
 
   // 1. DIBUJAR TERRENO BASE
   ctx.save();
@@ -451,7 +490,7 @@ export function pintarTerreno(
   ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   ctx.restore();
   if (artefacto) {
-    pintarSueloDelArtefacto(ctx, mapa, vista, modoMundo && cerca, !detalle);
+    pintarSueloDelArtefacto(ctx, mapa, vista, modoMundo && cerca);
   } else {
     // Mapa del backend TypeScript (sin rasters): biomas recalculados con el ruido del generador, sin relieve.
     ctx.imageSmoothingEnabled = true;
@@ -499,7 +538,13 @@ export function pintarTerreno(
   // 3. DIBUJAR RÍOS. De cerca, a su anchura real (cauce de 1,5 u, 3 si es navegable) y con orilla; de lejos, un trazo fijo en px.
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  for (const rio of mapa.rios) {
+  if (general) {
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(capaGeneral(mapa), 0, 0, mapa.config.ancho * escalaCanvas, mapa.config.alto * escalaCanvas);
+    ctx.restore();
+  }
+  for (const rio of general ? [] : mapa.rios) {
     if (rio.puntos.length < 2 || !rioALaVista(rio, vista)) continue;
     const anchoPx = Math.max(rio.navegable ? 5 : 2.5, (rio.navegable ? 3 : 1.5) * escalaCanvas);
     const trazo = () => {
@@ -541,7 +586,7 @@ export function pintarTerreno(
 
   // 4. DIBUJAR NODOS DE RECURSOS. De lejos, su icono pequeño (como el admin); de cerca, a escala: las parcelas como su círculo de 4 u, la piedra como roca y
   // los metales y el ganado como rombo con su nombre (estos no tienen extensión en el mundo, se marcan en px fijos).
-  for (const nodo of mapa.nodos) {
+  for (const nodo of general ? [] : mapa.nodos) {
     if (!aLaVista(nodo.posicion, 6)) continue;
     const x = nodo.posicion.x * escalaCanvas;
     const y = nodo.posicion.y * escalaCanvas;

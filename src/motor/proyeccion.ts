@@ -71,7 +71,7 @@ const CLASE_CELDA: Record<number, d.CeldaMuro['clase']> = { 1: 'muro', 2: 'puert
 const TIPO_RELACION: Record<number, string> = { 1: 'vasallaje', 2: 'alianza', 3: 'guerra' };
 const POLITICA_UNION: Record<number, 'rechazar' | 'aceptar' | 'preguntar'> = { 1: 'rechazar', 2: 'aceptar', 3: 'preguntar' };
 const ESTADO_CARAVANA: Record<number, NonNullable<d.Caravana['estado']>> = { 1: 'disponible', 2: 'preparando', 3: 'adjunta', 4: 'aparcada', 5: 'en_transito', 6: 'retornando' };
-const TIPO_CARAVANA: Record<number, NonNullable<d.Caravana['tipo']>> = { 1: 'comercial', 2: 'construccion', 3: 'comercial' };
+const TIPO_CARAVANA: Record<number, NonNullable<d.Caravana['tipo']>> = { 1: 'comercial', 2: 'construccion', 3: 'comercial', 4: 'acarreo' };
 const ESTADO_TRUEQUE: Record<number, d.AcuerdoTrueque['estado']> = { 1: 'propuesto', 2: 'activo', 3: 'rechazado', 4: 'cumplido', 5: 'expirado' };
 const ESTADO_ORDEN: Record<number, d.OrdenMercado['estado']> = { 1: 'activa', 2: 'cumplida', 3: 'expirada' };
 
@@ -232,7 +232,7 @@ function pueblo(x: pb.Pueblo, propio: boolean, ahora: number): d.PuebloDeMapa {
   if (Object.keys(almacen).length === 0 && x.almacenLocal) almacen[''] = valorDeRitmo(x.almacenLocal.cantidad, ahora);
   return {
     id: x.id, madreId: x.asentamientoMadreId, propio, tipo: x.tipoExtractor, nodoId: opcional(x.nodoId), posicion: punto(x.posicion),
-    almacen, capacidad: mil(x.almacenLocal?.capacidad), carroId: opcional(x.carroAcarreoId), guarnicionId: opcional(x.guarnicionEscuadronId),
+    almacen, capacidad: mil(x.almacenLocal?.capacidad), carroId: opcional(x.carroAcarreoId), guarnicionId: opcional(x.guarnicionEscuadronId), guarnicionReponeEn: instante(x.guarnicionReponeEnMs),
     batallaId: opcional(x.batallaId), nivelAldea: x.nivelAldea, fertilidad: x.fertilidad === undefined ? undefined : mil(x.fertilidad),
     rebano: x.rebanoEspecie ? { especie: x.rebanoEspecie, cabezas: mil(x.rebanoCabezas) } : undefined,
   };
@@ -282,7 +282,8 @@ function ubicacion(u: pb.Heroe['ubicacion']): d.HeroeProyectado['ubicacion'] {
     case 'ejercitoId': return { tipo: 'columna', ejercitoId: x.value };
     case 'campamentoId': return { tipo: 'mercenarios', campamentoId: x.value };
     case 'desconectadoEn': return { tipo: 'desconectado', punto: punto(x.value) };
-    // Dentro de un pueblo o de una avanzada: el cliente viejo no los conoce; se pinta como en su plaza madre más adelante.
+    case 'puebloId': return { tipo: 'pueblo', puebloId: x.value };
+    case 'avanzadaId': return { tipo: 'avanzada', avanzadaId: x.value };
     default: return { tipo: 'desconectado', punto: { x: 0, y: 0 } };
   }
 }

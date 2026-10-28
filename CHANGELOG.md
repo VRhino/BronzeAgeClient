@@ -3,6 +3,22 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.43.0] — 2026-10-28 · pueblos por dentro, tablón y mapa · sync con `VRhino/BronzeAge@14e49ae`
+
+Sin cambios en el contrato.
+
+### Añadido
+- **Entrar en pueblos y aldeas** (`entrarEnPueblo` / `salirDePueblo`): botón «Entrar» en la ficha del pueblo con tu columna a su puerta (un
+  ejército entra por orden de su Líder). Dentro, una pantalla con su almacén, el rebaño y su tope, la guarnición de serie, el carro de acarreo y
+  quién hay dentro, y «Salir al mapa». Por ahora dentro solo se mira: el motor aún no tiene órdenes que se den desde el pueblo (pedidas).
+- **Escolta del carro de acarreo** desde la plaza madre (pestaña Pueblos), con el carro parado en el pueblo, como la de las caravanas comerciales.
+
+### Cambiado
+- **Modo mapa**: vuelve el detalle de antes de cerca; solo con mucho mundo a la vista (más de 600 u de ancho, `ANCHO_VISTA_GENERAL` en
+  `render.ts`) ríos, vados y nodos van en una capa hecha una vez.
+- **Tablón**: tarjetas que no se desbordan: título con su estado, descripción, etiquetas, avance y al pie la recompensa en etiquetas y un
+  botón corto («Aceptar» / «Reclamar»); la explicación y quién aporta, plegados.
+
 ## [0.42.0] — 2026-10-28 · mejoras del cliente de jugador · sync con `VRhino/BronzeAge@14e49ae`
 
 Sin cambios en el motor ni en el contrato.

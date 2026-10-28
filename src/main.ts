@@ -83,7 +83,7 @@ import { explicarError } from './ui/erroresServidor';
 import { motivosParaCrearFaccion } from './ui/validarFaccion';
 import { nombreDeHeroe } from './ui/nombres';
 import { htmlEstados } from './ui/estados';
-import { htmlAscensoLocal, selectorDePunto } from './ui/pueblos';
+import { cablearInteriorPueblo, htmlAscensoLocal, htmlInteriorPueblo, nombreDePueblo, puebloActual, selectorDePunto } from './ui/pueblos';
 import { pintarSitiosDeAldea, type SitiosDeAldea } from './mundo/fertilidad';
 import { htmlMiembrosFaccion, htmlResidentesPlaza } from './ui/participacion';
 import { cablearTablon, htmlTablon } from './ui/tablon';
@@ -398,6 +398,38 @@ function montarCampamento(): void {
     void refrescarDatosJuego().catch(() => {}).finally(() => { sondeando = false; });
   }, 3000);
   limpiarPantalla = () => clearInterval(sondeo);
+}
+
+/** Pantalla de DENTRO DE UN PUEBLO o una aldea (`entrarEnPueblo`): la barra del jugador y la ficha del pueblo, con «Salir al mapa». */
+function montarPueblo(): void {
+  const proyeccion = estadoCliente.proyeccionUltima;
+  const pueblo = proyeccion && puebloActual(proyeccion);
+  if (!proyeccion || !pueblo) { montar('cargando'); return; }
+  menuEsquinaAbierto = false;
+  app.innerHTML = `<div class="asent-screen pueblo-screen">
+    ${htmlBarraJugador(proyeccion, escaparHtml)}
+    <header class="asent-barra"><span class="asent-nombre">${escaparHtml(nombreDePueblo(pueblo))}</span><span class="asent-nivel">De visita</span></header>
+    <div class="pueblo-cuerpo"><section class="pueblo-ficha"></section></div>
+    <aside class="jugador-panel" hidden></aside>
+    ${menuEsquinaHtml()}
+  </div>`;
+  const contenedor = app.querySelector<HTMLElement>('.asent-screen')!;
+  cablearMenuEsquina(contenedor);
+  cablearBarraJugador(contenedor);
+  let sondeando = false;
+  const sondeo = setInterval(() => {
+    if (sondeando || !document.querySelector('.pueblo-screen') || !hayQueSondear()) return;
+    sondeando = true;
+    void refrescarDatosJuego().catch(() => {}).finally(() => { sondeando = false; });
+  }, 3000);
+  limpiarPantalla = () => clearInterval(sondeo);
+}
+
+function pintarPueblo(p: ProyeccionJugador): void {
+  const ficha = app.querySelector<HTMLElement>('.pueblo-ficha');
+  const pueblo = puebloActual(p);
+  if (!ficha || !pueblo) return;
+  pintar(ficha, htmlInteriorPueblo(p, pueblo, escaparHtml), () => cablearInteriorPueblo(ficha, p, pueblo, ejecutarYRefrescar, () => { invalidar(ficha); pintarPueblo(p); }), 'pueblo');
 }
 
 /** Vuelca la proyección en la pantalla Campamento (en cada refresco). No toca el DOM de lo que no cambió, para no llevarse lo que se escribe. */
@@ -1172,7 +1204,7 @@ async function pintarVistaMapaYa(centrar: boolean | { x: number; y: number }): P
   controlVistaMapa?.fijarMundo(mapa.config.ancho, mapa.config.alto);
   if (!controlVistaMapa) return;
   const escala = controlVistaMapa.transformar(ctx);
-  pintarTerreno(ctx, mapa, p, escala, false, false);
+  pintarTerreno(ctx, mapa, p, escala);
   pintarMiradas(ctx, p.miradasIntel ?? [], p.instante, escala);
   // Eligiendo el sitio de una aldea: la zona de la plaza, que es donde cabe.
   const zona = eleccionEnMapa?.zona;
@@ -2394,7 +2426,7 @@ async function refrescarDatosJuego(): Promise<void> {
 // `twinkly-greeting-peacock.md`): no hay "última pantalla" guardada, así que recargar devuelve al jugador a
 // donde estaba. `#/legacy` es la válvula de escape a la interfaz anterior, intacta, y solo se llega
 // escribiéndola en la URL.
-type Pantalla = 'login' | 'partidas' | 'cargando' | 'heroe' | 'campamento' | 'mapa' | 'asentamiento' | 'legacy';
+type Pantalla = 'login' | 'partidas' | 'cargando' | 'heroe' | 'campamento' | 'mapa' | 'asentamiento' | 'pueblo' | 'legacy';
 
 let pantallaMontada: Pantalla | null = null;
 /** Limpieza de la pantalla saliente (listeners globales, etc.). La fija quien monta una pantalla que los
@@ -2416,6 +2448,8 @@ function pantallaActual(): Pantalla {
   // Dentro de un campamento cuyo ámbito aún no ha llegado (al recargar, `CAMPAMENTO` viene justo detrás de `HEROE`): se espera. Montar el
   // campamento sin él dejaba «Cargando partida…» para siempre, con la pantalla ya marcada como montada.
   if (proyeccion.heroe.ubicacion.tipo === 'mercenarios') return campamentoActual(proyeccion) ? 'campamento' : 'cargando';
+  // Dentro de un pueblo o una aldea: su pantalla, si ya llegó su ficha (la de un pueblo ajeno puede no llegar: se ve el mapa).
+  if (proyeccion.heroe.ubicacion.tipo === 'pueblo' && puebloActual(proyeccion)) return 'pueblo';
   if (proyeccion.asentamientos.length > 0) return 'asentamiento';
   return 'mapa';
 }
@@ -2437,6 +2471,7 @@ function montar(pantalla: Pantalla): void {
     case 'campamento': montarCampamento(); break;
     case 'mapa': montarMapa(); break;
     case 'asentamiento': montarAsentamiento(); break;
+    case 'pueblo': montarPueblo(); break;
   }
 }
 
@@ -2446,13 +2481,14 @@ function montar(pantalla: Pantalla): void {
 function refrescarPantalla(pantalla: Pantalla): void {
   const proyeccion = estadoCliente.proyeccionUltima;
   if (!proyeccion) return;
-  if (pantalla === 'mapa' || pantalla === 'campamento' || pantalla === 'asentamiento') {
+  if (pantalla === 'mapa' || pantalla === 'campamento' || pantalla === 'asentamiento' || pantalla === 'pueblo') {
     renderPanelJugador();
     pintarRastreador(proyeccion, abrirMisiones, escaparHtml);
     if (vistaMapaAbierta) void pintarVistaMapa();
   }
   if (pantalla === 'mapa') { pintarComida(proyeccion); if (!vistaMapaAbierta) void dibujarPantallaSegunModo(proyeccion); renderSeleccionMapa(); renderPanelRiel(); return; }
   if (pantalla === 'campamento') { const c = campamentoActual(proyeccion); if (c) pintarCampamento(proyeccion, c); return; }
+  if (pantalla === 'pueblo') { pintarPueblo(proyeccion); return; }
   if (pantalla === 'asentamiento') { void dibujarPantallaSegunModo(proyeccion); renderPanelEdificios(); renderPanelRecursos(); renderPanelAsent(); return; }
   if (pantalla !== 'legacy') return;
   renderizarPanelInteraccion(proyeccion);

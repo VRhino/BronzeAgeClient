@@ -291,7 +291,8 @@ export interface Caravana {
    * anfitriona. Sin interfaz que lo lea todavía — el mapa solo pinta la posición. */
   estado?: 'disponible' | 'preparando' | 'adjunta' | 'aparcada' | 'en_transito' | 'retornando';
   /** `construccion` = Caravana de Fundación (Doc 1.8): la de un campamento y la que lanza una plaza son la misma entidad. */
-  tipo?: 'comercial' | 'construccion' | 'militar' | 'contrabando';
+  /** `acarreo`: el carro de un pueblo, que va y vuelve solo entre el pueblo y su plaza madre. */
+  tipo?: 'comercial' | 'construccion' | 'militar' | 'contrabando' | 'acarreo';
   /** Caravana de Fundación comprada en un campamento (Doc 1.9b): de dónde salió, su Facción y quién la lleva y funda. */
   origenCampamentoId?: string;
   faccionId?: string;
@@ -654,6 +655,8 @@ export interface PuebloDeMapa {
   capacidad: number;
   carroId?: string;
   guarnicionId?: string;
+  /** Cuándo vuelve el siguiente minero o granjero de la guarnición mermada; ausente con la guarnición completa. */
+  guarnicionReponeEn?: number;
   batallaId?: string;
   nivelAldea?: number;
   /** Fertilidad del punto de la aldea (1 = 1,0). */
@@ -755,6 +758,10 @@ export interface HeroeProyectado {
     | { tipo: 'asentamiento'; asentamientoId: string }
     | { tipo: 'columna'; ejercitoId: string }
     | { tipo: 'mercenarios'; campamentoId: string }
+    /** Dentro de un pueblo o una aldea (`entrarEnPueblo`), con su columna entera fuera del mapa. */
+    | { tipo: 'pueblo'; puebloId: string }
+    /** Dentro de una avanzada (`entrarEnAvanzada`). */
+    | { tipo: 'avanzada'; avanzadaId: string }
     | { tipo: 'desconectado'; punto: Point };
   /** Lo que guarda en su campamento de residencia (Doc 2.5). */
   almacenPersonal?: Record<string, number>;

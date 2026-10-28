@@ -9,6 +9,8 @@
 //   plaza      la subpestaña «Pueblos» del Centro urbano (`SUBPESTANA_PUEBLOS`): cupo, lista, marcar, mejorar, reponer carro, destruir
 //   mapa       los pueblos y las obras se pintan (`dibujarPueblosYObras`) y se seleccionan (`seleccionarPuebloUObra`, fichas `FICHA_PUEBLO`/`FICHA_OBRA`)
 //   ascenso    la subida de nivel de la plaza con sus requisitos (`htmlAscensoLocal`): el nivel 2 pide ya una aldea activa
+//   dentro     se entra en un pueblo activo como de visita, con la columna entera (`entrarEnPueblo` / `salirDePueblo`); dentro solo se mira
+//              (`htmlInteriorPueblo`): el motor aún no tiene órdenes que se den desde el pueblo. La escolta del carro de acarreo se cede desde la plaza.
 import { bloqueDeDatos, catalogoDeCaravanas, radioDePuerta, type ProyeccionJugador } from '../apiCliente';
 import { estadoCliente, textoEnTiempoReal } from './estadoCliente';
 import { EDIFICIO_NOMBRE, RECURSO_NOMBRE, faccionColor } from '../paletas';
@@ -20,6 +22,9 @@ import { miColumna } from './ejercitos';
 import { dibujarIconoMapa } from '../mundo/iconosMapa';
 import { sitiosDeAldea, type SitiosDeAldea } from '../mundo/fertilidad';
 import type { ContextoPlaza, FichaMapaExtra, ObjetoBajoElClic, SubpestanaPlaza } from './ganchos';
+import { cablearEscolta, escolta, puntosDeEscolta } from './panelMercado';
+import type { Ejecutar } from './panelCarro';
+import { nombreDeHeroe } from './nombres';
 
 type Escapar = (valor: string) => string;
 
@@ -129,7 +134,7 @@ function htmlRebano(x: PuebloDeMapa): string {
   return ` · rebaño ${n0(x.rebano.cabezas)}${tope} cabezas de ${ESPECIE_NOMBRE[x.rebano.especie] ?? x.rebano.especie}`;
 }
 
-function htmlFilaPueblo(x: PuebloDeMapa, gestiona: boolean, obras: ObraDeMapa[], e: Escapar): string {
+function htmlFilaPueblo(p: ProyeccionJugador, a: Asentamiento, x: PuebloDeMapa, gestiona: boolean, obras: ObraDeMapa[], e: Escapar): string {
   const aldea = esAldea(x);
   const niveles = params()?.aldea?.niveles ?? {};
   const siguiente = aldea && x.nivelAldea ? niveles[String(x.nivelAldea + 1)] : undefined;
@@ -140,7 +145,23 @@ function htmlFilaPueblo(x: PuebloDeMapa, gestiona: boolean, obras: ObraDeMapa[],
       <button class="btn-secondary" type="button" data-pueblo-accion="destruir" data-pueblo="${e(x.id)}">Destruir</button></div>`;
   return `<div class="mapa-lista-item pueblo-fila"><div><strong>${e(nombreDePueblo(x))}</strong>
       <span>almacén ${e(htmlAlmacen(x))}${e(htmlRebano(x))}${x.fertilidad !== undefined ? ` · fertilidad ${x.fertilidad.toFixed(2).replace('.', ',')}` : ''} · ${x.carroId ? 'con carro' : 'sin carro de acarreo'}${x.batallaId ? ' · <strong>¡atacado!</strong>' : ''}</span>
-      ${mejorando ? '<span>Mejora en marcha: mira su obra abajo.</span>' : ''}</div>${botones}</div>`;
+      ${mejorando ? '<span>Mejora en marcha: mira su obra abajo.</span>' : ''}</div>${botones}</div>
+    ${htmlCarroDeAcarreo(p, x, e, a)}`;
+}
+
+const ESTADO_CARRO: Record<string, string> = { disponible: 'parado en el pueblo', en_transito: 'camino de la plaza, cargado', retornando: 'volviendo vacío al pueblo', preparando: 'cargando', adjunta: 'enganchado a una columna', aparcada: 'aparcado' };
+
+/** El carro de acarreo del pueblo: dónde va y lo que lleva y, desde su plaza madre (`madre`), su escolta, que se cede con el carro parado. */
+function htmlCarroDeAcarreo(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar, madre?: Asentamiento): string {
+  const c = x.carroId ? p.caravanas.find((k) => k.id === x.carroId) : undefined;
+  if (!x.carroId) return '<p class="asent-lado-nota">Sin carro de acarreo: la plaza madre lo repone sola en cuanto puede pagarlo (o lo compra su Gobernador o su Maestro de Obras con «Reponer carro»). Mientras, el pueblo acumula hasta llenarse.</p>';
+  if (!c) return '<p class="asent-lado-nota">Tiene carro de acarreo.</p>';
+  const lleva = listaRecursos(c.contenido ?? {});
+  const cedidas = (c.escoltaIds ?? []).length;
+  const linea = `<p class="asent-lado-nota">Carro de acarreo ${e(ESTADO_CARRO[c.estado ?? ''] ?? c.estado ?? '')}${lleva ? ` con ${e(lleva)}` : ''}${cedidas ? ` · ${cedidas} escuadra(s) de escolta` : ' · sin escolta'}.</p>`;
+  if (!madre) return linea;
+  const reside = [...(madre.heroesFundadoresIds ?? []), ...(madre.casasCompradas ?? [])].includes(p.heroeId);
+  return `${linea}<div class="escolta-caravana">${escolta(c, p, reside, c.estado === 'disponible', puntosDeEscolta(madre, alLlegarDatos), e)}</div>`;
 }
 
 function htmlFilaObra(p: ProyeccionJugador, o: ObraDeMapa, gestiona: boolean, e: Escapar): string {
@@ -194,7 +215,7 @@ function htmlPueblos(c: ContextoPlaza): string {
   return `<span class="faction-kicker">Pueblos ${ayuda('plaza:pueblos', 'Un pueblo es de la plaza: se marca aquí, una columna de tu Facción lleva sus materiales hasta la obra en el mapa y los entrega a su puerta (cualquier ciudadano de la columna), y con todo entregado se levanta. Su carro acarrea lo que produce a la plaza.')}</span>
     <p class="asent-lado-nota">Cupo ${usados} / ${total ?? '—'} (por el nivel de la plaza).</p>
     ${pueblos.length + obras.length === 0 ? '<p class="mapa-lista-vacia">Esta plaza aún no tiene pueblos.</p>'
-      : `<div class="mapa-lista">${pueblos.map((x) => htmlFilaPueblo(x, gestiona, obras, e)).join('')}${obras.map((o) => htmlFilaObra(p, o, gestiona, e)).join('')}</div>`}
+      : `<div class="mapa-lista">${pueblos.map((x) => htmlFilaPueblo(p, a, x, gestiona, obras, e)).join('')}${obras.map((o) => htmlFilaObra(p, o, gestiona, e)).join('')}</div>`}
     ${gestiona ? htmlMarcar(p, a, e) : '<p class="asent-lado-nota">Los pueblos los marca, mejora y destruye el Gobernador o el Maestro de Obras, residente y dentro de la plaza.</p>'}
     <p class="faction-error" data-pueblo-error role="alert"></p>`;
 }
@@ -232,6 +253,7 @@ function cablearPueblos(c: ContextoPlaza): void {
   const { proyeccion: p, asentamiento: a, cuerpo } = c;
   alCargarDatos = c.refrescar;
   const error = cuerpo.querySelector<HTMLElement>('[data-pueblo-error]');
+  cablearEscolta(cuerpo, p, c.ejecutar, error);
   const enviar = async (b: HTMLButtonElement, tipo: string, params: object): Promise<void> => {
     b.disabled = true;
     const mensaje = await c.ejecutar(tipo, params);
@@ -357,13 +379,34 @@ export const FICHA_PUEBLO: FichaMapaExtra = {
       <h3>${e(nombreDePueblo(x))}</h3>
       <p class="asent-lado-nota">De ${e(nombrePlaza(p, x.madreId))}.${x.batallaId ? ' <strong>Lo están atacando.</strong>' : ''}</p>
       ${x.propio ? `<p class="asent-lado-nota">Almacén ${e(htmlAlmacen(x))}${e(htmlRebano(x))}${x.fertilidad !== undefined ? ` · fertilidad ${x.fertilidad.toFixed(2).replace('.', ',')}` : ''}. ${x.carroId ? 'Su carro acarrea a la plaza.' : 'Sin carro de acarreo.'}</p>` : ''}
-      ${mejora ? htmlEntrega(p, mejora, c) : ''}`;
+      ${mejora ? htmlEntrega(p, mejora, c) : ''}
+      ${htmlEntrar(p, x, e)}`;
   },
   cablear: (cont, p, x: PuebloDeMapa, c) => {
     const mejora = (p.obrasDeMapa ?? []).find((o) => o.tipo === 'mejoraAldea' && o.destinoId === x.id);
     if (mejora) cablearEntrega(cont, p, mejora, c);
+    const b = cont.querySelector<HTMLButtonElement>('[data-entrar-pueblo]');
+    b?.addEventListener('click', async () => {
+      b.disabled = true;
+      const mensaje = await c.ejecutar('entrarEnPueblo', { heroeId: p.heroeId, puebloId: x.id });
+      b.disabled = false;
+      const err = cont.querySelector<HTMLElement>('[data-entrar-error]');
+      if (err) err.textContent = mensaje ?? '';
+    });
   },
 };
+
+/** «Entrar» en la ficha del pueblo: con tu columna a su puerta. Entra el que va solo; un ejército, por orden de su Líder. El acceso es el de la plaza madre. */
+function htmlEntrar(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar): string {
+  const mi = miColumna(p);
+  if (!mi) return '';
+  const d = distancia(mi.posicionActual, x.posicion);
+  const puerta = radioDePuerta();
+  const solo = mi.participantes.length === 1;
+  const motivo = d > puerta ? `Acerca tu columna: está a ${n0(d)} y se entra a ${puerta} o menos.` : !solo && mi.liderId !== p.heroeId ? 'Solo el Líder hace entrar al ejército.' : '';
+  return `<div class="mapa-seleccion-acciones"><button class="btn-primary" type="button" data-entrar-pueblo${motivo ? ` disabled title="${e(motivo)}"` : ''}>${solo ? 'Entrar' : 'Entrar con el ejército'}</button></div>
+    ${motivo ? `<p class="asent-lado-nota">${e(motivo)}</p>` : ''}<p class="faction-error" data-entrar-error role="alert"></p>`;
+}
 
 function htmlEntrega(p: ProyeccionJugador, o: ObraDeMapa, c: { escapar: Escapar }): string {
   const e = c.escapar;
@@ -400,3 +443,60 @@ export const FICHA_OBRA: FichaMapaExtra = {
     ${o.propia ? htmlEntrega(p, o, c) : ''}`,
   cablear: (cont, p, o: ObraDeMapa, c) => cablearEntrega(cont, p, o, c),
 };
+
+// ---------------------------------------------------------------- dentro del pueblo
+
+/** El pueblo en el que está el héroe, si está dentro de uno. */
+export function puebloActual(p: ProyeccionJugador): PuebloDeMapa | undefined {
+  const u = p.heroe.ubicacion;
+  return u.tipo === 'pueblo' ? (p.pueblos ?? []).find((x) => x.id === u.puebloId) : undefined;
+}
+
+/** Barra de un almacén o del rebaño frente a su tope. */
+function barra(valor: number, tope: number): string {
+  const pct = tope > 0 ? Math.min(100, Math.round((valor / tope) * 100)) : 0;
+  return `<div class="carro-barra carro-barra-${pct >= 100 ? 'llena' : pct >= 80 ? 'casi' : 'ok'}"><span style="width:${pct}%"></span></div>`;
+}
+
+/** Lo que se ve dentro del pueblo: su almacén, su rebaño, su guarnición, su carro y quién hay dentro. Solo mirar, y salir. */
+export function htmlInteriorPueblo(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar): string {
+  const aldea = esAldea(x);
+  const pr = params();
+  const nivel = aldea ? pr?.aldea?.niveles?.[String(x.nivelAldea ?? 1)] : undefined;
+  const total = Object.values(x.almacen).reduce((t, n) => t + n, 0);
+  const filasAlmacen = Object.entries(x.almacen).map(([r, n]) => `<div class="carro-fila"><span>${e(r ? RECURSO_NOMBRE[r] ?? r : 'Recurso')}</span><strong>${n0(n)}</strong></div>`).join('');
+  const especie = x.rebano ? bloqueDeDatos<Record<string, Especie>>('ESPECIES', alLlegarDatos)?.[x.rebano.especie] : undefined;
+  const topeRebano = especie && nivel ? especie.topePorCorral * nivel.corrales : undefined;
+  const mejora = (p.obrasDeMapa ?? []).find((o) => o.tipo === 'mejoraAldea' && o.destinoId === x.id);
+  const columna = miColumna(p);
+  const dentro = columna ? columna.participantes.map((q) => nombreDeHeroe(p, q.heroeId)).join(', ') : '';
+  return `<span class="faction-kicker">Dentro de ${e(nombreDePueblo(x))}</span>
+    <p class="asent-lado-nota">De ${e(nombrePlaza(p, x.madreId))}.${x.fertilidad !== undefined ? ` Fertilidad ${x.fertilidad.toFixed(2).replace('.', ',')}.` : ''}${x.batallaId ? ' <strong>Lo están atacando: si sigues dentro, defiendes.</strong>' : ''}</p>
+    <div class="carro-ocupacion"><strong class="heroe-sub">Almacén</strong><span>${n0(total)} / ${n0(x.capacidad)}</span></div>${barra(total, x.capacidad)}
+    ${filasAlmacen || '<p class="mapa-lista-vacia">Vacío.</p>'}
+    ${aldea ? `<strong class="heroe-sub">Aldea</strong>
+      <p class="asent-lado-nota">Nivel ${x.nivelAldea ?? 1}${nivel ? `: ${nivel.granjas} granjas y ${nivel.corrales} corrales` : ''}.${mejora ? ' Tiene una mejora en marcha (sus materiales se entregan en el mapa).' : ''}</p>
+      ${x.rebano ? `<div class="carro-ocupacion"><strong class="heroe-sub">Rebaño ${e(ESPECIE_NOMBRE[x.rebano.especie] ?? x.rebano.especie)}</strong><span>${n0(x.rebano.cabezas)}${topeRebano ? ` / ${topeRebano}` : ''} cabezas</span></div>${topeRebano ? barra(x.rebano.cabezas, topeRebano) : ''}
+        <p class="asent-lado-nota">Crece solo hasta el tope de sus corrales; lo que pasa del pie de cría entra como ganado en el almacén.</p>` : ''}` : ''}
+    <strong class="heroe-sub">Guarnición</strong>
+    <p class="asent-lado-nota">${aldea ? 'Granjeros' : 'Mineros'} de serie, que defienden el pueblo si lo saquean${x.guarnicionReponeEn && x.guarnicionReponeEn > p.instante ? `. Mermada: el siguiente vuelve en ${e(textoEnTiempoReal(x.guarnicionReponeEn - p.instante))}` : ''}.</p>
+    <strong class="heroe-sub">Carro de acarreo</strong>
+    ${htmlCarroDeAcarreo(p, x, e)}
+    <strong class="heroe-sub">Dentro</strong>
+    <p class="asent-lado-nota">${dentro ? `Tu columna (${e(dentro)}), fuera del mapa: nadie la ve y sigue comiendo de sus víveres.` : 'Tú.'} Al salir vuelve a la puerta con todo lo que trajo.</p>
+    <p class="asent-lado-nota">Mejorar la aldea, reponer el carro y cederle escolta se hacen desde la plaza madre.</p>
+    <div class="mapa-seleccion-acciones"><button class="btn-primary" type="button" data-salir-pueblo>Salir al mapa</button></div>
+    <p class="faction-error" data-salir-pueblo-error role="alert"></p>`;
+}
+
+export function cablearInteriorPueblo(raiz: HTMLElement, p: ProyeccionJugador, x: PuebloDeMapa, ejecutar: Ejecutar, alCargar: () => void): void {
+  alCargarDatos = alCargar;
+  const b = raiz.querySelector<HTMLButtonElement>('[data-salir-pueblo]');
+  b?.addEventListener('click', async () => {
+    b.disabled = true;
+    const mensaje = await ejecutar('salirDePueblo', { heroeId: p.heroeId, puebloId: x.id });
+    b.disabled = false;
+    const err = raiz.querySelector<HTMLElement>('[data-salir-pueblo-error]');
+    if (err) err.textContent = mensaje ?? '';
+  });
+}

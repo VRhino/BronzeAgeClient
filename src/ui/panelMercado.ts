@@ -110,8 +110,9 @@ function barraEscolta(usado: number, cupo: number): string {
     <small class="escolta-cifras"><strong>${usado}/${cupo} pts</strong> de Liderazgo · quedan ${Math.max(0, cupo - usado)}</small>`;
 }
 
-/** Escolta de una caravana comercial de esta plaza (Doc 3.13.4): cupo, escuadras cedidas con «Retirar» y «Añadir escolta», que despliega las que puedes ceder. */
-function escolta(c: Caravana, p: ProyeccionJugador, reside: boolean, parada: boolean, escoltaPts: number | undefined, e: Escapar): string {
+/** Escolta de una caravana comercial de esta plaza (Doc 3.13.4): cupo, escuadras cedidas con «Retirar» y «Añadir escolta», que despliega las que puedes ceder.
+ * También la del carro de acarreo de un pueblo (`ui/pueblos.ts`), que el motor escolta igual. */
+export function escolta(c: Caravana, p: ProyeccionJugador, reside: boolean, parada: boolean, escoltaPts: number | undefined, e: Escapar): string {
   const lid = c.escoltaLiderazgo ?? (escoltaPts !== undefined ? { usado: 0, cupo: escoltaPts } : undefined);
   if (!lid) return '<p class="asent-lado-nota">El backend no publica su cupo de escolta.</p>';
   const cedidas = p.heroe.escuadrones.filter((s) => s.contenedor.tipo === 'escolta' && s.contenedor.caravanaId === c.id);
@@ -221,6 +222,36 @@ function tarjeta(c: Caravana, p: ProyeccionJugador, a: Asentamiento, reside: boo
     ${carrosHtml}${acciones}${escolta(c, p, reside, parada, d?.escoltaPts, e)}</div>`;
 }
 
+/** Los puntos de Liderazgo de escolta por caravana que da el Mercado activo de la plaza (`escoltaPorNivelMercado`); `undefined` sin Mercado o sin datos. */
+export function puntosDeEscolta(a: Asentamiento, alCargar?: () => void): number | undefined {
+  const nivelMercado = Math.max(0, ...(a.edificios ?? []).filter((x) => x.tipo === 'mercado' && x.estado === 'activo').map((x) => x.nivelInterno ?? 1));
+  const cat = catalogoDeCaravanas(alCargar);
+  return cat && nivelMercado > 0 ? cat.escoltaPorNivelMercado[nivelMercado - 1] : undefined;
+}
+
+/** «Añadir escolta», «Ceder» y «Retirar» de las escoltas pintadas con `escolta` dentro de `raiz`. */
+export function cablearEscolta(raiz: HTMLElement, p: ProyeccionJugador, ejecutar: Ejecutar, error: HTMLElement | null): void {
+  // Escolta: «Añadir escolta» despliega o pliega la lista en la propia tarjeta (sin repintar: el conjunto hace que el siguiente pintado salga igual).
+  raiz.querySelectorAll<HTMLButtonElement>('[data-escolta-abrir]').forEach((b) => b.addEventListener('click', () => {
+    const id = b.dataset.escoltaAbrir!;
+    const abrir = !escoltaAbierta.has(id);
+    if (abrir) escoltaAbierta.add(id); else escoltaAbierta.delete(id);
+    raiz.querySelectorAll<HTMLElement>('[data-escolta-lista]').forEach((l) => { if (l.dataset.escoltaLista === id) l.hidden = !abrir; });
+    b.textContent = `${abrir ? '▾' : '＋'} Añadir escolta`;
+  }));
+  const escoltar = (tipo: 'asignarEscolta' | 'quitarEscolta', atributo: string): void =>
+    raiz.querySelectorAll<HTMLButtonElement>(`[${atributo}]`).forEach((boton) => boton.addEventListener('click', async () => {
+      const botones = Array.from(raiz.querySelectorAll<HTMLButtonElement>('button'));
+      const antes = botones.map((b) => b.disabled);
+      botones.forEach((b) => { b.disabled = true; });
+      const mensaje = await ejecutar(tipo, { caravanaId: boton.dataset.caravana!, heroeId: p.heroeId, escuadronIds: [boton.getAttribute(atributo)!] });
+      // Con éxito el refresco repinta el panel; si falla, se reabren los botones y se dice por qué.
+      if (mensaje !== null) { botones.forEach((b, i) => { b.disabled = antes[i]!; }); if (error) error.textContent = mensaje; }
+    }));
+  escoltar('asignarEscolta', 'data-ceder-escolta');
+  escoltar('quitarEscolta', 'data-quitar-escolta');
+}
+
 export function htmlCaravanas(p: ProyeccionJugador, a: Asentamiento, e: Escapar, alCargar?: () => void): string {
   const reside = resideAqui(p, a);
   const flota = p.caravanas.filter((c) => c.tipo === 'comercial' && c.origenAsentamientoId === a.id);
@@ -284,25 +315,7 @@ export function cablearCaravanas(raiz: HTMLElement, p: ProyeccionJugador, a: Ase
   }));
   raiz.querySelectorAll<HTMLButtonElement>('[data-cancelar-caravana]').forEach((b) => b.addEventListener('click', () => void lanzar(b, 'cancelarCaravana', { caravanaId: b.dataset.cancelarCaravana! })));
 
-  // Escolta: «Añadir escolta» despliega o pliega la lista en la propia tarjeta (sin repintar: el conjunto hace que el siguiente pintado salga igual).
-  raiz.querySelectorAll<HTMLButtonElement>('[data-escolta-abrir]').forEach((b) => b.addEventListener('click', () => {
-    const id = b.dataset.escoltaAbrir!;
-    const abrir = !escoltaAbierta.has(id);
-    if (abrir) escoltaAbierta.add(id); else escoltaAbierta.delete(id);
-    raiz.querySelectorAll<HTMLElement>('[data-escolta-lista]').forEach((l) => { if (l.dataset.escoltaLista === id) l.hidden = !abrir; });
-    b.textContent = `${abrir ? '▾' : '＋'} Añadir escolta`;
-  }));
-  const escoltar = (tipo: 'asignarEscolta' | 'quitarEscolta', atributo: string): void =>
-    raiz.querySelectorAll<HTMLButtonElement>(`[${atributo}]`).forEach((boton) => boton.addEventListener('click', async () => {
-      const botones = Array.from(raiz.querySelectorAll<HTMLButtonElement>('button'));
-      const antes = botones.map((b) => b.disabled);
-      botones.forEach((b) => { b.disabled = true; });
-      const mensaje = await ejecutar(tipo, { caravanaId: boton.dataset.caravana!, heroeId: p.heroeId, escuadronIds: [boton.getAttribute(atributo)!] });
-      // Con éxito el refresco repinta el panel; si falla, se reabren los botones y se dice por qué.
-      if (mensaje !== null) { botones.forEach((b, i) => { b.disabled = antes[i]!; }); if (error) error.textContent = mensaje; }
-    }));
-  escoltar('asignarEscolta', 'data-ceder-escolta');
-  escoltar('quitarEscolta', 'data-quitar-escolta');
+  cablearEscolta(raiz, p, ejecutar, error);
 
   // Aparcadas: pasar carga entre su carro y el almacén de esta plaza, o mandarla a su origen.
   const base = { heroeId: p.heroeId, asentamientoId: a.id };

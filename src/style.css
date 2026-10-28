@@ -3076,7 +3076,7 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .mision-explicacion { margin: 2px 0 4px; font-size: 0.8rem; color: var(--text-secondary); }
 .mision-explicacion summary { cursor: pointer; color: var(--bronce); }
 .mision-explicacion p { margin: 4px 0 0; }
-.tablon-columnas { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.tablon-columnas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 10px; }
 .tablon-columna { display: flex; flex-direction: column; gap: 6px; }
 .tablon-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .tablon-cab small, .tablon-meta { font-size: 0.75rem; color: var(--text-secondary); }
@@ -3119,3 +3119,36 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .faccion-pestana.activo { color: var(--text-primary, #f4ead2); border-color: var(--bronce); background: var(--marco-bg-alt); margin-bottom: -1px; }
 .faccion-aviso { display: inline-block; min-width: 18px; padding: 0 5px; border-radius: 9px; background: #e0705a; color: #fff; font-size: 0.7rem; text-align: center; }
 .faccion-cuerpo { width: min(100%, 960px); margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+
+/* Tablón: tarjetas que no se desbordan (título arriba con su estado, etiquetas, avance y el pie con la recompensa y el botón). */
+.tablon-columna { min-width: 0; }
+.tablon-tarjeta { display: flex; flex-direction: column; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
+.tablon-tarjeta-cab { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
+.tablon-tarjeta-cab strong { color: var(--oro-claro); line-height: 1.25; }
+.tablon-tarjeta .mision-texto { margin: 0; }
+.tablon-estado { flex-shrink: 0; font-size: 0.7rem; padding: 1px 6px; border-radius: 9px; background: rgba(255, 255, 255, 0.08); color: var(--text-secondary); white-space: nowrap; }
+.tablon-estado-cumplida { background: var(--oro); color: #201509; }
+.tablon-estado-en_curso { background: rgba(169, 121, 63, 0.35); color: var(--oro-claro); }
+.tablon-etiquetas, .tablon-premio { display: flex; flex-wrap: wrap; gap: 4px; }
+.tablon-chip { font-size: 0.7rem; padding: 1px 6px; border-radius: 3px; border: 1px solid var(--bronce-osc); color: var(--text-secondary); white-space: nowrap; }
+.tablon-chip-xp { border-color: #7aa0d8; color: #a9c4ee; }
+.tablon-chip-part { border-color: #8fbf7a; color: #b5dba3; }
+.tablon-chip-oro { border-color: var(--oro); color: var(--oro); }
+.tablon-pie { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+.tablon-pie button { padding: 3px 12px; font-size: 0.8rem; }
+.tablon-nota { font-size: 0.72rem; color: var(--text-muted); }
+
+/* Dentro de un pueblo o una aldea: su ficha en el centro. */
+.pueblo-cuerpo { flex: 1; min-height: 0; overflow-y: auto; display: flex; justify-content: center; padding: 24px 16px; color-scheme: dark; }
+.pueblo-ficha {
+  width: min(560px, 100%);
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px;
+  background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg));
+  border: 1px solid var(--bronce);
+  border-radius: 3px;
+  box-shadow: var(--placa);
+}

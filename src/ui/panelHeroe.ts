@@ -46,6 +46,8 @@ function dondeEsta(heroe: HeroeProyectado, proyeccion: ProyeccionJugador): strin
   if (u.tipo === 'columna') return 'en su columna';
   if (u.tipo === 'desconectado') return 'desconectado';
   if (u.tipo === 'mercenarios') return `en el campamento ${u.campamentoId}`;
+  if (u.tipo === 'pueblo') return 'dentro de un pueblo';
+  if (u.tipo === 'avanzada') return 'dentro de una avanzada';
   const plaza = [...proyeccion.asentamientos, ...proyeccion.asentamientosAvistados].find((a) => a.id === u.asentamientoId);
   return `en ${plaza?.nombre ?? u.asentamientoId}`;
 }

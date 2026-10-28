@@ -2,6 +2,7 @@
 // vista (mapa, campamento, asentamiento). Lo propio de cada sitio (mercado, edificios, salir…) vive en la pantalla de ese sitio.
 // Aquí solo está el HTML y la lista de paneles; quien pinta cada panel y cablea los botones es `main.ts`.
 import type { ProyeccionJugador } from '../apiCliente';
+import { nombreDePueblo } from './pueblos';
 
 export type PanelJugador = 'heroe' | 'escuadras' | 'carro' | 'faccion' | 'tecnologia' | 'misiones' | 'avisos';
 
@@ -21,6 +22,8 @@ function dondeEstas(p: ProyeccionJugador): string {
   if (u.tipo === 'mercenarios') return `Campamento ${u.campamentoId}`;
   if (u.tipo === 'asentamiento') return `Dentro de ${p.asentamientos[0]?.nombre ?? u.asentamientoId}`;
   if (u.tipo === 'columna') return 'En el mapa, con tu columna';
+  if (u.tipo === 'pueblo') { const x = (p.pueblos ?? []).find((q) => q.id === u.puebloId); return `Dentro de ${x ? nombreDePueblo(x) : 'un pueblo'}`; }
+  if (u.tipo === 'avanzada') return 'Dentro de una avanzada';
   return 'Desconectado';
 }
 
