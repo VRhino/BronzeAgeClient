@@ -7,7 +7,7 @@ import { ayuda } from './ayuda';
 import { textoEnTiempoReal } from './estadoCliente';
 import { nombreDeContador } from './misiones';
 import { nombreDeHeroe } from './nombres';
-import { plegable } from './plegable';
+import { cablearPlegables, plegable } from './plegable';
 import type { SubpestanaPlaza } from './ganchos';
 
 type Escapar = (s: string) => string;
@@ -149,6 +149,7 @@ export function htmlTablon(p: ProyeccionJugador, d: DuenoTablon, e: Escapar): st
 
 /** Aceptar, reclamar y elegir dentro de `raiz` (donde se pintó `htmlTablon`). */
 export function cablearTablon(raiz: HTMLElement, ejecutar: Ejecutar, repintar: () => void): void {
+  cablearPlegables(raiz);
   raiz.querySelectorAll<HTMLElement>('[data-tablon-dueno]').forEach((t) => {
     const duenoId = t.dataset.tablonDueno!;
     const error = (id: string, texto: string | null) => {

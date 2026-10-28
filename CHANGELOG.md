@@ -3,6 +3,13 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.41.1] — 2026-10-28 · elegir en el tablón · sync con `VRhino/BronzeAge@14e49ae`
+
+### Corregido
+- **Tablón**: «Elegir las de la semana que viene» se cerraba al marcar una casilla en el panel de la Facción y no dejaba guardar.
+  Probado contra el motor con el mundo nuevo: aceptar una individual y guardar la elección funcionan, y el aviso de bosque cerrado al
+  fundar coincide con lo que rechaza el motor.
+
 ## [0.41.0] — 2026-10-28 · tablón de misiones, participación y cambios del motor del 28-10 · sync con `VRhino/BronzeAge@14e49ae`
 
 Contrato regenerado (`src/contrato/REVISION` = 14e49ae4). Hace falta el mundo nuevo y partida nueva (lo pide el motor).
