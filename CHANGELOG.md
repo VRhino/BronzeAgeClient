@@ -3,6 +3,19 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.39.3] — 2026-10-28 · carro al salir, víveres al entrar, carro del ejército y círculo de Fundar · sync con `VRhino/BronzeAge@f4585ac`
+
+### Arreglado
+- **Carga del carro al salir**: el oro del almacén no salía en la lista (se excluía desde que había oro de botín aparte); si solo tenías
+  oro decía que no había nada que cargar. Ahora se carga como cualquier recurso.
+- **Círculo de Fundar**: pintaba la zona inicial con 30 u (el radio del TypeScript) y contaba los nodos y bosques de ese círculo. El motor
+  funda con 6 u (`ReglasTerritorio.radio_inicial`); el círculo y la lista de recursos usan ahora 6, con los nombres de los recursos.
+
+### Añadido
+- **Víveres al entrar en tu residencia**: al entrar en tu campamento, el cliente pide `repostarEnCampamento` (gratis) si no los tienes al
+  máximo, así la siguiente salida sale llena aunque la ración de salida aún no toque.
+- **Carro en el panel Ejército** del mapa (⚑): el mismo bloque de carro y almacén que en «Lo que llevas», cuando vas en un ejército.
+
 ## [0.39.2] — 2026-10-28 · nodos de hierro en el mapa · sync con `VRhino/BronzeAge@f4585ac`
 
 ### Arreglado

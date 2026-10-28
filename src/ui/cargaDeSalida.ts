@@ -11,7 +11,7 @@ type Escapar = (valor: string) => string;
 /** `disponible`: recurso → lo que puedes sacar (la reserva de trigo de la plaza la comprueba el backend). `de`: de dónde sale, para la explicación.
  * `yaEnCarro`: lo que el héroe ya trae en el carro (`heroe.carro`), que sale con él y ocupa sitio. */
 export function htmlCargaDeSalida(disponible: Record<string, number>, de: string, e: Escapar, yaEnCarro: Record<string, number> = {}): string {
-  const filas = Object.entries(disponible).filter(([r, n]) => n >= 1 && r !== 'oro');
+  const filas = Object.entries(disponible).filter(([, n]) => n >= 1);
   const ya = Object.entries(yaEnCarro).filter(([, n]) => n >= 1);
   const ocupado = Math.floor(ya.reduce((a, [, n]) => a + n, 0));
   return `

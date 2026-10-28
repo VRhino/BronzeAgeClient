@@ -13,7 +13,7 @@ import type { Ejercito } from '../tiposDominio';
 import { ayuda } from './ayuda';
 import { nombreDeHeroe } from './nombres';
 import { textoEnTiempoReal } from './estadoCliente';
-import type { Ejecutar } from './panelCarro';
+import { cablearCarro, htmlCarro, type Ejecutar } from './panelCarro';
 
 type Escapar = (valor: string) => string;
 
@@ -126,6 +126,7 @@ export function htmlPanelEjercito(p: ProyeccionJugador, e: Escapar): string {
   const otros = ejercitosDeLaFaccion(p);
   return `<span class="faction-kicker">Ejército</span>
     ${htmlMiSituacion(p, mi, e)}
+    ${mi && (mi.tipo === 'ejercito' || mi.participantes.length > 1) ? htmlCarro(p, e, false) : ''}
     <strong class="heroe-sub">Ejércitos y formaciones de tu Facción${ayuda('ejercito:otros', 'Se forman con «Organizar ejército» en el mapa, o convocándolos dentro de un campamento o de tu plaza.')}</strong>
     ${otros.length > 0 ? otros.map((c) => filaEjercito(p, c, e)).join('') : '<p class="asent-lado-nota">No hay ninguno.</p>'}
     <p class="faction-error" data-campo="error-ejercito" role="alert"></p>`;
@@ -168,6 +169,7 @@ export function cablearPanelEjercito(raiz: ParentNode, p: ProyeccionJugador, eje
       }
     }
   }));
+  if (mi && (mi.tipo === 'ejercito' || mi.participantes.length > 1) && raiz instanceof HTMLElement) cablearCarro(raiz, ejecutar);
   raiz.querySelectorAll<HTMLButtonElement>('[data-peticion]').forEach((b) => b.addEventListener('click', () => {
     if (mi) void enviar(b, 'responderPeticionDeUnion', { ejercitoId: mi.id, heroeId: p.heroeId, solicitanteId: b.dataset.peticion, aceptar: b.dataset.aceptar === 'si' });
   }));

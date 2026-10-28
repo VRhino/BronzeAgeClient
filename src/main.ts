@@ -2296,6 +2296,23 @@ function hayQueSondear(): boolean {
   return !tiempoRealVivo() || Date.now() - ultimoRefresco > RESERVA_SIN_TICK_MS;
 }
 
+/** El campamento de residencia donde ya se pidió repostar en esta visita: se pide una vez al entrar y se olvida al salir. */
+let repostadoEn: string | null = null;
+
+/** Al entrar en tu campamento de residencia, los víveres se llenan solos (`repostarEnCampamento`, gratis para cualquiera en el campamento):
+ * así la próxima salida sale al máximo, sin depender de la ración de salida, que tiene plazo. */
+function repostarAlEntrar(p: ProyeccionJugador): void {
+  const u = p.heroe.ubicacion;
+  if (u.tipo !== 'mercenarios') { repostadoEn = null; return; }
+  const campamento = p.campamentosMercenarios.find((c) => c.id === u.campamentoId);
+  if (!campamento?.residentesIds.includes(p.heroeId) || repostadoEn === campamento.id) return;
+  repostadoEn = campamento.id;
+  if ((p.heroe.viveres ?? 0) >= capacidadDeViveres() - 0.5) return;
+  void ejecutarComando(estadoCliente.gameIdActivo, 'repostarEnCampamento', { campamentoId: campamento.id }).then((r) => {
+    if (r.resultado.ok) mostrarAviso('Víveres al máximo: se repostan solos al entrar en tu campamento.');
+  }).catch(() => undefined);
+}
+
 async function refrescarDatosJuego(): Promise<void> {
   ultimoRefresco = Date.now();
   const respuesta = await consultarProyeccion(estadoCliente.gameIdActivo);
@@ -2313,6 +2330,7 @@ async function refrescarDatosJuego(): Promise<void> {
       mostrarAviso(`${nombreDeHeroe(respuesta, x.heroeId)} pide unirse a tu ejército: ${Math.max(0, Math.ceil((x.expiraEn - respuesta.instante) / 1000))} s para contestar (botón ⚑ del mapa).`, true);
     }
     actualizarSeguimiento(respuesta, (texto) => mostrarAviso(texto));
+    repostarAlEntrar(respuesta);
     fijarCanalesTiempoReal(canalesDe(respuesta));
     void avisarDeEventos(estadoCliente.gameIdActivo, respuesta.version);
   }

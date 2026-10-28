@@ -962,6 +962,10 @@ export function pintarMiradas(
   ctx.restore();
 }
 
+/** Radio con el que nace la zona de una plaza (motor: `ReglasTerritorio.radio_inicial`, 6 u). El bloque `ZONA_INFLUENCIA` que publica
+ * `/v1/datos` aún trae el 30 del TypeScript (Economia_Construccion §3.1 dice que el vigente es 6), así que no se lee de allí. */
+export const RADIO_ZONA_INICIAL = 6;
+
 export function pintarPrevisualizacionFundacion(
   ctx: CanvasRenderingContext2D,
   mapa: MapaGenerado,
@@ -970,7 +974,7 @@ export function pintarPrevisualizacionFundacion(
 ): void {
   const x = posicion.x * escalaCanvas;
   const y = posicion.y * escalaCanvas;
-  const radio = 30 * escalaCanvas;
+  const radio = RADIO_ZONA_INICIAL * escalaCanvas;
 
   ctx.save();
   ctx.beginPath();
@@ -990,7 +994,7 @@ export function pintarPrevisualizacionFundacion(
   ctx.lineWidth = 1.5;
   ctx.stroke();
 
-  const radioCuadrado = 30 * 30;
+  const radioCuadrado = RADIO_ZONA_INICIAL * RADIO_ZONA_INICIAL;
   for (const nodo of mapa.nodos) {
     const dx = nodo.posicion.x - posicion.x;
     const dy = nodo.posicion.y - posicion.y;
@@ -1009,7 +1013,7 @@ export function pintarPrevisualizacionFundacion(
     ctx.font = 'bold 11px system-ui, sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(nodo.tipo, nodoX + 11, nodoY);
+    ctx.fillText(RECURSO_NOMBRE[nodo.tipo] ?? nodo.tipo, nodoX + 11, nodoY);
   }
   ctx.restore();
 }
