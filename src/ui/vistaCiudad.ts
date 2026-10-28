@@ -27,7 +27,8 @@ export const tipoSeleccionado = (): string | null => seleccion?.tipo ?? null;
 
 const internosDe = (a: Asentamiento): Edificio[] => (a.edificios ?? []).filter((e) => (e.ambito ?? 'asentamiento') !== 'mapa');
 const nombreDe = (tipo: string): string => EDIFICIO_NOMBRE[tipo] ?? tipo;
-const fmt = (n: number): string => (n >= 10 ? Math.round(n).toString() : n.toFixed(1));
+/** Cifras de recurso: enteras sin decimales; con fracción, un decimal solo por debajo de 10 (en valor absoluto). */
+const fmt = (n: number): string => (Number.isInteger(n) || Math.abs(n) >= 10 ? Math.round(n).toString() : n.toFixed(1));
 
 function cargoDe(a: Asentamiento, heroeId: string): Cargo {
   if (a.cargos?.gobernadorId === heroeId) return 'gobernador';
@@ -268,8 +269,11 @@ function htmlExtraccion(c: ContextoPlaza): string {
   const pesants = Math.floor(a.poblacion?.pesants ?? 0);
   const ratio = necesarios <= 0 ? 1 : Math.min(1, pesants / necesarios);
   const neto = (r: string): string => {
-    const n = a.almacen?.[r]?.porMinuto;
-    return n === undefined ? '—' : `${n > 0 ? '+' : ''}${fmt(n)}/min`;
+    const x = a.almacen?.[r];
+    if (x?.porMinuto === undefined) return '—';
+    // Con el almacén lleno lo que se produce de más se pierde y el neto sale 0: se dice, para que no parezca que no produce.
+    const lleno = x.capacidad > 0 && x.cantidad >= x.capacidad ? ' (almacén lleno)' : '';
+    return `${x.porMinuto > 0 ? '+' : ''}${fmt(x.porMinuto)}/min${lleno}`;
   };
   const filas = [...porTipo.entries()].sort(([x], [y]) => nombreDe(x).localeCompare(nombreDe(y))).map(([tipo, g]) => {
     const parados = g.edificios.filter((x) => x.pausadoPorAlmacenLleno).length;

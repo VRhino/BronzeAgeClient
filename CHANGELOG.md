@@ -3,6 +3,12 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.40.2] — 2026-10-28 · cifras de producción · sync con `VRhino/BronzeAge@f4585ac`
+
+### Corregido
+- **Producción**: las cifras enteras salen sin decimales («0/min», no «0.0/min»), y los negativos pequeños con un decimal.
+- El neto de un recurso con el almacén lleno lo dice («almacén lleno»): lo que se produce de más se pierde y el neto sale 0.
+
 ## [0.40.1] — 2026-10-28 · suelo de la plaza, error de reclutar en unidades y borrar avisos · sync con `VRhino/BronzeAge@f4585ac`
 
 ### Cambiado
