@@ -608,7 +608,7 @@ export interface ObraDeMapa {
   terminaEn?: number;
 }
 
-/** Un alijo de exploración a la vista que aún no abriste (Doc 1.9b): su oro va a tu oro de botín. */
+/** Un alijo de exploración a la vista que aún no abriste (Doc 1.9b): su oro va al carro de tu columna. */
 export interface Alijo {
   id: string;
   posicion: Point;
@@ -693,8 +693,6 @@ export interface HeroeProyectado {
   /** El carro que el héroe trae consigo dentro de su residencia (`Heroe.fuera_carro` del motor): entrar no lo vacía; `vaciarCarro` lo pasa al
    * almacén personal y al salir va con él. */
   carro?: Record<string, number>;
-  /** Oro de bandidos y alijos: solo se gasta en el mercado de un campamento o en el fondo de refundación (Doc 1.9). */
-  oroDeBotin?: number;
   /** Víveres (backend 2026-10-08, Doc 5.13): el trigo que come tu columna. Siempre contigo, hasta `LOGISTICA.capacidadViveresPorHeroe`; ausente = 0. */
   viveres?: number;
   /** TODAS tus escuadras, estén donde estén (`contenedor`). */

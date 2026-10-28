@@ -15,7 +15,7 @@ export function htmlCargaDeSalida(disponible: Record<string, number>, de: string
   const ya = Object.entries(yaEnCarro).filter(([, n]) => n >= 1);
   const ocupado = Math.floor(ya.reduce((a, [, n]) => a + n, 0));
   return `
-    <strong class="heroe-sub" data-carga-ocupado="${ocupado}">Carga del carro <span data-carga-total>${ocupado} / ${CAPACIDAD_CARRO_SALIDA}</span>${ayuda('salida:carga', `Lo que metas en el carro sale contigo, de ${e(de)}. Es lo que llevas para comer o gastar fuera, y lo que se arriesga si pierdes un combate (se pierde la mitad). El oro de botín no va en el carro.`)}</strong>
+    <strong class="heroe-sub" data-carga-ocupado="${ocupado}">Carga del carro <span data-carga-total>${ocupado} / ${CAPACIDAD_CARRO_SALIDA}</span>${ayuda('salida:carga', `Lo que metas en el carro sale contigo, de ${e(de)}. Es lo que llevas para comer o gastar fuera, y lo que se arriesga si pierdes un combate (se pierde la mitad).`)}</strong>
     ${ya.length > 0 ? `<p class="asent-lado-nota">Ya llevas en el carro, y sale contigo: ${ya.map(([r, n]) => `${Math.floor(n)} ${e(RECURSO_NOMBRE[r] ?? r)}`).join(', ')}.</p>` : ''}
     ${filas.length === 0
       ? `<p class="asent-lado-nota">No hay nada que cargar en ${e(de)}.</p>`

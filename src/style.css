@@ -2853,8 +2853,7 @@ kbd {
 .mapa-comida.poca .mapa-comida-barra i { background: #c0392b; }
 .mapa-comida.poca strong { color: #e8806f; }
 
-/* Oro de botín, separado del carro; total de la carga de salida. */
-.carro-botin { margin-top: 12px; padding: 8px 10px; border: 1px solid #6b5a2c; border-radius: 6px; background: rgba(224, 180, 34, 0.08); }
+/* Total de la carga de salida. */
 [data-carga-total].excedido { color: #e8806f; }
 
 /* Fondo de refundación: precio de la caravana con barras por material. */

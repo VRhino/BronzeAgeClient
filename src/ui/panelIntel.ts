@@ -20,7 +20,7 @@ export interface TabernaDisponible {
   origen: OrigenDeIntel;
   etiqueta: string;
   posicion: Point;
-  /** El oro con el que se paga: el del almacén de la plaza o el oro de botín del héroe. */
+  /** El oro con el que se paga: el del almacén de la plaza, o en un campamento el del héroe (su almacén si reside, su carro si no). */
   oro: number;
   /** Cuántas Miradas admite a la vez (el nivel interno de la taberna de plaza). */
   cupo: number;
@@ -54,7 +54,9 @@ export function tabernasDisponibles(p: ProyeccionJugador): TabernaDisponible[] {
         ? p.campamentosMercenarios.find((c) => Math.hypot(c.posicion.x - columna.posicionActual.x, c.posicion.y - columna.posicionActual.y) <= radioDePuerta())
         : undefined;
   if (campamento && p.faccionId !== null) {
-    lista.push({ origen: { tipo: 'campamento', id: campamento.id }, etiqueta: `Taberna del campamento ${campamento.id}`, posicion: campamento.posicion, oro: p.heroe.oroDeBotin ?? 0, cupo: cupos.campamento });
+    // En el campamento paga el héroe: el residente con el oro de su almacén, el visitante con el de su carro.
+    const oro = campamento.residentesIds.includes(p.heroeId) ? p.heroe.almacenPersonal?.oro ?? 0 : columna?.suministro?.oro ?? 0;
+    lista.push({ origen: { tipo: 'campamento', id: campamento.id }, etiqueta: `Taberna del campamento ${campamento.id}`, posicion: campamento.posicion, oro, cupo: cupos.campamento });
   }
   return lista;
 }

@@ -736,7 +736,7 @@ function renderSeleccionCampamento(cont: HTMLElement, proyeccion: ProyeccionJuga
     : campamento.campamentoMercenariosId ? `al campamento ${escaparHtml(campamento.campamentoMercenariosId)}` : '';
   if (!pintar(cont, `
     <button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>
-    <span class="faction-kicker">Campamento de bandidos${ayuda('mapa:ficha-bandidos', `Plano esquemático: el servidor no publica el trazado de los campamentos de bandidos. El botín decrece si se destruyen muchos en un día. ${impide.length > 70 ? `${escaparHtml(impide)} ` : ''}Si cae, ganas su oro de botín (a salvo: no va en el carro). Si aguanta, quedas herido y pierdes la mitad del carro.`)}</span>
+    <span class="faction-kicker">Campamento de bandidos${ayuda('mapa:ficha-bandidos', `Plano esquemático: el servidor no publica el trazado de los campamentos de bandidos. El botín decrece si se destruyen muchos en un día. ${impide.length > 70 ? `${escaparHtml(impide)} ` : ''}Si cae, su oro va al carro de tu columna (lo que no quepa se pierde). Si aguanta, quedas herido y pierdes la mitad del carro.`)}</span>
     <h3>Bandidos · nivel ${campamento.nivel}</h3>
     <div class="bandidos-nivel" title="Nivel ${campamento.nivel} de 3">${[1, 2, 3].map((n) => `<i${n <= campamento.nivel ? ' class="on"' : ''}></i>`).join('')}<span>Nivel ${campamento.nivel} de 3</span></div>
     ${svgPlanoBandidos(campamento)}
@@ -766,7 +766,7 @@ function renderSeleccionCampamento(cont: HTMLElement, proyeccion: ProyeccionJuga
       return;
     }
     const sigue = estadoCliente.proyeccionUltima?.campamentosBandidos.some((c) => c.id === campamento.id);
-    avisoMapa(sigue ? 'El campamento aguanta: quedas herido y pierdes la mitad del carro.' : 'Campamento destruido: su oro se suma a tu oro de botín.');
+    avisoMapa(sigue ? 'El campamento aguanta: quedas herido y pierdes la mitad del carro.' : 'Campamento destruido: su oro va a tu carro.');
   });
 }
 
@@ -808,11 +808,11 @@ function renderSeleccionMercenarios(cont: HTMLElement, proyeccion: ProyeccionJug
   cablearAccionSeleccion(cont, '#btn-entrar-mercenarios', 'entrarEnCampamento', { campamentoId: campamento.id, heroeId: proyeccion.heroeId }, () => { seleccionMapa = null; });
 }
 
-/** Ficha de un alijo de exploración (Doc 1.9b): se abre estando en el sitio, y su oro va al oro de botín. */
+/** Ficha de un alijo de exploración (Doc 1.9b): se abre estando en el sitio, y su oro va al carro de la columna. */
 function renderSeleccionAlijo(cont: HTMLElement, alijo: Alijo): void {
   if (!pintar(cont, `
     <button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>
-    <span class="faction-kicker">Alijo${ayuda('mapa:ficha-alijo', 'Hay que estar en el sitio. El oro va a tu oro de botín.')}</span>
+    <span class="faction-kicker">Alijo${ayuda('mapa:ficha-alijo', 'Hay que estar en el sitio. El oro va al carro de tu columna (lo que no quepa se pierde).')}</span>
     <h3>${alijo.oro} de oro</h3>
     <div class="mapa-seleccion-acciones">
       <button id="btn-marchar-alli" class="btn-secondary" type="button">Marchar aquí</button>
@@ -821,7 +821,7 @@ function renderSeleccionAlijo(cont: HTMLElement, alijo: Alijo): void {
     <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`, undefined, claveSeleccion())) return;
   cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
   cont.querySelector('#btn-marchar-alli')?.addEventListener('click', () => void marcharAObjetivo({ tipo: 'punto', punto: alijo.posicion }));
-  cablearAccionSeleccion(cont, '#btn-abrir-alijo', 'abrirAlijo', { alijoId: alijo.id }, () => { seleccionMapa = null; avisoMapa(`Alijo abierto: ${alijo.oro} de oro de botín.`); });
+  cablearAccionSeleccion(cont, '#btn-abrir-alijo', 'abrirAlijo', { alijoId: alijo.id }, () => { seleccionMapa = null; avisoMapa(`Alijo abierto: ${alijo.oro} de oro al carro.`); });
 }
 
 // --- INTEL DE LAS TABERNAS (Doc 5.12.10) ---------------------------------------------------------

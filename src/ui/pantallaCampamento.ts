@@ -76,7 +76,6 @@ function resumen(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): st
     <strong class="heroe-sub">Campamento${info}</strong>
     <div class="asent-ficha-grid">
       <div><span>Residentes</span><strong>${c.residentesIds.length}</strong></div>
-      <div><span>Oro de botín</span><strong>${Math.floor(heroe.oroDeBotin ?? 0)}</strong></div>
       <div><span>Resides aquí</span><strong>${resides ? 'Sí' : 'No'}</strong></div>
     </div>
     ${resides ? '' : '<button class="btn-secondary" type="button" id="btn-residir">Residir aquí</button>'}
@@ -185,7 +184,7 @@ let ultimaCompra: string | null = null;
 /**
  * El MERCADO del campamento: una lista de lo que hay en venta y, del bien elegido, todo lo necesario para decidir antes de pulsar «Comprar»:
  * lo que hay en venta, lo que ya tienes, el cupo de hoy, tu oro, la cantidad y el total a pagar. Precio y cupo los manda el backend
- * (`mercadoCampamento`); se paga primero con el oro de botín y luego con el oro del almacén personal. Si no cabe todo o no alcanza, el
+ * (`mercadoCampamento`); se paga con el oro del almacén personal (residente) o del carro (visitante). Si no cabe todo o no alcanza, el
  * campamento sirve lo que puede, y se dice.
  */
 function mercado(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): string {
@@ -193,16 +192,14 @@ function mercado(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): st
   const resides = c.residentesIds.includes(heroe.id);
   const precios = p.mercadoCampamento?.precios;
   const enVenta = Object.entries(c.mercado).filter(([r, n]) => n >= 1 && r !== 'oro' && (resides || r === 'trigo'));
-  const nota = `<strong class="heroe-sub">Mercado${ayuda('camp:mercado', `${resides ? '' : 'Si no resides aquí, solo te venden trigo, y va al carro de tu columna.<br>'}Se paga primero con el oro de botín y luego con el oro de tu almacén. Si no cabe todo o no te llega, se compra lo que se pueda.`)}</strong>`;
+  const nota = `<strong class="heroe-sub">Mercado${ayuda('camp:mercado', `${resides ? '' : 'Si no resides aquí, solo te venden trigo, y va al carro de tu columna.<br>'}Se paga con el oro de tu ${resides ? 'almacén' : 'carro'}. Si no cabe todo o no te llega, se compra lo que se pueda.`)}</strong>`;
   if (enVenta.length === 0) return `${nota}<p class="asent-lado-nota">Nada en venta.</p>`;
   if (!bienElegido || !enVenta.some(([r]) => r === bienElegido)) bienElegido = enVenta[0]![0];
 
   const almacen = heroe.almacenPersonal ?? {};
-  const oroBotin = Math.floor(heroe.oroDeBotin ?? 0);
-  const oroAlmacen = Math.floor(almacen['oro'] ?? 0);
-  const oro = oroBotin + oroAlmacen;
   const carro = p.ejercitos.find((x) => x.liderId === heroe.id)?.suministro ?? {};
   const tienes = (r: string): number => Math.floor(resides ? (almacen[r] ?? 0) : (carro[r] ?? 0));
+  const oro = tienes('oro');
 
   const lista = enVenta
     .map(([r, n]) => `<button class="mercado-bien${r === bienElegido ? ' activo' : ''}" type="button" data-bien="${e(r)}"><span>${RECURSO_ICONO[r] ?? '📦'} ${e(nombreRecurso(r))}</span><small>${Math.floor(n)} en venta${precios?.[r] ? ` · ${formatoPrecio(precios[r]!)} oro/u` : ''}</small></button>`)
@@ -226,7 +223,7 @@ function mercado(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): st
         <div><span>En venta</span><strong>${stock}</strong></div>
         <div><span>Tienes ${resides ? 'en tu almacén' : 'en tu carro'}</span><strong>${tienes(r)}</strong></div>
         ${cupo !== undefined ? `<div><span>Cupo de hoy</span><strong>${cupo}</strong></div>` : ''}
-        <div><span>Tu oro</span><strong title="Oro de botín ${oroBotin} · almacén ${oroAlmacen}">${oro}</strong></div>
+        <div><span>Tu oro</span><strong title="En tu ${resides ? 'almacén' : 'carro'}">${oro}</strong></div>
         ${precio ? `<div><span>Precio por unidad</span><strong>${formatoPrecio(precio)}</strong></div>` : ''}
       </div>
       ${maximo < 1
@@ -295,7 +292,7 @@ function fondo(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): stri
   const sobrante = Object.entries(fondoDeFaccion).filter(([r, n]) => n > 0 && !(precio && r in precio));
 
   return `
-    <strong class="heroe-sub">Precio de la caravana${precio ? ` · reunido ${reunido} / ${total}` : ''}${ayuda('camp:fondo', 'La Caravana de Fundación se compra aquí entre todos los ciudadanos de tu Facción: cada uno aporta lo que quiere a un fondo común. Lo tuyo se puede retirar mientras no se gaste. El fondo se llena con lo de tu almacén personal y con tu oro de botín. Cuando el fondo está completo, la caravana espera aquí dentro: sal como ejército (Salir › Convocar ejército) y, al partir, el Líder elige llevársela; luego funda donde quieras (panel ⌂).')}</strong>
+    <strong class="heroe-sub">Precio de la caravana${precio ? ` · reunido ${reunido} / ${total}` : ''}${ayuda('camp:fondo', 'La Caravana de Fundación se compra aquí entre todos los ciudadanos de tu Facción: cada uno aporta lo que quiere a un fondo común. Lo tuyo se puede retirar mientras no se gaste. El fondo se llena con lo de tu almacén personal. Cuando el fondo está completo, la caravana espera aquí dentro: sal como ejército (Salir › Convocar ejército) y, al partir, el Líder elige llevársela; luego funda donde quieras (panel ⌂).')}</strong>
     ${precio ? `<div class="fondo-barra fondo-barra-total"><i style="width:${total > 0 ? ((reunido / total) * 100).toFixed(1) : 0}%"></i></div>` : ''}
     ${necesidad}
     ${sobrante.length > 0 ? `<p class="asent-lado-nota">Además en el fondo: ${sobrante.map(([r, n]) => `${Math.floor(n)} de ${e(nombreRecurso(r))}`).join(', ')}.</p>` : ''}

@@ -3,6 +3,13 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.39.1] — 2026-10-28 · fuera el «oro de botín» · sync con `VRhino/BronzeAge@f4585ac`
+
+### Quitado
+- El **oro de botín** como bolsa aparte (ya no existe en el motor): el oro de los bandidos y de los alijos es oro normal y va al carro de
+  la columna (lo que no cabe se pierde). Fuera la línea del panel Carro, la casilla del Resumen del campamento y los textos de ayuda.
+  En el mercado y la taberna del campamento se paga con el oro del almacén (si resides) o del carro (si no).
+
 ## [0.39.0] — 2026-10-27 · pueblos y aldea agrícola · sync con `VRhino/BronzeAge@7086ebc`
 
 ### Añadido

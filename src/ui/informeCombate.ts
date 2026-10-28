@@ -31,7 +31,7 @@ export interface InformeDeCombate {
   rival: LadoDelInforme | null;
   /** Solo contra bandidos: el poder del campamento. */
   poderRival: number;
-  /** Contra bandidos, si cae: el oro de botín que te llevas (backend 2026-10-07, `oroPorHeroe`). */
+  /** Contra bandidos, si cae: el oro que se carga en tu carro (backend 2026-10-07, `oroPorHeroe`). */
   oroGanado?: number;
   /** Contra bandidos, si aguanta: lo que tu columna pierde de su carro (`carroPerdido`). */
   carroPerdido?: Record<string, number>;
@@ -102,6 +102,6 @@ export function htmlInforme(i: InformeDeCombate, p: ProyeccionJugador, e: (s: st
     <strong class="heroe-sub">Tus escuadras</strong>
     ${tablaBajas(i.propio, mia, e)}
     ${i.rival ? `<strong class="heroe-sub">Escuadras rivales</strong>${tablaBajas(i.rival, (b) => nombreTropa(b.tropaId), e)}` : ''}
-    ${i.oroGanado !== undefined ? `<div class="briefing-botin victoria"><span>Botín</span><strong>${i.oroGanado > 0 ? `+${i.oroGanado} de oro de botín` : 'Sin oro: has destruido demasiados campamentos hoy (el botín decrece)'}</strong></div>` : ''}
+    ${i.oroGanado !== undefined ? `<div class="briefing-botin victoria"><span>Botín</span><strong>${i.oroGanado > 0 ? `+${i.oroGanado} de oro al carro` : 'Sin oro: has destruido demasiados campamentos hoy (el botín decrece)'}</strong></div>` : ''}
     ${i.carroPerdido !== undefined ? `<div class="briefing-botin derrota"><span>Pierdes del carro</span><strong>${Object.entries(i.carroPerdido).filter(([, n]) => n >= 1).map(([r, n]) => `${Math.floor(n)} ${e(RECURSO_NOMBRE[r] ?? r)}`).join(', ') || 'nada: el carro iba vacío'}</strong><small>Quedas herido: no atacas ni persigues durante 2 minutos.</small></div>` : ''}`;
 }
