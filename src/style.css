@@ -2807,6 +2807,13 @@ kbd {
 .carro-fila span { flex: 1; color: var(--text-secondary); }
 .carro-fila .form-input { width: 70px; }
 .carro-fila small { flex-basis: 100%; color: var(--text-muted); font-size: 0.7rem; }
+.carro-ocupacion { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.carro-ocupacion span { font-size: 0.75rem; color: var(--text-secondary); }
+.carro-barra { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; margin: 2px 0 6px; }
+.carro-barra span { display: block; height: 100%; transition: width 0.3s; }
+.carro-barra-ok span { background: #6fc46a; }
+.carro-barra-casi span { background: #e0b04a; }
+.carro-barra-llena span { background: #e0705a; }
 
 /* Estados activos («debuffs») en la barra: icono + nombre, y la descripción en un tooltip al pasar el cursor o con el foco. */
 .jugador-estados { display: flex; gap: 6px; align-items: center; }
@@ -3082,3 +3089,33 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .participacion-lista li small { color: var(--text-secondary); }
 .participacion-donde { display: block; }
 .participacion-yo { color: var(--oro-claro); }
+.cifra-pos { color: #6fc46a; }
+.cifra-neg { color: #e0705a; }
+.cifra-cero { color: var(--text-secondary); }
+
+/* Tesorería: tabla compacta de la reserva */
+.tesoreria-tabla { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: 4px 0 8px; }
+.tesoreria-tabla th { text-align: left; font-weight: 600; font-size: 0.72rem; color: var(--text-muted); padding: 2px 4px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+.tesoreria-tabla td { padding: 3px 4px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); color: var(--text-secondary); }
+.tesoreria-tabla td:first-child { color: var(--text-primary, inherit); }
+.tesoreria-tabla th:not(:first-child), .tesoreria-tabla td:not(:first-child) { text-align: right; }
+.tesoreria-tabla .form-input { width: 70px; text-align: right; }
+.tesoreria-tabla .tesoreria-cambiada { border-color: #e0b04a; }
+
+/* Facción a pantalla completa (sustituye al panel lateral): cabecera, pestañas y el cuerpo en columnas anchas. */
+.jugador-panel.jugador-panel-completo {
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  width: auto;
+  max-height: none;
+  z-index: 9;
+}
+.faccion-cabecera { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.faccion-cabecera .mapa-panel-jugador { margin: 0; font-size: 1.1rem; }
+.faccion-pestanas { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--bronce); }
+.faccion-pestana { background: none; border: 1px solid transparent; border-bottom: none; padding: 6px 14px; color: var(--text-secondary); cursor: pointer; border-radius: 3px 3px 0 0; font: inherit; }
+.faccion-pestana:hover { color: var(--text-primary, #f4ead2); }
+.faccion-pestana.activo { color: var(--text-primary, #f4ead2); border-color: var(--bronce); background: var(--marco-bg-alt); margin-bottom: -1px; }
+.faccion-aviso { display: inline-block; min-width: 18px; padding: 0 5px; border-radius: 9px; background: #e0705a; color: #fff; font-size: 0.7rem; text-align: center; }
+.faccion-cuerpo { width: min(100%, 960px); margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }

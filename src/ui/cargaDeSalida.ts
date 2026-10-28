@@ -10,8 +10,9 @@ type Escapar = (valor: string) => string;
 
 /** `disponible`: recurso → lo que puedes sacar (la reserva de trigo de la plaza la comprueba el backend). `de`: de dónde sale, para la explicación.
  * `yaEnCarro`: lo que el héroe ya trae en el carro (`heroe.carro`), que sale con él y ocupa sitio. */
-export function htmlCargaDeSalida(disponible: Record<string, number>, de: string, e: Escapar, yaEnCarro: Record<string, number> = {}): string {
-  const filas = Object.entries(disponible).filter(([, n]) => n >= 1);
+export function htmlCargaDeSalida(disponible: Record<string, number>, de: string, e: Escapar, yaEnCarro: Record<string, number> = {}, valores: Record<string, number> = {}): string {
+  // Lo ya elegido (`valores`) se enseña aunque el almacén se haya quedado sin ello: el motor lo comprueba al salir.
+  const filas = Object.entries({ ...Object.fromEntries(Object.keys(valores).map((r) => [r, 0])), ...disponible }).filter(([r, n]) => n >= 1 || (valores[r] ?? 0) > 0);
   const ya = Object.entries(yaEnCarro).filter(([, n]) => n >= 1);
   const ocupado = Math.floor(ya.reduce((a, [, n]) => a + n, 0));
   return `
@@ -19,7 +20,7 @@ export function htmlCargaDeSalida(disponible: Record<string, number>, de: string
     ${ya.length > 0 ? `<p class="asent-lado-nota">Ya llevas en el carro, y sale contigo: ${ya.map(([r, n]) => `${Math.floor(n)} ${e(RECURSO_NOMBRE[r] ?? r)}`).join(', ')}.</p>` : ''}
     ${filas.length === 0
       ? `<p class="asent-lado-nota">No hay nada que cargar en ${e(de)}.</p>`
-      : filas.map(([r, n]) => `<div class="carro-fila"><span>${RECURSO_ICONO[r] ?? '📦'} ${e(RECURSO_NOMBRE[r] ?? r)}</span><small>hay ${Math.floor(n)}</small><input class="form-input" type="number" min="0" max="${Math.floor(n)}" value="0" data-carga="${e(r)}" /><button class="btn-secondary" type="button" data-carga-todo="${e(r)}">Todo</button></div>`).join('')}`;
+      : filas.map(([r, n]) => `<div class="carro-fila"><span>${RECURSO_ICONO[r] ?? '📦'} ${e(RECURSO_NOMBRE[r] ?? r)}</span><small>hay ${Math.floor(n)}</small><input class="form-input" type="number" min="0" max="${Math.max(Math.floor(n), Math.floor(valores[r] ?? 0))}" value="${Math.floor(valores[r] ?? 0)}" data-carga="${e(r)}" /><button class="btn-secondary" type="button" data-carga-todo="${e(r)}">Todo</button></div>`).join('')}`;
 }
 
 /** Cablea el total en vivo y los botones «Todo» (limitados a lo que cabe en el carro); `leerCarga` devuelve el mapa a enviar. */

@@ -42,10 +42,10 @@ import { actualizarSalida, cablearCampamento, campamentoActual, htmlSeccionCampa
 import { leyendaPlanoCampamento, svgPlanoCampamento } from './ui/planoCampamento';
 import type { MapaGenerado } from './terreno';
 import { estadoCliente, medirRitmoDeMundo, TIPS_FUNDACION } from './ui/estadoCliente';
-import { actualizarTip, resumenRecursosFundacion } from './ui/pestanaAsentamientos';
+import { actualizarTip, resumenRecursosFundacion, sitiosDeAldeaAlFundar } from './ui/pestanaAsentamientos';
 import { renderPanelInteraccion } from './ui/panelInteraccion';
 import { renderPanelMapa } from './ui/panelMapa';
-import { renderPestanaFaccion } from './ui/pestanaFaccion';
+import { PESTANAS_FACCION, renderPestanaFaccion, type PestanaFaccion } from './ui/pestanaFaccion';
 import { cablearAnexion } from './ui/panelAnexion';
 import { cablearFusion } from './ui/panelFusion';
 import { cablearAdmision } from './ui/panelAdmision';
@@ -84,6 +84,7 @@ import { motivosParaCrearFaccion } from './ui/validarFaccion';
 import { nombreDeHeroe } from './ui/nombres';
 import { htmlEstados } from './ui/estados';
 import { htmlAscensoLocal, selectorDePunto } from './ui/pueblos';
+import { pintarSitiosDeAldea, type SitiosDeAldea } from './mundo/fertilidad';
 import { htmlMiembrosFaccion, htmlResidentesPlaza } from './ui/participacion';
 import { cablearTablon, htmlTablon } from './ui/tablon';
 import { actualizarSeguimiento, cablearMisiones, elegirPestanaMisiones, htmlListaMisiones, htmlPanelMisiones, misionesPorReclamar, pintarRastreador } from './ui/misiones';
@@ -937,13 +938,15 @@ function cablearMenuEsquina(contenedor: HTMLElement): void {
 
 /** El menú del jugador abierto (la barra es la misma en el mapa, el campamento y el asentamiento). Se cierra al cambiar de pantalla. */
 let panelJugador: PanelJugador | null = null;
+/** La pestaña abierta de la pantalla de Facción; se recuerda al cerrarla y volverla a abrir. */
+let pestanaFaccion: PestanaFaccion = 'resumen';
 /** ¿Está abierto el mapa «desde dentro» (botón Mapa de la barra) sobre el campamento o el asentamiento? */
 let vistaMapaAbierta = false;
 let controlVistaMapa: ControlMapa | null = null;
 /** Elegir un punto en el modo mapa (la aldea agrícola, `ui/pueblos.ts`): el clic lo manda en vez de solo mirar. Se olvida al cerrar el mapa. */
-let eleccionEnMapa: { texto: string; zona?: { x: number; y: number }[]; alElegir: (q: { x: number; y: number }) => Promise<string | null> } | null = null;
-selectorDePunto.abrir = (texto, centro, zona, alElegir) => {
-  eleccionEnMapa = { texto, zona, alElegir };
+let eleccionEnMapa: { texto: string; zona?: { x: number; y: number }[]; alElegir: (q: { x: number; y: number }) => Promise<string | null>; sitios?: SitiosDeAldea | null } | null = null;
+selectorDePunto.abrir = (texto, centro, zona, alElegir, sitios) => {
+  eleccionEnMapa = { texto, zona, alElegir, sitios };
   alternarVistaMapa(true, centro);
 };
 
@@ -959,6 +962,8 @@ function renderPanelJugador(forzar = false): void {
   });
   barra.querySelector('[data-ver-mapa]')?.classList.toggle('activo', vistaMapaAbierta);
   pintarAlertas(barra, proyeccion);
+  // La Facción va a pantalla completa; el resto, en el panel lateral.
+  if (panelJugador !== 'faccion') panel.classList.remove('jugador-panel-completo');
   if (panelJugador === null) { panel.hidden = true; vaciar(panel); return; }
   panel.hidden = false;
   if (forzar) invalidar(panel);
@@ -975,19 +980,36 @@ function renderPanelJugador(forzar = false): void {
   if (panelJugador === 'faccion') {
     // Creando una Facción o buscando a cuál pedir ingreso, el formulario es del jugador: solo se repinta al cambiar de modo (`forzar`).
     if (!forzar && proyeccion.faccionId === null && panel.querySelector('#form-crear-faccion, #input-buscar-faccion')) return;
-    // Al final, las misiones de la Facción (las reclama el Rey).
-    const misionesFaccion = proyeccion.faccionId ? `<section class="faccion-misiones" data-dueno="faccion"><h3>Misiones de la Facción</h3>${htmlListaMisiones(proyeccion, 'faccion', escaparHtml)}</section>` : '';
+    // Con Facción, a pantalla completa y por pestañas (sustituye al panel lateral); sin ella, la elección de crear o pedir ingreso.
     const propia = proyeccion.facciones.find((f) => f.id === proyeccion.faccionId);
-    const miembros = propia ? htmlMiembrosFaccion(proyeccion, propia, escaparHtml) : '';
-    const tablonFaccion = propia?.tablon ? `<section class="faccion-tablon"><h3>Tablón de la Facción</h3>${htmlTablon(proyeccion, { tipo: 'faccion', id: propia.id, tablon: propia.tablon }, escaparHtml)}</section>` : '';
-    const html = `<div class="mapa-panel-jugador">${escaparHtml(proyeccion.heroe.displayName)}</div>${renderPestanaFaccion(proyeccion, escaparHtml)}${miembros}${tablonFaccion}${misionesFaccion}`;
+    const pestana = propia ? pestanaFaccion : 'resumen';
+    let cuerpo: string;
+    if (propia && pestana === 'tablon') {
+      cuerpo = propia.tablon ? `<section class="faccion-tablon">${htmlTablon(proyeccion, { tipo: 'faccion', id: propia.id, tablon: propia.tablon }, escaparHtml)}</section>` : '<p class="mapa-lista-vacia">Tu Facción aún no tiene tablón.</p>';
+    } else if (propia && pestana === 'misiones') {
+      cuerpo = `<section class="faccion-misiones" data-dueno="faccion">${htmlListaMisiones(proyeccion, 'faccion', escaparHtml)}</section>`;
+    } else {
+      cuerpo = renderPestanaFaccion(proyeccion, escaparHtml, pestana, propia && pestana === 'miembros' ? htmlMiembrosFaccion(proyeccion, propia, escaparHtml) : '');
+    }
+    const pendientes = propia?.reyId === proyeccion.heroeId ? (propia.solicitudesIds ?? []).length : 0;
+    const pestanas = propia
+      ? `<nav class="faccion-pestanas" role="tablist">${PESTANAS_FACCION.map(([id, nombre]) => `<button type="button" role="tab" class="faccion-pestana${id === pestana ? ' activo' : ''}" aria-selected="${id === pestana}" data-pestana-faccion="${id}">${nombre}${id === 'miembros' && pendientes ? ` <span class="faccion-aviso">${pendientes}</span>` : ''}</button>`).join('')}</nav>`
+      : '';
+    const html = `<div class="faccion-cabecera"><div class="mapa-panel-jugador">${escaparHtml(propia ? propia.nombre : proyeccion.heroe.displayName)}</div><button class="btn-secondary" type="button" data-cerrar-faccion aria-label="Cerrar">Cerrar</button></div>
+      ${pestanas}<div class="faccion-cuerpo">${cuerpo}</div>`;
+    panel.classList.add('jugador-panel-completo');
     pintar(panel, html, () => {
       cablearFaccion(panel, proyeccion, () => renderPanelJugador(true));
+      panel.querySelectorAll<HTMLButtonElement>('[data-pestana-faccion]').forEach((b) => b.addEventListener('click', () => {
+        pestanaFaccion = b.dataset.pestanaFaccion as PestanaFaccion;
+        renderPanelJugador(true);
+      }));
+      panel.querySelector('[data-cerrar-faccion]')?.addEventListener('click', () => { panelJugador = null; renderPanelJugador(true); });
       const seccion = panel.querySelector<HTMLElement>('.faccion-misiones');
       if (seccion) cablearMisiones(seccion, proyeccion, ejecutarYRefrescar, () => renderPanelJugador(true));
       const tablon = panel.querySelector<HTMLElement>('.faccion-tablon');
       if (tablon) cablearTablon(tablon, ejecutarYRefrescar, () => renderPanelJugador(true));
-    }, 'faccion');
+    }, `faccion:${pestana}`);
     return;
   }
   if (panelJugador === 'misiones') {
@@ -1124,8 +1146,21 @@ function ajustarLienzo(canvas: HTMLCanvasElement, ancho: number, alto: number): 
   if (canvas.height !== h) canvas.height = h;
 }
 
-/** Pinta el terreno y lo que se ve en el modo mapa; `centrar` (solo al abrirlo) lo lleva al héroe, o al punto dado. */
-async function pintarVistaMapa(centrar: boolean | { x: number; y: number } = false): Promise<void> {
+/** Un pintado del modo mapa pedido para el próximo fotograma: arrastrar o hacer zoom pide muchos por fotograma y basta con uno. */
+let pintadoMapaPedido = false;
+
+/** Pinta el terreno y lo que se ve en el modo mapa; `centrar` (solo al abrirlo) lo lleva al héroe, o al punto dado. Sin `centrar`, a lo
+ * sumo uno por fotograma. */
+function pintarVistaMapa(centrar: boolean | { x: number; y: number } = false): Promise<void> {
+  if (centrar !== false) return pintarVistaMapaYa(centrar);
+  if (!pintadoMapaPedido) {
+    pintadoMapaPedido = true;
+    requestAnimationFrame(() => { pintadoMapaPedido = false; void pintarVistaMapaYa(false); });
+  }
+  return Promise.resolve();
+}
+
+async function pintarVistaMapaYa(centrar: boolean | { x: number; y: number }): Promise<void> {
   const p = proyeccionAlInstante() ?? estadoCliente.proyeccionUltima;
   const canvas = document.querySelector<HTMLCanvasElement>('#mapa-interior');
   const ctx = canvas?.getContext('2d');
@@ -1137,7 +1172,7 @@ async function pintarVistaMapa(centrar: boolean | { x: number; y: number } = fal
   controlVistaMapa?.fijarMundo(mapa.config.ancho, mapa.config.alto);
   if (!controlVistaMapa) return;
   const escala = controlVistaMapa.transformar(ctx);
-  pintarTerreno(ctx, mapa, p, escala);
+  pintarTerreno(ctx, mapa, p, escala, false, false);
   pintarMiradas(ctx, p.miradasIntel ?? [], p.instante, escala);
   // Eligiendo el sitio de una aldea: la zona de la plaza, que es donde cabe.
   const zona = eleccionEnMapa?.zona;
@@ -1153,6 +1188,7 @@ async function pintarVistaMapa(centrar: boolean | { x: number; y: number } = fal
     ctx.stroke();
     ctx.setLineDash([]);
   }
+  if (eleccionEnMapa?.sitios) pintarSitiosDeAldea(ctx, eleccionEnMapa.sitios, escala);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
@@ -1398,7 +1434,7 @@ function montarMapa(): void {
   }, 3000);
   // Las columnas avanzan por su plan y el servidor no manda nada mientras marchan: sin esto se verían a saltos (en cada sondeo). Mientras algo
   // propio está en marcha, el mapa se repinta a ~30 fps con la proyección del instante; con algo ajeno a la vista, a ~5 fps. La cámara va con
-  // tu columna (`dibujarPantallaSegunModo`). Con el modo mapa abierto encima, el mundo no se pinta y el mapa se repinta a ~5 fps.
+  // tu columna (`dibujarPantallaSegunModo`). Con el modo mapa abierto encima, el mundo no se pinta y el mapa, solo si algo marcha, a ~4 fps.
   let fotograma = 0;
   let ultimoFotograma = 0;
   const animar = (t: number): void => {
@@ -1406,15 +1442,16 @@ function montarMapa(): void {
     if (controlMapaActivo !== control || estadoCliente.modoVista !== 'mundo') return;
     const p = proyeccionAlInstante();
     if (!p) return;
+    const marchaPropia = p.ejercitos.some((e) => e.estado !== 'estacionado' && (e.ruta?.length ?? 0) >= 2) || p.caravanas.some((c) => (c.ruta?.length ?? 0) >= 2);
+    const ajenoALaVista = (p.ejercitosAvistados?.length ?? 0) + (p.caravanasAvistadas?.length ?? 0) > 0;
+    if (!marchaPropia && !ajenoALaVista) return;
+    // El modo mapa ya se repinta al mover la cámara y con cada sondeo: aquí solo mientras algo marcha, y a ~4 fps (a esa escala no se nota más).
     if (vistaMapaAbierta) {
-      if (t - ultimoFotograma < 200) return;
+      if (t - ultimoFotograma < 250) return;
       ultimoFotograma = t;
       void pintarVistaMapa();
       return;
     }
-    const marchaPropia = p.ejercitos.some((e) => e.estado !== 'estacionado' && (e.ruta?.length ?? 0) >= 2) || p.caravanas.some((c) => (c.ruta?.length ?? 0) >= 2);
-    const ajenoALaVista = (p.ejercitosAvistados?.length ?? 0) + (p.caravanasAvistadas?.length ?? 0) > 0;
-    if (!marchaPropia && !ajenoALaVista) return;
     if (t - ultimoFotograma < (marchaPropia ? 33 : 200)) return;
     ultimoFotograma = t;
     void dibujarPantallaSegunModo(p);
@@ -2248,7 +2285,7 @@ async function dibujarPantallaSegunModo(proyeccion: ProyeccionJugador): Promise<
     else { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillText('No perteneces a ningún asentamiento aún.', 20, 40); }
   }
   if (estadoCliente.modoFundacionActivo && estadoCliente.posicionFundacion && estadoCliente.mapaCache?.mapa) {
-    pintarPrevisualizacionFundacion(ctx, estadoCliente.mapaCache.mapa, estadoCliente.posicionFundacion, escalaMundo);
+    pintarPrevisualizacionFundacion(ctx, estadoCliente.mapaCache.mapa, estadoCliente.posicionFundacion, escalaMundo, sitiosDeAldeaAlFundar(estadoCliente.posicionFundacion));
   }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
 }

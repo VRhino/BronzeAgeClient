@@ -33,13 +33,13 @@ const punto = (p: { x: bigint; y: bigint } | undefined) => ({ x: Number(p?.x ?? 
 /** El artefacto, en la forma que pinta el mapa. */
 export function mapaDesdeArtefacto(a: ArtefactoDeMundo): MapaGenerado {
   const tamano = punto(a.manifiesto?.tamano);
-  const rasters: RastersDeMundo = { terreno: u8(a.terreno), altura: u16(a.altura), densidadBosque: u8(a.densidadBosque) };
+  const rasters: RastersDeMundo = { terreno: u8(a.terreno), altura: u16(a.altura), densidadBosque: u8(a.densidadBosque), fertilidad: u8(a.fertilidad) };
   return {
     version: a.manifiesto?.versionFormato ?? 0,
     config: { ancho: tamano.x, alto: tamano.y, seed: 0 },
     bosques: a.bosques.map((b) => ({ id: b.id, centro: punto(b.centro), radio: Number(b.radio) / MIL, densidad: b.densidadMilesimas / MIL })),
     nodos: a.nodos.map((n) => ({ id: n.id, tipo: n.tipo, rareza: n.rareza, posicion: punto(n.posicion), cantidadInicial: Number(n.cantidadInicial) / MIL })),
-    rios: a.rios.map((r) => ({ id: r.id, puntos: r.puntos.map(punto), terminaEnLago: r.terminaEnLago, navegable: r.navegable })),
+    rios: a.rios.map((r) => ({ id: r.id, puntos: r.puntos.map(punto), terminaEnLago: r.terminaEnLago, navegable: r.navegable, vados: r.vados.map(punto) })),
     rasters,
   };
 }

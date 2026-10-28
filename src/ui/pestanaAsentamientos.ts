@@ -2,9 +2,21 @@ import { bloqueDeDatos, radioZonaInicial, type ProyeccionJugador } from '../apiC
 import type { Faccion } from '../tiposDominio';
 import { ayuda } from './ayuda';
 import { densidadBosqueEn } from '../mundo/pintarArtefacto';
+import { sitiosDeAldea, type SitiosDeAldea } from '../mundo/fertilidad';
+import { ocupadosParaAldea, reglasDeAldea } from './pueblos';
 import { RECURSO_NOMBRE } from '../paletas';
 import { CAP_FUNDACION_POR_NIVEL, estadoCliente, TIPS_FUNDACION } from './estadoCliente';
 import { renderPestanaMuralla } from './pestanaMuralla';
+
+/** Dónde cabría la aldea agrícola si se funda en `posicion`: dentro de la zona con la que nace la plaza. */
+export function sitiosDeAldeaAlFundar(posicion: { x: number; y: number }): SitiosDeAldea | null {
+  const mapa = estadoCliente.mapaCache?.mapa;
+  const p = estadoCliente.proyeccionUltima;
+  if (!mapa || !p) return null;
+  const { fertilidadMinima, separacionMinima } = reglasDeAldea();
+  // La plaza nueva también ocupa: la aldea va a `separacionMinima` de ella.
+  return sitiosDeAldea(mapa, { centro: posicion, radio: radioZonaInicial() }, [...ocupadosParaAldea(p), posicion], fertilidadMinima, separacionMinima);
+}
 
 export function resumenRecursosFundacion(escaparHtml: (valor: string) => string): string {
   const posicion = estadoCliente.posicionFundacion;
@@ -29,12 +41,22 @@ export function resumenRecursosFundacion(escaparHtml: (valor: string) => string)
   return `
     <div class="foundation-resources">
       ${enBosqueCerrado ? '<span class="fundacion-gate falta">Bosque cerrado: aquí no se puede fundar. Busca la orilla o un claro.</span>' : ''}
+      ${htmlAldeaAlFundar(sitiosDeAldeaAlFundar(posicion))}
       <strong>Recursos en la zona inicial</strong>
       <span class="resource-summary-label">${nodos.length > 0 ? `${nodos.length} nodo${nodos.length === 1 ? '' : 's'} dentro del alcance` : 'Ningún nodo de recurso dentro del alcance'}</span>
       ${nodos.length > 0 ? `<div class="resource-summary-list">${nodos.map((nodo) => `<span><b>${escaparHtml(RECURSO_NOMBRE[nodo.tipo] ?? nodo.tipo)}</b> · ${escaparHtml(nodo.rareza)} · ${nodo.cantidadInicial} uds.</span>`).join('')}</div>` : ''}
       <span class="forest-summary">${bosques.length > 0 ? `Acceso a ${bosques.length} bosque${bosques.length === 1 ? '' : 's'} · madera disponible` : 'Sin acceso a bosque · no habrá madera inicial'}</span>
     </div>
   `;
+}
+
+/** Si la zona inicial tiene tierra para la aldea agrícola, que pide la subida a nivel 2. */
+function htmlAldeaAlFundar(s: SitiosDeAldea | null): string {
+  if (!s) return '';
+  const { fertilidadMinima } = reglasDeAldea();
+  return s.validos.length
+    ? `<span class="fundacion-gate ok">Tierra fértil para la aldea agrícola en la zona (mejor ${s.mejor.toFixed(2).replace('.', ',')}): en verde en el mapa.</span>`
+    : `<span class="fundacion-gate falta">Sin tierra de fertilidad ${fertilidadMinima.toFixed(1).replace('.', ',')} o más en la zona inicial: no cabrá la aldea agrícola, que pide el nivel 2, hasta que la zona crezca.</span>`;
 }
 
 export function actualizarTip(): void {

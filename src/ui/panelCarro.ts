@@ -10,6 +10,8 @@ import type { ProyeccionJugador } from '../apiCliente';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import { ayuda } from './ayuda';
 import { CAPACIDAD_CARRO_SALIDA } from './cargaDeSalida';
+import { radioDePuerta } from '../apiCliente';
+import type { Point } from '../terreno';
 
 type Escapar = (valor: string) => string;
 export type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
@@ -17,11 +19,28 @@ export type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
 const nombre = (r: string): string => RECURSO_NOMBRE[r] ?? r;
 const icono = (r: string): string => RECURSO_ICONO[r] ?? '📦';
 
-/** « · 120 / 1000» si el backend manda la capacidad (un backend anterior no la manda). */
-function ocupacion(recursos: Record<string, number>, capacidad: number | undefined): string {
-  if (capacidad === undefined) return '';
-  const total = Object.values(recursos).reduce((a, b) => a + b, 0);
-  return ` · ${Math.floor(total)} / ${Math.floor(capacidad)}`;
+/** Cuánto lleva y cuánto cabe, con una barra: verde, ámbar desde el 80 % y roja llena. Sin capacidad (un backend anterior), solo el título. */
+function ocupacion(titulo: string, recursos: Record<string, number>, capacidad: number | undefined): string {
+  if (capacidad === undefined || capacidad <= 0) return `<strong class="heroe-sub">${titulo}</strong>`;
+  const total = Math.floor(Object.values(recursos).reduce((a, b) => a + b, 0));
+  const pct = Math.min(100, Math.round((total / capacidad) * 100));
+  const tono = pct >= 100 ? 'llena' : pct >= 80 ? 'casi' : 'ok';
+  return `<div class="carro-ocupacion"><strong class="heroe-sub">${titulo}</strong><span>${total} / ${Math.floor(capacidad)} · ${pct} %</span></div>
+    <div class="carro-barra carro-barra-${tono}" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></div>`;
+}
+
+/** La puerta de tu residencia: tu plaza (fundador o con casa) o el campamento de mercenarios donde resides. */
+function puertaDeResidencia(p: ProyeccionJugador): Point | undefined {
+  const plaza = p.asentamientos.find((a) => [...(a.heroesFundadoresIds ?? []), ...(a.casasCompradas ?? [])].includes(p.heroeId));
+  if (plaza) return plaza.posicion;
+  return p.campamentosMercenarios.find((c) => c.residentesIds.includes(p.heroeId))?.posicion;
+}
+
+/** ¿Se puede tocar el almacén personal? Como el motor (`a_mano.rs`): dentro de tu residencia, o con tu columna a su puerta (`radioPuerta`). */
+function almacenAMano(p: ProyeccionJugador, columna: ReturnType<typeof miColumna>): boolean {
+  if (!columna) return p.heroe.ubicacion.tipo === 'asentamiento' || p.heroe.ubicacion.tipo === 'mercenarios';
+  const puerta = puertaDeResidencia(p);
+  return Boolean(puerta && Math.hypot(columna.posicionActual.x - puerta.x, columna.posicionActual.y - puerta.y) <= radioDePuerta());
 }
 
 function miColumna(p: ProyeccionJugador) {
@@ -45,6 +64,7 @@ export function htmlCarro(p: ProyeccionJugador, e: Escapar, cabecera = true): st
   const columna = miColumna(p);
   const almacen = p.heroe.almacenPersonal ?? {};
   const esLider = columna?.liderId === p.heroeId;
+  const aMano = almacenAMano(p, columna);
   const carro = columna?.suministro ?? {};
   // El resto del carro que se queda aparcado en la puerta de un campamento al entrar sin poder guardarlo todo.
   const aparcadas = p.ejercitos.filter((c) => c !== columna && c.liderId === p.heroeId && Object.values(c.suministro ?? {}).some((n) => n >= 1));
@@ -59,11 +79,12 @@ export function htmlCarro(p: ProyeccionJugador, e: Escapar, cabecera = true): st
   return `
     ${cabecera ? `<div class="mapa-panel-jugador">${e(p.heroe.displayName)} · carro y almacén</div>` : ''}
     <strong class="heroe-sub">Carga${ayuda('jugador:carro', e(nota))}</strong>
-    ${columna ? `<strong class="heroe-sub">Carro de tu columna${ocupacion(carro, columna.capacidadCarga)}</strong>${filas(carro, 'guardar', 'Guardar', esLider, e)}` : ''}
-    ${!columna ? `<strong class="heroe-sub">Tu carro${ocupacion(carroContigo, CAPACIDAD_CARRO_SALIDA)}</strong>${filas(carroContigo, 'ninguna', '', false, e)}${hayCarroContigo ? '<button class="btn-secondary" type="button" data-vaciar-carro>Pasar al almacén</button>' : ''}` : ''}
+    ${columna ? `${ocupacion('Carro de tu columna', carro, columna.capacidadCarga)}${filas(carro, 'guardar', 'Guardar', esLider && aMano, e)}` : ''}
+    ${!columna ? `${ocupacion('Tu carro', carroContigo, CAPACIDAD_CARRO_SALIDA)}${filas(carroContigo, 'ninguna', '', false, e)}${hayCarroContigo ? '<button class="btn-secondary" type="button" data-vaciar-carro>Pasar al almacén</button>' : ''}` : ''}
     ${aparcadas.map((c) => `<strong class="heroe-sub">Resto del carro, aparcado en la puerta</strong>${filas(c.suministro ?? {}, 'ninguna', '', false, e)}`).join('')}
-    <strong class="heroe-sub">Almacén personal${ocupacion(almacen, p.heroe.capacidadAlmacenPersonal)}</strong>
-    ${filas(almacen, 'sacar', 'Al carro', Boolean(columna) && esLider, e)}
+    ${aMano
+      ? `${ocupacion('Almacén personal', almacen, p.heroe.capacidadAlmacenPersonal)}${filas(almacen, 'sacar', 'Al carro', !columna || esLider, e)}`
+      : '<p class="asent-lado-nota">El almacén personal está en tu residencia: se usa dentro o con tu columna a su puerta.</p>'}
     <p class="faction-error" data-campo="error-carro" role="alert"></p>`;
 }
 

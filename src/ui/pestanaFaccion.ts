@@ -21,9 +21,24 @@ export function faccionDelJugador(proyeccion: ProyeccionJugador): Faccion | unde
   return proyeccion.facciones.find((faccion) => faccion.id === proyeccion.faccionId);
 }
 
+/** Las pestañas de la pantalla de Facción (a pantalla completa). Tablón y Misiones las rellena `main.ts`, que es quien las cablea. */
+export const PESTANAS_FACCION = [
+  ['resumen', 'Resumen'],
+  ['miembros', 'Miembros'],
+  ['tablon', 'Tablón'],
+  ['misiones', 'Misiones'],
+  ['diplomacia', 'Diplomacia'],
+  ['ajustes', 'Ajustes del Rey'],
+] as const;
+export type PestanaFaccion = (typeof PESTANAS_FACCION)[number][0];
+
+/** `pestana`: qué parte de tu Facción se pinta (sin Facción, la elección de crear o pedir ingreso, sin pestañas). `miembros` es la lista con la
+ * participación (`htmlMiembrosFaccion`), que se pinta en Miembros. */
 export function renderPestanaFaccion(
   proyeccion: ProyeccionJugador,
-  escaparHtml: (valor: string) => string
+  escaparHtml: (valor: string) => string,
+  pestana: PestanaFaccion = 'resumen',
+  miembros = ''
 ): string {
   const faccion = faccionDelJugador(proyeccion);
   // Con Facción pero sin su ficha todavía: nunca las opciones de quien no la tiene (crear o pedir ingreso).
@@ -34,6 +49,27 @@ export function renderPestanaFaccion(
     const liga = ligaDe(faccion.id, proyeccion.relaciones ?? []);
     const esGranRey = liga?.granReyId === faccion.id;
     const nombreDe = (id: string) => proyeccion.facciones.find((f) => f.id === id)?.nombre ?? id;
+    const solicitudes = faccion.reyId === proyeccion.heroeId && (faccion.solicitudesIds ?? []).length > 0
+      ? `<div class="faction-list"><span class="faction-kicker">Piden entrar</span>${(faccion.solicitudesIds ?? [])
+          .map((id) => `<div class="faction-list-item"><div><strong>${escaparHtml(nombreDeHeroe(proyeccion, id))}</strong></div><button class="btn-secondary" type="button" data-solicitud="${escaparHtml(id)}" data-aceptar="si">Aceptar</button><button class="btn-secondary" type="button" data-solicitud="${escaparHtml(id)}" data-aceptar="no">Denegar</button></div>`)
+          .join('')}</div>`
+      : '';
+    if (pestana === 'miembros') return `${solicitudes}${htmlCargos(proyeccion, faccion, escaparHtml)}${miembros}`;
+    if (pestana === 'diplomacia') {
+      return `${htmlDiplomacia(proyeccion, faccion, escaparHtml)}
+      ${htmlAnexion(proyeccion, faccion, escaparHtml)}
+      ${htmlFusion(proyeccion, faccion, escaparHtml)}
+      <div class="faction-list">
+        <span class="faction-kicker">Liga</span>
+        ${liga
+          ? `<div class="liga-fila">${htmlLiga(liga, proyeccion.facciones)}<div><strong>${liga.tieneVasallaje ? 'Por vasallaje' : 'Por alianza'}</strong><span>${liga.miembrosIds.map((id) => escaparHtml(nombreDe(id))).join(', ')}</span>${liga.granReyId ? `<span>Gran Rey: ${escaparHtml(granRey(proyeccion, liga.granReyId))}</span>` : ''}</div></div>`
+          : '<p class="legend-note">No perteneces a ninguna Liga.</p>'}
+      </div>`;
+    }
+    if (pestana === 'ajustes') {
+      const soyRey = faccion.reyId === proyeccion.heroeId;
+      return `${soyRey ? '' : '<p class="asent-lado-nota">Estos ajustes los cambia el Rey; aquí ves cómo están.</p>'}${htmlAdmision(proyeccion, faccion)}${htmlDejarFaccion(proyeccion, faccion)}`;
+    }
     return `
       <div class="faction-detail-header">
         <span class="faction-kicker">Tu facción${esGranRey ? ' · Gran Rey' : ''}</span>
@@ -50,27 +86,15 @@ export function renderPestanaFaccion(
         <div><span>Rey</span><strong>${escaparHtml(faccion.reyId ? nombreDeHeroe(proyeccion, faccion.reyId) : 'Sin designar')}</strong></div>
         <div><span>Embajador</span><strong>${escaparHtml(faccion.embajadorId ? nombreDeHeroe(proyeccion, faccion.embajadorId) : 'Sin designar')}</strong></div>
       </div>
-      ${faccion.reyId === proyeccion.heroeId && (faccion.solicitudesIds ?? []).length > 0
-        ? `<div class="faction-list"><span class="faction-kicker">Piden entrar</span>${(faccion.solicitudesIds ?? [])
-            .map((id) => `<div class="faction-list-item"><div><strong>${escaparHtml(nombreDeHeroe(proyeccion, id))}</strong></div><button class="btn-secondary" type="button" data-solicitud="${escaparHtml(id)}" data-aceptar="si">Aceptar</button><button class="btn-secondary" type="button" data-solicitud="${escaparHtml(id)}" data-aceptar="no">Denegar</button></div>`)
-            .join('')}</div>`
-        : ''}
-      ${htmlCargos(proyeccion, faccion, escaparHtml)}
-      ${htmlDiplomacia(proyeccion, faccion, escaparHtml)}
-      ${htmlAnexion(proyeccion, faccion, escaparHtml)}
-      ${htmlFusion(proyeccion, faccion, escaparHtml)}
-      ${htmlAdmision(proyeccion, faccion)}
+      ${solicitudes ? '<p class="asent-lado-nota">Hay héroes que piden entrar: contéstales en Miembros.</p>' : ''}
       <div class="faction-list">
         <span class="faction-kicker">Liga</span>
-        ${liga
-          ? `<div class="liga-fila">${htmlLiga(liga, proyeccion.facciones)}<div><strong>${liga.tieneVasallaje ? 'Por vasallaje' : 'Por alianza'}</strong><span>${liga.miembrosIds.map((id) => escaparHtml(nombreDe(id))).join(', ')}</span>${liga.granReyId ? `<span>Gran Rey: ${escaparHtml(granRey(proyeccion, liga.granReyId))}</span>` : ''}</div></div>`
-          : '<p class="legend-note">No perteneces a ninguna Liga.</p>'}
+        ${liga ? `<div class="liga-fila">${htmlLiga(liga, proyeccion.facciones)}<div><strong>${liga.tieneVasallaje ? 'Por vasallaje' : 'Por alianza'}</strong><span>${liga.miembrosIds.map((id) => escaparHtml(nombreDe(id))).join(', ')}</span></div></div>` : '<p class="legend-note">No perteneces a ninguna Liga.</p>'}
       </div>
       <div class="faction-list">
         <span class="faction-kicker">Títulos del servidor</span>
         ${htmlTitulos(proyeccion.titulos ?? [], proyeccion.facciones, faccion.id, escaparHtml)}
       </div>
-      ${htmlDejarFaccion(proyeccion, faccion)}
     `;
   }
 

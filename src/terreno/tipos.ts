@@ -16,6 +16,8 @@ export interface RioZona {
   puntos: Point[];
   terminaEnLago: boolean;
   navegable: boolean;
+  /** Los vados del río (artefacto de mundo): por donde se cruza a pie. */
+  vados?: Point[];
 }
 
 export interface ZonaBosque {
@@ -105,4 +107,6 @@ export interface RastersDeMundo {
   /** 0..65535 sobre el rango del generador. */
   altura?: RasterU16;
   densidadBosque?: RasterU8;
+  /** 0..255 (255 = fertilidad 1): la que mira la aldea agrícola. */
+  fertilidad?: RasterU8;
 }

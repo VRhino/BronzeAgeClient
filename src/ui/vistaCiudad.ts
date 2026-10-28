@@ -294,12 +294,16 @@ function htmlExtraccion(c: ContextoPlaza): string {
       ${plegable('produccion:balance', '<span class="plegable-titulo">Balance del almacén</span><span class="plegable-meta">por minuto</span>', balance)}</div>`;
 }
 
+/** Clase de color de una cifra: verde si suma, rojo si resta, gris si es cero. */
+const signo = (n: number): string => (n > 0 ? 'cifra-pos' : n < 0 ? 'cifra-neg' : 'cifra-cero');
+
 /** «+P producido · −C consumido · neto N/min» de un recurso del almacén (solo el neto si el servidor no manda el desglose). */
 function desglose(x: { porMinuto?: number; producido?: number; consumido?: number }): string {
-  const neto = `${(x.porMinuto ?? 0) > 0 ? '+' : ''}${fmt(x.porMinuto ?? 0)}/min`;
+  const n = x.porMinuto ?? 0;
+  const neto = `<span class="${signo(n)}">${n > 0 ? '+' : ''}${fmt(n)}/min</span>`;
   const p = x.producido ?? 0;
   const c = x.consumido ?? 0;
-  return p || c ? `+${fmt(p)} producido · −${fmt(c)} consumido · neto ${neto}` : `neto ${neto}`;
+  return p || c ? `<span class="${signo(p)}">+${fmt(p)}</span> producido · <span class="${signo(-c)}">−${fmt(c)}</span> consumido · neto ${neto}` : `neto ${neto}`;
 }
 
 /** Subpestaña «Producción»: extractores y granjas y, debajo, las recetas de los talleres; todo en partes plegables. */

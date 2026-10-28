@@ -11,6 +11,7 @@ import {
 } from './paletas';
 import { dibujarIconoMapa } from './mundo/iconosMapa';
 import { imagenDeSigilo } from './sigilo/lienzo';
+import { pintarSitiosDeAldea, type SitiosDeAldea } from './mundo/fertilidad';
 import { colorDelSueloEn, esDeCerca, hayArtefacto, pintarArbolesDelArtefacto, pintarSueloDelArtefacto, vistaDelLienzo } from './mundo/pintarArtefacto';
 import { dibujarPueblosYObras } from './ui/pueblos';
 
@@ -390,6 +391,26 @@ function pintarBiomas(mapa: MapaGenerado): HTMLCanvasElement {
 
 // --- RENDER PRINCIPAL DEL MAPA DEL MUNDO ---
 
+/** El rumbo (unitario) del cauce junto a cada vado, para cruzarlo de orilla a orilla; se calcula una vez por río. */
+const rumbosDeVados = new WeakMap<object, Point[]>();
+function rumboDelVado(rio: { puntos: Point[]; vados?: Point[] }, i: number): Point {
+  let r = rumbosDeVados.get(rio);
+  if (!r) {
+    r = (rio.vados ?? []).map((v) => {
+      let mejor = { d: Infinity, x: 1, y: 0 };
+      for (let k = 1; k < rio.puntos.length; k++) {
+        const a = rio.puntos[k - 1]!, b = rio.puntos[k]!;
+        const d = Math.hypot((a.x + b.x) / 2 - v.x, (a.y + b.y) / 2 - v.y);
+        const l = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+        if (d < mejor.d) mejor = { d, x: (b.x - a.x) / l, y: (b.y - a.y) / l };
+      }
+      return { x: mejor.x, y: mejor.y };
+    });
+    rumbosDeVados.set(rio, r);
+  }
+  return r[i] ?? { x: 1, y: 0 };
+}
+
 /** La caja de cada río, calculada una vez: para no recorrer sus vértices cuando no cae en la vista. */
 const cajasDeRio = new WeakMap<object, { x0: number; y0: number; x1: number; y1: number }>();
 function rioALaVista(rio: { puntos: Point[] }, v: { x0: number; y0: number; x1: number; y1: number }): boolean {
@@ -408,7 +429,8 @@ export function pintarTerreno(
   mapa: MapaGenerado, 
   proyeccion: ProyeccionJugador,
   escalaCanvas: number,
-  modoMundo = false
+  modoMundo = false,
+  detalle = true
 ): void {
   // La cámara del mapa (`ui/pantallaMapa.ts`) ya dejó en `ctx` su transformación: aquí se pinta en unidades × `escalaCanvas` y la vista
   // dice qué parte del mundo cae en el lienzo y a qué escala (de lejos o de cerca). Lo que cae fuera no se recorre. Lo que el jugador no
@@ -418,7 +440,8 @@ export function pintarTerreno(
   const aLaVista = (p: Point, margen = 0): boolean =>
     p.x >= vista.x0 - margen && p.x <= vista.x1 + margen && p.y >= vista.y0 - margen && p.y <= vista.y1 + margen;
   const artefacto = hayArtefacto(mapa);
-  const cerca = artefacto && esDeCerca(mapa, escalaCanvas);
+  // `detalle` falso (el modo mapa): de cerca se sigue pintando como de lejos, con la imagen del mundo ya hecha, sin árboles sueltos ni nombres de nodo.
+  const cerca = artefacto && detalle && esDeCerca(mapa, escalaCanvas);
   const k = factorDeGlifo(escalaCanvas);
 
   // 1. DIBUJAR TERRENO BASE
@@ -428,7 +451,7 @@ export function pintarTerreno(
   ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   ctx.restore();
   if (artefacto) {
-    pintarSueloDelArtefacto(ctx, mapa, vista, modoMundo && cerca);
+    pintarSueloDelArtefacto(ctx, mapa, vista, modoMundo && cerca, !detalle);
   } else {
     // Mapa del backend TypeScript (sin rasters): biomas recalculados con el ruido del generador, sin relieve.
     ctx.imageSmoothingEnabled = true;
@@ -439,7 +462,7 @@ export function pintarTerreno(
   // 2. DIBUJAR BOSQUES
   if (artefacto) {
     // Del raster de densidad: de lejos ya van en la imagen del suelo; de cerca, árbol a árbol a escala real.
-    if (!(modoMundo && cerca)) pintarArbolesDelArtefacto(ctx, mapa, vista); // en el modo mundo ya van en las baldosas del suelo
+    if (cerca && !modoMundo) pintarArbolesDelArtefacto(ctx, mapa, vista); // en el modo mundo ya van en las baldosas del suelo
   } else {
     // Bosques como silueta fusionada (no círculos sueltos), debajo de los ríos — mismo criterio de capas que
     // el cliente de administración. `nonzero` (el relleno por defecto de canvas) recorta solos los claros que
@@ -495,6 +518,25 @@ export function pintarTerreno(
     ctx.strokeStyle = 'rgba(38, 90, 145, 0.9)';
     ctx.lineWidth = anchoPx;
     trazo();
+    // Los vados: por donde se cruza a pie. Una franja de piedras clara atravesando el cauce.
+    for (const [i, v] of (rio.vados ?? []).entries()) {
+      if (!aLaVista(v, 4)) continue;
+      const d = rumboDelVado(rio, i);
+      const largo = anchoPx * 1.4 + 4;
+      const vx = v.x * escalaCanvas;
+      const vy = v.y * escalaCanvas;
+      ctx.lineCap = 'butt';
+      ctx.strokeStyle = 'rgba(30, 24, 14, 0.85)';
+      ctx.lineWidth = Math.max(4, 0.9 * escalaCanvas) + 2;
+      ctx.beginPath();
+      ctx.moveTo(vx - d.y * largo, vy + d.x * largo);
+      ctx.lineTo(vx + d.y * largo, vy - d.x * largo);
+      ctx.stroke();
+      ctx.strokeStyle = '#d9c79a';
+      ctx.lineWidth = Math.max(4, 0.9 * escalaCanvas);
+      ctx.stroke();
+      ctx.lineCap = 'round';
+    }
   }
 
   // 4. DIBUJAR NODOS DE RECURSOS. De lejos, su icono pequeño (como el admin); de cerca, a escala: las parcelas como su círculo de 4 u, la piedra como roca y
@@ -966,7 +1008,8 @@ export function pintarPrevisualizacionFundacion(
   ctx: CanvasRenderingContext2D,
   mapa: MapaGenerado,
   posicion: Point,
-  escalaCanvas: number
+  escalaCanvas: number,
+  sitiosAldea?: SitiosDeAldea | null
 ): void {
   const x = posicion.x * escalaCanvas;
   const y = posicion.y * escalaCanvas;
@@ -983,6 +1026,7 @@ export function pintarPrevisualizacionFundacion(
   ctx.lineWidth = 2;
   ctx.stroke();
   ctx.setLineDash([]);
+  if (sitiosAldea) pintarSitiosDeAldea(ctx, sitiosAldea, escalaCanvas);
   ctx.beginPath();
   ctx.arc(x, y, 5, 0, Math.PI * 2);
   ctx.fillStyle = '#f1d38b';

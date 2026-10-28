@@ -18,6 +18,7 @@ import { plegable } from './plegable';
 import { agarre } from './agarre';
 import { miColumna } from './ejercitos';
 import { dibujarIconoMapa } from '../mundo/iconosMapa';
+import { sitiosDeAldea, type SitiosDeAldea } from '../mundo/fertilidad';
 import type { ContextoPlaza, FichaMapaExtra, ObjetoBajoElClic, SubpestanaPlaza } from './ganchos';
 
 type Escapar = (valor: string) => string;
@@ -165,6 +166,7 @@ function htmlMarcar(p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
     <div class="pueblo-marcar">
       <div><strong>Aldea agrícola</strong>${ayuda('pueblos:aldea', `Granjas y corrales en un punto fértil de la zona (fertilidad ${pr?.aldea?.fertilidadMinima ?? 0.3} o más, a ${pr?.aldea?.separacionMinima ?? 3} de toda plaza y todo pueblo, con camino hasta la plaza). Acarrea trigo y ganado; su rebaño crece solo. El nivel 2 de la plaza pide una aldea activa.`)}
         <span class="asent-lado-nota">${nivel < nivelAldea ? `Desde el nivel ${nivelAldea} de la plaza.` : `Obra: ${e(costeAldea || '—')} (con el carro de acarreo y su buey), que se llevan al sitio.`}</span>
+        ${htmlSitiosDeAldea(sitiosDeLaPlaza(p, a))}
         <button class="btn-primary" type="button" data-pueblo-accion="elegir-aldea"${nivel < nivelAldea ? ' disabled' : ''}>Elegir el sitio en el mapa</button></div>
       <div><strong>Extractor</strong>${ayuda('pueblos:extractor', 'Una cantera o una mina sobre un nodo libre de la zona. Pide su edificio, 50 de madera y el carro de acarreo con su buey, que se llevan al sitio.')}
         ${nivel < nivelExtractor ? `<span class="asent-lado-nota">Desde el nivel ${nivelExtractor} de la plaza.</span>`
@@ -172,6 +174,16 @@ function htmlMarcar(p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
             : `<div class="campamento-fila"><select class="form-input" data-pueblo-nodo>${libres.map((n) => `<option value="${e(n.id)}">${e(RECURSO_NOMBRE[n.tipo] ?? n.tipo)} · a ${n0(n.d)}</option>`).join('')}</select>
               <button class="btn-primary" type="button" data-pueblo-accion="marcar-nodo">Marcar</button></div>`}</div>
     </div>`;
+}
+
+/** Si la zona tiene sitio para la aldea: en verde con la mejor fertilidad, o en rojo con el porqué. */
+function htmlSitiosDeAldea(s: SitiosDeAldea | null): string {
+  if (!s) return '';
+  const { fertilidadMinima, separacionMinima } = reglasDeAldea();
+  const coma = (n: number) => n.toFixed(2).replace('.', ',');
+  if (s.validos.length) return `<span class="fundacion-gate ok">Hay tierra fértil para la aldea en la zona (mejor fertilidad ${coma(s.mejor)}).</span>`;
+  if (s.cerca.length) return `<span class="fundacion-gate falta">La tierra fértil de la zona está a menos de ${separacionMinima} de una plaza o un pueblo. Crecerá la zona con los edificios.</span>`;
+  return `<span class="fundacion-gate falta">La zona no tiene tierra con fertilidad ${coma(fertilidadMinima)} o más: no cabe una aldea. La zona crece con cada edificio terminado.</span>`;
 }
 
 function htmlPueblos(c: ContextoPlaza): string {
@@ -187,8 +199,34 @@ function htmlPueblos(c: ContextoPlaza): string {
     <p class="faction-error" data-pueblo-error role="alert"></p>`;
 }
 
-/** Quien abre el mapa para elegir un punto (lo pone `main.ts`): `alElegir` devuelve el error del motor, o `null` si salió bien (y el mapa se cierra). */
-export const selectorDePunto: { abrir: ((texto: string, centro: Point, zona: Point[] | undefined, alElegir: (q: Point) => Promise<string | null>) => void) | null } = { abrir: null };
+/** Quien abre el mapa para elegir un punto (lo pone `main.ts`): `alElegir` devuelve el error del motor, o `null` si salió bien (y el mapa se cierra).
+ * `sitios`, si los hay, se pintan sobre el mapa (los de la aldea). */
+export const selectorDePunto: { abrir: ((texto: string, centro: Point, zona: Point[] | undefined, alElegir: (q: Point) => Promise<string | null>, sitios?: SitiosDeAldea | null) => void) | null } = { abrir: null };
+
+/** Lo que ocupa sitio para una aldea: las plazas y los pueblos (y sus obras) que se conocen. */
+export function ocupadosParaAldea(p: ProyeccionJugador): Point[] {
+  return [
+    ...p.asentamientos.map((a) => a.posicion),
+    ...(p.asentamientosAvistados ?? []).map((a) => a.posicion),
+    ...(p.pueblos ?? []).map((x) => x.posicion),
+    ...(p.obrasDeMapa ?? []).filter((o) => o.tipo !== 'mejoraAldea').map((o) => o.posicion),
+  ];
+}
+
+/** Los mínimos de la aldea: fertilidad y separación (`PUEBLOS_EXTRACTORES.aldea`); 0,3 y 3 mientras no lleguen los datos. */
+export function reglasDeAldea(): { fertilidadMinima: number; separacionMinima: number } {
+  const r = params()?.aldea;
+  return { fertilidadMinima: r?.fertilidadMinima ?? 0.3, separacionMinima: r?.separacionMinima ?? 3 };
+}
+
+/** Dónde cabe la aldea de esta plaza, con el mapa ya bajado; `null` si aún no está o no trae la capa de fertilidad. */
+function sitiosDeLaPlaza(p: ProyeccionJugador, a: Asentamiento): SitiosDeAldea | null {
+  const mapa = estadoCliente.mapaCache?.mapa;
+  if (!mapa) return null;
+  const { fertilidadMinima, separacionMinima } = reglasDeAldea();
+  const radio = Math.max(...(a.zonaReal ?? []).map((q) => Math.hypot(q.x - a.posicion.x, q.y - a.posicion.y)), 6);
+  return sitiosDeAldea(mapa, { centro: a.posicion, radio, poligono: a.zonaReal }, ocupadosParaAldea(p), fertilidadMinima, separacionMinima);
+}
 
 function cablearPueblos(c: ContextoPlaza): void {
   const { proyeccion: p, asentamiento: a, cuerpo } = c;
@@ -214,8 +252,8 @@ function cablearPueblos(c: ContextoPlaza): void {
         return;
       }
       case 'elegir-aldea':
-        selectorDePunto.abrir?.('Pulsa en el mapa donde levantar la aldea agrícola: tierra fértil dentro de la zona de la plaza.', a.posicion, a.zonaReal,
-          (punto) => c.ejecutar('marcarAldea', { asentamientoId: a.id, heroeId: p.heroeId, punto }));
+        selectorDePunto.abrir?.('Pulsa en el mapa donde levantar la aldea agrícola: en verde, la tierra fértil de la zona donde cabe (en gris, fértil pero pegada a una plaza o un pueblo).', a.posicion, a.zonaReal,
+          (punto) => c.ejecutar('marcarAldea', { asentamientoId: a.id, heroeId: p.heroeId, punto }), sitiosDeLaPlaza(p, a));
         return;
     }
   }));

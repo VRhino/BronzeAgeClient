@@ -3,6 +3,30 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.42.0] — 2026-10-28 · mejoras del cliente de jugador · sync con `VRhino/BronzeAge@14e49ae`
+
+Sin cambios en el motor ni en el contrato.
+
+### Añadido
+- **Aldea agrícola: dónde hay tierra fértil.** Al elegir el sitio en el mapa se pintan en verde los puntos donde cabe (tierra firme, dentro de la
+  zona, fertilidad mínima y separación de plazas y pueblos) y en gris los fértiles demasiado cerca de algo. La pestaña Pueblos dice si la zona
+  tiene sitio y su mejor fertilidad, y el panel de Fundar avisa antes de fundar si la plaza nueva tendrá tierra para una aldea. El camino
+  hasta la plaza no se puede comprobar aquí: un punto verde aún puede salir rechazado por eso.
+- **Vados** en el mapa del mundo: una franja de piedras atravesando el río.
+- **Carro con barra de llenado**: capacidad, lo que llevas y el porcentaje (verde, ámbar desde el 80 %, rojo lleno), también en el almacén personal.
+- **Carga del carro al preparar un ejército**: dentro del panel de preparación eliges qué cargas del almacén de la plaza (o de tu almacén
+  personal en un campamento) y lo guardas con «Guardar carga» (`cambiarSeleccionDeConvocatoria.carga`).
+- **Facción a pantalla completa** con pestañas: Resumen, Miembros, Tablón, Misiones, Diplomacia y Ajustes del Rey. Sustituye al panel lateral.
+
+### Cambiado
+- **Producción**: lo producido en verde, lo consumido en rojo y el neto con su color.
+- **Almacén personal**: solo aparece dentro de tu residencia o con tu columna a su puerta, que es donde lo deja usar el motor. Dentro de la
+  residencia ya se puede sacar al carro.
+- **Tesorería**: tabla con solo los recursos que la plaza produce o guarda (hay, producción por minuto y reserva), «+ Añadir recurso» para
+  otros, un único «Guardar reserva» y las políticas de cargo en una sección plegable.
+- **Modo mapa más ligero**: ya no se repinta 5 veces por segundo si nada se mueve, junta los repintados del arrastre y el zoom en uno por
+  fotograma y, de cerca, usa la imagen del mundo ya hecha en vez de árboles sueltos y nombres de nodo.
+
 ## [0.41.1] — 2026-10-28 · elegir en el tablón · sync con `VRhino/BronzeAge@14e49ae`
 
 ### Corregido
