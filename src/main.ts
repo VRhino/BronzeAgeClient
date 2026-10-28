@@ -2233,7 +2233,9 @@ async function dibujarPantallaSegunModo(proyeccion: ProyeccionJugador): Promise<
     if (titulo) titulo.textContent = 'Vista de Asentamiento (Geometría Urbana T2a)';
     const asentamiento = proyeccion.asentamientos[0];
     ajustarLienzo(canvas, 1, 1);
-    if (asentamiento) pintarAsentamiento(ctx, asentamiento, proyeccion.trazadoPorAsentamiento?.[asentamiento.id], edificioSeleccionado());
+    // El mapa da el color del suelo donde está la plaza; si aún no se ha bajado, se pinta llano.
+    const mapa = asentamiento ? await sincronizarMapa(proyeccion.mapaId).catch(() => null) : null;
+    if (asentamiento) pintarAsentamiento(ctx, asentamiento, proyeccion.trazadoPorAsentamiento?.[asentamiento.id], edificioSeleccionado(), mapa);
     else { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillText('No perteneces a ningún asentamiento aún.', 20, 40); }
   }
   if (estadoCliente.modoFundacionActivo && estadoCliente.posicionFundacion && estadoCliente.mapaCache?.mapa) {

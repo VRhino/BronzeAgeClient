@@ -2783,6 +2783,10 @@ kbd {
 .avisos-urgentes .avisos-cab { color: var(--terracota); }
 .avisos-urgentes .avisos-cab strong { flex: 1; }
 .aviso-urgente { border-left: 3px solid var(--terracota); }
+.aviso-fila { display: flex; align-items: stretch; gap: 4px; }
+.aviso-fila > .mapa-lista-item { flex: 1; min-width: 0; }
+.aviso-borrar { flex: none; width: 28px; padding: 0; border: 1px solid rgba(107, 74, 41, 0.5); border-radius: var(--radius-sm); background: rgba(18, 14, 9, 0.6); color: var(--pergamino); font-size: 1.1rem; line-height: 1; cursor: pointer; }
+.aviso-borrar:hover { border-color: var(--terracota); color: var(--terracota); }
 .aviso-nuevo strong { color: var(--bronce); }
 .briefing-fondo { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.55); }
 .briefing { position: relative; width: min(460px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow-y: auto; padding: 22px; display: flex; flex-direction: column; gap: 10px; background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg)); border: 1px solid var(--bronce); border-radius: 3px; box-shadow: var(--placa); }

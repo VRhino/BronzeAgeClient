@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.40.1] — 2026-10-28 · suelo de la plaza, error de reclutar en unidades y borrar avisos · sync con `VRhino/BronzeAge@f4585ac`
+
+### Cambiado
+- **Vista de asentamiento** sin rejilla: el fondo toma el color del terreno donde está la plaza en el mapa (llano, colina, costa…),
+  moteado, con bosquecillos en los bordes.
+- **Reclutar sin trigo de reserva**: el mensaje da unidades («la reserva de 70 y hay 21»), no milésimas.
+
+### Añadido
+- **Avisos urgentes**: cada tarjeta lleva a su derecha una × para borrarla.
+
 ## [0.40.0] — 2026-10-28 · Centro urbano reordenado · sync con `VRhino/BronzeAge@f4585ac`
 
 ### Cambiado

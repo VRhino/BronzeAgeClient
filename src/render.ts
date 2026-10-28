@@ -11,7 +11,7 @@ import {
 } from './paletas';
 import { dibujarIconoMapa } from './mundo/iconosMapa';
 import { imagenDeSigilo } from './sigilo/lienzo';
-import { esDeCerca, hayArtefacto, pintarArbolesDelArtefacto, pintarSueloDelArtefacto, vistaDelLienzo } from './mundo/pintarArtefacto';
+import { colorDelSueloEn, esDeCerca, hayArtefacto, pintarArbolesDelArtefacto, pintarSueloDelArtefacto, vistaDelLienzo } from './mundo/pintarArtefacto';
 import { dibujarPueblosYObras } from './ui/pueblos';
 
 /** px de pantalla por unidad con la que los glifos de las columnas salen a su tamaño de diseño (≈ la escala de visión en un portátil).
@@ -1154,6 +1154,75 @@ function dibujarEdificioLocal(
   }
 }
 
+let fondoCacheado: { clave: string; lienzo: HTMLCanvasElement } | null = null;
+
+/** El suelo de la vista de asentamiento: el color del terreno donde está la plaza en el mapa (llano si no hay artefacto), moteado, con
+ * bosquecillos en los bordes. Sin rejilla. Azar fijo por plaza, así no cambia entre repintados; se guarda mientras no cambie el lienzo. */
+function fondoDeAsentamiento(width: number, height: number, suelo: readonly [number, number, number] | null, semilla: string): HTMLCanvasElement {
+  const base = suelo ?? hexToRgb(BIOMA_TIERRA_PLANA);
+  const clave = `${width}x${height}|${base.join(',')}|${semilla}`;
+  if (fondoCacheado?.clave === clave) return fondoCacheado.lienzo;
+  const lienzo = document.createElement('canvas');
+  lienzo.width = width;
+  lienzo.height = height;
+  const c = lienzo.getContext('2d')!;
+  const rgb = (k: number, a = 1) => `rgba(${Math.round(Math.min(255, base[0] * k))}, ${Math.round(Math.min(255, base[1] * k))}, ${Math.round(Math.min(255, base[2] * k))}, ${a})`;
+  c.fillStyle = rgb(1);
+  c.fillRect(0, 0, width, height);
+  const rand = mulberry32(hashSemilla(`suelo:${semilla}`));
+  // Moteado: manchas suaves más claras y más oscuras, para que no sea un color plano.
+  const lado = Math.max(width, height);
+  for (let i = 0; i < 160; i++) {
+    const r = lado * (0.02 + rand() * 0.06);
+    const x = rand() * width;
+    const y = rand() * height;
+    const g = c.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, rand() < 0.5 ? rgb(0.88, 0.35) : rgb(1.08, 0.35));
+    g.addColorStop(1, rgb(1, 0));
+    c.fillStyle = g;
+    c.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  // Bosquecillos: grupos de árboles en la franja del borde, fuera de donde caen los edificios (más allá del 40 % desde el centro).
+  const arbol = (x: number, y: number, r: number) => {
+    c.beginPath();
+    c.arc(x + r * 0.35, y + r * 0.35, r, 0, Math.PI * 2);
+    c.fillStyle = 'rgba(10, 30, 12, 0.35)';
+    c.fill();
+    c.beginPath();
+    c.arc(x, y, r, 0, Math.PI * 2);
+    c.fillStyle = `rgb(${30 + rand() * 25}, ${80 + rand() * 35}, ${40 + rand() * 20})`;
+    c.fill();
+    c.beginPath();
+    c.arc(x - r * 0.3, y - r * 0.3, r * 0.45, 0, Math.PI * 2);
+    c.fillStyle = 'rgba(160, 210, 120, 0.25)';
+    c.fill();
+  };
+  const fueraDelCentro = (x: number, y: number) => Math.max(Math.abs(x - width / 2) / width, Math.abs(y - height / 2) / height) > 0.4;
+  for (let g = 0; g < 18; g++) {
+    // Un punto del perímetro, metido hacia dentro como mucho un 6 %.
+    const t = rand() * 4;
+    const hondo = rand() * 0.06;
+    const lado4 = Math.floor(t);
+    const f = t - lado4;
+    const gx = (lado4 === 0 ? f : lado4 === 1 ? 1 - hondo : lado4 === 2 ? 1 - f : hondo) * width;
+    const gy = (lado4 === 0 ? hondo : lado4 === 1 ? f : lado4 === 2 ? 1 - hondo : 1 - f) * height;
+    const radioGrupo = lado * (0.04 + rand() * 0.05);
+    const arboles = 6 + Math.floor(rand() * 12);
+    const tronco: [number, number, number][] = [];
+    for (let i = 0; i < arboles; i++) {
+      const a = rand() * Math.PI * 2;
+      const d = radioGrupo * Math.sqrt(rand());
+      const x = gx + Math.cos(a) * d;
+      const y = gy + Math.sin(a) * d;
+      if (fueraDelCentro(x, y)) tronco.push([x, y, lado * (0.011 + rand() * 0.008)]);
+    }
+    // De arriba abajo, para que las copas de delante tapen a las de detrás.
+    tronco.sort((a, b) => a[1] - b[1]).forEach(([x, y, r]) => arbol(x, y, r));
+  }
+  fondoCacheado = { clave, lienzo };
+  return lienzo;
+}
+
 /** Qué edificio se resalta: el elegido (`id`) con trazo fuerte y los demás de su tipo con trazo fino. */
 export interface SeleccionEdificio { id: string; tipo: string }
 
@@ -1161,40 +1230,19 @@ export function pintarAsentamiento(
   ctx: CanvasRenderingContext2D,
   asentamiento: Asentamiento,
   trazado: TrazadoAsentamiento | undefined,
-  seleccion?: SeleccionEdificio | null
+  seleccion?: SeleccionEdificio | null,
+  mapa?: MapaGenerado | null
 ): void {
   const width = ctx.canvas.width;
   const height = ctx.canvas.height;
 
   ctx.clearRect(0, 0, width, height);
 
-  // Fondo verde llano
-  ctx.fillStyle = BIOMA_TIERRA_PLANA;
-  ctx.fillRect(0, 0, width, height);
-
-  const tamanoCelda = 5;
   const { escala, centro: cx } = proyeccionAsentamiento(width, trazado);
   const cy = height / 2;
   const aPantalla = (p: Point): Point => ({ x: cx + p.x * escala, y: cy + p.y * escala });
 
-  // Cuadrícula de fondo
-  ctx.strokeStyle = 'rgba(27, 26, 23, 0.08)';
-  ctx.lineWidth = 1;
-  const pasoPantalla = tamanoCelda * escala;
-  const celdasX = Math.ceil(cx / pasoPantalla) + 1;
-  const celdasY = Math.ceil(cy / pasoPantalla) + 1;
-  ctx.beginPath();
-  for (let i = -celdasX; i <= celdasX; i++) {
-    const x = cx + i * pasoPantalla;
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, height);
-  }
-  for (let j = -celdasY; j <= celdasY; j++) {
-    const y = cy + j * pasoPantalla;
-    ctx.moveTo(0, y);
-    ctx.lineTo(width, y);
-  }
-  ctx.stroke();
+  ctx.drawImage(fondoDeAsentamiento(width, height, mapa ? colorDelSueloEn(mapa, asentamiento.posicion) : null, asentamiento.id), 0, 0);
 
   if (!trazado) {
     ctx.fillStyle = '#1b1a17';

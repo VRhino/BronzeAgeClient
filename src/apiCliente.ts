@@ -787,9 +787,17 @@ export async function ejecutarComando(_gameId: string, tipo: string, params: unk
   return {
     resultado: ok
       ? { ok, datos: { ...datos, creadas: r.creadas.map((c) => ({ entidad: TipoEntidad[c.entidad], id: c.id })) } }
-      : { ok, codigoError: r.rechazo?.codigo ?? 'rechazada', detalleError: r.rechazo?.mensaje },
+      : { ok, codigoError: r.rechazo?.codigo ?? 'rechazada', detalleError: detalleLegible(r.rechazo?.codigo, r.rechazo?.mensaje) },
     proyeccion: proyeccionActual(s),
   };
+}
+
+/** Rechazos cuyo mensaje del motor lleva cantidades en milésimas: se pasan a unidades para el jugador. */
+const RECHAZOS_EN_MILESIMAS = new Set(['reclutamiento.sin_reserva_de_trigo']);
+
+function detalleLegible(codigo: string | undefined, mensaje: string | undefined): string | undefined {
+  if (!mensaje || !codigo || !RECHAZOS_EN_MILESIMAS.has(codigo)) return mensaje;
+  return mensaje.replace(/-?\d+/g, (n) => String(Math.round(Number(n) / 1000)));
 }
 
 export const repartirPuntos = (gameId: string, params: ParamsRepartirPuntos) => ejecutarComando(gameId, 'repartirPuntos', params);

@@ -3,7 +3,7 @@
 // como leído. Una línea con «×N» es N avisos iguales fundidos (`ui/avisos.ts`). Un informe de combate se abre como briefing al pulsarlo. Qué te
 // persigue ahora mismo no es histórico: sale en la barra superior (`jugador-alerta`).
 import { ayuda } from './ayuda';
-import { CATEGORIAS, historialDeAvisos, marcarAvisosLeidos, type CategoriaAviso, type EntradaAviso } from './avisos';
+import { CATEGORIAS, borrarAviso, historialDeAvisos, marcarAvisosLeidos, type CategoriaAviso, type EntradaAviso } from './avisos';
 
 const ETIQUETA = { peligro: 'Te atacaron', combate: 'Combate', baja: 'Bajas', mirada: 'Te observaron' } as const;
 const AYUDA_CATEGORIA: Record<CategoriaAviso, string> = {
@@ -45,7 +45,7 @@ export function htmlAvisos(entradas: readonly EntradaAviso[], e: (s: string) => 
     const sin = urgentes.filter(([a]) => !a.leido).length;
     secciones.push(`<section class="avisos-seccion avisos-urgentes" data-seccion="urgentes">
       <div class="avisos-cab"><strong>Urgentes (${urgentes.length}${sin ? `, ${sin} sin leer` : ''})</strong>${sin ? '<button type="button" class="avisos-leer" data-leer="urgentes">Marcar leído</button>' : ''}${ayuda('avisos:urgentes', 'Lo grave o lo que pide una decisión (te atacan, combates tuyos, deserción, peticiones de unirse a tu ejército, propuestas). Hacen aviso propio y no se agrupan.')}</div>
-      <div class="mapa-lista">${urgentes.map(([a, i]) => htmlEntrada(a, i, e)).join('')}</div></section>`);
+      <div class="mapa-lista">${urgentes.map(([a, i]) => `<div class="aviso-fila">${htmlEntrada(a, i, e)}<button type="button" class="aviso-borrar" data-borrar-aviso="${i}" title="Borrar este aviso" aria-label="Borrar este aviso">×</button></div>`).join('')}</div></section>`);
   }
   for (const [cat, nombre] of CATEGORIAS) {
     const lineas = con.filter(([a]) => !a.urgente && a.categoria === cat);
@@ -67,5 +67,6 @@ export function cablearAvisos(panel: HTMLElement, repintar: () => void, abrirInf
   }));
   panel.querySelectorAll<HTMLButtonElement>('[data-plegar]').forEach((b) => b.addEventListener('click', () => { alternarPlegado(b.dataset.plegar!); repintar(); }));
   panel.querySelectorAll<HTMLButtonElement>('[data-leer]').forEach((b) => b.addEventListener('click', () => marcarAvisosLeidos(b.dataset.leer as 'urgentes' | CategoriaAviso)));
+  panel.querySelectorAll<HTMLButtonElement>('[data-borrar-aviso]').forEach((b) => b.addEventListener('click', () => borrarAviso(Number(b.dataset.borrarAviso))));
   marcarAvisosLeidos('urgentes');
 }

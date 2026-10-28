@@ -359,3 +359,19 @@ export function pintarSueloDelArtefacto(ctx: CanvasRenderingContext2D, mapa: Map
 export function pintarArbolesDelArtefacto(ctx: CanvasRenderingContext2D, mapa: MapaGenerado, v: VistaDelMundo): void {
   if (esDeCerca(mapa, v.escala)) pintarArboles(ctx, mapa, v);
 }
+
+/** El color del suelo donde está `p` (la clase de terreno, sin relieve ni bosque), para el fondo de la vista de asentamiento. Si `p` cae en
+ * agua (una plaza en la orilla), la clase de tierra más común en ±8 u. `null` sin artefacto. */
+export function colorDelSueloEn(mapa: MapaGenerado, p: { x: number; y: number }): readonly [number, number, number] | null {
+  const t = mapa.rasters?.terreno;
+  if (!t) return null;
+  const centro = celdaDe(t, p.x, p.y);
+  if (centro > 1) return COLOR_CLASE[centro]!;
+  const cuenta = new Map<number, number>();
+  for (let dy = -8; dy <= 8; dy += 2) for (let dx = -8; dx <= 8; dx += 2) {
+    const c = celdaDe(t, p.x + dx, p.y + dy);
+    if (c > 1) cuenta.set(c, (cuenta.get(c) ?? 0) + 1);
+  }
+  const mejor = [...cuenta].sort((a, b) => b[1] - a[1])[0];
+  return COLOR_CLASE[mejor?.[0] ?? 3]!;
+}

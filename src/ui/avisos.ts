@@ -82,6 +82,14 @@ export function marcarAvisosLeidos(que: 'todos' | 'urgentes' | CategoriaAviso = 
   oyentes.forEach((cb) => cb());
 }
 
+/** Quita un aviso del historial (la × de las tarjetas urgentes). */
+export function borrarAviso(i: number): void {
+  if (!historial[i]) return;
+  historial.splice(i, 1);
+  guardar();
+  oyentes.forEach((cb) => cb());
+}
+
 function guardar(): void {
   try { localStorage.setItem(clave, JSON.stringify({ ultimaVersion, historial })); } catch { /* sin almacenamiento: el historial dura lo que la pestaña */ }
 }
