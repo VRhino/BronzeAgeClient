@@ -3,7 +3,7 @@
 // Qué se puede hacer con UN edificio, según el backend (Doc 4 y comandos): mejorarlo (activo, Gobernador/Maestro de Obras) y quitarlo de la cola
 // (en cola). NO hay pausa ni prioridad por edificio (la pausa existe por RECETA y la prioridad la fija el motor): no se inventan.
 import type { ProyeccionJugador } from '../apiCliente';
-import { nivelesDeEdificio } from '../apiCliente';
+import { bloqueDeDatos, nivelesDeEdificio } from '../apiCliente';
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import { ayuda } from './ayuda';
 import { edificioBajoCursor, type SeleccionEdificio } from '../render';
@@ -13,6 +13,7 @@ import type { ContextoPlaza, SubpestanaPlaza } from './ganchos';
 import type { Ejecutar } from './panelCarro';
 import { renderPestanaInformacion } from './pestanaInformacion';
 import { pintar } from './repintado';
+import { cablearPlegables, plegable } from './plegable';
 
 type Escapar = (valor: string) => string;
 type Cargo = 'gobernador' | 'maestroObras' | null;
@@ -199,6 +200,7 @@ function recetasDe(a: Asentamiento, alCargar: () => void): RecetaAgregada[] {
   return [...porRecurso.values()].sort((x, y) => (RECURSO_NOMBRE[x.produce] ?? x.produce).localeCompare(RECURSO_NOMBRE[y.produce] ?? y.produce));
 }
 
+/** Las recetas de los talleres, cada una plegable: en el resumen el producto y su estado; dentro, talleres, ritmo, insumos y el botón. */
 function htmlRecetas(c: ContextoPlaza): string {
   const e = c.escapar;
   const pausadas = new Set(c.asentamiento.recetasPausadas ?? []);
@@ -207,16 +209,16 @@ function htmlRecetas(c: ContextoPlaza): string {
     const parada = pausadas.has(r.produce);
     const falta = adoptadas && r.tecnologia && !adoptadas.includes(r.tecnologia) ? `requiere la tecnología «${e(r.tecnologia)}»` : '';
     const talleres = [...r.talleres].map(([t, n]) => `${e(nombreDe(t))}${n > 1 ? ` ×${n}` : ''}`).join(', ');
-    return `<div class="asent-edif-item receta${parada ? ' pausada' : ''}">
-      <span class="asent-edif-nombre">${RECURSO_ICONO[r.produce] ?? '📦'} ${e(RECURSO_NOMBRE[r.produce] ?? r.produce)}</span>
-      <span class="asent-edif-meta">${parada ? 'parada' : falta ? 'bloqueada' : 'en marcha'}</span>
-      ${c.cargo ? `<button class="btn-secondary" type="button" data-receta="${e(r.produce)}" data-pausar="${parada ? '0' : '1'}">${parada ? 'Reanudar' : 'Parar'}</button>` : ''}
-      <span class="asent-edif-nota">${talleres || 'sin taller activo'}${r.porMinuto ? ` · hasta ${fmt(r.porMinuto)}/min` : ''}${Object.keys(r.insumos).length ? ` · insumos por unidad: ${costeTexto(r.insumos, e)}` : ''}${falta ? ` · ${falta}` : ''}</span>
-    </div>`;
+    const resumen = `<span class="plegable-titulo">${RECURSO_ICONO[r.produce] ?? '📦'} ${e(RECURSO_NOMBRE[r.produce] ?? r.produce)}</span><span class="plegable-meta${parada || falta ? ' falta' : ''}">${parada ? 'parada' : falta ? 'bloqueada' : 'en marcha'}</span>`;
+    const cuerpo = `<p class="asent-lado-nota">Talleres: ${talleres || 'ninguno activo'}${r.porMinuto ? ` · hasta ${fmt(r.porMinuto)}/min con la mano de obra completa` : ''}</p>
+      ${Object.keys(r.insumos).length ? `<p class="asent-lado-nota">Insumos por unidad: ${costeTexto(r.insumos, e)}</p>` : ''}
+      ${falta ? `<p class="asent-lado-nota">${falta}</p>` : ''}
+      ${c.cargo ? `<button class="btn-secondary" type="button" data-receta="${e(r.produce)}" data-pausar="${parada ? '0' : '1'}">${parada ? 'Reanudar' : 'Parar'}</button>` : ''}`;
+    return plegable(`receta:${r.produce}`, resumen, cuerpo);
   }).join('');
   return `<div class="asent-lado-cabecera"><span class="faction-kicker">Recetas ${ayuda('plaza:recetas', 'Parar una receta la detiene en todos los talleres de la plaza.')}</span></div>
-    <div class="asent-edif-lista">${filas || '<p class="mapa-lista-vacia">Ningún taller activo con recetas.</p>'}</div>
-    ${c.cargo ? '' : '<p class="asent-lado-nota">Solo el Gobernador o el Maestro de Obras pueden cambiarlo.</p>'}`;
+    <div class="plegables">${filas || '<p class="mapa-lista-vacia">Ningún taller activo con recetas.</p>'}</div>
+    ${c.cargo ? '' : '<p class="asent-lado-nota">Solo el Gobernador o el Maestro de Obras pueden parar o reanudar recetas.</p>'}`;
 }
 
 function cablearRecetas(c: ContextoPlaza): void {
@@ -227,5 +229,75 @@ function cablearRecetas(c: ContextoPlaza): void {
   }));
 }
 
-export const SUBPESTANA_RECETAS: SubpestanaPlaza = { id: 'recetas', etiqueta: 'Recetas', html: htmlRecetas, cablear: cablearRecetas };
+/** Lo que fija el catálogo para un extractor o granja: la producción base (`produccionBase<Recurso>`, en la raíz o en el nivel) y los trabajadores. */
+interface FichaCatalogo { trabajadoresRequeridos?: number; niveles?: Record<string, Record<string, unknown>>; [clave: string]: unknown }
+
+/** Qué produce un tipo de edificio sin receta y cuánto de base: `produccionBaseTrigo` → trigo. */
+function produccionBase(tipo: string, nivel: number, alCargar: () => void): { recurso: string; base: number; trabajadores: number } | null {
+  const cat = bloqueDeDatos<Record<string, FichaCatalogo>>('EDIFICIO_CATALOGO', alCargar)?.[tipo];
+  if (!cat) return null;
+  const delNivel = cat.niveles?.[String(nivel)] ?? {};
+  for (const fuente of [delNivel, cat as Record<string, unknown>]) {
+    const clave = Object.keys(fuente).find((k) => k.startsWith('produccionBase') && typeof fuente[k] === 'number');
+    if (!clave) continue;
+    const r = clave.slice('produccionBase'.length);
+    const recurso = r === 'Livestock' ? 'livestock' : r.charAt(0).toLowerCase() + r.slice(1);
+    const trabajadores = Number(delNivel.trabajadoresRequeridos ?? cat.trabajadoresRequeridos ?? 0);
+    return { recurso, base: Number(fuente[clave]), trabajadores };
+  }
+  return null;
+}
+
+/** La producción de la plaza: un plegable por tipo de extractor o granja activo, con el neto real del recurso (la tendencia del almacén). El motor no
+ * publica lo que rinde cada edificio, así que dentro va la base del catálogo y la mano de obra, que es lo que la reduce. */
+function htmlExtraccion(c: ContextoPlaza): string {
+  const e = c.escapar;
+  const a = c.asentamiento;
+  const porTipo = new Map<string, { recurso: string; base: number; trabajadores: number; edificios: Edificio[] }>();
+  for (const ed of a.edificios ?? []) {
+    if (ed.estado !== 'activo') continue;
+    const p = produccionBase(ed.tipo, ed.nivelInterno ?? 1, c.refrescar);
+    if (!p) continue;
+    const g = porTipo.get(ed.tipo) ?? { recurso: p.recurso, base: 0, trabajadores: 0, edificios: [] };
+    g.base += p.base;
+    g.trabajadores += p.trabajadores;
+    g.edificios.push(ed);
+    porTipo.set(ed.tipo, g);
+  }
+  const necesarios = [...porTipo.values()].reduce((s, g) => s + g.trabajadores, 0);
+  const pesants = Math.floor(a.poblacion?.pesants ?? 0);
+  const ratio = necesarios <= 0 ? 1 : Math.min(1, pesants / necesarios);
+  const neto = (r: string): string => {
+    const n = a.almacen?.[r]?.porMinuto;
+    return n === undefined ? '—' : `${n > 0 ? '+' : ''}${fmt(n)}/min`;
+  };
+  const filas = [...porTipo.entries()].sort(([x], [y]) => nombreDe(x).localeCompare(nombreDe(y))).map(([tipo, g]) => {
+    const parados = g.edificios.filter((x) => x.pausadoPorAlmacenLleno).length;
+    const danados = g.edificios.filter((x) => x.danado).length;
+    const resumen = `<span class="plegable-titulo">${e(nombreDe(tipo))}${g.edificios.length > 1 ? ` ×${g.edificios.length}` : ''}</span><span class="plegable-meta${parados ? ' falta' : ''}">${RECURSO_ICONO[g.recurso] ?? '📦'} ${e(RECURSO_NOMBRE[g.recurso] ?? g.recurso)} · neto ${neto(g.recurso)}</span>`;
+    const cuerpo = `<ul class="plegable-lista">${g.edificios.map((x) => `<li>Nivel ${x.nivelInterno ?? 1}${x.pausadoPorAlmacenLleno ? ' · <strong>parado: almacén lleno</strong>' : ''}${x.danado ? ' · dañado' : ''}</li>`).join('')}</ul>
+      <p class="asent-lado-nota">Base del catálogo: ${fmt(g.base)} en total con la mano de obra completa (${g.trabajadores} trabajadores).${tipo === 'granja' ? ' La fertilidad de la zona la multiplica.' : tipo === 'lenera' ? ' La densidad del bosque la multiplica.' : ''}</p>
+      ${parados || danados ? `<p class="asent-lado-nota">${parados ? `${parados} parado(s) por almacén lleno. ` : ''}${danados ? `${danados} dañado(s).` : ''}</p>` : ''}`;
+    return plegable(`produccion:${tipo}`, resumen, cuerpo);
+  }).join('');
+  const recursos = Object.entries(a.almacen ?? {}).filter(([, x]) => (x.porMinuto ?? 0) !== 0).sort(([, x], [, y]) => (y.porMinuto ?? 0) - (x.porMinuto ?? 0));
+  const balance = recursos.length
+    ? `<ul class="plegable-lista">${recursos.map(([r, x]) => `<li>${RECURSO_ICONO[r] ?? '📦'} ${e(RECURSO_NOMBRE[r] ?? r)}: <strong>${(x.porMinuto ?? 0) > 0 ? '+' : ''}${fmt(x.porMinuto ?? 0)}/min</strong></li>`).join('')}</ul>`
+    : '<p class="asent-lado-nota">Ningún recurso sube ni baja ahora mismo.</p>';
+  return `<div class="asent-lado-cabecera"><span class="faction-kicker">Producción ${ayuda('plaza:produccion', 'El neto es lo que sube o baja cada recurso en el almacén ahora mismo (producción menos consumo), tal como lo calcula el servidor. El servidor no da lo que rinde cada edificio por separado.')}</span></div>
+    <p class="asent-lado-nota">Mano de obra: ${pesants} pesants para ${necesarios} puestos${ratio < 1 ? ` (${Math.round(ratio * 100)} %: rinden menos)` : ''}.</p>
+    <div class="plegables">${filas || '<p class="mapa-lista-vacia">Sin extractores ni granjas activos.</p>'}
+      ${plegable('produccion:balance', '<span class="plegable-titulo">Balance del almacén</span><span class="plegable-meta">neto por minuto</span>', balance)}</div>`;
+}
+
+/** Subpestaña «Producción»: extractores y granjas y, debajo, las recetas de los talleres; todo en partes plegables. */
+export function htmlProduccionYRecetas(c: ContextoPlaza): string {
+  return `${htmlExtraccion(c)}${htmlRecetas(c)}`;
+}
+
+export function cablearProduccionYRecetas(c: ContextoPlaza): void {
+  cablearRecetas(c);
+  cablearPlegables(c.cuerpo);
+}
+
 export const SUBPESTANA_INFORMACION: SubpestanaPlaza = { id: 'informacion', etiqueta: 'Información', html: () => renderPestanaInformacion() };

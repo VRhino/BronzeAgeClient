@@ -131,7 +131,8 @@ export interface Asentamiento {
   nutricionPoblacion?: number;
   /** Racha de ticks con mantenimiento sano (para recuperar `nivelActual`). */
   rachaMantenimientoSano?: number;
-  almacen?: Record<string, { cantidad: number; capacidad: number }>;
+  /** `porMinuto`: la tendencia neta de ese recurso ahora (producción − consumo), la del ritmo del motor. */
+  almacen?: Record<string, { cantidad: number; capacidad: number; porMinuto?: number }>;
   edificios: Edificio[];
   /** El almacén está abierto a los ejércitos ALIADOS que pasan (`alternarReabastecerAliados`, Doc 5.13). Ausente = cerrado. */
   permiteReabastecerAliados?: boolean;

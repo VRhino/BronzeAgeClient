@@ -10,7 +10,9 @@ import type { ProyeccionJugador } from '../apiCliente';
 import type { Asentamiento, Recinto } from '../tiposDominio';
 import { ayuda } from './ayuda';
 
-export const NIVEL_MINIMO_MURALLA = 3;
+/** Nivel de plaza que pide cada anillo (motor: `MURALLA.nivelDePlaza`, Murallas.md): empalizada 2, muro de piedra 3, adarve 4. */
+const NIVEL_DE_PLAZA_POR_ANILLO = [2, 3, 4];
+export const NIVEL_MINIMO_MURALLA = NIVEL_DE_PLAZA_POR_ANILLO[0]!;
 const NIVEL_MAXIMO_MURALLA = 3;
 
 function puertasDe(recinto: Recinto): number {
@@ -99,11 +101,12 @@ export function renderPestanaMuralla(asentamiento: Asentamiento, proyeccion: Pro
     : hayRecintoEnObra
       ? '<p class="wall-note">Ya hay un recinto en obra — hay que terminarlo o abandonarlo antes de trazar otro.</p>'
       : `<div class="wall-action">
-          <label for="select-muralla-nivel">Nivel del anillo</label>${ayuda('plaza:muralla', `Gratis al comprometer — la obra se paga celda a celda con los ticks. Exige nivel de asentamiento ${NIVEL_MINIMO_MURALLA} (nivel operativo actual: ${nivelOperativo}).`)}
+          <label for="select-muralla-nivel">Nivel del anillo</label>${ayuda('plaza:muralla', `Gratis al comprometer — la obra se paga celda a celda con los ticks. Cada anillo pide un nivel de plaza: empalizada ${NIVEL_DE_PLAZA_POR_ANILLO[0]}, muro de piedra ${NIVEL_DE_PLAZA_POR_ANILLO[1]}, muralla con adarve ${NIVEL_DE_PLAZA_POR_ANILLO[2]} (nivel operativo actual: ${nivelOperativo}).`)}
           <select id="select-muralla-nivel">
-            <option value="1">1 · Empalizada (madera)</option>
-            <option value="2">2 · Muro de piedra</option>
-            <option value="3">3 · Muralla con adarve</option>
+            ${['Empalizada (madera)', 'Muro de piedra', 'Muralla con adarve'].map((nombre, i) => {
+              const pide = NIVEL_DE_PLAZA_POR_ANILLO[i]!;
+              return `<option value="${i + 1}"${nivelOperativo < pide ? ' disabled' : ''}>${i + 1} · ${nombre}${nivelOperativo < pide ? ` (plaza de nivel ${pide})` : ''}</option>`;
+            }).join('')}
           </select>
           <button id="btn-muralla-comprometer" class="btn-primary" data-cargo="${cargoParaComprometer}" type="button">${hayExterior ? 'Ampliar recinto' : 'Trazar y comprometer recinto'}</button>        </div>`;
 

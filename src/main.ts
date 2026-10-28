@@ -35,7 +35,7 @@ import { elegirPestanaHeroe, minutosHerido, pintarPanelHeroe } from './ui/panelH
 import { htmlBarraJugador, type PanelJugador } from './ui/barraJugador';
 import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
 import { EDIFICIO_COLOR, EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from './paletas';
-import type { Alijo, Asentamiento, BloqueoAscenso, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Edificio, EvaluacionAscenso, ParamsCrearHeroe, ProduccionItem, Sigilo } from './tiposDominio';
+import type { Alijo, Asentamiento, BloqueoAscenso, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Edificio, EvaluacionAscenso, ParamsCrearHeroe, Sigilo } from './tiposDominio';
 import { svgSigilo } from './sigilo/sigilo';
 import { alCargarSigilos } from './sigilo/lienzo';
 import { actualizarSalida, cablearCampamento, campamentoActual, htmlSeccionCampamento, seccionesDeCampamento, type SeccionCampamento } from './ui/pantallaCampamento';
@@ -54,7 +54,8 @@ import { cablearPanelEjercito, ejercitosDeLaFaccion, htmlFichaEjercito, htmlPane
 import { invalidar, olvidarEdicion, pintar, vaciar } from './ui/repintado';
 import { aplicarAyudas, ayuda } from './ui/ayuda';
 import { htmlInformeDeInspeccion } from './ui/interaccionAjena';
-import { cablearVistaCiudad, edificioSeleccionado, htmlTooltipEdificio, repintarFicha, tipoSeleccionado } from './ui/vistaCiudad';
+import { cablearProduccionYRecetas, cablearVistaCiudad, edificioSeleccionado, htmlProduccionYRecetas, htmlTooltipEdificio, repintarFicha, tipoSeleccionado } from './ui/vistaCiudad';
+import { cablearPlegables } from './ui/plegable';
 import { FICHAS_MAPA_EXTRA, SELECTORES_MAPA_EXTRA, SUBPESTANAS_CENTRO_EXTRA, SUBPESTANAS_MERCADO_EXTRA, type ContextoPlaza } from './ui/ganchos';
 import { montarPartidas } from './ui/pantallaPartidas';
 import { cablearCaravanas, cablearOrdenes, htmlCaravanas, htmlOrdenes } from './ui/panelMercado';
@@ -1620,20 +1621,24 @@ function renderPanelEdificios(): void {
   const cablearSub = (alCambiar: (sub: string) => void): void => cuerpo.querySelectorAll<HTMLButtonElement>('[data-sub]').forEach((b) => b.addEventListener('click', () => { alCambiar(b.dataset.sub!); renderPanelEdificios(); }));
 
   if (edificioAsent === 'centro') {
-    const SECCIONES: [SeccionAsent, string][] = [['resumen', 'Resumen'], ['edificios', 'Edificios'], ['produccion', 'Producción'], ['cola', 'Cola'], ['cargos', 'Cargos'], ...SUBPESTANAS_CENTRO_EXTRA.map((s) => [s.id, s.etiqueta] as [string, string])];
-    const extra = SUBPESTANAS_CENTRO_EXTRA.find((s) => s.id === seccionAsent);
+    const extras = SUBPESTANAS_CENTRO_EXTRA.filter((s) => s.visible?.(ctxPlaza) ?? true);
+    const SECCIONES: [SeccionAsent, string][] = [['resumen', 'Resumen'], ['edificios', 'Edificios'], ['produccion', 'Producción'], ['cola', 'Cola'], ['cargos', 'Cargos'], ...extras.map((s) => [s.id, s.etiqueta] as [string, string])];
+    if (!SECCIONES.some(([id]) => id === seccionAsent)) seccionAsent = 'resumen';
+    const extra = extras.find((s) => s.id === seccionAsent);
+    // La subida de nivel va fuera de las subpestañas, entre las pestañas de arriba y las de abajo: botón arriba y requisitos plegados.
+    const ascenso = proyeccion.ascensoDeAsentamiento ? seccionAscenso(asentamiento, proyeccion.ascensoDeAsentamiento, cargo === 'gobernador') : htmlAscensoLocal(proyeccion, asentamiento, cargo === 'gobernador', escaparHtml, renderPanelEdificios);
     const puedeMudarme = Boolean(proyeccion.faccionId) && asentamiento.faccionId === proyeccion.faccionId && !resideEnLaPlaza(proyeccion, asentamiento);
     const formNombre = resideEnLaPlaza(proyeccion, asentamiento)
       ? `<div class="asent-renombrar"><span class="faction-kicker">Nombre de la ciudad ${ayuda('plaza:nombre', 'Vacío = vuelve a mostrarse el identificador.')}</span><div class="mercado-acciones"><input class="form-input" type="text" maxlength="40" data-campo="nombre-plaza" value="${escaparHtml(asentamiento.nombre ?? '')}" placeholder="${escaparHtml(asentamiento.id)}" /><button id="btn-renombrar" class="btn-secondary" type="button">Cambiar nombre</button></div></div>`
       : '';
     const contenido = extra ? extra.html(ctxPlaza) : seccionAsent === 'resumen'
-      ? seccionResumen(asentamiento) + formNombre + (proyeccion.ascensoDeAsentamiento ? seccionAscenso(asentamiento, proyeccion.ascensoDeAsentamiento, cargo === 'gobernador') : htmlAscensoLocal(proyeccion, asentamiento, cargo === 'gobernador', escaparHtml, renderPanelEdificios))
+      ? seccionResumen(asentamiento) + formNombre
         + (puedeMudarme ? '<button id="btn-mudarme" class="btn-secondary" type="button" title="Hacer de esta plaza tu base: tu campamento se muda contigo">Hacer de esta plaza mi base</button>' : '')
       : seccionAsent === 'edificios' ? seccionEdificios(asentamiento, cargo)
-        : seccionAsent === 'produccion' ? seccionProduccion(proyeccion.produccionDeAsentamiento)
+        : seccionAsent === 'produccion' ? htmlProduccionYRecetas(ctxPlaza)
           : seccionAsent === 'cola' ? seccionCola(edificios, cargo)
-            : renderCargosAsentamiento(asentamiento, proyeccion) || `<p class="mapa-lista-vacia">No tienes cargos que asignar en esta plaza. ${ayuda('plaza:cargos', 'El Rey nombra al Gobernador y el Gobernador, al resto.')}</p>`;
-    html = `${subpestanas(SECCIONES, seccionAsent)}<div class="asent-lado-cuerpo">${contenido}</div>
+            : renderCargosAsentamiento(asentamiento, proyeccion);
+    html = `${ascenso ? `<section class="asent-ascenso">${ascenso}</section>` : ''}${subpestanas(SECCIONES, seccionAsent)}<div class="asent-lado-cuerpo">${contenido}</div>
       ${!cargo && (seccionAsent === 'edificios' || seccionAsent === 'cola') ? '<p class="asent-lado-nota">Necesitas ser Gobernador o Maestro de Obras para gestionar la construcción.</p>' : ''}${pie}`;
     ambito = `centro:${seccionAsent}`;
     cablear = () => {
@@ -1648,6 +1653,8 @@ function renderPanelEdificios(): void {
       });
       cablearAccionesAsentLado(cuerpo, asentamiento, cargo);
       cablearCargosAsentamiento(cuerpo, asentamiento);
+      cablearPlegables(cuerpo);
+      if (seccionAsent === 'produccion') cablearProduccionYRecetas(ctxPlaza);
       extra?.cablear?.(ctxPlaza);
     };
   } else if (edificioAsent === 'reclutamiento') {
@@ -1776,26 +1783,6 @@ function seccionEdificios(a: Asentamiento, cargo: 'gobernador' | 'maestroObras' 
     ${enRegion > 0 ? `<p class="asent-edif-region">+ ${enRegion} en la región (minas, canteras)</p>` : ''}`;
 }
 
-/** Solo lectura: producción por minuto de mundo de cada edificio, tal como la calcula el servidor
- * (`ProyeccionJugador.produccionDeAsentamiento` — este cliente no tiene motor para calcularla). */
-function seccionProduccion(items: ProduccionItem[] | undefined): string {
-  const fmt = (n: number) => (n >= 10 ? Math.round(n).toString() : n.toFixed(1));
-  const filas = (items ?? [])
-    .filter((it) => it.cantidadPorMinuto > 0)
-    .sort((a, b) => b.cantidadPorMinuto - a.cantidadPorMinuto)
-    .map(
-      (it) => `<div class="asent-edif-item" style="--swatch:${EDIFICIO_COLOR[it.tipo] ?? '#888'}">
-        <span class="asent-edif-nombre">${escaparHtml(EDIFICIO_NOMBRE[it.tipo] ?? it.tipo)}</span>
-        <span class="asent-edif-meta">${it.activos > 1 ? `×${it.activos}` : ''}</span>
-        <span class="asent-edif-nota">${RECURSO_ICONO[it.recurso] ?? '📦'} ${escaparHtml(RECURSO_NOMBRE[it.recurso] ?? it.recurso)} · ${fmt(it.cantidadPorMinuto)}/min</span>
-      </div>`
-    )
-    .join('');
-  return `
-    <div class="asent-lado-cabecera"><span class="faction-kicker">Producción ${ayuda('plaza:produccion', 'Por minuto de mundo, con la mano de obra y los yacimientos actuales.')}</span></div>
-    <div class="asent-edif-lista">${filas || '<p class="mapa-lista-vacia">Sin edificios productores activos.</p>'}</div>`;
-}
-
 function seccionCola(edificios: Edificio[], cargo: 'gobernador' | 'maestroObras' | null): string {
   const cola = edificios
     .filter((e) => e.estado !== 'activo')
@@ -1906,39 +1893,41 @@ function renderPanelAsent(): void {
 /** Sección "Cargos" del panel de Facción, acotada al asentamiento que se pisa. Solo aparecen los cargos que
  * el jugador PUEDE asignar aquí: Gobernador si eres el REY de la Facción; los otros cuatro si eres el
  * Gobernador (Doc 2.2, `asignarCargoLocal` en el backend, 2026-09-10). */
+/** Los cargos que se están cambiando (combo a la vista): sobreviven a los repintados del sondeo hasta que se asigna. */
+const cargosEditando = new Set<string>();
+
+/** Subpestaña «Cargos»: cada cargo con quien lo ocupa (o «vacante») y, si puedes nombrarlo, un botón «Cambiar» al lado. Al pulsarlo el nombre deja
+ * su sitio a un combo con los ciudadanos y el botón pasa a «Asignar»; al asignar vuelve el nombre. El Rey nombra al Gobernador; el Gobernador, al resto. */
 function renderCargosAsentamiento(asentamiento: Asentamiento | undefined, proyeccion: ProyeccionJugador): string {
   if (!asentamiento) return '';
   const faccion = proyeccion.facciones.find((f) => f.id === proyeccion.faccionId);
   const soyGobernador = asentamiento.cargos?.gobernadorId === proyeccion.heroeId;
   const soyRey = faccion?.reyId === proyeccion.heroeId;
-  if (!soyGobernador && !soyRey) return '';
-
   const ciudadanos = faccion?.ciudadanosIds ?? [];
-  const cargos = (
-    [
-      ['gobernadorId', 'Gobernador', soyRey],
-      ['maestroObrasId', 'Maestro de Obras', soyGobernador],
-      ['tesoreroId', 'Tesorero', soyGobernador],
-      ['generalId', 'General', soyGobernador],
-      ['sacerdoteId', 'Sacerdote', soyGobernador],
-    ] as const
-  ).filter(([, , puede]) => puede);
-  if (cargos.length === 0) return '';
-
+  const cargos = [
+    ['gobernadorId', 'Gobernador', soyRey],
+    ['maestroObrasId', 'Maestro de Obras', soyGobernador],
+    ['tesoreroId', 'Tesorero', soyGobernador],
+    ['generalId', 'General', soyGobernador],
+    ['sacerdoteId', 'Sacerdote', soyGobernador],
+  ] as const;
   return `
     <section class="asent-cargos">
-      <span class="faction-kicker">Cargos de ${escaparHtml(asentamiento.nombre ?? asentamiento.id)}</span>
-      ${cargos.map(([clave, nombre]) => {
+      <span class="faction-kicker">Cargos de ${escaparHtml(asentamiento.nombre ?? asentamiento.id)} ${ayuda('plaza:cargos', 'El Rey nombra al Gobernador y el Gobernador, al resto.')}</span>
+      ${cargos.map(([clave, nombre, puede]) => {
+        const cargo = clave.replace('Id', '');
         const actual = asentamiento.cargos?.[clave] ?? null;
-        return `<div class="asent-cargo" data-cargo="${clave.replace('Id', '')}">
-          <span>${nombre}</span>
-          <select class="asent-cargo-sel">
-            <option value="">— vacante —</option>
-            ${ciudadanos.map((id) => `<option value="${escaparHtml(id)}"${id === actual ? ' selected' : ''}>${escaparHtml(nombreDeHeroe(proyeccion, id))}</option>`).join('')}
-          </select>
-          <button class="btn-secondary asent-cargo-btn" type="button">Asignar</button>
+        const editando = puede && cargosEditando.has(cargo);
+        return `<div class="asent-cargo" data-cargo="${cargo}">
+          <span class="asent-cargo-nombre">${nombre}</span>
+          <span class="asent-cargo-titular">
+            <span class="asent-cargo-texto${actual ? '' : ' vacante'}"${editando ? ' hidden' : ''}>${actual ? escaparHtml(nombreDeHeroe(proyeccion, actual)) : 'vacante'}</span>
+            ${puede ? `<select class="asent-cargo-sel"${editando ? '' : ' hidden'}>${ciudadanos.map((id) => `<option value="${escaparHtml(id)}"${id === actual ? ' selected' : ''}>${escaparHtml(nombreDeHeroe(proyeccion, id))}</option>`).join('')}</select>` : ''}
+          </span>
+          ${puede ? `<button class="btn-secondary asent-cargo-btn" type="button">${editando ? 'Asignar' : 'Cambiar'}</button>` : ''}
         </div>`;
       }).join('')}
+      ${soyGobernador || soyRey ? '' : '<p class="asent-lado-nota">Solo el Rey (al Gobernador) y el Gobernador (al resto) pueden cambiar los cargos.</p>'}
       <p id="asent-cargo-error" class="faction-error" role="alert"></p>
     </section>`;
 }
@@ -1946,17 +1935,32 @@ function renderCargosAsentamiento(asentamiento: Asentamiento | undefined, proyec
 function cablearCargosAsentamiento(panel: HTMLElement, asentamiento: Asentamiento | undefined): void {
   if (!asentamiento) return;
   panel.querySelectorAll<HTMLElement>('.asent-cargo').forEach((fila) => {
-    const cargo = fila.dataset.cargo;
+    const cargo = fila.dataset.cargo!;
+    const texto = fila.querySelector<HTMLElement>('.asent-cargo-texto');
     const select = fila.querySelector<HTMLSelectElement>('.asent-cargo-sel');
-    fila.querySelector<HTMLButtonElement>('.asent-cargo-btn')?.addEventListener('click', async () => {
+    const boton = fila.querySelector<HTMLButtonElement>('.asent-cargo-btn');
+    boton?.addEventListener('click', async () => {
+      const error = panel.querySelector<HTMLElement>('#asent-cargo-error');
+      if (!cargosEditando.has(cargo)) {
+        // «Cambiar»: el combo ocupa el sitio del nombre.
+        cargosEditando.add(cargo);
+        texto?.toggleAttribute('hidden', true);
+        select?.toggleAttribute('hidden', false);
+        boton.textContent = 'Asignar';
+        select?.focus();
+        return;
+      }
       const heroeId = select?.value;
-      if (!cargo || !heroeId) return;
+      if (!heroeId) return;
+      boton.disabled = true;
       try {
         const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'asignarCargoLocal', { asentamientoId: asentamiento.id, cargo, heroeId });
         if (!respuesta.resultado.ok) throw errorDeRechazo(respuesta.resultado, 'No se pudo asignar el cargo.');
+        cargosEditando.delete(cargo);
+        if (error) error.textContent = '';
         await refrescarDatosJuego();
       } catch (err) {
-        const error = panel.querySelector<HTMLElement>('#asent-cargo-error');
+        boton.disabled = false;
         if (error) error.textContent = mensajeError(err);
       }
     });

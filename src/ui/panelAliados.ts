@@ -1,9 +1,10 @@
-// Subpestaña «Aliados» de Centro urbano: abrir o cerrar el almacén de la plaza a los ejércitos ALIADOS que pasan (`alternarReabastecerAliados`, Doc 5.13 «Reabastecimiento en ruta»).
+// Bloque «Aliados» del final de la subpestaña «Puerta»: abrir o cerrar el almacén de la plaza a los ejércitos ALIADOS que pasan (`alternarReabastecerAliados`, Doc 5.13 «Reabastecimiento en ruta»).
 // Repostar cuesta stock real a la plaza; por eso lo decide ella. Lo cambia el Gobernador o el Tesorero residentes y presentes; el servidor valida y su rechazo se enseña tal cual.
 import { ayuda } from './ayuda';
-import type { ContextoPlaza, SubpestanaPlaza } from './ganchos';
+import type { ContextoPlaza } from './ganchos';
 
-function html(c: ContextoPlaza): string {
+/** El bloque «Reabastecer a los aliados», que va al final de la subpestaña «Puerta». */
+export function htmlAliados(c: ContextoPlaza): string {
   const abierto = c.asentamiento.permiteReabastecerAliados === true;
   const cargos = c.asentamiento.cargos;
   const tieneCargo = c.resideAqui && (cargos?.gobernadorId === c.proyeccion.heroeId || cargos?.tesoreroId === c.proyeccion.heroeId);
@@ -14,7 +15,7 @@ function html(c: ContextoPlaza): string {
     <p class="faction-error" data-campo="error-aliados" role="alert"></p>`;
 }
 
-function cablear(c: ContextoPlaza): void {
+export function cablearAliados(c: ContextoPlaza): void {
   const error = c.cuerpo.querySelector<HTMLElement>('[data-campo="error-aliados"]');
   c.cuerpo.querySelector<HTMLButtonElement>('[data-alternar-aliados]')?.addEventListener('click', async (ev) => {
     const boton = ev.currentTarget as HTMLButtonElement;
@@ -25,4 +26,3 @@ function cablear(c: ContextoPlaza): void {
   });
 }
 
-export const SUBPESTANA_ALIADOS: SubpestanaPlaza = { id: 'aliados', etiqueta: 'Aliados', html, cablear };

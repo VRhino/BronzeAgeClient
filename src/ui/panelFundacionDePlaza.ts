@@ -67,7 +67,7 @@ export function htmlFundacionDePlaza(c: ContextoPlaza): string {
     <strong class="heroe-sub">Coste (sale del almacén de la plaza)</strong>
     ${filas}
     <strong class="heroe-sub">Requisitos</strong>
-    ${gates.map(([ok, texto, porque]) => `<p class="asent-lado-nota">${ok ? '✓' : '✗'} ${texto}${ok ? '' : ` — ${porque}`}</p>`).join('')}
+    ${gates.map(([ok, texto, porque]) => `<p class="asent-lado-nota fundacion-gate ${ok ? 'ok' : 'falta'}">${ok ? '✓' : '✗'} ${texto}${ok ? '' : ` — ${porque}`}</p>`).join('')}
     <button class="btn-primary" type="button" data-lanzar-fundacion${lanzable ? '' : ' disabled'}>Lanzar caravana</button>
     <strong class="heroe-sub">Caravanas de fundación de esta plaza</strong>
     ${lista}

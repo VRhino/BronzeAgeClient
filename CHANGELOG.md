@@ -3,6 +3,20 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.40.0] — 2026-10-28 · Centro urbano reordenado · sync con `VRhino/BronzeAge@f4585ac`
+
+### Cambiado
+- **Subida de nivel** fuera de las subpestañas, entre las pestañas de edificio y las del Centro urbano: el botón arriba (apagado si no se
+  cumple o no eres Gobernador) y los requisitos debajo en un panel plegable.
+- **Producción** y **Recetas** en una sola pestaña, cada elemento plegable. La producción enseña ahora los extractores y granjas activos
+  por tipo (el motor no publicaba la producción por edificio y salía vacía), con el neto real de cada recurso (la tendencia del almacén),
+  la base del catálogo y la mano de obra.
+- **Cargos**: cada cargo con quien lo ocupa (o «vacante») y un botón «Cambiar» al lado; el combo ocupa el sitio del nombre y el botón pasa
+  a «Asignar». Se ven aunque no puedas nombrar.
+- **Muralla** oculta hasta que la plaza llega a nivel 2; cada anillo dice el nivel que pide (empalizada 2, piedra 3, adarve 4; antes ponía 3).
+- **Aliados** deja de ser pestaña: va al final de «Puerta». **Información**, la última pestaña.
+- **Fundación**: los requisitos en verde si se cumplen y en rojo si no.
+
 ## [0.39.3] — 2026-10-28 · carro al salir, víveres al entrar, carro del ejército y círculo de Fundar · sync con `VRhino/BronzeAge@f4585ac`
 
 ### Arreglado

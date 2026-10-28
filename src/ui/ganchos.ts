@@ -9,9 +9,8 @@ import { SUBPESTANA_PUERTA } from './panelPuerta';
 import { SUBPESTANA_RESIDENCIA } from './panelResidencia';
 import { cablearFundacionDePlaza, htmlFundacionDePlaza } from './panelFundacionDePlaza';
 import { cablearTesoreria, htmlTesoreria } from './panelTesoreria';
-import { SUBPESTANA_INFORMACION, SUBPESTANA_RECETAS } from './vistaCiudad';
+import { SUBPESTANA_INFORMACION } from './vistaCiudad';
 import { SUBPESTANA_TRUEQUES } from './panelTrueques';
-import { SUBPESTANA_ALIADOS } from './panelAliados';
 import { SUBPESTANA_MISIONES } from './misiones';
 import { FICHA_OBRA, FICHA_PUEBLO, SUBPESTANA_PUEBLOS, seleccionarPuebloUObra } from './pueblos';
 import { FICHA_CARAVANA_AJENA, FICHA_COLUMNA_AJENA, seleccionarAjeno } from './interaccionAjena';
@@ -42,6 +41,8 @@ export interface SubpestanaPlaza {
   etiqueta: string;
   html: (c: ContextoPlaza) => string;
   cablear?: (c: ContextoPlaza) => void;
+  /** Si se enseña la pestaña en esta plaza (ausente = siempre). */
+  visible?: (c: ContextoPlaza) => boolean;
 }
 
 /** Subpestañas EXTRA de Centro urbano, después de Resumen · Edificios · Producción · Cola · Cargos. */
@@ -55,18 +56,16 @@ export const SUBPESTANAS_CENTRO_EXTRA: SubpestanaPlaza[] = [
   { id: 'tesoreria', etiqueta: 'Tesorería', html: htmlTesoreria, cablear: cablearTesoreria },
   { id: 'fundacion', etiqueta: 'Fundación', html: htmlFundacionDePlaza, cablear: cablearFundacionDePlaza },
 
-  // --- hueco bloque F (vista de la ciudad: recetas, glosario)
-  SUBPESTANA_RECETAS,
-  SUBPESTANA_INFORMACION,
-
-  // --- hueco bloque C3 (plaza › Centro urbano: reabastecer a los aliados)
-  SUBPESTANA_ALIADOS,
+  // (las recetas van dentro de «Producción»; reabastecer a los aliados, al final de «Puerta»)
 
   // --- hueco misiones (plaza › Centro urbano: las misiones de la plaza)
   SUBPESTANA_MISIONES,
 
   // --- hueco pueblos (plaza › Centro urbano: pueblos extractores y aldea agrícola)
   SUBPESTANA_PUEBLOS,
+
+  // --- el glosario, siempre la última
+  SUBPESTANA_INFORMACION,
 ];
 
 /** Subpestañas EXTRA de Mercado, después de Órdenes · Caravanas. */

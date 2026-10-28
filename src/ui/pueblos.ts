@@ -14,6 +14,7 @@ import { estadoCliente, textoEnTiempoReal } from './estadoCliente';
 import { EDIFICIO_NOMBRE, RECURSO_NOMBRE, faccionColor } from '../paletas';
 import type { Asentamiento, ObraDeMapa, Point, PuebloDeMapa } from '../tiposDominio';
 import { ayuda } from './ayuda';
+import { plegable } from './plegable';
 import { agarre } from './agarre';
 import { miColumna } from './ejercitos';
 import { dibujarIconoMapa } from '../mundo/iconosMapa';
@@ -235,8 +236,8 @@ export function htmlAscensoLocal(p: ProyeccionJugador, a: Asentamiento, soyGober
   if (!reqs || !asc) return '';
   const objetivo = a.nivel + 1;
   const techo = Math.min(reqs.nivelMaximo ?? 5, asc.nivelTechoProvisional ?? 5);
-  const cabecera = `<div class="asent-lado-cabecera"><span class="faction-kicker">Subida de nivel ${ayuda('plaza:ascenso', 'La subida de nivel no es automática: la pide el Gobernador, se paga entera del almacén y tarda una obra. Si conquistan la plaza durante la obra, se pierde.')}</span></div>`;
-  if (objetivo > techo) return `${cabecera}<p class="asent-lado-nota">La plaza está en el nivel más alto que se puede alcanzar hoy.</p>`;
+  const info = ayuda('plaza:ascenso', 'La subida de nivel no es automática: la pide el Gobernador, se paga entera del almacén y tarda una obra. Si conquistan la plaza durante la obra, se pierde.');
+  if (objetivo > techo) return `<p class="asent-lado-nota">La plaza está en el nivel más alto que se puede alcanzar hoy.${info}</p>`;
   const r = reqs.requisitos?.[String(objetivo)] ?? {};
   const coste = asc.porNivelObjetivo?.[String(objetivo)];
   const pob = a.poblacion ?? { pesants: 0, artesanos: 0, nobleza: 0 };
@@ -255,14 +256,15 @@ export function htmlAscensoLocal(p: ProyeccionJugador, a: Asentamiento, soyGober
     [faltaPagar.length === 0, `En el almacén: ${listaRecursos(coste?.costo ?? {}) || 'sin coste'}${faltaPagar.length ? ` (faltan ${faltaPagar.map(([k, n]) => `${Math.ceil(n - (almacen[k]?.cantidad ?? 0))} ${RECURSO_NOMBRE[k] ?? k}`).join(', ')})` : ''}`],
   ];
   const puede = !a.ascenso && filas.every(([ok]) => ok);
-  if (a.ascenso) return `${cabecera}<p class="asent-lado-nota">Obra en curso hacia el nivel ${a.ascenso.nivelObjetivo} · termina en ${textoEnTiempoReal(a.ascenso.completaEn - p.instante)}.</p>`;
-  return `${cabecera}
-    <p class="asent-lado-nota">Al nivel ${objetivo}${coste ? ` · obra de ${Math.round(coste.obraMinutos / 60)} h` : ''}:</p>
-    <ul class="ascenso-requisitos">${filas.map(([ok, t]) => `<li class="${ok ? 'ok' : 'falta'}">${ok ? '✓' : '✗'} ${e(t)}</li>`).join('')}</ul>
-    <p class="asent-lado-nota">El servidor comprueba además el cupo de tu Facción y que los ingresos cubran el mantenimiento del nivel nuevo.</p>
-    ${soyGobernador
-      ? `<button id="btn-solicitar-ascenso" class="btn-primary" type="button"${puede ? '' : ' disabled'}>Subir a nivel ${objetivo}</button>`
-      : '<p class="asent-lado-nota">Solo el Gobernador puede pedir la subida.</p>'}`;
+  if (a.ascenso) return `<p class="asent-lado-nota">Subiendo al nivel ${a.ascenso.nivelObjetivo} · termina en ${textoEnTiempoReal(a.ascenso.completaEn - p.instante)}.${info}</p>`;
+  const cumplidos = filas.filter(([ok]) => ok).length;
+  const motivo = !soyGobernador ? 'Solo el Gobernador puede pedir la subida.' : puede ? '' : 'Aún no cumple todos los requisitos (despliégalos debajo).';
+  // Arriba el botón (apagado si no se puede); debajo los requisitos, plegados.
+  return `<button id="btn-solicitar-ascenso" class="btn-primary" type="button"${puede && soyGobernador ? '' : ` disabled title="${e(motivo)}"`}>Subir a nivel ${objetivo}</button>
+    ${plegable('ascenso:requisitos', `<span class="plegable-titulo">Requisitos del nivel ${objetivo}${info}</span><span class="plegable-meta${cumplidos === filas.length ? '' : ' falta'}">${cumplidos} de ${filas.length}</span>`,
+      `${coste ? `<p class="asent-lado-nota">Obra de ${Math.round(coste.obraMinutos / 60)} h.</p>` : ''}
+      <ul class="ascenso-requisitos">${filas.map(([ok, t]) => `<li class="${ok ? 'ok' : 'falta'}">${ok ? '✓' : '✗'} ${e(t)}</li>`).join('')}</ul>
+      <p class="asent-lado-nota">El servidor comprueba además el cupo de tu Facción y que los ingresos cubran el mantenimiento del nivel nuevo.${soyGobernador ? '' : ' Solo el Gobernador puede pedir la subida.'}</p>`)}`;
 }
 
 // ---------------------------------------------------------------- mapa: pintar, seleccionar y fichas

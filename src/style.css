@@ -1971,24 +1971,38 @@ pre#proyeccion {
 }
 .asent-cargo {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 4px;
+  grid-template-columns: 8.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
   font-size: 0.8rem;
   color: var(--text-secondary);
 }
-.asent-cargo-sel {
-  padding: 5px 6px;
-  background: #12100b;
-  border: 1px solid var(--bronce-osc);
+.asent-cargo-nombre { color: var(--text-muted); }
+/* El nombre y el combo ocupan el mismo hueco: nunca se ven a la vez. */
+.asent-cargo-titular { display: block; min-width: 0; }
+.asent-cargo-texto, .asent-cargo-sel {
+  display: block;
+  width: 100%;
+  height: 28px;
+  box-sizing: border-box;
+  padding: 0 6px;
+  line-height: 26px;
+  border: 1px solid transparent;
   border-radius: 2px;
-  color: var(--pergamino);
-  font-size: 0.78rem;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+.asent-cargo-texto { color: var(--pergamino); }
+.asent-cargo-texto.vacante { color: var(--text-muted); font-style: italic; }
+.asent-cargo-sel { background: #12100b; border-color: var(--bronce-osc); color: var(--pergamino); }
+.asent-cargo-texto[hidden], .asent-cargo-sel[hidden] { display: none; }
 .asent-cargo-btn {
-  padding: 5px 10px;
+  padding: 3px 8px;
   border-radius: 2px;
   cursor: pointer;
-  font-size: 0.76rem;
+  font-size: 0.72rem;
 }
 
 /* Columna izquierda: lo que antes flotaba sobre el mapa (Ejércitos / Salir al mundo, ficha del edificio, recursos del almacén,
@@ -3026,3 +3040,25 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .mapa-eleccion { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 4; max-width: min(560px, calc(100% - 32px)); padding: 8px 14px; background: rgba(20, 16, 12, 0.92); border: 1px solid var(--oro); border-radius: 4px; color: var(--pergamino); font-size: 0.85rem; text-align: center; }
 .mapa-eleccion .faction-error:empty { display: none; }
 .mapa-interior:has(.mapa-eleccion) canvas { cursor: crosshair; }
+
+/* Subida de nivel: entre las pestañas de edificio y las subpestañas del Centro urbano. */
+.asent-ascenso { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 10px; padding: 8px 0 10px; border-bottom: 1px solid var(--bronce-osc); }
+.asent-ascenso > .btn-primary { width: 100%; }
+.asent-ascenso .asent-lado-nota { margin: 0; }
+
+/* Secciones plegables (producción, recetas, requisitos). */
+.plegables { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.plegable { border: 1px solid var(--bronce-osc); border-radius: 3px; background: rgba(0, 0, 0, 0.18); }
+.plegable > summary { display: flex; align-items: center; gap: 8px; padding: 6px 10px; cursor: pointer; list-style: none; font-size: 0.82rem; }
+.plegable > summary::-webkit-details-marker { display: none; }
+.plegable > summary::before { content: '▸'; color: var(--oro); transition: transform 0.15s; }
+.plegable[open] > summary::before { transform: rotate(90deg); }
+.plegable-titulo { flex: 1; min-width: 0; color: var(--pergamino); }
+.plegable-meta { color: #9fd49a; font-size: 0.76rem; white-space: nowrap; }
+.plegable-meta.falta { color: #e8a08f; }
+.plegable-cuerpo { padding: 2px 12px 10px; display: flex; flex-direction: column; gap: 4px; }
+.plegable-lista { margin: 0; padding-left: 16px; font-size: 0.8rem; color: var(--text-secondary); }
+
+/* Requisitos de la Caravana de Fundación: verde si se cumple, rojo si falta. */
+.fundacion-gate.ok { color: #9fd49a; }
+.fundacion-gate.falta { color: #e8a08f; }

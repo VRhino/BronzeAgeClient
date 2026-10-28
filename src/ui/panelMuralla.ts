@@ -39,4 +39,7 @@ function cablear(c: ContextoPlaza): void {
   cuerpo.querySelectorAll<HTMLButtonElement>('[data-mejorar-recinto]').forEach((b) => lanzar(b, 'mejorarRecinto', () => ({ cargo: b.dataset.cargo, recintoId: b.dataset.mejorarRecinto })));
 }
 
-export const SUBPESTANA_MURALLA: SubpestanaPlaza = { id: 'muralla', etiqueta: 'Muralla', html, cablear };
+/** Hasta que la plaza llega al nivel de la empalizada no hay muralla que gestionar (salvo recintos que ya tenga). */
+const visible = (c: ContextoPlaza): boolean => (c.asentamiento.nivelActual ?? c.asentamiento.nivel) >= NIVEL_MINIMO_MURALLA || (c.asentamiento.recintos ?? []).length > 0;
+
+export const SUBPESTANA_MURALLA: SubpestanaPlaza = { id: 'muralla', etiqueta: 'Muralla', html, cablear, visible };

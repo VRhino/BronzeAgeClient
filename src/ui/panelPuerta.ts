@@ -6,6 +6,7 @@ import type { GrupoPuerta } from '../tiposDominio';
 import { ayuda } from './ayuda';
 import type { ContextoPlaza, SubpestanaPlaza } from './ganchos';
 import { nombreDeHeroe } from './nombres';
+import { cablearAliados, htmlAliados } from './panelAliados';
 
 const GRUPOS: [GrupoPuerta, string][] = [
   ['neutrales', 'Neutrales (ni aliados ni en guerra con la Facción)'],
@@ -36,7 +37,7 @@ function html(c: ContextoPlaza): string {
        ${candidatos.length ? `<div class="mercado-acciones"><select class="form-input" data-campo="vetado">${candidatos.map((id) => `<option value="${e(id)}">${e(nombreDeHeroe(p, id))}</option>`).join('')}</select><button class="btn-secondary" type="button" data-vetar-elegido>Vetar</button></div>` : '<p class="asent-lado-nota">No hay a quién vetar.</p>'}`
     : `<p class="asent-lado-nota">Solo el Gobernador de la plaza veta a jugadores concretos.${vetados.length ? ` Vetados: ${vetados.map((id) => e(nombreDeHeroe(p, id))).join(', ')}.` : ''}</p>`;
   const info = ayuda('plaza:puerta', 'Tu Facción y quien reside aquí entran siempre. Sin ninguna casilla, la plaza queda abierta a todos. Es el exilio (Doc 2.8): no caduca, y el Gobernador o el Rey pueden cambiarla cuando quieran.<br>Vetar a jugadores concretos es solo del Gobernador de la plaza (a un residente no se le veta): solo se veta a quien no reside aquí, y solo ves a los ciudadanos de tu Facción y a los héroes que tienes a la vista.');
-  return `<span class="faction-kicker">Puerta de ${e(a.nombre ?? a.id)} ${info}</span>${resumen}${fijar}${veto}<p class="faction-error" data-campo="error-puerta" role="alert"></p>`;
+  return `<span class="faction-kicker">Puerta de ${e(a.nombre ?? a.id)} ${info}</span>${resumen}${fijar}${veto}<p class="faction-error" data-campo="error-puerta" role="alert"></p>${htmlAliados(c)}`;
 }
 
 function cablear(c: ContextoPlaza): void {
@@ -57,6 +58,7 @@ function cablear(c: ContextoPlaza): void {
     if (vetadoId) void lanzar(ev.currentTarget as HTMLButtonElement, 'vetarJugador', { vetadoId, vetar: true });
   });
   cuerpo.querySelectorAll<HTMLButtonElement>('[data-vetar]').forEach((b) => b.addEventListener('click', () => void lanzar(b, 'vetarJugador', { vetadoId: b.dataset.vetar, vetar: false })));
+  cablearAliados(c);
 }
 
 export const SUBPESTANA_PUERTA: SubpestanaPlaza = { id: 'puerta', etiqueta: 'Puerta', html, cablear };
