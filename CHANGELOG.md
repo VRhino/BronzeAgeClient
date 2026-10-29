@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.45.0] — 2026-10-29 · ventana de misiones · sync con `VRhino/BronzeAge@fd9cd58`
+
+### Cambiado
+- **Misiones** en una ventana centrada, como el diario de misiones de WoW pero en bronce y arcilla: a la izquierda los nombres por grupo
+  (Mías, Mi plaza, Mi Facción) con su estado (cumplida, seguida, nueva) y las hechas plegadas; a la derecha, más ancha, la misión abierta con
+  su descripción, objetivos, detalles y recompensas, y abajo los botones «Seguir» / «Dejar de seguir» y «Reclamar». Pulsar una misión del
+  rastreador abre la ventana en esa misión. La subpestaña de la plaza y la pestaña de la Facción siguen con sus tarjetas.
+
 ## [0.44.0] — 2026-10-29 · gestionar pueblos y aldeas desde dentro · sync con `VRhino/BronzeAge@fd9cd58`
 
 Contrato regenerado (`src/contrato/REVISION` = fd9cd584; cambio aditivo, no hace falta mundo ni partida nueva).

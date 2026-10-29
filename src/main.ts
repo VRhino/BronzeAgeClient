@@ -996,6 +996,7 @@ function renderPanelJugador(forzar = false): void {
   pintarAlertas(barra, proyeccion);
   // La Facción va a pantalla completa; el resto, en el panel lateral.
   if (panelJugador !== 'faccion') panel.classList.remove('jugador-panel-completo');
+  if (panelJugador !== 'misiones') panel.classList.remove('jugador-panel-diario');
   if (panelJugador === null) { panel.hidden = true; vaciar(panel); return; }
   panel.hidden = false;
   if (forzar) invalidar(panel);
@@ -1045,7 +1046,12 @@ function renderPanelJugador(forzar = false): void {
     return;
   }
   if (panelJugador === 'misiones') {
-    pintar(panel, htmlPanelMisiones(proyeccion, escaparHtml), () => cablearMisiones(panel, proyeccion, ejecutarYRefrescar, () => renderPanelJugador(true)), 'misiones');
+    // La ventana de misiones va centrada, como el diario de misiones de WoW: lista a la izquierda y la misión abierta a la derecha.
+    panel.classList.add('jugador-panel-diario');
+    pintar(panel, htmlPanelMisiones(proyeccion, escaparHtml), () => {
+      cablearMisiones(panel, proyeccion, ejecutarYRefrescar, () => renderPanelJugador(true));
+      panel.querySelector('[data-mision-cerrar]')?.addEventListener('click', () => { panelJugador = null; renderPanelJugador(true); });
+    }, 'misiones');
     return;
   }
   if (panelJugador === 'tecnologia') {
@@ -1099,8 +1105,8 @@ function mostrarInforme(informe: InformeDeCombate): void {
 }
 
 /** Desde el rastreador: abre el panel Misiones en la pestaña de ese dueño. */
-function abrirMisiones(d: Parameters<typeof elegirPestanaMisiones>[0]): void {
-  elegirPestanaMisiones(d);
+function abrirMisiones(d: Parameters<typeof elegirPestanaMisiones>[0], id?: string): void {
+  elegirPestanaMisiones(d, id);
   panelJugador = 'misiones';
   renderPanelJugador(true);
 }

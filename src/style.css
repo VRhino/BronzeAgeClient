@@ -3152,3 +3152,61 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
   border-radius: 3px;
   box-shadow: var(--placa);
 }
+
+/* Ventana de misiones (como el diario de misiones de WoW, en bronce y arcilla): centrada, índice a la izquierda y la misión a la derecha. */
+.jugador-panel.jugador-panel-diario {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(960px, calc(100vw - 32px));
+  height: min(640px, calc(100% - var(--jugador-alto) - 40px));
+  max-height: none;
+  padding: 0;
+  overflow: hidden;
+  z-index: 9;
+}
+.diario { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.diario-cab { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--bronce-osc); background: linear-gradient(180deg, rgba(169, 121, 63, 0.18), transparent); }
+.diario-cab-titulo { flex: 1; font-family: var(--fuente-titulo); font-size: 1.15rem; letter-spacing: 0.06em; color: var(--oro-claro); }
+.diario-cab small { color: var(--text-secondary); font-size: 0.78rem; }
+.diario-cerrar { background: none; border: 1px solid var(--bronce-osc); color: var(--oro); width: 28px; height: 28px; border-radius: 3px; cursor: pointer; }
+.diario-cerrar:hover { border-color: var(--oro); color: var(--oro-claro); }
+.diario-cuerpo { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(200px, 34%) 1fr; }
+.diario-indice { overflow-y: auto; padding: 10px 8px; border-right: 1px solid var(--bronce-osc); background: var(--marco-panel); }
+.diario-grupo { margin-bottom: 10px; }
+.diario-grupo-cab { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 8px; font-family: var(--fuente-titulo); font-size: 0.82rem; letter-spacing: 0.05em; color: var(--bronce); border-bottom: 1px solid rgba(169, 121, 63, 0.25); margin-bottom: 4px; }
+.diario-grupo-cab small { font-family: inherit; color: var(--text-muted); }
+.diario-item { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 6px; width: 100%; padding: 5px 10px; border-radius: 2px; cursor: pointer; font-size: 0.86rem; color: var(--text-secondary); border-left: 2px solid transparent; }
+.diario-item span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.diario-item:hover { background: rgba(169, 121, 63, 0.14); color: var(--oro-claro); }
+.diario-item.activo { background: rgba(169, 121, 63, 0.24); color: var(--oro-claro); border-left-color: var(--oro); }
+.diario-item.diario-cumplida { color: var(--oro); }
+.diario-item.diario-reclamada { opacity: 0.55; }
+.diario-item i { font-style: normal; font-size: 0.68rem; }
+.diario-seguida { color: var(--oro); }
+.diario-nueva { padding: 0 5px; border-radius: 8px; background: var(--terracota); color: #fff; }
+.diario-lista { color: var(--oro); font-size: 0.85rem !important; }
+.diario-hechas summary { cursor: pointer; padding: 4px 10px; font-size: 0.75rem; color: var(--text-muted); }
+.diario-vacio { padding: 4px 10px; font-size: 0.78rem; color: var(--text-muted); margin: 0; }
+.diario-detalle { display: flex; flex-direction: column; min-height: 0; background: radial-gradient(ellipse at top, rgba(237, 224, 196, 0.06), transparent 70%), var(--marco-bg-alt); }
+.diario-pagina { flex: 1; overflow-y: auto; padding: 18px 24px; display: flex; flex-direction: column; gap: 8px; }
+.diario-titulo { display: flex; align-items: flex-start; gap: 12px; }
+.diario-titulo h2 { flex: 1; margin: 0; font-family: var(--fuente-titulo); font-size: 1.35rem; color: var(--oro-claro); line-height: 1.2; overflow-wrap: anywhere; }
+.diario-estado { flex-shrink: 0; font-size: 0.72rem; padding: 2px 8px; border-radius: 9px; border: 1px solid var(--bronce-osc); color: var(--text-secondary); }
+.diario-estado-cumplida { background: var(--oro); border-color: var(--oro); color: #201509; }
+.diario-de { margin: 0; font-size: 0.75rem; color: var(--bronce); text-transform: uppercase; letter-spacing: 0.08em; }
+.diario-texto { margin: 0; font-size: 0.92rem; line-height: 1.5; color: var(--pergamino); }
+.diario-seccion { margin: 10px 0 2px; font-family: var(--fuente-titulo); font-size: 0.9rem; letter-spacing: 0.05em; color: var(--oro); border-bottom: 1px solid rgba(169, 121, 63, 0.3); padding-bottom: 3px; }
+.diario-premios { display: flex; flex-wrap: wrap; gap: 6px; }
+.diario-premio { padding: 4px 10px; border: 1px solid var(--bronce-osc); border-radius: 3px; background: rgba(0, 0, 0, 0.25); font-size: 0.82rem; color: var(--text-secondary); }
+.diario-premio strong { color: var(--oro-claro); }
+.diario-premio.oro { border-color: var(--oro); }
+.diario-premio.xp { border-color: #7aa0d8; }
+.diario-nota { margin: 4px 0 0; font-size: 0.8rem; color: var(--text-muted); }
+.diario-pie { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--bronce-osc); background: var(--marco-panel); }
+.diario-pie:empty { display: none; }
+.diario-pie-hueco { flex: 1; }
+@media (max-width: 640px) {
+  .diario-cuerpo { grid-template-columns: 1fr; grid-template-rows: minmax(120px, 38%) 1fr; }
+  .diario-indice { border-right: none; border-bottom: 1px solid var(--bronce-osc); }
+}

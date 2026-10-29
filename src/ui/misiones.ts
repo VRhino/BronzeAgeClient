@@ -2,7 +2,8 @@
 // Tres dueños: el héroe, la plaza donde estás dentro y tu Facción. No se aceptan: el motor activa cada una al cumplirse su previa, y las
 // siguientes son sorpresa (no se enseñan antes). Lo que el jugador «acepta» es SEGUIRLA: fijarla en el rastreador (3 como mucho), que se
 // guarda en este navegador por partida y héroe. Cumplir no da la recompensa: se pide con `reclamarRecompensa { duenoId, misionId }`.
-//   panel     el botón «Misiones» de la barra: pestañas Mías · Mi plaza · Mi Facción, con una insignia de las que puedes reclamar
+//   ventana   el botón «Misiones» de la barra: una ventana centrada como el diario de WoW, con los nombres a la izquierda (Mías · Mi plaza ·
+//             Mi Facción) y la misión abierta a la derecha, con sus botones abajo; la barra lleva una insignia de las que puedes reclamar
 //   plaza     la subpestaña «Misiones» del Centro urbano (`SUBPESTANA_MISIONES`, en `ganchos.ts`)
 //   Facción   la lista de la Facción al pie de su pestaña
 //   rastreador las seguidas, arriba a la derecha en el mundo y al principio de la columna izquierda en la plaza y el campamento
@@ -82,7 +83,6 @@ export function nombreDeContador(c: string): string {
 }
 
 const PESTANAS: [DuenoMision, string][] = [['heroe', 'Mías'], ['plaza', 'Mi plaza'], ['faccion', 'Mi Facción']];
-let pestana: DuenoMision = 'heroe';
 let alCambiar: (() => void) | undefined;
 
 /** Las misiones visibles de un dueño, y su id de dueño para reclamar (`undefined` si ahora no se ve ese dueño). */
@@ -210,17 +210,99 @@ export function htmlListaMisiones(p: ProyeccionJugador, d: DuenoMision, e: Escap
     ${hechas.length ? `<details class="misiones-hechas"><summary>Hechas: ${hechas.length}</summary>${hechas.map((m) => `<div class="mision mision-reclamada"><div class="mision-cab"><strong>${e(textoDeMision(m.id).titulo)}</strong><span class="mision-premio">${e(recompensa(m))}</span></div></div>`).join('')}</details>` : ''}`;
 }
 
-/** El panel del botón Misiones de la barra. */
-export function htmlPanelMisiones(p: ProyeccionJugador, e: Escapar): string {
-  const n = (d: DuenoMision): number => quienReclama(p, d) ? 0 : delDueno(p, d).misiones.filter((m) => m.estado === 'cumplida').length;
-  return `<div class="mapa-panel-jugador">${e(p.heroe.displayName)} · misiones${ayuda('jugador:misiones', `Se activan solas: cuando cumples una, aparecen las que venían detrás. Sigue hasta ${MAX_SEGUIDAS} para verlas en pantalla. La recompensa no llega sola: pulsa Reclamar cuando esté cumplida.`)}</div>
-    <div class="asent-tabs">${PESTANAS.map(([d, nombre]) => `<button class="asent-tab${d === pestana ? ' activo' : ''}" type="button" data-mision-pestana="${d}">${nombre}${n(d) ? ` <b class="mision-cuenta">${n(d)}</b>` : ''}</button>`).join('')}</div>
-    <div class="misiones-lista">${htmlListaMisiones(p, pestana, e)}</div>`;
+// ---------------------------------------------------------------- la ventana (como el diario de misiones de WoW)
+
+/** La misión abierta en la ventana (`dueño:id`); `null` = la primera que haya. Vive entre repintados. */
+let seleccionada: string | null = null;
+
+/** Las misiones de la ventana en el orden de su lista: por dueño, primero las cumplidas, luego las activas; las hechas, aparte. */
+function entradas(p: ProyeccionJugador): { d: DuenoMision; m: Mision }[] {
+  return PESTANAS.flatMap(([d]) => {
+    const ms = delDueno(p, d).misiones;
+    return [...ms.filter((m) => m.estado === 'cumplida'), ...ms.filter((m) => m.estado === 'activa'), ...ms.filter((m) => m.estado === 'reclamada')].map((m) => ({ d, m }));
+  });
 }
 
-/** Abre el panel en la pestaña de un dueño (desde el rastreador o la Facción). */
-export function elegirPestanaMisiones(d: DuenoMision): void {
-  pestana = d;
+function elegida(p: ProyeccionJugador): { d: DuenoMision; m: Mision } | undefined {
+  const todas = entradas(p);
+  return todas.find((x) => claveDe(x.d, x.m.id) === seleccionada) ?? todas.find((x) => x.m.estado !== 'reclamada') ?? todas[0];
+}
+
+/** Las recompensas en etiquetas, como la parte «Recompensas» del diario. */
+function htmlRecompensas(m: Mision, e: Escapar): string {
+  const r = Object.entries(m.recompensa).filter(([, n]) => n > 0).map(([k, n]) => `<span class="diario-premio${k === 'oro' ? ' oro' : ''}"><strong>${Math.round(n)}</strong> ${e(k === 'oro' ? 'oro' : (RECURSO_NOMBRE[k] ?? k).toLowerCase())}</span>`);
+  if (m.recompensaExperiencia > 0) r.push(`<span class="diario-premio xp"><strong>${Math.round(m.recompensaExperiencia)}</strong> XP de Facción</span>`);
+  return r.join('') || '<span class="diario-premio">Sin recompensa</span>';
+}
+
+/** La columna de la izquierda: los nombres por grupo (Mías, Mi plaza, Mi Facción), con su estado; las hechas, plegadas al final de cada grupo. */
+function htmlIndice(p: ProyeccionJugador, abierta: string | undefined, e: Escapar): string {
+  const s = cargarSeguimiento(p);
+  const item = (d: DuenoMision, m: Mision): string => {
+    const k = claveDe(d, m.id);
+    const marcas = `${s?.seguidas.includes(k) ? '<i class="diario-seguida" title="La sigues">◆</i>' : ''}${s?.nuevas.includes(k) ? '<i class="diario-nueva" title="Nueva">nueva</i>' : ''}`;
+    return `<button class="diario-item diario-${m.estado}${k === abierta ? ' activo' : ''}" type="button" data-mision-abrir="${e(k)}"><span>${e(textoDeMision(m.id).titulo)}</span>${marcas}${m.estado === 'cumplida' ? '<i class="diario-lista">✓</i>' : ''}</button>`;
+  };
+  return PESTANAS.map(([d, nombre]) => {
+    const { misiones, duenoId } = delDueno(p, d);
+    const vivas = [...misiones.filter((m) => m.estado === 'cumplida'), ...misiones.filter((m) => m.estado === 'activa')];
+    const hechas = misiones.filter((m) => m.estado === 'reclamada');
+    const vacio = !duenoId ? (d === 'plaza' ? 'Solo dentro de una plaza.' : 'Sin Facción.') : vivas.length ? '' : 'Ninguna en marcha.';
+    return `<div class="diario-grupo"><div class="diario-grupo-cab">${nombre}<small>${vivas.length}</small></div>
+      ${vivas.map((m) => item(d, m)).join('')}${vacio ? `<p class="diario-vacio">${vacio}</p>` : ''}
+      ${hechas.length ? `<details class="diario-hechas"${hechas.some((m) => claveDe(d, m.id) === abierta) ? ' open' : ''}><summary>Hechas (${hechas.length})</summary>${hechas.map((m) => item(d, m)).join('')}</details>` : ''}</div>`;
+  }).join('');
+}
+
+/** La parte de la derecha: título, descripción, objetivos, detalles y recompensas; los botones, abajo. */
+function htmlDetalle(p: ProyeccionJugador, x: { d: DuenoMision; m: Mision } | undefined, e: Escapar): { cuerpo: string; pie: string } {
+  if (!x) return { cuerpo: '<p class="diario-vacio">No tienes misiones todavía. Se activan solas a medida que juegas.</p>', pie: '' };
+  const { d, m } = x;
+  const t = textoDeMision(m.id);
+  const k = claveDe(d, m.id);
+  const s = cargarSeguimiento(p);
+  const seguida = s?.seguidas.includes(k) ?? false;
+  const otro = quienReclama(p, d);
+  const estado = m.estado === 'cumplida' ? '¡Cumplida!' : m.estado === 'reclamada' ? 'Hecha' : 'En curso';
+  const de = PESTANAS.find(([q]) => q === d)?.[1] ?? '';
+  const cuerpo = `<div class="diario-titulo"><h2>${e(t.titulo)}</h2><span class="diario-estado diario-estado-${m.estado}">${estado}</span></div>
+    <p class="diario-de">${e(de)}</p>
+    ${t.texto ? `<p class="diario-texto">${e(t.texto)}</p>` : ''}
+    ${m.estado === 'activa' && m.condiciones.length ? `<h3 class="diario-seccion">Objetivos</h3>${barras(m, e)}` : ''}
+    ${t.explicacion ? `<h3 class="diario-seccion">Detalles</h3><p class="diario-texto">${e(t.explicacion)}</p>` : ''}
+    <h3 class="diario-seccion">Recompensas</h3><div class="diario-premios">${htmlRecompensas(m, e)}</div>
+    ${m.estado === 'cumplida' && otro ? `<p class="diario-nota">${e(otro)}</p>` : ''}
+    <p class="faction-error" data-mision-error="${e(m.id)}" role="alert"></p>`;
+  const seguir = m.estado === 'reclamada' ? ''
+    : `<button class="btn-secondary" type="button" data-mision-seguir="${e(k)}"${!seguida && (s?.seguidas.length ?? 0) >= MAX_SEGUIDAS ? ` disabled title="Ya sigues ${MAX_SEGUIDAS}: deja de seguir alguna"` : ''}>${seguida ? 'Dejar de seguir' : 'Seguir'}</button>`;
+  const reclamar = m.estado === 'cumplida' && !otro ? `<button class="btn-primary" type="button" data-mision-reclamar="${e(m.id)}" data-dueno="${d}">Reclamar</button>` : '';
+  return { cuerpo, pie: `${seguir}<span class="diario-pie-hueco"></span>${reclamar}` };
+}
+
+/** La ventana del botón Misiones de la barra: centrada, con la lista a la izquierda y la misión abierta a la derecha. */
+export function htmlPanelMisiones(p: ProyeccionJugador, e: Escapar): string {
+  const x = elegida(p);
+  const abierta = x ? claveDe(x.d, x.m.id) : undefined;
+  const { cuerpo, pie } = htmlDetalle(p, x, e);
+  const s = cargarSeguimiento(p);
+  return `<div class="diario">
+    <header class="diario-cab"><span class="diario-cab-titulo">Misiones${ayuda('jugador:misiones', `Se activan solas: cuando cumples una, aparecen las que venían detrás. Sigue hasta ${MAX_SEGUIDAS} para verlas en pantalla. La recompensa no llega sola: pulsa Reclamar cuando esté cumplida.`)}</span>
+      <small>Sigues ${s?.seguidas.length ?? 0}/${MAX_SEGUIDAS}</small><button class="diario-cerrar" type="button" data-mision-cerrar aria-label="Cerrar">✕</button></header>
+    <div class="diario-cuerpo">
+      <nav class="diario-indice">${htmlIndice(p, abierta, e)}</nav>
+      <section class="diario-detalle"><div class="diario-pagina">${cuerpo}</div><footer class="diario-pie">${pie}</footer></section>
+    </div>
+  </div>`;
+}
+
+/** Abre la ventana en un dueño (desde la Facción o el rastreador) o, con `id`, en esa misión. */
+export function elegirPestanaMisiones(d: DuenoMision, id?: string): void {
+  seleccionada = id ? claveDe(d, id) : null;
+  if (!id) {
+    const p = estadoCliente.proyeccionUltima;
+    const m = p ? delDueno(p, d).misiones.find((q) => q.estado !== 'reclamada') : undefined;
+    if (m) seleccionada = claveDe(d, m.id);
+  }
 }
 
 /** Al enseñar una lista, lo nuevo de ese dueño deja de ser «nuevo». */
@@ -234,9 +316,16 @@ function verNuevas(p: ProyeccionJugador, d: DuenoMision): void {
 /** Cablea Seguir, Reclamar y las pestañas en `raiz` (el panel, la subpestaña de la plaza o la pestaña Facción). */
 export function cablearMisiones(raiz: HTMLElement, p: ProyeccionJugador, ejecutar: Ejecutar, repintar: () => void): void {
   alCambiar = repintar;
-  const vista = raiz.querySelector('[data-mision-pestana]') ? pestana : (raiz.querySelector<HTMLElement>('[data-dueno]')?.dataset.dueno as DuenoMision | undefined);
+  // En la ventana, lo nuevo deja de serlo al abrir cada misión; en la plaza y la Facción, al cabo de un rato de ver la lista.
+  const vista = raiz.querySelector('.diario') ? undefined : (raiz.querySelector<HTMLElement>('[data-dueno]')?.dataset.dueno as DuenoMision | undefined);
   if (vista) setTimeout(() => verNuevas(p, vista), 4000);
-  raiz.querySelectorAll<HTMLButtonElement>('[data-mision-pestana]').forEach((b) => b.addEventListener('click', () => { pestana = b.dataset.misionPestana as DuenoMision; repintar(); }));
+  raiz.querySelectorAll<HTMLButtonElement>('[data-mision-abrir]').forEach((b) => b.addEventListener('click', () => {
+    seleccionada = b.dataset.misionAbrir!;
+    // Abrirla es verla: deja de ser «nueva».
+    const s = cargarSeguimiento(p);
+    if (s?.nuevas.includes(seleccionada)) { s.nuevas = s.nuevas.filter((k) => k !== seleccionada); guardarSeguimiento(); }
+    repintar();
+  }));
   raiz.querySelectorAll<HTMLButtonElement>('[data-mision-seguir]').forEach((b) => b.addEventListener('click', () => {
     const s = cargarSeguimiento(p);
     const k = b.dataset.misionSeguir!;
@@ -271,7 +360,7 @@ export const SUBPESTANA_MISIONES: SubpestanaPlaza = {
  * Las seguidas que se ven ahora, con su barra fina; las cumplidas, en dorado. En el mundo flota arriba a la derecha; en la plaza y el
  * campamento va al principio de su columna izquierda (allí arriba a la izquierda está la leyenda). Plegado, una línea.
  */
-export function pintarRastreador(p: ProyeccionJugador, abrir: (d: DuenoMision) => void, e: Escapar): void {
+export function pintarRastreador(p: ProyeccionJugador, abrir: (d: DuenoMision, id?: string) => void, e: Escapar): void {
   const izq = document.querySelector<HTMLElement>('.asent-izq');
   const mundo = document.querySelector<HTMLElement>('.mapa-screen:not(.mapa-interior)');
   const sitio = izq ?? mundo;
@@ -291,7 +380,7 @@ export function pintarRastreador(p: ProyeccionJugador, abrir: (d: DuenoMision) =
     sitio.prepend(el);
   }
   const html = `<button class="rastreador-cab" type="button" data-rastreador-plegar aria-expanded="${s?.plegado ? 'false' : 'true'}">Misiones ${seguidas.length}/${MAX_SEGUIDAS} <span>${s?.plegado ? '▸' : '▾'}</span></button>
-    ${s?.plegado ? '' : seguidas.map(({ d, m }) => `<button class="rastreador-item${m.estado === 'cumplida' ? ' cumplida' : ''}" type="button" data-rastreador-abrir="${d}"><strong>${e(textoDeMision(m.id).titulo)}</strong>${m.estado === 'cumplida' ? '<small>¡Cumplida! Reclámala</small>' : barras(m, e, true)}</button>`).join('')}`;
+    ${s?.plegado ? '' : seguidas.map(({ d, m }) => `<button class="rastreador-item${m.estado === 'cumplida' ? ' cumplida' : ''}" type="button" data-rastreador-abrir="${d}" data-rastreador-mision="${e(m.id)}"><strong>${e(textoDeMision(m.id).titulo)}</strong>${m.estado === 'cumplida' ? '<small>¡Cumplida! Reclámala</small>' : barras(m, e, true)}</button>`).join('')}`;
   if (el.dataset.pintado === html) return;
   el.dataset.pintado = html;
   el.innerHTML = html;
@@ -301,5 +390,5 @@ export function pintarRastreador(p: ProyeccionJugador, abrir: (d: DuenoMision) =
     guardarSeguimiento();
     pintarRastreador(p, abrir, e);
   });
-  el.querySelectorAll<HTMLButtonElement>('[data-rastreador-abrir]').forEach((b) => b.addEventListener('click', () => abrir(b.dataset.rastreadorAbrir as DuenoMision)));
+  el.querySelectorAll<HTMLButtonElement>('[data-rastreador-abrir]').forEach((b) => b.addEventListener('click', () => abrir(b.dataset.rastreadorAbrir as DuenoMision, b.dataset.rastreadorMision)));
 }
