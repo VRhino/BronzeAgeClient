@@ -31,7 +31,7 @@ import {
   type ProyeccionJugador,
   type RespuestaComando,
 } from './apiCliente';
-import { cablearSalidaDePlazaAjena, htmlSalidaDePlazaAjena } from './ui/salidaDePlazaAjena';
+import { pintarVentanaSalida, reiniciarVentanaSalida, type LugarDeSalida } from './ui/ventanaSalida';
 import { elegirPestanaHeroe, minutosHerido, pintarPanelHeroe } from './ui/panelHeroe';
 import { htmlBarraJugador, type PanelJugador } from './ui/barraJugador';
 import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
@@ -40,7 +40,7 @@ import { iconoEdificio } from './ui/iconosEdificio';
 import type { Alijo, Asentamiento, BloqueoAscenso, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Edificio, EvaluacionAscenso, Faccion, ParamsCrearHeroe, Sigilo } from './tiposDominio';
 import { svgSigilo } from './sigilo/sigilo';
 import { alCargarSigilos } from './sigilo/lienzo';
-import { actualizarSalida, cablearCampamento, campamentoActual, htmlSeccionCampamento, seccionesDeCampamento, type SeccionCampamento } from './ui/pantallaCampamento';
+import { cablearCampamento, campamentoActual, htmlSeccionCampamento, seccionesDeCampamento, type SeccionCampamento } from './ui/pantallaCampamento';
 import { leyendaPlanoCampamento, svgPlanoCampamento } from './ui/planoCampamento';
 import type { MapaGenerado } from './terreno';
 import { estadoCliente, medirRitmoDeMundo, TIPS_FUNDACION } from './ui/estadoCliente';
@@ -62,8 +62,7 @@ import { FICHAS_MAPA_EXTRA, SELECTORES_MAPA_EXTRA, SUBPESTANAS_CENTRO_EXTRA, SUB
 import { montarPartidas } from './ui/pantallaPartidas';
 import { cablearCaravanas, cablearOrdenes, htmlCaravanas, htmlOrdenes } from './ui/panelMercado';
 import { cablearReclutamiento, htmlReclutamiento } from './ui/reclutamiento';
-import { actualizarConvocatorias, cablearSalidaComoEjercito, htmlSalidaComoEjercito } from './ui/salidaComoEjercito';
-import { cablearPreparacion, htmlPreparacion, peticionesNuevasConv } from './ui/convocatoria';
+import { peticionesNuevasConv } from './ui/convocatoria';
 import { cablearUnirseDesdePlaza, htmlUnirseDesdePlaza } from './ui/unirseDesdePlaza';
 import { cablearCargos } from './ui/panelCargos';
 import { cablearDiplomacia } from './ui/panelDiplomacia';
@@ -75,8 +74,6 @@ import { htmlInforme, type InformeDeCombate } from './ui/informeCombate';
 import { cablearAvisos, htmlAvisos } from './ui/panelAvisos';
 import { cablearCarro, htmlCarro } from './ui/panelCarro';
 import { cablearTecnologia, htmlTecnologia } from './ui/panelTecnologia';
-import { chipLiderazgo } from './ui/liderazgo';
-import { cablearCargaDeSalida, htmlCargaDeSalida, leerCarga } from './ui/cargaDeSalida';
 import { cablearColumna, htmlColumna } from './ui/panelColumna';
 import { cablearPanelIntel, renderPanelIntel } from './ui/panelIntel';
 import { cablearMercadoDePlaza, htmlMercadoDePlaza } from './ui/mercadoDePlaza';
@@ -85,7 +82,7 @@ import { explicarError } from './ui/erroresServidor';
 import { motivosParaCrearFaccion } from './ui/validarFaccion';
 import { nombreDeHeroe } from './ui/nombres';
 import { htmlEstados } from './ui/estados';
-import { cablearInteriorPueblo, htmlAscensoLocal, htmlInteriorPueblo, nombreDePueblo, puebloActual, selectorDePunto } from './ui/pueblos';
+import { cablearInteriorPueblo, htmlAlmacenPueblo, htmlAscensoLocal, htmlPestanasPueblo, htmlTrazadoPueblo, nombreDePueblo, puebloActual, selectorDePunto } from './ui/pueblos';
 import { pintarSitiosDeAldea, type SitiosDeAldea } from './mundo/fertilidad';
 import { htmlMiembrosFaccion, htmlResidentesPlaza } from './ui/participacion';
 import { cablearTablon, htmlTablon } from './ui/tablon';
@@ -387,13 +384,14 @@ function montarCampamento(): void {
       <div class="asent-mapa"><div class="asent-lienzo camp-lienzo"></div></div>
       <aside class="asent-lado"><div class="camp-lado"></div></aside>
     </div>
+    ${HTML_VELO_SALIDA}
     <aside class="jugador-panel" hidden></aside>
     ${menuEsquinaHtml()}
   </div>`;
   const contenedor = app.querySelector<HTMLElement>('.asent-screen')!;
   cablearMenuEsquina(contenedor);
   cablearBarraJugador(contenedor);
-  contenedor.querySelector('#btn-salir-mundo')?.addEventListener('click', () => { seccionCamp = 'salir'; const lado = contenedor.querySelector<HTMLElement>('.camp-lado'); if (lado) invalidar(lado); refrescarPantalla('campamento'); });
+  contenedor.querySelector('#btn-salir-mundo')?.addEventListener('click', abrirVentanaSalida);
   // Sin tiempo real de datos, el campamento (mercado, fondo, avisos) se pone al día con el mismo sondeo suave que el asentamiento.
   let sondeando = false;
   const sondeo = setInterval(() => {
@@ -404,7 +402,8 @@ function montarCampamento(): void {
   limpiarPantalla = () => clearInterval(sondeo);
 }
 
-/** Pantalla de DENTRO DE UN PUEBLO o una aldea (`entrarEnPueblo`): la barra del jugador y la ficha del pueblo, con «Salir al mapa». */
+/** Pantalla de DENTRO DE UN PUEBLO o una aldea (`entrarEnPueblo`), con la forma de la de la plaza: el trazado al centro, el almacén debajo y las
+ * pestañas a la derecha. «Salir al mundo» abre la ventana común. */
 function montarPueblo(): void {
   const proyeccion = estadoCliente.proyeccionUltima;
   const pueblo = proyeccion && puebloActual(proyeccion);
@@ -412,14 +411,25 @@ function montarPueblo(): void {
   menuEsquinaAbierto = false;
   app.innerHTML = `<div class="asent-screen pueblo-screen">
     ${htmlBarraJugador(proyeccion, escaparHtml)}
-    <header class="asent-barra"><span class="asent-nombre">${escaparHtml(nombreDePueblo(pueblo))}</span><span class="asent-nivel">De visita</span></header>
-    <div class="pueblo-cuerpo"><section class="pueblo-ficha"></section></div>
+    <header class="asent-barra">
+      <span class="asent-nombre">${escaparHtml(nombreDePueblo(pueblo))}</span><span class="asent-nivel">De visita</span>
+      <div class="asent-barra-acciones"><button id="btn-salir-mundo" class="btn-primary" type="button">Salir al mundo</button></div>
+    </header>
+    <div class="asent-cuerpo">
+      <div class="asent-centro">
+        <div class="asent-mapa"><div class="asent-lienzo pueblo-lienzo"></div></div>
+        <div class="asent-recursos pueblo-almacen"></div>
+      </div>
+      <aside class="asent-lado"><div class="pueblo-lado"></div></aside>
+    </div>
+    ${HTML_VELO_SALIDA}
     <aside class="jugador-panel" hidden></aside>
     ${menuEsquinaHtml()}
   </div>`;
   const contenedor = app.querySelector<HTMLElement>('.asent-screen')!;
   cablearMenuEsquina(contenedor);
   cablearBarraJugador(contenedor);
+  contenedor.querySelector('#btn-salir-mundo')?.addEventListener('click', abrirVentanaSalida);
   let sondeando = false;
   const sondeo = setInterval(() => {
     if (sondeando || !document.querySelector('.pueblo-screen') || !hayQueSondear()) return;
@@ -430,10 +440,15 @@ function montarPueblo(): void {
 }
 
 function pintarPueblo(p: ProyeccionJugador): void {
-  const ficha = app.querySelector<HTMLElement>('.pueblo-ficha');
   const pueblo = puebloActual(p);
-  if (!ficha || !pueblo) return;
-  pintar(ficha, htmlInteriorPueblo(p, pueblo, escaparHtml), () => cablearInteriorPueblo(ficha, p, pueblo, ejecutarYRefrescar, () => { invalidar(ficha); pintarPueblo(p); }), 'pueblo');
+  const lienzo = app.querySelector<HTMLElement>('.pueblo-lienzo');
+  const almacen = app.querySelector<HTMLElement>('.pueblo-almacen');
+  const lado = app.querySelector<HTMLElement>('.pueblo-lado');
+  if (!pueblo || !lienzo || !almacen || !lado) return;
+  const repintar = (): void => { const q = estadoCliente.proyeccionUltima; if (q) pintarPueblo(q); };
+  pintar(lienzo, htmlTrazadoPueblo(p, pueblo, escaparHtml), undefined, 'pueblo-trazado');
+  pintar(almacen, htmlAlmacenPueblo(pueblo, escaparHtml), undefined, 'pueblo-almacen');
+  pintar(lado, htmlPestanasPueblo(p, pueblo, escaparHtml), () => cablearInteriorPueblo(lado, p, pueblo, ejecutarYRefrescar, repintar), 'pueblo');
 }
 
 /** Vuelca la proyección en la pantalla Campamento (en cada refresco). No toca el DOM de lo que no cambió, para no llevarse lo que se escribe. */
@@ -468,7 +483,6 @@ function pintarCampamento(p: ProyeccionJugador, campamento: CampamentoMercenario
       repintar: () => { olvidarEdicion(lado); if (estadoCliente.proyeccionUltima) pintarCampamento(estadoCliente.proyeccionUltima, campamento); },
     });
   }, seccionCamp);
-  actualizarSalida(lado, p, ejecutarYRefrescar);
   const taberna = lado.querySelector<HTMLElement>('#camp-taberna');
   if (taberna) pintarIntel(taberna, p, () => pintarCampamento(p, campamento));
 }
@@ -1536,9 +1550,54 @@ function montarMapa(): void {
   void dibujarPantallaSegunModo(proyeccion);
 }
 
+// --- VENTANA «SALIR AL MUNDO» (ui/ventanaSalida.ts): la misma en la plaza, el campamento y el pueblo ---------------------------
+
+const HTML_VELO_SALIDA = '<div class="salida-velo" hidden><section class="salida-ventana" role="dialog" aria-label="Salir al mundo"></section></div>';
+let ventanaSalidaAbierta = false;
+
+/** De dónde se sale, según la pantalla montada. */
+function lugarDeSalida(p: ProyeccionJugador): LugarDeSalida | null {
+  if (pantallaMontada === 'campamento') { const c = campamentoActual(p); return c ? { tipo: 'campamento', campamento: c } : null; }
+  if (pantallaMontada === 'pueblo') { const x = puebloActual(p); return x ? { tipo: 'pueblo', pueblo: x } : null; }
+  const a = pantallaMontada === 'asentamiento' ? p.asentamientos[0] : undefined;
+  if (!a) return null;
+  return resideEnLaPlaza(p, a) ? { tipo: 'residencia', asentamiento: a } : { tipo: 'plazaAjena', asentamiento: a };
+}
+
+document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && ventanaSalidaAbierta && !document.querySelector('.dialogo-velo')) cerrarVentanaSalida(); });
+
+function abrirVentanaSalida(): void {
+  reiniciarVentanaSalida();
+  ventanaSalidaAbierta = true;
+  renderVentanaSalida();
+}
+
+function cerrarVentanaSalida(): void {
+  ventanaSalidaAbierta = false;
+  renderVentanaSalida();
+}
+
+function renderVentanaSalida(): void {
+  const velo = document.querySelector<HTMLElement>('.salida-velo');
+  const ventana = velo?.querySelector<HTMLElement>('.salida-ventana');
+  const p = estadoCliente.proyeccionUltima;
+  if (!velo || !ventana) return;
+  const lugar = p && ventanaSalidaAbierta ? lugarDeSalida(p) : null;
+  if (!p || !lugar) { velo.hidden = true; vaciar(ventana); return; }
+  if (velo.hidden) {
+    velo.hidden = false;
+    // Se cierra con el fondo (una vez por velo: cada pantalla monta el suyo) o con Escape.
+    if (!velo.dataset.cableado) {
+      velo.dataset.cableado = '1';
+      velo.addEventListener('click', (ev) => { if (ev.target === velo) cerrarVentanaSalida(); });
+    }
+  }
+  pintarVentanaSalida(ventana, p, lugar, ejecutarYRefrescar, cerrarVentanaSalida, renderVentanaSalida, escaparHtml);
+}
+
 // --- PANTALLA ASENTAMIENTO (T6) -----------------------------------------------------------------
 
-type PanelAsent = 'salir' | 'ejercito';
+type PanelAsent = 'ejercito';
 let panelAsentAbierto: PanelAsent | null = null;
 
 /** ¿Resides en la plaza donde estás? (fundadores y quienes compraron casa: así lo cuenta la proyección). */
@@ -1562,58 +1621,6 @@ async function mudarseAEstaPlaza(): Promise<void> {
   if (!(await confirmar(aviso, { titulo: '¿Hacer de esta plaza tu base?', aceptar: 'Hacerla mi base' }))) return;
   const mensaje = await ejecutarYRefrescar('cambiarResidencia', { destinoId: a.id, heroeId: p.heroeId });
   if (error) error.textContent = mensaje ?? '';
-}
-
-/** Salir al mundo desde tu residencia (Doc 1.10.2) con la tropa y la carga elegidas en el panel «Salir al mundo». */
-async function salirAlMundo(escuadronIds: string[], carga: Record<string, number>): Promise<void> {
-  const proyeccion = estadoCliente.proyeccionUltima;
-  const asentamiento = proyeccion?.asentamientos[0];
-  if (!proyeccion || !asentamiento) return;
-  try {
-    const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'salirAlMundo', { asentamientoId: asentamiento.id, heroeId: proyeccion.heroeId, escuadronIds, carga });
-    if (!respuesta.resultado.ok) throw errorDeRechazo(respuesta.resultado, 'No se pudo salir al mundo.');
-    panelAsentAbierto = null;
-    await refrescarDatosJuego(); // el router lleva a la pantalla Mapa
-  } catch (err) {
-    const error = document.querySelector<HTMLElement>('.asent-panel [data-campo="error-salida"]') ?? document.querySelector<HTMLElement>('#asent-error');
-    if (error) error.textContent = err instanceof ApiError ? mensajeError(err) : (err as Error).message;
-  }
-}
-
-/** Panel «Salir al mundo» de la plaza: tropa que sacas y carga del almacén de la plaza (el backend reserva el trigo que necesita la tropa que se queda). */
-function pintarSalidaAsentamiento(panel: HTMLElement, p: ProyeccionJugador, asentamiento: Asentamiento): void {
-  // Fuera de tu residencia no hay nada que equipar: se retoma la columna aparcada (`salirDeAsentamiento`).
-  if (!resideEnLaPlaza(p, asentamiento)) {
-    pintar(panel, htmlSalidaDePlazaAjena(p, asentamiento, escaparHtml), () => cablearSalidaDePlazaAjena(panel, p, asentamiento, ejecutarYRefrescar), 'salir-ajena');
-    return;
-  }
-  const repintarSalida = (): void => { const q = estadoCliente.proyeccionUltima; if (q) pintarSalidaAsentamiento(panel, q, asentamiento); };
-  // En un ejército en preparación solo se ve ese panel (cambia cuando llegan integrantes, peticiones o cambios de tropa).
-  const preparacion = htmlPreparacion(p, escaparHtml);
-  if (preparacion) {
-    pintar(panel, preparacion, () => cablearPreparacion(panel, p, ejecutarYRefrescar, avisoMapa, repintarSalida), 'preparacion');
-    return;
-  }
-  const leerSeleccion = () => ({ escuadronIds: Array.from(panel.querySelectorAll<HTMLInputElement>('input[data-salir-escuadra]:checked')).map((i) => i.dataset.salirEscuadra!), carga: leerCarga(panel) });
-  const tropa = p.heroe.escuadrones.filter((s) => s.contenedor.tipo === 'campamento' && !s.enGuarnicion && s.cantidad > 0);
-  const almacen = Object.fromEntries(Object.entries(asentamiento.almacen ?? {}).map(([r, v]) => [r, v.cantidad]));
-  const html = `<span class="faction-kicker">Salir al mundo</span>
-    <strong class="heroe-sub">Tropa que sacas</strong>
-    <div class="mapa-lista">${tropa.length > 0
-      ? tropa.map((s) => `<label class="mapa-lista-item"><div><strong>${escaparHtml(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres</span></div><input type="checkbox" data-salir-escuadra="${escaparHtml(s.id)}" checked /></label>`).join('')
-      : '<p class="asent-lado-nota">No tienes tropa libre en la plaza (la de guarnición no sale). Puedes salir solo.</p>'}</div>
-    ${htmlSalidaComoEjercito(p, escaparHtml)}
-    ${htmlCargaDeSalida(almacen, 'el almacén de la plaza', escaparHtml, p.heroe.carro)}
-    <button class="btn-primary" type="button" data-salir>Salir</button>
-    <p class="faction-error" data-campo="error-salida" role="alert"></p>`;
-  // El almacén de la plaza cambia con el sondeo: se repinta solo si cambió y lo marcado (tropa, carga, modo) vuelve a su sitio.
-  pintar(panel, html, () => {
-    cablearCargaDeSalida(panel);
-    const boton = panel.querySelector<HTMLButtonElement>('[data-salir]');
-    boton?.addEventListener('click', () => void salirAlMundo(leerSeleccion().escuadronIds, leerSeleccion().carga));
-    cablearSalidaComoEjercito(panel, p, boton, 'Salir', leerSeleccion, ejecutarYRefrescar, avisoMapa);
-  }, 'salir');
-  actualizarConvocatorias(panel, p, leerSeleccion, ejecutarYRefrescar, avisoMapa, escaparHtml);
 }
 
 // --- PANEL DE GESTIÓN DEL ASENTAMIENTO (columna derecha): Resumen · Edificios · Cola ------------
@@ -1998,7 +2005,7 @@ function renderPanelRecursos(): void {
   pintar(contenedor, htmlRecursos, undefined, 'recursos');
 }
 
-/** Pinta el panel flotante de la barra (Ejércitos / Salir al mundo) según `panelAsentAbierto`. */
+/** Pinta el panel flotante de la barra (Ejércitos) según `panelAsentAbierto`. */
 function renderPanelAsent(): void {
   const proyeccion = estadoCliente.proyeccionUltima;
   const barra = document.querySelector<HTMLElement>('.asent-barra');
@@ -2016,11 +2023,6 @@ function renderPanelAsent(): void {
     const asentamiento = proyeccion.asentamientos[0];
     if (!asentamiento) return;
     pintar(panel, htmlUnirseDesdePlaza(proyeccion, asentamiento, escaparHtml), () => cablearUnirseDesdePlaza(panel, proyeccion, asentamiento, ejecutarYRefrescar), 'ejercito');
-    return;
-  }
-  if (panelAsentAbierto === 'salir') {
-    const asentamiento = proyeccion.asentamientos[0];
-    if (asentamiento) pintarSalidaAsentamiento(panel, proyeccion, asentamiento);
     return;
   }
 }
@@ -2137,6 +2139,7 @@ function montarAsentamiento(): void {
       <aside class="asent-lado"><div class="asent-edificios"><div class="asent-edif-tabs"></div><div class="asent-edif-cuerpo"></div></div></aside>
     </div>
     <div class="asent-tooltip" hidden></div>
+    ${HTML_VELO_SALIDA}
     <aside class="jugador-panel" hidden></aside>
     ${menuEsquinaHtml()}
   </div>`;
@@ -2149,12 +2152,7 @@ function montarAsentamiento(): void {
       renderPanelAsent();
     });
   });
-  contenedor.querySelector('#btn-salir-mundo')?.addEventListener('click', () => {
-    panelAsentAbierto = panelAsentAbierto === 'salir' ? null : 'salir';
-    menuEsquinaAbierto = false;
-    sincronizarMenuEsquina();
-    renderPanelAsent();
-  });
+  contenedor.querySelector('#btn-salir-mundo')?.addEventListener('click', () => { panelAsentAbierto = null; menuEsquinaAbierto = false; sincronizarMenuEsquina(); renderPanelAsent(); abrirVentanaSalida(); });
   cablearMenuEsquina(contenedor);
   cablearBarraJugador(contenedor);
   cablearTooltipEdificios(contenedor);
@@ -2545,6 +2543,7 @@ function refrescarPantalla(pantalla: Pantalla): void {
     if (vistaMapaAbierta) void pintarVistaMapa();
   }
   if (pantalla === 'mapa') { pintarComida(proyeccion); if (!vistaMapaAbierta) void dibujarPantallaSegunModo(proyeccion); renderSeleccionMapa(); renderPanelRiel(); return; }
+  if (pantalla === 'campamento' || pantalla === 'pueblo' || pantalla === 'asentamiento') renderVentanaSalida();
   if (pantalla === 'campamento') { const c = campamentoActual(proyeccion); if (c) pintarCampamento(proyeccion, c); return; }
   if (pantalla === 'pueblo') { pintarPueblo(proyeccion); return; }
   if (pantalla === 'asentamiento') { void dibujarPantallaSegunModo(proyeccion); renderPanelEdificios(); renderPanelRecursos(); renderPanelAsent(); return; }
@@ -2560,6 +2559,7 @@ function refrescarPantalla(pantalla: Pantalla): void {
 function enrutar(): void {
   const destino = pantallaActual();
   if (destino !== pantallaMontada) {
+    ventanaSalidaAbierta = false;
     montar(destino);
     pantallaMontada = destino;
   }

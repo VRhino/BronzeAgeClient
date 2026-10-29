@@ -10,10 +10,11 @@
 //   mapa       los pueblos y las obras se pintan (`dibujarPueblosYObras`) y se seleccionan (`seleccionarPuebloUObra`, fichas `FICHA_PUEBLO`/`FICHA_OBRA`)
 //   ascenso    la subida de nivel de la plaza con sus requisitos (`htmlAscensoLocal`): el nivel 2 pide ya una aldea activa
 //   dentro     se entra en un pueblo activo como de visita, con la columna entera (`entrarEnPueblo` / `salirDePueblo`); dentro se gestiona con esa
-//              columna (`htmlInteriorPueblo`): guarnición, carga, escolta del carro de acarreo y mejora de la aldea. La escolta también se cede desde la plaza.
+//              columna (`htmlPestanasPueblo`): guarnición, carga, escolta del carro de acarreo y mejora de la aldea. La escolta también se cede desde la plaza.
 import { bloqueDeDatos, catalogoDeCaravanas, radioDePuerta, type ProyeccionJugador } from '../apiCliente';
 import { estadoCliente, textoEnTiempoReal } from './estadoCliente';
-import { EDIFICIO_NOMBRE, RECURSO_NOMBRE, faccionColor } from '../paletas';
+import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE, faccionColor } from '../paletas';
+import { iconoEdificio } from './iconosEdificio';
 import type { Asentamiento, AvanzadaDeMapa, ObraDeMapa, Point, PuebloDeMapa } from '../tiposDominio';
 import { ayuda } from './ayuda';
 import { plegable } from './plegable';
@@ -602,40 +603,99 @@ function htmlEscoltaDentro(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar): s
     ${parada && libres.length ? `<div class="mapa-lista">${libres.map((s) => fila(s, `<button class="btn-secondary" type="button" data-pueblo-dentro="escolta" data-escuadra="${e(s.id)}" data-caravana="${e(c.id)}">Escoltar</button>`, e)).join('')}</div>` : ''}`;
 }
 
-/** Lo que se ve y se hace dentro del pueblo: almacén y carga, rebaño, guarnición, carro de acarreo y su escolta, mejorar la aldea, y salir. */
-export function htmlInteriorPueblo(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar): string {
+// DENTRO DEL PUEBLO (decisión de Víctor, 2026-10-29): la misma forma que la pantalla de la plaza. Al centro su trazado (`htmlTrazadoPueblo`), con los
+// huecos de todos los niveles aunque aún no estén construidos; debajo, el almacén (`htmlAlmacenPueblo`); a la derecha, pestañas (`htmlPestanasPueblo`).
+// Salir va por la ventana común «Salir al mundo» (ventanaSalida.ts).
+export type PestanaPueblo = 'resumen' | 'guarnicion' | 'acarreo' | 'carga';
+let pestanaPueblo: PestanaPueblo = 'resumen';
+
+/** Un carro de acarreo, para el trazado (no es un edificio del catálogo). */
+const ICONO_CARRO = '<svg class="icono-edificio" width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><path fill="var(--relleno, rgba(205,160,90,0.25))" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M5 11h17v9H5z"/><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="23" r="3.5"/><circle cx="18" cy="23" r="3.5"/><path d="M22 15h7"/></g></svg>';
+
+/** El trazado del pueblo: el centro, el almacén, el carro de acarreo y, en una aldea, los huecos de todas sus granjas y corrales. */
+export function htmlTrazadoPueblo(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar): string {
+  const aldea = esAldea(x);
+  const niveles = Object.entries(params()?.aldea?.niveles ?? {}).sort(([a], [b]) => Number(a) - Number(b));
+  const actual = params()?.aldea?.niveles?.[String(x.nivelAldea ?? 1)];
+  /** El nivel con el que llega el hueco `i` de un tipo. */
+  const llegaCon = (i: number, campo: 'granjas' | 'corrales'): string | undefined => niveles.find(([, n]) => n[campo] > i)?.[0];
+  const hueco = (tipo: string, lleno: boolean, titulo: string, estilo: string, icono?: string): string =>
+    `<div class="pueblo-hueco${lleno ? '' : ' vacio'}" style="${estilo}" title="${e(titulo)}">${icono ?? iconoEdificio(tipo, 30)}</div>`;
+  const anillo: string[] = [];
+  if (aldea) {
+    const maxGranjas = Math.max(actual?.granjas ?? 0, ...niveles.map(([, n]) => n.granjas));
+    const maxCorrales = Math.max(actual?.corrales ?? 0, ...niveles.map(([, n]) => n.corrales));
+    for (let i = 0; i < maxGranjas; i++) {
+      const lleno = i < (actual?.granjas ?? 0);
+      anillo.push(`granja|${lleno ? 1 : 0}|${lleno ? `Granja ${i + 1}` : `Granja ${i + 1}: llega con el nivel ${llegaCon(i, 'granjas') ?? '?'}`}`);
+    }
+    for (let i = 0; i < maxCorrales; i++) {
+      const lleno = i < (actual?.corrales ?? 0);
+      const rebano = lleno && x.rebano && i === 0 ? ` · rebaño de ${n0(x.rebano.cabezas)} cabezas` : '';
+      anillo.push(`corral|${lleno ? 1 : 0}|${lleno ? `Corral ${i + 1}${rebano}` : `Corral ${i + 1}: llega con el nivel ${llegaCon(i, 'corrales') ?? '?'}`}`);
+    }
+  }
+  const huecosAnillo = anillo.map((h, i) => {
+    const [tipo, lleno, titulo] = h.split('|') as [string, string, string];
+    const angulo = (i / anillo.length) * Math.PI * 2 - Math.PI / 2;
+    return hueco(tipo, lleno === '1', titulo, `left:${(50 + Math.cos(angulo) * 36).toFixed(1)}%;top:${(50 + Math.sin(angulo) * 36).toFixed(1)}%`);
+  }).join('');
+  const total = Object.values(x.almacen).reduce((t, n) => t + n, 0);
+  const carro = x.carroId ? p.caravanas.find((k) => k.id === x.carroId) : undefined;
+  const carroEnCasa = carro?.estado === 'disponible';
+  return `<div class="pueblo-trazado${x.batallaId ? ' en-batalla' : ''}">
+    <div class="pueblo-recinto"></div>
+    ${huecosAnillo}
+    <div class="pueblo-hueco centro" style="left:50%;top:50%" title="${e(nombreDePueblo(x))}">${iconoEdificio(aldea ? 'vivienda' : x.tipo, 30)}</div>
+    ${hueco('almacen', true, `Almacén · ${n0(total)} / ${n0(x.capacidad)}`, aldea ? 'left:37%;top:67%' : 'left:30%;top:68%')}
+    ${hueco('carro', carroEnCasa, x.carroId ? (carroEnCasa ? 'Carro de acarreo, parado aquí' : 'Carro de acarreo: fuera') : 'Sin carro de acarreo', aldea ? 'left:63%;top:67%' : 'left:70%;top:68%', ICONO_CARRO)}
+    ${x.batallaId ? '<p class="pueblo-trazado-aviso">Lo están atacando: si sigues dentro, defiendes.</p>' : ''}
+  </div>`;
+}
+
+/** El almacén del pueblo, en la tira de abajo como el de la plaza: uno para todo, hasta su capacidad. */
+export function htmlAlmacenPueblo(x: PuebloDeMapa, e: Escapar): string {
+  const total = Object.values(x.almacen).reduce((t, n) => t + n, 0);
+  const llenado = (n: number): number => (x.capacidad > 0 ? Math.min(100, Math.round((n / x.capacidad) * 100)) : 0);
+  const chip = (icono: string, nombre: string, n: number, detalle: string): string =>
+    `<span class="asent-recurso${llenado(n) >= 90 ? ' lleno' : ''}" data-nombre="${e(nombre)}" data-detalle="${e(detalle)}"><span class="asent-recurso-icono" aria-hidden="true">${icono}</span>${n0(n)}<span class="asent-recurso-barra" style="--llenado:${llenado(n)}%"></span></span>`;
+  const recursos = Object.entries(x.almacen).filter(([r]) => r).map(([r, n]) => chip(RECURSO_ICONO[r] ?? '📦', RECURSO_NOMBRE[r] ?? r, n, `${n0(n)} de ${n0(x.capacidad)} entre todo`));
+  return `${chip('🏚️', 'Almacén', total, `${n0(total)} / ${n0(x.capacidad)}`)}${recursos.join('') || '<span class="asent-recurso-vacio">Vacío</span>'}`;
+}
+
+function htmlResumenPueblo(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar): string {
   const aldea = esAldea(x);
   const pr = params();
   const nivel = aldea ? pr?.aldea?.niveles?.[String(x.nivelAldea ?? 1)] : undefined;
   const siguiente = aldea && x.nivelAldea ? pr?.aldea?.niveles?.[String(x.nivelAldea + 1)] : undefined;
-  const total = Object.values(x.almacen).reduce((t, n) => t + n, 0);
-  const filasAlmacen = Object.entries(x.almacen).map(([r, n]) => `<div class="carro-fila"><span>${e(r ? RECURSO_NOMBRE[r] ?? r : 'Recurso')}</span><strong>${n0(n)}</strong></div>`).join('');
   const especie = x.rebano ? bloqueDeDatos<Record<string, Especie>>('ESPECIES', alLlegarDatos)?.[x.rebano.especie] : undefined;
   const topeRebano = especie && nivel ? especie.topePorCorral * nivel.corrales : undefined;
   const mejora = (p.obrasDeMapa ?? []).find((o) => o.tipo === 'mejoraAldea' && o.destinoId === x.id);
-  // Gestiona el ciudadano de la Facción de la plaza madre; el motor lo comprueba (`pueblo.faccion_ajena`).
   const ciudadano = x.propio;
   const columna = miColumna(p);
   const dentro = columna ? columna.participantes.map((q) => nombreDeHeroe(p, q.heroeId)).join(', ') : '';
-  return `<span class="faction-kicker">Dentro de ${e(nombreDePueblo(x))}</span>
-    <p class="asent-lado-nota">De ${e(nombrePlaza(p, x.madreId))}.${x.fertilidad !== undefined ? ` Fertilidad ${x.fertilidad.toFixed(2).replace('.', ',')}.` : ''}${x.batallaId ? ' <strong>Lo están atacando: si sigues dentro, defiendes.</strong>' : ''}</p>
-    <div class="carro-ocupacion"><strong class="heroe-sub">Almacén</strong><span>${n0(total)} / ${n0(x.capacidad)}</span></div>${barra(total, x.capacidad)}
-    ${filasAlmacen || '<p class="mapa-lista-vacia">Vacío.</p>'}
-    ${ciudadano ? htmlCargaDelPueblo(p, x, e) : ''}
+  return `<p class="asent-lado-nota">De ${e(nombrePlaza(p, x.madreId))}.${x.fertilidad !== undefined ? ` Fertilidad ${x.fertilidad.toFixed(2).replace('.', ',')}.` : ''}${x.batallaId ? ' <strong>Lo están atacando: si sigues dentro, defiendes.</strong>' : ''}</p>
     ${aldea ? `<strong class="heroe-sub">Aldea</strong>
       <p class="asent-lado-nota">Nivel ${x.nivelAldea ?? 1}${nivel ? `: ${nivel.granjas} granjas y ${nivel.corrales} corrales` : ''}.${mejora ? ' Tiene una mejora en marcha: sus materiales se entregan en el mapa, a su puerta.' : ''}</p>
       ${ciudadano && siguiente && !mejora ? `<div class="mapa-seleccion-acciones"><button class="btn-secondary" type="button" data-pueblo-dentro="mejorar" title="${e(`Al nivel ${x.nivelAldea! + 1}: ${siguiente.granjas} granjas y ${siguiente.corrales} corrales. Pide ${listaRecursos(siguiente.coste)}, que se traen como una obra.`)}">Mejorar a nivel ${x.nivelAldea! + 1}</button><small class="asent-lado-nota">El Gobernador o el Maestro de Obras de la plaza madre.</small></div>` : ''}
       ${x.rebano ? `<div class="carro-ocupacion"><strong class="heroe-sub">Rebaño ${e(ESPECIE_NOMBRE[x.rebano.especie] ?? x.rebano.especie)}</strong><span>${n0(x.rebano.cabezas)}${topeRebano ? ` / ${topeRebano}` : ''} cabezas</span></div>${topeRebano ? barra(x.rebano.cabezas, topeRebano) : ''}
         <p class="asent-lado-nota">Crece solo hasta el tope de sus corrales; lo que pasa del pie de cría entra como ganado en el almacén.</p>` : ''}` : ''}
-    ${htmlGuarnicion(p, x, ciudadano, e)}
-    <strong class="heroe-sub">Carro de acarreo</strong>
-    ${htmlCarroDeAcarreo(p, x, e)}
-    ${ciudadano ? htmlEscoltaDentro(p, x, e) : ''}
     <strong class="heroe-sub">Dentro</strong>
     <p class="asent-lado-nota">${dentro ? `Tu columna (${e(dentro)}), fuera del mapa: nadie la ve y sigue comiendo de sus víveres.` : 'Tú.'} Al salir vuelve a la puerta con todo lo que trajo; tu guarnición se queda.</p>
-    ${ciudadano ? '' : '<p class="asent-lado-nota">Solo los ciudadanos de la Facción de su plaza madre lo gestionan.</p>'}
-    <p class="faction-error" data-pueblo-dentro-error role="alert"></p>
-    <div class="mapa-seleccion-acciones"><button class="btn-primary" type="button" data-salir-pueblo>Salir al mapa</button></div>`;
+    ${ciudadano ? '' : '<p class="asent-lado-nota">Solo los ciudadanos de la Facción de su plaza madre lo gestionan.</p>'}`;
+}
+
+/** Las pestañas de la derecha con la abierta. «Carga» solo para el ciudadano de la Facción de la madre que entró con columna. */
+export function htmlPestanasPueblo(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar): string {
+  const ciudadano = x.propio;
+  const pestanas: [PestanaPueblo, string][] = [['resumen', 'Resumen'], ['guarnicion', 'Guarnición'], ['acarreo', 'Acarreo y escolta'], ...(ciudadano && miColumna(p) ? [['carga', 'Carga'] as [PestanaPueblo, string]] : [])];
+  if (!pestanas.some(([id]) => id === pestanaPueblo)) pestanaPueblo = 'resumen';
+  const cuerpo = pestanaPueblo === 'guarnicion' ? htmlGuarnicion(p, x, ciudadano, e)
+    : pestanaPueblo === 'acarreo' ? `<strong class="heroe-sub">Carro de acarreo</strong>${htmlCarroDeAcarreo(p, x, e)}${ciudadano ? htmlEscoltaDentro(p, x, e) : ''}`
+    : pestanaPueblo === 'carga' ? htmlCargaDelPueblo(p, x, e)
+    : htmlResumenPueblo(p, x, e);
+  return `<div class="asent-tabs asent-tabs-ancho">${pestanas.map(([id, etiqueta]) => `<button class="asent-tab${id === pestanaPueblo ? ' activo' : ''}" type="button" data-pueblo-pestana="${id}">${etiqueta}</button>`).join('')}</div>
+    <div class="asent-lado-cuerpo">${cuerpo}<p class="faction-error" data-pueblo-dentro-error role="alert"></p></div>`;
 }
 
 export function cablearInteriorPueblo(raiz: HTMLElement, p: ProyeccionJugador, x: PuebloDeMapa, ejecutar: Ejecutar, alCargar: () => void): void {
@@ -647,7 +707,7 @@ export function cablearInteriorPueblo(raiz: HTMLElement, p: ProyeccionJugador, x
     b.disabled = false;
     if (error) error.textContent = mensaje ?? '';
   };
-  raiz.querySelector<HTMLButtonElement>('[data-salir-pueblo]')?.addEventListener('click', (ev) => void enviar(ev.currentTarget as HTMLButtonElement, 'salirDePueblo', { heroeId: p.heroeId, puebloId: x.id }));
+  raiz.querySelectorAll<HTMLButtonElement>('[data-pueblo-pestana]').forEach((b) => b.addEventListener('click', () => { pestanaPueblo = b.dataset.puebloPestana as PestanaPueblo; alCargar(); }));
   raiz.querySelectorAll<HTMLButtonElement>('[data-pueblo-dentro]').forEach((b) => b.addEventListener('click', () => {
     const escuadronIds = b.dataset.escuadra ? [b.dataset.escuadra] : [];
     const recurso = b.dataset.recurso ?? '';

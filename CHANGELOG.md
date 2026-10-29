@@ -3,6 +3,20 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.52.0] — 2026-10-29 · ventana «Salir al mundo» común y aldea por dentro · sync con `VRhino/BronzeAge@fd9cd58`
+
+### Cambiado
+- **Salir al mundo**: una sola ventana, centrada como el diario de misiones, para tu residencia, una plaza ajena, el campamento de mercenarios y
+  un pueblo (`src/ui/ventanaSalida.ts`). A la izquierda cómo sales (columna personal o ejército, con las convocatorias abiertas), a la derecha
+  la carga del carro y abajo la tropa: 5 espacios (más si el Liderazgo da para ello) con su icono, ✕ para quitar y un «+» que abre la lista de
+  escuadras que caben. Sale cargado el loadout activo (todo, si no tiene escuadras); se puede elegir otro loadout y, con **Guardar loadout**,
+  dejar en él el cambio. Sin guardar vale solo para esa salida. De visita (plaza ajena, pueblo, campamento donde no resides) los espacios
+  enseñan la columna con la que entraste, sin cambios. Con un ejército en preparación, la ventana enseña ese panel. Desaparecen el panel
+  «Salir» de la plaza, la pestaña «Salir» del campamento y el botón «Salir al mapa» del pueblo.
+- **Dentro de una aldea o un pueblo**: la pantalla toma la forma de la de la plaza. Al centro su trazado, con los huecos de todas las granjas y
+  corrales de la aldea (vacíos y con el nivel que los trae los que aún no tiene), el almacén y el carro de acarreo; en un extractor, su
+  edificio. Debajo, el almacén como la tira de la plaza. A la derecha, pestañas: Resumen, Guarnición, Acarreo y escolta, y Carga.
+
 ## [0.51.1] — 2026-10-29 · Reclutamiento solo con lo desbloqueado · sync con `VRhino/BronzeAge@fd9cd58`
 
 ### Cambiado

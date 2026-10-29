@@ -1,12 +1,9 @@
 // Pantalla CAMPAMENTO (backend 2026-10-04, Doc 1.9b): el héroe nace DENTRO de un campamento de mercenarios y vuelve a él.
-// Se organiza como la del asentamiento: la planta a la izquierda y, a la derecha, subpestañas (Resumen · Salir · Tropa · Mercado ·
-// Fondo · Taberna) en vez de una sola columna larga. Aquí no se decide ninguna regla: quien valida es el backend, y su rechazo sale
+// Se organiza como la del asentamiento: la planta a la izquierda y, a la derecha, subpestañas (Resumen · Tropa · Mercado ·
+// Fondo · Taberna) en vez de una sola columna larga; salir va por la ventana común «Salir al mundo» (ventanaSalida.ts). Aquí no se decide ninguna regla: quien valida es el backend, y su rechazo sale
 // tal cual en `#camp-error`. Los menús del jugador (héroe, escuadras, Facción) están en la barra superior (`barraJugador.ts`).
 import { ayuda } from './ayuda';
 import { chipLiderazgo } from './liderazgo';
-import { cablearPreparacion, htmlPreparacion } from './convocatoria';
-import { actualizarConvocatorias, cablearSalidaComoEjercito, htmlSalidaComoEjercito } from './salidaComoEjercito';
-import { cablearCargaDeSalida, htmlCargaDeSalida, leerCarga } from './cargaDeSalida';
 import { costoDeRefundacion, tropasReclutables, unidadesDeTropa, type ProyeccionJugador } from '../apiCliente';
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { CampamentoMercenarios, Escuadron } from '../tiposDominio';
@@ -16,9 +13,9 @@ import { confirmar } from './dialogo';
 export type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
 type Escapar = (valor: string) => string;
 
-export type SeccionCampamento = 'resumen' | 'salir' | 'tropa' | 'mercado' | 'fondo' | 'taberna';
+export type SeccionCampamento = 'resumen' | 'tropa' | 'mercado' | 'fondo' | 'taberna';
 
-const ETIQUETA: Record<SeccionCampamento, string> = { resumen: 'Resumen', salir: 'Salir', tropa: 'Tropa', mercado: 'Mercado', fondo: 'Fondo', taberna: 'Taberna' };
+const ETIQUETA: Record<SeccionCampamento, string> = { resumen: 'Resumen', tropa: 'Tropa', mercado: 'Mercado', fondo: 'Fondo', taberna: 'Taberna' };
 
 /** Las tres tropas de leva comunal que presta el campamento (backend `TROPAS_RECLUTABLES`, tecnología `leva_comunal`). */
 const TROPAS_PRESTAMO: [string, string][] = [['milicia_lanceros', 'Milicia de lanceros'], ['lenadores', 'Leñadores'], ['granjeros', 'Granjeros']];
@@ -41,7 +38,7 @@ function faccionConPlaza(p: ProyeccionJugador): boolean {
 
 /** Las subpestañas que hay ahora: el Fondo de refundación solo aparece mientras tu Facción no tiene plaza. */
 export function seccionesDeCampamento(p: ProyeccionJugador): { id: SeccionCampamento; etiqueta: string }[] {
-  const ids: SeccionCampamento[] = ['resumen', 'salir', 'tropa', 'mercado', ...(p.faccionId !== null && !faccionConPlaza(p) ? ['fondo' as const] : []), 'taberna'];
+  const ids: SeccionCampamento[] = ['resumen', 'tropa', 'mercado', ...(p.faccionId !== null && !faccionConPlaza(p) ? ['fondo' as const] : []), 'taberna'];
   return ids.map((id) => ({ id, etiqueta: ETIQUETA[id] }));
 }
 
@@ -87,31 +84,6 @@ function resumen(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): st
     ${listaRecursos(heroe.almacenPersonal ?? {}, e)}
     <strong class="heroe-sub">Edificios del campamento</strong>
     <p class="asent-lado-nota">${edificios.map(e).join(' · ') || 'Ninguno.'}</p>`;
-}
-
-function salir(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): string {
-  const heroe = p.heroe;
-  const resides = c.residentesIds.includes(heroe.id);
-  const almacen = heroe.almacenPersonal ?? {};
-  const enCampamento = heroe.escuadrones.filter((s) => s.contenedor.tipo === 'campamento');
-  const aparcadas = heroe.escuadrones.filter((s) => s.contenedor.tipo === 'ejercito');
-  // En un ejército en preparación solo se ve ese panel: mientras tanto el backend rechaza cualquier otra salida.
-  const preparacion = htmlPreparacion(p, e);
-  if (preparacion) return preparacion;
-  if (!resides) {
-    return `<strong class="heroe-sub">Salir${ayuda('camp:salir', 'Sales con la columna con la que entraste, tal cual.')}</strong>
-      ${aparcadas.length > 0 ? `<p class="asent-lado-nota">Columna: ${aparcadas.map((s) => `${e(s.nombre)} (${s.cantidad})`).join(', ')}.</p>` : ''}
-      ${htmlSalidaComoEjercito(p, e)}
-      <button class="btn-primary" type="button" id="btn-salir-campamento">Salir</button>`;
-  }
-  return `
-    <strong class="heroe-sub">Salir${ayuda('camp:salir', 'Elige la tropa que sacas y lo que cargas de tu almacén. La ración gratis de trigo llena tus víveres, que van siempre contigo.<br>Lo que ya traías en el carro sale contigo. Al volver a tu residencia el carro sigue contigo: para guardarlo, «Pasar al almacén» en el panel Carro. Tus víveres no se descargan.')}</strong>
-    <div class="mapa-lista">${enCampamento.length > 0
-      ? enCampamento.map((s) => `<label class="mapa-lista-item"><div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres</span></div><input type="checkbox" data-salir-escuadra="${e(s.id)}" checked /></label>`).join('')
-      : '<p class="asent-lado-nota">No tienes tropa en el campamento.</p>'}</div>
-    ${htmlSalidaComoEjercito(p, e)}
-    ${htmlCargaDeSalida(almacen, 'tu almacén personal', e, heroe.carro)}
-    <button class="btn-primary" type="button" id="btn-salir-campamento">Salir</button>`;
 }
 
 /**
@@ -320,20 +292,11 @@ function fondo(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): stri
 export function htmlSeccionCampamento(seccion: SeccionCampamento, p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): string {
   switch (seccion) {
     case 'resumen': return resumen(p, c, e);
-    case 'salir': return salir(p, c, e);
     case 'tropa': return tropa(p, c, e);
     case 'mercado': return mercado(p, c, e);
     case 'fondo': return fondo(p, c, e);
     case 'taberna': return '<div id="camp-taberna"></div>';
   }
-}
-
-/** Pone al día la lista de ejércitos en preparación de la pestaña Salir (cambia con el sondeo, sin repintar el formulario). `main.ts` la llama en cada refresco. */
-export function actualizarSalida(root: HTMLElement, p: ProyeccionJugador, ejecutar: Ejecutar): void {
-  const escapar = (v: string): string => v.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]!);
-  const aviso = (mensaje: string): void => { const error = root.querySelector<HTMLElement>('#camp-error'); if (error) error.textContent = mensaje; };
-  const leer = () => ({ escuadronIds: Array.from(root.querySelectorAll<HTMLInputElement>('input[data-salir-escuadra]:checked')).map((i) => i.dataset.salirEscuadra!), carga: leerCarga(root) });
-  actualizarConvocatorias(root, p, leer, ejecutar, aviso, escapar);
 }
 
 /** Cablea los botones de la subpestaña pintada. Tras un éxito refresca `ejecutar`, y el router decide la pantalla. */
@@ -420,18 +383,6 @@ export function cablearCampamento(root: HTMLElement, p: ProyeccionJugador, c: Ca
     }, true);
   }
   conBoton('#btn-residir', 'residirEnCampamento', () => ({ heroeId, campamentoId: c.id }));
-  conBoton('#btn-salir-campamento', 'salirDelCampamento', () => ({
-    campamentoId: c.id,
-    heroeId,
-    escuadronIds: marcados('data-salir-escuadra'),
-    carga: leerCarga(root),
-  }));
-  cablearCargaDeSalida(root);
-  const avisarEnError = (mensaje: string): void => { const error = root.querySelector<HTMLElement>('#camp-error'); if (error) error.textContent = mensaje; };
-  const leerSeleccion = () => ({ escuadronIds: marcados('data-salir-escuadra'), carga: leerCarga(root) });
-  cablearSalidaComoEjercito(root, p, root.querySelector<HTMLButtonElement>('#btn-salir-campamento'), 'Salir', leerSeleccion, ejecutar, avisarEnError);
-  actualizarSalida(root, p, ejecutar);
-  cablearPreparacion(root, p, ejecutar, avisarEnError, opciones.repintar);
   conBoton('#btn-pedir-prestamo', 'pedirPrestamo', () => ({ tropaIds: marcados('data-prestamo') }));
   conBoton('#btn-reponer-prestamo', 'reponerPrestamo', () => ({}));
   root.querySelector<HTMLSelectElement>('#reclutar-pagar-con')?.addEventListener('change', (ev) => { pagarConElegido = (ev.target as HTMLSelectElement).value as typeof pagarConElegido; opciones.repintar(); });

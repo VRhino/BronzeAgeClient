@@ -3187,21 +3187,6 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .tablon-pie button { padding: 3px 12px; font-size: 0.8rem; }
 .tablon-nota { font-size: 0.72rem; color: var(--text-muted); }
 
-/* Dentro de un pueblo o una aldea: su ficha en el centro. */
-.pueblo-cuerpo { flex: 1; min-height: 0; overflow-y: auto; display: flex; justify-content: center; padding: 24px 16px; color-scheme: dark; }
-.pueblo-ficha {
-  width: min(560px, 100%);
-  align-self: flex-start;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 18px;
-  background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg));
-  border: 1px solid var(--bronce);
-  border-radius: 3px;
-  box-shadow: var(--placa);
-}
-
 /* Ventana de misiones (como el diario de misiones de WoW, en bronce y arcilla): centrada, índice a la izquierda y la misión a la derecha. */
 .jugador-panel.jugador-panel-diario {
   left: 50%;
@@ -3322,3 +3307,60 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .recl-datos small { color: var(--text-muted); font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.04em; }
 .recl-datos b { font-size: 0.88rem; }
 .btn-primary.recl-boton { align-self: flex-start; width: auto; padding: 4px 12px; font-size: 0.72rem; letter-spacing: 0.06em; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 1px 0 var(--tinta), 0 3px 8px rgba(0, 0, 0, 0.4); }
+
+/* Dentro de un pueblo o una aldea (0.52.0): como la plaza. El trazado al centro, con sus huecos (vacíos los de niveles por llegar). */
+.pueblo-lienzo { position: relative; background: radial-gradient(circle at 50% 50%, rgba(120, 140, 70, 0.28), rgba(60, 70, 35, 0.2) 48%, rgba(30, 24, 16, 0.92) 72%); }
+.pueblo-recinto { position: absolute; inset: 9%; border-radius: 50%; border: 2px dashed rgba(169, 121, 63, 0.45); }
+.pueblo-trazado { position: absolute; inset: 0; }
+.pueblo-trazado.en-batalla .pueblo-recinto { border-color: rgba(200, 70, 50, 0.7); }
+.pueblo-hueco { position: absolute; transform: translate(-50%, -50%); width: 13%; aspect-ratio: 1; display: grid; place-items: center; border: 1px solid var(--bronce); border-radius: 4px; background: linear-gradient(180deg, rgba(60, 44, 26, 0.95), rgba(30, 22, 14, 0.95)); color: var(--oro-claro); --relleno: rgba(205, 160, 90, 0.3); box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45); }
+.pueblo-hueco svg { width: 62%; height: 62%; }
+.pueblo-hueco.centro { width: 18%; border-color: var(--oro); }
+.pueblo-hueco.vacio { border-style: dashed; border-color: rgba(169, 121, 63, 0.45); background: rgba(20, 16, 11, 0.45); color: rgba(160, 140, 110, 0.4); --relleno: transparent; box-shadow: none; }
+.pueblo-trazado-aviso { position: absolute; left: 50%; bottom: 3%; transform: translateX(-50%); margin: 0; padding: 4px 10px; border: 1px solid #b2543a; border-radius: 3px; background: rgba(60, 20, 12, 0.85); color: #f0b48a; font-size: 0.8rem; white-space: nowrap; }
+.asent-recurso-vacio { font-size: 0.8rem; color: var(--text-muted); padding: 4px 6px; }
+
+/* Ventana «Salir al mundo» (0.52.0): la misma en la plaza, el campamento y el pueblo; centrada como el diario de misiones. */
+.salida-velo { position: absolute; inset: 0; z-index: 9; display: grid; place-items: center; background: rgba(8, 6, 4, 0.55); }
+.salida-velo[hidden] { display: none; }
+.salida-ventana { width: min(980px, calc(100vw - 32px)); height: min(680px, calc(100% - 40px)); background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg)); border: 1px solid var(--bronce); border-radius: 3px; box-shadow: var(--placa); overflow: hidden; color-scheme: dark; }
+.salida-cuerpo { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; }
+.salida-col { overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 8px; background: radial-gradient(ellipse at top, rgba(237, 224, 196, 0.05), transparent 70%), var(--marco-bg-alt); }
+.salida-col + .salida-col { border-left: 1px solid var(--bronce-osc); background: var(--marco-panel); }
+.salida-preparacion { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 8px; }
+.salida-pie { border-top: 1px solid var(--bronce-osc); padding: 10px 16px 12px; display: flex; flex-direction: column; gap: 8px; background: linear-gradient(0deg, rgba(169, 121, 63, 0.14), transparent); }
+.salida-tropa-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.salida-tropa-cab .heroe-sub { margin: 0; }
+.salida-liderazgo { font-size: 0.8rem; color: var(--text-secondary); }
+.salida-liderazgo.excedido { color: #d9534f; }
+.salida-loadout { display: flex; align-items: center; gap: 6px; margin-left: auto; font-size: 0.8rem; color: var(--text-secondary); }
+.salida-loadout select { width: auto; padding: 3px 6px; font-size: 0.8rem; }
+.salida-guardar { padding: 3px 10px; font-size: 0.75rem; }
+.salida-huecos { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.salida-hueco { position: relative; min-height: 64px; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; align-items: center; column-gap: 8px; padding: 6px 8px; border: 1px solid var(--bronce); border-radius: 3px; background: linear-gradient(180deg, rgba(60, 44, 26, 0.9), rgba(30, 22, 14, 0.9)); color: var(--oro-claro); --relleno: rgba(205, 160, 90, 0.3); }
+.salida-hueco-icono { grid-row: span 2; display: flex; }
+.salida-hueco-nombre { font-size: 0.84rem; color: var(--pergamino); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 14px; }
+.salida-hueco small { font-size: 0.72rem; color: var(--text-secondary); }
+.salida-hueco-quitar { position: absolute; top: 2px; right: 3px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.75rem; padding: 2px; }
+.salida-hueco-quitar:hover { color: #d9534f; }
+.salida-hueco.vacio { border-style: dashed; border-color: rgba(169, 121, 63, 0.35); background: rgba(20, 16, 11, 0.35); }
+.salida-hueco.mas { display: grid; place-items: center; grid-template-columns: 1fr; border-style: dashed; background: rgba(20, 16, 11, 0.45); color: var(--oro); font-size: 1.8rem; cursor: pointer; }
+.salida-hueco.mas:hover, .salida-hueco.mas.activo { border-color: var(--oro); color: var(--oro-claro); background: rgba(169, 121, 63, 0.16); }
+.salida-elegir { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; border: 1px solid var(--bronce-osc); border-radius: 3px; background: rgba(0, 0, 0, 0.25); max-height: 140px; overflow-y: auto; }
+.salida-candidata { display: flex; align-items: center; gap: 6px; padding: 4px 10px 4px 6px; border: 1px solid var(--bronce); border-radius: 3px; background: rgba(40, 30, 18, 0.9); color: var(--oro-claro); cursor: pointer; --relleno: rgba(205, 160, 90, 0.3); text-align: left; }
+.salida-candidata span { display: flex; flex-direction: column; }
+.salida-candidata strong { font-size: 0.8rem; color: var(--pergamino); }
+.salida-candidata small { font-size: 0.7rem; color: var(--text-secondary); }
+.salida-candidata:hover:not(:disabled) { border-color: var(--oro); }
+.salida-candidata:disabled { opacity: 0.45; cursor: not-allowed; }
+.salida-acciones { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+.salida-acciones .faction-error { flex: 1; margin: 0; }
+.salida-acciones .btn-primary { width: auto; padding: 8px 32px; }
+.salida-col .carro-fila { display: grid; grid-template-columns: 1fr auto 90px auto; align-items: center; gap: 8px; }
+.salida-col .carro-fila .form-input { width: 100%; padding: 4px 6px; }
+.salida-col .carro-fila .btn-secondary { padding: 4px 10px; font-size: 0.75rem; }
+@media (max-width: 720px) {
+  .salida-cuerpo { grid-template-columns: 1fr; overflow-y: auto; }
+  .salida-col { overflow: visible; }
+  .salida-col + .salida-col { border-left: none; border-top: 1px solid var(--bronce-osc); }
+}
