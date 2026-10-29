@@ -17,6 +17,7 @@ import {
   cerrarPresencia,
   fijarCanalesTiempoReal,
   loginConClave,
+  bloqueDeDatos,
   capacidadDeViveres,
   costoDeRefundacion,
   nivelesBandidos,
@@ -35,6 +36,7 @@ import { elegirPestanaHeroe, minutosHerido, pintarPanelHeroe } from './ui/panelH
 import { htmlBarraJugador, type PanelJugador } from './ui/barraJugador';
 import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
 import { EDIFICIO_COLOR, EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from './paletas';
+import { iconoEdificio } from './ui/iconosEdificio';
 import type { Alijo, Asentamiento, BloqueoAscenso, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Edificio, EvaluacionAscenso, Faccion, ParamsCrearHeroe, Sigilo } from './tiposDominio';
 import { svgSigilo } from './sigilo/sigilo';
 import { alCargarSigilos } from './sigilo/lienzo';
@@ -565,9 +567,9 @@ function objetoBajoElClic(proy: ProyeccionJugador, punto: { x: number; y: number
   }
   const batalla = cercano((proy.batallas ?? []).map((b) => ({ ...b, posicion: b.punto })), punto, agarre(20));
   if (batalla) return { seleccion: { tipo: 'batalla', id: batalla.battleId }, ir: { tipo: 'punto', punto: batalla.punto } };
-  const formacion = cercano(formacionesVisibles(proy).map((e) => ({ ...e, posicion: e.posicionActual })), punto, agarre(20));
+  const formacion = cercano(formacionesVisibles(proy).filter((e) => !('dentroDe' in e && e.dentroDe)).map((e) => ({ ...e, posicion: e.posicionActual })), punto, agarre(20));
   if (formacion) return { seleccion: { tipo: 'formacion', id: formacion.id }, ir: { tipo: 'punto', punto: formacion.posicionActual } };
-  const delEjercito = cercano(ejercitosDeLaFaccion(proy).filter((x) => !x.formacion).map((x) => ({ ...x, posicion: x.posicionActual })), punto, agarre(20));
+  const delEjercito = cercano(ejercitosDeLaFaccion(proy).filter((x) => !x.formacion && !x.dentroDe).map((x) => ({ ...x, posicion: x.posicionActual })), punto, agarre(20));
   if (delEjercito) return { seleccion: { tipo: 'ejercito', id: delEjercito.id }, ir: { tipo: 'punto', punto: delEjercito.posicionActual } };
   const alijo = cercano(proy.alijos ?? [], punto, agarre(15));
   if (alijo) return { seleccion: { tipo: 'alijo', id: alijo.id }, ir: { tipo: 'punto', punto: alijo.posicion } };
@@ -1629,6 +1631,48 @@ const EDIFICIOS_MANUALES = [
   'fundicion', 'granFundicion', 'curtiduria', 'armeria', 'carpinteria', 'maravilla',
 ] as const;
 
+interface DefEdificio { costo?: Record<string, number>; requisitoNivelAsentamientoConstruccion?: number; requiereTecnologia?: string; nivelFaccionMinimo?: number }
+
+/** Por qué no se puede añadir ahora un edificio a la cola, como el motor (`anadir_manual`), o `''` si se puede. Lo que el cliente no sabe (sitio,
+ * topes de almacenes y viviendas, cola llena, recursos) lo dice el motor al pedirlo. */
+function motivoParaConstruir(a: Asentamiento, tipo: string, def: DefEdificio, cargo: 'gobernador' | 'maestroObras' | null): string {
+  const p = estadoCliente.proyeccionUltima;
+  if (!cargo) return 'Solo el Gobernador o el Maestro de Obras.';
+  const hay = (a.edificios ?? []).some((e) => e.tipo === tipo);
+  if (tipo === 'cantera' && hay) return 'La plaza ya tiene su cantera: las demás son pueblos sobre nodos de piedra.';
+  const unicos = bloqueDeDatos<string[]>('EDIFICIOS_UNICOS') ?? [];
+  if (unicos.includes(tipo) && hay) return 'Solo puede haber uno.';
+  const nivel = a.nivelActual ?? a.nivel;
+  const pide = def.requisitoNivelAsentamientoConstruccion ?? 0;
+  if (nivel < pide) return `Pide la plaza en nivel ${pide}.`;
+  if (def.requiereTecnologia && !(p?.tecnologiasAdoptadas ?? []).includes(def.requiereTecnologia)) return `Pide la tecnología ${def.requiereTecnologia.replace(/_/g, ' ')}.`;
+  if (tipo === 'granFundicion') {
+    const nivelFaccion = p?.facciones.find((f) => f.id === p.faccionId)?.nivel ?? 1;
+    if (def.nivelFaccionMinimo && nivelFaccion < def.nivelFaccionMinimo) return `Pide la Facción en nivel ${def.nivelFaccionMinimo}.`;
+    if (p?.tecnologia?.capitalId && p.tecnologia.capitalId !== a.id) return 'Solo en la capital.';
+  }
+  return '';
+}
+
+/** Los botones para añadir a la cola: uno por edificio, con su icono; encendidos los que se pueden construir ahora y apagados, con el motivo, los demás.
+ * Fuera: los que nacen solos (sin coste), los de pueblo (minas) y el Corral, que es de la aldea. */
+function htmlBotonesConstruir(a: Asentamiento, cargo: 'gobernador' | 'maestroObras' | null): string {
+  if (!cargo) return '';
+  const catalogo = bloqueDeDatos<Record<string, DefEdificio>>('EDIFICIO_CATALOGO');
+  const tipos = catalogo
+    ? Object.keys(catalogo).filter((t) => Object.keys(catalogo[t]!.costo ?? {}).length > 0 && !t.startsWith('mina') && t !== 'corral')
+    : [...EDIFICIOS_MANUALES];
+  const botones = tipos.map((t) => {
+    const def = catalogo?.[t] ?? {};
+    const motivo = catalogo ? motivoParaConstruir(a, t, def, cargo) : '';
+    const coste = Object.entries(def.costo ?? {}).map(([r, n]) => `${n} ${RECURSO_NOMBRE[r] ?? r}`).join(', ');
+    const titulo = `${EDIFICIO_NOMBRE[t] ?? t}${coste ? ` · ${coste}` : ''}${motivo ? ` · ${motivo}` : ''}`;
+    return `<button class="asent-construir${motivo ? ' apagado' : ''}" type="button" data-construir="${escaparHtml(t)}"${motivo ? ' aria-disabled="true"' : ''} title="${escaparHtml(titulo)}" aria-label="${escaparHtml(titulo)}">${iconoEdificio(t, 30)}</button>`;
+  });
+  return `<div class="asent-construir-cab"><span class="faction-kicker">Construir</span><small>Pasa el ratón para ver qué es y qué cuesta</small></div>
+    <div class="asent-construir-rejilla">${botones.join('')}</div>`;
+}
+
 /** El cargo de construcción que el héroe tiene en esta plaza, o `null`. */
 function cargoConstructor(asentamiento: Asentamiento, heroeId: string): 'gobernador' | 'maestroObras' | null {
   if (asentamiento.cargos?.gobernadorId === heroeId) return 'gobernador';
@@ -1857,20 +1901,15 @@ function seccionEdificios(a: Asentamiento, cargo: 'gobernador' | 'maestroObras' 
       const objetivoMejora = lista
         .filter((e) => e.estado === 'activo' && !e.mejora)
         .sort((e1, e2) => (e1.nivelInterno ?? 1) - (e2.nivelInterno ?? 1))[0];
-      return `<div class="asent-edif-item${tipoSeleccionado() === tipo ? ' sel' : ''}" data-fila-tipo="${escaparHtml(tipo)}" style="--swatch:${EDIFICIO_COLOR[tipo] ?? '#888'}">
-        <span class="asent-edif-nombre">${escaparHtml(EDIFICIO_NOMBRE[tipo] ?? tipo)}</span>
+      return `<div class="asent-edif-item asent-edif-con-icono${tipoSeleccionado() === tipo ? ' sel' : ''}" data-fila-tipo="${escaparHtml(tipo)}" style="--swatch:${EDIFICIO_COLOR[tipo] ?? '#888'}">
+        <span class="asent-edif-nombre">${iconoEdificio(tipo, 26)}${escaparHtml(EDIFICIO_NOMBRE[tipo] ?? tipo)}</span>
         <span class="asent-edif-meta">${escaparHtml(meta)}</span>
         ${cargo && objetivoMejora && tipo !== 'centroUrbano' ? `<button class="asent-edif-mejora" type="button" data-mejorar="${escaparHtml(objetivoMejora.id)}" title="Mejorar el de menor nivel">⬆</button>` : ''}
         ${nota ? `<span class="asent-edif-nota">${escaparHtml(nota)}</span>` : ''}
       </div>`;
     })
     .join('');
-  const anadir = cargo
-    ? `<div class="asent-anadir">
-        <select id="sel-anadir-edificio">${EDIFICIOS_MANUALES.map((t) => `<option value="${t}">${escaparHtml(EDIFICIO_NOMBRE[t] ?? t)}</option>`).join('')}</select>
-        <button id="btn-anadir-edificio" class="btn-secondary" type="button">Añadir a la cola</button>
-      </div>`
-    : '';
+  const anadir = htmlBotonesConstruir(a, cargo);
   return `
     <div class="asent-lado-cabecera"><span class="faction-kicker">Edificios</span><strong>${internos.length}</strong></div>
     ${anadir}
@@ -1887,7 +1926,7 @@ function seccionCola(edificios: Edificio[], cargo: 'gobernador' | 'maestroObras'
     .filter((e) => e.mejora)
     .map((e) => `<div class="asent-cola-item" style="--swatch:${EDIFICIO_COLOR[e.tipo] ?? '#888'}">
       <span class="asent-cola-pos">⬆</span>
-      <span class="asent-edif-nombre">${escaparHtml(EDIFICIO_NOMBRE[e.tipo] ?? e.tipo)}</span>
+      <span class="asent-edif-nombre asent-edif-icono">${iconoEdificio(e.tipo, 22)}${escaparHtml(EDIFICIO_NOMBRE[e.tipo] ?? e.tipo)}</span>
       <span class="asent-edif-nota">mejora a N${e.mejora!.nivelObjetivo} · ${cuentaAtras(e.mejora!.completaEn)}</span>
     </div>`)
     .join('');
@@ -1895,7 +1934,7 @@ function seccionCola(edificios: Edificio[], cargo: 'gobernador' | 'maestroObras'
   return `<div class="asent-cola-lista">${mejoras}${cola
     .map((e, i) => `<div class="asent-cola-item" style="--swatch:${EDIFICIO_COLOR[e.tipo] ?? '#888'}">
       <span class="asent-cola-pos">${i + 1}</span>
-      <span class="asent-edif-nombre">${escaparHtml(EDIFICIO_NOMBRE[e.tipo] ?? e.tipo)}</span>
+      <span class="asent-edif-nombre asent-edif-icono">${iconoEdificio(e.tipo, 22)}${escaparHtml(EDIFICIO_NOMBRE[e.tipo] ?? e.tipo)}</span>
       <span class="asent-edif-nota">${e.estado === 'en_construccion' ? `obra · ${cuentaAtras(e.completaEn)}` : 'en cola'}</span>
       ${cargo ? `<span class="asent-cola-acciones">
         <button type="button" data-cola-mover="arriba" data-edificio="${escaparHtml(e.id)}" title="Subir">▲</button>
@@ -1912,10 +1951,11 @@ function cablearAccionesAsentLado(cont: HTMLElement, a: Asentamiento, cargo: 'go
   });
   cont.querySelector('#btn-solicitar-ascenso')?.addEventListener('click', () => void ejecutarAccionAsent('solicitarAscenso', { asentamientoId: a.id }));
   if (!cargo) return;
-  cont.querySelector('#btn-anadir-edificio')?.addEventListener('click', () => {
-    const tipo = cont.querySelector<HTMLSelectElement>('#sel-anadir-edificio')?.value;
-    if (tipo) void ejecutarAccionAsent('anadirEdificioManualmente', { asentamientoId: a.id, cargo, tipo });
-  });
+  cont.querySelectorAll<HTMLButtonElement>('[data-construir]').forEach((b) => b.addEventListener('click', () => {
+    // Uno apagado dice por qué no, en vez de pedirlo.
+    if (b.classList.contains('apagado')) { const error = document.querySelector<HTMLElement>('#asent-lado-error'); if (error) error.textContent = b.title; return; }
+    void ejecutarAccionAsent('anadirEdificioManualmente', { asentamientoId: a.id, cargo, tipo: b.dataset.construir });
+  }));
   cont.querySelectorAll<HTMLButtonElement>('[data-mejorar]').forEach((b) => {
     b.addEventListener('click', () => void ejecutarAccionAsent('mejorarEdificioAhora', { asentamientoId: a.id, cargo, edificioId: b.dataset.mejorar }));
   });

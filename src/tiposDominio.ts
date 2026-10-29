@@ -335,6 +335,8 @@ export interface Mision {
 
 export interface Ejercito {
   id: string;
+  /** La columna entró en un lugar (plaza, pueblo, avanzada o campamento): no está en el mapa hasta que sale. */
+  dentroDe?: string;
   /** Marcha forzada (motor 6bf35ee): ×1,5 de velocidad y, mientras marcha, ×2 de víveres. Solo se sabe de las columnas propias. */
   marchaForzada?: boolean;
   faccionId: string;

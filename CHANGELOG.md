@@ -3,6 +3,19 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.50.0] — 2026-10-29 · edificios con iconos y arreglos · sync con `VRhino/BronzeAge@fd9cd58`
+
+### Cambiado
+- **Plaza → Edificios**: el desplegable de «Añadir a la cola» pasa a una rejilla de botones, uno por edificio, con un icono dibujado para el
+  cliente (provisional). Encendidos los que se pueden construir ahora; apagados, con el motivo al pasar el ratón (nivel de la plaza,
+  tecnología, único, cantera ya hecha, Gran Fundición fuera de la capital o sin nivel de Facción). La lista sale del catálogo del motor, así que
+  ya aparecen la **Cantera** (una por plaza), las Caballerizas y la Sala del Consejo. Los edificios construidos y la cola llevan también su icono.
+- **Pedir ingreso** (sin Facción): todas las Facciones con su escudo, lo público, miembros y plazas.
+
+### Arreglado
+- Una columna que entró en una plaza, un campamento, un pueblo o una avanzada ya no se pinta en el mapa encima del lugar (`dentroDe`).
+- **Inspeccionar** una plaza (o una columna o una caravana) enseña el informe en su ficha: el cliente no leía los informes del motor.
+
 ## [0.49.0] — 2026-10-29 · mapa, territorio, avisos y experiencia de Facción · sync con `VRhino/BronzeAge@fd9cd58`
 
 ### Añadido

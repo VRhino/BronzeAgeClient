@@ -159,7 +159,8 @@ export function htmlListaFacciones(p: ProyeccionJugador, e: (valor: string) => s
   const lista = p.facciones.filter((f) => f.nombre.toLowerCase().includes(termino)).sort((a, b) => Number(a.derrotadaPor !== undefined) - Number(b.derrotadaPor !== undefined)
     || (b.ciudadanosIds?.length ?? 0) - (a.ciudadanosIds?.length ?? 0) || a.nombre.localeCompare(b.nombre));
   if (lista.length === 0) return `<p class="mapa-lista-vacia">${termino ? 'No hay facciones que coincidan.' : 'Aún no hay Facciones en el mundo.'}</p>`;
-  const conocidas = lista.filter((f) => hayContacto(p, f, plazas));
+  // Sin Facción, todas con su detalle: son a las que puede pedir el ingreso (el motor se las manda todas en su forma pública).
+  const conocidas = p.faccionId === null ? lista : lista.filter((f) => hayContacto(p, f, plazas));
   const lejanas = lista.filter((f) => !conocidas.includes(f));
   const fila = (f: Faccion): string => {
     const propia = f.id === p.faccionId;
@@ -190,7 +191,7 @@ export function htmlListaFacciones(p: ProyeccionJugador, e: (valor: string) => s
     </div>`;
   };
   const sencilla = (f: Faccion): string => `<div class="faccion-lejana"><span>${e(f.nombre)}</span>${accion(f)}</div>`;
-  return `<div class="faction-list faction-list-libre"><span class="faction-kicker">Conocidas (${conocidas.length})${ayuda('faccion:lista', 'Con contacto: la tuya, las de tu Liga, con las que tienes relación y aquellas de las que conoces alguna plaza en el mapa. Las plazas son las que conoces, no todas las que tienen.')}</span>
+  return `<div class="faction-list faction-list-libre"><span class="faction-kicker">${p.faccionId === null ? 'Facciones del mundo' : 'Conocidas'} (${conocidas.length})${ayuda('faccion:lista', 'Con contacto: la tuya, las de tu Liga, con las que tienes relación y aquellas de las que conoces alguna plaza en el mapa. Las plazas son las que conoces, no todas las que tienen.')}</span>
     ${conocidas.length ? conocidas.map(fila).join('') : '<p class="legend-note">Aún no has tenido contacto con ninguna.</p>'}</div>
     ${lejanas.length ? `<div class="faction-list faction-list-libre"><span class="faction-kicker">Sin contacto (${lejanas.length})</span><div class="faccion-lejanas">${lejanas.map(sencilla).join('')}</div></div>` : ''}`;
 }

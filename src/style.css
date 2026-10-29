@@ -3294,3 +3294,16 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .faccion-xp-barra { height: 8px; border-radius: 4px; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--bronce-osc); overflow: hidden; }
 .faccion-xp-barra span { display: block; height: 100%; background: linear-gradient(90deg, var(--bronce), var(--oro)); }
 .faccion-xp small { color: var(--text-muted); font-size: 0.72rem; text-align: right; }
+
+/* Pestaña Edificios: botones con el icono de cada edificio para añadir a la cola, y el icono en la lista de construidos (`ui/iconosEdificio.ts`). */
+.asent-construir-cab { display: flex; justify-content: space-between; align-items: baseline; margin: 4px 0 6px; }
+.asent-construir-cab small { color: var(--text-muted); font-size: 0.72rem; }
+.asent-construir-rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 6px; margin-bottom: 12px; }
+.asent-construir { display: flex; align-items: center; justify-content: center; aspect-ratio: 1; padding: 4px; border: 1px solid var(--bronce); border-radius: 3px; background: linear-gradient(180deg, rgba(60, 44, 26, 0.9), rgba(30, 22, 14, 0.9)); color: var(--oro-claro); cursor: pointer; --relleno: rgba(205, 160, 90, 0.3); transition: transform 0.1s, box-shadow 0.15s; }
+.asent-construir:hover { box-shadow: 0 0 0 1px var(--oro), 0 0 10px rgba(232, 190, 100, 0.35); transform: translateY(-1px); }
+.asent-construir.apagado { border-color: rgba(107, 74, 41, 0.5); background: rgba(20, 16, 11, 0.6); color: rgba(160, 140, 110, 0.45); --relleno: rgba(120, 100, 80, 0.12); cursor: help; }
+.asent-construir.apagado:hover { box-shadow: none; transform: none; }
+.asent-edif-con-icono .asent-edif-nombre { display: flex; align-items: center; gap: 8px; }
+.asent-edif-con-icono .icono-edificio { flex: 0 0 auto; color: var(--oro); --relleno: rgba(205, 160, 90, 0.3); }
+.asent-edif-icono { display: flex; align-items: center; gap: 6px; }
+.asent-edif-icono .icono-edificio { flex: 0 0 auto; color: var(--oro); --relleno: rgba(205, 160, 90, 0.3); }

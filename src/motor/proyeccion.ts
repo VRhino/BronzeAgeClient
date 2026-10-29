@@ -203,7 +203,7 @@ function ejercito(e: pb.Ejercito, ahora: number): d.Ejercito {
   const { posicion, ruta } = evaluarPlan(e.plan, e.posicion, ahora);
   const marcha = ruta.length > 0;
   return {
-    id: e.id, faccionId: e.faccionId, origenAsentamientoId: '', escuadronIds: e.escuadronIds,
+    id: e.id, dentroDe: opcional(e.dentroDe), faccionId: e.faccionId, origenAsentamientoId: '', escuadronIds: e.escuadronIds,
     participantes: e.participantes.map((p) => ({ heroeId: p.heroeId, unidoEn: instante(p.unidoEnMs)! })),
     ruta, posicionActual: posicion, estado: marcha ? 'marchando' : 'estacionado',
     caravanasAdjuntasIds: e.caravanasAdjuntasIds, suministro: cantidades(e.suministro), capacidadCarga: undefined,
@@ -540,7 +540,18 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
       caravanaFundacionId: opcional(e.caravanaFundacionId),
     })),
     caravanasAvistadas: caravanasAjenas.map((x) => ({ id: x.id, posicionActual: evaluarPlan(x.plan, x.posicion, ahora).posicion, faccionId: x.faccionId, escoltada: x.escoltada, recursos: x.recursosAvistados })),
-    informesDeInspeccion: [],
+    // Lo que sacó tu héroe de mirar de cerca (`inspeccionar`): viaja en HEROE y vale 10 minutos.
+    informesDeInspeccion: deAmbito('HEROE:', 'informeInspeccion').map((i): d.InformeDeInspeccion => {
+      const tipo: d.InformeDeInspeccion['objetivo']['tipo'] = i.objetivoId.startsWith('as-') ? 'asentamiento' : i.objetivoId.startsWith('car-') ? 'caravana' : 'ejercito';
+      const tropa = (g: { tropaId: string; cantidad: number; heroeId: string }[]) => g.map((x) => ({ tropaId: x.tropaId, cantidad: x.cantidad, heroeId: x.heroeId }));
+      const c = i.contenido;
+      const contenido: d.ContenidoInforme = c.case === 'plaza'
+        ? { asentamientoId: i.objetivoId, faccionId: c.value.faccionId, heroesIds: c.value.heroesIds, guarnicion: tropa(c.value.guarnicion) }
+        : c.case === 'caravana'
+          ? { caravanaId: i.objetivoId, escoltada: c.value.escoltada, recursos: c.value.recursos }
+          : { ejercitoId: i.objetivoId, faccionId: c.value?.faccionId ?? '', heroesIds: c.value?.heroesIds ?? [], escuadrones: tropa(c.value?.escuadras ?? []) };
+      return { heroeId: i.heroeId, objetivo: { tipo, id: i.objetivoId }, vistoEn: instante(i.vistoEnMs)!, expiraEn: instante(i.expiraEnMs)!, donde: punto(i.donde), contenido };
+    }),
     miConvocatoriaId: deAmbito('', 'convocatoria').find((v) => v.integrantes.some((i) => i.heroeId === heroeId))?.id,
     heroe: (() => {
       // Los víveres viajan en la columna (`Ejercito.viveres`, contract: «en un ejército, los del ejército»); el héroe solo los lleva propios si va sin ella. La interfaz los lee del héroe.

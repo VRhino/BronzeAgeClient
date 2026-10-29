@@ -856,7 +856,9 @@ export function pintarTerreno(
   ctx.strokeStyle = 'rgba(241, 230, 200, 0.6)';
   ctx.lineWidth = anchoRuta;
   ctx.setLineDash(trazoRuta);
-  for (const ejercito of proyeccion.ejercitos || []) {
+  // Una columna que entró en un lugar no está en el mapa (`dentroDe`): ni su ruta ni su rombo.
+  const enElMapa = (proyeccion.ejercitos || []).filter((e) => !e.dentroDe);
+  for (const ejercito of enElMapa) {
     // Estacionado acampo: no tiene trayecto pendiente que ensenar. Marchando y regresando si.
     if (ejercito.estado === 'estacionado' || !ejercito.ruta || ejercito.ruta.length < 2) continue;
     ctx.beginPath();
@@ -872,7 +874,7 @@ export function pintarTerreno(
   ctx.setLineDash([]);
 
   // 16. EJERCITOS (racimos de rombos, uno por jugador de la columna) + de quien es la tierra que pisan
-  for (const ejercito of proyeccion.ejercitos || []) {
+  for (const ejercito of enElMapa) {
     // El color sale del asentamiento de ORIGEN, como en las caravanas, con `faccionId` de reserva por si ese
     // asentamiento ya no existe (a un ejercito se le puede caer la ciudad de la que salio).
     const origen = proyeccion.asentamientos.find((a) => a.id === ejercito.origenAsentamientoId);
@@ -930,7 +932,7 @@ export function pintarTerreno(
 
   // 17b. FORMACIONES EN CAMPO (anillo discontinuo): columnas quietas que esperan a ser tres para ser un ejército (backend Doc 5.14.4). Las
   // propias y las avistadas; es lo que le dice a otro jugador de su Facción que hay algo a lo que unirse.
-  const formaciones = [...(proyeccion.ejercitos || []).filter((e) => e.formacion), ...(proyeccion.ejercitosAvistados || []).filter((e) => e.enFormacion)];
+  const formaciones = [...enElMapa.filter((e) => e.formacion), ...(proyeccion.ejercitosAvistados || []).filter((e) => e.enFormacion)];
   for (const f of formaciones) {
     ctx.beginPath();
     ctx.arc(f.posicionActual.x * escalaCanvas, f.posicionActual.y * escalaCanvas, 11 * k, 0, Math.PI * 2);
@@ -988,7 +990,7 @@ export function pintarTerreno(
 
   // 19. TÚ Y TU DESTINO. Encima de todo: la mira sobre la columna del propio jugador (para ubicarse de un
   // vistazo) y, si va en marcha, un aspa en el punto al que se dirige — el último vértice de su ruta.
-  const miColumna = (proyeccion.ejercitos || []).find((ejercito) => ejercito.participantes.some((p) => p.heroeId === proyeccion.heroeId));
+  const miColumna = enElMapa.find((ejercito) => ejercito.participantes.some((p) => p.heroeId === proyeccion.heroeId));
   if (miColumna) {
     dibujarMarcadorJugador(ctx, miColumna.posicionActual.x * escalaCanvas, miColumna.posicionActual.y * escalaCanvas, k);
     if (miColumna.estado !== 'estacionado' && miColumna.ruta && miColumna.ruta.length >= 2) {
