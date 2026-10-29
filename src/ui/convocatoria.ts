@@ -138,8 +138,10 @@ const ESPACIOS = 5;
 function htmlIntegrante(p: ProyeccionJugador, c: Convocatoria, x: Convocatoria['integrantes'][number], e: Escapar): string {
   const papel = [x.heroeId === c.liderId ? 'Líder' : '', x.heroeId === p.heroeId ? 'tú' : ''].filter(Boolean).join(' · ');
   const iconos = x.tropas.map((t) => `<span class="conv-integrante-tropa" title="${e(`${t.nombre} · nivel ${t.nivel} · moral ${Math.round(t.moral)} · ${t.cantidad} hombres`)}">${iconoTropa(t.tropaId, 26)}</span>`).join('');
+  // De las escuadras ajenas el motor solo manda el id: un hueco sin icono por cada una que no se conoce.
+  const desconocidas = '<span class="conv-integrante-tropa desconocida" title="Escuadra de otro héroe: el motor no dice de qué tropa es"></span>'.repeat(Math.max(0, x.escuadronIds.length - x.tropas.length));
   return `<li class="conv-integrante"><div class="conv-integrante-cab"><strong>${e(nombreDeHeroe(p, x.heroeId))}</strong>${papel ? ` <em>${papel}</em>` : ''}<span>${x.escuadronIds.length} escuadra(s)${x.tropas.length > 0 ? ` · ${hombres(x)} hombres` : ''}</span></div>
-    <div class="conv-integrante-tropas">${iconos || '<small>Sin tropa</small>'}</div></li>`;
+    <div class="conv-integrante-tropas">${iconos + desconocidas || '<small>Sin tropa</small>'}</div></li>`;
 }
 
 /**

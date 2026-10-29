@@ -3,6 +3,12 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.56.1] — 2026-10-29 · escuadras ajenas del ejército en preparación · sync con `VRhino/BronzeAge@db80cb87`
+
+### Cambiado
+- **Integrantes del ejército en preparación**: de las escuadras de otro héroe el motor solo manda el id, no la tropa. En vez de «Sin tropa»
+  sale un hueco sin icono por cada escuadra suya, hasta que el motor mande de qué tropa es.
+
 ## [0.56.0] — 2026-10-29 · ejército en preparación con el reparto de la ventana de salida · sync con `VRhino/BronzeAge@db80cb87`
 
 ### Cambiado
