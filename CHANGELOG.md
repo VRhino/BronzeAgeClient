@@ -3,6 +3,22 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.60.0] — 2026-10-29 · Mercado › Caravanas: arreglos y nueva tarjeta · sync con `VRhino/BronzeAge@bcc90a01`
+
+### Corregido
+- **Comprar animal y mover carro** fallaban en cualquier carro que no fuera el primero: el índice del carro (`carroIndice`, `sint64`) se
+  mandaba en milésimas (el segundo carro llegaba como 1000). Ahora va como entero, igual que lo lee el motor; `salirEn` va como instante.
+- **Barra de Liderazgo de la escolta**: no se movía al ceder escuadras porque el motor no publica lo usado. Ahora suma el coste (por
+  escalón) de tus escuadras cedidas; si van escuadras de otros residentes, se dice cuántas (su coste solo lo conoce el servidor).
+
+### Cambiado
+- **Tarjeta de caravana compacta**: cabecera con estado y «Reservada» (con aviso de que sin reservar puede salir sola en el reparto),
+  cifras en una fila (capacidad, velocidad, preparación, carros con animal), carros en filas cortas con su animal o «Comprar» en línea y
+  «Mover…» en un desplegable, «＋ Básico / ＋ Reforzado» con su coste junto al título (el reforzado dice si falta la Carpintería).
+- **Viaje**: destino junto al título y la carga en rejilla de dos columnas con una barra de carga contra la capacidad, que no deja lanzar
+  si te pasas. El botón dice cuánto tarda en prepararse.
+- **Crear caravana** dice cuánto falta para poder crear otra (`CARAVANA_COOLDOWN`) o por qué no se puede.
+
 ## [0.59.0] — 2026-10-29 · colocar avanzadas desde el mapa · sync con `VRhino/BronzeAge@bcc90a01`
 
 ### Añadido

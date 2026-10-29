@@ -2901,6 +2901,36 @@ kbd {
 .caravana-estado { margin-left: 6px; padding: 1px 8px; border: 1px solid #4a4538; border-radius: 10px; font-size: 0.72rem; font-weight: 400; color: var(--text-secondary); }
 .caravana-estado.aparcada { border-color: #d9b44a; color: #d9b44a; }
 [data-escolta-lista][hidden] { display: none; }
+/* Mercado › Caravanas: tarjeta compacta por caravana (cabecera, cifras, carros, viaje y escolta). */
+.btn-chico { padding: 4px 10px; font-size: 0.75rem; letter-spacing: 0.02em; }
+.btn-primary.btn-chico { padding: 6px 14px; }
+.caravana-flota { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 0.78rem; color: var(--text-secondary); }
+.caravana-tarjeta { display: grid; gap: 8px; padding: 10px 12px; }
+.caravana-cab { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.caravana-cab .caravana-estado { margin-left: 0; }
+.caravana-reservar { margin-left: auto; font-size: 0.75rem; }
+.caravana-chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.caravana-chips span { padding: 3px 6px; border: 1px solid #4a4538; border-radius: 4px; font-size: 0.75rem; color: var(--text-secondary); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.caravana-chips strong { color: var(--text-primary, #f2ead7); }
+.caravana-seccion { display: grid; gap: 6px; padding-top: 8px; border-top: 1px solid #3a362b; }
+.caravana-seccion-cab { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
+.caravana-seccion-cab .heroe-sub { margin: 0; }
+.caravana-botones { display: flex; gap: 4px; flex-wrap: wrap; }
+.carro-lista { display: grid; gap: 4px; }
+.carro-row { display: grid; grid-template-columns: 88px 1fr auto; align-items: center; gap: 6px; padding: 3px 6px; background: rgba(0, 0, 0, 0.18); border-radius: 4px; font-size: 0.8rem; min-height: 32px; }
+.carro-tipo { white-space: nowrap; }
+.carro-animal { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.carro-animal small { color: var(--text-muted); }
+.carro-animal.falta { color: var(--text-muted); font-style: italic; }
+.carro-animal .form-input, .carro-row .carro-mover { min-width: 0; width: 100%; padding: 3px 6px; font-size: 0.75rem; font-style: normal; }
+.carro-row .carro-mover { width: 96px; }
+.viaje-destino { flex: 1; min-width: 140px; max-width: 260px; padding: 4px 8px; font-size: 0.8rem; }
+.carga-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 4px; }
+.carga-celda { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 4px; padding: 3px 6px; background: rgba(0, 0, 0, 0.18); border-radius: 4px; font-size: 0.75rem; color: var(--text-secondary); }
+.carga-celda span { grid-column: 1 / -1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.carga-celda .form-input { width: 100%; padding: 2px 6px; font-size: 0.8rem; }
+.carga-celda small { color: var(--text-muted); }
+.carga-total .escolta-barra { margin-top: 0; }
 .escolta-cifras { display: block; margin-bottom: 6px; color: var(--text-secondary); }
 
 /* Víveres: selector «añadir desde el carro». */

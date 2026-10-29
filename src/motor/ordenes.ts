@@ -108,7 +108,11 @@ function escalar(t: ScalarType, nombre: string, v: unknown): unknown {
     case ScalarType.FIXED64:
     case ScalarType.SFIXED64:
       return nombre.endsWith('Ms') ? aContrato(Number(v)) : BigInt(Math.round(Number(v)));
-    case ScalarType.SINT64: return milesimas(v);
+    // Salvo los índices (`carroIndice`), que el motor lee como entero tal cual, y el instante `salirEn`.
+    case ScalarType.SINT64:
+      if (nombre.endsWith('Indice')) return BigInt(Math.round(Number(v)));
+      if (nombre === 'salirEn') return aContrato(Number(v));
+      return milesimas(v);
     default: return Math.round(Number(v));
   }
 }

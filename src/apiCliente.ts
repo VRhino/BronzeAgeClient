@@ -683,10 +683,10 @@ export function oroPorSoldado(t: { escalon: number; edificio: string; caballos?:
 }
 
 /** Los catálogos de carros y animales y la preparación/escolta de las caravanas (Doc 3.13); `null` mientras no llegue el balance. */
-export function catalogoDeCaravanas(alCargar?: () => void): { carros: Record<string, CarroDelCatalogo>; animales: Record<string, AnimalDelCatalogo>; preparacionKPorCarro: number; escoltaPorNivelMercado: number[] } | null {
+export function catalogoDeCaravanas(alCargar?: () => void): { carros: Record<string, CarroDelCatalogo>; animales: Record<string, AnimalDelCatalogo>; preparacionKPorCarro: number; escoltaPorNivelMercado: number[]; cooldownMinutos: number } | null {
   const c = balance(alCargar)?.caravanas;
   if (!c?.CARRO_CATALOGO || !c.ANIMAL_CATALOGO) return null;
-  return { carros: c.CARRO_CATALOGO, animales: c.ANIMAL_CATALOGO, preparacionKPorCarro: c.CARAVANA_PREPARACION?.kPorCarro ?? 0, escoltaPorNivelMercado: c.CARAVANA_ESCOLTA?.liderazgoPorNivelMercado ?? [] };
+  return { carros: c.CARRO_CATALOGO, animales: c.ANIMAL_CATALOGO, preparacionKPorCarro: c.CARAVANA_PREPARACION?.kPorCarro ?? 0, escoltaPorNivelMercado: c.CARAVANA_ESCOLTA?.liderazgoPorNivelMercado ?? [], cooldownMinutos: c.CARAVANA_COOLDOWN?.cooldownMinutos ?? 0 };
 }
 
 /** Lo que fija cada nivel de bandidos: su poder, los hombres que defienden y el oro del botín por héroe. */

@@ -25,6 +25,7 @@ const ESTADO: Record<string, string> = {
 };
 const CARRO: Record<string, string> = { basico: 'Carro básico', reforzado: 'Carro reforzado' };
 const ANIMAL: Record<string, string> = { buey: 'Buey', caballo: 'Caballo', camello: 'Camello' };
+const ANIMAL_ICONO: Record<string, string> = { buey: '🐂', caballo: '🐎', camello: '🐪' };
 
 function resideAqui(p: ProyeccionJugador, a: Asentamiento): boolean {
   return [...(a.heroesFundadoresIds ?? []), ...(a.casasCompradas ?? [])].includes(p.heroeId);
@@ -114,11 +115,15 @@ function barraEscolta(usado: number, cupo: number): string {
 /** Escolta de una caravana comercial de esta plaza (Doc 3.13.4): cupo, escuadras cedidas con «Retirar» y «Añadir escolta», que despliega las que puedes ceder.
  * También la del carro de acarreo de un pueblo (`ui/pueblos.ts`), que el motor escolta igual. */
 export function escolta(c: Caravana, p: ProyeccionJugador, reside: boolean, parada: boolean, escoltaPts: number | undefined, e: Escapar): string {
-  const lid = c.escoltaLiderazgo ?? (escoltaPts !== undefined ? { usado: 0, cupo: escoltaPts } : undefined);
-  if (!lid) return '<p class="asent-lado-nota">El backend no publica su cupo de escolta.</p>';
+  const cupo = c.escoltaLiderazgo?.cupo ?? escoltaPts;
+  if (cupo === undefined) return '<p class="asent-lado-nota">El backend no publica su cupo de escolta.</p>';
   const cedidas = p.heroe.escuadrones.filter((s) => s.contenedor.tipo === 'escolta' && s.contenedor.caravanaId === c.id);
-  const deOtros = Math.max(0, lid.usado - cedidas.reduce((t, s) => t + s.costeLiderazgo, 0));
-  const libre = lid.cupo - lid.usado;
+  const mias = cedidas.reduce((t, s) => t + s.costeLiderazgo, 0);
+  // El motor no publica lo usado: cuentan las escuadras tuyas cedidas (su coste sale del escalón de la tropa); las de otros residentes solo se ven como ids.
+  const usado = c.escoltaLiderazgo?.usado ?? mias;
+  const ajenas = (c.escoltaIds ?? []).filter((id) => !cedidas.some((s) => s.id === id)).length;
+  const deOtros = c.escoltaLiderazgo ? Math.max(0, usado - mias) : 0;
+  const libre = cupo - usado;
   const candidatas: Escuadron[] = p.heroe.escuadrones.filter((s) => s.contenedor.tipo === 'campamento' && !s.enGuarnicion && s.cantidad > 0);
   const motivo = !parada ? 'Solo se cambia con la caravana parada en su origen.'
     : !reside ? 'Solo quien reside en esta plaza cede escolta.'
@@ -132,11 +137,14 @@ export function escolta(c: Caravana, p: ProyeccionJugador, reside: boolean, para
     const cabe = s.costeLiderazgo <= libre;
     return `<div class="mapa-lista-item con-tropa">${iconoEnFila(s.tropaId)}<div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres${cabe ? '' : ` · no cabe: quedan ${Math.max(0, libre)} pts`}</span></div><button class="btn-secondary" type="button" data-ceder-escolta="${e(s.id)}" data-caravana="${e(c.id)}"${cabe ? '' : ' disabled'}>Ceder</button></div>`;
   }).join('');
-  return `<strong class="heroe-sub">Escolta</strong>${barraEscolta(lid.usado, lid.cupo)}
-    ${deOtros > 0 ? `<p class="asent-lado-nota">Otros residentes han cedido ${deOtros} pts.</p>` : ''}
-    ${cedidasHtml}
-    <div class="mercado-acciones"><button class="btn-secondary" type="button" data-escolta-abrir="${e(c.id)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>${abierta ? '▾' : '＋'} Añadir escolta</button>${motivo ? `<small class="asent-lado-nota">${e(motivo)}</small>` : ''}</div>
-    ${motivo ? '' : `<div class="mapa-lista" data-escolta-lista="${e(c.id)}"${abierta ? '' : ' hidden'}>${libresHtml}</div>`}`;
+  const otros = deOtros > 0 ? `Otros residentes han cedido ${deOtros} pts.`
+    : !c.escoltaLiderazgo && ajenas > 0 ? `Además van ${ajenas === 1 ? '1 escuadra' : `${ajenas} escuadras`} de otros residentes: la barra no cuenta su coste y el servidor sí.` : '';
+  return `<div class="caravana-seccion-cab"><strong class="heroe-sub">Escolta</strong><button class="btn-secondary btn-chico" type="button" data-escolta-abrir="${e(c.id)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>${abierta ? '▾' : '＋'} Añadir escolta</button></div>
+    ${barraEscolta(usado, cupo)}
+    ${otros ? `<p class="asent-lado-nota">${otros}</p>` : ''}
+    ${motivo && parada && reside ? `<small class="asent-lado-nota">${e(motivo)}</small>` : ''}
+    ${motivo ? '' : `<div class="mapa-lista" data-escolta-lista="${e(c.id)}"${abierta ? '' : ' hidden'}>${libresHtml}</div>`}
+    ${cedidasHtml}`;
 }
 
 /** Caravana aparcada AQUÍ por un ejército (Doc 3.13.7): sigue siendo de su origen; intercambia carga con el almacén y solo sale enganchada o enviada al origen. */
@@ -163,64 +171,84 @@ function tarjeta(c: Caravana, p: ProyeccionJugador, a: Asentamiento, reside: boo
   const aparcadaAqui = estado === 'aparcada' && c.origenAsentamientoId !== a.id;
   const destino = c.destinoAsentamientoId ? ` → ${e(nombrePlaza(p, c.destinoAsentamientoId))}` : '';
   const etiqueta = aparcadaAqui ? `Aparcada en esta plaza · origen: ${e(nombrePlaza(p, c.origenAsentamientoId))}` : (ESTADO[estado] ?? e(estado));
-  const cabecera = `<strong class="heroe-sub">Caravana ${e(c.id)}${destino} <span class="caravana-estado ${e(estado)}">${etiqueta}</span></strong>`;
-  if (aparcadaAqui) return `<div class="escolta-caravana">${cabecera}${cuerpoAparcada(c, a, p, e)}</div>`;
+  const titulo = `<strong class="heroe-sub">Caravana ${e(c.id)}${destino}</strong><span class="caravana-estado ${e(estado)}">${etiqueta}</span>`;
+  if (aparcadaAqui) return `<div class="escolta-caravana caravana-tarjeta"><div class="caravana-cab">${titulo}</div>${cuerpoAparcada(c, a, p, e)}</div>`;
 
   const carros = c.carros ?? [];
   const parada = estado === 'disponible' && c.origenAsentamientoId === a.id;
   const otras = flota.filter((x) => x.id !== c.id && (x.estado ?? 'disponible') === 'disponible');
-  const deshab = reside ? '' : ' disabled';
   const motivoLleno = carrosLleno ? 'La flota ya tiene el tope de carros de tu Mercado.' : null;
   const motivoReside = reside ? null : 'Solo quien reside en esta plaza maneja la flota.';
   const motivoCarro = (tipo: string): string | null => {
     const def = d?.cat.carros[tipo];
     if (motivoReside || motivoLleno || !def) return motivoReside ?? motivoLleno;
-    if (def.fabrica !== 'mercado' && !a.edificios.some((x) => x.tipo === def.fabrica && x.estado === 'activo')) return `Hace falta ${EDIFICIO_NOMBRE[def.fabrica] ?? def.fabrica} activo.`;
+    if (def.fabrica !== 'mercado' && !a.edificios.some((x) => x.tipo === def.fabrica && x.estado === 'activo')) return `Hace falta tener ${EDIFICIO_NOMBRE[def.fabrica] ?? def.fabrica} en funcionamiento.`;
     return motivoCosto(def.costo, almacen);
   };
   const botonCarro = (tipo: 'basico' | 'reforzado'): string => {
     const def = d?.cat.carros[tipo];
-    return `<button class="btn-secondary" type="button" data-carro-nuevo="${e(c.id)}:${tipo}"${atributosApagado(motivoCarro(tipo), e)}>＋ ${CARRO[tipo]}${def ? ` · ${iconos(def.costo)}` : ''}</button>`;
+    const info = def ? ` (capacidad ${def.capacidadBase})` : '';
+    const m = motivoCarro(tipo);
+    return `<button class="btn-secondary btn-chico" type="button" data-carro-nuevo="${e(c.id)}:${tipo}"${m ? ` disabled title="${e(m)}"` : ` title="${e(`${CARRO[tipo]}${info}`)}"`}>＋ ${tipo === 'basico' ? 'Básico' : 'Reforzado'}${def ? ` · ${iconos(def.costo)}` : ''}</button>`;
   };
   // Capacidad y velocidad de la caravana: solo cuentan los carros con animal (Doc 3.13.1); las políticas de la plaza las multiplican.
   const tira = carros.filter((r) => r.animal && d?.cat.carros[r.tipoCarro] && d.cat.animales[r.animal]);
-  const capacidad = d ? tira.reduce((t, r) => t + d.cat.carros[r.tipoCarro]!.capacidadBase * d.cat.animales[r.animal!]!.factorCarga, 0) * d.fCapacidad : 0;
+  const capacidad = d ? Math.floor(tira.reduce((t, r) => t + d.cat.carros[r.tipoCarro]!.capacidadBase * d.cat.animales[r.animal!]!.factorCarga, 0) * d.fCapacidad) : 0;
   const velocidad = d && tira.length > 0 ? Math.min(...tira.map((r) => d.cat.animales[r.animal!]!.velocidad)) * d.fVelocidad : 0;
   const preparacion = d ? textoEnTiempoReal(d.cat.preparacionKPorCarro * Math.max(0, carros.length - 1) * 60_000) : '';
-  const cifras = d && tira.length > 0 ? `<p class="asent-lado-nota">Capacidad <strong>${Math.floor(capacidad)}</strong> · velocidad <strong>${Math.round(velocidad * 10) / 10}</strong> · ${carros.length > 1 ? `preparación <strong>${preparacion}</strong>` : 'sale al instante'}${d.fCapacidad !== 1 || d.fVelocidad !== 1 ? ' · con las políticas de la plaza' : ''}</p>` : '';
+  const politicas = d && (d.fCapacidad !== 1 || d.fVelocidad !== 1) ? ' title="Con las políticas de la plaza"' : '';
+  const chips = `<div class="caravana-chips"${politicas}>
+      <span title="Lo que puede llevar: solo cuentan los carros con animal">📦 <strong>${d ? capacidad : '?'}</strong></span>
+      <span title="Velocidad: la del animal más lento">🐾 <strong>${tira.length > 0 ? Math.round(velocidad * 10) / 10 : '—'}</strong></span>
+      <span title="Tiempo de preparación antes de salir">⏱ <strong>${carros.length > 1 ? preparacion : 'al instante'}</strong></span>
+      <span title="Carros con animal / carros">🛞 <strong>${tira.length}/${carros.length}</strong></span>
+    </div>`;
+
   const opcionesAnimal = (): string => Object.entries(d?.cat.animales ?? {}).map(([id, an]) => {
     const m = motivoCosto(an.costo, almacen);
-    return `<option value="${e(id)}"${m ? ' disabled' : ''}>${e(ANIMAL[id] ?? id)} · ${iconos(an.costo)} · ×${an.factorCarga} carga · vel. ${an.velocidad}${m ? ' (no te llega)' : ''}</option>`;
+    return `<option value="${e(id)}"${m ? ' disabled' : ''} title="×${an.factorCarga} de carga · velocidad ${an.velocidad}">${ANIMAL_ICONO[id] ?? ''} ${e(ANIMAL[id] ?? id)} · ${iconos(an.costo)} · ×${an.factorCarga} · vel. ${an.velocidad}</option>`;
   }).join('');
   const motivoAnimal = motivoReside ?? (d && Object.values(d.cat.animales).every((an) => motivoCosto(an.costo, almacen)) ? 'No te llega para ningún animal.' : null);
-  const carrosHtml = carros.length === 0
-    ? '<p class="asent-lado-nota">Casco vacío: no puede salir hasta que le montes un carro y un animal.</p>'
-    : `${cifras}<div class="mapa-lista">${carros.map((r, i) => `<div class="mapa-lista-item"><div><strong>${e(CARRO[r.tipoCarro] ?? r.tipoCarro)}</strong> · <span>${r.animal ? e(ANIMAL[r.animal] ?? r.animal) : 'sin animal: no tira'}</span></div>
-        ${parada ? `<div class="mercado-acciones">
-          ${r.animal ? '' : `<select class="form-input" data-animal-tipo="${e(c.id)}:${i}">${d ? opcionesAnimal() : '<option value="buey">Buey</option><option value="caballo">Caballo</option><option value="camello">Camello</option>'}</select><button class="btn-secondary" type="button" data-animal="${e(c.id)}" data-carro="${i}"${atributosApagado(motivoAnimal, e)}>Comprar animal</button>`}
-          ${otras.length > 0 ? `<select class="form-input" data-mover-a="${e(c.id)}:${i}">${otras.map((x) => `<option value="${e(x.id)}">a ${e(x.id)}</option>`).join('')}</select><button class="btn-secondary" type="button" data-mover="${e(c.id)}" data-carro="${i}"${deshab}>Mover</button>` : ''}
-        </div>` : ''}</div>`).join('')}</div>`;
+  const filaCarro = (r: NonNullable<Caravana['carros']>[number], i: number): string => {
+    const def = d?.cat.carros[r.tipoCarro];
+    const an = r.animal ? d?.cat.animales[r.animal] : undefined;
+    const cap = def ? Math.floor(def.capacidadBase * (an?.factorCarga ?? 0) * (d?.fCapacidad ?? 1)) : null;
+    const animal = r.animal
+      ? `<span class="carro-animal">${ANIMAL_ICONO[r.animal] ?? ''} ${e(ANIMAL[r.animal] ?? r.animal)}${cap !== null ? ` <small>· ${cap}</small>` : ''}</span>`
+      : parada && reside
+        ? `<span class="carro-animal falta"><select class="form-input" data-animal-tipo="${e(c.id)}:${i}">${d ? opcionesAnimal() : '<option value="buey">Buey</option><option value="caballo">Caballo</option><option value="camello">Camello</option>'}</select><button class="btn-secondary btn-chico" type="button" data-animal="${e(c.id)}" data-carro="${i}"${atributosApagado(motivoAnimal, e)}>Comprar</button></span>`
+        : '<span class="carro-animal falta">sin animal: no tira</span>';
+    const mover = parada && reside && otras.length > 0
+      ? `<select class="form-input carro-mover" data-mover-a="${e(c.id)}:${i}" title="Pasar este carro a otra caravana parada"><option value="">⇄ Mover…</option>${otras.map((x) => `<option value="${e(x.id)}">a ${e(x.id)}</option>`).join('')}</select>`
+      : '';
+    return `<div class="carro-row"><span class="carro-tipo" title="${e(CARRO[r.tipoCarro] ?? r.tipoCarro)}${def ? ` · capacidad ${def.capacidadBase}` : ''}">🛞 ${e(r.tipoCarro === 'reforzado' ? 'Reforzado' : r.tipoCarro === 'basico' ? 'Básico' : r.tipoCarro)}</span>${animal}${mover}</div>`;
+  };
+  const carrosHtml = `<div class="caravana-seccion">
+      <div class="caravana-seccion-cab"><strong class="heroe-sub">Carros</strong>${parada && reside ? `<span class="caravana-botones">${botonCarro('basico')}${botonCarro('reforzado')}</span>` : ''}</div>
+      ${carros.length === 0 ? '<p class="asent-lado-nota">Casco vacío: no sale hasta que le montes un carro con su animal.</p>' : `<div class="carro-lista">${carros.map(filaCarro).join('')}</div>`}
+      ${parada && reside && tira.length < carros.length ? '<p class="asent-lado-nota">Un carro sin animal no tira ni carga: cómprale uno.</p>' : ''}
+    </div>`;
 
-  let acciones = '';
-  if (parada) {
-    const hayTraccion = carros.some((r) => r.animal);
+  let viaje = '';
+  if (parada && reside) {
     const destinos = [...p.asentamientosAvistados.map((x) => ({ id: x.id, nombre: x.nombre, faccionId: x.faccionId })), ...p.asentamientosConocidos.map((x) => ({ id: x.asentamientoId, nombre: x.nombre, faccionId: x.faccionId }))]
-      .filter((x) => x.id !== a.id);
+      .filter((x, i, l) => x.id !== a.id && l.findIndex((y) => y.id === x.id) === i);
     const filas = Object.entries(almacen).filter(([r, n]) => n >= 1 && r !== 'oro');
-    acciones = `<div class="mercado-acciones">
-        ${botonCarro('basico')}
-        ${botonCarro('reforzado')}
-        <label class="asent-toggle"><input type="checkbox" data-reservar="${e(c.id)}"${c.reservadaManual ? ' checked' : ''}${deshab} /> Reservada (fuera del reparto automático)</label>
-      </div>
-      ${hayTraccion && reside ? `<strong class="heroe-sub">Preparar un viaje</strong>
-        <select class="form-input" data-viaje-destino="${e(c.id)}">${destinos.length === 0 ? '<option value="">— no conoces otra plaza —</option>' : destinos.map((x) => `<option value="${e(x.id)}">${e(x.nombre ?? x.id)}${x.faccionId === p.faccionId ? ' (tuya)' : ''}</option>`).join('')}</select>
-        ${filas.length === 0 ? '<p class="asent-lado-nota">No hay nada que cargar en el almacén.</p>' : filas.map(([r, n]) => `<div class="carro-fila"><span>${RECURSO_ICONO[r] ?? '📦'} ${e(RECURSO_NOMBRE[r] ?? r)}</span><small>hay ${Math.floor(n)}</small><input class="form-input" type="number" min="0" max="${Math.floor(n)}" value="0" data-viaje-carga="${e(c.id)}:${e(r)}" /></div>`).join('')}
-        <button class="btn-primary" type="button" data-preparar="${e(c.id)}"${destinos.length === 0 ? ' disabled' : ''}>Preparar y lanzar</button>` : ''}`;
+    viaje = tira.length === 0 ? '<div class="caravana-seccion"><strong class="heroe-sub">Viaje</strong><p class="asent-lado-nota">Ponle un animal a un carro para poder cargarla y lanzarla.</p></div>'
+      : `<div class="caravana-seccion">
+        <div class="caravana-seccion-cab"><strong class="heroe-sub">Viaje</strong><select class="form-input viaje-destino" data-viaje-destino="${e(c.id)}">${destinos.length === 0 ? '<option value="">— no conoces otra plaza —</option>' : destinos.map((x) => `<option value="${e(x.id)}">${e(x.nombre ?? x.id)}${x.faccionId === p.faccionId ? ' (tuya)' : ''}</option>`).join('')}</select></div>
+        ${filas.length === 0 ? '<p class="asent-lado-nota">No hay nada que cargar en el almacén.</p>' : `<div class="carga-grid">${filas.map(([r, n]) => `<label class="carga-celda" title="${e(RECURSO_NOMBRE[r] ?? r)}: hay ${Math.floor(n)} en el almacén"><span>${RECURSO_ICONO[r] ?? '📦'} ${e(RECURSO_NOMBRE[r] ?? r)}</span><input class="form-input" type="number" min="0" max="${Math.floor(n)}" value="0" data-viaje-carga="${e(c.id)}:${e(r)}" /><small>/${Math.floor(n)}</small></label>`).join('')}</div>`}
+        <div class="carga-total" data-carga-total="${e(c.id)}" data-capacidad="${capacidad}"><div class="escolta-barra"><i style="width:0%"></i></div><small class="escolta-cifras"><strong>0/${capacidad}</strong> de carga</small></div>
+        <button class="btn-primary btn-chico" type="button" data-preparar="${e(c.id)}"${destinos.length === 0 ? ' disabled title="No conoces otra plaza"' : ''}>${carros.length > 1 ? `Preparar (${preparacion}) y lanzar` : 'Lanzar ya'}</button>
+      </div>`;
   } else if (estado === 'preparando') {
-    acciones = `<p class="asent-lado-nota">Sale en ${c.preparaHasta ? falta(c.preparaHasta, p) : 'un momento'}.</p>${reside ? `<button class="btn-secondary" type="button" data-cancelar-caravana="${e(c.id)}">Cancelar preparación</button>` : ''}`;
+    viaje = `<div class="caravana-seccion"><p class="asent-lado-nota">Sale en ${c.preparaHasta ? falta(c.preparaHasta, p) : 'un momento'}.</p>${reside ? `<button class="btn-secondary btn-chico" type="button" data-cancelar-caravana="${e(c.id)}">Cancelar preparación</button>` : ''}</div>`;
   }
-  return `<div class="escolta-caravana">${cabecera}
-    ${carrosHtml}${acciones}${escolta(c, p, reside, parada, d?.escoltaPts, e)}</div>`;
+  const reservar = parada ? `<label class="asent-toggle caravana-reservar" title="Reservada: la plaza no la usa en sus envíos automáticos; sin reservar, una caravana con animal puede salir sola en el reparto"><input type="checkbox" data-reservar="${e(c.id)}"${c.reservadaManual ? ' checked' : ''}${reside ? '' : ' disabled'} /> Reservada</label>` : '';
+  return `<div class="escolta-caravana caravana-tarjeta">
+    <div class="caravana-cab">${titulo}${reservar}</div>
+    ${chips}${carrosHtml}${viaje}
+    <div class="caravana-seccion">${escolta(c, p, reside, parada, d?.escoltaPts, e)}</div></div>`;
 }
 
 /** Los puntos de Liderazgo de escolta por caravana que da el Mercado activo de la plaza (`escoltaPorNivelMercado`); `undefined` sin Mercado o sin datos. */
@@ -269,11 +297,14 @@ export function htmlCaravanas(p: ProyeccionJugador, a: Asentamiento, e: Escapar,
   const politicas = catalogoDePoliticas(alCargar)?.catalogo ?? [];
   const factor = (campo: string): number => (a.politicasActivas ?? []).reduce((t, x) => { const v = politicas.find((q) => q.id === x.politicaId)?.[campo]; return typeof v === 'number' ? t * v : t; }, 1);
   const datos: DatosCaravana | null = cat ? { cat, fCapacidad: factor('factorCapacidadCaravana'), fVelocidad: factor('factorVelocidadCaravana'), escoltaPts: nivelMercado > 0 ? cat.escoltaPorNivelMercado[nivelMercado - 1] : undefined } : null;
-  const topes = cupo ? `<p class="asent-lado-nota">Flota de tu Mercado (nivel ${nivelMercado}): <strong>${flota.length}${cupo.caravanas !== undefined ? `/${cupo.caravanas}` : ''}</strong> caravanas · <strong>${carros}${cupo.carros !== undefined ? `/${cupo.carros}` : ''}</strong> carros${flotaLlena ? ' · No caben más caravanas.' : ''}${carrosLleno ? ' · No caben más carros.' : ''}${datos?.escoltaPts !== undefined ? ` · Escolta: <strong>${datos.escoltaPts} pts</strong> de Liderazgo por caravana` : ''}</p>` : '';
+  const topes = cupo ? `<span>Mercado nivel ${nivelMercado}: <strong>${flota.length}${cupo.caravanas !== undefined ? `/${cupo.caravanas}` : ''}</strong> caravanas · <strong>${carros}${cupo.carros !== undefined ? `/${cupo.carros}` : ''}</strong> carros${datos?.escoltaPts !== undefined ? ` · escolta <strong>${datos.escoltaPts} pts</strong> por caravana` : ''}</span>` : '';
+  // Entre dos caravanas creadas hay una espera (`CARAVANA_COOLDOWN`), compartida con la fundación.
+  const listaEn = cat && a.ultimaCaravanaCreadaEn ? a.ultimaCaravanaCreadaEn + cat.cooldownMinutos * 60_000 : 0;
+  const motivoCrear = nivelMercado === 0 ? 'Hace falta un Mercado activo.' : flotaLlena ? 'La flota ya tiene el tope de caravanas de tu Mercado.' : listaEn > p.instante ? `Podrás crear otra en ${falta(listaEn, p)}.` : null;
   const info = ayuda('mercado:caravanas', 'Tu flota: un casco se arma con carros (que pagas con materiales del almacén) y un animal por carro, y sale a mano hacia otra plaza con la carga que elijas. Solo cuentan los carros con animal. El cupo de flota y los costes los decide el servidor. Los carros se reparten como quieras entre las caravanas; mover un carro no gasta cupo.<br>La carga sale del almacén al prepararla; si la cancelas antes de salir, vuelve entera.<br><strong>Escolta:</strong> cede escuadras de tu campamento a una caravana parada en su origen: viajarán con ella y volverán al campamento al acabar el viaje. El cupo es de la caravana, en puntos de Liderazgo (lo da tu Mercado) y lo comparten los residentes; ceder no gasta tu Liderazgo.<br><strong>Aparcadas:</strong> caravanas de tu Facción que un ejército dejó aquí al entrar. No las usa esta plaza: puedes pasar carga entre su carro y el almacén, y solo salen enganchadas a un ejército (desde el panel del ejército) o enviadas a su origen. Vacía, aparece en su origen al instante; con carga, vuelve por el camino y la deja allí al llegar.');
   return `<span class="faction-kicker">Caravanas comerciales${info}</span>
-    ${topes}
-    ${reside ? `<button class="btn-primary" type="button" data-caravana-crear${flotaLlena ? ' disabled title="La flota ya tiene el tope de caravanas de tu Mercado"' : ''}>Crear caravana (casco vacío)</button>` : '<p class="asent-lado-nota">Solo quien reside en esta plaza maneja la flota.</p>'}
+    <div class="caravana-flota">${topes}${reside ? `<button class="btn-primary btn-chico" type="button" data-caravana-crear${motivoCrear ? ` disabled title="${e(motivoCrear)}"` : ''}>＋ Crear caravana</button>` : ''}</div>
+    ${reside ? (motivoCrear ? `<p class="asent-lado-nota">${e(motivoCrear)}</p>` : '') : '<p class="asent-lado-nota">Solo quien reside en esta plaza maneja la flota.</p>'}
     ${flota.length + aparcadas.length === 0 ? '<p class="mapa-lista-vacia">No hay caravanas en esta plaza.</p>' : [...flota, ...aparcadas].map((c) => tarjeta(c, p, a, reside, flota, almacen, carrosLleno, datos, e)).join('')}
     <p class="faction-error" data-campo="error-mercado" role="alert"></p>`;
 }
@@ -296,10 +327,32 @@ export function cablearCaravanas(raiz: HTMLElement, p: ProyeccionJugador, a: Ase
     const caravanaId = b.dataset.animal!;
     void lanzar(b, 'comprarAnimalCaravana', { caravanaId, carroIndice: Number(b.dataset.carro), tipoAnimal: valor(`[data-animal-tipo="${caravanaId}:${b.dataset.carro}"]`) });
   }));
-  raiz.querySelectorAll<HTMLButtonElement>('[data-mover]').forEach((b) => b.addEventListener('click', () => {
-    const desdeCaravanaId = b.dataset.mover!;
-    void lanzar(b, 'moverCarroCaravana', { desdeCaravanaId, haciaCaravanaId: valor(`[data-mover-a="${desdeCaravanaId}:${b.dataset.carro}"]`), carroIndice: Number(b.dataset.carro) });
+  raiz.querySelectorAll<HTMLSelectElement>('[data-mover-a]').forEach((sel) => sel.addEventListener('change', () => {
+    if (!sel.value) return;
+    const [desdeCaravanaId, carro] = sel.dataset.moverA!.split(':');
+    void lanzar(sel as unknown as HTMLButtonElement, 'moverCarroCaravana', { desdeCaravanaId, haciaCaravanaId: sel.value, carroIndice: Number(carro) }).then(() => { sel.value = ''; });
   }));
+  // La carga elegida contra la capacidad de la caravana, a cada tecla; de más, no se deja lanzar.
+  raiz.querySelectorAll<HTMLElement>('[data-carga-total]').forEach((caja) => {
+    const id = caja.dataset.cargaTotal!;
+    const capacidad = Number(caja.dataset.capacidad);
+    const entradas = Array.from(raiz.querySelectorAll<HTMLInputElement>('input[data-viaje-carga]')).filter((i) => i.dataset.viajeCarga!.startsWith(`${id}:`));
+    const boton = raiz.querySelector<HTMLButtonElement>(`[data-preparar="${id}"]`);
+    const sinDestino = boton?.disabled ?? true;
+    const actualizar = (): void => {
+      const total = entradas.reduce((t, i) => t + Math.max(0, Number(i.value) || 0), 0);
+      const sobra = total > capacidad;
+      const barra = caja.querySelector<HTMLElement>('.escolta-barra');
+      barra?.classList.toggle('llena', sobra);
+      const i = barra?.querySelector<HTMLElement>('i');
+      if (i) i.style.width = `${capacidad > 0 ? Math.min(100, (total / capacidad) * 100).toFixed(1) : 0}%`;
+      const cifras = caja.querySelector<HTMLElement>('.escolta-cifras');
+      if (cifras) cifras.innerHTML = `<strong>${total}/${capacidad}</strong> de carga${sobra ? ` · sobran ${total - capacidad}` : ''}`;
+      if (boton && !sinDestino) { boton.disabled = sobra; boton.title = sobra ? 'Lleva más de lo que cabe en la caravana.' : ''; }
+    };
+    entradas.forEach((x) => x.addEventListener('input', actualizar));
+    actualizar();
+  });
   raiz.querySelectorAll<HTMLInputElement>('[data-reservar]').forEach((c) => c.addEventListener('change', async () => {
     const mensaje = await ejecutar('reservarCaravana', { caravanaId: c.dataset.reservar!, reservada: c.checked });
     if (mensaje !== null) { c.checked = !c.checked; if (error) error.textContent = mensaje; }
