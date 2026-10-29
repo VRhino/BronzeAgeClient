@@ -16,7 +16,7 @@ type Pestana = 'ficha' | 'escuadras' | 'loadouts';
 
 const PESTANAS: [Pestana, string][] = [['ficha', 'Ficha'], ['escuadras', 'Escuadras'], ['loadouts', 'Loadouts']];
 const ATRIBUTOS: [AtributoHeroe, string][] = [['fuerza', 'Fuerza'], ['destreza', 'Destreza'], ['armadura', 'Armadura'], ['vitalidad', 'Vitalidad']];
-const DONDE = { campamento: 'Campamento', ejercito: 'En columna', escolta: 'Escoltando', fuera: 'Fuera del mundo' } as const;
+const DONDE = { campamento: 'Campamento', ejercito: 'En columna', escolta: 'Escoltando', pueblo: 'Guarneciendo un pueblo', fuera: 'Fuera del mundo' } as const;
 
 let pestana: Pestana = 'ficha';
 /** El loadout que se está editando (`loadoutId` ausente = uno nuevo), o `null`. Mientras exista, el sondeo de 3 s no

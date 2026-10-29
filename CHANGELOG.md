@@ -3,6 +3,20 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.44.0] — 2026-10-29 · gestionar pueblos y aldeas desde dentro · sync con `VRhino/BronzeAge@fd9cd58`
+
+Contrato regenerado (`src/contrato/REVISION` = fd9cd584; cambio aditivo, no hace falta mundo ni partida nueva).
+
+### Añadido
+- **Dentro de un pueblo o una aldea**, para los ciudadanos de la Facción de la plaza madre y con la columna con la que entraste:
+  - **Guarnición**: dejar escuadras de tu columna («Dejar») y recogerlas («Retirar») dentro de tu cupo de Liderazgo (30 en nivel 1 y 15 más
+    por nivel de la aldea), con su barra; se ve también lo que han dejado otros héroes (`guarnecerPueblo`, `retirarDePueblo`).
+  - **Carga**: del almacén del pueblo al carro de tu columna y dejarle lo que produce, con la barra del carro (`cargarDePueblo`, `dejarEnPueblo`).
+  - **Escolta del carro de acarreo** con escuadras de tu columna, con el carro parado en el pueblo (`asignarEscolta` / `quitarEscolta`).
+  - **Mejorar la aldea** desde dentro (el Gobernador o el Maestro de Obras de la madre).
+- Las escuadras en la guarnición de un pueblo aparecen como «Guarneciendo un pueblo» en Héroe y en el campamento.
+- Mensajes de los rechazos nuevos (`pueblo.escuadra_fuera_de_tu_columna`, `pueblo.recurso_ajeno`, `pueblo.almacen_sin_sitio`…).
+
 ## [0.43.0] — 2026-10-28 · pueblos por dentro, tablón y mapa · sync con `VRhino/BronzeAge@14e49ae`
 
 Sin cambios en el contrato.

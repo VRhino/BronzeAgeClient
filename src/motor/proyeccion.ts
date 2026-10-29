@@ -235,6 +235,7 @@ function pueblo(x: pb.Pueblo, propio: boolean, ahora: number): d.PuebloDeMapa {
     almacen, capacidad: mil(x.almacenLocal?.capacidad), carroId: opcional(x.carroAcarreoId), guarnicionId: opcional(x.guarnicionEscuadronId), guarnicionReponeEn: instante(x.guarnicionReponeEnMs),
     batallaId: opcional(x.batallaId), nivelAldea: x.nivelAldea, fertilidad: x.fertilidad === undefined ? undefined : mil(x.fertilidad),
     rebano: x.rebanoEspecie ? { especie: x.rebanoEspecie, cabezas: mil(x.rebanoCabezas) } : undefined,
+    guarnicionJugadoresIds: x.guarnicionJugadoresIds, cupoGuarnicionPorHeroe: x.cupoGuarnicionPorHeroe ? Number(x.cupoGuarnicionPorHeroe) : undefined,
   };
 }
 
@@ -258,7 +259,7 @@ function mision(m: pb.Mision): d.Mision {
 function escuadron(e: pb.Escuadron, ahora: number): d.Escuadron {
   const c = e.contenedor?.donde;
   const contenedor: d.Escuadron['contenedor'] =
-    c?.case === 'ejercitoId' ? { tipo: 'ejercito', ejercitoId: c.value } : c?.case === 'caravanaId' ? { tipo: 'escolta', caravanaId: c.value } : c?.case === 'fuera' ? { tipo: 'fuera' } : { tipo: 'campamento' };
+    c?.case === 'ejercitoId' ? { tipo: 'ejercito', ejercitoId: c.value } : c?.case === 'caravanaId' ? { tipo: 'escolta', caravanaId: c.value } : c?.case === 'puebloId' ? { tipo: 'pueblo', puebloId: c.value } : c?.case === 'fuera' ? { tipo: 'fuera' } : { tipo: 'campamento' };
   return {
     id: e.id, nombre: e.nombre, heroeId: e.heroeId, tropaId: e.tropaId, origen: e.origen as d.Escuadron['origen'], cantidad: e.cantidad, nivel: e.nivel,
     experiencia: mil(e.experiencia), moral: valorDeRitmo(e.moral, ahora), contenedor,

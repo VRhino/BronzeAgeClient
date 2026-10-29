@@ -9,8 +9,8 @@
 //   plaza      la subpestaña «Pueblos» del Centro urbano (`SUBPESTANA_PUEBLOS`): cupo, lista, marcar, mejorar, reponer carro, destruir
 //   mapa       los pueblos y las obras se pintan (`dibujarPueblosYObras`) y se seleccionan (`seleccionarPuebloUObra`, fichas `FICHA_PUEBLO`/`FICHA_OBRA`)
 //   ascenso    la subida de nivel de la plaza con sus requisitos (`htmlAscensoLocal`): el nivel 2 pide ya una aldea activa
-//   dentro     se entra en un pueblo activo como de visita, con la columna entera (`entrarEnPueblo` / `salirDePueblo`); dentro solo se mira
-//              (`htmlInteriorPueblo`): el motor aún no tiene órdenes que se den desde el pueblo. La escolta del carro de acarreo se cede desde la plaza.
+//   dentro     se entra en un pueblo activo como de visita, con la columna entera (`entrarEnPueblo` / `salirDePueblo`); dentro se gestiona con esa
+//              columna (`htmlInteriorPueblo`): guarnición, carga, escolta del carro de acarreo y mejora de la aldea. La escolta también se cede desde la plaza.
 import { bloqueDeDatos, catalogoDeCaravanas, radioDePuerta, type ProyeccionJugador } from '../apiCliente';
 import { estadoCliente, textoEnTiempoReal } from './estadoCliente';
 import { EDIFICIO_NOMBRE, RECURSO_NOMBRE, faccionColor } from '../paletas';
@@ -25,6 +25,7 @@ import type { ContextoPlaza, FichaMapaExtra, ObjetoBajoElClic, SubpestanaPlaza }
 import { cablearEscolta, escolta, puntosDeEscolta } from './panelMercado';
 import type { Ejecutar } from './panelCarro';
 import { nombreDeHeroe } from './nombres';
+import { chipLiderazgo } from './liderazgo';
 
 type Escapar = (valor: string) => string;
 
@@ -445,6 +446,13 @@ export const FICHA_OBRA: FichaMapaExtra = {
 };
 
 // ---------------------------------------------------------------- dentro del pueblo
+// Motor fd9cd58 (Economia_Construccion §14.0.1): dentro, el ciudadano de la Facción de la madre gestiona con la COLUMNA con la que entró. Las
+// órdenes no llevan héroe (es el de la cuenta):
+//   guarnecerPueblo / retirarDePueblo { puebloId, escuadronIds }   escuadras de la columna a la guarnición (cupo de Liderazgo por héroe) y vuelta
+//   cargarDePueblo / dejarEnPueblo   { puebloId, recurso, cantidad } del almacén local al carro de la columna y vuelta (solo lo que el pueblo produce)
+//   asignarEscolta / quitarEscolta   sobre su carro de acarreo, con escuadras de la columna (el cupo, el del Mercado de la madre)
+//   mejorarAldea                     el Gobernador o el Maestro de Obras de la madre, residente en ella
+// El corral y el rebaño siguen solos, y el carro de acarreo se repone solo.
 
 /** El pueblo en el que está el héroe, si está dentro de uno. */
 export function puebloActual(p: ProyeccionJugador): PuebloDeMapa | undefined {
@@ -458,45 +466,129 @@ function barra(valor: number, tope: number): string {
   return `<div class="carro-barra carro-barra-${pct >= 100 ? 'llena' : pct >= 80 ? 'casi' : 'ok'}"><span style="width:${pct}%"></span></div>`;
 }
 
-/** Lo que se ve dentro del pueblo: su almacén, su rebaño, su guarnición, su carro y quién hay dentro. Solo mirar, y salir. */
+/** Lo que produce el pueblo (lo único que se le puede dejar): la aldea, trigo y ganado; un extractor, lo que guarda su almacén. */
+function produce(x: PuebloDeMapa): string[] {
+  return esAldea(x) ? ['trigo', 'ganado'] : Object.keys(x.almacen).filter((r) => r);
+}
+
+const fila = (s: { id: string; nombre: string; cantidad: number; costeLiderazgo: number }, boton: string, e: Escapar): string =>
+  `<div class="mapa-lista-item"><div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres</span></div>${boton}</div>`;
+
+/** La guarnición: los de serie, la tuya (con «Retirar») y lo que puedes dejar de tu columna (con «Dejar»), dentro de tu cupo de Liderazgo. */
+function htmlGuarnicion(p: ProyeccionJugador, x: PuebloDeMapa, ciudadano: boolean, e: Escapar): string {
+  const aldea = esAldea(x);
+  const mias = p.heroe.escuadrones.filter((s) => s.contenedor.tipo === 'pueblo' && s.contenedor.puebloId === x.id);
+  const columna = miColumna(p);
+  const libres = columna ? p.heroe.escuadrones.filter((s) => s.contenedor.tipo === 'ejercito' && s.contenedor.ejercitoId === columna.id && s.cantidad > 0) : [];
+  const usado = mias.reduce((t, s) => t + s.costeLiderazgo, 0);
+  const cupo = x.cupoGuarnicionPorHeroe;
+  const libre = cupo === undefined ? Infinity : cupo - usado;
+  const deOtros = Math.max(0, (x.guarnicionJugadoresIds ?? []).length - mias.length);
+  const serie = `${aldea ? 'Granjeros' : 'Mineros'} de serie${x.guarnicionReponeEn && x.guarnicionReponeEn > p.instante ? ` (mermada: el siguiente vuelve en ${e(textoEnTiempoReal(x.guarnicionReponeEn - p.instante))})` : ''}`;
+  const cabecera = `<div class="carro-ocupacion"><strong class="heroe-sub">Guarnición${ayuda('pueblo:guarnicion', 'Además de los de serie, cada ciudadano de la Facción de la plaza madre puede dejar aquí escuadras de su columna, hasta su cupo de Liderazgo. Defienden el pueblo aunque tú no estés y se quedan al salir; vuelven solas a tu campamento si el pueblo desaparece o dejas la Facción.')}</strong>${cupo !== undefined ? `<span>tu cupo ${usado} / ${cupo}</span>` : ''}</div>
+    ${cupo !== undefined ? barra(usado, cupo) : ''}
+    <p class="asent-lado-nota">${serie}${deOtros ? ` y ${deOtros} escuadra(s) de otros héroes` : ''}.</p>`;
+  if (!ciudadano) return cabecera;
+  const tuyas = mias.length ? `<div class="mapa-lista">${mias.map((s) => fila(s, `<button class="btn-secondary" type="button" data-pueblo-dentro="retirar" data-escuadra="${e(s.id)}">Retirar</button>`, e)).join('')}</div>` : '';
+  const dejar = libres.length ? `<div class="mapa-lista">${libres.map((s) => {
+    const cabe = s.costeLiderazgo <= libre;
+    return fila(s, `<button class="btn-secondary" type="button" data-pueblo-dentro="guarnecer" data-escuadra="${e(s.id)}"${cabe ? '' : ` disabled title="No cabe: te quedan ${Math.max(0, libre)} de Liderazgo"`}>Dejar</button>`, e);
+  }).join('')}</div>` : '<p class="asent-lado-nota">Tu columna no trae escuadras que dejar.</p>';
+  return `${cabecera}${tuyas}<strong class="heroe-sub">De tu columna</strong>${dejar}`;
+}
+
+/** Cargar del almacén del pueblo al carro de tu columna, y dejarle lo que produce. */
+function htmlCargaDelPueblo(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar): string {
+  const columna = miColumna(p);
+  if (!columna) return '';
+  const carro = columna.suministro ?? {};
+  const enCarro = Math.floor(Object.values(carro).reduce((t, n) => t + n, 0));
+  const nombre = (r: string): string => RECURSO_NOMBRE[r] ?? r;
+  const linea = (r: string, n: number, accion: 'cargar' | 'dejar', etiqueta: string): string =>
+    `<div class="carro-fila"><span>${e(nombre(r))}</span><strong>${n0(n)}</strong><input class="form-input" type="number" min="1" max="${n0(n)}" value="${n0(n)}" data-pueblo-cantidad="${accion}:${e(r)}" /><button class="btn-secondary" type="button" data-pueblo-dentro="${accion}" data-recurso="${e(r)}">${etiqueta}</button></div>`;
+  const cargar = Object.entries(x.almacen).filter(([r, n]) => r && n >= 1);
+  const dejar = produce(x).map((r) => [r, carro[r] ?? 0] as const).filter(([, n]) => n >= 1);
+  return `<div class="carro-ocupacion"><strong class="heroe-sub">Carro de tu columna${ayuda('pueblo:carga', 'Carga lo que guarda el pueblo hasta donde quepa en el carro, o déjale lo que produce (en la aldea, trigo y ganado) hasta su capacidad. Si el almacén se llena con su carro de acarreo en casa, el carro sale hacia la plaza.')}</strong>${columna.capacidadCarga ? `<span>${enCarro} / ${Math.floor(columna.capacidadCarga)}</span>` : ''}</div>
+    ${columna.capacidadCarga ? barra(enCarro, columna.capacidadCarga) : ''}
+    ${cargar.length ? `<p class="asent-lado-nota">Del almacén del pueblo al carro:</p>${cargar.map(([r, n]) => linea(r, n, 'cargar', 'Al carro')).join('')}` : '<p class="asent-lado-nota">El almacén del pueblo está vacío.</p>'}
+    ${dejar.length ? `<p class="asent-lado-nota">Del carro al almacén del pueblo:</p>${dejar.map(([r, n]) => linea(r, n, 'dejar', 'Dejar')).join('')}` : ''}`;
+}
+
+/** Escolta del carro de acarreo desde dentro: escuadras de tu columna, con el carro parado aquí. */
+function htmlEscoltaDentro(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar): string {
+  const c = x.carroId ? p.caravanas.find((k) => k.id === x.carroId) : undefined;
+  if (!c) return '';
+  const parada = c.estado === 'disponible';
+  const cedidas = p.heroe.escuadrones.filter((s) => s.contenedor.tipo === 'escolta' && s.contenedor.caravanaId === c.id);
+  const columna = miColumna(p);
+  const libres = columna ? p.heroe.escuadrones.filter((s) => s.contenedor.tipo === 'ejercito' && s.contenedor.ejercitoId === columna.id && s.cantidad > 0) : [];
+  const madre = p.asentamientos.find((a) => a.id === x.madreId);
+  const cupo = madre ? puntosDeEscolta(madre, alLlegarDatos) : undefined;
+  const otros = Math.max(0, (c.escoltaIds ?? []).length - cedidas.length);
+  return `<strong class="heroe-sub">Escolta del carro${ayuda('pueblo:escolta', 'Cede escuadras de tu columna al carro de acarreo mientras está parado aquí: viajan con él a la plaza y vuelven. El cupo de escolta es el del Mercado de la plaza madre. «Retirar» las devuelve a tu columna.')}</strong>
+    <p class="asent-lado-nota">${cedidas.length + otros ? `${cedidas.length + otros} escuadra(s) de escolta${otros ? `, ${otros} de otros héroes` : ''}` : 'Sin escolta'}${cupo !== undefined ? ` · cupo ${cupo} de Liderazgo` : ''}.${parada ? '' : ' Solo se cambia con el carro parado aquí.'}</p>
+    ${cedidas.length ? `<div class="mapa-lista">${cedidas.map((s) => fila(s, parada ? `<button class="btn-secondary" type="button" data-pueblo-dentro="quitar-escolta" data-escuadra="${e(s.id)}" data-caravana="${e(c.id)}">Retirar</button>` : '', e)).join('')}</div>` : ''}
+    ${parada && libres.length ? `<div class="mapa-lista">${libres.map((s) => fila(s, `<button class="btn-secondary" type="button" data-pueblo-dentro="escolta" data-escuadra="${e(s.id)}" data-caravana="${e(c.id)}">Escoltar</button>`, e)).join('')}</div>` : ''}`;
+}
+
+/** Lo que se ve y se hace dentro del pueblo: almacén y carga, rebaño, guarnición, carro de acarreo y su escolta, mejorar la aldea, y salir. */
 export function htmlInteriorPueblo(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar): string {
   const aldea = esAldea(x);
   const pr = params();
   const nivel = aldea ? pr?.aldea?.niveles?.[String(x.nivelAldea ?? 1)] : undefined;
+  const siguiente = aldea && x.nivelAldea ? pr?.aldea?.niveles?.[String(x.nivelAldea + 1)] : undefined;
   const total = Object.values(x.almacen).reduce((t, n) => t + n, 0);
   const filasAlmacen = Object.entries(x.almacen).map(([r, n]) => `<div class="carro-fila"><span>${e(r ? RECURSO_NOMBRE[r] ?? r : 'Recurso')}</span><strong>${n0(n)}</strong></div>`).join('');
   const especie = x.rebano ? bloqueDeDatos<Record<string, Especie>>('ESPECIES', alLlegarDatos)?.[x.rebano.especie] : undefined;
   const topeRebano = especie && nivel ? especie.topePorCorral * nivel.corrales : undefined;
   const mejora = (p.obrasDeMapa ?? []).find((o) => o.tipo === 'mejoraAldea' && o.destinoId === x.id);
+  // Gestiona el ciudadano de la Facción de la plaza madre; el motor lo comprueba (`pueblo.faccion_ajena`).
+  const ciudadano = x.propio;
   const columna = miColumna(p);
   const dentro = columna ? columna.participantes.map((q) => nombreDeHeroe(p, q.heroeId)).join(', ') : '';
   return `<span class="faction-kicker">Dentro de ${e(nombreDePueblo(x))}</span>
     <p class="asent-lado-nota">De ${e(nombrePlaza(p, x.madreId))}.${x.fertilidad !== undefined ? ` Fertilidad ${x.fertilidad.toFixed(2).replace('.', ',')}.` : ''}${x.batallaId ? ' <strong>Lo están atacando: si sigues dentro, defiendes.</strong>' : ''}</p>
     <div class="carro-ocupacion"><strong class="heroe-sub">Almacén</strong><span>${n0(total)} / ${n0(x.capacidad)}</span></div>${barra(total, x.capacidad)}
     ${filasAlmacen || '<p class="mapa-lista-vacia">Vacío.</p>'}
+    ${ciudadano ? htmlCargaDelPueblo(p, x, e) : ''}
     ${aldea ? `<strong class="heroe-sub">Aldea</strong>
-      <p class="asent-lado-nota">Nivel ${x.nivelAldea ?? 1}${nivel ? `: ${nivel.granjas} granjas y ${nivel.corrales} corrales` : ''}.${mejora ? ' Tiene una mejora en marcha (sus materiales se entregan en el mapa).' : ''}</p>
+      <p class="asent-lado-nota">Nivel ${x.nivelAldea ?? 1}${nivel ? `: ${nivel.granjas} granjas y ${nivel.corrales} corrales` : ''}.${mejora ? ' Tiene una mejora en marcha: sus materiales se entregan en el mapa, a su puerta.' : ''}</p>
+      ${ciudadano && siguiente && !mejora ? `<div class="mapa-seleccion-acciones"><button class="btn-secondary" type="button" data-pueblo-dentro="mejorar" title="${e(`Al nivel ${x.nivelAldea! + 1}: ${siguiente.granjas} granjas y ${siguiente.corrales} corrales. Pide ${listaRecursos(siguiente.coste)}, que se traen como una obra.`)}">Mejorar a nivel ${x.nivelAldea! + 1}</button><small class="asent-lado-nota">El Gobernador o el Maestro de Obras de la plaza madre.</small></div>` : ''}
       ${x.rebano ? `<div class="carro-ocupacion"><strong class="heroe-sub">Rebaño ${e(ESPECIE_NOMBRE[x.rebano.especie] ?? x.rebano.especie)}</strong><span>${n0(x.rebano.cabezas)}${topeRebano ? ` / ${topeRebano}` : ''} cabezas</span></div>${topeRebano ? barra(x.rebano.cabezas, topeRebano) : ''}
         <p class="asent-lado-nota">Crece solo hasta el tope de sus corrales; lo que pasa del pie de cría entra como ganado en el almacén.</p>` : ''}` : ''}
-    <strong class="heroe-sub">Guarnición</strong>
-    <p class="asent-lado-nota">${aldea ? 'Granjeros' : 'Mineros'} de serie, que defienden el pueblo si lo saquean${x.guarnicionReponeEn && x.guarnicionReponeEn > p.instante ? `. Mermada: el siguiente vuelve en ${e(textoEnTiempoReal(x.guarnicionReponeEn - p.instante))}` : ''}.</p>
+    ${htmlGuarnicion(p, x, ciudadano, e)}
     <strong class="heroe-sub">Carro de acarreo</strong>
     ${htmlCarroDeAcarreo(p, x, e)}
+    ${ciudadano ? htmlEscoltaDentro(p, x, e) : ''}
     <strong class="heroe-sub">Dentro</strong>
-    <p class="asent-lado-nota">${dentro ? `Tu columna (${e(dentro)}), fuera del mapa: nadie la ve y sigue comiendo de sus víveres.` : 'Tú.'} Al salir vuelve a la puerta con todo lo que trajo.</p>
-    <p class="asent-lado-nota">Mejorar la aldea, reponer el carro y cederle escolta se hacen desde la plaza madre.</p>
-    <div class="mapa-seleccion-acciones"><button class="btn-primary" type="button" data-salir-pueblo>Salir al mapa</button></div>
-    <p class="faction-error" data-salir-pueblo-error role="alert"></p>`;
+    <p class="asent-lado-nota">${dentro ? `Tu columna (${e(dentro)}), fuera del mapa: nadie la ve y sigue comiendo de sus víveres.` : 'Tú.'} Al salir vuelve a la puerta con todo lo que trajo; tu guarnición se queda.</p>
+    ${ciudadano ? '' : '<p class="asent-lado-nota">Solo los ciudadanos de la Facción de su plaza madre lo gestionan.</p>'}
+    <p class="faction-error" data-pueblo-dentro-error role="alert"></p>
+    <div class="mapa-seleccion-acciones"><button class="btn-primary" type="button" data-salir-pueblo>Salir al mapa</button></div>`;
 }
 
 export function cablearInteriorPueblo(raiz: HTMLElement, p: ProyeccionJugador, x: PuebloDeMapa, ejecutar: Ejecutar, alCargar: () => void): void {
   alCargarDatos = alCargar;
-  const b = raiz.querySelector<HTMLButtonElement>('[data-salir-pueblo]');
-  b?.addEventListener('click', async () => {
+  const error = raiz.querySelector<HTMLElement>('[data-pueblo-dentro-error]');
+  const enviar = async (b: HTMLButtonElement, tipo: string, params: object): Promise<void> => {
     b.disabled = true;
-    const mensaje = await ejecutar('salirDePueblo', { heroeId: p.heroeId, puebloId: x.id });
+    const mensaje = await ejecutar(tipo, params);
     b.disabled = false;
-    const err = raiz.querySelector<HTMLElement>('[data-salir-pueblo-error]');
-    if (err) err.textContent = mensaje ?? '';
-  });
+    if (error) error.textContent = mensaje ?? '';
+  };
+  raiz.querySelector<HTMLButtonElement>('[data-salir-pueblo]')?.addEventListener('click', (ev) => void enviar(ev.currentTarget as HTMLButtonElement, 'salirDePueblo', { heroeId: p.heroeId, puebloId: x.id }));
+  raiz.querySelectorAll<HTMLButtonElement>('[data-pueblo-dentro]').forEach((b) => b.addEventListener('click', () => {
+    const escuadronIds = b.dataset.escuadra ? [b.dataset.escuadra] : [];
+    const recurso = b.dataset.recurso ?? '';
+    const cantidad = Number(raiz.querySelector<HTMLInputElement>(`input[data-pueblo-cantidad="${b.dataset.puebloDentro}:${recurso}"]`)?.value ?? 0);
+    switch (b.dataset.puebloDentro) {
+      case 'guarnecer': return void enviar(b, 'guarnecerPueblo', { puebloId: x.id, escuadronIds });
+      case 'retirar': return void enviar(b, 'retirarDePueblo', { puebloId: x.id, escuadronIds });
+      case 'cargar': return void enviar(b, 'cargarDePueblo', { puebloId: x.id, recurso, cantidad });
+      case 'dejar': return void enviar(b, 'dejarEnPueblo', { puebloId: x.id, recurso, cantidad });
+      case 'escolta': return void enviar(b, 'asignarEscolta', { caravanaId: b.dataset.caravana, heroeId: p.heroeId, escuadronIds });
+      case 'quitar-escolta': return void enviar(b, 'quitarEscolta', { caravanaId: b.dataset.caravana, heroeId: p.heroeId, escuadronIds });
+      case 'mejorar': return void enviar(b, 'mejorarAldea', { heroeId: p.heroeId, puebloId: x.id });
+    }
+  }));
 }

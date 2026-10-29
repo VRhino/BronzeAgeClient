@@ -662,6 +662,10 @@ export interface PuebloDeMapa {
   /** Fertilidad del punto de la aldea (1 = 1,0). */
   fertilidad?: number;
   rebano?: { especie: string; cabezas: number };
+  /** Escuadrones de jugadores en su guarnición (de todos los héroes). */
+  guarnicionJugadoresIds?: string[];
+  /** Liderazgo que puede dejar cada héroe en su guarnición: 30 en nivel 1 y 15 más por nivel de la aldea. */
+  cupoGuarnicionPorHeroe?: number;
 }
 
 /** Una obra de mapa (§14): la de un pueblo o una aldea (pendiente de materiales o levantándose), la subida de nivel de una aldea, o una avanzada. */
@@ -719,7 +723,8 @@ export interface Escuadron {
   /** 0-100, por raciones (Doc 5.4). */
   moral: number;
   /** Dónde está: en el campamento de tu residencia, en una columna o escoltando una caravana. */
-  contenedor: { tipo: 'campamento' } | { tipo: 'ejercito'; ejercitoId: string } | { tipo: 'escolta'; caravanaId: string } | { tipo: 'fuera' };
+  /** `pueblo`: en la guarnición de un pueblo o una aldea (`guarnecerPueblo`), fuera de su campamento y de su columna. */
+  contenedor: { tipo: 'campamento' } | { tipo: 'ejercito'; ejercitoId: string } | { tipo: 'escolta'; caravanaId: string } | { tipo: 'pueblo'; puebloId: string } | { tipo: 'fuera' };
   /** Prestada por un campamento de mercenarios (Doc 1.9b): gratis, sin experiencia. */
   prestada?: { campamentoId: string };
   /** En la guarnición de tu residencia (`asignarGuarnicion`). Solo con `contenedor: campamento`. */
