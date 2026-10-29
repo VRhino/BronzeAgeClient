@@ -3,6 +3,12 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.55.1] — 2026-10-29 · ficha del pueblo en el mapa sin almacén · sync con `VRhino/BronzeAge@db80cb87`
+
+### Cambiado
+- **Ficha del pueblo en el mapa**: ya no enseña el almacén ni el rebaño. Fuera del pueblo el motor no los refresca cada minuto y se veían
+  congelados (Víctor: se quitan de la ventana de interacción). Siguen en la pantalla de dentro del pueblo y en la plaza madre.
+
 ## [0.55.0] — 2026-10-29 · tecnología conectada al motor · sync con `VRhino/BronzeAge@db80cb87`
 
 ### Arreglado

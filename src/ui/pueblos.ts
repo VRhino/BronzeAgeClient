@@ -452,7 +452,7 @@ export const FICHA_PUEBLO: FichaMapaExtra = {
     return `<span class="faction-kicker">${x.propio ? 'Pueblo de tu Facción' : 'Pueblo ajeno'}</span>
       <h3>${e(nombreDePueblo(x))}</h3>
       <p class="asent-lado-nota">De ${e(nombrePlaza(p, x.madreId))}.${x.batallaId ? ' <strong>Lo están atacando.</strong>' : ''}</p>
-      ${x.propio ? `<p class="asent-lado-nota">Almacén ${e(htmlAlmacen(x))}${e(htmlRebano(x))}${x.fertilidad !== undefined ? ` · fertilidad ${x.fertilidad.toFixed(2).replace('.', ',')}` : ''}. ${x.carroId ? 'Su carro acarrea a la plaza.' : 'Sin carro de acarreo.'}</p>` : ''}
+      ${x.propio ? `<p class="asent-lado-nota">${x.fertilidad !== undefined ? `Fertilidad ${x.fertilidad.toFixed(2).replace('.', ',')}. ` : ''}${x.carroId ? 'Su carro acarrea a la plaza.' : 'Sin carro de acarreo.'}</p>` : ''}
       ${mejora ? htmlEntrega(p, mejora, c) : ''}
       ${htmlEntrar(p, x, e)}`;
   },
