@@ -571,6 +571,29 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
       faccion: (faccionId ? todasFacciones.get(faccionId)?.misiones ?? [] : []).map(mision),
     },
     tecnologiasAdoptadas: deAmbito('FACCION:', 'tecnologias').find((t) => t.faccionId === faccionId)?.adoptadas ?? [],
+    // Tecnología (Tecnologia_Aedas): el estado del mundo viaja en `HEROE` (forma pública), lo de tu Facción en `FACCION`. El hito de una revelada y los
+    // nombres de las épicas los pone el panel con el catálogo de `/v1/datos`.
+    tecnologia: (() => {
+      const est = deAmbito('', 'estadoTecnologia')[0];
+      if (!est) return undefined;
+      const tf = faccionId ? deAmbito('FACCION:', 'tecnologias').find((t) => t.faccionId === faccionId) : undefined;
+      return {
+        era: est.era, eraDesde: instante(est.eraDesdeMs) ?? 0,
+        logros: est.logrosCumplidos.map((l) => ({ contador: l.contador, umbral: Number(l.umbral), en: instante(l.enMs) ?? 0 })),
+        propias: faccionId ? { aparecidas: tf?.aparecidas ?? [], adoptadas: tf?.adoptadas ?? [], reveladas: tf?.reveladas ?? [] } : null,
+        reveladas: (tf?.detalleReveladas ?? []).map((r) => ({ tecnologiaId: r.tecnologiaId, descubridorFaccionId: r.descubridoraFaccionId, hito: [], cumplidas: r.cumplidas })),
+        capitalId: (faccionId ? todasFacciones.get(faccionId)?.capitalId : undefined) ?? null,
+        epicasPosibles: tf?.epicasPosibles ?? [],
+      } as d.TecnologiaJugador;
+    })(),
+    aedasResidentes: deAmbito('FACCION:', 'aedaResidente').filter((x) => x.faccionId === faccionId).map((x) => ({
+      id: x.id, nombre: x.nombre, asentamientoId: x.asentamientoId,
+      epica: x.epica ? {
+        tecnologiaId: x.epica.tecnologiaId, nombre: x.epica.tecnologiaId, capitulo: x.epica.capitulo, capitulos: x.epica.capitulos, tituloCapitulo: '',
+        hechos: x.epica.hechos, hechosNecesarios: x.epica.hechosNecesarios, ultimoHechoEn: instante(x.epica.ultimoHechoEnMs),
+      } : undefined,
+    })),
+    aedasAvistados: deAmbito('VISTA:', 'aedaItinerante').map((x) => ({ id: x.id, posicion: evaluarPlan(x.plan, x.posicion, ahora).posicion, enAsentamientoId: opcional(x.enAsentamientoId) })),
     // Los tramos ya fundidos (paridad P7); un servidor anterior solo manda las aristas sueltas.
     caminos: !red ? [] : red.tramos.length
       ? red.tramos.map((t) => ({ id: t.id, escalon: Math.min(2, t.escalon) as 0 | 1 | 2, puntos: t.puntos.map(punto) }))

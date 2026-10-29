@@ -40,7 +40,8 @@ export function htmlTecnologia(p: ProyeccionJugador, e: Escapar): string {
   const propias = t.propias;
   const adoptadas = propias?.adoptadas ?? [];
   const adoptables = (propias?.aparecidas ?? []).filter((id) => !adoptadas.includes(id));
-  const plazas = p.asentamientos;
+  // Tus plazas: la que pisas, con todo, y las demás de tu Facción por su ficha (para nombrarlas y saber dónde hay que estar).
+  const plazas: Asentamiento[] = [...p.asentamientos, ...(p.asentamientosAvistados as Asentamiento[]).filter((a) => a.faccionId === p.faccionId && !p.asentamientos.some((x) => x.id === a.id))];
   const ubic = p.heroe.ubicacion;
   const dondeEstoy = ubic.tipo === 'asentamiento' ? ubic.asentamientoId : null;
   const nombrePlaza = (a: Asentamiento): string => a.nombre ?? a.id;
@@ -92,7 +93,7 @@ export function htmlTecnologia(p: ProyeccionJugador, e: Escapar): string {
     <button class="btn-primary" type="button" data-tec-adoptar="${e(id)}" data-faccion="${e(p.faccionId ?? '')}"${motivoAdoptar ? ` disabled title="${e(motivoAdoptar)}"` : ''}>Adoptar</button></li>`;
   };
   const filaReveladaHtml = (r: (typeof reveladas)[number]): string => `<li class="tec-fila tec-revelada"><span><strong>${e(nombreTec(r.tecnologiaId))}</strong>${eraChip(r.tecnologiaId)}${ayudaTec(r.tecnologiaId)}
-    <small>desbloqueada por ${e(p.facciones.find((f) => f.id === r.descubridorFaccionId)?.nombre ?? r.descubridorFaccionId)}</small>${hitoHtml(r.hito, r.cumplidas)}</span></li>`;
+    <small>desbloqueada por ${e(p.facciones.find((f) => f.id === r.descubridorFaccionId)?.nombre ?? r.descubridorFaccionId)}</small>${hitoHtml(cat?.TECNOLOGIAS[r.tecnologiaId]?.hito ?? r.hito, r.cumplidas)}</span></li>`;
 
   const residentes = p.aedasResidentes ?? [];
   const posibles = t.epicasPosibles ?? [];

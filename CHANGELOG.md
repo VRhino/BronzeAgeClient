@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.55.0] — 2026-10-29 · tecnología conectada al motor · sync con `VRhino/BronzeAge@db80cb87`
+
+### Arreglado
+- **Tecnología**: el panel salía vacío porque el cliente no leía lo que manda el motor. Ahora mapea `EstadoTecnologia` (era y logros, ámbito
+  HEROE), `TecnologiasFaccion` (aparecidas, adoptadas, reveladas con su descubridora y épicas posibles, ámbito FACCION), los Aedas residentes
+  de tu Facción con su épica (FACCION) y los itinerantes a la vista (VISTA). El hito de cada revelada sale del catálogo y las plazas de tu
+  Facción vistas en el mapa cuentan para elegir dónde.
+
 ## [0.54.0] — 2026-10-29 · iconos de tropa en todas las listas y escolta de la aldea · sync con `VRhino/BronzeAge@db80cb87`
 
 ### Cambiado
