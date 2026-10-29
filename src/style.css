@@ -3150,6 +3150,15 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .faccion-publica-cifras strong { font-family: var(--fuente-titulo); font-size: 1.15rem; color: var(--oro); }
 .faccion-publica-cifras span { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
 .faccion-lejanas { display: flex; flex-direction: column; }
+.faccion-lateral-resumen { width: 100%; display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.faccion-lateral-resumen .faction-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 0; }
+.faccion-lateral-resumen .faction-stats div, .faccion-lateral-resumen .faction-roles div { padding: 6px 8px; }
+.faccion-lateral-resumen .faction-roles { grid-template-columns: 1fr; gap: 6px; margin-top: 0; }
+.faccion-plaza { display: flex; align-items: center; gap: 14px; padding: 8px 10px; border-bottom: 1px solid rgba(169, 121, 63, 0.18); }
+.faccion-plaza.capital { background: rgba(169, 121, 63, 0.12); border-left: 3px solid var(--oro); }
+.faccion-plaza-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.faccion-plaza-info strong { font-family: var(--fuente-titulo); color: var(--pergamino); }
+.faccion-plaza-info > span { font-size: 0.8rem; color: var(--text-secondary); }
 .faccion-lejana { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 5px 10px; border-bottom: 1px solid rgba(169, 121, 63, 0.12); color: var(--text-secondary); font-size: 0.88rem; }
 .faccion-publica .btn-join-faction, .faccion-publica .faccion-pedido { flex: 0 0 auto; }
 .faccion-pedido { font-size: 0.78rem; color: var(--text-muted); }

@@ -972,7 +972,7 @@ function cablearMenuEsquina(contenedor: HTMLElement): void {
 /** El menú del jugador abierto (la barra es la misma en el mapa, el campamento y el asentamiento). Se cierra al cambiar de pantalla. */
 let panelJugador: PanelJugador | null = null;
 /** La pestaña abierta de la pantalla de Facción; se recuerda al cerrarla y volverla a abrir. */
-let pestanaFaccion: PestanaFaccion = 'resumen';
+let pestanaFaccion: PestanaFaccion = 'miembros';
 /** ¿Está abierto el mapa «desde dentro» (botón Mapa de la barra) sobre el campamento o el asentamiento? */
 let vistaMapaAbierta = false;
 let controlVistaMapa: ControlMapa | null = null;
@@ -1016,7 +1016,7 @@ function renderPanelJugador(forzar = false): void {
     if (!forzar && proyeccion.faccionId === null && panel.querySelector('#form-crear-faccion, #input-buscar-faccion')) return;
     // Con Facción, a pantalla completa y por pestañas (sustituye al panel lateral); sin ella, la elección de crear o pedir ingreso.
     const propia = proyeccion.facciones.find((f) => f.id === proyeccion.faccionId);
-    const pestana = propia ? pestanaFaccion : 'resumen';
+    const pestana = propia ? (pestanaFaccion === 'resumen' ? 'miembros' : pestanaFaccion) : 'resumen';
     let cuerpo: string;
     if (propia && pestana === 'tablon') {
       cuerpo = propia.tablon ? `<section class="faccion-tablon">${htmlTablon(proyeccion, { tipo: 'faccion', id: propia.id, tablon: propia.tablon }, escaparHtml)}</section>` : '<p class="mapa-lista-vacia">Tu Facción aún no tiene tablón.</p>';
@@ -1043,6 +1043,12 @@ function renderPanelJugador(forzar = false): void {
         renderPanelJugador(true);
       }));
       panel.querySelector('[data-cerrar-faccion]')?.addEventListener('click', () => { panelJugador = null; renderPanelJugador(true); });
+      // «Ver en el mapa» de la pestaña Plazas: cierra la ventana y centra el mapa en la plaza.
+      panel.querySelectorAll<HTMLButtonElement>('[data-centrar-x]').forEach((b) => b.addEventListener('click', () => {
+        panelJugador = null;
+        renderPanelJugador(true);
+        alternarVistaMapa(true, { x: Number(b.dataset.centrarX), y: Number(b.dataset.centrarY) });
+      }));
       const seccion = panel.querySelector<HTMLElement>('.faccion-misiones');
       if (seccion) cablearMisiones(seccion, proyeccion, ejecutarYRefrescar, () => renderPanelJugador(true));
       const tablon = panel.querySelector<HTMLElement>('.faccion-tablon');

@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.48.0] — 2026-10-29 · Facción sin Resumen y con Plazas · sync con `VRhino/BronzeAge@fd9cd58`
+
+### Añadido
+- **Facción → pestaña «Plazas»**: las plazas de tu Facción, la capital primero, con su nivel, dónde están, cuántos ciudadanos residen en cada
+  una y «Ver en el mapa» (cierra la ventana y centra el mapa en ella).
+
+### Cambiado
+- **Fuera la pestaña Resumen**: lo suyo (nivel, reputación, ciudadanos, Rey, Embajador, aviso de solicitudes, Liga y títulos del servidor) pasa
+  al panel fijo de la izquierda. La ventana abre en Miembros.
+
 ## [0.47.0] — 2026-10-29 · lista híbrida de Facciones · sync con `VRhino/BronzeAge@fd9cd58`
 
 ### Cambiado

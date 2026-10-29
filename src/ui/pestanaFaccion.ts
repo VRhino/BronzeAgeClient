@@ -23,15 +23,16 @@ export function faccionDelJugador(proyeccion: ProyeccionJugador): Faccion | unde
 
 /** Las pestañas de la pantalla de Facción (a pantalla completa). Tablón y Misiones las rellena `main.ts`, que es quien las cablea. */
 export const PESTANAS_FACCION = [
-  ['resumen', 'Resumen'],
   ['miembros', 'Miembros'],
+  ['plazas', 'Plazas'],
   ['tablon', 'Tablón'],
   ['misiones', 'Misiones'],
   ['diplomacia', 'Diplomacia'],
   ['facciones', 'Facciones'],
   ['ajustes', 'Ajustes del Rey'],
 ] as const;
-export type PestanaFaccion = (typeof PESTANAS_FACCION)[number][0];
+/** `resumen` ya no es pestaña: lo suyo va en el panel de la izquierda; queda para los paneles sueltos (`panelInteraccion`). */
+export type PestanaFaccion = (typeof PESTANAS_FACCION)[number][0] | 'resumen';
 
 /** Las plazas que el cliente conoce, con su Facción: las que tiene dentro, las que ve y las que recuerda (lo visto ahora gana a lo recordado).
  * El motor no publica cuántas plazas tiene cada Facción: de las ajenas solo se cuentan las que conoces. */
@@ -47,23 +48,63 @@ function plazasDe(p: ProyeccionJugador, faccionId: string): number {
   return [...plazasConocidas(p).values()].filter((x) => x.faccionId === faccionId).length;
 }
 
-/** El panel fijo de la izquierda de la ventana de Facción: el escudo grande, el nombre y, abajo, las plazas, los títulos y Dejar la Facción. */
+/** Lo de tu Facción que se ve siempre: nivel, reputación y ciudadanos, Rey y Embajador, si piden entrar y la Liga. */
+function htmlResumenFaccion(p: ProyeccionJugador, faccion: Faccion, e: (valor: string) => string): string {
+  const liga = ligaDe(faccion.id, p.relaciones ?? []);
+  const nombreDe = (id: string) => p.facciones.find((f) => f.id === id)?.nombre ?? id;
+  const piden = faccion.reyId === p.heroeId && (faccion.solicitudesIds ?? []).length > 0;
+  return `<div class="faction-stats">
+        <div><span>Nivel</span><strong>${faccion.nivel}</strong></div>
+        <div><span>Reputación</span><strong>${faccion.reputacion ?? 0}</strong></div>
+        <div><span>Ciudadanos</span><strong>${faccion.ciudadanosIds?.length ?? 0}</strong></div>
+      </div>
+      <div class="faction-roles">
+        <div><span>Rey</span><strong>${e(faccion.reyId ? nombreDeHeroe(p, faccion.reyId) : 'Sin designar')}</strong></div>
+        <div><span>Embajador</span><strong>${e(faccion.embajadorId ? nombreDeHeroe(p, faccion.embajadorId) : 'Sin designar')}</strong></div>
+      </div>
+      ${piden ? '<p class="asent-lado-nota">Hay héroes que piden entrar: contéstales en Miembros.</p>' : ''}
+      <div class="faction-list">
+        <span class="faction-kicker">Liga</span>
+        ${liga ? `<div class="liga-fila">${htmlLiga(liga, p.facciones)}<div><strong>${liga.tieneVasallaje ? 'Por vasallaje' : 'Por alianza'}</strong><span>${liga.miembrosIds.map((id) => e(nombreDe(id))).join(', ')}</span></div></div>` : '<p class="legend-note">No perteneces a ninguna Liga.</p>'}
+      </div>`;
+}
+
+/** El panel fijo de la izquierda de la ventana de Facción: el escudo grande, el nombre, el resumen y, abajo, las plazas, los títulos y Dejar la Facción. */
 export function htmlLateralFaccion(proyeccion: ProyeccionJugador, e: (valor: string) => string): string {
   const faccion = faccionDelJugador(proyeccion);
   if (!faccion) return '';
   const esGranRey = ligaDe(faccion.id, proyeccion.relaciones ?? [])?.granReyId === faccion.id;
-  const titulos = (proyeccion.titulos ?? []).filter((t) => t.poseedorId === faccion.id);
   return `<aside class="faccion-lateral">
     <div class="faccion-lateral-escudo">${svgSigilo(faccion.sigilo, 168, { granRey: esGranRey })}</div>
     <h2 class="faccion-lateral-nombre">${e(faccion.nombre)}</h2>
     <span class="faction-kicker">Tu facción${esGranRey ? ' · Gran Rey' : ''}</span>
+    <div class="faccion-lateral-resumen">${htmlResumenFaccion(proyeccion, faccion, e)}</div>
     <div class="faccion-lateral-pie">
       <div class="faccion-lateral-dato"><span>Plazas</span><strong>${plazasDe(proyeccion, faccion.id)}</strong></div>
-      <div class="faction-list"><span class="faction-kicker">Títulos</span>
-        ${titulos.length ? htmlTitulos(titulos, proyeccion.facciones, faccion.id, e) : '<p class="legend-note">Tu Facción aún no tiene títulos.</p>'}</div>
+      <div class="faction-list"><span class="faction-kicker">Títulos del servidor</span>
+        ${htmlTitulos(proyeccion.titulos ?? [], proyeccion.facciones, faccion.id, e)}</div>
       ${htmlDejarFaccion(proyeccion, faccion)}
     </div>
   </aside>`;
+}
+
+/** La pestaña Plazas: las de tu Facción que conoce el cliente, con su nivel, si es la capital, cuántos ciudadanos residen y «Ver» en el mapa. */
+function htmlPlazasFaccion(p: ProyeccionJugador, faccion: Faccion, e: (valor: string) => string): string {
+  const plazas = new Map<string, { nombre: string; nivel: number; posicion: { x: number; y: number }; recordada: boolean }>();
+  for (const a of p.asentamientosConocidos) if (a.faccionId === faccion.id) plazas.set(a.asentamientoId, { nombre: a.nombre ?? a.asentamientoId, nivel: a.nivel, posicion: a.posicion, recordada: true });
+  for (const a of p.asentamientosAvistados) if (a.faccionId === faccion.id) plazas.set(a.id, { nombre: a.nombre ?? a.id, nivel: a.nivel, posicion: a.posicion, recordada: false });
+  for (const a of p.asentamientos) if (a.faccionId === faccion.id && !plazas.has(a.id)) plazas.set(a.id, { nombre: a.nombre ?? a.id, nivel: a.nivel, posicion: a.posicion, recordada: false });
+  if (plazas.size === 0) return '<p class="mapa-lista-vacia">Tu Facción aún no tiene plazas.</p>';
+  const capitalId = faccion.capitalId ?? p.tecnologia?.capitalId ?? undefined;
+  const residentes = (id: string) => (faccion.miembros ?? []).filter((m) => m.residenciaId === id).length;
+  const lista = [...plazas.entries()].sort(([ia, a], [ib, b]) => Number(ib === capitalId) - Number(ia === capitalId) || b.nivel - a.nivel || a.nombre.localeCompare(b.nombre));
+  return `<div class="faction-list faction-list-libre"><span class="faction-kicker">Plazas de tu Facción (${plazas.size})</span>
+    ${lista.map(([id, a]) => `<div class="faccion-plaza${id === capitalId ? ' capital' : ''}">
+      <div class="faccion-plaza-info"><strong>${e(a.nombre)}${id === capitalId ? ' <span class="faccion-publica-relacion">Capital</span>' : ''}</strong>
+        <span>Nivel ${a.nivel} · (${Math.round(a.posicion.x)}, ${Math.round(a.posicion.y)})${a.recordada ? ' · recordada' : ''}</span></div>
+      <div class="faccion-publica-cifras"><div><strong>${residentes(id)}</strong><span>Residentes</span></div></div>
+      <button class="btn-secondary" type="button" data-centrar-x="${a.posicion.x}" data-centrar-y="${a.posicion.y}">Ver en el mapa</button>
+    </div>`).join('')}</div>`;
 }
 
 const RELACION: Record<string, string> = { alianza: 'Aliada', guerra: 'En guerra', vasallaje: 'Vasallaje' };
@@ -157,6 +198,7 @@ export function renderPestanaFaccion(
           .join('')}</div>`
       : '';
     if (pestana === 'facciones') return htmlListaFacciones(proyeccion, escaparHtml);
+    if (pestana === 'plazas') return htmlPlazasFaccion(proyeccion, faccion, escaparHtml);
     if (pestana === 'miembros') return `${solicitudes}${htmlCargos(proyeccion, faccion, escaparHtml)}${miembros}`;
     if (pestana === 'diplomacia') {
       return `${htmlDiplomacia(proyeccion, faccion, escaparHtml)}
@@ -181,20 +223,7 @@ export function renderPestanaFaccion(
         <span class="faction-id">${escaparHtml(faccion.id)}</span>
       </div>`;
     return `${cabecera}
-      <div class="faction-stats">
-        <div><span>Nivel</span><strong>${faccion.nivel}</strong></div>
-        <div><span>Reputación</span><strong>${faccion.reputacion ?? 0}</strong></div>
-        <div><span>Ciudadanos</span><strong>${faccion.ciudadanosIds?.length ?? 0}</strong></div>
-      </div>
-      <div class="faction-roles">
-        <div><span>Rey</span><strong>${escaparHtml(faccion.reyId ? nombreDeHeroe(proyeccion, faccion.reyId) : 'Sin designar')}</strong></div>
-        <div><span>Embajador</span><strong>${escaparHtml(faccion.embajadorId ? nombreDeHeroe(proyeccion, faccion.embajadorId) : 'Sin designar')}</strong></div>
-      </div>
-      ${solicitudes ? '<p class="asent-lado-nota">Hay héroes que piden entrar: contéstales en Miembros.</p>' : ''}
-      <div class="faction-list">
-        <span class="faction-kicker">Liga</span>
-        ${liga ? `<div class="liga-fila">${htmlLiga(liga, proyeccion.facciones)}<div><strong>${liga.tieneVasallaje ? 'Por vasallaje' : 'Por alianza'}</strong><span>${liga.miembrosIds.map((id) => escaparHtml(nombreDe(id))).join(', ')}</span></div></div>` : '<p class="legend-note">No perteneces a ninguna Liga.</p>'}
-      </div>
+      ${htmlResumenFaccion(proyeccion, faccion, escaparHtml)}
       <div class="faction-list">
         <span class="faction-kicker">Títulos del servidor</span>
         ${htmlTitulos(proyeccion.titulos ?? [], proyeccion.facciones, faccion.id, escaparHtml)}
