@@ -12,7 +12,7 @@ import { textoEnTiempoReal } from './estadoCliente';
 import { nombreDeHeroe } from './nombres';
 import type { Ejecutar } from './panelCarro';
 import { cablearCargaDeSalida, htmlCargaDeSalida, leerCarga } from './cargaDeSalida';
-import { iconoEnFila, iconoMini } from './iconosTropa';
+import { iconoTropa } from './iconosTropa';
 
 type Escapar = (valor: string) => string;
 
@@ -26,8 +26,6 @@ const hombres = (c: Convocatoria['integrantes'][number]): number => c.tropas.red
 /** Los cambios que llevas hechos en TU selección y aún no has guardado (ids en orden de combate), de esa convocatoria; `null` = lo guardado. Vive entre repintados. */
 let borrador: { convocatoriaId: string; ids: string[] } | null = null;
 
-const filaDeTropa = (t: Convocatoria['integrantes'][number]['tropas'][number], e: Escapar): string =>
-  `<li>${iconoMini(t.tropaId)}${e(t.nombre)} · nivel ${t.nivel} · moral ${Math.round(t.moral)} · ${t.cantidad} hombres</li>`;
 
 /** ¿Resides en el lugar de la convocatoria? Solo entonces eliges tropa; quien visita sale con su columna aparcada y su selección no cuenta. */
 function resideEnElLugar(p: ProyeccionJugador, c: Convocatoria): boolean {
@@ -62,7 +60,13 @@ function mismaCarga(a: Record<string, number>, b: Record<string, number>): boole
   return [...claves].every((r) => Math.floor(a[r] ?? 0) === Math.floor(b[r] ?? 0));
 }
 
-/** TU tropa: la que sale, en el orden en que entra en combate, con casillas y flechas para cambiarla (`cambiarSeleccionDeConvocatoria`). Solo la tuya. */
+/** Si la lista para añadir escuadras (el «+») está abierta. Vive entre repintados. */
+let eligiendo = false;
+
+/**
+ * TU tropa, en los espacios de la ventana de salida: la que sale, en el orden en que entra en combate (‹ › la mueven), con ✕ para quitar y «+» para
+ * añadir (`cambiarSeleccionDeConvocatoria`). Los cambios se aplican al guardar.
+ */
 function htmlMiTropa(p: ProyeccionJugador, c: Convocatoria, e: Escapar): string {
   const mio = c.integrantes.find((x) => x.heroeId === p.heroeId);
   if (!mio) return '';
@@ -74,13 +78,37 @@ function htmlMiTropa(p: ProyeccionJugador, c: Convocatoria, e: Escapar): string 
   const elegidas = ids.map((id) => candidatas.find((s) => s.id === id)).filter((s): s is NonNullable<typeof s> => s !== undefined);
   const libres = candidatas.filter((s) => !ids.includes(s.id));
   const cambiado = ids.length !== guardados.length || ids.some((id, i) => id !== guardados[i]);
-  const fila = (s: (typeof propias)[number], pos: number | null): string => `<div class="mapa-lista-item con-tropa">${iconoEnFila(s.tropaId)}<div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${pos === null ? 'no sale' : `va en el puesto ${pos + 1}`} · nivel ${s.nivel} · moral ${Math.round(s.moral)} · ${s.cantidad} hombres</span></div>
-      <input type="checkbox" data-conv-sel="${e(s.id)}"${pos === null ? '' : ' checked'} aria-label="Sale con el ejército" />
-      ${pos === null ? '' : `<button class="btn-secondary" type="button" data-conv-mover="${e(s.id)}" data-dir="-1"${pos === 0 ? ' disabled' : ''} aria-label="Subir">↑</button><button class="btn-secondary" type="button" data-conv-mover="${e(s.id)}" data-dir="1"${pos === elegidas.length - 1 ? ' disabled' : ''} aria-label="Bajar">↓</button>`}</div>`;
-  return `<strong class="heroe-sub">Tu tropa${ayuda('convocatoria:tropa', 'La primera entra primero en combate. Marca las escuadras que salen y reordénalas con las flechas; los cambios se aplican al guardar.')}</strong>
-    <div class="mapa-lista">${elegidas.map((s, i) => fila(s, i)).join('')}${libres.map((s) => fila(s, null)).join('')}</div>
-    ${elegidas.length === 0 ? '<p class="asent-lado-nota">Sin ninguna escuadra no sales. Marca al menos una.</p>' : ''}
-    <div class="mapa-seleccion-acciones"><button class="btn-primary" type="button" data-conv="guardar-tropa"${cambiado && elegidas.length > 0 ? '' : ' disabled'}>Guardar cambios</button><button class="btn-secondary" type="button" data-conv="descartar-tropa"${cambiado ? '' : ' disabled'}>Descartar</button></div>`;
+  const usado = elegidas.reduce((t, s) => t + s.costeLiderazgo, 0);
+  const libre = p.heroe.liderazgoBase - usado;
+  const caben = libres.filter((s) => s.costeLiderazgo <= libre);
+  const espacios = Math.max(ESPACIOS, elegidas.length + (caben.length > 0 ? 1 : 0));
+  const hueco = (s: (typeof propias)[number], pos: number): string => `<div class="salida-hueco lleno" title="${e(`Puesto ${pos + 1} · ${s.nombre} · ${s.cantidad} hombres · nivel ${s.nivel} · moral ${Math.round(s.moral)}`)}">
+      <span class="salida-hueco-icono">${iconoTropa(s.tropaId, 34)}</span>
+      <span class="salida-hueco-nombre">${pos + 1}. ${e(s.nombre)}</span>
+      <small>${s.cantidad} hombres ${chipLiderazgo(s)}</small>
+      <span class="salida-hueco-mover"><button type="button" data-conv-mover="${e(s.id)}" data-dir="-1"${pos === 0 ? ' disabled' : ''} aria-label="Antes">‹</button><button type="button" data-conv-mover="${e(s.id)}" data-dir="1"${pos === elegidas.length - 1 ? ' disabled' : ''} aria-label="Después">›</button></span>
+      <button class="salida-hueco-quitar" type="button" data-conv-quitar="${e(s.id)}" title="Quitar" aria-label="Quitar ${e(s.nombre)}">✕</button>
+    </div>`;
+  const huecos = Array.from({ length: espacios }, (_, i) => {
+    const s = elegidas[i];
+    if (s) return hueco(s, i);
+    if (i === elegidas.length && libres.length > 0) return `<button class="salida-hueco mas${eligiendo ? ' activo' : ''}" type="button" data-conv-mas title="Añadir una escuadra" aria-label="Añadir una escuadra">+</button>`;
+    return '<div class="salida-hueco vacio"></div>';
+  }).join('');
+  const lista = eligiendo && libres.length > 0
+    ? `<div class="salida-elegir">${libres.map((s) => {
+      const cabe = s.costeLiderazgo <= libre;
+      return `<button class="salida-candidata" type="button" data-conv-anadir="${e(s.id)}"${cabe ? '' : ` disabled title="No cabe: te quedan ${Math.max(0, libre)} de Liderazgo"`}>${iconoTropa(s.tropaId, 26)}<span><strong>${e(s.nombre)}</strong><small>${s.cantidad} hombres · ${s.costeLiderazgo} de Liderazgo</small></span></button>`;
+    }).join('')}</div>`
+    : '';
+  return `<div class="salida-tropa-cab">
+      <strong class="heroe-sub">Tu tropa${ayuda('convocatoria:tropa', 'La primera entra primero en combate: muévela con ‹ ›. Quita con ✕ o añade con «+»; los cambios se aplican al pulsar «Guardar cambios».')}</strong>
+      <span class="salida-liderazgo${libre < 0 ? ' excedido' : ''}">Liderazgo ${usado} / ${p.heroe.liderazgoBase}</span>
+      <span class="salida-loadout"><button class="btn-secondary salida-guardar" type="button" data-conv="guardar-tropa"${cambiado && elegidas.length > 0 ? '' : ' disabled'}>Guardar cambios</button><button class="btn-secondary salida-guardar" type="button" data-conv="descartar-tropa"${cambiado ? '' : ' disabled'}>Descartar</button></span>
+    </div>
+    <div class="salida-huecos">${huecos}</div>
+    ${lista}
+    ${elegidas.length === 0 ? '<p class="asent-lado-nota">Sin ninguna escuadra no sales. Añade al menos una.</p>' : ''}`;
 }
 
 /** Las Caravanas de Fundación de tu Facción que esperan dentro del lugar de la convocatoria (motor d8ef09c): el Líder puede llevársela al partir. */
@@ -103,23 +131,38 @@ function htmlPreguntaCaravana(p: ProyeccionJugador, c: Convocatoria, e: Escapar)
     <div class="conv-caravanas">${opcion('', 'No, se queda aquí')}${esperan.map((x) => opcion(x.id, `Sí, llevar ${e(x.id)}${x.contenido ? ` <small>(${e(x.contenido)})</small>` : ''}`)).join('')}</div>`;
 }
 
-/** El panel de TU convocatoria (vacío si no estás en ninguna): quiénes van, las peticiones y los botones que le tocan a tu papel. */
-export function htmlPreparacion(p: ProyeccionJugador, e: Escapar): string {
+/** Espacios de tropa a la vista, como en la ventana de salida. */
+const ESPACIOS = 5;
+
+/** Un integrante: su nombre y, debajo, los iconos de la tropa que lleva. */
+function htmlIntegrante(p: ProyeccionJugador, c: Convocatoria, x: Convocatoria['integrantes'][number], e: Escapar): string {
+  const papel = [x.heroeId === c.liderId ? 'Líder' : '', x.heroeId === p.heroeId ? 'tú' : ''].filter(Boolean).join(' · ');
+  const iconos = x.tropas.map((t) => `<span class="conv-integrante-tropa" title="${e(`${t.nombre} · nivel ${t.nivel} · moral ${Math.round(t.moral)} · ${t.cantidad} hombres`)}">${iconoTropa(t.tropaId, 26)}</span>`).join('');
+  return `<li class="conv-integrante"><div class="conv-integrante-cab"><strong>${e(nombreDeHeroe(p, x.heroeId))}</strong>${papel ? ` <em>${papel}</em>` : ''}<span>${x.escuadronIds.length} escuadra(s)${x.tropas.length > 0 ? ` · ${hombres(x)} hombres` : ''}</span></div>
+    <div class="conv-integrante-tropas">${iconos || '<small>Sin tropa</small>'}</div></li>`;
+}
+
+/**
+ * Tu convocatoria repartida como la ventana de salida (vacía si no estás en ninguna): a la izquierda quiénes van (nombre e iconos de su tropa), las
+ * peticiones y la Caravana; a la derecha tu carro; abajo tu tropa en espacios y los botones que le tocan a tu papel.
+ */
+export function htmlPreparacion(p: ProyeccionJugador, e: Escapar): { izquierda: string; derecha: string; pie: string } | null {
   const c = miConvocatoria(p);
-  if (!c) return '';
+  if (!c) return null;
   const peticiones = c.soyLider ? c.peticiones.filter((x) => x.expiraEn > p.instante) : [];
-  return `<span class="faction-kicker">Ejército en preparación</span>
+  const izquierda = `<span class="faction-kicker">Ejército en preparación</span>
     <p class="asent-lado-nota">${c.soyLider ? 'Tú lo diriges.' : `Lo dirige ${e(nombreDeHeroe(p, c.liderId))}.`} ${e(POLITICA[c.politicaDeUnion])}.${ayuda('convocatoria:espera', 'Seguís dentro: nada se mueve hasta que el Líder pulse «Salir con el ejército» o cancele. Espera sin límite de tiempo.')}</p>
-    <ul class="ejercito-lista">${c.integrantes.map((x) => `<li><strong>${e(nombreDeHeroe(p, x.heroeId))}</strong>${x.heroeId === c.liderId ? ' <em>(Líder)</em>' : ''}${x.heroeId === p.heroeId ? ' · tú' : ''} — ${x.escuadronIds.length} escuadra(s)${x.tropas.length > 0 ? `, ${hombres(x)} hombres` : ''}${x.heroeId === p.heroeId ? '' : `<ul>${x.tropas.map((t) => filaDeTropa(t, e)).join('')}</ul>`}</li>`).join('')}</ul>
-    ${htmlMiTropa(p, c, e)}
-    ${htmlMiCarga(p, c, e)}
+    <strong class="heroe-sub">Integrantes</strong>
+    <ul class="conv-integrantes">${c.integrantes.map((x) => htmlIntegrante(p, c, x, e)).join('')}</ul>
     ${peticiones.length > 0 ? `<strong class="heroe-sub">Piden unirse</strong>${peticiones.map((x) => `<div class="ejercito-fila"><div><strong>${e(nombreDeHeroe(p, x.heroeId))}</strong><span>${e(textoEnTiempoReal(x.expiraEn - p.instante))} para contestar · ${x.escuadronIds.length} escuadra(s)</span></div>
         <button class="btn-primary" type="button" data-conv-peticion="${e(x.heroeId)}" data-aceptar="si">Aceptar</button><button class="btn-secondary" type="button" data-conv-peticion="${e(x.heroeId)}" data-aceptar="no">Rechazar</button></div>`).join('')}` : ''}
-    ${htmlPreguntaCaravana(p, c, e)}
-    <div class="mapa-seleccion-acciones">${c.soyLider
-      ? '<button class="btn-primary" type="button" data-conv="partir">Salir con el ejército</button><button class="btn-secondary" type="button" data-conv="cancelar">Cancelar la salida</button>'
-      : '<button class="btn-secondary" type="button" data-conv="separarme">Separarme (sigues dentro)</button>'}</div>
-    <p class="faction-error" data-campo="error-conv" role="alert"></p>`;
+    ${htmlPreguntaCaravana(p, c, e)}`;
+  const derecha = htmlMiCarga(p, c, e) || '<p class="asent-lado-nota">No resides aquí: sales con el carro de tu columna, tal cual.</p>';
+  const pie = `${htmlMiTropa(p, c, e)}
+    <div class="salida-acciones"><p class="faction-error" data-campo="error-conv" role="alert"></p>${c.soyLider
+      ? '<button class="btn-secondary" type="button" data-conv="cancelar">Cancelar la salida</button><button class="btn-primary" type="button" data-conv="partir">Salir con el ejército</button>'
+      : '<button class="btn-primary" type="button" data-conv="separarme">Separarme (sigues dentro)</button>'}</div>`;
+  return { izquierda, derecha, pie };
 }
 
 export function cablearPreparacion(raiz: ParentNode, p: ProyeccionJugador, ejecutar: Ejecutar, avisar: (mensaje: string) => void, repintar: () => void): void {
@@ -134,10 +177,9 @@ export function cablearPreparacion(raiz: ParentNode, p: ProyeccionJugador, ejecu
   const mio = c.integrantes.find((x) => x.heroeId === p.heroeId);
   const idsActuales = (): string[] => (borrador?.convocatoriaId === c.id ? borrador.ids : mio?.escuadronIds ?? []);
   const cambiarBorrador = (ids: string[]): void => { borrador = { convocatoriaId: c.id, ids }; repintar(); };
-  raiz.querySelectorAll<HTMLInputElement>('[data-conv-sel]').forEach((i) => i.addEventListener('change', () => {
-    const id = i.dataset.convSel!;
-    cambiarBorrador(i.checked ? [...idsActuales(), id] : idsActuales().filter((x) => x !== id));
-  }));
+  raiz.querySelectorAll<HTMLButtonElement>('[data-conv-quitar]').forEach((b) => b.addEventListener('click', () => cambiarBorrador(idsActuales().filter((x) => x !== b.dataset.convQuitar))));
+  raiz.querySelector<HTMLButtonElement>('[data-conv-mas]')?.addEventListener('click', () => { eligiendo = !eligiendo; repintar(); });
+  raiz.querySelectorAll<HTMLButtonElement>('[data-conv-anadir]').forEach((b) => b.addEventListener('click', () => { eligiendo = false; cambiarBorrador([...idsActuales(), b.dataset.convAnadir!]); }));
   raiz.querySelectorAll<HTMLButtonElement>('[data-conv-mover]').forEach((b) => b.addEventListener('click', () => {
     const ids = [...idsActuales()];
     const i = ids.indexOf(b.dataset.convMover!);

@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.56.0] — 2026-10-29 · ejército en preparación con el reparto de la ventana de salida · sync con `VRhino/BronzeAge@db80cb87`
+
+### Cambiado
+- **Salir como ejército**: con un ejército en preparación, la ventana «Salir al mundo» se reparte como la normal. A la izquierda, donde va
+  «Cómo sales», los integrantes con su nombre y debajo los iconos de la tropa que lleva cada uno (más las peticiones y la Caravana); a la
+  derecha, la carga de tu carro; abajo, tu tropa en espacios con ✕, «+» y ‹ › para el orden de combate, «Guardar cambios» y los botones
+  del Líder (Salir con el ejército, Cancelar) o de Separarme.
+
 ## [0.55.1] — 2026-10-29 · ficha del pueblo en el mapa sin almacén · sync con `VRhino/BronzeAge@db80cb87`
 
 ### Cambiado

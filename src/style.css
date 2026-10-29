@@ -3330,7 +3330,22 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .salida-cuerpo { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; }
 .salida-col { overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 8px; background: radial-gradient(ellipse at top, rgba(237, 224, 196, 0.05), transparent 70%), var(--marco-bg-alt); }
 .salida-col + .salida-col { border-left: 1px solid var(--bronce-osc); background: var(--marco-panel); }
-.salida-preparacion { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 8px; }
+.conv-integrantes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.conv-integrante { padding: 8px 10px; border: 1px solid var(--bronce-osc); border-radius: 3px; background: rgba(20, 16, 11, 0.35); display: flex; flex-direction: column; gap: 6px; }
+.conv-integrante-cab { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.conv-integrante-cab strong { color: var(--pergamino); }
+.conv-integrante-cab em { font-size: 0.75rem; color: var(--oro); font-style: normal; }
+.conv-integrante-cab span { margin-left: auto; font-size: 0.75rem; color: var(--text-secondary); }
+.conv-integrante-tropas { display: flex; flex-wrap: wrap; gap: 4px; color: var(--oro-claro); --relleno: rgba(205, 160, 90, 0.3); }
+.conv-integrante-tropas small { font-size: 0.75rem; color: var(--text-muted); }
+.conv-integrante-tropa { display: flex; padding: 2px; border: 1px solid rgba(169, 121, 63, 0.45); border-radius: 3px; background: rgba(40, 30, 18, 0.9); }
+.salida-hueco-mover { position: absolute; bottom: 2px; right: 3px; display: flex; gap: 2px; }
+.salida-hueco-mover button { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85rem; line-height: 1; padding: 1px 3px; }
+.salida-hueco-mover button:hover:not(:disabled) { color: var(--oro-claro); }
+.salida-hueco-mover button:disabled { opacity: 0.3; cursor: default; }
+.salida-acciones .btn-secondary { width: auto; padding: 8px 20px; }
+.salida-col .mapa-seleccion-acciones { justify-content: flex-end; }
+.salida-col .mapa-seleccion-acciones button { flex: 0 0 auto; width: auto; padding: 4px 12px; font-size: 0.75rem; }
 .salida-pie { border-top: 1px solid var(--bronce-osc); padding: 10px 16px 12px; display: flex; flex-direction: column; gap: 8px; background: linear-gradient(0deg, rgba(169, 121, 63, 0.14), transparent); }
 .salida-tropa-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
 .salida-tropa-cab .heroe-sub { margin: 0; }

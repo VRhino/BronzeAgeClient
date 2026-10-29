@@ -7,7 +7,7 @@
 //   pueblo       `salirDePueblo`: vuelves a la puerta con la columna con la que entraste
 // Donde se elige tropa, sale cargado el loadout activo (o todo, si ese loadout no tiene escuadras); se puede cambiar de loadout, quitar y añadir escuadras y,
 // con «Guardar loadout», dejar el cambio en el loadout elegido. Sin guardarlo vale solo para esta salida. De visita no hay nada que elegir: los espacios
-// enseñan lo que lleva la columna. Mientras haya un ejército en preparación, la ventana enseña ese panel.
+// enseñan lo que lleva la columna. Con un ejército en preparación se reparte igual: integrantes a la izquierda, tu carro a la derecha y tu tropa abajo.
 import type { ProyeccionJugador } from '../apiCliente';
 import type { Asentamiento, CampamentoMercenarios, Escuadron, PuebloDeMapa } from '../tiposDominio';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
@@ -177,9 +177,12 @@ const textoSalir = (l: LugarDeSalida): string => (l.tipo === 'pueblo' ? 'Salir a
 export function pintarVentanaSalida(raiz: HTMLElement, p: ProyeccionJugador, l: LugarDeSalida, ejecutar: Ejecutar, cerrar: () => void, repintar: () => void, e: Escapar): void {
   const avisar = (mensaje: string): void => { const error = raiz.querySelector<HTMLElement>('[data-salida-error]'); if (error) error.textContent = mensaje; };
   const cabecera = `<header class="diario-cab"><span class="diario-cab-titulo">Salir de ${e(nombreDe(l))}</span><button class="diario-cerrar" type="button" data-salida-cerrar aria-label="Cerrar">✕</button></header>`;
-  const preparacion = admiteEjercito(l) ? htmlPreparacion(p, e) : '';
+  const preparacion = admiteEjercito(l) ? htmlPreparacion(p, e) : null;
   if (preparacion) {
-    pintar(raiz, `<div class="diario salida">${cabecera}<div class="salida-preparacion">${preparacion}</div></div>`, () => {
+    // Ejército en preparación: el mismo reparto, con los integrantes a la izquierda, tu carro a la derecha y tu tropa abajo.
+    pintar(raiz, `<div class="diario salida">${cabecera}
+      <div class="salida-cuerpo"><section class="salida-col">${preparacion.izquierda}</section><section class="salida-col">${preparacion.derecha}</section></div>
+      <footer class="salida-pie">${preparacion.pie}</footer></div>`, () => {
       raiz.querySelector('[data-salida-cerrar]')?.addEventListener('click', cerrar);
       cablearPreparacion(raiz, p, ejecutar, avisar, repintar);
     }, `salida-prep:${claveDe(l)}`);
