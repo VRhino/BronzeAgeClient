@@ -2,10 +2,11 @@
 // plaza ajena (foto con fecha de su layout y su defensa). Se compra en la taberna de una plaza propia —estando dentro— o en la de un
 // campamento de mercenarios —dentro, o con la columna a la puerta—. Aquí no se decide ninguna regla: el precio es una cotización con
 // `tarifasIntel` y quien valida es el backend, cuyo rechazo sale tal cual en `#intel-error`.
-import { radioDePuerta, type ProyeccionJugador } from '../apiCliente';
+import { radioDePuerta, tropasReclutables, type ProyeccionJugador } from '../apiCliente';
 import { ayuda } from './ayuda';
 import { EDIFICIO_COLOR, EDIFICIO_NOMBRE } from '../paletas';
 import type { InformePlaza, MiradaIntel, OrigenDeIntel, Point } from '../tiposDominio';
+import { iconoMini } from './iconosTropa';
 
 export type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
 type Escapar = (valor: string) => string;
@@ -137,7 +138,7 @@ function detalleInforme(inf: InformePlaza, p: ProyeccionJugador, e: Escapar): st
       <strong>Edificios</strong>
       <div class="mapa-seleccion-datos">${[...porTipo].map(([t, n]) => `<div><span>${e(EDIFICIO_NOMBRE[t] ?? t)}</span><strong>${n}</strong></div>`).join('')}</div>
       <strong>Guarnición</strong>
-      ${tropas.size > 0 ? `<div class="mapa-seleccion-datos">${[...tropas].map(([t, n]) => `<div><span>${e(t)}</span><strong>${n}</strong></div>`).join('')}</div>` : '<p class="mapa-lista-vacia">Sin guarnición.</p>'}
+      ${tropas.size > 0 ? `<div class="mapa-seleccion-datos">${[...tropas].map(([t, n]) => `<div><span>${iconoMini(t)}${e(tropasReclutables()?.find((x) => x.id === t)?.nombre ?? t.replace(/_/g, ' '))}</span><strong>${n}</strong></div>`).join('')}</div>` : '<p class="mapa-lista-vacia">Sin guarnición.</p>'}
       <strong>Murallas</strong>
       ${inf.recintos.length > 0 ? inf.recintos.map((r) => `<p class="mapa-lista-vacia">Recinto de nivel ${r.nivel}: ${Math.max(0, r.avance + 1)} de ${r.celdas.length} celdas levantadas, ${r.celdas.filter((c) => c.clase === 'puerta').length} puertas.</p>`).join('') : '<p class="mapa-lista-vacia">Sin recinto.</p>'}    </section>`;
 }

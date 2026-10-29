@@ -65,3 +65,8 @@ export function iconoTropa(id: string, lado = 32): string {
 }
 
 export const TROPAS_CON_ICONO = Object.keys(DIBUJOS);
+
+/** El icono de la tropa al principio de una fila de lista (`.mapa-lista-item.con-tropa`). */
+export const iconoEnFila = (tropaId: string): string => `<span class="tropa-icono" aria-hidden="true">${iconoTropa(tropaId, 26)}</span>`;
+/** El icono pequeño, dentro de un texto. */
+export const iconoMini = (tropaId: string): string => `<span class="tropa-icono-mini" aria-hidden="true">${iconoTropa(tropaId, 16)}</span>`;

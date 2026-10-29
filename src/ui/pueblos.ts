@@ -28,6 +28,7 @@ import type { Ejecutar } from './panelCarro';
 import { nombreDeHeroe } from './nombres';
 import { chipLiderazgo } from './liderazgo';
 import { confirmar } from './dialogo';
+import { iconoEnFila } from './iconosTropa';
 
 type Escapar = (valor: string) => string;
 
@@ -543,8 +544,8 @@ function produce(x: PuebloDeMapa): string[] {
   return esAldea(x) ? ['trigo', 'ganado'] : Object.keys(x.almacen).filter((r) => r);
 }
 
-const fila = (s: { id: string; nombre: string; cantidad: number; costeLiderazgo: number }, boton: string, e: Escapar): string =>
-  `<div class="mapa-lista-item"><div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres</span></div>${boton}</div>`;
+const fila = (s: { id: string; tropaId: string; nombre: string; cantidad: number; costeLiderazgo: number }, boton: string, e: Escapar): string =>
+  `<div class="mapa-lista-item con-tropa">${iconoEnFila(s.tropaId)}<div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres</span></div>${boton}</div>`;
 
 /** La guarnición: los de serie, la tuya (con «Retirar») y lo que puedes dejar de tu columna (con «Dejar»), dentro de tu cupo de Liderazgo. */
 function htmlGuarnicion(p: ProyeccionJugador, x: PuebloDeMapa, ciudadano: boolean, e: Escapar): string {
@@ -594,13 +595,20 @@ function htmlEscoltaDentro(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar): s
   const cedidas = p.heroe.escuadrones.filter((s) => s.contenedor.tipo === 'escolta' && s.contenedor.caravanaId === c.id);
   const columna = miColumna(p);
   const libres = columna ? p.heroe.escuadrones.filter((s) => s.contenedor.tipo === 'ejercito' && s.contenedor.ejercitoId === columna.id && s.cantidad > 0) : [];
-  const madre = p.asentamientos.find((a) => a.id === x.madreId);
-  const cupo = madre ? puntosDeEscolta(madre, alLlegarDatos) : undefined;
+  // Dentro del pueblo no se está en la madre: su Mercado (que fija el cupo) se lee de la ficha que llega de ella.
+  const madre = p.asentamientos.find((a) => a.id === x.madreId) ?? (p.asentamientosAvistados.find((a) => a.id === x.madreId) as Asentamiento | undefined);
+  const cupo = c.escoltaLiderazgo?.cupo ?? (madre ? puntosDeEscolta(madre, alLlegarDatos) : undefined);
+  const usado = c.escoltaLiderazgo?.usado ?? cedidas.reduce((t, s) => t + s.costeLiderazgo, 0);
+  const libre = cupo === undefined ? Infinity : cupo - usado;
   const otros = Math.max(0, (c.escoltaIds ?? []).length - cedidas.length);
-  return `<strong class="heroe-sub">Escolta del carro${ayuda('pueblo:escolta', 'Cede escuadras de tu columna al carro de acarreo mientras está parado aquí: viajan con él a la plaza y vuelven. El cupo de escolta es el del Mercado de la plaza madre. «Retirar» las devuelve a tu columna.')}</strong>
-    <p class="asent-lado-nota">${cedidas.length + otros ? `${cedidas.length + otros} escuadra(s) de escolta${otros ? `, ${otros} de otros héroes` : ''}` : 'Sin escolta'}${cupo !== undefined ? ` · cupo ${cupo} de Liderazgo` : ''}.${parada ? '' : ' Solo se cambia con el carro parado aquí.'}</p>
+  return `<div class="carro-ocupacion"><strong class="heroe-sub">Escolta del carro${ayuda('pueblo:escolta', 'Cede escuadras de tu columna al carro de acarreo mientras está parado aquí: viajan con él a la plaza y vuelven. El cupo de escolta, en Liderazgo, es el del Mercado de la plaza madre. «Retirar» las devuelve a tu columna.')}</strong><span>${cupo !== undefined ? `cupo ${usado} / ${cupo}` : madre ? 'la madre no tiene Mercado: sin cupo' : 'cupo desconocido'}</span></div>
+    ${cupo !== undefined ? barra(usado, cupo) : ''}
+    <p class="asent-lado-nota">${cedidas.length + otros ? `${cedidas.length + otros} escuadra(s) de escolta${otros ? `, ${otros} de otros héroes` : ''}` : 'Sin escolta'}.${parada ? '' : ' Solo se cambia con el carro parado aquí.'}</p>
     ${cedidas.length ? `<div class="mapa-lista">${cedidas.map((s) => fila(s, parada ? `<button class="btn-secondary" type="button" data-pueblo-dentro="quitar-escolta" data-escuadra="${e(s.id)}" data-caravana="${e(c.id)}">Retirar</button>` : '', e)).join('')}</div>` : ''}
-    ${parada && libres.length ? `<div class="mapa-lista">${libres.map((s) => fila(s, `<button class="btn-secondary" type="button" data-pueblo-dentro="escolta" data-escuadra="${e(s.id)}" data-caravana="${e(c.id)}">Escoltar</button>`, e)).join('')}</div>` : ''}`;
+    ${parada && libres.length ? `<div class="mapa-lista">${libres.map((s) => {
+      const cabe = s.costeLiderazgo <= libre;
+      return fila(s, `<button class="btn-secondary" type="button" data-pueblo-dentro="escolta" data-escuadra="${e(s.id)}" data-caravana="${e(c.id)}"${cabe ? '' : ` disabled title="No cabe: quedan ${Math.max(0, libre)} de Liderazgo"`}>Escoltar</button>`, e);
+    }).join('')}</div>` : ''}`;
 }
 
 // DENTRO DEL PUEBLO (decisión de Víctor, 2026-10-29): la misma forma que la pantalla de la plaza. Al centro su trazado (`htmlTrazadoPueblo`), con los
@@ -648,7 +656,7 @@ export function htmlTrazadoPueblo(p: ProyeccionJugador, x: PuebloDeMapa, e: Esca
     ${huecosAnillo}
     <div class="pueblo-hueco centro" style="left:50%;top:50%" title="${e(nombreDePueblo(x))}">${iconoEdificio(aldea ? 'vivienda' : x.tipo, 30)}</div>
     ${hueco('almacen', true, `Almacén · ${n0(total)} / ${n0(x.capacidad)}`, aldea ? 'left:37%;top:67%' : 'left:30%;top:68%')}
-    ${hueco('carro', carroEnCasa, x.carroId ? (carroEnCasa ? 'Carro de acarreo, parado aquí' : 'Carro de acarreo: fuera') : 'Sin carro de acarreo', aldea ? 'left:63%;top:67%' : 'left:70%;top:68%', ICONO_CARRO)}
+    ${carroEnCasa ? hueco('carro', true, 'Carro de acarreo, parado aquí', aldea ? 'left:63%;top:67%' : 'left:70%;top:68%', ICONO_CARRO) : ''}
     ${x.batallaId ? '<p class="pueblo-trazado-aviso">Lo están atacando: si sigues dentro, defiendes.</p>' : ''}
   </div>`;
 }

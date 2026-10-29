@@ -9,6 +9,7 @@ import { ayuda } from './ayuda';
 import { estadoCliente } from './estadoCliente';
 import { invalidar, pintar } from './repintado';
 import { confirmar } from './dialogo';
+import { iconoEnFila } from './iconosTropa';
 
 /** Manda el comando, comprueba `resultado.ok` y refresca; devuelve el mensaje de error o `null`. Lo pone `main.ts`. */
 export type Aplicar = (peticion: Promise<RespuestaComando>) => Promise<string | null>;
@@ -89,7 +90,7 @@ function renderEscuadras(h: HeroeProyectado, proyeccion: ProyeccionJugador, e: E
         : s.enGuarnicion
           ? `<button type="button" class="btn-secondary" data-accion="retirar" data-squad="${e(s.id)}">Retirar</button>`
           : `<button type="button" class="btn-secondary" data-accion="asignar" data-squad="${e(s.id)}"${s.costeLiderazgo > libre ? ' disabled title="No cabe en el cupo de guarnición"' : ''}>A la guarnición</button>`;
-      return `<div class="mapa-lista-item heroe-fila">
+      return `<div class="mapa-lista-item heroe-fila con-tropa">${iconoEnFila(s.tropaId)}
         <div><strong>${e(s.nombre)}</strong>
           <span>${s.cantidad} hombres · nivel ${s.nivel} · moral ${Math.round(s.moral)} · ${s.costeLiderazgo} de Liderazgo</span>
           <span>${DONDE[s.contenedor.tipo]}${s.enGuarnicion ? ' · en guarnición' : ''}${defiende ? ' · <em class="heroe-marca">defiende</em>' : ''}</span></div>
@@ -110,7 +111,7 @@ function renderEditor(h: HeroeProyectado, e: Escapar): string {
     <input class="asent-cargo-sel" type="text" data-campo="nombre" value="${e(b.displayName)}" placeholder="Nombre" autocomplete="off" />
     <div class="mapa-lista">${
       h.escuadrones
-        .map((s) => `<label class="mapa-lista-item heroe-fila"><div><strong>${e(s.nombre)}</strong><span>${s.cantidad} hombres · ${s.costeLiderazgo} de Liderazgo · ${DONDE[s.contenedor.tipo]}</span></div><input type="checkbox" data-squad="${e(s.id)}"${b.squadIds.has(s.id) ? ' checked' : ''} /></label>`)
+        .map((s) => `<label class="mapa-lista-item heroe-fila con-tropa">${iconoEnFila(s.tropaId)}<div><strong>${e(s.nombre)}</strong><span>${s.cantidad} hombres · ${s.costeLiderazgo} de Liderazgo · ${DONDE[s.contenedor.tipo]}</span></div><input type="checkbox" data-squad="${e(s.id)}"${b.squadIds.has(s.id) ? ' checked' : ''} /></label>`)
         .join('') || '<p class="mapa-lista-vacia">No tienes escuadras: el loadout irá vacío.</p>'
     }</div>
     <label class="heroe-check"><input type="checkbox" data-campo="activo"${b.activo ? ' checked' : ''} /> Activo (defiende tu residencia)</label>

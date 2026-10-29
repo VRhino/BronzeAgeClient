@@ -12,6 +12,7 @@ import { textoEnTiempoReal } from './estadoCliente';
 import { nombreDeHeroe } from './nombres';
 import type { Ejecutar } from './panelCarro';
 import { cablearCargaDeSalida, htmlCargaDeSalida, leerCarga } from './cargaDeSalida';
+import { iconoEnFila, iconoMini } from './iconosTropa';
 
 type Escapar = (valor: string) => string;
 
@@ -26,7 +27,7 @@ const hombres = (c: Convocatoria['integrantes'][number]): number => c.tropas.red
 let borrador: { convocatoriaId: string; ids: string[] } | null = null;
 
 const filaDeTropa = (t: Convocatoria['integrantes'][number]['tropas'][number], e: Escapar): string =>
-  `<li>${e(t.nombre)} · nivel ${t.nivel} · moral ${Math.round(t.moral)} · ${t.cantidad} hombres</li>`;
+  `<li>${iconoMini(t.tropaId)}${e(t.nombre)} · nivel ${t.nivel} · moral ${Math.round(t.moral)} · ${t.cantidad} hombres</li>`;
 
 /** ¿Resides en el lugar de la convocatoria? Solo entonces eliges tropa; quien visita sale con su columna aparcada y su selección no cuenta. */
 function resideEnElLugar(p: ProyeccionJugador, c: Convocatoria): boolean {
@@ -73,7 +74,7 @@ function htmlMiTropa(p: ProyeccionJugador, c: Convocatoria, e: Escapar): string 
   const elegidas = ids.map((id) => candidatas.find((s) => s.id === id)).filter((s): s is NonNullable<typeof s> => s !== undefined);
   const libres = candidatas.filter((s) => !ids.includes(s.id));
   const cambiado = ids.length !== guardados.length || ids.some((id, i) => id !== guardados[i]);
-  const fila = (s: (typeof propias)[number], pos: number | null): string => `<div class="mapa-lista-item"><div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${pos === null ? 'no sale' : `va en el puesto ${pos + 1}`} · nivel ${s.nivel} · moral ${Math.round(s.moral)} · ${s.cantidad} hombres</span></div>
+  const fila = (s: (typeof propias)[number], pos: number | null): string => `<div class="mapa-lista-item con-tropa">${iconoEnFila(s.tropaId)}<div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${pos === null ? 'no sale' : `va en el puesto ${pos + 1}`} · nivel ${s.nivel} · moral ${Math.round(s.moral)} · ${s.cantidad} hombres</span></div>
       <input type="checkbox" data-conv-sel="${e(s.id)}"${pos === null ? '' : ' checked'} aria-label="Sale con el ejército" />
       ${pos === null ? '' : `<button class="btn-secondary" type="button" data-conv-mover="${e(s.id)}" data-dir="-1"${pos === 0 ? ' disabled' : ''} aria-label="Subir">↑</button><button class="btn-secondary" type="button" data-conv-mover="${e(s.id)}" data-dir="1"${pos === elegidas.length - 1 ? ' disabled' : ''} aria-label="Bajar">↓</button>`}</div>`;
   return `<strong class="heroe-sub">Tu tropa${ayuda('convocatoria:tropa', 'La primera entra primero en combate. Marca las escuadras que salen y reordénalas con las flechas; los cambios se aplican al guardar.')}</strong>

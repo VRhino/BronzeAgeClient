@@ -2826,7 +2826,7 @@ kbd {
 
 /* Panel «Lo que llevas» del riel del mapa: la tropa en su orden de combate. */
 .columna-orden { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.columna-orden li { display: grid; grid-template-columns: 22px 1fr auto auto; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid var(--bronce-osc); border-radius: 2px; background: rgba(0, 0, 0, 0.25); }
+.columna-orden li { display: grid; grid-template-columns: 22px auto 1fr auto auto; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid var(--bronce-osc); border-radius: 2px; background: rgba(0, 0, 0, 0.25); }
 .columna-orden li div { display: flex; flex-direction: column; min-width: 0; }
 .columna-orden li strong { font-size: 0.82rem; color: var(--pergamino); }
 .columna-orden li span { font-size: 0.72rem; color: var(--text-secondary); }
@@ -3367,3 +3367,12 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
   .salida-col { overflow: visible; }
   .salida-col + .salida-col { border-left: none; border-top: 1px solid var(--bronce-osc); }
 }
+
+/* Icono de la tropa en toda lista de escuadras (0.54.0). */
+.mapa-lista-item.con-tropa { flex-direction: row; align-items: center; gap: 10px; }
+.mapa-lista-item.con-tropa > div { flex: 1; min-width: 0; }
+.heroe-fila.con-tropa > div { display: flex; flex-direction: column; gap: 2px; }
+.tropa-icono { flex: none; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 1px solid var(--bronce-osc); border-radius: 3px; background: linear-gradient(180deg, rgba(60, 44, 26, 0.9), rgba(30, 22, 14, 0.9)); color: var(--oro-claro); --relleno: rgba(205, 160, 90, 0.3); }
+.tropa-icono-mini { display: inline-flex; vertical-align: -3px; margin-right: 4px; color: var(--oro); --relleno: rgba(205, 160, 90, 0.25); }
+.mapa-lista-item .tropa-icono { color: var(--oro-claro); font-size: inherit; }
+.mapa-lista-item.con-tropa > div > span:not(.lid-chip) { display: block; }

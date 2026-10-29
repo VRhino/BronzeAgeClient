@@ -7,6 +7,7 @@ import { ayuda } from './ayuda';
 import { cablearCaravanasAdjuntas, htmlCaravanasAdjuntas } from './caravanasAdjuntas';
 import { chipLiderazgo } from './liderazgo';
 import { cablearCarro, htmlCarro, type Ejecutar } from './panelCarro';
+import { iconoEnFila } from './iconosTropa';
 
 type Escapar = (valor: string) => string;
 
@@ -38,7 +39,7 @@ export function htmlColumna(p: ProyeccionJugador, e: Escapar): string {
     ${mias.length === 0
       ? '<p class="mapa-lista-vacia">Tu columna no lleva tropa tuya.</p>'
       : `<ol class="columna-orden">${mias
-          .map((s, i) => `<li><span class="columna-pos">${i + 1}</span><div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres · moral ${Math.round(s.moral)}${s.prestada ? ' · prestada' : ''}</span></div>
+          .map((s, i) => `<li><span class="columna-pos">${i + 1}</span>${iconoEnFila(s.tropaId)}<div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres · moral ${Math.round(s.moral)}${s.prestada ? ' · prestada' : ''}</span></div>
             <button class="btn-secondary" type="button" data-mover="${i}" data-dir="-1" aria-label="Subir ${e(s.nombre)}"${i === 0 ? ' disabled' : ''}>↑</button>
             <button class="btn-secondary" type="button" data-mover="${i}" data-dir="1" aria-label="Bajar ${e(s.nombre)}"${i === mias.length - 1 ? ' disabled' : ''}>↓</button></li>`)
           .join('')}</ol>`}

@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.54.0] — 2026-10-29 · iconos de tropa en todas las listas y escolta de la aldea · sync con `VRhino/BronzeAge@db80cb87`
+
+### Cambiado
+- **Icono de la tropa** en toda lista de escuadras: Héroe (escuadras y editor de loadout), columna, ejército en preparación y su lista de
+  integrantes, unirse desde la plaza, campamento (toda tu tropa, reclutar y préstamo), escolta del Mercado, guarnición y escolta del pueblo,
+  héroes ajenos y tropa inspeccionada, informe de combate y guarnición del informe de Intel (que ahora dice el nombre de la tropa, no su id).
+- **Aldea → Acarreo y escolta**: se ve el cupo de escolta (usado / cupo, con su barra). Dentro del pueblo no se está en la madre, así que el
+  Mercado se lee de su ficha; «Escoltar» se apaga si la escuadra no cabe.
+- **Trazado de la aldea**: el carro de acarreo solo se dibuja cuando está parado en el pueblo.
+
 ## [0.53.0] — 2026-10-29 · todas las Facciones en la lista · sync con `VRhino/BronzeAge@db80cb87`
 
 ### Cambiado

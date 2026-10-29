@@ -19,6 +19,7 @@ import { ejercitosDeLaFaccion, miColumna } from './ejercitos';
 import type { FichaMapaExtra, ObjetoBajoElClic } from './ganchos';
 import { nombreDeHeroe } from './nombres';
 import { minutosHerido } from './panelHeroe';
+import { iconoEnFila, iconoMini } from './iconosTropa';
 
 type Escapar = (valor: string) => string;
 type Punto = { x: number; y: number };
@@ -120,7 +121,7 @@ function htmlHeroe(p: ProyeccionJugador, id: string, e: Escapar): string {
   const h = p.heroesVisibles.find((x) => x.heroeId === id);
   if (!h) return `<div class="mapa-lista-item"><div><strong>${e(nombreDeHeroe(p, id))}</strong>${linea('sin ficha a la vista')}</div></div>`;
   const herido = heridoAhora(p, id) ? ` · herido ${Math.ceil((h.heridoHasta! - p.instante) / 60_000)} min` : '';
-  const tropa = h.escuadrasQueLleva.length > 0 ? h.escuadrasQueLleva.map((s) => `${e(nombreTropa(s.tropaId))} ×${s.cantidad} (nv ${s.nivel})`).join(', ') : 'sin tropa';
+  const tropa = h.escuadrasQueLleva.length > 0 ? h.escuadrasQueLleva.map((s) => `${iconoMini(s.tropaId)}${e(nombreTropa(s.tropaId))} ×${s.cantidad} (nv ${s.nivel})`).join(', ') : 'sin tropa';
   const puesto = Object.values(h.equipamiento ?? {}).filter((x): x is string => Boolean(x));
   return `<div class="mapa-lista-item"><div><strong>${e(h.displayName)}</strong>${linea(`${e(h.classDefinitionId)} · nivel ${h.nivel}${herido}`)}${linea(tropa)}${puesto.length > 0 ? linea(`Equipo: ${puesto.map((x) => e(x.replace(/_/g, ' '))).join(', ')}`) : ''}</div></div>`;
 }
@@ -132,7 +133,7 @@ function informeDe(p: ProyeccionJugador, tipo: InformeDeInspeccion['objetivo']['
 
 const filasDeTropa = (p: ProyeccionJugador, lista: { tropaId: string; cantidad: number; heroeId: string }[], vacio: string, e: Escapar): string =>
   lista.length > 0
-    ? `<div class="mapa-lista">${lista.map((s) => `<div class="mapa-lista-item"><div><strong>${e(nombreTropa(s.tropaId))} ×${s.cantidad}</strong>${linea(`de ${e(nombreDeHeroe(p, s.heroeId))}`)}</div></div>`).join('')}</div>`
+    ? `<div class="mapa-lista">${lista.map((s) => `<div class="mapa-lista-item con-tropa">${iconoEnFila(s.tropaId)}<div><strong>${e(nombreTropa(s.tropaId))} ×${s.cantidad}</strong>${linea(`de ${e(nombreDeHeroe(p, s.heroeId))}`)}</div></div>`).join('')}</div>`
     : `<p class="mapa-lista-vacia">${vacio}</p>`;
 
 /** Lo que dio `inspeccionar` de una columna, caravana o plaza ajena, con «visto hace X»; vacío si no hay informe vigente. También lo usa la ficha de plaza del mapa. */

@@ -10,6 +10,7 @@ import { ayuda } from './ayuda';
 import { textoEnTiempoReal } from './estadoCliente';
 import { chipLiderazgo } from './liderazgo';
 import type { Ejecutar } from './panelCarro';
+import { iconoEnFila } from './iconosTropa';
 
 type Escapar = (valor: string) => string;
 
@@ -125,11 +126,11 @@ export function escolta(c: Caravana, p: ProyeccionJugador, reside: boolean, para
         : candidatas.every((s) => s.costeLiderazgo > libre) ? `No cabe ninguna: quedan ${Math.max(0, libre)} pts.` : null;
   const abierta = motivo === null && escoltaAbierta.has(c.id);
   const cedidasHtml = cedidas.length > 0
-    ? `<div class="mapa-lista">${cedidas.map((s) => `<div class="mapa-lista-item"><div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres</span></div>${parada ? `<button class="btn-secondary" type="button" data-quitar-escolta="${e(s.id)}" data-caravana="${e(c.id)}">Retirar</button>` : ''}</div>`).join('')}</div>`
+    ? `<div class="mapa-lista">${cedidas.map((s) => `<div class="mapa-lista-item con-tropa">${iconoEnFila(s.tropaId)}<div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres</span></div>${parada ? `<button class="btn-secondary" type="button" data-quitar-escolta="${e(s.id)}" data-caravana="${e(c.id)}">Retirar</button>` : ''}</div>`).join('')}</div>`
     : '<p class="asent-lado-nota">No has cedido ninguna escuadra.</p>';
   const libresHtml = candidatas.map((s) => {
     const cabe = s.costeLiderazgo <= libre;
-    return `<div class="mapa-lista-item"><div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres${cabe ? '' : ` · no cabe: quedan ${Math.max(0, libre)} pts`}</span></div><button class="btn-secondary" type="button" data-ceder-escolta="${e(s.id)}" data-caravana="${e(c.id)}"${cabe ? '' : ' disabled'}>Ceder</button></div>`;
+    return `<div class="mapa-lista-item con-tropa">${iconoEnFila(s.tropaId)}<div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres${cabe ? '' : ` · no cabe: quedan ${Math.max(0, libre)} pts`}</span></div><button class="btn-secondary" type="button" data-ceder-escolta="${e(s.id)}" data-caravana="${e(c.id)}"${cabe ? '' : ' disabled'}>Ceder</button></div>`;
   }).join('');
   return `<strong class="heroe-sub">Escolta</strong>${barraEscolta(lid.usado, lid.cupo)}
     ${deOtros > 0 ? `<p class="asent-lado-nota">Otros residentes han cedido ${deOtros} pts.</p>` : ''}

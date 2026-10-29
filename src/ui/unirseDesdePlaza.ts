@@ -10,6 +10,7 @@ import { ejercitosDeLaFaccion, POLITICA } from './ejercitos';
 import { chipLiderazgo } from './liderazgo';
 import { nombreDeHeroe } from './nombres';
 import type { Ejecutar } from './panelCarro';
+import { iconoEnFila } from './iconosTropa';
 
 type Escapar = (valor: string) => string;
 
@@ -33,7 +34,7 @@ export function htmlUnirseDesdePlaza(p: ProyeccionJugador, a: Asentamiento, e: E
   return `<span class="faction-kicker">Unirse a un ejército${ayuda('plaza:unirse', `Cuando un ejército de tu Facción pasa cerca de tu plaza (a ${radio} o menos) puedes sumarte a él con tropa fresca de tu campamento. Pasas a ir donde lo dirija su Líder. Unirse en campo, con lo que ya llevas encima, se hace desde el mapa. Un ejército se convoca dentro de un campamento o de una plaza (botón «Salir»), o con «Organizar ejército» en el mapa.`)}</span>
     <strong class="heroe-sub">Tropa que aportas</strong>
     ${tropa.length > 0
-      ? `<div class="mapa-lista">${tropa.map((s) => `<label class="mapa-lista-item"><div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres</span></div><input type="checkbox" data-aporta="${e(s.id)}"${desmarcadas.has(s.id) ? '' : ' checked'} /></label>`).join('')}</div>`
+      ? `<div class="mapa-lista">${tropa.map((s) => `<label class="mapa-lista-item con-tropa">${iconoEnFila(s.tropaId)}<div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres</span></div><input type="checkbox" data-aporta="${e(s.id)}"${desmarcadas.has(s.id) ? '' : ' checked'} /></label>`).join('')}</div>`
       : '<p class="asent-lado-nota">No tienes tropa libre en el campamento (la de guarnición no sale).</p>'}
     <strong class="heroe-sub">Ejércitos de tu Facción</strong>
     ${filas.length > 0 ? filas.join('') : '<p class="mapa-lista-vacia">Ninguno en marcha.</p>'}

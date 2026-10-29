@@ -7,6 +7,7 @@ import type { ProyeccionJugador } from '../apiCliente';
 import type { EventoDominio } from '../tiposDominio';
 import { nombreDeHeroe } from './nombres';
 import { RECURSO_NOMBRE } from '../paletas';
+import { iconoMini } from './iconosTropa';
 
 export interface BajaDeEscuadra { escuadronId: string; tropaId: string; antes: number; despues: number }
 export interface LadoDelInforme {
@@ -83,7 +84,7 @@ export function informeDeEvento(e: EventoDominio, heroeId: string): InformeDeCom
 function tablaBajas(lado: LadoDelInforme, nombre: (b: BajaDeEscuadra) => string, e: (s: string) => string): string {
   if (lado.bajas.length === 0) return `<p class="mapa-lista-vacia">${lado.bajasTotales ? `${lado.bajasTotales} bajas en total (sin detalle por escuadra).` : 'Sin escuadras.'}</p>`;
   return `<table class="briefing-bajas"><thead><tr><th>Escuadra</th><th>Antes</th><th>Después</th><th>Bajas</th></tr></thead><tbody>${lado.bajas
-    .map((b) => `<tr><td>${e(nombre(b))}</td><td>${b.antes}</td><td>${b.despues}</td><td class="${b.antes - b.despues > 0 ? 'baja' : ''}">${b.antes - b.despues > 0 ? `−${b.antes - b.despues}` : '0'}</td></tr>`)
+    .map((b) => `<tr><td>${iconoMini(b.tropaId)}${e(nombre(b))}</td><td>${b.antes}</td><td>${b.despues}</td><td class="${b.antes - b.despues > 0 ? 'baja' : ''}">${b.antes - b.despues > 0 ? `−${b.antes - b.despues}` : '0'}</td></tr>`)
     .join('')}</tbody></table>`;
 }
 

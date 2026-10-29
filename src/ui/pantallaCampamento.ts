@@ -8,6 +8,7 @@ import { costoDeRefundacion, tropasReclutables, unidadesDeTropa, type Proyeccion
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { CampamentoMercenarios, Escuadron } from '../tiposDominio';
 import { confirmar } from './dialogo';
+import { iconoEnFila } from './iconosTropa';
 
 /** Manda el comando y refresca; devuelve el mensaje de error o `null`. Lo pone `main.ts`. */
 export type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
@@ -61,7 +62,7 @@ function dondeEstaLaEscuadra(s: Escuadron, p: ProyeccionJugador): string {
 }
 
 function filaEscuadra(s: Escuadron, p: ProyeccionJugador, e: Escapar): string {
-  return `<div class="mapa-lista-item"><div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}</div><span>${s.cantidad} hombres · ${dondeEstaLaEscuadra(s, p)}${s.prestada ? ' · prestada' : ''}</span></div>`;
+  return `<div class="mapa-lista-item con-tropa">${iconoEnFila(s.tropaId)}<div><div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}</div><span>${s.cantidad} hombres · ${dondeEstaLaEscuadra(s, p)}${s.prestada ? ' · prestada' : ''}</span></div></div>`;
 }
 
 function resumen(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): string {
@@ -114,7 +115,7 @@ function reclutar(p: ProyeccionJugador, e: Escapar): string {
     const motivo = faltan <= 0 ? 'Escuadra al completo.'
         : oferta.poblacion < faltan ? `Faltan reclutas: hay ${Math.floor(oferta.poblacion)} y hacen falta ${faltan}.`
           : oro > oroOrigen ? `No te llega el oro: ${oro} y tienes ${oroOrigen}.` : '';
-    return `<div class="mapa-lista-item"><div><strong>${e(t.nombre)}</strong>
+    return `<div class="mapa-lista-item con-tropa">${iconoEnFila(t.id)}<div><strong>${e(t.nombre)}</strong>
         <span>${e(EDIFICIO_RECLUTA[t.edificio] ?? t.edificio)} · ${t.unidadesPorDefecto} hombres · escalón ${t.escalon} · equipo (ya en el precio): ${e(equipo(t))}</span>
         <span>${ya ? `ya la tienes: ${ya.cantidad}/${t.unidadesPorDefecto}, ${dondeEstaLaEscuadra(ya, p)}` : 'aún no la tienes'}</span>
         ${faltan > 0 ? `<div class="recl-costes"><span class="recl-coste${oro > oroOrigen ? ' falta' : ''}">🪙 ${formatoPrecio(o.precioPorSoldado)} por soldado · <strong>${oro} de oro</strong> por ${faltan}</span></div>` : ''}
@@ -141,7 +142,7 @@ function tropa(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): stri
     <strong class="heroe-sub">Tropa prestada${ayuda('camp:prestamo', 'Gratis, para aprender a usar tropa antes de tener la tuya. No gana experiencia. Se retira si dejas de residir en este campamento.')}</strong>
     <div class="mapa-lista">${TROPAS_PRESTAMO.map(([id, nombre]) => {
       const ya = prestadas.get(id);
-      return `<label class="mapa-lista-item"><div><strong>${nombre}</strong><span>${ya ? `ya la tienes: ${ya.cantidad} hombres, ${dondeEstaLaEscuadra(ya, p)}` : `${unidadesDeTropa(id, () => { /* se pinta con el siguiente sondeo */ }) ?? '?'} hombres`}</span></div><input type="checkbox" data-prestamo="${id}"${ya ? ' disabled' : ''} /></label>`;
+      return `<label class="mapa-lista-item con-tropa">${iconoEnFila(id)}<div><strong>${nombre}</strong><span>${ya ? `ya la tienes: ${ya.cantidad} hombres, ${dondeEstaLaEscuadra(ya, p)}` : `${unidadesDeTropa(id, () => { /* se pinta con el siguiente sondeo */ }) ?? '?'} hombres`}</span></div><input type="checkbox" data-prestamo="${id}"${ya ? ' disabled' : ''} /></label>`;
     }).join('')}</div>
     <div class="mapa-seleccion-acciones">
       <button class="btn-secondary" type="button" id="btn-pedir-prestamo">Pedir</button>
