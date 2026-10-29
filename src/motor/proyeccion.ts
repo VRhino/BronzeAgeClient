@@ -451,7 +451,10 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
   // Las plazas: la del interior (ASENTAMIENTO) gana a la ficha de FACCION y de VISTA.
   const plazas = new Map<string, pb.Asentamiento>();
   for (const p of [...deAmbito('VISTA:', 'asentamiento'), ...deAmbito('FACCION:', 'asentamiento'), ...deAmbito('ASENTAMIENTO:', 'asentamiento')]) plazas.set(p.id, p);
-  const interior = deAmbito('ASENTAMIENTO:', 'asentamiento')[0];
+  // De visita en una plaza de otra Facción (aliada) el motor no da su interior (ASENTAMIENTO solo va a los de su Facción): se usa su ficha de
+  // VISTA o FACCION para que se vea la pantalla de visitante y se pueda salir.
+  const interior = deAmbito('ASENTAMIENTO:', 'asentamiento')[0]
+    ?? (h.ubicacion?.donde?.case === 'asentamientoId' ? plazas.get(h.ubicacion.donde.value) : undefined);
   const propias = [...plazas.values()].filter((p) => p.faccionId === faccionId);
   const ajenas = [...plazas.values()].filter((p) => p.faccionId !== faccionId);
 
@@ -500,7 +503,7 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
     directorioFacciones: deAmbito('VISTA:', 'directorioFacciones')[0]?.facciones.map((f) => ({ id: f.id, nombre: f.nombre, sigilo: sigilo(f.sigilo), nivel: f.nivel, ciudadanos: f.ciudadanos, derrotada: f.derrotada })),
     // Lo de siempre: SOLO la plaza donde el jugador está (cero o un elemento), con todo su interior.
     asentamientos: interior ? [asentamiento(interior, ahora)] : [],
-    asentamientosAvistados: [...ajenas, ...propias.filter((p) => p.id !== interior?.id)].map((p) => ({
+    asentamientosAvistados: [...ajenas, ...propias].filter((p) => p.id !== interior?.id).map((p) => ({
       id: p.id, nombre: p.nombre, faccionId: p.faccionId, posicion: punto(p.posicion), nivel: p.nivel, zona: p.zona.map(punto),
       edificios: p.edificios.map(edificio),
       almacen: Object.keys(p.almacen).length ? Object.fromEntries(Object.entries(p.almacen).map(([k, x]) => [k, { cantidad: valorDeRitmo(x.cantidad, ahora), capacidad: mil(x.capacidad) }])) : undefined,

@@ -3,6 +3,13 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.57.2] — 2026-10-29 · de visita en una plaza aliada · sync con `VRhino/BronzeAge@3cfd61e5`
+
+### Arreglado
+- **Entrar en una plaza de otra Facción** (aliada): el héroe desaparecía del mapa pero no salía la pantalla de la plaza, así que no había
+  cómo salir. El motor solo da el interior de una plaza (ámbito ASENTAMIENTO) a los de su Facción; ahora, si estás dentro de una ajena, el
+  cliente monta la pantalla de visitante con su ficha del mapa (VISTA o FACCION) y se sale por la ventana «Salir al mundo» como siempre.
+
 ## [0.57.1] — 2026-10-29 · Liderazgo de las escuadras por escalón · sync con `VRhino/BronzeAge@3cfd61e5`
 
 ### Arreglado
