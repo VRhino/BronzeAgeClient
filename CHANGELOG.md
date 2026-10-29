@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.47.0] — 2026-10-29 · lista híbrida de Facciones · sync con `VRhino/BronzeAge@fd9cd58`
+
+### Cambiado
+- **Lista de Facciones híbrida**, en la pestaña Facciones y en «Pedir ingreso» (sin Facción): las **conocidas** (la tuya, las de tu Liga, con
+  las que tienes relación activa o de las que conoces alguna plaza en el mapa) salen con escudo, lo público, miembros y plazas; las **sin
+  contacto**, solo con el nombre (y el botón «Pedir ingreso» si no tienes Facción). Es presentación del cliente: el motor sigue mandando la
+  forma pública de todas.
+
 ## [0.46.0] — 2026-10-29 · misiones sin leer y ventana de Facción · sync con `VRhino/BronzeAge@fd9cd58`
 
 ### Añadido

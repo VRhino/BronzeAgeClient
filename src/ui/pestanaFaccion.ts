@@ -78,13 +78,26 @@ function relacionCon(p: ProyeccionJugador, propiaId: string | null, otraId: stri
   return RELACION[r.tipo] ?? r.tipo;
 }
 
-/** La pestaña Facciones: la lista pública de todas, con su escudo, su nombre y lo que se sabe de ellas; los ciudadanos y las plazas, a la derecha. */
-function htmlListaFacciones(p: ProyeccionJugador, e: (valor: string) => string): string {
+/** ¿Hay contacto con esa Facción? Es la tuya, está en tu Liga, tenéis una relación activa (alianza, guerra o vasallaje) o conoces alguna de sus
+ * plazas en el mapa (vista o recordada). El motor manda la forma pública de todas; sin contacto, el cliente solo enseña el nombre. */
+function hayContacto(p: ProyeccionJugador, f: Faccion, plazas: Map<string, { faccionId: string }>): boolean {
+  const propiaId = p.faccionId;
+  if (propiaId && (f.id === propiaId || f.liga?.miembrosIds.includes(propiaId) || relacionCon(p, propiaId, f.id))) return true;
+  return [...plazas.values()].some((x) => x.faccionId === f.id);
+}
+
+/** La lista de Facciones, híbrida: las conocidas con su escudo, lo público y, a la derecha del todo, miembros y plazas; las demás, solo el nombre.
+ * La usan la pestaña Facciones y «Pedir ingreso» (que filtra por `termino` y pone en cada fila el botón de `accion`). */
+export function htmlListaFacciones(p: ProyeccionJugador, e: (valor: string) => string, opciones: { termino?: string; accion?: (f: Faccion) => string } = {}): string {
   const plazas = plazasConocidas(p);
   const nombreDe = (id: string) => p.facciones.find((f) => f.id === id)?.nombre ?? id;
-  const lista = [...p.facciones].sort((a, b) => Number(a.derrotadaPor !== undefined) - Number(b.derrotadaPor !== undefined)
+  const termino = (opciones.termino ?? '').trim().toLowerCase();
+  const accion = opciones.accion ?? (() => '');
+  const lista = p.facciones.filter((f) => f.nombre.toLowerCase().includes(termino)).sort((a, b) => Number(a.derrotadaPor !== undefined) - Number(b.derrotadaPor !== undefined)
     || (b.ciudadanosIds?.length ?? 0) - (a.ciudadanosIds?.length ?? 0) || a.nombre.localeCompare(b.nombre));
-  if (lista.length === 0) return '<p class="mapa-lista-vacia">Aún no hay Facciones en el mundo.</p>';
+  if (lista.length === 0) return `<p class="mapa-lista-vacia">${termino ? 'No hay facciones que coincidan.' : 'Aún no hay Facciones en el mundo.'}</p>`;
+  const conocidas = lista.filter((f) => hayContacto(p, f, plazas));
+  const lejanas = lista.filter((f) => !conocidas.includes(f));
   const fila = (f: Faccion): string => {
     const propia = f.id === p.faccionId;
     const relacion = relacionCon(p, p.faccionId, f.id);
@@ -110,10 +123,13 @@ function htmlListaFacciones(p: ProyeccionJugador, e: (valor: string) => string):
         <div><strong>${f.ciudadanosIds?.length ?? 0}</strong><span>Miembros</span></div>
         <div><strong>${[...plazas.values()].filter((x) => x.faccionId === f.id).length}</strong><span>Plazas</span></div>
       </div>
+      ${accion(f)}
     </div>`;
   };
-  return `<div class="faction-list faction-list-libre"><span class="faction-kicker">Facciones del mundo (${lista.length})${ayuda('faccion:lista', 'Lo público de cada Facción. Las plazas son las que conoces: las que ves o recuerdas en el mapa. El motor no dice cuántas tiene cada una.')}</span>
-    ${lista.map(fila).join('')}</div>`;
+  const sencilla = (f: Faccion): string => `<div class="faccion-lejana"><span>${e(f.nombre)}</span>${accion(f)}</div>`;
+  return `<div class="faction-list faction-list-libre"><span class="faction-kicker">Conocidas (${conocidas.length})${ayuda('faccion:lista', 'Con contacto: la tuya, las de tu Liga, con las que tienes relación y aquellas de las que conoces alguna plaza en el mapa. Las plazas son las que conoces, no todas las que tienen.')}</span>
+    ${conocidas.length ? conocidas.map(fila).join('') : '<p class="legend-note">Aún no has tenido contacto con ninguna.</p>'}</div>
+    ${lejanas.length ? `<div class="faction-list faction-list-libre"><span class="faction-kicker">Sin contacto (${lejanas.length})</span><div class="faccion-lejanas">${lejanas.map(sencilla).join('')}</div></div>` : ''}`;
 }
 
 /** `conLateral`: va con el panel fijo de la izquierda, que ya lleva el escudo, el nombre y Dejar la Facción.

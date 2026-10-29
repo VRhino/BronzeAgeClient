@@ -35,7 +35,7 @@ import { elegirPestanaHeroe, minutosHerido, pintarPanelHeroe } from './ui/panelH
 import { htmlBarraJugador, type PanelJugador } from './ui/barraJugador';
 import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
 import { EDIFICIO_COLOR, EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from './paletas';
-import type { Alijo, Asentamiento, BloqueoAscenso, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Edificio, EvaluacionAscenso, ParamsCrearHeroe, Sigilo } from './tiposDominio';
+import type { Alijo, Asentamiento, BloqueoAscenso, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Edificio, EvaluacionAscenso, Faccion, ParamsCrearHeroe, Sigilo } from './tiposDominio';
 import { svgSigilo } from './sigilo/sigilo';
 import { alCargarSigilos } from './sigilo/lienzo';
 import { actualizarSalida, cablearCampamento, campamentoActual, htmlSeccionCampamento, seccionesDeCampamento, type SeccionCampamento } from './ui/pantallaCampamento';
@@ -45,7 +45,7 @@ import { estadoCliente, medirRitmoDeMundo, TIPS_FUNDACION } from './ui/estadoCli
 import { actualizarTip, resumenRecursosFundacion, sitiosDeAldeaAlFundar } from './ui/pestanaAsentamientos';
 import { renderPanelInteraccion } from './ui/panelInteraccion';
 import { renderPanelMapa } from './ui/panelMapa';
-import { htmlLateralFaccion, PESTANAS_FACCION, renderPestanaFaccion, type PestanaFaccion } from './ui/pestanaFaccion';
+import { htmlLateralFaccion, htmlListaFacciones, PESTANAS_FACCION, renderPestanaFaccion, type PestanaFaccion } from './ui/pestanaFaccion';
 import { cablearAnexion } from './ui/panelAnexion';
 import { cablearFusion } from './ui/panelFusion';
 import { cablearAdmision } from './ui/panelAdmision';
@@ -273,9 +273,10 @@ function cablearFaccion(root: ParentNode, proyeccion: ProyeccionJugador, rerende
   const busqueda = root.querySelector<HTMLInputElement>('#input-buscar-faccion');
   if (lista && busqueda) {
     const pintarLista = (): void => {
-      const termino = busqueda.value.trim().toLowerCase();
-      const facciones = proyeccion.facciones.filter((faccion) => faccion.nombre.toLowerCase().includes(termino));
-      lista.innerHTML = facciones.length > 0 ? facciones.map((faccion) => `<div class="faction-list-item">${svgSigilo(faccion.sigilo, 40)}<div><strong>${escaparHtml(faccion.nombre)}</strong><span>Nivel ${faccion.nivel}${faccion.ciudadanosIds ? ` · ${faccion.ciudadanosIds.length} integrante${faccion.ciudadanosIds.length === 1 ? '' : 's'}` : ''}${faccion.reyId && nombreDeHeroe(proyeccion, faccion.reyId) !== faccion.reyId ? ` · Rey: ${escaparHtml(nombreDeHeroe(proyeccion, faccion.reyId))}` : ''}</span></div>${(faccion.solicitudesIds ?? []).includes(proyeccion.heroeId) ? '<span>Pedido: decide su Rey</span>' : `<button class="btn-join-faction" type="button" data-faccion-id="${escaparHtml(faccion.id)}">Pedir ingreso</button>`}</div>`).join('') : '<p class="faction-empty-list">No hay facciones que coincidan.</p>';
+      const pedir = (faccion: Faccion): string => (faccion.solicitudesIds ?? []).includes(proyeccion.heroeId)
+        ? '<span class="faccion-pedido">Pedido: decide su Rey</span>'
+        : `<button class="btn-join-faction" type="button" data-faccion-id="${escaparHtml(faccion.id)}">Pedir ingreso</button>`;
+      lista.innerHTML = htmlListaFacciones(proyeccion, escaparHtml, { termino: busqueda.value, accion: pedir });
       lista.querySelectorAll<HTMLButtonElement>('.btn-join-faction').forEach((boton) => boton.addEventListener('click', async () => {
         boton.disabled = true;
         boton.textContent = 'Pidiendo...';
