@@ -3150,6 +3150,9 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .faccion-publica-cifras strong { font-family: var(--fuente-titulo); font-size: 1.15rem; color: var(--oro); }
 .faccion-publica-cifras span { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
 .faccion-lejanas { display: flex; flex-direction: column; }
+.faccion-lejana-escudo { flex: none; display: flex; }
+.faccion-lejana-nombre { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.faccion-lejana-nombre small { font-size: 0.72rem; color: var(--text-muted); }
 .faccion-lateral-resumen { width: 100%; display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
 .faccion-lateral-resumen .faction-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 0; }
 .faccion-lateral-resumen .faction-stats div, .faccion-lateral-resumen .faction-roles div { padding: 6px 8px; }

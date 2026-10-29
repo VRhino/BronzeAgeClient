@@ -39,6 +39,17 @@ export interface Titulo {
   valorMetrica: number;
 }
 
+/** Una Facción del directorio ligero (`DirectorioFacciones`, motor db80cb8): llegan todas, también sin contacto, con lo justo para la lista. */
+export interface FaccionDelDirectorio {
+  id: string;
+  nombre: string;
+  sigilo: Sigilo;
+  nivel: number;
+  /** Cuántos ciudadanos tiene. */
+  ciudadanos: number;
+  derrotada: boolean;
+}
+
 export interface Faccion {
   id: string;
   nombre: string;

@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.53.0] — 2026-10-29 · todas las Facciones en la lista · sync con `VRhino/BronzeAge@db80cb87`
+
+### Cambiado
+- Contrato regenerado desde el motor db80cb87: llega en `VISTA` el **directorio ligero de Facciones** (`DirectorioFacciones`), con todas las
+  del mundo, también para quien ya tiene Facción.
+- **Facción → Facciones**: la parte «Sin contacto» sale ahora del directorio, con todas las Facciones (sin las derrotadas), su escudo, su nivel y
+  sus miembros. Las conocidas siguen con su ficha completa; sus miembros salen del directorio si la ficha no los trae.
+
 ## [0.52.0] — 2026-10-29 · ventana «Salir al mundo» común y aldea por dentro · sync con `VRhino/BronzeAge@fd9cd58`
 
 ### Cambiado

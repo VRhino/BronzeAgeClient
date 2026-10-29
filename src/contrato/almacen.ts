@@ -88,6 +88,7 @@ export function identidad(c: Cuerpo): [TipoEntidad, string] {
     case 'alijo': return [TipoEntidad.ALIJO, c.value.id];
     case 'nodo': return [TipoEntidad.NODO_RECURSO, c.value.id];
     case 'memoria': return [TipoEntidad.MEMORIA_FACCION, c.value.faccionId];
+    case 'directorioFacciones': return [TipoEntidad.DIRECTORIO_FACCIONES, 'facciones'];
   }
 }
 

@@ -156,12 +156,21 @@ export function htmlListaFacciones(p: ProyeccionJugador, e: (valor: string) => s
   const nombreDe = (id: string) => p.facciones.find((f) => f.id === id)?.nombre ?? id;
   const termino = (opciones.termino ?? '').trim().toLowerCase();
   const accion = opciones.accion ?? (() => '');
+  // El directorio ligero (motor db80cb8) trae todas las Facciones; las que también llegan completas se enseñan con su detalle.
+  const directorio = new Map((p.directorioFacciones ?? []).map((x) => [x.id, x]));
+  const miembros = (f: Faccion): number => f.ciudadanosIds?.length ?? directorio.get(f.id)?.ciudadanos ?? 0;
   const lista = p.facciones.filter((f) => f.nombre.toLowerCase().includes(termino)).sort((a, b) => Number(a.derrotadaPor !== undefined) - Number(b.derrotadaPor !== undefined)
-    || (b.ciudadanosIds?.length ?? 0) - (a.ciudadanosIds?.length ?? 0) || a.nombre.localeCompare(b.nombre));
-  if (lista.length === 0) return `<p class="mapa-lista-vacia">${termino ? 'No hay facciones que coincidan.' : 'Aún no hay Facciones en el mundo.'}</p>`;
+    || miembros(b) - miembros(a) || a.nombre.localeCompare(b.nombre));
   // Sin Facción, todas con su detalle: son a las que puede pedir el ingreso (el motor se las manda todas en su forma pública).
   const conocidas = p.faccionId === null ? lista : lista.filter((f) => hayContacto(p, f, plazas));
-  const lejanas = lista.filter((f) => !conocidas.includes(f));
+  const yaVistas = new Set(conocidas.map((f) => f.id));
+  // Sin contacto: del directorio si llega (con escudo, nivel y miembros; sin las derrotadas), si no, las completas que no son conocidas.
+  const lejanas: Faccion[] = p.directorioFacciones
+    ? p.directorioFacciones.filter((x) => !yaVistas.has(x.id) && !x.derrotada && x.nombre.toLowerCase().includes(termino))
+      .sort((a, b) => b.ciudadanos - a.ciudadanos || a.nombre.localeCompare(b.nombre))
+      .map((x) => p.facciones.find((f) => f.id === x.id) ?? { id: x.id, nombre: x.nombre, sigilo: x.sigilo, nivel: x.nivel })
+    : lista.filter((f) => !yaVistas.has(f.id));
+  if (conocidas.length === 0 && lejanas.length === 0) return `<p class="mapa-lista-vacia">${termino ? 'No hay facciones que coincidan.' : 'Aún no hay Facciones en el mundo.'}</p>`;
   const fila = (f: Faccion): string => {
     const propia = f.id === p.faccionId;
     const relacion = relacionCon(p, p.faccionId, f.id);
@@ -184,13 +193,13 @@ export function htmlListaFacciones(p: ProyeccionJugador, e: (valor: string) => s
         <span>${datos.map(e).join(' · ')}</span>
       </div>
       <div class="faccion-publica-cifras">
-        <div><strong>${f.ciudadanosIds?.length ?? 0}</strong><span>Miembros</span></div>
+        <div><strong>${miembros(f)}</strong><span>Miembros</span></div>
         <div><strong>${[...plazas.values()].filter((x) => x.faccionId === f.id).length}</strong><span>Plazas</span></div>
       </div>
       ${accion(f)}
     </div>`;
   };
-  const sencilla = (f: Faccion): string => `<div class="faccion-lejana"><span>${e(f.nombre)}</span>${accion(f)}</div>`;
+  const sencilla = (f: Faccion): string => `<div class="faccion-lejana">${directorio.has(f.id) ? `<span class="faccion-lejana-escudo">${svgSigilo(f.sigilo, 30)}</span>` : ''}<span class="faccion-lejana-nombre">${e(f.nombre)}${directorio.has(f.id) ? `<small>Nivel ${f.nivel} · ${miembros(f)} miembro${miembros(f) === 1 ? '' : 's'}</small>` : ''}</span>${accion(f)}</div>`;
   return `<div class="faction-list faction-list-libre"><span class="faction-kicker">${p.faccionId === null ? 'Facciones del mundo' : 'Conocidas'} (${conocidas.length})${ayuda('faccion:lista', 'Con contacto: la tuya, las de tu Liga, con las que tienes relación y aquellas de las que conoces alguna plaza en el mapa. Las plazas son las que conoces, no todas las que tienen.')}</span>
     ${conocidas.length ? conocidas.map(fila).join('') : '<p class="legend-note">Aún no has tenido contacto con ninguna.</p>'}</div>
     ${lejanas.length ? `<div class="faction-list faction-list-libre"><span class="faction-kicker">Sin contacto (${lejanas.length})</span><div class="faccion-lejanas">${lejanas.map(sencilla).join('')}</div></div>` : ''}`;

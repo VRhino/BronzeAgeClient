@@ -497,6 +497,7 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
     faccionId,
     mapaId: c.mapaId,
     facciones: [...todasFacciones.values()].map((f) => faccion(f, ahora)),
+    directorioFacciones: deAmbito('VISTA:', 'directorioFacciones')[0]?.facciones.map((f) => ({ id: f.id, nombre: f.nombre, sigilo: sigilo(f.sigilo), nivel: f.nivel, ciudadanos: f.ciudadanos, derrotada: f.derrotada })),
     // Lo de siempre: SOLO la plaza donde el jugador está (cero o un elemento), con todo su interior.
     asentamientos: interior ? [asentamiento(interior, ahora)] : [],
     asentamientosAvistados: [...ajenas, ...propias.filter((p) => p.id !== interior?.id)].map((p) => ({
