@@ -30,6 +30,19 @@ function u16(r: Raster | undefined): RasterU16 | undefined {
 
 const punto = (p: { x: bigint; y: bigint } | undefined) => ({ x: Number(p?.x ?? 0n) / MIL, y: Number(p?.y ?? 0n) / MIL });
 
+/** Los tipos de nodo que el motor carga en su mapa (crates/nucleo/src/economia.rs, `Mapa`), en ese orden de artefacto. */
+const TIPOS_DEL_MOTOR = new Set(['piedra', 'livestock', 'oro', 'cobre', 'estano', 'hierro']);
+
+/**
+ * El id de cada nodo como lo usa el motor: `nodo-N`, con N su posición entre los nodos del artefacto de esos tipos (el motor los indexa así).
+ * Es el que llega en `pueblo.nodoId`, `obra.nodoId` y `edificio.fuenteId`, y el que pide `marcarPueblo`; el del artefacto (`piedra-727`) el
+ * motor no lo entiende. Los de otro tipo conservan el suyo.
+ */
+function nodosConIdDelMotor(a: ArtefactoDeMundo): { n: ArtefactoDeMundo['nodos'][number]; id: string }[] {
+  let i = 0;
+  return a.nodos.map((n) => ({ n, id: TIPOS_DEL_MOTOR.has(n.tipo) ? `nodo-${i++}` : n.id }));
+}
+
 /** El artefacto, en la forma que pinta el mapa. */
 export function mapaDesdeArtefacto(a: ArtefactoDeMundo): MapaGenerado {
   const tamano = punto(a.manifiesto?.tamano);
@@ -38,7 +51,7 @@ export function mapaDesdeArtefacto(a: ArtefactoDeMundo): MapaGenerado {
     version: a.manifiesto?.versionFormato ?? 0,
     config: { ancho: tamano.x, alto: tamano.y, seed: 0 },
     bosques: a.bosques.map((b) => ({ id: b.id, centro: punto(b.centro), radio: Number(b.radio) / MIL, densidad: b.densidadMilesimas / MIL })),
-    nodos: a.nodos.map((n) => ({ id: n.id, tipo: n.tipo, rareza: n.rareza, posicion: punto(n.posicion), cantidadInicial: Number(n.cantidadInicial) / MIL })),
+    nodos: nodosConIdDelMotor(a).map(({ n, id }) => ({ id, tipo: n.tipo, rareza: n.rareza, posicion: punto(n.posicion), cantidadInicial: Number(n.cantidadInicial) / MIL })),
     parcelas: a.parcelas.map((x) => ({ id: x.id, bosqueId: x.bosqueId, centro: punto(x.centro), densidad: x.densidadMilesimas / MIL })),
     rios: a.rios.map((r) => ({ id: r.id, puntos: r.puntos.map(punto), terminaEnLago: r.terminaEnLago, navegable: r.navegable, vados: r.vados.map(punto) })),
     rasters,

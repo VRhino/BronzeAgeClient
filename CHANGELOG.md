@@ -3,6 +3,13 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.58.3] — 2026-10-29 · ids de nodo del motor · sync con `VRhino/BronzeAge@bcc90a01`
+
+### Arreglado
+- **Marcar un pueblo extractor** fallaba siempre con el nodo (`piedra-727`): el cliente mandaba el id del artefacto del mundo y el motor
+  espera el suyo, `nodo-N` (N = posición del nodo entre los de piedra, ganado y minerales del artefacto). Ahora los nodos del mapa llevan el
+  id del motor, así que también cuadra qué nodos están ocupados por un pueblo, una obra o un edificio.
+
 ## [0.58.2] — 2026-10-29 · trazado y órdenes de la plaza ajena · sync con `VRhino/BronzeAge@bcc90a01`
 
 ### Cambiado
