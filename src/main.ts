@@ -1798,7 +1798,7 @@ function renderPanelEdificios(): void {
     };
   } else if (edificioAsent === 'reclutamiento') {
     html = `<div class="asent-lado-cuerpo">${htmlReclutamiento(proyeccion, asentamiento, escaparHtml, renderPanelEdificios)}</div>${pie}`;
-    cablear = () => cablearReclutamiento(cuerpo, proyeccion, asentamiento, ejecutarYRefrescar);
+    cablear = () => cablearReclutamiento(cuerpo, proyeccion, asentamiento, ejecutarYRefrescar, renderPanelEdificios);
   } else if (edificioAsent === 'taberna') {
     html = `${renderPanelIntel(proyeccion, escaparHtml)}${pie}`;
     cablear = () => cablearPanelIntel(cuerpo, proyeccion, ejecutarYRefrescar, () => { olvidarEdicion(cuerpo); invalidar(cuerpo); renderPanelEdificios(); });

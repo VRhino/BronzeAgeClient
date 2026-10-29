@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.51.0] — 2026-10-29 · fichas de tropa en Reclutamiento · sync con `VRhino/BronzeAge@fd9cd58`
+
+### Cambiado
+- **Plaza → Reclutamiento**: la lista de filas pasa a una rejilla de botones por edificio militar, uno por tropa, con un icono dibujado para
+  cada una de las 27 (provisional, `src/ui/iconosTropa.ts`). Encendidas las que la Facción puede formar ya; apagadas, con el motivo al pasar el
+  ratón, las que piden tecnología, el edificio o más nivel (antes se escondían). Un número en la esquina dice cuántos hombres tienes ya de esa tropa.
+- Al elegir una tropa se abre su **ficha** encima de la rejilla: icono grande, escalón, edificio y nivel que pide, hombres, poder, velocidad,
+  coste de Liderazgo (bloque `LIDERAZGO.costePorEscalon`), de qué población salen y cuántos libres hay, el coste de lo que falta con lo que no
+  alcanza en rojo, y un botón **Reclutar / Reponer** más pequeño que antes.
+
 ## [0.50.0] — 2026-10-29 · edificios con iconos y arreglos · sync con `VRhino/BronzeAge@fd9cd58`
 
 ### Cambiado

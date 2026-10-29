@@ -536,6 +536,8 @@ export interface TropaReclutable {
   costoEquipo: Record<string, number | undefined>;
   unidadesPorDefecto: number;
   escalon: number;
+  poderBase?: number;
+  velocidad?: number;
   /** Caballos por soldado: se pagan en oro. */
   caballos?: number;
 }
