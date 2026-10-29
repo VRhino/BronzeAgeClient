@@ -516,10 +516,10 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
     caravanas: caravanasPropias.map((x) => caravana(x, ahora)),
     ejercitos: ejercitosPropios.map((e) => ejercito(e, ahora)),
     // Los ejércitos que se preparan dentro (`Convocatoria`, la manda el motor a los de la Facción). La tropa de cada integrante solo se
-    // detalla si sus escuadras se conocen (las tuyas); de las de otro héroe, el número de escuadras.
+    // detalla si sus escuadras se conocen (las tuyas); de las de otro héroe, su tropa (`tropaIds`, motor 3cfd61e).
     convocatorias: deAmbito('', 'convocatoria').filter((v) => v.lugarId === lugarDelHeroe || v.integrantes.some((i) => i.heroeId === heroeId)).map((v) => {
       const porId = new Map(escuadrones.map((x) => [x.id, x]));
-      const sel = (x: pb.SeleccionDeSalida | undefined) => ({ escuadronIds: x?.escuadronIds ?? [], carga: cantidades(x?.carga) });
+      const sel = (x: pb.SeleccionDeSalida | undefined) => ({ escuadronIds: x?.escuadronIds ?? [], tropaIds: x?.tropaIds ?? [], carga: cantidades(x?.carga) });
       return {
         id: v.id, lugar: { tipo: v.lugarEsCampamento ? 'campamento' : 'asentamiento', id: v.lugarId }, liderId: v.liderId,
         politicaDeUnion: v.politicaDeUnion === pb.PoliticaUnion.UNION_PREGUNTAR ? 'preguntar' : 'aceptar', creadaEn: instante(v.creadaEnMs)!,

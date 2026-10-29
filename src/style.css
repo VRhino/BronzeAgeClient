@@ -3339,7 +3339,6 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .conv-integrante-tropas { display: flex; flex-wrap: wrap; gap: 4px; color: var(--oro-claro); --relleno: rgba(205, 160, 90, 0.3); }
 .conv-integrante-tropas small { font-size: 0.75rem; color: var(--text-muted); }
 .conv-integrante-tropa { display: flex; padding: 2px; border: 1px solid rgba(169, 121, 63, 0.45); border-radius: 3px; background: rgba(40, 30, 18, 0.9); }
-.conv-integrante-tropa.desconocida { width: 32px; height: 32px; box-sizing: border-box; border-style: dashed; background: rgba(20, 16, 11, 0.35); }
 .salida-hueco-mover { position: absolute; bottom: 2px; right: 3px; display: flex; gap: 2px; }
 .salida-hueco-mover button { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85rem; line-height: 1; padding: 1px 3px; }
 .salida-hueco-mover button:hover:not(:disabled) { color: var(--oro-claro); }

@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.57.0] — 2026-10-29 · tropa de los demás en el ejército en preparación y almacén del pueblo al día · sync con `VRhino/BronzeAge@3cfd61e5`
+
+### Cambiado
+- **Contrato regenerado** contra el motor 3cfd61e5: `SeleccionDeSalida.tropa_ids` (la tropa de cada escuadra elegida, en el orden de
+  `escuadron_ids`).
+- **Integrantes del ejército en preparación**: las escuadras de los otros héroes se ven con el icono de su tropa (el nombre sale del catálogo
+  de `/v1/datos`), en vez de huecos vacíos.
+- **Almacén del pueblo por dentro**: el motor ya lo refresca cada minuto a quien está dentro y es de la Facción de la plaza madre; el cliente
+  lo pinta sin cambios.
+
 ## [0.56.1] — 2026-10-29 · escuadras ajenas del ejército en preparación · sync con `VRhino/BronzeAge@db80cb87`
 
 ### Cambiado
