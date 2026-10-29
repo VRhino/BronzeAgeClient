@@ -1745,13 +1745,18 @@ function renderPanelEdificios(): void {
   if (nombreBarra) nombreBarra.textContent = asentamiento.nombre ?? asentamiento.id;
   const edificios = asentamiento.edificios ?? [];
   const construido = (tipo: string): boolean => edificios.some((e) => e.tipo === tipo && e.estado === 'activo');
-  const abierta = (id: EdificioAsent): boolean => { const t = PESTANAS_EDIFICIO.find((x) => x.id === id)!; return !t.requiere || construido(t.requiere.tipo); };
+  // De visita en una plaza de otra Facción solo queda lo que se puede ver o usar desde fuera de ella (decisión de Víctor, 2026-10-29): Centro urbano
+  // con Resumen y Territorio. Reclutamiento y Taberna no (el motor solo deja reclutar y comprar intel en las plazas de tu Facción); Mercado, tampoco
+  // por ahora: el motor no manda las órdenes de una plaza ajena.
+  const ajena = esPlazaAjena(proyeccion, asentamiento);
+  const pestanas = ajena ? PESTANAS_EDIFICIO.filter((t) => t.id === 'centro') : PESTANAS_EDIFICIO;
+  const abierta = (id: EdificioAsent): boolean => { const t = pestanas.find((x) => x.id === id); return Boolean(t) && (!t!.requiere || construido(t!.requiere.tipo)); };
   if (!abierta(edificioAsent)) edificioAsent = 'centro';
 
-  const tabs = PESTANAS_EDIFICIO.map((t) => abierta(t.id)
+  const tabs = pestanas.map((t) => abierta(t.id)
     ? `<button class="asent-tab${t.id === edificioAsent ? ' activo' : ''}" type="button" data-edificio="${t.id}">${t.etiqueta}</button>`
     : `<button class="asent-tab bloqueada" type="button" disabled title="Necesitas construir ${t.requiere!.nombre}">${t.etiqueta} 🔒</button>`).join('');
-  const bloqueadas = PESTANAS_EDIFICIO.filter((t) => !abierta(t.id)).map((t) => `🔒 ${t.etiqueta}: necesitas construir ${t.requiere!.nombre}.`);
+  const bloqueadas = pestanas.filter((t) => !abierta(t.id)).map((t) => `🔒 ${t.etiqueta}: necesitas construir ${t.requiere!.nombre}.`);
   const faltan = bloqueadas.length ? `<p class="asent-lado-nota">Pestañas bloqueadas ${ayuda('plaza:pestanas-bloqueadas', bloqueadas.join('<br>'))}</p>` : '';
   pintar(tabsEl, `<div class="asent-tabs asent-tabs-ancho">${tabs}</div>${faltan}`, () => {
     tabsEl.querySelectorAll<HTMLButtonElement>('[data-edificio]').forEach((boton) => boton.addEventListener('click', () => { edificioAsent = boton.dataset.edificio as EdificioAsent; renderPanelEdificios(); }));
@@ -1766,7 +1771,19 @@ function renderPanelEdificios(): void {
   let ambito: string = edificioAsent;
   const cablearSub = (alCambiar: (sub: string) => void): void => cuerpo.querySelectorAll<HTMLButtonElement>('[data-sub]').forEach((b) => b.addEventListener('click', () => { alCambiar(b.dataset.sub!); renderPanelEdificios(); }));
 
-  if (edificioAsent === 'centro') {
+  if (edificioAsent === 'centro' && ajena) {
+    const SECCIONES: [SeccionAsent, string][] = [['resumen', 'Resumen'], ['pueblos', 'Territorio']];
+    if (!SECCIONES.some(([id]) => id === seccionAsent)) seccionAsent = 'resumen';
+    const territorio = SUBPESTANAS_CENTRO_EXTRA.find((s) => s.id === 'pueblos')!;
+    const contenido = seccionAsent === 'pueblos' ? territorio.html(ctxPlaza) : seccionResumenAjena(proyeccion, asentamiento);
+    html = `${subpestanas(SECCIONES, seccionAsent)}<div class="asent-lado-cuerpo">${contenido}</div>${pie}`;
+    ambito = `ajena:${seccionAsent}`;
+    cablear = () => {
+      cablearSub((s) => { seccionAsent = s as SeccionAsent; });
+      cablearPlegables(cuerpo);
+      if (seccionAsent === 'pueblos') territorio.cablear?.(ctxPlaza);
+    };
+  } else if (edificioAsent === 'centro') {
     const extras = SUBPESTANAS_CENTRO_EXTRA.filter((s) => s.visible?.(ctxPlaza) ?? true);
     const SECCIONES: [SeccionAsent, string][] = [['resumen', 'Resumen'], ['edificios', 'Edificios'], ['produccion', 'Producción'], ['cola', 'Cola'], ['cargos', 'Cargos'], ...extras.map((s) => [s.id, s.etiqueta] as [string, string])];
     if (!SECCIONES.some(([id]) => id === seccionAsent)) seccionAsent = 'resumen';
@@ -1826,6 +1843,29 @@ function renderPanelEdificios(): void {
   }
   // Solo se repinta si cambió (la ciudad produce a cada tick), y lo elegido en los formularios vuelve a su sitio.
   pintar(cuerpo, html, cablear, ambito);
+}
+
+/** Una plaza de otra Facción (o de una Facción, si no tienes): de visita solo se ve lo de fuera. */
+function esPlazaAjena(p: ProyeccionJugador, a: Asentamiento): boolean {
+  return Boolean(a.faccionId) && a.faccionId !== p.faccionId;
+}
+
+/** El Resumen de una plaza ajena: su nombre, su Rey y la Facción dueña con su escudo completo. */
+function seccionResumenAjena(p: ProyeccionJugador, a: Asentamiento): string {
+  const f = p.facciones.find((x) => x.id === a.faccionId);
+  const dir = p.directorioFacciones?.find((x) => x.id === a.faccionId);
+  const nombre = f?.nombre ?? dir?.nombre ?? a.faccionId ?? '';
+  const sigilo = f?.sigilo ?? dir?.sigilo;
+  const rey = f?.reyId ? nombreDeHeroe(p, f.reyId) : null;
+  return `<div class="plaza-ajena-resumen">
+      ${sigilo ? `<span class="plaza-ajena-escudo">${svgSigilo(sigilo, 96)}</span>` : ''}
+      <div class="asent-ficha-grid">
+        <div><span>Plaza</span><strong>${escaparHtml(a.nombre ?? a.id)}</strong></div>
+        <div><span>Facción</span><strong>${escaparHtml(nombre)}</strong></div>
+        <div><span>Rey</span><strong>${rey ? escaparHtml(rey) : '—'}</strong></div>
+      </div>
+      <p class="asent-lado-nota">Estás de visita: esta plaza es de otra Facción.</p>
+    </div>`;
 }
 
 function seccionResumen(a: Asentamiento): string {

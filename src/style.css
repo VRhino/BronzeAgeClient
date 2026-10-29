@@ -3391,3 +3391,8 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .tropa-icono-mini { display: inline-flex; vertical-align: -3px; margin-right: 4px; color: var(--oro); --relleno: rgba(205, 160, 90, 0.25); }
 .mapa-lista-item .tropa-icono { color: var(--oro-claro); font-size: inherit; }
 .mapa-lista-item.con-tropa > div > span:not(.lid-chip) { display: block; }
+
+/* Resumen de una plaza de otra Facción, de visita */
+.plaza-ajena-resumen { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.plaza-ajena-escudo { display: flex; }
+.plaza-ajena-resumen .asent-ficha-grid { width: 100%; }

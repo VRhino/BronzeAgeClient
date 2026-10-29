@@ -3,6 +3,15 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.58.0] — 2026-10-29 · plaza de otra Facción, de visita · sync con `VRhino/BronzeAge@3cfd61e5`
+
+### Cambiado
+- **De visita en una plaza de otra Facción** solo queda lo que se ve o se usa desde fuera (Víctor): Centro urbano con Resumen (nombre de
+  la plaza, su Rey y la Facción dueña con su escudo completo) y Territorio. Fuera la subida de nivel y sus requisitos, la auto-construcción,
+  Edificios, Producción, Cola, Cargos, Puerta (su estado no llega a quien no es de la Facción), Residencia, Tesorería, Fundación,
+  Misiones, Reclutamiento y Taberna (el motor solo deja reclutar y comprar intel en las plazas de tu Facción). El Mercado tampoco, por
+  ahora: el motor no manda las órdenes de una plaza ajena.
+
 ## [0.57.2] — 2026-10-29 · de visita en una plaza aliada · sync con `VRhino/BronzeAge@3cfd61e5`
 
 ### Arreglado
