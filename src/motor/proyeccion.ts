@@ -601,7 +601,8 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
     caminos: !red ? [] : red.tramos.length
       ? red.tramos.map((t) => ({ id: t.id, escalon: Math.min(2, t.escalon) as 0 | 1 | 2, puntos: t.puntos.map(punto) }))
       : red.aristas.map((x, i) => ({ id: x, escalon: (red.escalones[i] ?? 1) as 0 | 1 | 2, puntos: arista(x) })),
-    ordenes: deAmbito('FACCION:', 'ordenMercado').map((o) => ({
+    // Las de tu Facción (FACCION) y, de visita dentro de una plaza ajena, las abiertas de esa plaza (VISTA, motor bcc90a0).
+    ordenes: deAmbito('', 'ordenMercado').map((o) => ({
       id: o.id, asentamientoId: o.asentamientoId, tipo: o.esCompra ? 'compra' : 'venta', recurso: o.recurso, cantidad: mil(o.cantidad), cantidadCumplida: mil(o.cantidadCumplida),
       precioUnitario: mil(o.precioUnitario), creadoEn: instante(o.creadoEnMs)!, expiraEn: instante(o.expiraEnMs)!, estado: ESTADO_ORDEN[o.estado] ?? 'activa',
     })),

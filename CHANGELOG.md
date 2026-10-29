@@ -3,6 +3,13 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.58.2] — 2026-10-29 · trazado y órdenes de la plaza ajena · sync con `VRhino/BronzeAge@bcc90a01`
+
+### Cambiado
+- **De visita dentro de una plaza de otra Facción** el motor (bcc90a0) manda en VISTA su trazado y sus órdenes de mercado abiertas. El
+  trazado ya se pintaba desde esa ficha; las órdenes se leían solo de FACCION y ahora se leen de cualquier ámbito, así que la pestaña
+  Mercado las enseña y se pueden tomar.
+
 ## [0.58.1] — 2026-10-29 · Mercado de una plaza ajena · sync con `VRhino/BronzeAge@3cfd61e5`
 
 ### Cambiado
