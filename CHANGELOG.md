@@ -3,6 +3,13 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.58.1] — 2026-10-29 · Mercado de una plaza ajena · sync con `VRhino/BronzeAge@3cfd61e5`
+
+### Cambiado
+- **De visita en una plaza de otra Facción** vuelve la pestaña Mercado (con su candado si la plaza no tiene Mercado): las órdenes abiertas
+  de compra y venta de la plaza, que se toman con el carro de tu columna como desde su ficha en el mapa. Hoy el motor aún no manda las
+  órdenes de una plaza ajena, así que sale vacía hasta que lo haga.
+
 ## [0.58.0] — 2026-10-29 · plaza de otra Facción, de visita · sync con `VRhino/BronzeAge@3cfd61e5`
 
 ### Cambiado

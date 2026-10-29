@@ -1746,10 +1746,10 @@ function renderPanelEdificios(): void {
   const edificios = asentamiento.edificios ?? [];
   const construido = (tipo: string): boolean => edificios.some((e) => e.tipo === tipo && e.estado === 'activo');
   // De visita en una plaza de otra Facción solo queda lo que se puede ver o usar desde fuera de ella (decisión de Víctor, 2026-10-29): Centro urbano
-  // con Resumen y Territorio. Reclutamiento y Taberna no (el motor solo deja reclutar y comprar intel en las plazas de tu Facción); Mercado, tampoco
-  // por ahora: el motor no manda las órdenes de una plaza ajena.
+  // con Resumen y Territorio, y Mercado (con su candado si no lo hay) con las órdenes abiertas. Reclutamiento y Taberna no: el motor solo deja
+  // reclutar y comprar intel en las plazas de tu Facción.
   const ajena = esPlazaAjena(proyeccion, asentamiento);
-  const pestanas = ajena ? PESTANAS_EDIFICIO.filter((t) => t.id === 'centro') : PESTANAS_EDIFICIO;
+  const pestanas = ajena ? PESTANAS_EDIFICIO.filter((t) => t.id === 'centro' || t.id === 'mercado') : PESTANAS_EDIFICIO;
   const abierta = (id: EdificioAsent): boolean => { const t = pestanas.find((x) => x.id === id); return Boolean(t) && (!t!.requiere || construido(t!.requiere.tipo)); };
   if (!abierta(edificioAsent)) edificioAsent = 'centro';
 
@@ -1820,6 +1820,12 @@ function renderPanelEdificios(): void {
       if (seccionAsent === 'produccion') cablearProduccionYRecetas(ctxPlaza);
       extra?.cablear?.(ctxPlaza);
     };
+  } else if (edificioAsent === 'mercado' && ajena) {
+    // Las órdenes abiertas de la plaza, que se toman con el carro de tu columna (`comerciarEnPlaza`), como desde su ficha en el mapa.
+    const ordenes = htmlMercadoDePlaza(proyeccion, asentamiento.id, escaparHtml);
+    html = `<div class="asent-lado-cuerpo">${ordenes || '<p class="asent-lado-nota">No hay órdenes abiertas de compra ni de venta a la vista.</p>'}<p id="mapa-seleccion-error" class="faction-error" role="alert"></p></div>${pie}`;
+    ambito = 'mercado:ajena';
+    cablear = () => cablearMercadoDePlaza(cuerpo, asentamiento.id, { ejecutarConDatos: ejecutarConDatosYRefrescar, aviso: avisoMapa }, proyeccion.heroeId);
   } else if (edificioAsent === 'reclutamiento') {
     html = `<div class="asent-lado-cuerpo">${htmlReclutamiento(proyeccion, asentamiento, escaparHtml, renderPanelEdificios)}</div>${pie}`;
     cablear = () => cablearReclutamiento(cuerpo, proyeccion, asentamiento, ejecutarYRefrescar, renderPanelEdificios);
