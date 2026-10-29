@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.59.0] — 2026-10-29 · colocar avanzadas desde el mapa · sync con `VRhino/BronzeAge@bcc90a01`
+
+### Añadido
+- **Colocar avanzada** (Víctor: desde el mapa, con la columna): en «Lo que llevas», el Gobernador o el Maestro de Obras de su plaza de
+  residencia tiene «Colocar avanzada aquí» (`colocarAvanzada` con la posición de su columna). Si no se puede ahí, dice por qué: fuera de la
+  zona, la plaza sin el nivel que pide la atalaya, el cupo lleno o no ser el Líder de la columna. El motor comprueba el resto (la ciudad y
+  los otros elementos del mapa).
+- **Territorio** enseña las avanzadas de la plaza (etapa, distancia, en ruinas, atacada) y sus obras, el cupo (`AVANZADAS.cupoPorNivelDeLaMadre`)
+  y cómo se coloca una, con lo que pide la atalaya.
+
 ## [0.58.3] — 2026-10-29 · ids de nodo del motor · sync con `VRhino/BronzeAge@bcc90a01`
 
 ### Arreglado
