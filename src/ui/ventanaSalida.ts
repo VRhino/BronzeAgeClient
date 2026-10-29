@@ -80,6 +80,15 @@ export function reiniciarVentanaSalida(): void {
 
 const liderazgoDe = (lista: Escuadron[]): number => lista.reduce((t, s) => t + s.costeLiderazgo, 0);
 
+/** El Liderazgo de la tropa elegida, si pasa del tope del héroe (si no, `null`). Pasado el tope no se sale, ni se convoca, ni se une, ni se guarda el loadout. */
+function excesoDeLiderazgo(p: ProyeccionJugador, l: LugarDeSalida): number | null {
+  if (!seElige(p, l)) return null;
+  const disponibles = tropaDe(p, l);
+  const usado = liderazgoDe(prepararEleccion(p, l).ids.flatMap((id) => disponibles.filter((s) => s.id === id)));
+  return usado > p.heroe.liderazgoBase ? usado : null;
+}
+const avisoExceso = (usado: number, tope: number): string => `Te pasas de Liderazgo (${usado} / ${tope}): quita escuadras para poder salir.`;
+
 function htmlHueco(s: Escuadron, quitar: boolean, e: Escapar): string {
   return `<div class="salida-hueco lleno" title="${e(`${s.nombre} · ${s.cantidad} hombres · nivel ${s.nivel}`)}">
     <span class="salida-hueco-icono">${iconoTropa(s.tropaId, 34)}</span>
@@ -117,7 +126,7 @@ function htmlTropa(p: ProyeccionJugador, l: LugarDeSalida, e: Escapar): string {
     : '';
   const loadouts = editable && h.loadouts.length > 0
     ? `<label class="salida-loadout">Loadout <select class="form-input" data-salida-loadout>${h.loadouts.map((x) => `<option value="${e(x.id)}"${x.id === sel!.loadoutId ? ' selected' : ''}>${e(x.displayName)}${x.activo ? ' (activo)' : ''}</option>`).join('')}</select></label>
-      <button class="btn-secondary salida-guardar" type="button" data-salida-guardar${cambiado(p, l) ? '' : ' disabled title="La tropa elegida ya es la del loadout"'}>Guardar loadout</button>`
+      <button class="btn-secondary salida-guardar" type="button" data-salida-guardar${libre < 0 ? ' disabled title="Te pasas de Liderazgo"' : cambiado(p, l) ? '' : ' disabled title="La tropa elegida ya es la del loadout"'}>Guardar loadout</button>`
     : '';
   const nota = editable
     ? (disponibles.length === 0 ? `<p class="asent-lado-nota">${l.tipo === 'residencia' ? 'No tienes tropa libre en la plaza (la de guarnición no sale). Puedes salir solo.' : 'No tienes tropa en el campamento. Puedes salir solo.'}</p>` : '')
@@ -128,7 +137,7 @@ function htmlTropa(p: ProyeccionJugador, l: LugarDeSalida, e: Escapar): string {
       ${loadouts}
     </div>
     <div class="salida-huecos">${huecos}</div>
-    ${lista}${nota}`;
+    ${lista}${nota}${editable && libre < 0 ? `<p class="faction-error">${e(avisoExceso(usado, h.liderazgoBase))}</p>` : ''}`;
 }
 
 /** Si la tropa elegida no es la del loadout elegido (las escuadras de ese loadout que están aquí). */
@@ -196,11 +205,12 @@ export function pintarVentanaSalida(raiz: HTMLElement, p: ProyeccionJugador, l: 
     </div>
     <footer class="salida-pie">
       ${htmlTropa(p, l, e)}
-      <div class="salida-acciones"><p class="faction-error" data-salida-error role="alert"></p><button class="btn-primary" type="button" data-salida-ir>${textoSalir(l)}</button></div>
+      <div class="salida-acciones"><p class="faction-error" data-salida-error role="alert"></p><button class="btn-primary" type="button" data-salida-ir${excesoDeLiderazgo(p, l) !== null ? ' disabled' : ''}>${textoSalir(l)}</button></div>
     </footer>
   </div>`;
   const elegidas = (): string[] => (seElige(p, l) ? prepararEleccion(p, l).ids : []);
   const leerSeleccion = () => ({ escuadronIds: elegidas(), carga: seElige(p, l) ? leerCarga(raiz) : {} });
+  const bloqueo = (): string | null => { const usado = excesoDeLiderazgo(p, l); return usado === null ? null : avisoExceso(usado, p.heroe.liderazgoBase); };
   pintar(raiz, html, () => {
     raiz.querySelector('[data-salida-cerrar]')?.addEventListener('click', cerrar);
     if (seElige(p, l)) cablearCargaDeSalida(raiz);
@@ -228,6 +238,8 @@ export function pintarVentanaSalida(raiz: HTMLElement, p: ProyeccionJugador, l: 
       const boton = ev.currentTarget as HTMLButtonElement;
       const loadout = p.heroe.loadouts.find((x) => x.id === sel?.loadoutId);
       if (!sel || !loadout) return;
+      const motivo = bloqueo();
+      if (motivo) { avisar(motivo); return; }
       // Las escuadras del loadout que no están aquí (en guarnición, escoltando…) se quedan en él.
       const aqui = new Set(tropaDe(p, l).map((s) => s.id));
       const squadIds = [...loadout.squadIds.filter((id) => !aqui.has(id)), ...sel.ids];
@@ -238,6 +250,8 @@ export function pintarVentanaSalida(raiz: HTMLElement, p: ProyeccionJugador, l: 
     const ir = raiz.querySelector<HTMLButtonElement>('[data-salida-ir]');
     ir?.addEventListener('click', async () => {
       if (!ir) return;
+      const motivo = bloqueo();
+      if (motivo) { avisar(motivo); return; }
       const { escuadronIds, carga } = leerSeleccion();
       const [tipo, params]: [string, object] =
         l.tipo === 'residencia' ? ['salirAlMundo', { asentamientoId: l.asentamiento.id, heroeId: p.heroeId, escuadronIds, carga }]
@@ -250,7 +264,7 @@ export function pintarVentanaSalida(raiz: HTMLElement, p: ProyeccionJugador, l: 
       eleccion = null;
       cerrar(); // el router lleva al mapa
     });
-    if (admiteEjercito(l)) cablearSalidaComoEjercito(raiz, p, ir, textoSalir(l), leerSeleccion, ejecutar, avisar);
+    if (admiteEjercito(l)) cablearSalidaComoEjercito(raiz, p, ir, textoSalir(l), leerSeleccion, ejecutar, avisar, bloqueo);
   }, `salida:${claveDe(l)}`);
-  if (admiteEjercito(l)) actualizarConvocatorias(raiz, p, leerSeleccion, ejecutar, avisar, e);
+  if (admiteEjercito(l)) actualizarConvocatorias(raiz, p, leerSeleccion, ejecutar, avisar, e, bloqueo);
 }

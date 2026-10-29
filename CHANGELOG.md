@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.57.1] — 2026-10-29 · Liderazgo de las escuadras por escalón · sync con `VRhino/BronzeAge@3cfd61e5`
+
+### Arreglado
+- **Liderazgo de una escuadra**: el cliente ponía como coste sus hombres (30 lanceros = 30) y sumaba de más (115 / 100 con cuatro escuadras
+  que cuestan 35). Ahora va por el escalón de su tropa (`LIDERAZGO.costePorEscalon` y `TROPAS_RECLUTABLES` de `/v1/datos`), como el motor:
+  la corona de cada escuadra, el total y el tope ya cuadran.
+- **Pasarse del tope**: en la ventana «Salir al mundo» no se sale, ni se convoca, ni se une a un ejército, ni se guarda el loadout si la
+  tropa elegida pasa del Liderazgo del héroe; avisa en rojo. En el ejército en preparación no se guardan cambios que se pasen y el Líder no
+  parte si su tropa guardada se pasa.
+
 ## [0.57.0] — 2026-10-29 · tropa de los demás en el ejército en preparación y almacén del pueblo al día · sync con `VRhino/BronzeAge@3cfd61e5`
 
 ### Cambiado

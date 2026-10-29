@@ -43,7 +43,8 @@ export function cablearSalidaComoEjercito(
   textoPersonal: string,
   leerSeleccion: () => Seleccion,
   ejecutar: Ejecutar,
-  avisar: (mensaje: string) => void
+  avisar: (mensaje: string) => void,
+  bloqueo: () => string | null = () => null
 ): void {
   const bloque = raiz.querySelector<HTMLElement>('[data-salida-ejercito]');
   // El HTML es siempre el mismo (si no, el sondeo repintaría la pestaña entera y borraría lo marcado): el estado elegido se aplica al DOM aquí.
@@ -67,16 +68,20 @@ export function cablearSalidaComoEjercito(
   boton?.addEventListener('click', (ev) => {
     if (!eleccion.ejercito) return;
     ev.stopImmediatePropagation();
+    const motivo = bloqueo();
+    if (motivo) { avisar(motivo); return; }
     void enviar(boton, 'convocarEjercito', { heroeId: p.heroeId, politicaDeUnion: eleccion.politica, ...leerSeleccion() });
   }, true);
 }
 
 /** Repinta solo la lista de convocatorias abiertas (las altera el sondeo) sin tocar lo marcado en el formulario. */
-export function actualizarConvocatorias(raiz: ParentNode, p: ProyeccionJugador, leerSeleccion: () => Seleccion, ejecutar: Ejecutar, avisar: (mensaje: string) => void, escapar: Escapar): void {
+export function actualizarConvocatorias(raiz: ParentNode, p: ProyeccionJugador, leerSeleccion: () => Seleccion, ejecutar: Ejecutar, avisar: (mensaje: string) => void, escapar: Escapar, bloqueo: () => string | null = () => null): void {
   const lista = raiz.querySelector<HTMLElement>('[data-lista-convocatorias]');
   if (!lista) return;
   const html = htmlConvocatoriasAbiertas(p, escapar);
   pintar(lista, html, () => lista.querySelectorAll<HTMLButtonElement>('[data-unirse-conv]').forEach((b) => b.addEventListener('click', async () => {
+    const motivo = bloqueo();
+    if (motivo) { avisar(motivo); return; }
     b.disabled = true;
     const mensaje = await ejecutar('unirseAConvocatoria', { heroeId: p.heroeId, convocatoriaId: b.dataset.unirseConv, ...leerSeleccion() });
     if (mensaje) { b.disabled = false; avisar(mensaje); }

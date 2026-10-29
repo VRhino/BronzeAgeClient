@@ -105,11 +105,12 @@ function htmlMiTropa(p: ProyeccionJugador, c: Convocatoria, e: Escapar): string 
   return `<div class="salida-tropa-cab">
       <strong class="heroe-sub">Tu tropa${ayuda('convocatoria:tropa', 'La primera entra primero en combate: muévela con ‹ ›. Quita con ✕ o añade con «+»; los cambios se aplican al pulsar «Guardar cambios».')}</strong>
       <span class="salida-liderazgo${libre < 0 ? ' excedido' : ''}">Liderazgo ${usado} / ${p.heroe.liderazgoBase}</span>
-      <span class="salida-loadout"><button class="btn-secondary salida-guardar" type="button" data-conv="guardar-tropa"${cambiado && elegidas.length > 0 ? '' : ' disabled'}>Guardar cambios</button><button class="btn-secondary salida-guardar" type="button" data-conv="descartar-tropa"${cambiado ? '' : ' disabled'}>Descartar</button></span>
+      <span class="salida-loadout"><button class="btn-secondary salida-guardar" type="button" data-conv="guardar-tropa"${cambiado && elegidas.length > 0 && libre >= 0 ? '' : ' disabled'}>Guardar cambios</button><button class="btn-secondary salida-guardar" type="button" data-conv="descartar-tropa"${cambiado ? '' : ' disabled'}>Descartar</button></span>
     </div>
     <div class="salida-huecos">${huecos}</div>
     ${lista}
-    ${elegidas.length === 0 ? '<p class="asent-lado-nota">Sin ninguna escuadra no sales. Añade al menos una.</p>' : ''}`;
+    ${elegidas.length === 0 ? '<p class="asent-lado-nota">Sin ninguna escuadra no sales. Añade al menos una.</p>' : ''}
+    ${libre < 0 ? `<p class="faction-error">Te pasas de Liderazgo (${usado} / ${p.heroe.liderazgoBase}): quita escuadras${cambiado ? ' y guarda' : ''} para poder salir.</p>` : ''}`;
 }
 
 /** Las Caravanas de Fundación de tu Facción que esperan dentro del lugar de la convocatoria (motor d8ef09c): el Líder puede llevársela al partir. */
@@ -130,6 +131,14 @@ function htmlPreguntaCaravana(p: ProyeccionJugador, c: Convocatoria, e: Escapar)
   const opcion = (id: string, texto: string): string => `<label class="conv-caravana"><input type="radio" name="conv-caravana" value="${e(id)}"${id === elegida ? ' checked' : ''} /> ${texto}</label>`;
   return `<strong class="heroe-sub">¿Os lleváis la Caravana de Fundación?${ayuda('convocatoria:caravana', 'Espera aquí dentro. Si el ejército se la lleva, va enganchada detrás y, si su titular no sale con vosotros, pasas a serlo tú.')}</strong>
     <div class="conv-caravanas">${opcion('', 'No, se queda aquí')}${esperan.map((x) => opcion(x.id, `Sí, llevar ${e(x.id)}${x.contenido ? ` <small>(${e(x.contenido)})</small>` : ''}`)).join('')}</div>`;
+}
+
+/** Si TU tropa guardada en la convocatoria pasa de tu Liderazgo: así no se sale (el Líder no puede partir). */
+function excedeLoGuardado(p: ProyeccionJugador, c: Convocatoria): boolean {
+  const mio = c.integrantes.find((x) => x.heroeId === p.heroeId);
+  if (!mio) return false;
+  const usado = mio.escuadronIds.reduce((t, id) => t + (p.heroe.escuadrones.find((s) => s.id === id)?.costeLiderazgo ?? 0), 0);
+  return usado > p.heroe.liderazgoBase;
 }
 
 /** Espacios de tropa a la vista, como en la ventana de salida. */
@@ -170,7 +179,7 @@ export function htmlPreparacion(p: ProyeccionJugador, e: Escapar): { izquierda: 
   const derecha = htmlMiCarga(p, c, e) || '<p class="asent-lado-nota">No resides aquí: sales con el carro de tu columna, tal cual.</p>';
   const pie = `${htmlMiTropa(p, c, e)}
     <div class="salida-acciones"><p class="faction-error" data-campo="error-conv" role="alert"></p>${c.soyLider
-      ? '<button class="btn-secondary" type="button" data-conv="cancelar">Cancelar la salida</button><button class="btn-primary" type="button" data-conv="partir">Salir con el ejército</button>'
+      ? `<button class="btn-secondary" type="button" data-conv="cancelar">Cancelar la salida</button><button class="btn-primary" type="button" data-conv="partir"${excedeLoGuardado(p, c) ? ' disabled title="Te pasas de Liderazgo: quita escuadras y guarda"' : ''}>Salir con el ejército</button>`
       : '<button class="btn-primary" type="button" data-conv="separarme">Separarme (sigues dentro)</button>'}</div>`;
   return { izquierda, derecha, pie };
 }

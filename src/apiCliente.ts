@@ -444,7 +444,17 @@ export async function unirseAPartida(_gameId: string): Promise<{ jugadorId: stri
 }
 
 function proyeccionActual(s: Sesion): ProyeccionJugador | PartidaSinHeroe {
-  return proyectar({ almacen: s.almacen, bienvenida: s.bienvenida!, ahora: s.ahoraMundo(), gameId: PARTIDA, mapaId: s.bienvenida?.mundo?.hash ?? '' });
+  const p = proyectar({ almacen: s.almacen, bienvenida: s.bienvenida!, ahora: s.ahoraMundo(), gameId: PARTIDA, mapaId: s.bienvenida?.mundo?.hash ?? '' });
+  // El Liderazgo de una escuadra va por el escalón de su tropa (LIDERAZGO.costePorEscalon), no por sus hombres: el motor no lo manda en la escuadra.
+  if ('heroe' in p) for (const x of p.heroe.escuadrones) x.costeLiderazgo = costeDeLiderazgo(x.tropaId);
+  return p;
+}
+
+/** Lo que cuesta en Liderazgo una escuadra de esa tropa, sea cual sea su número de hombres (0 mientras no llegue `/v1/datos`). */
+export function costeDeLiderazgo(tropaId: string): number {
+  const escalon = tropasReclutables()?.find((t) => t.id === tropaId)?.escalon;
+  const costes = bloqueDeDatos<{ costePorEscalon?: Record<string, number> }>('LIDERAZGO')?.costePorEscalon;
+  return escalon !== undefined ? costes?.[String(escalon)] ?? 0 : 0;
 }
 
 /** La proyección recalculada en este instante, sin red y sin esperar a un cambio: las columnas avanzan por su plan (`Plan`) y el servidor no
