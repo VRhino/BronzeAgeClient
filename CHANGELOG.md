@@ -3,6 +3,12 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.51.1] — 2026-10-29 · Reclutamiento solo con lo desbloqueado · sync con `VRhino/BronzeAge@fd9cd58`
+
+### Cambiado
+- **Plaza → Reclutamiento**: vuelven a esconderse las tropas que la Facción aún no puede formar (tecnología, edificio o su nivel), en vez de
+  salir apagadas. Los edificios sin ninguna tropa disponible no salen.
+
 ## [0.51.0] — 2026-10-29 · fichas de tropa en Reclutamiento · sync con `VRhino/BronzeAge@fd9cd58`
 
 ### Cambiado

@@ -1,5 +1,5 @@
 // Pestaña «RECLUTAMIENTO» de la plaza: reclutar o reponer tropa con `reclutarTropa { asentamientoId, heroeId, tropaId }`. Todos los edificios militares juntos.
-// Cada tropa es un botón con su icono, agrupadas por edificio; las que la Facción aún no puede formar (tecnología, edificio o su nivel) salen apagadas. La elegida
+// Cada tropa es un botón con su icono, agrupadas por edificio. Solo se ENSEÑA lo que la Facción puede formar ya (tecnología, edificio y su nivel): lo demás se esconde. La elegida
 // se abre en una ficha encima de la rejilla, que dice lo que depende del momento (residencia, la escuadra que ya tienes, hombres libres, equipo) y lleva el botón. Un héroe tiene como mucho UNA escuadra por tropa en toda la partida:
 // si ya la tiene, reclutar la REPONE y solo donde está. El oro por soldado sale del balance como en el motor (escalón + caballos; la tropa del Centro Urbano no paga; «Leva Forzosa» solo toca el equipo); si algo falla, el rechazo del servidor se enseña tal cual.
 import type { ProyeccionJugador } from '../apiCliente';
@@ -25,18 +25,8 @@ function adoptadasDe(p: ProyeccionJugador): string[] | null {
   return t?.propias?.adoptadas ?? p.tecnologiasAdoptadas ?? (t ? [] : null);
 }
 
-/** Lo que impide formar la tropa en esta plaza por la Facción o los edificios (no por el momento), o '' si se puede. */
-function motivoBloqueo(t: TropaReclutable, adoptadas: string[] | null, nivel: number): string {
-  if (adoptadas !== null && !adoptadas.includes(t.tecnologia)) {
-    const nombre = bloqueDeDatos<Record<string, { nombre?: string }>>('TECNOLOGIAS')?.[t.tecnologia]?.nombre ?? t.tecnologia.replace(/_/g, ' ');
-    return `Pide la tecnología ${nombre}.`;
-  }
-  if (nivel < t.nivelRequerido) return nivel === 0 ? `Pide ${EDIFICIO_NOMBRE[t.edificio] ?? t.edificio} en la plaza.` : `Pide ${EDIFICIO_NOMBRE[t.edificio] ?? t.edificio} a nivel ${t.nivelRequerido}.`;
-  return '';
-}
-
 /** La ficha de la tropa elegida: datos, coste de lo que falta y el botón de reclutar o reponer. */
-function ficha(t: TropaReclutable, p: ProyeccionJugador, a: Asentamiento, reside: boolean, motivo: string, nivel: number, e: Escapar): string {
+function ficha(t: TropaReclutable, p: ProyeccionJugador, a: Asentamiento, reside: boolean, nivel: number, e: Escapar): string {
   const existente = p.heroe.escuadrones.find((s) => s.tropaId === t.id && !s.prestada);
   const falta = t.unidadesPorDefecto - (existente?.cantidad ?? 0);
   const origen = ORIGEN(t.escalon);
@@ -47,18 +37,17 @@ function ficha(t: TropaReclutable, p: ProyeccionJugador, a: Asentamiento, reside
     .map(([r, n]) => {
       const total = Math.ceil((n ?? 0) * Math.max(falta, 0));
       const hay = Math.floor(almacen[r]?.cantidad ?? 0);
-      return `<span class="recl-coste${!motivo && hay < total ? ' falta' : ''}" title="Hay ${hay} en el almacén">${RECURSO_ICONO[r] ?? '📦'} ${total} ${e(RECURSO_NOMBRE[r] ?? r)}</span>`;
+      return `<span class="recl-coste${hay < total ? ' falta' : ''}" title="Hay ${hay} en el almacén">${RECURSO_ICONO[r] ?? '📦'} ${total} ${e(RECURSO_NOMBRE[r] ?? r)}</span>`;
     })
     .join('');
   const liderazgo = bloqueDeDatos<{ costePorEscalon?: Record<string, number> }>('LIDERAZGO')?.costePorEscalon?.[String(t.escalon)];
 
-  const bloqueo = motivo
-    || (falta <= 0 ? 'Escuadra al completo.'
-      : existente && existente.contenedor.tipo !== 'campamento' ? 'Tu escuadra está fuera del campamento: solo se repone donde está.'
-      : !reside ? 'Solo quien reside en esta plaza recluta aquí.' : '');
+  const bloqueo = falta <= 0 ? 'Escuadra al completo.'
+    : existente && existente.contenedor.tipo !== 'campamento' ? 'Tu escuadra está fuera del campamento: solo se repone donde está.'
+    : !reside ? 'Solo quien reside en esta plaza recluta aquí.' : '';
   const dato = (etiqueta: string, valor: string | number | undefined): string => (valor === undefined ? '' : `<span><small>${etiqueta}</small><b>${valor}</b></span>`);
   return `<div class="recl-ficha">
-    <div class="recl-ficha-icono${motivo ? ' apagado' : ''}">${iconoTropa(t.id, 56)}</div>
+    <div class="recl-ficha-icono">${iconoTropa(t.id, 56)}</div>
     <div class="recl-ficha-cuerpo">
       <div class="recl-ficha-titulo"><strong>${e(t.nombre)}</strong> <span class="recl-esc" title="Escalón de élite">Esc. ${t.escalon}</span></div>
       <small class="recl-ficha-sub">${e(EDIFICIO_NOMBRE[t.edificio] ?? t.edificio)} nivel ${t.nivelRequerido}${nivel ? ` (tienes ${nivel})` : ''}</small>
@@ -81,24 +70,23 @@ export function htmlReclutamiento(p: ProyeccionJugador, a: Asentamiento, e: Esca
   if (!tropas) return '<p class="mapa-lista-vacia">Cargando el catálogo de tropas…</p>';
   const adoptadas = adoptadasDe(p);
   const nivelDe = (tipo: string): number => Math.max(0, ...(a.edificios ?? []).filter((x) => x.tipo === tipo && x.estado === 'activo').map((x) => x.nivelInterno ?? 1));
-  const motivoDe = (t: TropaReclutable): string => motivoBloqueo(t, adoptadas, nivelDe(t.edificio));
+  const desbloqueada = (t: TropaReclutable): boolean => (adoptadas === null || adoptadas.includes(t.tecnologia)) && nivelDe(t.edificio) >= t.nivelRequerido;
   const reside = resideAqui(p, a);
-  const porEdificio = ORDEN_EDIFICIO.map((tipo) => [tipo, tropas.filter((t) => t.edificio === tipo).sort((x, y) => x.escalon - y.escalon || x.nivelRequerido - y.nivelRequerido)] as const).filter(([, l]) => l.length > 0);
+  const porEdificio = ORDEN_EDIFICIO.map((tipo) => [tipo, tropas.filter((t) => t.edificio === tipo && desbloqueada(t)).sort((x, y) => x.escalon - y.escalon || x.nivelRequerido - y.nivelRequerido)] as const).filter(([, l]) => l.length > 0);
   const ordenadas = porEdificio.flatMap(([, l]) => l);
-  const elegida = ordenadas.find((t) => t.id === tropaElegida) ?? ordenadas.find((t) => !motivoDe(t)) ?? ordenadas[0];
+  const elegida = ordenadas.find((t) => t.id === tropaElegida) ?? ordenadas[0];
   const pob = a.poblacion;
-  const info = ayuda('plaza:reclutamiento', 'Los militares de la plaza, juntos. Elige una tropa para ver su ficha. Reclutas con el equipo del almacén; si ya tienes una escuadra de esa tropa, solo la repones hasta completarla. Las tropas apagadas aún no se pueden formar: la ficha dice qué tecnología o edificio piden.<br>El servidor no deja reclutar si dejaría la producción sin brazos.');
+  const info = ayuda('plaza:reclutamiento', 'Los militares de la plaza, juntos. Elige una tropa para ver su ficha. Reclutas con el equipo del almacén; si ya tienes una escuadra de esa tropa, solo la repones hasta completarla. Aquí solo salen las tropas que tu Facción ya puede formar: otras llegan con más tecnología o edificios militares mejores.<br>El servidor no deja reclutar si dejaría la producción sin brazos.');
   const boton = (t: TropaReclutable): string => {
-    const motivo = motivoDe(t);
     const cantidad = p.heroe.escuadrones.find((s) => s.tropaId === t.id && !s.prestada)?.cantidad;
-    const titulo = `${t.nombre} · Esc. ${t.escalon}${motivo ? ` · ${motivo}` : ''}`;
-    return `<button class="asent-construir recl-tropa${motivo ? ' apagado' : ''}${t.id === elegida?.id ? ' elegida' : ''}" type="button" data-tropa="${e(t.id)}" title="${e(titulo)}" aria-label="${e(titulo)}">${iconoTropa(t.id, 30)}${cantidad !== undefined ? `<span class="recl-tropa-cuenta">${cantidad}</span>` : ''}</button>`;
+    const titulo = `${t.nombre} · Esc. ${t.escalon}`;
+    return `<button class="asent-construir recl-tropa${t.id === elegida?.id ? ' elegida' : ''}" type="button" data-tropa="${e(t.id)}" title="${e(titulo)}" aria-label="${e(titulo)}">${iconoTropa(t.id, 30)}${cantidad !== undefined ? `<span class="recl-tropa-cuenta">${cantidad}</span>` : ''}</button>`;
   };
   return `<span class="faction-kicker">Reclutamiento ${info}</span>
     ${pob ? `<p class="asent-lado-nota">Gente libre: ${Math.floor(pob.pesants)} pesants · ${Math.floor(pob.artesanos)} artesanos · ${Math.floor(pob.nobleza)} nobleza.</p>` : ''}
-    ${elegida ? ficha(elegida, p, a, reside, motivoDe(elegida), nivelDe(elegida.edificio), e) : ''}
+    ${elegida ? ficha(elegida, p, a, reside, nivelDe(elegida.edificio), e) : '<p class="mapa-lista-vacia">Aún no puedes reclutar ninguna tropa: hace falta la tecnología y el edificio militar de cada una.</p>'}
     <p class="faction-error" data-campo="error-reclutar" role="alert"></p>
-    ${porEdificio.map(([tipo, lista]) => `<div class="asent-construir-cab"><strong class="heroe-sub">${e(EDIFICIO_NOMBRE[tipo] ?? tipo)}${nivelDe(tipo) ? ` · nivel ${nivelDe(tipo)}` : ' · sin construir'}</strong></div><div class="asent-construir-rejilla">${lista.map(boton).join('')}</div>`).join('')}`;
+    ${porEdificio.map(([tipo, lista]) => `<div class="asent-construir-cab"><strong class="heroe-sub">${e(EDIFICIO_NOMBRE[tipo] ?? tipo)} · nivel ${nivelDe(tipo)}</strong></div><div class="asent-construir-rejilla">${lista.map(boton).join('')}</div>`).join('')}`;
 }
 
 export function cablearReclutamiento(raiz: HTMLElement, p: ProyeccionJugador, a: Asentamiento, ejecutar: Ejecutar, repintar: () => void): void {
