@@ -591,6 +591,14 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
       const porId = new Map(propios.map((x) => [x.id, x]));
       return [...[...porId.values()].map((x) => pueblo(x, true, ahora)), ...deAmbito('VISTA:', 'pueblo').filter((x) => !ids.has(x.id)).map((x) => pueblo(x, false, ahora))];
     })(),
+    avanzadas: (() => {
+      const propias = new Map([...deAmbito('FACCION:', 'avanzada'), ...deAmbito('ASENTAMIENTO:', 'avanzada')].map((x) => [x.id, x]));
+      const de = (x: pb.Avanzada, propia: boolean): d.AvanzadaDeMapa => ({
+        id: x.id, madreId: x.asentamientoMadreId, etapa: x.etapa, posicion: punto(x.posicion), enRuinas: x.estado === pb.EstadoAvanzada.AVANZADA_EN_RUINAS,
+        batallaId: opcional(x.batallaId), propia,
+      });
+      return [...[...propias.values()].map((x) => de(x, true)), ...deAmbito('VISTA:', 'avanzada').filter((x) => !propias.has(x.id)).map((x) => de(x, false))];
+    })(),
     obrasDeMapa: (() => {
       const propias = new Map([...deAmbito('FACCION:', 'obra'), ...deAmbito('ASENTAMIENTO:', 'obra')].map((x) => [x.id, x]));
       return [...[...propias.values()].map((x) => obraDeMapa(x, true)), ...deAmbito('VISTA:', 'obra').filter((x) => !propias.has(x.id)).map((x) => obraDeMapa(x, false))];

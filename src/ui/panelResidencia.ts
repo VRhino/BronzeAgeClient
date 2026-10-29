@@ -3,6 +3,7 @@
 import { diasDeEnfriamientoDeCapital, diasDeEnfriamientoDeResidencia } from '../apiCliente';
 import { ayuda } from './ayuda';
 import type { ContextoPlaza, SubpestanaPlaza } from './ganchos';
+import { confirmar } from './dialogo';
 
 const DIA_MS = 86_400_000;
 const CARGO_NOMBRE: Record<string, string> = { gobernadorId: 'Gobernador', maestroObrasId: 'Maestro de Obras', tesoreroId: 'Tesorero', generalId: 'General', sacerdoteId: 'Sacerdote' };
@@ -51,8 +52,9 @@ function cablear(c: ContextoPlaza): void {
     if (error) error.textContent = mensaje ?? '';
   };
   cuerpo.querySelector<HTMLButtonElement>('[data-dejar-residencia]')?.addEventListener('click', (ev) => {
-    if (!window.confirm(`¿Dejar tu residencia en ${a.nombre ?? a.id}? Pierdes tu vivienda, tus cargos locales y tu guarnición aquí, y pasas a un campamento de mercenarios. Sigues en tu Facción.`)) return;
-    void lanzar(ev.currentTarget as HTMLButtonElement, 'dejarResidencia', { heroeId: p.heroeId });
+    const boton = ev.currentTarget as HTMLButtonElement;
+    void confirmar(`Pierdes tu vivienda en ${a.nombre ?? a.id}, tus cargos locales y tu guarnición aquí, y pasas a un campamento de mercenarios. Sigues en tu Facción.`, { titulo: '¿Dejar tu residencia?', aceptar: 'Dejar la residencia', peligro: true })
+      .then((ok) => { if (ok) void lanzar(boton, 'dejarResidencia', { heroeId: p.heroeId }); });
   });
   cuerpo.querySelector<HTMLButtonElement>('[data-designar-capital]')?.addEventListener('click', (ev) => void lanzar(ev.currentTarget as HTMLButtonElement, 'designarCapital', { faccionId: a.faccionId, asentamientoId: a.id }));
 }

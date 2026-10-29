@@ -1,4 +1,4 @@
-import type { ProyeccionJugador } from '../apiCliente';
+import { bloqueDeDatos, type ProyeccionJugador } from '../apiCliente';
 import type { Faccion, Sigilo } from '../tiposDominio';
 import { htmlLiga, htmlTitulos, ligaDe } from '../sigilo/imperio';
 import { CATALOGO_SIGILO, opciones, sigiloAleatorio, svgSigilo } from '../sigilo/sigilo';
@@ -69,6 +69,27 @@ function htmlResumenFaccion(p: ProyeccionJugador, faccion: Faccion, e: (valor: s
       </div>`;
 }
 
+/** La experiencia de la Facción hacia el nivel siguiente, con su barra: los umbrales acumulados de `NIVEL_FACCION.xpParaNivel` (datos del motor). */
+function htmlExperienciaFaccion(faccion: Faccion): string {
+  const reglas = bloqueDeDatos<{ nivelMaximo?: number; xpParaNivel?: number[] }>('NIVEL_FACCION');
+  const umbrales = reglas?.xpParaNivel;
+  if (!umbrales?.length || faccion.experiencia === undefined) return '';
+  const xp = faccion.experiencia;
+  const maximo = reglas?.nivelMaximo ?? umbrales.length + 1;
+  const n = (v: number) => Math.floor(v).toLocaleString('es-ES');
+  if (faccion.nivel >= maximo) {
+    return `<div class="faccion-xp"><div class="faccion-xp-cab"><span>Experiencia</span><strong>${n(xp)} · nivel máximo</strong></div><div class="faccion-xp-barra"><span style="width:100%"></span></div></div>`;
+  }
+  const desde = faccion.nivel >= 2 ? umbrales[faccion.nivel - 2] ?? 0 : 0;
+  const hasta = umbrales[faccion.nivel - 1] ?? desde;
+  const pct = hasta > desde ? Math.max(0, Math.min(100, ((xp - desde) / (hasta - desde)) * 100)) : 100;
+  return `<div class="faccion-xp" title="${n(xp - desde)} de ${n(hasta - desde)} para el nivel ${faccion.nivel + 1}">
+    <div class="faccion-xp-cab"><span>Experiencia</span><strong>${n(xp)} / ${n(hasta)}</strong></div>
+    <div class="faccion-xp-barra" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct.toFixed(1)}%"></span></div>
+    <small>Faltan ${n(hasta - xp)} para el nivel ${faccion.nivel + 1}</small>
+  </div>`;
+}
+
 /** El panel fijo de la izquierda de la ventana de Facción: el escudo grande, el nombre, el resumen y, abajo, las plazas, los títulos y Dejar la Facción. */
 export function htmlLateralFaccion(proyeccion: ProyeccionJugador, e: (valor: string) => string): string {
   const faccion = faccionDelJugador(proyeccion);
@@ -78,6 +99,7 @@ export function htmlLateralFaccion(proyeccion: ProyeccionJugador, e: (valor: str
     <div class="faccion-lateral-escudo">${svgSigilo(faccion.sigilo, 168, { granRey: esGranRey })}</div>
     <h2 class="faccion-lateral-nombre">${e(faccion.nombre)}</h2>
     <span class="faction-kicker">Tu facción${esGranRey ? ' · Gran Rey' : ''}</span>
+    ${htmlExperienciaFaccion(faccion)}
     <div class="faccion-lateral-resumen">${htmlResumenFaccion(proyeccion, faccion, e)}</div>
     <div class="faccion-lateral-pie">
       <div class="faccion-lateral-dato"><span>Plazas</span><strong>${plazasDe(proyeccion, faccion.id)}</strong></div>

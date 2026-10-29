@@ -42,7 +42,7 @@ import { actualizarSalida, cablearCampamento, campamentoActual, htmlSeccionCampa
 import { leyendaPlanoCampamento, svgPlanoCampamento } from './ui/planoCampamento';
 import type { MapaGenerado } from './terreno';
 import { estadoCliente, medirRitmoDeMundo, TIPS_FUNDACION } from './ui/estadoCliente';
-import { actualizarTip, resumenRecursosFundacion, sitiosDeAldeaAlFundar } from './ui/pestanaAsentamientos';
+import { actualizarTip, parcelasAlFundar, resumenRecursosFundacion, sitiosDeAldeaAlFundar } from './ui/pestanaAsentamientos';
 import { renderPanelInteraccion } from './ui/panelInteraccion';
 import { renderPanelMapa } from './ui/panelMapa';
 import { htmlLateralFaccion, htmlListaFacciones, PESTANAS_FACCION, renderPestanaFaccion, type PestanaFaccion } from './ui/pestanaFaccion';
@@ -88,6 +88,7 @@ import { pintarSitiosDeAldea, type SitiosDeAldea } from './mundo/fertilidad';
 import { htmlMiembrosFaccion, htmlResidentesPlaza } from './ui/participacion';
 import { cablearTablon, htmlTablon } from './ui/tablon';
 import { actualizarSeguimiento, cablearMisiones, elegirPestanaMisiones, htmlListaMisiones, htmlPanelMisiones, misionesPorReclamar, pintarRastreador } from './ui/misiones';
+import { confirmar } from './ui/dialogo';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 /** Los campamentos donde se puede nacer, de la última respuesta `sinHeroe` (pantalla Héroe). */
@@ -553,7 +554,33 @@ function avisoMapa(texto: string): void {
   avisoMapaTimer = setTimeout(() => { el.hidden = true; }, 4500);
 }
 
-async function marcharAObjetivo(objetivo: { tipo: 'punto'; punto: { x: number; y: number } } | { tipo: 'asentamiento'; id: string }): Promise<void> {
+type Objetivo = { tipo: 'punto'; punto: { x: number; y: number } } | { tipo: 'asentamiento'; id: string };
+
+/** Qué hay bajo un clic en `punto` (unidades de mundo): qué se selecciona y adónde se marcha. `null`: suelo vacío. Lo usan el modo mundo y el modo
+ * mapa (en este, solo los elementos: un clic en el suelo no mueve a nadie). */
+function objetoBajoElClic(proy: ProyeccionJugador, punto: { x: number; y: number }): { seleccion: { tipo: string; id: string }; ir?: Objetivo } | null {
+  for (const selector of SELECTORES_MAPA_EXTRA) {
+    const bajo = selector(proy, punto);
+    if (bajo) return { seleccion: { tipo: bajo.tipo, id: bajo.id }, ir: bajo.ir };
+  }
+  const batalla = cercano((proy.batallas ?? []).map((b) => ({ ...b, posicion: b.punto })), punto, agarre(20));
+  if (batalla) return { seleccion: { tipo: 'batalla', id: batalla.battleId }, ir: { tipo: 'punto', punto: batalla.punto } };
+  const formacion = cercano(formacionesVisibles(proy).map((e) => ({ ...e, posicion: e.posicionActual })), punto, agarre(20));
+  if (formacion) return { seleccion: { tipo: 'formacion', id: formacion.id }, ir: { tipo: 'punto', punto: formacion.posicionActual } };
+  const delEjercito = cercano(ejercitosDeLaFaccion(proy).filter((x) => !x.formacion).map((x) => ({ ...x, posicion: x.posicionActual })), punto, agarre(20));
+  if (delEjercito) return { seleccion: { tipo: 'ejercito', id: delEjercito.id }, ir: { tipo: 'punto', punto: delEjercito.posicionActual } };
+  const alijo = cercano(proy.alijos ?? [], punto, agarre(15));
+  if (alijo) return { seleccion: { tipo: 'alijo', id: alijo.id }, ir: { tipo: 'punto', punto: alijo.posicion } };
+  const mercenarios = cercano(proy.campamentosMercenarios ?? [], punto, agarre(30));
+  if (mercenarios) return { seleccion: { tipo: 'mercenarios', id: mercenarios.id }, ir: { tipo: 'punto', punto: mercenarios.posicion } };
+  const campamento = campamentoCercaDe(punto, proy);
+  if (campamento) return { seleccion: { tipo: 'campamento', id: campamento.id }, ir: { tipo: 'punto', punto: campamento.posicion } };
+  const asentamiento = asentamientoCercaDe(punto, proy);
+  if (asentamiento) return { seleccion: { tipo: 'asentamiento', id: asentamiento.id }, ir: { tipo: 'asentamiento', id: asentamiento.id } };
+  return null;
+}
+
+async function marcharAObjetivo(objetivo: Objetivo): Promise<void> {
   const proyeccion = estadoCliente.proyeccionUltima;
   if (!proyeccion) return;
   // Un ejército lo dirige su Líder con sus clics (backend 2026-10-08); una formación sin 3 héroes no se mueve. Si el clic abrió una ficha, no se avisa.
@@ -1142,8 +1169,8 @@ function posicionDelHeroe(p: ProyeccionJugador): { x: number; y: number } | null
   return miColumna(p)?.posicionActual ?? campamentoActual(p)?.posicion ?? p.asentamientos[0]?.posicion ?? null;
 }
 
-/** Abre o cierra el MODO MAPA (botón Mapa de la barra, en cualquier pantalla): el mapa del mundo con la visión de ahora y zoom libre, pero
- * solo para mirar: un clic no manda marchar a nadie. Se abre centrado en el héroe, o en `centro` («Mis cosas», el panel de ejército). */
+/** Abre o cierra el MODO MAPA (botón Mapa de la barra, en cualquier pantalla): el mapa del mundo con la visión de ahora y zoom libre. En el
+ * mundo, un clic sobre un elemento marcha hacia él (como en el modo mundo); en el suelo, nada. Se abre centrado en el héroe, o en `centro` («Mis cosas», el panel de ejército). */
 function alternarVistaMapa(abrir: boolean = !vistaMapaAbierta, centro?: { x: number; y: number }): void {
   const pantalla = document.querySelector<HTMLElement>('.asent-screen') ?? document.querySelector<HTMLElement>('.mapa-screen:not(.mapa-interior)');
   const proyeccion = estadoCliente.proyeccionUltima;
@@ -1163,7 +1190,20 @@ function alternarVistaMapa(abrir: boolean = !vistaMapaAbierta, centro?: { x: num
     // Eligiendo un punto, el clic lo manda; si el motor lo rechaza se dice por qué y se puede probar otro sitio.
     const alClicar = (evento: PointerEvent): void => {
       const eleccion = eleccionEnMapa;
-      if (!eleccion || !controlVistaMapa) return;
+      if (!controlVistaMapa) return;
+      // Sin elegir sitio, en el mundo: un clic sobre un elemento (plaza, campamento, pueblo, avanzada…) lo selecciona y marcha hacia él, como en
+      // el modo mundo; se vuelve al mundo para verlo. Un clic en el suelo no mueve a nadie, y desde dentro de una plaza el mapa sigue siendo para mirar.
+      if (!eleccion) {
+        const p = estadoCliente.proyeccionUltima;
+        if (!p || !controlMapaActivo) return;
+        const bajo = objetoBajoElClic(p, controlVistaMapa.aMundo(evento));
+        if (!bajo) return;
+        seleccionMapa = bajo.seleccion;
+        alternarVistaMapa(false);
+        renderSeleccionMapa();
+        if (bajo.ir) void marcharAObjetivo(bajo.ir);
+        return;
+      }
       const q = controlVistaMapa.aMundo(evento);
       const error = interior.querySelector<HTMLElement>('[data-eleccion-error]');
       if (error) error.textContent = 'Enviando…';
@@ -1417,50 +1457,11 @@ function montarMapa(): void {
     const canvas = document.querySelector<HTMLCanvasElement>('#mapa');
     if (!proy || !mapa || !canvas) return;
     const punto = puntoDeMapa(evento, canvas, mapa);
-    for (const selector of SELECTORES_MAPA_EXTRA) {
-      const bajo = selector(proy, punto);
-      if (!bajo) continue;
-      seleccionMapa = { tipo: bajo.tipo, id: bajo.id };
-      renderSeleccionMapa();
-      if (bajo.ir) void marcharAObjetivo(bajo.ir);
-      return;
-    }
-    const batalla = cercano((proy.batallas ?? []).map((b) => ({ ...b, posicion: b.punto })), punto, agarre(20));
-    const formacion = batalla ? null : cercano(formacionesVisibles(proy).map((e) => ({ ...e, posicion: e.posicionActual })), punto, agarre(20));
-    if (batalla || formacion) {
-      seleccionMapa = batalla ? { tipo: 'batalla', id: batalla.battleId } : { tipo: 'formacion', id: formacion!.id };
-      renderSeleccionMapa();
-      void marcharAObjetivo({ tipo: 'punto', punto: batalla ? batalla.punto : formacion!.posicionActual });
-      return;
-    }
-    const delEjercito = cercano(ejercitosDeLaFaccion(proy).filter((x) => !x.formacion).map((x) => ({ ...x, posicion: x.posicionActual })), punto, agarre(20));
-    if (delEjercito) {
-      seleccionMapa = { tipo: 'ejercito', id: delEjercito.id };
-      renderSeleccionMapa();
-      void marcharAObjetivo({ tipo: 'punto', punto: delEjercito.posicionActual });
-      return;
-    }
-    const alijo = cercano(proy.alijos ?? [], punto, agarre(15));
-    const mercenarios = alijo ? null : cercano(proy.campamentosMercenarios ?? [], punto, agarre(30));
-    const campamento = alijo || mercenarios ? null : campamentoCercaDe(punto, proy);
-    const asentamiento = alijo || mercenarios || campamento ? null : asentamientoCercaDe(punto, proy);
-    if (alijo || mercenarios) {
-      seleccionMapa = alijo ? { tipo: 'alijo', id: alijo.id } : { tipo: 'mercenarios', id: mercenarios!.id };
-      renderSeleccionMapa();
-      void marcharAObjetivo({ tipo: 'punto', punto: (alijo ?? mercenarios)!.posicion });
-    } else if (campamento) {
-      seleccionMapa = { tipo: 'campamento', id: campamento.id };
-      renderSeleccionMapa();
-      void marcharAObjetivo({ tipo: 'punto', punto: campamento.posicion });
-    } else if (asentamiento) {
-      seleccionMapa = { tipo: 'asentamiento', id: asentamiento.id };
-      renderSeleccionMapa();
-      void marcharAObjetivo({ tipo: 'asentamiento', id: asentamiento.id });
-    } else {
-      seleccionMapa = null;
-      renderSeleccionMapa();
-      void marcharAObjetivo({ tipo: 'punto', punto });
-    }
+    const bajo = objetoBajoElClic(proy, punto);
+    seleccionMapa = bajo?.seleccion ?? null;
+    renderSeleccionMapa();
+    if (!bajo) void marcharAObjetivo({ tipo: 'punto', punto });
+    else if (bajo.ir) void marcharAObjetivo(bajo.ir);
   };
   // MODO MUNDO: la vista va pegada al héroe con dos zooms, la visión llenando la pantalla y 1,5 veces la visión, y se pinta lo que cabe en
   // pantalla; lo que no se ve lo tapa la niebla. Mirar más lejos es el modo mapa (botón Mapa). La vista guardada solo aporta panel y selección.
@@ -1556,7 +1557,7 @@ async function mudarseAEstaPlaza(): Promise<void> {
   const guarnicion = p.heroe.escuadrones.some((s) => s.enGuarnicion);
   const aviso = `Vas a hacer de ${a.nombre ?? a.id} tu base: dejas de residir donde vives ahora y tu campamento se muda contigo.${prestadas.length > 0 ? ` Se te retira la tropa prestada por tu campamento anterior (${prestadas.map((s) => `${s.nombre}: ${s.cantidad}`).join(', ')}).` : ''}${guarnicion ? ' Tu guarnición se suelta.' : ''} Después hay que esperar un tiempo para volver a mudarte. ¿Seguro?`;
   const error = document.querySelector<HTMLElement>('#asent-lado-error');
-  if (!confirm(aviso)) return;
+  if (!(await confirmar(aviso, { titulo: '¿Hacer de esta plaza tu base?', aceptar: 'Hacerla mi base' }))) return;
   const mensaje = await ejecutarYRefrescar('cambiarResidencia', { destinoId: a.id, heroeId: p.heroeId });
   if (error) error.textContent = mensaje ?? '';
 }
@@ -2334,7 +2335,7 @@ async function dibujarPantallaSegunModo(proyeccion: ProyeccionJugador): Promise<
     else { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillText('No perteneces a ningún asentamiento aún.', 20, 40); }
   }
   if (estadoCliente.modoFundacionActivo && estadoCliente.posicionFundacion && estadoCliente.mapaCache?.mapa) {
-    pintarPrevisualizacionFundacion(ctx, estadoCliente.mapaCache.mapa, estadoCliente.posicionFundacion, escalaMundo, sitiosDeAldeaAlFundar(estadoCliente.posicionFundacion));
+    pintarPrevisualizacionFundacion(ctx, estadoCliente.mapaCache.mapa, estadoCliente.posicionFundacion, escalaMundo, sitiosDeAldeaAlFundar(estadoCliente.posicionFundacion), parcelasAlFundar(estadoCliente.posicionFundacion));
   }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
 }

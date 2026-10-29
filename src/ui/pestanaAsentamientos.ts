@@ -3,7 +3,7 @@ import type { Faccion } from '../tiposDominio';
 import { ayuda } from './ayuda';
 import { densidadBosqueEn } from '../mundo/pintarArtefacto';
 import { sitiosDeAldea, type SitiosDeAldea } from '../mundo/fertilidad';
-import { ocupadosParaAldea, reglasDeAldea } from './pueblos';
+import { dentro, fuentesOcupadas, ocupadosParaAldea, reglasDeAldea } from './pueblos';
 import { RECURSO_NOMBRE } from '../paletas';
 import { CAP_FUNDACION_POR_NIVEL, estadoCliente, TIPS_FUNDACION } from './estadoCliente';
 import { renderPestanaMuralla } from './pestanaMuralla';
@@ -16,6 +16,36 @@ export function sitiosDeAldeaAlFundar(posicion: { x: number; y: number }): Sitio
   const { fertilidadMinima, separacionMinima } = reglasDeAldea();
   // La plaza nueva también ocupa: la aldea va a `separacionMinima` de ella.
   return sitiosDeAldea(mapa, { centro: posicion, radio: radioZonaInicial() }, [...ocupadosParaAldea(p), posicion], fertilidadMinima, separacionMinima);
+}
+
+export type EstadoParcela = 'libre' | 'ocupada' | 'ajena';
+export interface ParcelaAlFundar { centro: { x: number; y: number }; estado: EstadoParcela }
+
+/** Las parcelas de bosque dentro del círculo de fundar: `libre` (cabría una Leñera de la plaza nueva), `ocupada` (ya tiene una Leñera que el cliente
+ * conoce) o `ajena` (cae en la zona de otra plaza conocida, que no la cede). De las plazas ajenas no se ven sus Leñeras: las de dentro de su zona
+ * cuentan como ajenas y las que no se conocen cuentan como libres. */
+export function parcelasAlFundar(posicion: { x: number; y: number }): ParcelaAlFundar[] {
+  const mapa = estadoCliente.mapaCache?.mapa;
+  const p = estadoCliente.proyeccionUltima;
+  if (!mapa || !p) return [];
+  const radio = radioZonaInicial();
+  const ocupadas = fuentesOcupadas(p);
+  const zonas: ((q: { x: number; y: number }) => boolean)[] = [
+    ...p.asentamientos.filter((a) => (a.zonaReal?.length ?? 0) > 2).map((a) => (q: { x: number; y: number }) => dentro(q, a.zonaReal!)),
+    ...(p.asentamientosAvistados ?? []).filter((a) => a.zona.length > 2).map((a) => (q: { x: number; y: number }) => dentro(q, a.zona)),
+    ...(p.asentamientosConocidos ?? []).filter((a) => a.radioPotencial).map((a) => (q: { x: number; y: number }) => Math.hypot(q.x - a.posicion.x, q.y - a.posicion.y) <= a.radioPotencial!),
+  ];
+  return (mapa.parcelas ?? [])
+    .filter((x) => Math.hypot(x.centro.x - posicion.x, x.centro.y - posicion.y) <= radio)
+    .map((x) => ({ centro: x.centro, estado: ocupadas.has(x.id) ? 'ocupada' : zonas.some((z) => z(x.centro)) ? 'ajena' : 'libre' }));
+}
+
+/** Cuántas Leñeras aprovecharía la plaza nueva: las parcelas libres del círculo. */
+function htmlParcelasAlFundar(parcelas: ParcelaAlFundar[]): string {
+  const libres = parcelas.filter((x) => x.estado === 'libre').length;
+  const otras = parcelas.length - libres;
+  if (parcelas.length === 0) return '<span class="fundacion-gate falta">Ninguna parcela de bosque en la zona inicial: no habrá Leñeras hasta que la zona crezca.</span>';
+  return `<span class="fundacion-gate ${libres ? 'ok' : 'falta'}">${libres} parcela${libres === 1 ? '' : 's'} de bosque libre${libres === 1 ? '' : 's'} en la zona inicial: ${libres === 1 ? 'cabe 1 Leñera' : `caben ${libres} Leñeras`}${otras ? ` (${otras} más ocupada${otras === 1 ? '' : 's'} o en la zona de otra plaza)` : ''}. En verde en el mapa.</span>`;
 }
 
 export function resumenRecursosFundacion(escaparHtml: (valor: string) => string): string {
@@ -42,6 +72,7 @@ export function resumenRecursosFundacion(escaparHtml: (valor: string) => string)
     <div class="foundation-resources">
       ${enBosqueCerrado ? '<span class="fundacion-gate falta">Bosque cerrado: aquí no se puede fundar. Busca la orilla o un claro.</span>' : ''}
       ${htmlAldeaAlFundar(sitiosDeAldeaAlFundar(posicion))}
+      ${htmlParcelasAlFundar(parcelasAlFundar(posicion))}
       <strong>Recursos en la zona inicial</strong>
       <span class="resource-summary-label">${nodos.length > 0 ? `${nodos.length} nodo${nodos.length === 1 ? '' : 's'} dentro del alcance` : 'Ningún nodo de recurso dentro del alcance'}</span>
       ${nodos.length > 0 ? `<div class="resource-summary-list">${nodos.map((nodo) => `<span><b>${escaparHtml(RECURSO_NOMBRE[nodo.tipo] ?? nodo.tipo)}</b> · ${escaparHtml(nodo.rareza)} · ${nodo.cantidadInicial} uds.</span>`).join('')}</div>` : ''}

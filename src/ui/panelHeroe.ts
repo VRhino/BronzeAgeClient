@@ -8,6 +8,7 @@ import type { AtributoHeroe, HeroeProyectado, Loadout } from '../tiposDominio';
 import { ayuda } from './ayuda';
 import { estadoCliente } from './estadoCliente';
 import { invalidar, pintar } from './repintado';
+import { confirmar } from './dialogo';
 
 /** Manda el comando, comprueba `resultado.ok` y refresca; devuelve el mensaje de error o `null`. Lo pone `main.ts`. */
 export type Aplicar = (peticion: Promise<RespuestaComando>) => Promise<string | null>;
@@ -192,7 +193,7 @@ function cablear(panel: HTMLElement, h: HeroeProyectado, e: Escapar, aplicar: Ap
         if (elegido) void accion(boton, () => guardarLoadout(gameId, { loadoutId: elegido.id, displayName: elegido.displayName, squadIds: elegido.squadIds, perksSeleccionados: elegido.perksSeleccionados, activo: true }));
         return;
       case 'borrar':
-        if (elegido && confirm(`¿Borrar el loadout «${elegido.displayName}»?`)) void accion(boton, () => borrarLoadout(gameId, elegido.id));
+        if (elegido) void confirmar(`Se borra el loadout «${elegido.displayName}».`, { titulo: '¿Borrar el loadout?', aceptar: 'Borrar', peligro: true }).then((ok) => { if (ok) void accion(boton, () => borrarLoadout(gameId, elegido.id)); });
         return;
       case 'nuevo': borrador = { displayName: '', squadIds: new Set(), activo: false }; repintar(); return;
       case 'editar':

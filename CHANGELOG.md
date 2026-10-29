@@ -3,6 +3,25 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.49.0] — 2026-10-29 · mapa, territorio, avisos y experiencia de Facción · sync con `VRhino/BronzeAge@fd9cd58`
+
+### Añadido
+- **Modo mapa**: en el mundo, un clic sobre una plaza, un campamento (de mercenarios o de bandidos), un pueblo, una avanzada, un alijo, una
+  batalla o un ejército lo selecciona y marcha hacia él, como en el modo mundo, y vuelve al mundo. Un clic en el suelo no mueve a nadie, y desde
+  dentro de una plaza el mapa sigue siendo solo para mirar.
+- **Avanzadas en el mapa** (atalaya, fuerte y ciudadela, propias y ajenas a la vista), con su ficha. En el mundo, un clic en un pueblo o una
+  avanzada también lleva tu columna hacia él.
+- **Círculo de fundar**: las parcelas de bosque de la zona inicial, en verde las libres (una Leñera cada una) y en rojo las ocupadas o en la
+  zona de otra plaza conocida, y en el panel cuántas Leñeras cabrían.
+- **Plaza → «Territorio»** (antes «Pueblos»): arriba, lo que hay ahora en su zona de influencia, nodos por tipo y parcelas de bosque, libres y
+  ocupados; debajo, sus pueblos como antes.
+- **Barra de experiencia** de la Facción en el panel de la izquierda, con los umbrales de nivel de los datos del motor.
+
+### Cambiado
+- **Confirmaciones con un cuadro del juego** en vez del `confirm` del navegador: hacer de una plaza tu base, residir en un campamento, dejar la
+  residencia o la Facción, traspasar el trono, replegar el ejército, borrar un loadout, destruir un pueblo, desarmar la Caravana de Fundación y
+  la diplomacia (guerra, vasallaje, romper, rebelarse). Escape cancela e Intro acepta.
+
 ## [0.48.0] — 2026-10-29 · Facción sin Resumen y con Plazas · sync con `VRhino/BronzeAge@fd9cd58`
 
 ### Añadido

@@ -14,6 +14,7 @@ import { ayuda } from './ayuda';
 import { nombreDeHeroe } from './nombres';
 import { textoEnTiempoReal } from './estadoCliente';
 import { cablearCarro, htmlCarro, type Ejecutar } from './panelCarro';
+import { confirmar } from './dialogo';
 
 type Escapar = (valor: string) => string;
 
@@ -160,7 +161,7 @@ export function cablearPanelEjercito(raiz: ParentNode, p: ProyeccionJugador, eje
       case 'forzada': return void (mi && enviar(b, 'marchaForzada', { ejercitoId: mi.id, activa: !mi.marchaForzada }));
       case 'estacionar': return void (mi && enviar(b, 'estacionarEjercito', { ejercitoId: mi.id }));
       case 'replegar':
-        if (mi && confirm('¿Replegar el ejército? Cancela la marcha y todos vuelven a su origen.')) void enviar(b, 'replegarEjercito', { ejercitoId: mi.id });
+        if (mi) void confirmar('Cancela la marcha y todos vuelven a su origen.', { titulo: '¿Replegar el ejército?', aceptar: 'Replegar' }).then((ok) => { if (ok) void enviar(b, 'replegarEjercito', { ejercitoId: mi.id }); });
         return;
       case 'ceder': {
         const sucesorId = raiz.querySelector<HTMLSelectElement>('#ej-sucesor')?.value;

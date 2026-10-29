@@ -6,7 +6,7 @@
 //   3. esperar  con todo entregado arranca la obra (4-8 h) y el pueblo queda activo.
 // La aldea sube de nivel igual (`mejorarAldea` deja otra obra de materiales) y sigue produciendo mientras tanto. Aquí no se decide ninguna regla: las
 // cifras salen de `GET /v1/datos` y el motor valida; su rechazo se enseña tal cual.
-//   plaza      la subpestaña «Pueblos» del Centro urbano (`SUBPESTANA_PUEBLOS`): cupo, lista, marcar, mejorar, reponer carro, destruir
+//   plaza      la subpestaña «Territorio» del Centro urbano (lo que hay en su zona y sus pueblos) (`SUBPESTANA_PUEBLOS`): cupo, lista, marcar, mejorar, reponer carro, destruir
 //   mapa       los pueblos y las obras se pintan (`dibujarPueblosYObras`) y se seleccionan (`seleccionarPuebloUObra`, fichas `FICHA_PUEBLO`/`FICHA_OBRA`)
 //   ascenso    la subida de nivel de la plaza con sus requisitos (`htmlAscensoLocal`): el nivel 2 pide ya una aldea activa
 //   dentro     se entra en un pueblo activo como de visita, con la columna entera (`entrarEnPueblo` / `salirDePueblo`); dentro se gestiona con esa
@@ -14,7 +14,7 @@
 import { bloqueDeDatos, catalogoDeCaravanas, radioDePuerta, type ProyeccionJugador } from '../apiCliente';
 import { estadoCliente, textoEnTiempoReal } from './estadoCliente';
 import { EDIFICIO_NOMBRE, RECURSO_NOMBRE, faccionColor } from '../paletas';
-import type { Asentamiento, ObraDeMapa, Point, PuebloDeMapa } from '../tiposDominio';
+import type { Asentamiento, AvanzadaDeMapa, ObraDeMapa, Point, PuebloDeMapa } from '../tiposDominio';
 import { ayuda } from './ayuda';
 import { plegable } from './plegable';
 import { agarre } from './agarre';
@@ -26,6 +26,7 @@ import { cablearEscolta, escolta, puntosDeEscolta } from './panelMercado';
 import type { Ejecutar } from './panelCarro';
 import { nombreDeHeroe } from './nombres';
 import { chipLiderazgo } from './liderazgo';
+import { confirmar } from './dialogo';
 
 type Escapar = (valor: string) => string;
 
@@ -84,7 +85,7 @@ function nombrePlaza(p: ProyeccionJugador, id: string): string {
 }
 
 /** ¿Está `q` dentro del polígono `zona`? (par-impar). */
-function dentro(q: Point, zona: Point[]): boolean {
+export function dentro(q: Point, zona: Point[]): boolean {
   let c = false;
   for (let i = 0, j = zona.length - 1; i < zona.length; j = i++) {
     const a = zona[i]!, b = zona[j]!;
@@ -120,7 +121,49 @@ function nodosLibres(p: ProyeccionJugador, a: Asentamiento): { id: string; tipo:
     .sort((x, y) => x.d - y.d);
 }
 
-// ---------------------------------------------------------------- plaza: subpestaña «Pueblos»
+// ---------------------------------------------------------------- plaza: lo que hay en su zona
+
+const NOMBRE_NODO: Record<string, string> = { piedra: 'Piedra', cobre: 'Cobre', estano: 'Estaño', hierro: 'Hierro', oro: 'Oro', ganado: 'Ganado' };
+
+/** Lo que ocupa un nodo o una parcela: los edificios que lo explotan (`fuenteId`, de las plazas que el cliente ve por dentro) y los pueblos y obras. */
+export function fuentesOcupadas(p: ProyeccionJugador): Set<string> {
+  return new Set([
+    ...[...p.asentamientos, ...(p.asentamientosAvistados ?? [])].flatMap((x) => (x.edificios ?? []).map((ed) => ed.fuenteId)),
+    ...(p.pueblos ?? []).map((x) => x.nodoId),
+    ...(p.obrasDeMapa ?? []).map((o) => o.nodoId),
+  ].filter((x): x is string => Boolean(x)));
+}
+
+/** Las parcelas de bosque de dentro de `zona` (un polígono) o de un círculo, con si están ocupadas. */
+export function parcelasEn(p: ProyeccionJugador, dentroDe: (q: Point) => boolean): { libres: number; ocupadas: number } {
+  const ocupadas = fuentesOcupadas(p);
+  const todas = (estadoCliente.mapaCache?.mapa.parcelas ?? []).filter((x) => dentroDe(x.centro));
+  const usadas = todas.filter((x) => ocupadas.has(x.id)).length;
+  return { libres: todas.length - usadas, ocupadas: usadas };
+}
+
+/** La cabecera de la pestaña Territorio: lo que hay ahora en la zona de influencia de la plaza, nodos (libres y ocupados) y parcelas de bosque. */
+function htmlZona(p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
+  const zona = a.zonaReal;
+  if (!zona || zona.length < 3 || !estadoCliente.mapaCache) return '<p class="asent-lado-nota">La zona de la plaza aún no ha llegado.</p>';
+  const ocupadas = fuentesOcupadas(p);
+  const nodos = estadoCliente.mapaCache.mapa.nodos.filter((n) => dentro(n.posicion, zona));
+  const porTipo = new Map<string, { libres: number; ocupados: number }>();
+  for (const n of nodos) {
+    const t = porTipo.get(n.tipo) ?? { libres: 0, ocupados: 0 };
+    if (ocupadas.has(n.id)) t.ocupados++; else t.libres++;
+    porTipo.set(n.tipo, t);
+  }
+  const parcelas = parcelasEn(p, (q) => dentro(q, zona));
+  const fila = (nombre: string, libres: number, ocupados: number, ocupadoPor: string) =>
+    `<tr><td>${e(nombre)}</td><td class="zona-libre">${libres}</td><td class="zona-ocupada">${ocupados}</td><td>${libres + ocupados}</td><td class="zona-por">${e(ocupadoPor)}</td></tr>`;
+  const filas = [...porTipo.entries()].sort(([x], [y]) => x.localeCompare(y)).map(([t, n]) => fila(`Nodo de ${NOMBRE_NODO[t] ?? t}`, n.libres, n.ocupados, t === 'ganado' ? 'edificio' : 'pueblo o edificio'));
+  filas.push(fila('Parcelas de bosque', parcelas.libres, parcelas.ocupadas, 'Leñera'));
+  return `<span class="faction-kicker">Zona de influencia${ayuda('plaza:zona', 'Lo que cae ahora dentro de la zona de la plaza (crece con su nivel y con las fronteras de las vecinas). Un nodo lo ocupa un pueblo o un edificio que lo explota; una parcela de bosque, una Leñera.')}</span>
+    <table class="zona-tabla"><thead><tr><th></th><th>Libres</th><th>Ocupados</th><th>Total</th><th>Lo ocupa</th></tr></thead><tbody>${filas.join('')}</tbody></table>`;
+}
+
+// ---------------------------------------------------------------- plaza: subpestaña «Territorio» (la zona y sus pueblos)
 
 function htmlAlmacen(x: PuebloDeMapa): string {
   const partes = Object.entries(x.almacen).map(([r, n]) => `${n0(n)} ${r ? RECURSO_NOMBRE[r] ?? r : ''}`.trim());
@@ -213,7 +256,8 @@ function htmlPueblos(c: ContextoPlaza): string {
   const { pueblos, obras } = deLaPlaza(p, a);
   const gestiona = c.cargo !== null && c.resideAqui;
   const { usados, total } = cupo(p, a);
-  return `<span class="faction-kicker">Pueblos ${ayuda('plaza:pueblos', 'Un pueblo es de la plaza: se marca aquí, una columna de tu Facción lleva sus materiales hasta la obra en el mapa y los entrega a su puerta (cualquier ciudadano de la columna), y con todo entregado se levanta. Su carro acarrea lo que produce a la plaza.')}</span>
+  return `${htmlZona(p, a, e)}
+    <span class="faction-kicker">Pueblos ${ayuda('plaza:pueblos', 'Un pueblo es de la plaza: se marca aquí, una columna de tu Facción lleva sus materiales hasta la obra en el mapa y los entrega a su puerta (cualquier ciudadano de la columna), y con todo entregado se levanta. Su carro acarrea lo que produce a la plaza.')}</span>
     <p class="asent-lado-nota">Cupo ${usados} / ${total ?? '—'} (por el nivel de la plaza).</p>
     ${pueblos.length + obras.length === 0 ? '<p class="mapa-lista-vacia">Esta plaza aún no tiene pueblos.</p>'
       : `<div class="mapa-lista">${pueblos.map((x) => htmlFilaPueblo(p, a, x, gestiona, obras, e)).join('')}${obras.map((o) => htmlFilaObra(p, o, gestiona, e)).join('')}</div>`}
@@ -267,7 +311,11 @@ function cablearPueblos(c: ContextoPlaza): void {
       case 'mejorar': return void enviar(b, 'mejorarAldea', { heroeId: p.heroeId, puebloId });
       case 'carro': return void enviar(b, 'reponerCarroDeAcarreo', { heroeId: p.heroeId, puebloId });
       case 'destruir':
-        if (confirm(puebloId.startsWith('pueblo-') && (p.pueblos ?? []).some((x) => x.id === puebloId) ? '¿Destruir el pueblo? No se recupera nada de lo que guarda ni de lo que costó.' : '¿Cancelar la obra? Lo entregado no se devuelve.')) void enviar(b, 'destruirPueblo', { heroeId: p.heroeId, puebloId });
+        {
+        const pueblo = puebloId.startsWith('pueblo-') && (p.pueblos ?? []).some((x) => x.id === puebloId);
+        void confirmar(pueblo ? 'No se recupera nada de lo que guarda ni de lo que costó.' : 'Lo entregado no se devuelve.', { titulo: pueblo ? '¿Destruir el pueblo?' : '¿Cancelar la obra?', aceptar: pueblo ? 'Destruir' : 'Cancelar la obra', cancelar: 'Volver', peligro: true })
+          .then((ok) => { if (ok) void enviar(b, 'destruirPueblo', { heroeId: p.heroeId, puebloId }); });
+      }
         return;
       case 'marcar-nodo': {
         const nodoId = cuerpo.querySelector<HTMLSelectElement>('[data-pueblo-nodo]')?.value;
@@ -282,7 +330,7 @@ function cablearPueblos(c: ContextoPlaza): void {
   }));
 }
 
-export const SUBPESTANA_PUEBLOS: SubpestanaPlaza = { id: 'pueblos', etiqueta: 'Pueblos', html: htmlPueblos, cablear: cablearPueblos };
+export const SUBPESTANA_PUEBLOS: SubpestanaPlaza = { id: 'pueblos', etiqueta: 'Territorio', html: htmlPueblos, cablear: cablearPueblos };
 
 // ---------------------------------------------------------------- subida de nivel de la plaza
 
@@ -349,6 +397,12 @@ export function dibujarPueblosYObras(ctx: CanvasRenderingContext2D, p: Proyeccio
   for (const x of p.pueblos ?? []) {
     dibujarIconoMapa(ctx, esAldea(x) ? 'aldea' : 'pueblo', x.posicion.x * escala, x.posicion.y * escala, 14 * k, color(x.madreId, x.propio));
   }
+  for (const x of p.avanzadas ?? []) {
+    ctx.save();
+    if (x.enRuinas) ctx.globalAlpha = 0.5;
+    dibujarIconoMapa(ctx, 'avanzada', x.posicion.x * escala, x.posicion.y * escala, (11 + 2 * x.etapa) * k, color(x.madreId, x.propia));
+    ctx.restore();
+  }
   ctx.save();
   for (const o of p.obrasDeMapa ?? []) {
     if (o.tipo === 'mejoraAldea') continue; // la aldea ya se pinta; su mejora se ve en su ficha
@@ -358,17 +412,34 @@ export function dibujarPueblosYObras(ctx: CanvasRenderingContext2D, p: Proyeccio
   ctx.restore();
 }
 
-/** Qué pueblo u obra hay bajo el clic. A una obra propia, el clic además lleva tu columna (para entregar a su puerta). */
+/** Qué pueblo, avanzada u obra hay bajo el clic. Con columna, el clic además la lleva hacia el pueblo, la avanzada o la obra propia sin terminar. */
 export function seleccionarPuebloUObra(p: ProyeccionJugador, punto: Point): ObjetoBajoElClic | null {
   const candidatos = [
     ...(p.obrasDeMapa ?? []).filter((o) => o.tipo !== 'mejoraAldea').map((o) => ({ tipo: 'obraMapa', id: o.id, d: distancia(o.posicion, punto), o })),
-    ...(p.pueblos ?? []).map((x) => ({ tipo: 'puebloMapa', id: x.id, d: distancia(x.posicion, punto), o: undefined })),
+    ...(p.pueblos ?? []).map((x) => ({ tipo: 'puebloMapa', id: x.id, d: distancia(x.posicion, punto), o: undefined, posicion: x.posicion })),
+    ...(p.avanzadas ?? []).map((x) => ({ tipo: 'avanzadaMapa', id: x.id, d: distancia(x.posicion, punto), o: undefined, posicion: x.posicion })),
   ].filter((c) => c.d < agarre(12)).sort((a, b) => a.d - b.d);
   const c = candidatos[0];
   if (!c) return null;
-  const ir = c.o?.propia && !c.o.terminaEn && miColumna(p) ? { tipo: 'punto' as const, punto: c.o.posicion } : undefined;
+  // Con columna, el clic lleva hacia el pueblo o la avanzada (como a una plaza) y a una obra propia sin terminar (para entregar a su puerta).
+  const destino = c.o ? (c.o.propia && !c.o.terminaEn ? c.o.posicion : undefined) : c.posicion;
+  const ir = destino && miColumna(p) ? { tipo: 'punto' as const, punto: destino } : undefined;
   return { tipo: c.tipo, id: c.id, ...(ir ? { ir } : {}) };
 }
+
+const ETAPA_AVANZADA: Record<number, string> = { 1: 'Atalaya', 2: 'Fuerte', 3: 'Ciudadela' };
+
+/** La ficha de una avanzada: qué es, de qué plaza y si está en ruinas o la atacan. */
+export const FICHA_AVANZADA: FichaMapaExtra = {
+  tipo: 'avanzadaMapa',
+  buscar: (p, id) => (p.avanzadas ?? []).find((x) => x.id === id),
+  html: (p, x: AvanzadaDeMapa, c) => {
+    const e = c.escapar;
+    return `<span class="faction-kicker">${x.propia ? 'Avanzada de tu Facción' : 'Avanzada ajena'}</span>
+      <h3>${e(ETAPA_AVANZADA[x.etapa] ?? 'Avanzada')}</h3>
+      <p class="asent-lado-nota">De ${e(nombrePlaza(p, x.madreId))}.${x.enRuinas ? ' En ruinas.' : ''}${x.batallaId ? ' <strong>La están atacando.</strong>' : ''}</p>`;
+  },
+};
 
 export const FICHA_PUEBLO: FichaMapaExtra = {
   tipo: 'puebloMapa',

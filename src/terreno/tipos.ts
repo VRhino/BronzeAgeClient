@@ -78,6 +78,8 @@ export interface MapaGenerado {
   config: WorldConfig;
   bosques: ZonaBosque[];
   nodos: NodoRecurso[];
+  /** Las parcelas de bosque del artefacto: el cupo de Leñeras (una por parcela; ocupada cuando un edificio la tiene en `fuenteId`). */
+  parcelas?: { id: string; bosqueId: string; centro: Point; densidad: number }[];
   /** Solo en el mapa del backend TypeScript (el ruido que este cliente recalculaba); el del motor en Rust trae `rasters`. */
   fertilidad?: CampoFertilidad;
   elevacion?: CampoElevacion;

@@ -9,7 +9,7 @@ import { cargarMundo } from './mundo/artefacto';
 import { instante, proyectar } from './motor/proyeccion';
 import { ComandoDesconocido, traducirOrden } from './motor/ordenes';
 
-import type { AcuerdoTrueque, AedaAvistado, AedaResidenteProyectado, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, CaravanaAvistada, Convocatoria, Ejercito, EjercitoAvistado, EscenaCampamento, EvaluacionAscenso, EventoDominio, Faccion, HeroeProyectado, HeroePublico, InformeDeInspeccion, ObraDeMapa, PuebloDeMapa, InformePlaza, MiradaIntel, Mision, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, PropuestaAnexion, PropuestaFusion, PropuestaRelacion, RelacionPolitica, Sigilo, TarifasIntel, TecnologiaJugador, Titulo, TrazadoAsentamiento, ZonaFaccion } from './tiposDominio';
+import type { AcuerdoTrueque, AedaAvistado, AvanzadaDeMapa, AedaResidenteProyectado, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, CaravanaAvistada, Convocatoria, Ejercito, EjercitoAvistado, EscenaCampamento, EvaluacionAscenso, EventoDominio, Faccion, HeroeProyectado, HeroePublico, InformeDeInspeccion, ObraDeMapa, PuebloDeMapa, InformePlaza, MiradaIntel, Mision, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, PropuestaAnexion, PropuestaFusion, PropuestaRelacion, RelacionPolitica, Sigilo, TarifasIntel, TecnologiaJugador, Titulo, TrazadoAsentamiento, ZonaFaccion } from './tiposDominio';
 
 export class ApiError extends Error {
   constructor(
@@ -100,6 +100,7 @@ export interface ProyeccionJugador {
   alijos: Alijo[];
   /** Pueblos activos y obras de mapa: los de tu Facción con todo, los ajenos que se ven solo con dónde y qué. */
   pueblos?: PuebloDeMapa[];
+  avanzadas?: AvanzadaDeMapa[];
   obrasDeMapa?: ObraDeMapa[];
   /** Tus Miradas de las tabernas, abiertas o enfriándose (backend 2026-10-05, Doc 5.12.10). Lo que dejan ver llega por las listas de avistados. */
   miradasIntel: MiradaIntel[];

@@ -646,6 +646,18 @@ export interface CampamentoMercenarios {
   fondos: Record<string, Record<string, number>>;
 }
 
+/** Una avanzada en el mapa (atalaya, fuerte o ciudadela de una plaza madre). `propia` = de tu Facción. */
+export interface AvanzadaDeMapa {
+  id: string;
+  madreId: string;
+  /** 1 atalaya, 2 fuerte, 3 ciudadela. */
+  etapa: number;
+  posicion: Point;
+  enRuinas: boolean;
+  batallaId?: string;
+  propia: boolean;
+}
+
 /** Un pueblo activo (Economia_Construccion §14): un extractor sobre su nodo o una aldea agrícola en su punto (motor 7086ebc). `propio` = de tu
  * Facción (llega de `FACCION`/`ASENTAMIENTO` con todo); los ajenos llegan de la `VISTA` solo con dónde están y qué son. */
 export interface PuebloDeMapa {

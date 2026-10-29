@@ -7,6 +7,7 @@ import { textoEnTiempoReal } from './estadoCliente';
 import { ayuda } from './ayuda';
 import type { ContextoPlaza } from './ganchos';
 import { nombreDeHeroe } from './nombres';
+import { confirmar } from './dialogo';
 
 const ESTADO: Record<string, string> = {
   disponible: 'esperando dentro',
@@ -85,6 +86,6 @@ export function cablearFundacionDePlaza(c: ContextoPlaza): void {
   c.cuerpo.querySelector<HTMLButtonElement>('[data-lanzar-fundacion]')?.addEventListener('click', (ev) =>
     void lanzar(ev.currentTarget as HTMLButtonElement, 'lanzarCaravanaFundacion', { origenAsentamientoId: c.asentamiento.id }));
   c.cuerpo.querySelectorAll<HTMLButtonElement>('[data-desarmar]').forEach((b) => b.addEventListener('click', () => {
-    if (confirm('¿Desarmar la Caravana de Fundación? El coste vuelve al almacén de la plaza.')) void lanzar(b, 'desarmarCaravanaFundacion', { caravanaId: b.dataset.desarmar! });
+    void confirmar('El coste vuelve al almacén de la plaza.', { titulo: '¿Desarmar la Caravana de Fundación?', aceptar: 'Desarmar' }).then((ok) => { if (ok) void lanzar(b, 'desarmarCaravanaFundacion', { caravanaId: b.dataset.desarmar! }); });
   }));
 }

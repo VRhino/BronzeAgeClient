@@ -13,7 +13,7 @@ import { cablearTesoreria, htmlTesoreria } from './panelTesoreria';
 import { SUBPESTANA_INFORMACION } from './vistaCiudad';
 import { SUBPESTANA_TRUEQUES } from './panelTrueques';
 import { SUBPESTANA_MISIONES } from './misiones';
-import { FICHA_OBRA, FICHA_PUEBLO, SUBPESTANA_PUEBLOS, seleccionarPuebloUObra } from './pueblos';
+import { FICHA_AVANZADA, FICHA_OBRA, FICHA_PUEBLO, SUBPESTANA_PUEBLOS, seleccionarPuebloUObra } from './pueblos';
 import { FICHA_CARAVANA_AJENA, FICHA_COLUMNA_AJENA, seleccionarAjeno } from './interaccionAjena';
 
 type Escapar = (valor: string) => string;
@@ -108,6 +108,7 @@ export const FICHAS_MAPA_EXTRA: FichaMapaExtra[] = [
 
   // --- hueco pueblos (pueblos y obras de mapa)
   FICHA_PUEBLO,
+  FICHA_AVANZADA,
   FICHA_OBRA,
 ];
 

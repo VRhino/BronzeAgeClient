@@ -1054,7 +1054,8 @@ export function pintarPrevisualizacionFundacion(
   mapa: MapaGenerado,
   posicion: Point,
   escalaCanvas: number,
-  sitiosAldea?: SitiosDeAldea | null
+  sitiosAldea?: SitiosDeAldea | null,
+  parcelas: { centro: Point; estado: 'libre' | 'ocupada' | 'ajena' }[] = []
 ): void {
   const x = posicion.x * escalaCanvas;
   const y = posicion.y * escalaCanvas;
@@ -1072,6 +1073,16 @@ export function pintarPrevisualizacionFundacion(
   ctx.stroke();
   ctx.setLineDash([]);
   if (sitiosAldea) pintarSitiosDeAldea(ctx, sitiosAldea, escalaCanvas);
+  // Las parcelas de bosque del círculo: en verde las libres (una Leñera cada una), en rojo apagado las ocupadas o de otra plaza.
+  for (const q of parcelas) {
+    ctx.beginPath();
+    ctx.arc(q.centro.x * escalaCanvas, q.centro.y * escalaCanvas, Math.max(4, 2 * escalaCanvas), 0, Math.PI * 2);
+    ctx.fillStyle = q.estado === 'libre' ? 'rgba(120, 220, 110, 0.55)' : 'rgba(200, 90, 70, 0.4)';
+    ctx.fill();
+    ctx.strokeStyle = q.estado === 'libre' ? '#2f6b26' : '#6b2a1e';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
   ctx.beginPath();
   ctx.arc(x, y, 5, 0, Math.PI * 2);
   ctx.fillStyle = '#f1d38b';

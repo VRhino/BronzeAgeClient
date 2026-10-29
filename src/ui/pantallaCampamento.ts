@@ -10,6 +10,7 @@ import { cablearCargaDeSalida, htmlCargaDeSalida, leerCarga } from './cargaDeSal
 import { costoDeRefundacion, tropasReclutables, unidadesDeTropa, type ProyeccionJugador } from '../apiCliente';
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { CampamentoMercenarios, Escuadron } from '../tiposDominio';
+import { confirmar } from './dialogo';
 
 /** Manda el comando y refresca; devuelve el mensaje de error o `null`. Lo pone `main.ts`. */
 export type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
@@ -409,8 +410,13 @@ export function cablearCampamento(root: HTMLElement, p: ProyeccionJugador, c: Ca
   const prestadas = p.heroe.escuadrones.filter((s) => s.prestada);
   const residir = root.querySelector<HTMLButtonElement>('#btn-residir');
   if (residir && prestadas.length > 0) {
+    // El cuadro del juego no bloquea: se para el clic, se pregunta y, si acepta, se repite el clic dejándolo pasar.
+    let confirmado = false;
     residir.addEventListener('click', (ev) => {
-      if (!confirm(`Si resides aquí, el campamento donde te prestaron tropa la retira (${prestadas.map((s) => `${s.nombre}: ${s.cantidad}`).join(', ')}). ¿Seguro?`)) ev.stopImmediatePropagation();
+      if (confirmado) { confirmado = false; return; }
+      ev.stopImmediatePropagation();
+      void confirmar(`Si resides aquí, el campamento donde te prestaron tropa la retira (${prestadas.map((s) => `${s.nombre}: ${s.cantidad}`).join(', ')}).`, { titulo: '¿Residir aquí?', aceptar: 'Residir aquí' })
+        .then((ok) => { if (ok) { confirmado = true; residir.click(); } });
     }, true);
   }
   conBoton('#btn-residir', 'residirEnCampamento', () => ({ heroeId, campamentoId: c.id }));

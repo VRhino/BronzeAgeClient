@@ -7,6 +7,7 @@ import { RECURSO_NOMBRE } from '../paletas';
 import { ayuda } from './ayuda';
 import { caduca, crearEnvio, type Ejecutar } from './panelAnexion';
 import { estadoCliente, textoEnTiempoReal } from './estadoCliente';
+import { confirmar } from './dialogo';
 
 const TRIBUTOS = ['trigo', 'madera', 'piedra', 'cobre', 'estano', 'oro'];
 
@@ -83,12 +84,13 @@ export function cablearDiplomacia(raiz: ParentNode, proyeccion: ProyeccionJugado
     if (!destino || !yo) return;
     const boton = ev.currentTarget as HTMLButtonElement;
     if (tipo === 'guerra') {
-      if (confirm('¿Declarar la guerra? También la declaras al señor y a los vasallos del rival, y solo termina con la paz de las dos Facciones.')) void enviar(boton, 'declararGuerra', { faccionAId: yo, faccionBId: destino });
+      void confirmar('También la declaras al señor y a los vasallos del rival, y solo termina con la paz de las dos Facciones.', { titulo: '¿Declarar la guerra?', aceptar: 'Declarar la guerra', peligro: true }).then((ok) => { if (ok) void enviar(boton, 'declararGuerra', { faccionAId: yo, faccionBId: destino }); });
     } else if (tipo === 'vasallaje') {
       const tributoCantidad = Number(raiz.querySelector<HTMLInputElement>('#tributo-cantidad')?.value);
       const tributoRecurso = raiz.querySelector<HTMLSelectElement>('#tributo-recurso')?.value;
-      if (Number.isFinite(tributoCantidad) && tributoCantidad >= 0 && confirm('¿Proponer el vasallaje? Solo nace si su Rey acepta. Entonces ellos te pagarán el tributo y tú los defenderás (una guerra contra ellos es una guerra contra ti).')) {
-        void proponer(boton, { tipo, faccionAId: yo, faccionBId: destino, tributoRecurso, tributoCantidad });
+      if (Number.isFinite(tributoCantidad) && tributoCantidad >= 0) {
+        void confirmar('Solo nace si su Rey acepta. Entonces ellos te pagarán el tributo y tú los defenderás (una guerra contra ellos es una guerra contra ti).', { titulo: '¿Proponer el vasallaje?', aceptar: 'Proponer' })
+          .then((ok) => { if (ok) void proponer(boton, { tipo, faccionAId: yo, faccionBId: destino, tributoRecurso, tributoCantidad }); });
       }
     } else if (tipo) {
       void proponer(boton, { tipo, faccionAId: yo, faccionBId: destino });
@@ -96,19 +98,20 @@ export function cablearDiplomacia(raiz: ParentNode, proyeccion: ProyeccionJugado
   });
   raiz.querySelectorAll<HTMLButtonElement>('[data-dipl-responder]').forEach((b) => b.addEventListener('click', () => {
     const aceptar = b.dataset.aceptar === 'si';
-    if (aceptar && b.dataset.tipo === 'vasallaje' && !confirm('¿Aceptar el vasallaje? Pasas a ser su vasalla: les pagarás el tributo cada minuto y no podrás dejarlo salvo rebelándote (guerra contra tu señora y sus vasallos). Una guerra contra ti será también contra ella.')) return;
-    void enviar(b, 'responderRelacion', { propuestaId: b.dataset.diplResponder, aceptar });
+    const responder = (): void => void enviar(b, 'responderRelacion', { propuestaId: b.dataset.diplResponder, aceptar });
+    if (!(aceptar && b.dataset.tipo === 'vasallaje')) return responder();
+    void confirmar('Pasas a ser su vasalla: les pagarás el tributo cada minuto y no podrás dejarlo salvo rebelándote (guerra contra tu señora y sus vasallos). Una guerra contra ti será también contra ella.', { titulo: '¿Aceptar el vasallaje?', aceptar: 'Aceptar el vasallaje', peligro: true })
+      .then((ok) => { if (ok) responder(); });
   }));
   raiz.querySelectorAll<HTMLButtonElement>('[data-dipl-retirar]').forEach((b) => b.addEventListener('click', () =>
     void enviar(b, 'retirarRelacion', { propuestaId: b.dataset.diplRetirar })));
   raiz.querySelectorAll<HTMLButtonElement>('[data-dipl-paz]').forEach((b) => b.addEventListener('click', () =>
     void enviar(b, 'proponerPaz', { relacionId: b.dataset.diplPaz, faccionId: yo })));
   raiz.querySelectorAll<HTMLButtonElement>('[data-dipl-romper]').forEach((b) => b.addEventListener('click', () => {
-    if (confirm('¿Terminar esta relación? Es inmediato.')) void enviar(b, 'romperRelacion', { relacionId: b.dataset.diplRomper, iniciadorFaccionId: yo });
+    void confirmar('Es inmediato.', { titulo: '¿Terminar esta relación?', aceptar: 'Terminarla', peligro: true }).then((ok) => { if (ok) void enviar(b, 'romperRelacion', { relacionId: b.dataset.diplRomper, iniciadorFaccionId: yo }); });
   }));
   raiz.querySelectorAll<HTMLButtonElement>('[data-dipl-rebelion]').forEach((b) => b.addEventListener('click', () => {
-    if (confirm('¿Rebelarse? Rompes el vasallaje, declaras la guerra a tu señor y al resto de sus vasallos, y se cancelan al instante los acuerdos de trueque entre vuestras plazas. Tu señor pierde 10 puntos de reputación. No hay vuelta atrás.')) {
-      void enviar(b, 'rebelionVasallo', { relacionId: b.dataset.diplRebelion });
-    }
+    void confirmar('Rompes el vasallaje, declaras la guerra a tu señor y al resto de sus vasallos, y se cancelan al instante los acuerdos de trueque entre vuestras plazas. Tu señor pierde 10 puntos de reputación. No hay vuelta atrás.', { titulo: '¿Rebelarse?', aceptar: 'Rebelarse', peligro: true })
+      .then((ok) => { if (ok) void enviar(b, 'rebelionVasallo', { relacionId: b.dataset.diplRebelion }); });
   }));
 }

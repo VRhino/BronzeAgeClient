@@ -5,6 +5,7 @@ import type { Faccion } from '../tiposDominio';
 import { ayuda } from './ayuda';
 import { nombreDeHeroe } from './nombres';
 import { crearEnvio, type Ejecutar } from './panelAnexion';
+import { confirmar } from './dialogo';
 
 
 /** Los selectores del Rey (traspasar el trono, designar Embajador). Vacío si no eres el Rey. */
@@ -48,11 +49,14 @@ export function cablearCargos(raiz: ParentNode, proyeccion: ProyeccionJugador, e
   raiz.querySelector<HTMLButtonElement>('#btn-traspasar-trono')?.addEventListener('click', (ev) => {
     const sel = elegido('#sel-rey');
     if (!sel?.value || !faccionId) return;
-    if (!confirm(`¿Traspasar el trono a ${sel.selectedOptions[0]?.textContent}? Dejarás de ser Rey en el acto.`)) return;
-    void enviar(ev.currentTarget as HTMLButtonElement, 'asignarRey', { faccionId, heroeId: sel.value });
+    const boton = ev.currentTarget as HTMLButtonElement;
+    const heroeId = sel.value;
+    void confirmar(`El trono pasa a ${sel.selectedOptions[0]?.textContent ?? ''}: dejarás de ser Rey en el acto.`, { titulo: '¿Traspasar el trono?', aceptar: 'Traspasar', peligro: true })
+      .then((ok) => { if (ok) void enviar(boton, 'asignarRey', { faccionId, heroeId }); });
   });
   raiz.querySelector<HTMLButtonElement>('#btn-dejar-faccion')?.addEventListener('click', (ev) => {
-    if (!confirm('¿Dejar la Facción? Pierdes ciudadanía, casa y cargos, y tendrás que esperar para crear otra. Si eres Rey, el trono pasa al siguiente ciudadano.')) return;
-    void crearEnvio(raiz, 'error-dejar-faccion', ejecutar, avisar)(ev.currentTarget as HTMLButtonElement, 'dejarFaccion', {});
+    const boton = ev.currentTarget as HTMLButtonElement;
+    void confirmar('Pierdes ciudadanía, casa y cargos, y tendrás que esperar para crear otra. Si eres Rey, el trono pasa al siguiente ciudadano.', { titulo: '¿Dejar la Facción?', aceptar: 'Dejar la Facción', peligro: true })
+      .then((ok) => { if (ok) void crearEnvio(raiz, 'error-dejar-faccion', ejecutar, avisar)(boton, 'dejarFaccion', {}); });
   });
 }
