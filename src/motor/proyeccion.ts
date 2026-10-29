@@ -87,6 +87,8 @@ function faccion(f: pb.Faccion, ahora: number): d.Faccion {
     id: f.id, nombre: f.nombre, sigilo: sigilo(f.sigilo), reyId: f.reyId ?? null, embajadorId: f.embajadorId ?? null, nivel: f.nivel,
     experiencia: mil(f.experiencia), ciudadanosIds: f.ciudadanosIds, solicitudesIds: f.solicitudesIds, reputacion: valorDeRitmo(f.reputacion, ahora),
     admiteOtrasEnAtaques: f.admiteOtrasEnAtaques, capitalDesignadaEn: instante(f.capitalDesignadaEnMs),
+    capitalId: f.capitalId, derrotadaPor: f.derrotadaPor,
+    liga: f.liga ? { miembrosIds: f.liga.miembrosIds, tieneVasallaje: f.liga.tieneVasallaje, granReyId: f.liga.granReyId } : undefined,
     miembros: f.miembros.length ? f.miembros.map((m) => ({ heroeId: m.heroeId, residenciaId: m.residenciaId, cargos: m.cargos, participacion: Number(m.participacion) })) : undefined,
     tablon: f.tablon ? tablon(f.tablon) : undefined,
   };

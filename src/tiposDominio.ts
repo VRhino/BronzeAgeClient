@@ -55,6 +55,12 @@ export interface Faccion {
   admiteOtrasEnAtaques?: boolean;
   /** Instante de MUNDO de la última designación de capital (el traslado tiene enfriamiento, Doc 2.2). */
   capitalDesignadaEn?: number;
+  /** Su capital efectiva (la designada con Palacio o la plaza viva más antigua); ausente sin plazas. */
+  capitalId?: string;
+  /** Ausente: no derrotada. `''`: colapsó sin ganador; si no, la Facción que la derrotó. */
+  derrotadaPor?: string;
+  /** La Liga en que está, derivada de las relaciones activas; ausente si no está en ninguna. */
+  liga?: { miembrosIds: string[]; tieneVasallaje: boolean; granReyId?: string };
   /** Solo la propia: un ciudadano por entrada, en orden de ingreso, con sus cargos y su participación sumada en las plazas de la Facción. */
   miembros?: MiembroFaccion[];
   /** Solo la propia: el tablón de misiones recurrentes de la Facción. */

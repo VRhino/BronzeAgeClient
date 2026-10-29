@@ -3,6 +3,20 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.46.0] — 2026-10-29 · misiones sin leer y ventana de Facción · sync con `VRhino/BronzeAge@fd9cd58`
+
+### Añadido
+- **Facción → pestaña «Facciones»**: la lista pública de todas las Facciones, con su escudo completo a la izquierda, el nombre y lo público
+  (nivel, reputación, Rey, Embajador, capital, Liga, si admite a otras en sus ataques, si fue derrotada y qué es para la tuya) y, a la derecha
+  del todo, sus miembros y sus plazas. Las plazas son las que conoces (vistas o recordadas en el mapa): el motor no publica el total.
+
+### Cambiado
+- **Misiones**: las nuevas o sin leer se marcan en color (borde y texto terracota) hasta que las abres, también en las tarjetas de la plaza y
+  la Facción; cada grupo (Mías, Mi plaza, Mi Facción) se pliega y lleva cuántas tiene sin leer.
+- **Ventana de Facción**: un panel fijo a la izquierda (un cuarto de la pantalla) con el escudo grande y centrado, el nombre debajo y, abajo,
+  el número de plazas, los títulos de tu Facción y «Dejar la Facción»; las pestañas, a la derecha. Resumen ya no repite el escudo ni el
+  nombre, y «Dejar la Facción» sale de Ajustes del Rey.
+
 ## [0.45.0] — 2026-10-29 · ventana de misiones · sync con `VRhino/BronzeAge@fd9cd58`
 
 ### Cambiado

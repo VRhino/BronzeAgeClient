@@ -45,7 +45,7 @@ import { estadoCliente, medirRitmoDeMundo, TIPS_FUNDACION } from './ui/estadoCli
 import { actualizarTip, resumenRecursosFundacion, sitiosDeAldeaAlFundar } from './ui/pestanaAsentamientos';
 import { renderPanelInteraccion } from './ui/panelInteraccion';
 import { renderPanelMapa } from './ui/panelMapa';
-import { PESTANAS_FACCION, renderPestanaFaccion, type PestanaFaccion } from './ui/pestanaFaccion';
+import { htmlLateralFaccion, PESTANAS_FACCION, renderPestanaFaccion, type PestanaFaccion } from './ui/pestanaFaccion';
 import { cablearAnexion } from './ui/panelAnexion';
 import { cablearFusion } from './ui/panelFusion';
 import { cablearAdmision } from './ui/panelAdmision';
@@ -995,7 +995,7 @@ function renderPanelJugador(forzar = false): void {
   barra.querySelector('[data-ver-mapa]')?.classList.toggle('activo', vistaMapaAbierta);
   pintarAlertas(barra, proyeccion);
   // La Facción va a pantalla completa; el resto, en el panel lateral.
-  if (panelJugador !== 'faccion') panel.classList.remove('jugador-panel-completo');
+  if (panelJugador !== 'faccion') panel.classList.remove('jugador-panel-completo', 'jugador-panel-faccion');
   if (panelJugador !== 'misiones') panel.classList.remove('jugador-panel-diario');
   if (panelJugador === null) { panel.hidden = true; vaciar(panel); return; }
   panel.hidden = false;
@@ -1022,15 +1022,19 @@ function renderPanelJugador(forzar = false): void {
     } else if (propia && pestana === 'misiones') {
       cuerpo = `<section class="faccion-misiones" data-dueno="faccion">${htmlListaMisiones(proyeccion, 'faccion', escaparHtml)}</section>`;
     } else {
-      cuerpo = renderPestanaFaccion(proyeccion, escaparHtml, pestana, propia && pestana === 'miembros' ? htmlMiembrosFaccion(proyeccion, propia, escaparHtml) : '');
+      cuerpo = renderPestanaFaccion(proyeccion, escaparHtml, pestana, propia && pestana === 'miembros' ? htmlMiembrosFaccion(proyeccion, propia, escaparHtml) : '', Boolean(propia));
     }
     const pendientes = propia?.reyId === proyeccion.heroeId ? (propia.solicitudesIds ?? []).length : 0;
     const pestanas = propia
       ? `<nav class="faccion-pestanas" role="tablist">${PESTANAS_FACCION.map(([id, nombre]) => `<button type="button" role="tab" class="faccion-pestana${id === pestana ? ' activo' : ''}" aria-selected="${id === pestana}" data-pestana-faccion="${id}">${nombre}${id === 'miembros' && pendientes ? ` <span class="faccion-aviso">${pendientes}</span>` : ''}</button>`).join('')}</nav>`
       : '';
-    const html = `<div class="faccion-cabecera"><div class="mapa-panel-jugador">${escaparHtml(propia ? propia.nombre : proyeccion.heroe.displayName)}</div><button class="btn-secondary" type="button" data-cerrar-faccion aria-label="Cerrar">Cerrar</button></div>
-      ${pestanas}<div class="faccion-cuerpo">${cuerpo}</div>`;
+    const cabecera = `<div class="faccion-cabecera"><div class="mapa-panel-jugador">${propia ? 'Facción' : escaparHtml(proyeccion.heroe.displayName)}</div><button class="btn-secondary" type="button" data-cerrar-faccion aria-label="Cerrar">Cerrar</button></div>`;
+    // Con Facción: el panel fijo de la izquierda (escudo, nombre, plazas, títulos y Dejar) y, a la derecha, las pestañas.
+    const html = propia
+      ? `${cabecera}<div class="faccion-marco">${htmlLateralFaccion(proyeccion, escaparHtml)}<div class="faccion-principal">${pestanas}<div class="faccion-cuerpo">${cuerpo}</div></div></div>`
+      : `${cabecera}<div class="faccion-cuerpo">${cuerpo}</div>`;
     panel.classList.add('jugador-panel-completo');
+    panel.classList.toggle('jugador-panel-faccion', Boolean(propia));
     pintar(panel, html, () => {
       cablearFaccion(panel, proyeccion, () => renderPanelJugador(true));
       panel.querySelectorAll<HTMLButtonElement>('[data-pestana-faccion]').forEach((b) => b.addEventListener('click', () => {

@@ -2999,6 +2999,7 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .mision-cab { display: flex; align-items: baseline; gap: 8px; }
 .mision-cab strong { flex: 1; color: var(--oro-claro); }
 .mision-nueva { padding: 0 6px; font-size: 0.7rem; border-radius: 9px; background: var(--terracota); color: #fff; }
+.mision.mision-sin-leer { border-left: 3px solid var(--terracota); background: rgba(178, 84, 52, 0.12); }
 .mision-premio { font-size: 0.8rem; color: var(--oro); white-space: nowrap; }
 .mision-texto { margin: 4px 0; font-size: 0.82rem; color: var(--text-secondary); }
 .mision-cond { margin-top: 4px; }
@@ -3119,6 +3120,41 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .faccion-pestana.activo { color: var(--text-primary, #f4ead2); border-color: var(--bronce); background: var(--marco-bg-alt); margin-bottom: -1px; }
 .faccion-aviso { display: inline-block; min-width: 18px; padding: 0 5px; border-radius: 9px; background: #e0705a; color: #fff; font-size: 0.7rem; text-align: center; }
 .faccion-cuerpo { width: min(100%, 960px); margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+/* Con Facción: el panel fijo de la izquierda (1/4) y las pestañas a la derecha; cada columna se desplaza por su cuenta. */
+.jugador-panel.jugador-panel-faccion { overflow: hidden; }
+.faccion-marco { flex: 1; min-height: 0; display: flex; gap: 18px; }
+.faccion-lateral { flex: 0 0 25%; min-width: 220px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 12px; overflow-y: auto; border: 1px solid var(--bronce-osc); border-radius: 3px; background: rgba(0, 0, 0, 0.2); }
+.faccion-lateral-escudo { display: flex; justify-content: center; padding: 8px 0 4px; }
+.faccion-lateral-escudo .sigilo { display: block; width: min(168px, 70%); height: auto; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5)); }
+.faccion-lateral-nombre { margin: 4px 0 0; text-align: center; font-family: var(--fuente-titulo); font-size: 1.35rem; color: var(--oro-claro); overflow-wrap: anywhere; }
+.faccion-lateral-pie { margin-top: auto; width: 100%; display: flex; flex-direction: column; gap: 10px; padding-top: 14px; border-top: 1px solid rgba(169, 121, 63, 0.3); }
+.faccion-lateral-dato { display: flex; justify-content: space-between; align-items: baseline; }
+.faccion-lateral-dato span { color: var(--text-secondary); font-size: 0.85rem; }
+.faccion-lateral-dato strong { font-family: var(--fuente-titulo); font-size: 1.2rem; color: var(--oro); }
+.faccion-lateral #btn-dejar-faccion { width: 100%; }
+.faccion-principal { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+/* La pestaña Facciones: escudo, nombre e información pública; miembros y plazas a la derecha del todo. */
+.faccion-publica { display: flex; align-items: center; gap: 14px; padding: 8px 10px; border-bottom: 1px solid rgba(169, 121, 63, 0.18); }
+.faccion-publica.propia { background: rgba(169, 121, 63, 0.12); border-left: 3px solid var(--oro); }
+.faccion-publica.derrotada { opacity: 0.55; }
+.faccion-publica-escudo { flex: 0 0 auto; }
+.faccion-publica-escudo .sigilo { display: block; }
+.faccion-publica-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.faccion-publica-info strong { font-family: var(--fuente-titulo); color: var(--pergamino); }
+.faccion-publica-info strong small { font-family: inherit; color: var(--text-muted); }
+.faccion-publica-info > span { font-size: 0.8rem; color: var(--text-secondary); }
+.faccion-publica-relacion { margin-left: 6px; padding: 0 6px; border-radius: 8px; font-family: system-ui, sans-serif; font-size: 0.7rem; color: #fff; background: var(--bronce-osc); }
+.faccion-publica-relacion.rel-guerra, .faccion-publica-relacion.rel-derrota { background: var(--terracota); }
+.faccion-publica-cifras { flex: 0 0 auto; display: flex; gap: 16px; text-align: center; }
+.faccion-publica-cifras div { display: flex; flex-direction: column; min-width: 58px; }
+.faccion-publica-cifras strong { font-family: var(--fuente-titulo); font-size: 1.15rem; color: var(--oro); }
+.faccion-publica-cifras span { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+@media (max-width: 900px) {
+  .jugador-panel.jugador-panel-faccion { overflow-y: auto; }
+  .faccion-marco { flex-direction: column; }
+  .faccion-lateral { flex-basis: auto; min-width: 0; }
+  .faccion-principal { overflow: visible; }
+}
 
 /* Tablón: tarjetas que no se desbordan (título arriba con su estado, etiquetas, avance y el pie con la recompensa y el botón). */
 .tablon-columna { min-width: 0; }
@@ -3176,12 +3212,21 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .diario-grupo { margin-bottom: 10px; }
 .diario-grupo-cab { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 8px; font-family: var(--fuente-titulo); font-size: 0.82rem; letter-spacing: 0.05em; color: var(--bronce); border-bottom: 1px solid rgba(169, 121, 63, 0.25); margin-bottom: 4px; }
 .diario-grupo-cab small { font-family: inherit; color: var(--text-muted); }
+.diario-grupo > .plegable { border: none; background: none; border-radius: 0; }
+.diario-grupo > .plegable > summary { padding: 4px 8px; font-family: var(--fuente-titulo); font-size: 0.82rem; letter-spacing: 0.05em; color: var(--bronce); border-bottom: 1px solid rgba(169, 121, 63, 0.25); margin-bottom: 4px; }
+.diario-grupo > .plegable > summary:hover { color: var(--oro-claro); }
+.diario-grupo-nombre { flex: 1; }
+.diario-grupo > .plegable > summary small { color: var(--text-muted); }
+.diario-grupo > .plegable > summary .diario-nueva { font-family: system-ui, sans-serif; font-style: normal; font-size: 0.68rem; letter-spacing: 0; }
+.diario-grupo > .plegable > .plegable-cuerpo { padding: 0; gap: 0; }
 .diario-item { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 6px; width: 100%; padding: 5px 10px; border-radius: 2px; cursor: pointer; font-size: 0.86rem; color: var(--text-secondary); border-left: 2px solid transparent; }
 .diario-item span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .diario-item:hover { background: rgba(169, 121, 63, 0.14); color: var(--oro-claro); }
 .diario-item.activo { background: rgba(169, 121, 63, 0.24); color: var(--oro-claro); border-left-color: var(--oro); }
 .diario-item.diario-cumplida { color: var(--oro); }
 .diario-item.diario-reclamada { opacity: 0.55; }
+.diario-item.diario-item-nueva { color: #f0b48a; border-left-color: var(--terracota); background: rgba(178, 84, 52, 0.14); font-weight: 600; }
+.diario-item.diario-item-nueva:hover { background: rgba(178, 84, 52, 0.24); }
 .diario-item i { font-style: normal; font-size: 0.68rem; }
 .diario-seguida { color: var(--oro); }
 .diario-nueva { padding: 0 5px; border-radius: 8px; background: var(--terracota); color: #fff; }

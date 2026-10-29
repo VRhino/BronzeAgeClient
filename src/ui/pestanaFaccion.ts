@@ -28,17 +28,103 @@ export const PESTANAS_FACCION = [
   ['tablon', 'Tablón'],
   ['misiones', 'Misiones'],
   ['diplomacia', 'Diplomacia'],
+  ['facciones', 'Facciones'],
   ['ajustes', 'Ajustes del Rey'],
 ] as const;
 export type PestanaFaccion = (typeof PESTANAS_FACCION)[number][0];
 
-/** `pestana`: qué parte de tu Facción se pinta (sin Facción, la elección de crear o pedir ingreso, sin pestañas). `miembros` es la lista con la
+/** Las plazas que el cliente conoce, con su Facción: las que tiene dentro, las que ve y las que recuerda (lo visto ahora gana a lo recordado).
+ * El motor no publica cuántas plazas tiene cada Facción: de las ajenas solo se cuentan las que conoces. */
+function plazasConocidas(p: ProyeccionJugador): Map<string, { faccionId: string; nombre: string }> {
+  const plazas = new Map<string, { faccionId: string; nombre: string }>();
+  for (const a of p.asentamientosConocidos) plazas.set(a.asentamientoId, { faccionId: a.faccionId, nombre: a.nombre ?? '' });
+  for (const a of p.asentamientos) plazas.set(a.id, { faccionId: a.faccionId, nombre: a.nombre ?? '' });
+  for (const a of p.asentamientosAvistados) plazas.set(a.id, { faccionId: a.faccionId, nombre: a.nombre ?? '' });
+  return plazas;
+}
+
+function plazasDe(p: ProyeccionJugador, faccionId: string): number {
+  return [...plazasConocidas(p).values()].filter((x) => x.faccionId === faccionId).length;
+}
+
+/** El panel fijo de la izquierda de la ventana de Facción: el escudo grande, el nombre y, abajo, las plazas, los títulos y Dejar la Facción. */
+export function htmlLateralFaccion(proyeccion: ProyeccionJugador, e: (valor: string) => string): string {
+  const faccion = faccionDelJugador(proyeccion);
+  if (!faccion) return '';
+  const esGranRey = ligaDe(faccion.id, proyeccion.relaciones ?? [])?.granReyId === faccion.id;
+  const titulos = (proyeccion.titulos ?? []).filter((t) => t.poseedorId === faccion.id);
+  return `<aside class="faccion-lateral">
+    <div class="faccion-lateral-escudo">${svgSigilo(faccion.sigilo, 168, { granRey: esGranRey })}</div>
+    <h2 class="faccion-lateral-nombre">${e(faccion.nombre)}</h2>
+    <span class="faction-kicker">Tu facción${esGranRey ? ' · Gran Rey' : ''}</span>
+    <div class="faccion-lateral-pie">
+      <div class="faccion-lateral-dato"><span>Plazas</span><strong>${plazasDe(proyeccion, faccion.id)}</strong></div>
+      <div class="faction-list"><span class="faction-kicker">Títulos</span>
+        ${titulos.length ? htmlTitulos(titulos, proyeccion.facciones, faccion.id, e) : '<p class="legend-note">Tu Facción aún no tiene títulos.</p>'}</div>
+      ${htmlDejarFaccion(proyeccion, faccion)}
+    </div>
+  </aside>`;
+}
+
+const RELACION: Record<string, string> = { alianza: 'Aliada', guerra: 'En guerra', vasallaje: 'Vasallaje' };
+
+/** Qué es esa Facción para la tuya, por las relaciones activas: aliada, en guerra, tu señora o tu vasalla. */
+function relacionCon(p: ProyeccionJugador, propiaId: string | null, otraId: string): string {
+  if (!propiaId || propiaId === otraId) return '';
+  const r = (p.relaciones ?? []).find((x) => x.estado === 'activa'
+    && ((x.faccionAId === propiaId && x.faccionBId === otraId) || (x.faccionAId === otraId && x.faccionBId === propiaId)));
+  if (!r) return '';
+  if (r.tipo === 'vasallaje') return r.faccionAId === propiaId ? 'Tu vasalla' : 'Tu señora';
+  return RELACION[r.tipo] ?? r.tipo;
+}
+
+/** La pestaña Facciones: la lista pública de todas, con su escudo, su nombre y lo que se sabe de ellas; los ciudadanos y las plazas, a la derecha. */
+function htmlListaFacciones(p: ProyeccionJugador, e: (valor: string) => string): string {
+  const plazas = plazasConocidas(p);
+  const nombreDe = (id: string) => p.facciones.find((f) => f.id === id)?.nombre ?? id;
+  const lista = [...p.facciones].sort((a, b) => Number(a.derrotadaPor !== undefined) - Number(b.derrotadaPor !== undefined)
+    || (b.ciudadanosIds?.length ?? 0) - (a.ciudadanosIds?.length ?? 0) || a.nombre.localeCompare(b.nombre));
+  if (lista.length === 0) return '<p class="mapa-lista-vacia">Aún no hay Facciones en el mundo.</p>';
+  const fila = (f: Faccion): string => {
+    const propia = f.id === p.faccionId;
+    const relacion = relacionCon(p, p.faccionId, f.id);
+    const capital = f.capitalId ? plazas.get(f.capitalId)?.nombre : undefined;
+    const derrota = f.derrotadaPor === undefined ? '' : f.derrotadaPor ? `Derrotada por ${nombreDe(f.derrotadaPor)}` : 'Desaparecida';
+    const liga = f.liga ? `Liga ${f.liga.tieneVasallaje ? 'por vasallaje' : 'por alianza'}${f.liga.granReyId === f.id ? ' · Gran Rey' : f.liga.granReyId ? ` de ${nombreDe(f.liga.granReyId)}` : ''}` : '';
+    const datos = [
+      `Nivel ${f.nivel}`,
+      `Reputación ${Math.round(f.reputacion ?? 0)}`,
+      `Rey: ${f.reyId ? nombreDeHeroe(p, f.reyId) : 'sin designar'}`,
+      f.embajadorId ? `Embajador: ${nombreDeHeroe(p, f.embajadorId)}` : '',
+      capital ? `Capital: ${capital}` : '',
+      liga,
+      f.admiteOtrasEnAtaques ? 'Admite a otras Facciones en sus ataques' : '',
+    ].filter(Boolean);
+    return `<div class="faccion-publica${propia ? ' propia' : ''}${derrota ? ' derrotada' : ''}">
+      <div class="faccion-publica-escudo">${svgSigilo(f.sigilo, 56, { granRey: f.liga?.granReyId === f.id })}</div>
+      <div class="faccion-publica-info">
+        <strong>${e(f.nombre)}${propia ? ' <small>· la tuya</small>' : ''}${relacion ? ` <span class="faccion-publica-relacion rel-${e(relacion === 'En guerra' ? 'guerra' : 'paz')}">${e(relacion)}</span>` : ''}${derrota ? ` <span class="faccion-publica-relacion rel-derrota">${e(derrota)}</span>` : ''}</strong>
+        <span>${datos.map(e).join(' · ')}</span>
+      </div>
+      <div class="faccion-publica-cifras">
+        <div><strong>${f.ciudadanosIds?.length ?? 0}</strong><span>Miembros</span></div>
+        <div><strong>${[...plazas.values()].filter((x) => x.faccionId === f.id).length}</strong><span>Plazas</span></div>
+      </div>
+    </div>`;
+  };
+  return `<div class="faction-list faction-list-libre"><span class="faction-kicker">Facciones del mundo (${lista.length})${ayuda('faccion:lista', 'Lo público de cada Facción. Las plazas son las que conoces: las que ves o recuerdas en el mapa. El motor no dice cuántas tiene cada una.')}</span>
+    ${lista.map(fila).join('')}</div>`;
+}
+
+/** `conLateral`: va con el panel fijo de la izquierda, que ya lleva el escudo, el nombre y Dejar la Facción.
+ * `pestana`: qué parte de tu Facción se pinta (sin Facción, la elección de crear o pedir ingreso, sin pestañas). `miembros` es la lista con la
  * participación (`htmlMiembrosFaccion`), que se pinta en Miembros. */
 export function renderPestanaFaccion(
   proyeccion: ProyeccionJugador,
   escaparHtml: (valor: string) => string,
   pestana: PestanaFaccion = 'resumen',
-  miembros = ''
+  miembros = '',
+  conLateral = false
 ): string {
   const faccion = faccionDelJugador(proyeccion);
   // Con Facción pero sin su ficha todavía: nunca las opciones de quien no la tiene (crear o pedir ingreso).
@@ -54,6 +140,7 @@ export function renderPestanaFaccion(
           .map((id) => `<div class="faction-list-item"><div><strong>${escaparHtml(nombreDeHeroe(proyeccion, id))}</strong></div><button class="btn-secondary" type="button" data-solicitud="${escaparHtml(id)}" data-aceptar="si">Aceptar</button><button class="btn-secondary" type="button" data-solicitud="${escaparHtml(id)}" data-aceptar="no">Denegar</button></div>`)
           .join('')}</div>`
       : '';
+    if (pestana === 'facciones') return htmlListaFacciones(proyeccion, escaparHtml);
     if (pestana === 'miembros') return `${solicitudes}${htmlCargos(proyeccion, faccion, escaparHtml)}${miembros}`;
     if (pestana === 'diplomacia') {
       return `${htmlDiplomacia(proyeccion, faccion, escaparHtml)}
@@ -68,15 +155,16 @@ export function renderPestanaFaccion(
     }
     if (pestana === 'ajustes') {
       const soyRey = faccion.reyId === proyeccion.heroeId;
-      return `${soyRey ? '' : '<p class="asent-lado-nota">Estos ajustes los cambia el Rey; aquí ves cómo están.</p>'}${htmlAdmision(proyeccion, faccion)}${htmlDejarFaccion(proyeccion, faccion)}`;
+      return `${soyRey ? '' : '<p class="asent-lado-nota">Estos ajustes los cambia el Rey; aquí ves cómo están.</p>'}${htmlAdmision(proyeccion, faccion)}${conLateral ? '' : htmlDejarFaccion(proyeccion, faccion)}`;
     }
-    return `
-      <div class="faction-detail-header">
+    // Con el panel de la izquierda (`htmlLateralFaccion`), el escudo y el nombre van allí; en los paneles sueltos, arriba.
+    const cabecera = conLateral ? '' : `<div class="faction-detail-header">
         <span class="faction-kicker">Tu facción${esGranRey ? ' · Gran Rey' : ''}</span>
         ${svgSigilo(faccion.sigilo, 64, { granRey: esGranRey })}
         <h2>${escaparHtml(faccion.nombre)}</h2>
         <span class="faction-id">${escaparHtml(faccion.id)}</span>
-      </div>
+      </div>`;
+    return `${cabecera}
       <div class="faction-stats">
         <div><span>Nivel</span><strong>${faccion.nivel}</strong></div>
         <div><span>Reputación</span><strong>${faccion.reputacion ?? 0}</strong></div>

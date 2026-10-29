@@ -12,6 +12,7 @@ import type { Mision } from '../tiposDominio';
 import { RECURSO_NOMBRE } from '../paletas';
 import { estadoCliente } from './estadoCliente';
 import { ayuda } from './ayuda';
+import { cablearPlegables, plegable } from './plegable';
 import type { Ejecutar } from './panelCarro';
 import type { SubpestanaPlaza } from './ganchos';
 
@@ -189,7 +190,7 @@ function tarjeta(p: ProyeccionJugador, d: DuenoMision, m: Mision, e: Escapar): s
     : `<button class="btn-primary" type="button" data-mision-reclamar="${e(m.id)}" data-dueno="${d}">Reclamar ${e(recompensa(m))}</button>`;
   const seguir = m.estado === 'reclamada' ? ''
     : `<button class="btn-secondary" type="button" data-mision-seguir="${e(k)}"${!seguida && (s?.seguidas.length ?? 0) >= MAX_SEGUIDAS ? ` disabled title="Ya sigues ${MAX_SEGUIDAS}: deja de seguir alguna"` : ''}>${seguida ? 'Dejar de seguir' : 'Seguir'}</button>`;
-  return `<div class="mision mision-${m.estado}" data-mision="${e(k)}">
+  return `<div class="mision mision-${m.estado}${nueva ? ' mision-sin-leer' : ''}" data-mision="${e(k)}">
     <div class="mision-cab"><strong>${e(t.titulo)}</strong>${nueva ? '<span class="mision-nueva">nueva</span>' : ''}<span class="mision-premio">${m.estado === 'cumplida' ? '¡Cumplida! ' : ''}${e(recompensa(m))}</span></div>
     ${t.texto ? `<p class="mision-texto">${e(t.texto)}</p>` : ''}
     ${t.explicacion ? `<details class="mision-explicacion"><summary>Más</summary><p>${e(t.explicacion)}</p></details>` : ''}
@@ -241,16 +242,20 @@ function htmlIndice(p: ProyeccionJugador, abierta: string | undefined, e: Escapa
   const item = (d: DuenoMision, m: Mision): string => {
     const k = claveDe(d, m.id);
     const marcas = `${s?.seguidas.includes(k) ? '<i class="diario-seguida" title="La sigues">◆</i>' : ''}${s?.nuevas.includes(k) ? '<i class="diario-nueva" title="Nueva">nueva</i>' : ''}`;
-    return `<button class="diario-item diario-${m.estado}${k === abierta ? ' activo' : ''}" type="button" data-mision-abrir="${e(k)}"><span>${e(textoDeMision(m.id).titulo)}</span>${marcas}${m.estado === 'cumplida' ? '<i class="diario-lista">✓</i>' : ''}</button>`;
+    const nueva = s?.nuevas.includes(k) && k !== abierta;
+    return `<button class="diario-item diario-${m.estado}${nueva ? ' diario-item-nueva' : ''}${k === abierta ? ' activo' : ''}" type="button" data-mision-abrir="${e(k)}"><span>${e(textoDeMision(m.id).titulo)}</span>${marcas}${m.estado === 'cumplida' ? '<i class="diario-lista">✓</i>' : ''}</button>`;
   };
   return PESTANAS.map(([d, nombre]) => {
     const { misiones, duenoId } = delDueno(p, d);
     const vivas = [...misiones.filter((m) => m.estado === 'cumplida'), ...misiones.filter((m) => m.estado === 'activa')];
     const hechas = misiones.filter((m) => m.estado === 'reclamada');
     const vacio = !duenoId ? (d === 'plaza' ? 'Solo dentro de una plaza.' : 'Sin Facción.') : vivas.length ? '' : 'Ninguna en marcha.';
-    return `<div class="diario-grupo"><div class="diario-grupo-cab">${nombre}<small>${vivas.length}</small></div>
-      ${vivas.map((m) => item(d, m)).join('')}${vacio ? `<p class="diario-vacio">${vacio}</p>` : ''}
-      ${hechas.length ? `<details class="diario-hechas"${hechas.some((m) => claveDe(d, m.id) === abierta) ? ' open' : ''}><summary>Hechas (${hechas.length})</summary>${hechas.map((m) => item(d, m)).join('')}</details>` : ''}</div>`;
+    const nuevas = s?.nuevas.filter((k) => k.startsWith(`${d}:`) && k !== abierta).length ?? 0;
+    const cab = `<span class="diario-grupo-nombre">${nombre}</span>${nuevas ? `<i class="diario-nueva" title="Sin leer">${nuevas}</i>` : ''}<small>${vivas.length}</small>`;
+    const cuerpo = `${vivas.map((m) => item(d, m)).join('')}${vacio ? `<p class="diario-vacio">${vacio}</p>` : ''}
+      ${hechas.length ? `<details class="diario-hechas"${hechas.some((m) => claveDe(d, m.id) === abierta) ? ' open' : ''}><summary>Hechas (${hechas.length})</summary>${hechas.map((m) => item(d, m)).join('')}</details>` : ''}`;
+    // Cada grupo se pliega; recuerda cómo lo dejó el jugador mientras dura la sesión.
+    return `<div class="diario-grupo">${plegable(`diario:${d}`, cab, cuerpo, true)}</div>`;
   }).join('');
 }
 
@@ -316,6 +321,7 @@ function verNuevas(p: ProyeccionJugador, d: DuenoMision): void {
 /** Cablea Seguir, Reclamar y las pestañas en `raiz` (el panel, la subpestaña de la plaza o la pestaña Facción). */
 export function cablearMisiones(raiz: HTMLElement, p: ProyeccionJugador, ejecutar: Ejecutar, repintar: () => void): void {
   alCambiar = repintar;
+  cablearPlegables(raiz);
   // En la ventana, lo nuevo deja de serlo al abrir cada misión; en la plaza y la Facción, al cabo de un rato de ver la lista.
   const vista = raiz.querySelector('.diario') ? undefined : (raiz.querySelector<HTMLElement>('[data-dueno]')?.dataset.dueno as DuenoMision | undefined);
   if (vista) setTimeout(() => verNuevas(p, vista), 4000);
