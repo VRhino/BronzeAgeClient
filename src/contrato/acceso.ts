@@ -49,3 +49,10 @@ export async function descargarArtefacto(base: string, url: string): Promise<Uin
   if (!r.ok) throw new ErrorDeAcceso(r.status, 'artefacto', `no se pudo bajar el artefacto de mundo (${r.status})`);
   return new Uint8Array(await r.arrayBuffer());
 }
+
+/** `GET` del paquete de relieve por su ruta (`InfoMundo.url_relieve`, relativa al servidor; contrato 06 §8). */
+export async function descargarRelieve(base: string, url: string): Promise<Uint8Array> {
+  const r = await fetch(new URL(url, base || location.origin).toString());
+  if (!r.ok) throw new ErrorDeAcceso(r.status, 'relieve', `no se pudo bajar el relieve del mundo (${r.status})`);
+  return new Uint8Array(await r.arrayBuffer());
+}

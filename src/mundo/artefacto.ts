@@ -6,6 +6,7 @@ import { decompress } from 'fzstd';
 import { ArtefactoDeMundoSchema, EncodingRaster, type ArtefactoDeMundo, type Raster } from '../contrato/gen/bronzeage/v1/world_pb';
 import { descargarArtefacto } from '../contrato/acceso';
 import type { MapaGenerado, RastersDeMundo, RasterU8, RasterU16 } from '../terreno';
+import { cacheDeUno } from './cacheDeUno';
 
 const MIL = 1000;
 
@@ -60,70 +61,19 @@ export function mapaDesdeArtefacto(a: ArtefactoDeMundo): MapaGenerado {
 
 // ─────────────────────────── caché en IndexedDB ───────────────────────────
 
-const BD = 'bronzeage-mundo';
-const ALMACEN = 'artefactos';
-
-function abrirBd(): Promise<IDBDatabase | undefined> {
-  return new Promise((resolver) => {
-    try {
-      const p = indexedDB.open(BD, 1);
-      p.onupgradeneeded = () => p.result.createObjectStore(ALMACEN);
-      p.onsuccess = () => resolver(p.result);
-      p.onerror = () => resolver(undefined);
-    } catch {
-      resolver(undefined);
-    }
-  });
-}
-
-async function leerCache(hash: string): Promise<Uint8Array | undefined> {
-  const bd = await abrirBd();
-  if (!bd) return undefined;
-  return new Promise((resolver) => {
-    try {
-      const p = bd.transaction(ALMACEN).objectStore(ALMACEN).get(hash);
-      p.onsuccess = () => resolver(p.result instanceof Uint8Array ? p.result : undefined);
-      p.onerror = () => resolver(undefined);
-    } catch {
-      resolver(undefined);
-    }
-  });
-}
-
-async function guardarCache(hash: string, datos: Uint8Array): Promise<void> {
-  const bd = await abrirBd();
-  if (!bd) return;
-  try {
-    const t = bd.transaction(ALMACEN, 'readwrite');
-    // Solo se guarda el vigente: un mundo nuevo deja viejo al anterior.
-    t.objectStore(ALMACEN).clear();
-    t.objectStore(ALMACEN).put(datos, hash);
-  } catch {
-    // sin caché, se bajará otra vez
-  }
-}
+const cache = cacheDeUno('bronzeage-mundo', 'artefactos');
 
 /** El hash del artefacto que hay en caché (para `Hola.mundo_hash_conocido`), si hay alguno. */
-export async function hashEnCache(): Promise<string | undefined> {
-  const bd = await abrirBd();
-  if (!bd) return undefined;
-  return new Promise((resolver) => {
-    try {
-      const p = bd.transaction(ALMACEN).objectStore(ALMACEN).getAllKeys();
-      p.onsuccess = () => resolver(typeof p.result[0] === 'string' ? p.result[0] : undefined);
-      p.onerror = () => resolver(undefined);
-    } catch {
-      resolver(undefined);
-    }
-  });
+export function hashEnCache(): Promise<string | undefined> {
+  return cache.clave();
 }
 
 /** El mapa del mundo vigente: de la caché si coincide el hash; si no, lo baja de `url` y lo guarda. */
 export async function cargarMundo(base: string, url: string, hash: string): Promise<{ mapa: MapaGenerado; artefacto: ArtefactoDeMundo }> {
-  let datos = await leerCache(hash);
+  let datos = await cache.leer(hash);
   if (!datos) {
     datos = await descargarArtefacto(base, url);
-    await guardarCache(hash, datos);
+    await cache.guardar(hash, datos);
   }
   const artefacto = fromBinary(ArtefactoDeMundoSchema, datos);
   return { mapa: mapaDesdeArtefacto(artefacto), artefacto };

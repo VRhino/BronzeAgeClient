@@ -17,6 +17,7 @@ como imagen/rejilla, este cliente lleva su **propia copia** de las funciones pur
 - [`docs/COMANDOS.md`](docs/COMANDOS.md) — los 76 comandos de partida y cuáles están cableados.
 - [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md) — endpoints, formas de petición y respuesta.
 - [`docs/Features_Pendientes.md`](docs/Features_Pendientes.md) — cómo se quiere que sea la interfaz.
+- [`docs/Mundo_3D.md`](docs/Mundo_3D.md) — el paso del modo mundo a 3D: decisiones, valores, piezas y fases.
 
 ## Por qué duplicar el terreno en vez de importarlo
 

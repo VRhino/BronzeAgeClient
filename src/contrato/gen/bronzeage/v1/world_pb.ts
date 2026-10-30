@@ -23,7 +23,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file bronzeage/v1/world.proto.
  */
 export const file_bronzeage_v1_world: GenFile = /*@__PURE__*/
-  fileDesc("Chhicm9uemVhZ2UvdjEvd29ybGQucHJvdG8SDGJyb256ZWFnZS52MSKMAQoGUmFzdGVyEhAKCGNvbHVtbmFzGAEgASgNEg0KBWZpbGFzGAIgASgNEhQKDHRhbWFub19jZWxkYRgDIAEoDRIuCghlbmNvZGluZxgEIAEoDjIcLmJyb256ZWFnZS52MS5FbmNvZGluZ1Jhc3RlchINCgVkYXRvcxgFIAEoDBIMCgR6c3RkGAYgASgIIoYBCgNSaW8SCgoCaWQYASABKAkSIwoGcHVudG9zGAIgAygLMhMuYnJvbnplYWdlLnYxLlB1bnRvEhcKD3Rlcm1pbmFfZW5fbGFnbxgDIAEoCBIRCgluYXZlZ2FibGUYBCABKAgSIgoFdmFkb3MYBSADKAsyEy5icm9uemVhZ2UudjEuUHVudG8irgEKBFZldGESCgoCaWQYASABKAkSIwoGY2VudHJvGAIgASgLMhMuYnJvbnplYWdlLnYxLlB1bnRvEhEKCW5vZG9zX2lkcxgDIAMoCRIjChZjYW1wYW1lbnRvX2JhbmRpZG9zX2lkGAQgASgJSACIAQESFQoIYWxpam9faWQYBSABKAlIAYgBAUIZChdfY2FtcGFtZW50b19iYW5kaWRvc19pZEILCglfYWxpam9faWQiPgoJTm9kb0dyYWZvEgoKAmlkGAEgASgNEiUKCHBvc2ljaW9uGAIgASgLMhMuYnJvbnplYWdlLnYxLlB1bnRvIkoKC0FyaXN0YUdyYWZvEgkKAWEYASABKA0SCQoBYhgCIAEoDRIXCg9jb3N0ZV9taWxlc2ltYXMYAyABKA0SDAoEdmFkbxgEIAEoCCJ8Cg9HcmFmb05hdmVnYWNpb24SJgoFbm9kb3MYASADKAsyFy5icm9uemVhZ2UudjEuTm9kb0dyYWZvEioKB2FyaXN0YXMYAiADKAsyGS5icm9uemVhZ2UudjEuQXJpc3RhR3JhZm8SFQoNZXNwYWNpYWRvX21pbhgDIAEoDSKrAQoKTWFuaWZpZXN0bxIMCgRoYXNoGAEgASgJEhcKD3ZlcnNpb25fZm9ybWF0bxgCIAEoDRIRCglnZW5lcmFkb3IYAyABKAkSIwoGdGFtYW5vGAQgASgLMhMuYnJvbnplYWdlLnYxLlB1bnRvEhQKDGZhY3Rvcl91bml0eRgFIAEoDRIoCgVjYXBhcxgGIAMoCzIZLmJyb256ZWFnZS52MS5DYXBhRGVNdW5kbyJNCgtDYXBhRGVNdW5kbxIOCgZub21icmUYASABKAkSDwoHYXJjaGl2bxgCIAEoCRIOCgZzaGEyNTYYAyABKAkSDQoFYnl0ZXMYBCABKAQi9wUKEEFydGVmYWN0b0RlTXVuZG8SLAoKbWFuaWZpZXN0bxgBIAEoCzIYLmJyb256ZWFnZS52MS5NYW5pZmllc3RvEiQKBmFsdHVyYRgCIAEoCzIULmJyb256ZWFnZS52MS5SYXN0ZXISJQoHdGVycmVubxgDIAEoCzIULmJyb256ZWFnZS52MS5SYXN0ZXISKAoKZmVydGlsaWRhZBgEIAEoCzIULmJyb256ZWFnZS52MS5SYXN0ZXISJQoHaHVtZWRhZBgFIAEoCzIULmJyb256ZWFnZS52MS5SYXN0ZXISLQoPZGVuc2lkYWRfYm9zcXVlGAYgASgLMhQuYnJvbnplYWdlLnYxLlJhc3RlchIlCgdhbmlsbG9zGAcgASgLMhQuYnJvbnplYWdlLnYxLlJhc3RlchIpCgt0cmFuc2l0YWJsZRgIIAEoCzIULmJyb256ZWFnZS52MS5SYXN0ZXISHwoEcmlvcxgJIAMoCzIRLmJyb256ZWFnZS52MS5SaW8SKQoHYm9zcXVlcxgKIAMoCzIYLmJyb256ZWFnZS52MS5ab25hQm9zcXVlEigKBW5vZG9zGAsgAygLMhkuYnJvbnplYWdlLnYxLk5vZG9SZWN1cnNvEiEKBXZldGFzGAwgAygLMhIuYnJvbnplYWdlLnYxLlZldGESOAoLY2FtcGFtZW50b3MYDSADKAsyIy5icm9uemVhZ2UudjEuQ2FtcGFtZW50b01lcmNlbmFyaW9zEjwKEmJhbmRpZG9zX2luaWNpYWxlcxgOIAMoCzIgLmJyb256ZWFnZS52MS5DYW1wYW1lbnRvQmFuZGlkb3MSIwoGYWxpam9zGA8gAygLMhMuYnJvbnplYWdlLnYxLkFsaWpvEjEKCm5hdmVnYWNpb24YECABKAsyHS5icm9uemVhZ2UudjEuR3JhZm9OYXZlZ2FjaW9uEi0KCHBhcmNlbGFzGBEgAygLMhsuYnJvbnplYWdlLnYxLlBhcmNlbGFCb3NxdWUiaAoLU2VjdG9yVW5pdHkSCgoCaWQYASABKAkSLAoKcmVjdGFuZ3VsbxgCIAEoCzIYLmJyb256ZWFnZS52MS5SZWN0YW5ndWxvEg8KB2FyY2hpdm8YAyABKAkSDgoGc2hhMjU2GAQgASgJInEKDFBhcXVldGVVbml0eRIWCg5oYXNoX2FydGVmYWN0bxgBIAEoCRIMCgRoYXNoGAIgASgJEg4KBmZhY3RvchgDIAEoDRIrCghzZWN0b3JlcxgEIAMoCzIZLmJyb256ZWFnZS52MS5TZWN0b3JVbml0eSpnCg5FbmNvZGluZ1Jhc3RlchIcChhFTkNPRElOR19OT19FU1BFQ0lGSUNBRE8QABIPCgtFTkNPRElOR19VOBABEhMKD0VOQ09ESU5HX1UxNl9MRRACEhEKDUVOQ09ESU5HX0JJVFMQAyqkAQoMQ2xhc2VUZXJyZW5vEiEKHUNMQVNFX1RFUlJFTk9fTk9fRVNQRUNJRklDQURBEAASEAoMVEVSUkVOT19BR1VBEAESEQoNVEVSUkVOT19DT1NUQRACEhEKDVRFUlJFTk9fTExBTk8QAxISCg5URVJSRU5PX0NPTElOQRAEEhMKD1RFUlJFTk9fTU9OVEFOQRAFEhAKDFRFUlJFTk9fQ0lNQRAGKl0KBkFuaWxsbxIaChZBTklMTE9fTk9fRVNQRUNJRklDQURPEAASDwoLQU5JTExPX0ZPQ08QARITCg9BTklMTE9fRlJPTlRFUkEQAhIRCg1BTklMTE9fTEVKQU5BEANCGKoCFUJyb256ZUFnZS5Db250cmFjdC5WMWIGcHJvdG8z", [file_bronzeage_v1_common, file_bronzeage_v1_entities]);
+  fileDesc("Chhicm9uemVhZ2UvdjEvd29ybGQucHJvdG8SDGJyb256ZWFnZS52MSKMAQoGUmFzdGVyEhAKCGNvbHVtbmFzGAEgASgNEg0KBWZpbGFzGAIgASgNEhQKDHRhbWFub19jZWxkYRgDIAEoDRIuCghlbmNvZGluZxgEIAEoDjIcLmJyb256ZWFnZS52MS5FbmNvZGluZ1Jhc3RlchINCgVkYXRvcxgFIAEoDBIMCgR6c3RkGAYgASgIIoYBCgNSaW8SCgoCaWQYASABKAkSIwoGcHVudG9zGAIgAygLMhMuYnJvbnplYWdlLnYxLlB1bnRvEhcKD3Rlcm1pbmFfZW5fbGFnbxgDIAEoCBIRCgluYXZlZ2FibGUYBCABKAgSIgoFdmFkb3MYBSADKAsyEy5icm9uemVhZ2UudjEuUHVudG8irgEKBFZldGESCgoCaWQYASABKAkSIwoGY2VudHJvGAIgASgLMhMuYnJvbnplYWdlLnYxLlB1bnRvEhEKCW5vZG9zX2lkcxgDIAMoCRIjChZjYW1wYW1lbnRvX2JhbmRpZG9zX2lkGAQgASgJSACIAQESFQoIYWxpam9faWQYBSABKAlIAYgBAUIZChdfY2FtcGFtZW50b19iYW5kaWRvc19pZEILCglfYWxpam9faWQiPgoJTm9kb0dyYWZvEgoKAmlkGAEgASgNEiUKCHBvc2ljaW9uGAIgASgLMhMuYnJvbnplYWdlLnYxLlB1bnRvIkoKC0FyaXN0YUdyYWZvEgkKAWEYASABKA0SCQoBYhgCIAEoDRIXCg9jb3N0ZV9taWxlc2ltYXMYAyABKA0SDAoEdmFkbxgEIAEoCCJ8Cg9HcmFmb05hdmVnYWNpb24SJgoFbm9kb3MYASADKAsyFy5icm9uemVhZ2UudjEuTm9kb0dyYWZvEioKB2FyaXN0YXMYAiADKAsyGS5icm9uemVhZ2UudjEuQXJpc3RhR3JhZm8SFQoNZXNwYWNpYWRvX21pbhgDIAEoDSKrAQoKTWFuaWZpZXN0bxIMCgRoYXNoGAEgASgJEhcKD3ZlcnNpb25fZm9ybWF0bxgCIAEoDRIRCglnZW5lcmFkb3IYAyABKAkSIwoGdGFtYW5vGAQgASgLMhMuYnJvbnplYWdlLnYxLlB1bnRvEhQKDGZhY3Rvcl91bml0eRgFIAEoDRIoCgVjYXBhcxgGIAMoCzIZLmJyb256ZWFnZS52MS5DYXBhRGVNdW5kbyJNCgtDYXBhRGVNdW5kbxIOCgZub21icmUYASABKAkSDwoHYXJjaGl2bxgCIAEoCRIOCgZzaGEyNTYYAyABKAkSDQoFYnl0ZXMYBCABKAQinAYKEEFydGVmYWN0b0RlTXVuZG8SLAoKbWFuaWZpZXN0bxgBIAEoCzIYLmJyb256ZWFnZS52MS5NYW5pZmllc3RvEiQKBmFsdHVyYRgCIAEoCzIULmJyb256ZWFnZS52MS5SYXN0ZXISJQoHdGVycmVubxgDIAEoCzIULmJyb256ZWFnZS52MS5SYXN0ZXISKAoKZmVydGlsaWRhZBgEIAEoCzIULmJyb256ZWFnZS52MS5SYXN0ZXISJQoHaHVtZWRhZBgFIAEoCzIULmJyb256ZWFnZS52MS5SYXN0ZXISLQoPZGVuc2lkYWRfYm9zcXVlGAYgASgLMhQuYnJvbnplYWdlLnYxLlJhc3RlchIlCgdhbmlsbG9zGAcgASgLMhQuYnJvbnplYWdlLnYxLlJhc3RlchIpCgt0cmFuc2l0YWJsZRgIIAEoCzIULmJyb256ZWFnZS52MS5SYXN0ZXISHwoEcmlvcxgJIAMoCzIRLmJyb256ZWFnZS52MS5SaW8SKQoHYm9zcXVlcxgKIAMoCzIYLmJyb256ZWFnZS52MS5ab25hQm9zcXVlEigKBW5vZG9zGAsgAygLMhkuYnJvbnplYWdlLnYxLk5vZG9SZWN1cnNvEiEKBXZldGFzGAwgAygLMhIuYnJvbnplYWdlLnYxLlZldGESOAoLY2FtcGFtZW50b3MYDSADKAsyIy5icm9uemVhZ2UudjEuQ2FtcGFtZW50b01lcmNlbmFyaW9zEjwKEmJhbmRpZG9zX2luaWNpYWxlcxgOIAMoCzIgLmJyb256ZWFnZS52MS5DYW1wYW1lbnRvQmFuZGlkb3MSIwoGYWxpam9zGA8gAygLMhMuYnJvbnplYWdlLnYxLkFsaWpvEjEKCm5hdmVnYWNpb24YECABKAsyHS5icm9uemVhZ2UudjEuR3JhZm9OYXZlZ2FjaW9uEi0KCHBhcmNlbGFzGBEgAygLMhsuYnJvbnplYWdlLnYxLlBhcmNlbGFCb3NxdWUSIwoFY29zdGUYEiABKAsyFC5icm9uemVhZ2UudjEuUmFzdGVyImgKC1NlY3RvclVuaXR5EgoKAmlkGAEgASgJEiwKCnJlY3Rhbmd1bG8YAiABKAsyGC5icm9uemVhZ2UudjEuUmVjdGFuZ3VsbxIPCgdhcmNoaXZvGAMgASgJEg4KBnNoYTI1NhgEIAEoCSJxCgxQYXF1ZXRlVW5pdHkSFgoOaGFzaF9hcnRlZmFjdG8YASABKAkSDAoEaGFzaBgCIAEoCRIOCgZmYWN0b3IYAyABKA0SKwoIc2VjdG9yZXMYBCADKAsyGS5icm9uemVhZ2UudjEuU2VjdG9yVW5pdHkizgEKDlBhcXVldGVSZWxpZXZlEgwKBGhhc2gYASABKAkSFgoOaGFzaF9hcnRlZmFjdG8YAiABKAkSDAoEcGFzbxgDIAEoDRITCgtsYWRvX3Rlc2VsYRgEIAEoDRIQCghjb2x1bW5hcxgFIAEoDRINCgVmaWxhcxgGIAEoDRIRCgl0ZXNlbGFzX3gYByABKA0SEQoJdGVzZWxhc195GAggASgNEiwKB3Rlc2VsYXMYCSADKAsyGy5icm9uemVhZ2UudjEuVGVzZWxhUmVsaWV2ZSItCg1UZXNlbGFSZWxpZXZlEg4KBmFsdHVyYRgBIAEoDBIMCgRhZ3VhGAIgASgMKmcKDkVuY29kaW5nUmFzdGVyEhwKGEVOQ09ESU5HX05PX0VTUEVDSUZJQ0FETxAAEg8KC0VOQ09ESU5HX1U4EAESEwoPRU5DT0RJTkdfVTE2X0xFEAISEQoNRU5DT0RJTkdfQklUUxADKqQBCgxDbGFzZVRlcnJlbm8SIQodQ0xBU0VfVEVSUkVOT19OT19FU1BFQ0lGSUNBREEQABIQCgxURVJSRU5PX0FHVUEQARIRCg1URVJSRU5PX0NPU1RBEAISEQoNVEVSUkVOT19MTEFOTxADEhIKDlRFUlJFTk9fQ09MSU5BEAQSEwoPVEVSUkVOT19NT05UQU5BEAUSEAoMVEVSUkVOT19DSU1BEAYqXQoGQW5pbGxvEhoKFkFOSUxMT19OT19FU1BFQ0lGSUNBRE8QABIPCgtBTklMTE9fRk9DTxABEhMKD0FOSUxMT19GUk9OVEVSQRACEhEKDUFOSUxMT19MRUpBTkEQA0IYqgIVQnJvbnplQWdlLkNvbnRyYWN0LlYxYgZwcm90bzM", [file_bronzeage_v1_common, file_bronzeage_v1_entities]);
 
 /**
  * @generated from message bronzeage.v1.Raster
@@ -430,6 +430,13 @@ export type ArtefactoDeMundo = Message<"bronzeage.v1.ArtefactoDeMundo"> & {
    * @generated from field: repeated bronzeage.v1.ParcelaBosque parcelas = 17;
    */
   parcelas: ParcelaBosque[];
+
+  /**
+   * u16: coste de movimiento en el centro de la celda, en milésimas (1000 = llano;
+   *
+   * @generated from field: bronzeage.v1.Raster coste = 18;
+   */
+  coste?: Raster | undefined;
 };
 
 /**
@@ -510,6 +517,116 @@ export type PaqueteUnity = Message<"bronzeage.v1.PaqueteUnity"> & {
  */
 export const PaqueteUnitySchema: GenMessage<PaqueteUnity> = /*@__PURE__*/
   messageDesc(file_bronzeage_v1_world, 10);
+
+/**
+ * Paquete de relieve (06 §8, 2026-10-30): la altura fina de todo el mapa para los clientes 3D. Lo escribe el mismo generador que el
+ * artefacto, va aparte (el servidor solo lo valida y lo sirve) y se baja una vez por mundo, como el artefacto: el cliente lo guarda
+ * por hash. Las muestras van en los vértices de una rejilla de `paso` (x = i · paso, y = j · paso) y valen lo que el raster `altura`.
+ *
+ * @generated from message bronzeage.v1.PaqueteRelieve
+ */
+export type PaqueteRelieve = Message<"bronzeage.v1.PaqueteRelieve"> & {
+  /**
+   * sha256 hex de la serialización con hash = ""
+   *
+   * @generated from field: string hash = 1;
+   */
+  hash: string;
+
+  /**
+   * manifiesto.hash del artefacto del que deriva
+   *
+   * @generated from field: string hash_artefacto = 2;
+   */
+  hashArtefacto: string;
+
+  /**
+   * milésimas de unidad estratégica entre muestras: 500 (0,5 u)
+   *
+   * @generated from field: uint32 paso = 3;
+   */
+  paso: number;
+
+  /**
+   * intervalos por lado de tesela: 128 (64 u); cada tesela guarda (lado + 1)² muestras
+   *
+   * @generated from field: uint32 lado_tesela = 4;
+   */
+  ladoTesela: number;
+
+  /**
+   * y comparte su última fila y su última columna con la vecina
+   *
+   * muestras del mapa en x: ⌈ancho / paso⌉ + 1 (la primera en x = 0)
+   *
+   * @generated from field: uint32 columnas = 5;
+   */
+  columnas: number;
+
+  /**
+   * muestras en y, fila 0 al norte
+   *
+   * @generated from field: uint32 filas = 6;
+   */
+  filas: number;
+
+  /**
+   * ⌈(columnas − 1) / lado_tesela⌉
+   *
+   * @generated from field: uint32 teselas_x = 7;
+   */
+  teselasX: number;
+
+  /**
+   * ⌈(filas − 1) / lado_tesela⌉
+   *
+   * @generated from field: uint32 teselas_y = 8;
+   */
+  teselasY: number;
+
+  /**
+   * teselas_x · teselas_y, por filas de teselas desde el noroeste. La parte de una tesela
+   *
+   * @generated from field: repeated bronzeage.v1.TeselaRelieve teselas = 9;
+   */
+  teselas: TeselaRelieve[];
+};
+
+/**
+ * Describes the message bronzeage.v1.PaqueteRelieve.
+ * Use `create(PaqueteRelieveSchema)` to create a new message.
+ */
+export const PaqueteRelieveSchema: GenMessage<PaqueteRelieve> = /*@__PURE__*/
+  messageDesc(file_bronzeage_v1_world, 11);
+
+/**
+ * @generated from message bronzeage.v1.TeselaRelieve
+ */
+export type TeselaRelieve = Message<"bronzeage.v1.TeselaRelieve"> & {
+  /**
+   * zstd de (lado + 1)² u16 LE en orden de filas (0..65535 como el raster `altura`), cada
+   *
+   * @generated from field: bytes altura = 1;
+   */
+  altura: Uint8Array;
+
+  /**
+   * muestra guardada como su diferencia, módulo 2^16, con la predicción: izquierda + arriba
+   * − diagonal; solo la izquierda en la primera fila y solo la de arriba en la primera columna
+   *
+   * zstd de (lado + 1)² bits de agua (mar y lagos; muestra i → byte i >> 3, bit i & 7,
+   *
+   * @generated from field: bytes agua = 2;
+   */
+  agua: Uint8Array;
+};
+
+/**
+ * Describes the message bronzeage.v1.TeselaRelieve.
+ * Use `create(TeselaRelieveSchema)` to create a new message.
+ */
+export const TeselaRelieveSchema: GenMessage<TeselaRelieve> = /*@__PURE__*/
+  messageDesc(file_bronzeage_v1_world, 12);
 
 /**
  * @generated from enum bronzeage.v1.EncodingRaster

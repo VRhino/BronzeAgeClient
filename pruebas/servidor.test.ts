@@ -1,11 +1,12 @@
 // Contra un `bronzeage-servidor` de verdad (solo con `BRONZEAGE_URL=http://127.0.0.1:7878`): registro, login, sesión, Bienvenida sin héroe,
-// `crear_heroe` con respuesta causal, el artefacto de mundo, la VISTA con su niebla y la reanudación sin novedad.
+// `crear_heroe` con respuesta causal, el artefacto de mundo y su relieve, la VISTA con su niebla y la reanudación sin novedad.
 import { describe, expect, test } from 'vitest';
 import { fromBinary } from '@bufbuild/protobuf';
 import { TipoEntidad } from '../src/contrato/gen/bronzeage/v1/common_pb';
-import { ArtefactoDeMundoSchema } from '../src/contrato/gen/bronzeage/v1/world_pb';
+import { ArtefactoDeMundoSchema, PaqueteRelieveSchema } from '../src/contrato/gen/bronzeage/v1/world_pb';
 import { Resultado, TipoCliente } from '../src/contrato/gen/bronzeage/v1/session_pb';
-import { descargarArtefacto, entrar, registrar } from '../src/contrato/acceso';
+import { descargarArtefacto, descargarRelieve, entrar, registrar } from '../src/contrato/acceso';
+import { verificarRelieve } from '../src/mundo/relieve';
 import { Sesion } from '../src/contrato/sesion';
 
 const BASE = process.env.BRONZEAGE_URL;
@@ -34,6 +35,13 @@ describe.skipIf(!BASE)('servidor real', () => {
 
     const artefacto = fromBinary(ArtefactoDeMundoSchema, await descargarArtefacto(BASE!, b.mundo!.urlArtefacto));
     expect(artefacto.manifiesto?.hash).toBe(b.mundo!.hash);
+    // El relieve fino, si el servidor lo tiene al lado del artefacto: su ruta, su hash y que es el de este mundo.
+    if (b.mundo!.urlRelieve) {
+      expect(b.mundo!.urlRelieve).toBe(`/v1/mundo/${b.mundo!.hash}/relieve`);
+      const relieve = fromBinary(PaqueteRelieveSchema, await descargarRelieve(BASE!, b.mundo!.urlRelieve));
+      expect(await verificarRelieve(relieve, b.mundo!.hashRelieve)).toBe(true);
+      expect(relieve.hashArtefacto).toBe(b.mundo!.hash);
+    }
 
     const camp = b.campamentosParaElegir[0]!;
     const r = await s.ordenar({ case: 'crearHeroe', value: { displayName: 'Ana', campamentoId: camp.campamentoId } });

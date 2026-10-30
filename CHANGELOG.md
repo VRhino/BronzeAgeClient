@@ -3,6 +3,22 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.61.0] — 2026-10-30 · mundo 3D, fase 1: el relieve fino · sync con `VRhino/BronzeAge@bfb9eb9`
+
+Empieza el paso del modo mundo a 3D (plan y decisiones en [`docs/Mundo_3D.md`](docs/Mundo_3D.md)). Esta fase solo trae los datos: no
+cambia nada de lo que se ve.
+
+### Añadido
+- **Relieve fino del mundo** (`src/mundo/relieve.ts`, contrato 06 §8): el paquete con la altura cada 0,5 u, el que dibujará el 3D. Se baja
+  una vez por mundo por la ruta que anuncia la `Bienvenida` (`InfoMundo.url_relieve`), se comprueba que es el anunciado
+  (`hash_relieve`) y se guarda en IndexedDB. Se abre por teselas de 64 u, solo las que se piden: `alturaEn` y `aguaEn` en cualquier punto.
+  `obtenerRelieve()` lo da a quien lo pida (aún nadie: lo usará la fase 2).
+
+### Cambiado
+- **Contrato** regenerado desde `VRhino/BronzeAge@bfb9eb9`: `InfoMundo.url_relieve` y `hash_relieve`, el mensaje `PaqueteRelieve` y la capa
+  `coste` del artefacto.
+- La caché del artefacto en IndexedDB pasa a `src/mundo/cacheDeUno.ts`, que comparte con el relieve; guarda lo mismo y en el mismo sitio.
+
 ## [0.60.0] — 2026-10-29 · Mercado › Caravanas: arreglos y nueva tarjeta · sync con `VRhino/BronzeAge@bcc90a01`
 
 ### Corregido

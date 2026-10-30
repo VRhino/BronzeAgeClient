@@ -6,6 +6,7 @@ import { Resultado } from './contrato/gen/bronzeage/v1/session_pb';
 import { TipoEntidad } from './contrato/gen/bronzeage/v1/common_pb';
 import type { EventoDominio as EventoPb } from './contrato/gen/bronzeage/v1/events_pb';
 import { cargarMundo } from './mundo/artefacto';
+import { cargarRelieve, type Relieve } from './mundo/relieve';
 import { instante, proyectar } from './motor/proyeccion';
 import { ComandoDesconocido, traducirOrden } from './motor/ordenes';
 
@@ -788,6 +789,22 @@ export async function obtenerMapa(_gameId: string, mapaId: string): Promise<Mapa
   const { mapa } = await cargarMundo(BASE, mundo.urlArtefacto, mundo.hash);
   mapaCargado = { hash: mundo.hash, mapa };
   return mapa;
+}
+
+let relieveCargado: { hash: string; relieve: Promise<Relieve> } | null = null;
+
+/** El relieve fino del mundo para la vista 3D (contrato 06 §8): se baja una vez por mundo y se guarda por hash. `null` si el servidor no lo
+ * anuncia. Dos peticiones a la vez comparten la misma descarga. */
+export async function obtenerRelieve(): Promise<Relieve | null> {
+  const s = await sesionAbierta();
+  const mundo = s.bienvenida?.mundo;
+  if (!mundo?.urlRelieve || !mundo.hashRelieve) return null;
+  if (relieveCargado?.hash !== mundo.hashRelieve) {
+    const relieve = cargarRelieve(BASE, mundo.urlRelieve, mundo.hashRelieve);
+    relieveCargado = { hash: mundo.hashRelieve, relieve };
+    relieve.catch(() => { if (relieveCargado?.relieve === relieve) relieveCargado = null; }); // un fallo no se queda guardado
+  }
+  return relieveCargado.relieve;
 }
 
 /** Un comando de siempre, como `Orden` del contrato. Cuando llega el resultado, el almacén ya tiene lo que la orden cambió (respuesta
