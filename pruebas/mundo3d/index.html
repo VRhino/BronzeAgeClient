@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Banco del mundo 3D</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #0a0e17; color: #e8e2d0; font: 14px/1.4 system-ui, sans-serif; }
+      #escena { position: absolute; inset: 0; }
+      .mundo3d-lienzo { display: block; width: 100%; height: 100%; outline: none; cursor: crosshair; }
+      #mandos { position: absolute; top: 10px; left: 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; background: rgba(10, 14, 23, 0.8); padding: 8px 10px; border-radius: 6px; }
+      #mandos button, #mandos label { font: inherit; color: inherit; }
+      #mandos button { background: #1d2433; border: 1px solid #3a4558; border-radius: 4px; padding: 3px 8px; cursor: pointer; }
+      #lectura { position: absolute; bottom: 10px; left: 10px; background: rgba(10, 14, 23, 0.8); padding: 6px 10px; border-radius: 6px; font: 12px ui-monospace, monospace; }
+    </style>
+  </head>
+  <body>
+    <div id="escena"></div>
+    <div id="mandos">
+      <strong>Banco del mundo 3D</strong>
+      <button type="button" id="normal">Normal</button>
+      <button type="button" id="alejado">Alejado</button>
+      <label><input type="checkbox" id="soldados"> Con soldados</label>
+      <label><input type="checkbox" id="sin-niebla"> Sin niebla</label>
+      <span>Clic en el terreno: la columna va ahí en línea recta.</span>
+    </div>
+    <div id="lectura">cargando el mundo…</div>
+    <script type="module" src="./banco.ts"></script>
+  </body>
+</html>

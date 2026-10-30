@@ -1276,6 +1276,22 @@ pre#proyeccion {
   height: 100%;
 }
 
+/* El modo mundo en 3D (src/mundo3d/): el lienzo de la escena y el aviso mientras carga el mundo. */
+.mapa-lienzo .mundo3d-lienzo {
+  outline: none;
+}
+
+.mapa-cargando {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 24px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
 .mapa-zoom {
   position: absolute;
   right: 16px;

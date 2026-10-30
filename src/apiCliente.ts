@@ -508,6 +508,16 @@ export function radioDeVision(): Promise<number> {
   });
 }
 
+/** Los radios de visión del servidor (`Movimiento_Ejercitos.VISION`): el del héroe solo y el de la columna con soldados; si no llegan, 15 y 30,
+ * las cifras de hoy. Deciden cuánto cabe en pantalla en el mundo 3D. */
+export function radiosDeVisionDelServidor(): Promise<{ solo: number; ejercito: number }> {
+  return cargarDatosDeJuego().then((d) => {
+    const v = d?.documentos?.Movimiento_Ejercitos?.VISION as { jugadorSolo?: number; ejercito?: number } | undefined;
+    const solo = Number(v?.jugadorSolo), ejercito = Number(v?.ejercito);
+    return { solo: solo > 0 ? solo : 15, ejercito: ejercito > 0 ? ejercito : 30 };
+  });
+}
+
 /** Los textos de las misiones que publica el motor en un catálogo aparte de `GET /v1/datos`, no en la foto
  * (`documentos.Misiones_Textos.TEXTOS_MISIONES`): `misiones.<id>` con título y texto, y `contadores.<contador>` con el nombre de cada barra.
  * `null` mientras no llegue (o si el motor aún no lo publica). */

@@ -54,6 +54,8 @@ export class Relieve {
   private readonly teselas: TeselaRelieve[];
   /** Las teselas abiertas, de la menos a la más usada hace poco. */
   private readonly abiertas = new Map<number, TeselaAbierta>();
+  /** La última tesela pedida: pedir la misma seguida (lo normal al montar el terreno) no toca la lista de abiertas. */
+  private ultima: { k: number; t: TeselaAbierta } | null = null;
 
   /** `maxAbiertas`: cuántas teselas se guardan abiertas (cada una ocupa unos 50 KB). */
   constructor(p: PaqueteRelieve, private readonly maxAbiertas = 96) {
@@ -77,6 +79,7 @@ export class Relieve {
   /** La tesela (tx, ty), abierta. Las últimas `maxAbiertas` se quedan abiertas. */
   tesela(tx: number, ty: number): TeselaAbierta {
     const k = ty * this.teselasX + tx;
+    if (this.ultima?.k === k) return this.ultima.t;
     let t = this.abiertas.get(k);
     if (t) {
       this.abiertas.delete(k);
@@ -85,6 +88,7 @@ export class Relieve {
       if (this.abiertas.size >= this.maxAbiertas) this.abiertas.delete(this.abiertas.keys().next().value!);
     }
     this.abiertas.set(k, t);
+    this.ultima = { k, t };
     return t;
   }
 

@@ -27,6 +27,8 @@ import {
   radioDeProteccionMercenarios,
   proyeccionAlInstante,
   obtenerMapa,
+  obtenerRelieve,
+  radiosDeVisionDelServidor,
   unirseAPartida,
   type ProyeccionJugador,
   type RespuestaComando,
@@ -67,7 +69,10 @@ import { cablearUnirseDesdePlaza, htmlUnirseDesdePlaza } from './ui/unirseDesdeP
 import { cablearCargos } from './ui/panelCargos';
 import { cablearDiplomacia } from './ui/panelDiplomacia';
 import { instalarZoomPan, type ControlMapa } from './ui/pantallaMapa';
-import { agarre } from './ui/agarre';
+import { agarre, fijarEscalaDeAgarre } from './ui/agarre';
+import { estadoDesdeProyeccion, type RadiosDeVision } from './mundo3d/estado';
+import { fuenteDesdeMapa, fuenteDesdeRelieve } from './mundo3d/fuente';
+import { VistaMundo3D } from './mundo3d/vista';
 import { guardarVistaMapa, leerVistaMapa } from './ui/vistaMapaGuardada';
 import { alCambiarAvisos, alLlegarInforme, avisarDeEventos, avisosNoLeidos, hayPeligroSinLeer, historialDeAvisos, mostrar as mostrarAviso, reiniciarAvisos } from './ui/avisos';
 import { htmlInforme, type InformeDeCombate } from './ui/informeCombate';
@@ -920,6 +925,44 @@ type PanelRiel = 'columna' | 'ejercito' | 'cosas' | 'fundar';
 let panelMapaAbierto: PanelRiel | null = null;
 let menuEsquinaAbierto = false;
 let controlMapaActivo: ControlMapa | null = null;
+/** ¿Está montado el modo mundo (la pantalla Mapa)? Desde dentro de una plaza el modo mapa es solo para mirar. */
+let enModoMundo = false;
+
+/** Los radios de visión del servidor (`VISION`), para el encuadre de la cámara 3D: el héroe solo y la columna con soldados. */
+let radiosDeVision: RadiosDeVision = { solo: 15, ejercito: 30 };
+
+/** Monta la vista 3D del modo mundo en `lienzo` cuando están el mapa y el relieve (sin relieve, con el raster de 4 u del artefacto). `null` si
+ * no se puede (sin WebGL, o el mapa sin altura): lo dice en el lienzo. */
+async function montarVista3D(lienzo: HTMLElement, alClicar: (punto: { x: number; y: number }) => void): Promise<VistaMundo3D | null> {
+  const p0 = estadoCliente.proyeccionUltima;
+  if (!p0) return null;
+  const avisar = (texto: string) => { lienzo.innerHTML = `<p class="mapa-cargando">${escaparHtml(texto)}</p>`; };
+  try {
+    const [mapa, relieve, radios] = await Promise.all([sincronizarMapa(p0.mapaId), obtenerRelieve().catch(() => null), radiosDeVisionDelServidor()]);
+    radiosDeVision = radios;
+    const fuente = relieve ? fuenteDesdeRelieve(relieve) : fuenteDesdeMapa(mapa);
+    if (!fuente) { avisar('Este mundo no trae relieve: no se puede pintar en 3D.'); return null; }
+    if (!lienzo.isConnected) return null;
+    lienzo.querySelector('.mapa-cargando')?.remove();
+    const vista = new VistaMundo3D(lienzo, {
+      fuente,
+      mapa,
+      estado: () => {
+        const p = proyeccionAlInstante() ?? estadoCliente.proyeccionUltima;
+        return p ? estadoDesdeProyeccion(p, radiosDeVision, posicionDelHeroe(p)) : null;
+      },
+      alClicar: (punto) => alClicar(punto),
+      alCambiarEscala: fijarEscalaDeAgarre,
+      sinNiebla: import.meta.env.DEV && new URLSearchParams(location.search).has('sinNiebla'),
+    });
+    if (import.meta.env.DEV) Object.assign(window, { __vista3d: vista }); // para mirarla desde la consola o un navegador de pruebas
+    return vista;
+  } catch (e) {
+    console.error(e);
+    avisar('No se pudo pintar el mundo en 3D: tu navegador necesita WebGL.');
+    return null;
+  }
+}
 
 /** ¿Tiene el jugador algún asentamiento propio a la vista o en memoria? Sirve para destacar el icono de
  * Fundar mientras aún no tiene ninguno (no es el gate real: eso lo decide el backend). */
@@ -1211,7 +1254,7 @@ function alternarVistaMapa(abrir: boolean = !vistaMapaAbierta, centro?: { x: num
       // el modo mundo; se vuelve al mundo para verlo. Un clic en el suelo no mueve a nadie, y desde dentro de una plaza el mapa sigue siendo para mirar.
       if (!eleccion) {
         const p = estadoCliente.proyeccionUltima;
-        if (!p || !controlMapaActivo) return;
+        if (!p || !enModoMundo) return;
         const bajo = objetoBajoElClic(p, controlVistaMapa.aMundo(evento));
         if (!bajo) return;
         seleccionMapa = bajo.seleccion;
@@ -1449,7 +1492,7 @@ function montarMapa(): void {
   panelMapaAbierto = vista?.panel ?? null;
   menuEsquinaAbierto = false;
   app.innerHTML = `<div class="mapa-screen">
-    <div class="mapa-lienzo"><canvas id="mapa"></canvas></div>
+    <div class="mapa-lienzo"><p class="mapa-cargando">Cargando el mundo…</p></div>
     ${htmlBarraJugador(proyeccion, escaparHtml)}
     <nav class="mapa-riel" aria-label="Paneles del mapa">
       <button type="button" data-panel="columna" title="Lo que llevas: tropa y carro" aria-label="Lo que llevas: tropa y carro">⚔</button>
@@ -1467,28 +1510,22 @@ function montarMapa(): void {
   </div>`;
   const contenedor = document.querySelector<HTMLElement>('.mapa-screen')!;
   const lienzo = document.querySelector<HTMLElement>('.mapa-lienzo')!;
-  const alClicar = (evento: PointerEvent): void => {
+  // Un clic en el terreno (la vista 3D da el punto del mapa bajo el ratón): lo que hay debajo se selecciona y la columna marcha hacia ello.
+  const alClicar = (punto: { x: number; y: number }): void => {
     const proy = estadoCliente.proyeccionUltima;
-    const mapa = estadoCliente.mapaCache?.mapa;
-    const canvas = document.querySelector<HTMLCanvasElement>('#mapa');
-    if (!proy || !mapa || !canvas) return;
-    const punto = puntoDeMapa(evento, canvas, mapa);
+    if (!proy) return;
     const bajo = objetoBajoElClic(proy, punto);
     seleccionMapa = bajo?.seleccion ?? null;
     renderSeleccionMapa();
     if (!bajo) void marcharAObjetivo({ tipo: 'punto', punto });
     else if (bajo.ir) void marcharAObjetivo(bajo.ir);
   };
-  // MODO MUNDO: la vista va pegada al héroe con dos zooms, la visión llenando la pantalla y 1,5 veces la visión, y se pinta lo que cabe en
-  // pantalla; lo que no se ve lo tapa la niebla. Mirar más lejos es el modo mapa (botón Mapa). La vista guardada solo aporta panel y selección.
-  const control = instalarZoomPan(contenedor, lienzo, {
-    niveles: [1, 1 / 1.5],
-    alClicar,
-    alCambiar: () => { const p = proyeccionAlInstante() ?? estadoCliente.proyeccionUltima; if (p && controlMapaActivo === control) void dibujarPantallaSegunModo(p); },
-  });
-  controlMapaActivo = control;
-  // Los zooms son múltiplos de la escala de visión del héroe: el radio sale de los datos de juego del servidor.
-  void radioDeVision().then((r) => control.fijarRadioVision(r));
+  // MODO MUNDO, en 3D (docs/Mundo_3D.md): la cámara sigue al héroe y en pantalla cabe lo que dice su visión (15 o 22 u el héroe solo, 30 o 45
+  // con soldados); lo que no se ve lo tapa la niebla. Mirar más lejos es el modo mapa, en 2D (botón Mapa). La vista guardada solo aporta panel
+  // y selección. Se monta cuando están el mapa y el relieve.
+  let vista3d: VistaMundo3D | null = null, desmontado = false;
+  enModoMundo = true;
+  void montarVista3D(lienzo, alClicar).then((v) => { if (desmontado) v?.destruir(); else vista3d = v; });
   // El mundo solo avanza por tick y este cliente aún no tiene tiempo real (`WS .../tiempo-real`): sin esto el
   // mapa sería una foto y la columna nunca parecería moverse. Sondeo suave mientras la pantalla Mapa esté
   // montada; se corta al cambiar de pantalla (`limpiarPantalla`).
@@ -1505,39 +1542,40 @@ function montarMapa(): void {
   let ultimoFotograma = 0;
   const animar = (t: number): void => {
     fotograma = requestAnimationFrame(animar);
-    if (controlMapaActivo !== control || estadoCliente.modoVista !== 'mundo') return;
+    // la vista 3D pinta sola, en su bucle; mientras el modo mapa la tapa, descansa
+    vista3d?.pausar(vistaMapaAbierta);
+    if (!vistaMapaAbierta || estadoCliente.modoVista !== 'mundo') return;
     const p = proyeccionAlInstante();
     if (!p) return;
     const marchaPropia = p.ejercitos.some((e) => e.estado !== 'estacionado' && (e.ruta?.length ?? 0) >= 2) || p.caravanas.some((c) => (c.ruta?.length ?? 0) >= 2);
     const ajenoALaVista = (p.ejercitosAvistados?.length ?? 0) + (p.caravanasAvistadas?.length ?? 0) > 0;
     if (!marchaPropia && !ajenoALaVista) return;
     // El modo mapa ya se repinta al mover la cámara y con cada sondeo: aquí solo mientras algo marcha, y a ~4 fps (a esa escala no se nota más).
-    if (vistaMapaAbierta) {
-      if (t - ultimoFotograma < 250) return;
-      ultimoFotograma = t;
-      void pintarVistaMapa();
-      return;
-    }
-    if (t - ultimoFotograma < (marchaPropia ? 33 : 200)) return;
+    if (t - ultimoFotograma < 250) return;
     ultimoFotograma = t;
-    void dibujarPantallaSegunModo(p);
+    void pintarVistaMapa();
   };
   fotograma = requestAnimationFrame(animar);
-  const guardarVista = (): void => guardarVistaMapa(gameId, { ...control.estado(), panel: panelMapaAbierto === 'fundar' ? null : panelMapaAbierto, seleccion: seleccionMapa });
+  const guardarVista = (): void => {
+    const donde = estadoCliente.proyeccionUltima ? posicionDelHeroe(estadoCliente.proyeccionUltima) : null;
+    guardarVistaMapa(gameId, { escala: 1, cx: donde?.x ?? 0, cy: donde?.y ?? 0, panel: panelMapaAbierto === 'fundar' ? null : panelMapaAbierto, seleccion: seleccionMapa });
+  };
   addEventListener('pagehide', guardarVista); // recarga o cierre de pestaña
   limpiarPantalla = () => {
     guardarVista(); // salir del mapa (plaza, campamento, otra partida, cerrar sesión)
     removeEventListener('pagehide', guardarVista);
     cancelAnimationFrame(fotograma);
     clearInterval(sondeo);
-    control.destruir();
-    controlMapaActivo = null;
+    desmontado = true;
+    vista3d?.destruir();
+    vista3d = null;
+    enModoMundo = false;
     estadoCliente.modoFundacionActivo = false;
     estadoCliente.posicionFundacion = null;
   };
 
   contenedor.querySelectorAll<HTMLButtonElement>('[data-zoom]').forEach((boton) => {
-    boton.addEventListener('click', () => control.zoomHacia(boton.dataset.zoom === 'in' ? 1 : -1));
+    boton.addEventListener('click', () => vista3d?.zoom(boton.dataset.zoom === 'in' ? 'normal' : 'alejado'));
   });
   contenedor.querySelectorAll<HTMLButtonElement>('.mapa-riel [data-panel]').forEach((boton) => {
     boton.addEventListener('click', () => abrirPanelRiel(boton.dataset.panel as PanelRiel));

@@ -38,22 +38,28 @@ del héroe solo (`radioDeVision`); el 3D tiene que seguir a la de la columna. El
 | Pieza | Módulo | Datos |
 |---|---|---|
 | Altura y agua | `src/mundo/relieve.ts` (hecho) | Paquete de relieve: `InfoMundo.url_relieve`, una vez por mundo |
-| Escena, luz, cielo según el tema | `src/mundo3d/escena.ts` | — |
-| Cámara de juego | `src/mundo3d/camara.ts` | Visión de la columna y los valores de arriba |
-| Terreno por teselas de 64 u alrededor del héroe | `src/mundo3d/terreno.ts` | Relieve; color por clase, roca en laderas, agua |
-| Niebla en el sombreado | `src/mundo3d/niebla.ts` | `proyeccion.exploracion` |
+| Escena, luz, bruma y bucle de fotogramas | `src/mundo3d/vista.ts` (hecho) | `estado()` en cada fotograma |
+| Cámara de juego | `src/mundo3d/camara.ts` (hecho) | Visión de la columna y los valores de arriba |
+| Valores | `src/mundo3d/config.ts` (hecho) | Los de la tabla de arriba y los umbrales del generador |
+| De dónde sale la altura | `src/mundo3d/fuente.ts` (hecho) | El relieve o, sin él, el raster de 4 u del artefacto |
+| Lo que pinta, sacado de la proyección | `src/mundo3d/estado.ts` (hecho) | `proyeccionAlInstante`; el banco le da uno de mentira |
+| Terreno por teselas de 64 u alrededor del héroe | `src/mundo3d/terreno.ts` (hecho) | Relieve; color por clase, roca en laderas, sotobosque, agua |
+| Niebla en el sombreado | `src/mundo3d/niebla.ts` (hecho) | `proyeccion.exploracion` |
 | Árboles instanciados por trozos | `src/mundo3d/arboles.ts` | Densidad de bosque del artefacto (4 u) |
 | Ríos y vados | `src/mundo3d/rios.ts` | Ríos del artefacto |
 | Plazas, pueblos, avanzadas, campamentos | `src/mundo3d/maquetas.ts` | Proyección |
-| Héroe, tropa, columnas ajenas, caravanas | `src/mundo3d/columnas.ts` | Proyección: ruta y posición en el instante |
-| Ruta, destino, caminos, fronteras, zonas | `src/mundo3d/lineas.ts` | Proyección |
-| Etiquetas y clic | `src/mundo3d/etiquetas.ts`, `src/mundo3d/entrada.ts` | El clic acaba en `objetoBajoElClic` y `marcharA` |
+| Héroe y tropa | `src/mundo3d/figuras.ts` (hecho: la columna propia) | Proyección: ruta y posición en el instante |
+| Columnas ajenas, caravanas | `src/mundo3d/figuras.ts` | Proyección |
+| Ruta, destino, caminos, fronteras, zonas | `src/mundo3d/lineas.ts` (hecho: ruta y destino) | Proyección |
+| Clic, arrastre, rueda y teclas | `src/mundo3d/entrada.ts` (hecho) | El clic acaba en `objetoBajoElClic` y `marcharA` |
+| Etiquetas | `src/mundo3d/etiquetas.ts` | Proyección |
 
 ## Fases
 
 1. **Datos (hecho, 0.61.0).** Contrato regenerado con el relieve; descarga del paquete, caché en IndexedDB por su hash y teselas que se
    abren a demanda (`Relieve.alturaEn`, `aguaEn`). No cambia nada de lo que se ve.
-2. **Se juega en 3D:** escena, cámara, terreno, niebla, tu columna, clic para marchar, ruta y destino.
+2. **Se juega en 3D (hecho, 0.62.0):** escena, cámara, terreno, niebla, tu columna, clic para marchar, ruta y destino. El modo mundo de
+   `main.ts` monta `VistaMundo3D` cuando están el mapa y el relieve; lo que aún no pinta el 3D se ve en el modo mapa.
 3. **El mundo:** árboles, ríos y vados, maquetas de plazas, pueblos, avanzadas y campamentos; zonas, fronteras y caminos.
 4. **Lo ajeno y lo que falta:** columnas avistadas, caravanas, bandidos, mercenarios, alijos, batallas y formaciones; etiquetas y selección; la
    vista previa de fundación y la elección del sitio de una aldea.
@@ -72,3 +78,25 @@ y la tesela va con zstd. La semilla 42 ocupa 8,6 MB.
 - **Memoria:** el paquete se queda comprimido; `Relieve` abre cada tesela al pedirla y guarda abiertas las 96 últimas (unos 5 MB).
 - **Pruebas:** `pruebas/relieve.test.ts` escribe un paquete pequeño según el contrato y comprueba el real del motor contra la ventana de la
   mesa, muestra a muestra; `pruebas/servidor.test.ts` lo baja de un servidor de verdad.
+
+## Cómo se pinta (fase 2)
+
+- **Escena.** Coordenadas: x = x del mapa, z = y del mapa, y = altura en unidades (metros / 12). Luz de cielo y sol con sombras alrededor del
+  héroe. El fondo y la bruma lejana son del color de la niebla de guerra: lo que queda lejos se funde con ella.
+- **Suelo.** Teselas de 64 u a menos de `min(320, 7·d)` u del héroe (d, la distancia de la cámara); las más cercanas primero, dos por fotograma.
+  Paso de 0,5 u a menos de 80 u, 1 u a menos de 160 y 2 u más allá; un faldón de 3 u en el borde tapa las grietas entre niveles. Color por la
+  clase de terreno según la altura (los umbrales del generador: agua 375 m, costa 420, colina 545, montaña 600, cima 685), roca en las laderas
+  y sotobosque donde el artefacto tiene bosque.
+- **Niebla.** La rejilla de `proyeccion.exploracion` es una textura (rojo: explorado; verde: se ve ahora) que el sombreado del suelo mezcla con
+  el color de `NIEBLA` (`paletas.ts`) con sus tres alfas, igual que `render.ts`. La columna propia, la ruta y el destino van encima.
+- **Cámara.** `distanciaDeEncuadre` busca la distancia a la que el círculo de «en pantalla» cabe entero en la pantalla con la inclinación de
+  ahora; desde arriba es el lado corto, como en el 2D. La cámara no baja del suelo.
+- **Clic.** Un rayo desde la cámara avanza hasta tocar el relieve; el punto pasa a `objetoBajoElClic` y a `marcharAObjetivo`, como antes.
+
+## Banco de pruebas
+
+`npm run mundo3d` abre `pruebas/mundo3d/` con el artefacto y el relieve que haya en `generador/salida/mundo/` del motor (el checkout hermano
+`../BronzeAgeFase0` o `../BronzeAge`, o la variable `MOTOR`); el servidor de Vite los sirve en `/__banco/mundo` y `/__banco/relieve` solo en
+desarrollo. Una columna propia va en línea recta adonde haces clic, a 30 u/min, y una niebla de mentira explora lo que se ve. `?x=…&y=…` pone
+el héroe en otro sitio; `?raster` pinta con el raster de 4 u en vez del relieve. En desarrollo, el juego deja la vista en `window.__vista3d` y
+`?sinNiebla` la quita.

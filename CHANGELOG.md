@@ -3,6 +3,31 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.62.0] — 2026-10-30 · mundo 3D, fase 2: se juega en 3D · sync con `VRhino/BronzeAge@bfb9eb9`
+
+El modo mundo pasa a 3D con three.js (plan en [`docs/Mundo_3D.md`](docs/Mundo_3D.md)). El modo mapa y la plaza siguen en 2D.
+
+### Añadido
+- **El modo mundo en 3D** (`src/mundo3d/`): el suelo por teselas de 64 u alrededor del héroe con el relieve fino (0,5 u cerca, 1 y 2 u más
+  lejos), color por clase de terreno, roca en las laderas, sotobosque y agua; la niebla de guerra en el sombreado con sus tres estados (la
+  rejilla de `proyeccion.exploracion`); tu columna (jinetes al frente y la tropa detrás, a ×2) con su ruta pegada al suelo y el aro del destino.
+- **Cámara de juego**: sigue al héroe con 35° de apertura; en pantalla cabe lo que dice la visión de la columna (`VISION` del servidor): 15 u
+  (alejada 22) el héroe solo y 30 u (alejada 45) con soldados, con cualquier inclinación. Arrastrar gira e inclina (de 10° a 90°), la rueda y
+  los botones ＋/－ cambian entre normal y alejada, y las flechas o WASD giran e inclinan.
+- **Clic en 3D**: un rayo toca el relieve y el punto del mapa sigue el camino de siempre (`objetoBajoElClic` y `marcharA`); el radio de agarre
+  se ajusta a los píxeles por unidad de la cámara.
+- **Banco de pruebas** `npm run mundo3d` (`pruebas/mundo3d/`): la vista con el artefacto y el relieve que haya generado el motor en el
+  checkout hermano (o `MOTOR`), sin servidor ni cuenta; una columna que va adonde haces clic y una niebla de mentira.
+- Sin paquete de relieve (un servidor viejo) se pinta con el raster de 4 u del artefacto; sin WebGL lo dice en el lienzo.
+
+### Cambiado
+- **Cuánto cabe en pantalla sigue a la visión de la columna**, no a la del héroe solo: con soldados se ve el doble.
+- Dependencia nueva: `three` 0.170.0.
+
+### Pendiente (fases 3 y 4)
+- Aún no se pintan en 3D árboles, ríos, plazas, pueblos, avanzadas, campamentos, caminos, fronteras ni lo ajeno (columnas avistadas,
+  caravanas, bandidos…); se ven en el modo mapa. La vista previa de fundación en el modo mundo vuelve en la fase 4.
+
 ## [0.61.0] — 2026-10-30 · mundo 3D, fase 1: el relieve fino · sync con `VRhino/BronzeAge@bfb9eb9`
 
 Empieza el paso del modo mundo a 3D (plan y decisiones en [`docs/Mundo_3D.md`](docs/Mundo_3D.md)). Esta fase solo trae los datos: no
