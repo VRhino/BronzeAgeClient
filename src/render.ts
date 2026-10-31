@@ -467,12 +467,12 @@ export function pintarTerreno(
   mapa: MapaGenerado, 
   proyeccion: ProyeccionJugador,
   escalaCanvas: number,
-  modoMundo = false,
   permitirGeneral = true
 ): void {
   // La cámara del mapa (`ui/pantallaMapa.ts`) ya dejó en `ctx` su transformación: aquí se pinta en unidades × `escalaCanvas` y la vista
   // dice qué parte del mundo cae en el lienzo y a qué escala (de lejos o de cerca). Lo que cae fuera no se recorre. Lo que el jugador no
-  // ve lo tapa la niebla, como en cualquier otra vista. En el modo mundo el suelo va por baldosas (`pintarArtefacto.ts`).
+  // ve lo tapa la niebla, como en cualquier otra vista. Lo usa el modo mapa; el modo mundo es 3D (`src/mundo3d/`), con las mismas capas a
+  // cada lado de la niebla.
   const vista = vistaDelLienzo(ctx, escalaCanvas);
   /** ¿Cae `p` en lo que se pinta, con `margen` unidades de holgura? Lo de fuera ni se recorre: con el mundo entero son miles de vértices. */
   const aLaVista = (p: Point, margen = 0): boolean =>
@@ -481,7 +481,7 @@ export function pintarTerreno(
   const cerca = artefacto && esDeCerca(mapa, escalaCanvas);
   const k = factorDeGlifo(escalaCanvas);
   // Vista general (el modo mapa con mucho mundo a la vista): ríos, vados y nodos van en una capa hecha una vez (`capaGeneral`), no uno a uno.
-  const general = permitirGeneral && !modoMundo && vista.x1 - vista.x0 > ANCHO_VISTA_GENERAL;
+  const general = permitirGeneral && vista.x1 - vista.x0 > ANCHO_VISTA_GENERAL;
 
   // 1. DIBUJAR TERRENO BASE
   ctx.save();
@@ -490,7 +490,7 @@ export function pintarTerreno(
   ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   ctx.restore();
   if (artefacto) {
-    pintarSueloDelArtefacto(ctx, mapa, vista, modoMundo && cerca);
+    pintarSueloDelArtefacto(ctx, mapa, vista);
   } else {
     // Mapa del backend TypeScript (sin rasters): biomas recalculados con el ruido del generador, sin relieve.
     ctx.imageSmoothingEnabled = true;
@@ -501,7 +501,7 @@ export function pintarTerreno(
   // 2. DIBUJAR BOSQUES
   if (artefacto) {
     // Del raster de densidad: de lejos ya van en la imagen del suelo; de cerca, árbol a árbol a escala real.
-    if (cerca && !modoMundo) pintarArbolesDelArtefacto(ctx, mapa, vista); // en el modo mundo ya van en las baldosas del suelo
+    if (cerca) pintarArbolesDelArtefacto(ctx, mapa, vista);
   } else {
     // Bosques como silueta fusionada (no círculos sueltos), debajo de los ríos — mismo criterio de capas que
     // el cliente de administración. `nonzero` (el relleno por defecto de canvas) recorta solos los claros que

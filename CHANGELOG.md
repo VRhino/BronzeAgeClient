@@ -3,6 +3,28 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.65.0] — 2026-10-31 · mundo 3D, fase 5: cierre · sync con `VRhino/BronzeAge@bfb9eb9`
+
+Termina el paso del modo mundo a 3D (plan en [`docs/Mundo_3D.md`](docs/Mundo_3D.md)). El modo mapa y la plaza siguen en 2D.
+
+### Quitado
+- **El pintor 2D del modo mundo**:
+  - `controlMapaActivo` y las llamadas a `dibujarPantallaSegunModo` desde la pantalla Mapa;
+  - los zooms fijos y `seguir` de la cámara 2D (ahora solo la usa el modo mapa);
+  - el parámetro `modoMundo` de `pintarTerreno`;
+  - las baldosas del suelo de `pintarArtefacto.ts`.
+
+  `render.ts` sigue para el modo mapa y `#/legacy`.
+
+### Cambiado
+- **Rendimiento**: la vista 3D ya no rehace la proyección en cada fotograma. Reutiliza el estado mientras no llega otra proyección o cambia
+  la selección o la vista previa de fundar. Mientras algo tuyo marcha, recalcula la proyección del instante como mucho cada 33 ms. En vacío,
+  de 1,07 ms a 0,002 ms por fotograma.
+- La densidad de píxeles del 3D llega como mucho a 1,5 (antes 2).
+
+### Añadido
+- `VistaMundo3D.rendimiento()`: lo que tarda cada parte del fotograma, para medir.
+
 ## [0.64.0] — 2026-10-31 · mundo 3D, fase 4: lo ajeno, los nombres y la selección · sync con `VRhino/BronzeAge@bfb9eb9`
 
 El modo mundo en 3D ya pinta todo lo que pintaba el 2D (plan en [`docs/Mundo_3D.md`](docs/Mundo_3D.md)).

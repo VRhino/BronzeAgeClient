@@ -4,10 +4,8 @@
 // por CSS una imagen del mundo entero, porque de la vista del mundo a la escala de visión del jugador hay un factor ~80 y la imagen se
 // vería a cuadros. Quien pinta fija `ctx.setTransform` con `transformar(ctx)` y dibuja en unidades × `escala`, como siempre.
 //
-// Dos usos:
-//  * el MODO MUNDO (`niveles`): la vista va pegada al héroe y solo tiene unos pocos zooms fijos, en múltiplos de la escala de visión
-//    (1× y 1,5× la visión). No se arrastra;
-//  * el MODO MAPA (sin `niveles`): zoom libre entre el mundo entero y la escala de visión, y arrastre. Solo para mirar.
+// La usa el MODO MAPA: zoom libre entre el mundo entero y la escala de visión, y arrastre. Solo para mirar. (El modo mundo es 3D y lleva su
+// propia cámara: `src/mundo3d/camara.ts`.)
 
 import { fijarEscalaDeAgarre } from './agarre';
 import { acotar, aMundo, arrastrar, escalaDeVision, escalaMinima, origen, zoomHacia, type Camara } from './geometriaVista';
@@ -25,8 +23,6 @@ export interface ControlMapa {
   fijarMundo(anchoMundo: number, altoMundo: number): void;
   /** El radio de visión del héroe, que fija el zoom máximo (y el inicial). */
   fijarRadioVision(radio: number): void;
-  /** Como `centrar`, pero sin pedir repintado: para quien va a pintar justo después (el modo mundo, en cada fotograma). */
-  seguir(puntoMundo: { x: number; y: number }): void;
   /** La cámara actual (para guardar la vista). */
   estado(): Camara;
   /** ¿Sigue la vista un punto fijado con `centrar`? (hasta que se arrastra o se hace zoom con la rueda). */
@@ -48,10 +44,7 @@ export function instalarZoomPan(
     alClicar?: (evento: PointerEvent) => void;
     /** La cámara cambió (zoom, arrastre, tamaño): hay que repintar. Agrupado por `requestAnimationFrame`. */
     alCambiar?: () => void;
-    /** Modo mundo: los zooms permitidos, como fracción de la escala de visión (1 = la visión llena el lado corto), el primero el inicial.
-     * La rueda y los botones saltan de uno a otro y no se puede arrastrar. */
-    niveles?: readonly number[];
-    /** Modo mapa sin `camaraInicial`: el zoom de arranque como fracción de la escala de visión (por defecto, 1). */
+    /** Sin `camaraInicial`: el zoom de arranque como fracción de la escala de visión (por defecto, 1). */
     factorInicial?: number;
   } = {}
 ): ControlMapa {
@@ -60,16 +53,11 @@ export function instalarZoomPan(
   let foco: { x: number; y: number } | null = null;
   let mundo = { ancho: 0, alto: 0 };
   let radioVision = RADIO_VISION_POR_DEFECTO;
-  const niveles = opciones.niveles && opciones.niveles.length > 0 ? [...opciones.niveles].sort((a, b) => b - a) : null;
-  /** Índice en `niveles` (0 = el más cercano). */
-  let nivel = 0;
 
   const tamano = () => ({ ancho: contenedor.clientWidth, alto: contenedor.clientHeight });
   const topes = (): [number, number] => {
     const t = tamano();
-    const vision = escalaDeVision(t, radioVision);
-    if (niveles) return [vision * niveles[niveles.length - 1]!, vision];
-    return [escalaMinima(t, mundo), vision];
+    return [escalaMinima(t, mundo), escalaDeVision(t, radioVision)];
   };
 
   let pendiente = 0;
@@ -81,7 +69,7 @@ export function instalarZoomPan(
     });
   };
 
-  function aplicar(silencioso = false): void {
+  function aplicar(): void {
     const t = tamano();
     if (t.ancho === 0 || mundo.ancho === 0) return; // sin maquetar o sin mundo: el ResizeObserver o `fijarMundo` reintentarán
     const dpr = window.devicePixelRatio || 1;
@@ -91,22 +79,12 @@ export function instalarZoomPan(
     if (canvas.height !== h) canvas.height = h;
     const [min, max] = topes();
     const base = camara ?? { escala: max * (opciones.factorInicial ?? 1), cx: mundo.ancho / 2, cy: mundo.alto / 2 };
-    if (niveles) base.escala = max * niveles[nivel]!;
     camara = acotar(foco ? { ...base, cx: foco.x, cy: foco.y } : base, t, mundo, min, max);
     fijarEscalaDeAgarre(camara.escala);
-    if (!silencioso) avisar();
-  }
-
-  function irANivel(n: number): void {
-    if (!niveles) return;
-    const nuevo = Math.max(0, Math.min(niveles.length - 1, n));
-    if (nuevo === nivel) return;
-    nivel = nuevo;
-    aplicar();
+    avisar();
   }
 
   function zoomA(factor: number, focoX: number, focoY: number): void {
-    if (niveles) return irANivel(factor > 1 ? nivel - 1 : nivel + 1);
     if (!camara) return;
     camara = foco ? { ...camara, escala: camara.escala * factor } : zoomHacia(camara, factor, focoX, focoY);
     aplicar();
@@ -120,7 +98,6 @@ export function instalarZoomPan(
   const onWheel = (evento: WheelEvent): void => {
     evento.preventDefault();
     evento.stopPropagation(); // el modo mapa se abre DENTRO de la pantalla del mundo: que su rueda no mueva también el zoom de debajo
-    if (niveles) return irANivel(evento.deltaY < 0 ? 0 : niveles.length - 1);
     foco = null;
     const [x, y] = desdeCentro(evento);
     zoomA(evento.deltaY < 0 ? 1.15 : 1 / 1.15, x, y);
@@ -135,11 +112,11 @@ export function instalarZoomPan(
     arrastrando = true;
     inicioX = ultimoX = evento.clientX;
     inicioY = ultimoY = evento.clientY;
-    if (!niveles) lienzo.classList.add('arrastrando');
+    lienzo.classList.add('arrastrando');
     lienzo.setPointerCapture?.(evento.pointerId);
   };
   const onPointerMove = (evento: PointerEvent): void => {
-    if (!arrastrando || !camara || niveles) return; // en el modo mundo la vista no se suelta del héroe
+    if (!arrastrando || !camara) return;
     if (Math.hypot(evento.clientX - inicioX, evento.clientY - inicioY) < 5) return; // aún puede ser un clic
     foco = null;
     camara = arrastrar(camara, evento.clientX - ultimoX, evento.clientY - ultimoY);
@@ -164,10 +141,6 @@ export function instalarZoomPan(
   observer.observe(contenedor);
 
   return {
-    seguir: (puntoMundo) => {
-      foco = puntoMundo;
-      aplicar(true);
-    },
     estado: () => camara ?? { escala: 1, cx: mundo.ancho / 2, cy: mundo.alto / 2 },
     siguiendo: () => foco !== null,
     zoomHacia: (direccion) => zoomA(direccion === 1 ? 1.4 : 1 / 1.4, 0, 0),
@@ -184,7 +157,7 @@ export function instalarZoomPan(
     fijarRadioVision: (radio) => {
       if (!(radio > 0) || radio === radioVision) return;
       // Si se estaba a escala de visión, se sigue a la nueva.
-      const enElTope = !niveles && camara && Math.abs(camara.escala - topes()[1]) < 1e-6;
+      const enElTope = camara && Math.abs(camara.escala - topes()[1]) < 1e-6;
       radioVision = radio;
       if (enElTope && camara) camara = { ...camara, escala: topes()[1] };
       aplicar();

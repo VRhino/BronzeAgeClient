@@ -75,13 +75,17 @@ export class VistaMundo3D {
   private antes = performance.now();
   private pausada = false;
   private sinNiebla: boolean;
+  /** Lo que tarda cada parte del fotograma (ms, media móvil), para la pasada de rendimiento: `rendimiento()`. */
+  private readonly tiempos: Record<string, number> = {};
+  /** Lo que queda por construir alrededor del héroe (teselas de suelo y paisaje, trozos de árboles). */
+  private readonly faltan = { terreno: 0, paisaje: 0, arboles: 0 };
   private objetivo = new THREE.Vector3();
   private rayo = new THREE.Raycaster();
 
   constructor(private readonly contenedor: HTMLElement, private readonly o: OpcionesVista) {
     this.sinNiebla = o.sinNiebla ?? false;
     this.renderer = new THREE.WebGLRenderer({ canvas: this.lienzo, antialias: true });
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5)); // en una pantalla retina, 2 sombrearía cada píxel cuatro veces
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.lienzo.className = 'mundo3d-lienzo';
@@ -129,10 +133,23 @@ export class VistaMundo3D {
   }
 
   /** Cuánto hay puesto (para el banco de pruebas): árboles y piezas de las maquetas. */
-  cuentas(): { arboles: number; maquetas: number; trazos: number } {
+  cuentas(): { arboles: number; maquetas: number; trazos: number; faltan: { terreno: number; paisaje: number; arboles: number } } {
     let maquetas = 0;
     for (const m of this.maquetas.grupo.children) maquetas += (m as THREE.InstancedMesh).count;
-    return { arboles: this.arboles.cuantos, maquetas, trazos: this.trazos.grupo.children.length };
+    return { arboles: this.arboles.cuantos, maquetas, trazos: this.trazos.grupo.children.length, faltan: { ...this.faltan } };
+  }
+
+  /** Lo que tarda cada parte del fotograma en el hilo principal (ms, media de los últimos ~30). `render` es lo que tarda en mandar la escena a
+   * la tarjeta, no lo que tarda la tarjeta. */
+  rendimiento(): Record<string, number> {
+    return Object.fromEntries(Object.entries(this.tiempos).map(([k, v]) => [k, Math.round(v * 100) / 100]));
+  }
+
+  /** Apunta lo que tardó `parte` desde `desde` y devuelve el instante de ahora. */
+  private medir(parte: string, desde: number): number {
+    const ahora = performance.now();
+    this.tiempos[parte] = (this.tiempos[parte] ?? ahora - desde) * 0.97 + (ahora - desde) * 0.03;
+    return ahora;
   }
 
   /** Deja de pintar (el modo mapa en 2D la tapa) o vuelve a hacerlo. */
@@ -176,7 +193,10 @@ export class VistaMundo3D {
     const dt = Math.min(0.1, (ahora - this.antes) / 1000);
     this.antes = ahora;
     if (this.pausada) return;
+    let t = performance.now();
+    const inicio = t;
     const estado = this.o.estado();
+    t = this.medir('estado', t);
     if (!estado?.heroe) return;
     this.entrada.teclas(dt);
     this.niebla.actualizar(estado.niebla, this.sinNiebla);
@@ -190,16 +210,23 @@ export class VistaMundo3D {
     this.bruma.near = d * 2.2;
     this.bruma.far = d * 7;
     const alcance = Math.min(320, d * 7), hasta = performance.now() + PRESUPUESTO;
-    this.terreno.actualizar(x, y, alcance, hasta);
+    t = this.medir('camara', t);
+    this.faltan.terreno = this.terreno.actualizar(x, y, alcance, hasta);
+    t = this.medir('terreno', t);
     this.maquetas.actualizar(estado.mundo);
     this.trazos.actualizar(estado.mundo.trazos, x, y, Math.min(alcance, ALCANCE.trazos));
+    t = this.medir('maquetasYTrazos', t);
     this.arboles.fijarDespejes(this.maquetas.claros, this.trazos.caminos, `${this.maquetas.claveClaros}|${this.trazos.claveCaminos}`);
-    this.paisaje.actualizar(x, y, Math.min(alcance, ALCANCE.paisaje), hasta);
-    this.arboles.actualizar(x, y, Math.min(alcance, ALCANCE.arboles), hasta);
+    this.faltan.paisaje = this.paisaje.actualizar(x, y, Math.min(alcance, ALCANCE.paisaje), hasta);
+    t = this.medir('paisaje', t);
+    this.faltan.arboles = this.arboles.actualizar(x, y, Math.min(alcance, ALCANCE.arboles), hasta);
+    t = this.medir('arboles', t);
     this.ponerColumnas(estado.columnas, estado.caravanas);
     this.ponerLineas(estado.columnas, estado.caravanas);
     this.marcas.actualizar(estado, ahora);
+    t = this.medir('columnasYMarcas', t);
     this.etiquetas.actualizar([...estado.etiquetas, ...this.etiquetasDeNodos(x, y, estado)], this.camara.camara, w, h, this.alturaU, estado.heroe, (this.bruma.near + this.bruma.far) / 2);
+    t = this.medir('etiquetas', t);
     // la sombra sigue al héroe y cubre lo que se ve
     const r = Math.min(120, Math.max(20, d * 1.6));
     this.sol.position.set(x - 60, this.objetivo.y + 110, y + 45);
@@ -207,6 +234,8 @@ export class VistaMundo3D {
     const sc = this.sol.shadow.camera;
     if (sc.right !== r) { sc.left = -r; sc.right = r; sc.top = r; sc.bottom = -r; sc.near = 1; sc.far = 600; sc.updateProjectionMatrix(); }
     this.renderer.render(this.escena, this.camara.camara);
+    this.medir('render', t);
+    this.medir('total', inicio);
   }
 
   /** Las figuras de cada columna (de la Facción y avistadas) y de cada caravana suelta; se rehacen si cambia lo que llevan o su color. */

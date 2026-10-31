@@ -65,7 +65,8 @@ del héroe solo (`radioDeVision`); el 3D tiene que seguir a la de la columna. El
    fronteras y caminos.
 4. **Lo ajeno y lo que falta (hecho, 0.64.0):** columnas avistadas, caravanas, bandidos, alijos, batallas y formaciones; Miradas; nombres y
    selección; la vista previa de fundación. La elección del sitio de una aldea o de una avanzada sigue en el modo mapa, que es 2D.
-5. **Cierre:** se retira el pintor 2D del modo mundo (`render.ts` sigue para el modo mapa), una pasada de rendimiento y la documentación.
+5. **Cierre (hecho, 0.65.0):** se retira el pintor 2D del modo mundo (`render.ts` sigue para el modo mapa y `#/legacy`), una pasada de
+   rendimiento y la documentación. La rama ya pinta todo lo que pintaba el 2D; su paso a `main` lo decide el autor.
 
 ## El paquete de relieve
 
@@ -152,6 +153,37 @@ suelo, luego el paisaje y los árboles. Lo que se aleja se suelta.
   - bajo una columna propia que pisa tierra ajena, «⚑ Facción» (lo dice el servidor, `territorioPorEjercito`).
 
   Lo que cae detrás de la cámara, fuera de la pantalla o en la bruma no se pone.
+
+## Lo que se retiró del 2D (fase 5)
+
+El modo mundo ya no pasa por el lienzo `#mapa` ni por la cámara 2D. Se quitaron:
+- `controlMapaActivo` y las llamadas a `dibujarPantallaSegunModo` desde la pantalla Mapa (`main.ts`);
+- los zooms fijos (`niveles`) y `seguir` de `ui/pantallaMapa.ts`, que ahora es solo la cámara del modo mapa;
+- el parámetro `modoMundo` de `pintarTerreno` (`render.ts`);
+- las baldosas del suelo de `mundo/pintarArtefacto.ts`.
+
+`render.ts` sigue pintando el modo mapa y la ruta de depuración `#/legacy` (el mundo entero en 2D).
+
+## Rendimiento (fase 5)
+
+Medido con `VistaMundo3D.rendimiento()`, que da lo que tarda cada parte del fotograma en el hilo principal (ms, media móvil). En este
+contenedor el WebGL es por software, así que solo valen las cifras de JS, medidas en vacío, y el tamaño de la escena:
+
+| | Héroe solo, 15 u | Con soldados, alejado (45 u) | Sin niebla, alejado |
+|---|---|---|---|
+| Triángulos | 0,43 M | 0,88 M | 2,6 M |
+| Llamadas de dibujo | 58 | 146 | 169 |
+| Árboles | 3.700 | 14.400 | 110.000 |
+
+- **JS por fotograma, en vacío:** árboles 0,24 ms, cámara 0,08, suelo 0,02, paisaje 0,02, maquetas y rayas 0,03. Construir lo nuevo va
+  aparte, con los 8 ms de presupuesto.
+- **El estado del juego** era lo más caro: `proyectar` rehace la proyección entera desde el almacén (≈1 ms) y la vista la pedía en cada
+  fotograma. Ahora (`estadoDeLaVista3D` en `main.ts`) solo se rehace cuando llega otra proyección o cambia la selección, la vista previa de
+  fundar o las reglas. Mientras algo propio marcha, la proyección del instante se recalcula como mucho cada 33 ms: a 0,5 u/s, la columna
+  no avanza ni 0,02 u entre dos. En vacío baja de 1,07 ms a 0,002.
+- **Densidad de píxeles** como mucho 1,5 (antes 2): en una pantalla retina, 2 sombrearía cada píxel cuatro veces.
+- Lo que falta medir es la tarjeta gráfica de un equipo de verdad. La escena más pesada es la de sin niebla alejada (2,6 M triángulos),
+  que en el juego no se da: la niebla quita los árboles de lo que no se ha explorado.
 
 ## Banco de pruebas
 

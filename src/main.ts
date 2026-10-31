@@ -71,7 +71,7 @@ import { cablearCargos } from './ui/panelCargos';
 import { cablearDiplomacia } from './ui/panelDiplomacia';
 import { instalarZoomPan, type ControlMapa } from './ui/pantallaMapa';
 import { agarre, fijarEscalaDeAgarre } from './ui/agarre';
-import { estadoDesdeProyeccion, type FundacionEnVista, type RadiosDeVision } from './mundo3d/estado';
+import { estadoDesdeProyeccion, type EstadoVista, type FundacionEnVista, type RadiosDeVision } from './mundo3d/estado';
 import { fuenteDesdeMapa, fuenteDesdeRelieve } from './mundo3d/fuente';
 import { VistaMundo3D } from './mundo3d/vista';
 import { guardarVistaMapa, leerVistaMapa } from './ui/vistaMapaGuardada';
@@ -551,9 +551,8 @@ function cercano<T extends { posicion: { x: number; y: number } }>(lista: readon
  * antes de mandar la orden. El que decide es el motor. */
 const radioDeAtaque = (): number => radioDeEncuentro();
 
-/** Punto de MUNDO bajo un clic: el de la cámara del mapa; sin ella, el lienzo con el mundo entero. */
+/** Punto de MUNDO bajo un clic en el lienzo de `#/legacy`, que enseña el mundo entero. */
 function puntoDeMapa(evento: { clientX: number; clientY: number }, canvas: HTMLCanvasElement, mapa: MapaGenerado): { x: number; y: number } {
-  if (controlMapaActivo) return controlMapaActivo.aMundo(evento);
   const rect = canvas.getBoundingClientRect();
   return {
     x: ((evento.clientX - rect.left) / rect.width) * mapa.config.ancho,
@@ -925,7 +924,6 @@ function pintarIntel(cont: HTMLElement, p: ProyeccionJugador, repintar: () => vo
 type PanelRiel = 'columna' | 'ejercito' | 'cosas' | 'fundar';
 let panelMapaAbierto: PanelRiel | null = null;
 let menuEsquinaAbierto = false;
-let controlMapaActivo: ControlMapa | null = null;
 /** ¿Está montado el modo mundo (la pantalla Mapa)? Desde dentro de una plaza el modo mapa es solo para mirar. */
 let enModoMundo = false;
 
@@ -944,6 +942,30 @@ function fundacionEnVista(): FundacionEnVista | null {
   return fundacion3d.valor;
 }
 
+/** El último estado que se dio a la vista 3D: de qué proyección salió, con qué selección, vista previa y reglas, y cuándo. */
+let estado3d: { p: ProyeccionJugador; clave: string; en: number; estado: EstadoVista } | null = null;
+/** Cada cuánto, como mucho, se recalcula la proyección del instante mientras algo marcha (ms): rehacerla cuesta ~1 ms y a 0,5 u/s la columna
+ * no avanza ni 0,02 u entre dos. */
+const CADA_PROYECCION_MS = 33;
+
+/** El estado que pinta la vista 3D en cada fotograma. Mientras algo propio marcha (las columnas y caravanas avanzan por su plan sin que el
+ * servidor mande nada), la proyección del instante, como mucho cada `CADA_PROYECCION_MS`; si no, la última que llegó. Si no cambió nada, el
+ * mismo estado de antes. */
+function estadoDeLaVista3D(): EstadoVista | null {
+  const base = estadoCliente.proyeccionUltima;
+  if (!base) return null;
+  const ahora = performance.now();
+  const marcha = base.ejercitos.some((e) => e.estado !== 'estacionado' && (e.ruta?.length ?? 0) >= 2) || base.caravanas.some((c) => (c.ruta?.length ?? 0) >= 2);
+  const fundacion = fundacionEnVista();
+  const reglas = { vision: radiosDeVision, radioZonaInicial: radioZonaInicial(), radioProteccion: radioDeProteccionMercenarios() };
+  const clave = `${claveSeleccion()}|${fundacion3d.clave}|${reglas.vision.solo},${reglas.vision.ejercito},${reglas.radioZonaInicial},${reglas.radioProteccion}`;
+  const vale = estado3d && estado3d.clave === clave && (marcha ? ahora - estado3d.en < CADA_PROYECCION_MS : estado3d.p === base);
+  if (vale) return estado3d!.estado;
+  const p = (marcha ? proyeccionAlInstante() : null) ?? base;
+  estado3d = { p: marcha ? p : base, clave, en: ahora, estado: estadoDesdeProyeccion(p, reglas, posicionDelHeroe(p), { seleccion: seleccionMapa, fundacion }) };
+  return estado3d.estado;
+}
+
 /** Monta la vista 3D del modo mundo en `lienzo` cuando están el mapa y el relieve (sin relieve, con el raster de 4 u del artefacto). `null` si
  * no se puede (sin WebGL, o el mapa sin altura): lo dice en el lienzo. */
 async function montarVista3D(lienzo: HTMLElement, alClicar: (punto: { x: number; y: number }) => void): Promise<VistaMundo3D | null> {
@@ -960,11 +982,7 @@ async function montarVista3D(lienzo: HTMLElement, alClicar: (punto: { x: number;
     const vista = new VistaMundo3D(lienzo, {
       fuente,
       mapa,
-      estado: () => {
-        const p = proyeccionAlInstante() ?? estadoCliente.proyeccionUltima;
-        const reglas = { vision: radiosDeVision, radioZonaInicial: radioZonaInicial(), radioProteccion: radioDeProteccionMercenarios() };
-        return p ? estadoDesdeProyeccion(p, reglas, posicionDelHeroe(p), { seleccion: seleccionMapa, fundacion: fundacionEnVista() }) : null;
-      },
+      estado: estadoDeLaVista3D,
       alClicar: (punto) => alClicar(punto),
       alCambiarEscala: fijarEscalaDeAgarre,
       sinNiebla: import.meta.env.DEV && new URLSearchParams(location.search).has('sinNiebla'),
@@ -1019,8 +1037,7 @@ function abrirPanelRiel(panel: PanelRiel): void {
   const columna = estadoCliente.proyeccionUltima ? miColumna(estadoCliente.proyeccionUltima) : undefined;
   estadoCliente.modoFundacionActivo = panelMapaAbierto === 'fundar' && Boolean(columna);
   estadoCliente.posicionFundacion = estadoCliente.modoFundacionActivo && columna ? columna.posicionActual : null;
-  renderPanelRiel();
-  if (estadoCliente.proyeccionUltima) void dibujarPantallaSegunModo(estadoCliente.proyeccionUltima);
+  renderPanelRiel(); // la vista 3D lee la vista previa de fundar en cada fotograma
 }
 
 // --- MENÚ DE ESQUINA (compartido entre las pantallas Mapa y Asentamiento) -----------------------
@@ -1294,10 +1311,8 @@ function alternarVistaMapa(abrir: boolean = !vistaMapaAbierta, centro?: { x: num
     interior.querySelector('.mapa-interior-cerrar')?.addEventListener('click', () => alternarVistaMapa(false));
     void pintarVistaMapa(centro ?? true);
   } else {
+    // De vuelta al modo mundo: la vista 3D vuelve a pintar sola, y a poner la escala de agarre de sus clics.
     eleccionEnMapa = null;
-    // De vuelta al modo mundo, que dejó de pintarse mientras el mapa lo tapaba (y la escala de agarre de sus clics es la suya).
-    const p = proyeccionAlInstante() ?? proyeccion;
-    if (controlMapaActivo) void dibujarPantallaSegunModo(p);
   }
   renderPanelJugador();
 }
@@ -1429,9 +1444,9 @@ function renderPanelRiel(): void {
   }
 }
 
-/** Pantalla MAPA: el mundo a pantalla completa como fondo, con zoom (rueda y botones) y arrastre acotados
- * (T3), y movimiento por clic + panel de Selección (T4). El terreno lo pinta `dibujarPantallaSegunModo`
- * sobre el mismo canvas `#mapa` de siempre; el zoom es solo `transform` CSS encima. */
+// Pantalla MAPA (`montarMapa`): el mundo alrededor del héroe a pantalla completa, en 3D (`montarVista3D`, docs/Mundo_3D.md), con movimiento
+// por clic y el panel de Selección; el botón Mapa abre encima el modo mapa, en 2D.
+
 /** El selector «añadir a víveres» (abierto o no, y la cantidad que va eligiendo): vive entre repintados, porque el sondeo de 3 s rehace la barra. */
 let selectorViveres: { abierto: boolean; cantidad: number } = { abierto: false, cantidad: 1 };
 
@@ -1549,9 +1564,9 @@ function montarMapa(): void {
     sondeando = true;
     void refrescarDatosJuego().catch(() => {}).finally(() => { sondeando = false; });
   }, 3000);
-  // Las columnas avanzan por su plan y el servidor no manda nada mientras marchan: sin esto se verían a saltos (en cada sondeo). Mientras algo
-  // propio está en marcha, el mapa se repinta a ~30 fps con la proyección del instante; con algo ajeno a la vista, a ~5 fps. La cámara va con
-  // tu columna (`dibujarPantallaSegunModo`). Con el modo mapa abierto encima, el mundo no se pinta y el mapa, solo si algo marcha, a ~4 fps.
+  // Las columnas avanzan por su plan y el servidor no manda nada mientras marchan: sin esto se verían a saltos (en cada sondeo). La vista 3D
+  // pinta en su bucle con la proyección del instante. Con el modo mapa abierto encima, el mundo no se pinta y el mapa, solo si algo marcha o
+  // hay algo ajeno a la vista, a ~4 fps.
   let fotograma = 0;
   let ultimoFotograma = 0;
   const animar = (t: number): void => {
@@ -1599,7 +1614,6 @@ function montarMapa(): void {
 
   renderPanelRiel();
   if (seleccionMapa) renderSeleccionMapa();
-  void dibujarPantallaSegunModo(proyeccion);
 }
 
 // --- VENTANA «SALIR AL MUNDO» (ui/ventanaSalida.ts): la misma en la plaza, el campamento y el pueblo ---------------------------
@@ -2450,15 +2464,11 @@ async function dibujarPantallaSegunModo(proyeccion: ProyeccionJugador): Promise<
   let escalaMundo = 1;
   if (estadoCliente.modoVista === 'mundo') {
     if (titulo) titulo.textContent = 'Mapa del Mundo (Evaluación T2a)';
+    // Solo en `#/legacy`: el mundo entero en el lienzo (el modo mundo del juego es 3D, `src/mundo3d/`).
     const mapa = await sincronizarMapa(proyeccion.mapaId);
-    controlMapaActivo?.fijarMundo(mapa.config.ancho, mapa.config.alto);
-    // Modo mundo: la cámara, pegada al héroe.
-    const donde = posicionDelHeroe(proyeccion);
-    if (donde) controlMapaActivo?.seguir(donde);
-    // La cámara pone la transformación; sin ella (no debería), el mundo entero en el lienzo.
-    if (controlMapaActivo) escalaMundo = controlMapaActivo.transformar(ctx);
-    else { ctx.setTransform(1, 0, 0, 1, 0, 0); escalaMundo = canvas.width / mapa.config.ancho; }
-    pintarTerreno(ctx, mapa, proyeccion, escalaMundo, true);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    escalaMundo = canvas.width / mapa.config.ancho;
+    pintarTerreno(ctx, mapa, proyeccion, escalaMundo);
     pintarMiradas(ctx, proyeccion.miradasIntel ?? [], proyeccion.instante, escalaMundo);
   } else {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -2640,7 +2650,7 @@ function refrescarPantalla(pantalla: Pantalla): void {
     pintarRastreador(proyeccion, abrirMisiones, escaparHtml);
     if (vistaMapaAbierta) void pintarVistaMapa();
   }
-  if (pantalla === 'mapa') { pintarComida(proyeccion); if (!vistaMapaAbierta) void dibujarPantallaSegunModo(proyeccion); renderSeleccionMapa(); renderPanelRiel(); return; }
+  if (pantalla === 'mapa') { pintarComida(proyeccion); renderSeleccionMapa(); renderPanelRiel(); return; }
   if (pantalla === 'campamento' || pantalla === 'pueblo' || pantalla === 'asentamiento') renderVentanaSalida();
   if (pantalla === 'campamento') { const c = campamentoActual(proyeccion); if (c) pintarCampamento(proyeccion, c); return; }
   if (pantalla === 'pueblo') { pintarPueblo(proyeccion); return; }
