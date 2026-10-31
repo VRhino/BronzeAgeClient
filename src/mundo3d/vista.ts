@@ -12,7 +12,7 @@ import { instalarEntrada, type Entrada } from './entrada';
 import type { CaravanaEnVista, ColumnaEnVista, EstadoVista, EtiquetaEnVista } from './estado';
 import { Etiquetas } from './etiquetas';
 import { RejillaDeMovimiento, type Navegacion } from './rejilla';
-import { FigurasDeColumna } from './figuras';
+import { FigurasDeColumna, type TropaDeColumna } from './figuras';
 import type { FuenteDeAltura } from './fuente';
 import { Arboles } from './arboles';
 import { aro, cinta, circulo, linea, rutaPendiente } from './lineas';
@@ -44,6 +44,7 @@ export interface OpcionesVista {
 const PRESUPUESTO = 8;
 /** Lo mínimo que mide en pantalla la zona de clic de algo seleccionable, en px de radio. */
 const MIN_PX_CLIC = 26;
+const SIN_TROPA: TropaDeColumna = { porHeroe: [], ejercito: false };
 /** Hasta dónde llegan, como mucho, los árboles y lo que va sobre el suelo (u); más allá la bruma ya casi lo tapa todo. */
 const ALCANCE = { arboles: 200, paisaje: 240, trazos: 240 };
 
@@ -67,6 +68,8 @@ export class VistaMundo3D {
   private readonly columnas = new Map<string, { figuras: FigurasDeColumna; clave: string }>();
   private readonly lineas = new THREE.Group();
   private readonly matRuta = new THREE.LineBasicMaterial({ color: 0xf1e6c8, transparent: true, opacity: 0.85 });
+  /** La ruta de la columna del jugador: punteada y más marcada que el rastro de las demás (Víctor, 2026-10-31); el aro del destino sigue entero. */
+  private readonly matRutaMia = new THREE.LineDashedMaterial({ color: 0xf1e6c8, transparent: true, opacity: 0.9, dashSize: 0.35, gapSize: 0.25 });
   /** Las rutas de las demás columnas de la Facción y de las caravanas: un rastro discontinuo, más tenue el de las caravanas (como en el 2D). */
   private readonly matRutaFaccion = new THREE.LineDashedMaterial({ color: 0xf1e6c8, transparent: true, opacity: 0.6, dashSize: 0.6, gapSize: 0.4 });
   private readonly matRutaCaravana = new THREE.LineDashedMaterial({ color: 0xf1e6c8, transparent: true, opacity: 0.35, dashSize: 0.6, gapSize: 0.4 });
@@ -209,7 +212,7 @@ export class VistaMundo3D {
       ...m.obras.map((x) => ({ posicion: x.posicion, radio: 0.6 * M })),
       ...m.campamentos.map((x) => ({ posicion: x.posicion, radio: 0.9 * M * MUNDO3D.campamento })),
       ...m.bandidos.map((x) => ({ posicion: x.posicion, radio: 0.7 * M * MUNDO3D.campamento })),
-      ...m.alijos.map((x) => ({ posicion: x.posicion, radio: 0.5 })),
+      ...m.alijos.map((x) => ({ posicion: x.posicion, radio: 0.5 * MUNDO3D.alijo })),
       ...m.batallas.map((x) => ({ posicion: x.posicion, radio: 1 })),
       ...e.columnas.filter((c) => !c.mia).map((c) => ({ posicion: c.posicion, radio: 0.8 })),
       ...e.caravanas.map((c) => ({ posicion: c.posicion, radio: 0.7 })),
@@ -282,20 +285,20 @@ export class VistaMundo3D {
   /** Las figuras de cada columna (de la Facción y avistadas) y de cada caravana suelta; se rehacen si cambia lo que llevan o su color. */
   private ponerColumnas(lista: readonly ColumnaEnVista[], caravanas: readonly CaravanaEnVista[]): void {
     const vivas = new Set<string>();
-    const poner = (id: string, jinetes: number, soldados: number, color: string, carros: { carga: number; fundacion: boolean }, posicion: Punto) => {
+    const poner = (id: string, jinetes: number, tropa: TropaDeColumna, color: string, carros: { carga: number; fundacion: boolean }, posicion: Punto) => {
       vivas.add(id);
-      const hex = new THREE.Color(color).getHex(), clave = `${jinetes}:${soldados}:${hex}:${carros.carga}:${carros.fundacion}`;
+      const hex = new THREE.Color(color).getHex(), clave = `${jinetes}:${tropa.ejercito ? 'E' : 'P'}${tropa.porHeroe.join(',')}:${hex}:${carros.carga}:${carros.fundacion}`;
       let f = this.columnas.get(id);
       if (!f || f.clave !== clave) {
         f?.figuras.destruir();
-        f = { figuras: new FigurasDeColumna(jinetes, soldados, hex, carros), clave };
+        f = { figuras: new FigurasDeColumna(jinetes, tropa, hex, carros), clave };
         this.columnas.set(id, f);
         this.escena.add(f.figuras.grupo);
       }
       f.figuras.mover(posicion, this.alturaU);
     };
-    for (const c of lista) poner(c.id, c.jinetes, c.soldados, c.color, c.carros, c.posicion);
-    for (const c of caravanas) poner(`caravana:${c.id}`, 0, 0, c.color, { carga: c.fundacion ? 0 : 1, fundacion: c.fundacion }, c.posicion);
+    for (const c of lista) poner(c.id, c.jinetes, c.tropa, c.color, c.carros, c.posicion);
+    for (const c of caravanas) poner(`caravana:${c.id}`, 0, SIN_TROPA, c.color, { carga: c.fundacion ? 0 : 1, fundacion: c.fundacion }, c.posicion);
     for (const [id, f] of this.columnas) if (!vivas.has(id)) { f.figuras.destruir(); this.columnas.delete(id); }
   }
 
@@ -315,7 +318,7 @@ export class VistaMundo3D {
       }
       if (c.ruta.length < 2) continue;
       const pendiente = rutaPendiente(c.ruta, c.posicion);
-      if (pendiente.length >= 2) this.lineas.add(c.mia ? linea(pendiente, this.alturaU, this.matRuta) : linea(pendiente, this.alturaU, this.matRutaFaccion).computeLineDistances());
+      if (pendiente.length >= 2) this.lineas.add(linea(pendiente, this.alturaU, c.mia ? this.matRutaMia : this.matRutaFaccion).computeLineDistances());
       if (c.mia) this.lineas.add(aro(c.ruta[c.ruta.length - 1]!, 0.5, this.alturaU, this.matRuta));
     }
     for (const c of caravanas) {
@@ -348,6 +351,7 @@ export class VistaMundo3D {
     for (const f of this.columnas.values()) f.figuras.destruir();
     for (const l of this.lineas.children) (l as THREE.Line).geometry.dispose();
     this.matRuta.dispose();
+    this.matRutaMia.dispose();
     this.matRutaFaccion.dispose();
     this.matRutaCaravana.dispose();
     this.matMira.dispose();

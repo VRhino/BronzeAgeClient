@@ -96,7 +96,7 @@ async function arrancar(): Promise<void> {
       c.posicion = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
     }
     const mia: ColumnaEnVista = {
-      id: 'mia', mia: true, propia: true, posicion: cabeza, ruta: ruta.length ? [cabeza, ...ruta] : [], jinetes: 1, soldados: soldados ? 6 : 0,
+      id: 'mia', mia: true, propia: true, posicion: cabeza, ruta: ruta.length ? [cabeza, ...ruta] : [], jinetes: 1, tropa: { porHeroe: [soldados ? 1 : 0], ejercito: false },
       color: '#c0392b', carros: { carga: soldados ? 1 : 0, fundacion: !!fundacion }, formacion: false,
     };
     return { heroe: cabeza, radioVision: radio, columnas: [mia, ...ajenas], caravanas, niebla, mundo, miradas, etiquetas, seleccion, fundacion };
@@ -159,7 +159,7 @@ function mundoDePrueba(c: Punto, vacio: boolean): { mundo: MundoEnVista; ajenas:
   camino([plaza, en(12, 10, plaza), ajena], 1);
   camino([plaza, en(3, 4, plaza), en(6, 5, plaza)], 0);
   // lo ajeno: una columna en formación junto a la plaza ajena, bandidos, un alijo y una batalla; caravanas propia y ajena; dos Miradas
-  ajenas.push({ id: 'ajena', mia: false, propia: false, posicion: en(-6, 4, ajena), ruta: [], jinetes: 2, soldados: 0, color: AJENO, carros: { carga: 0, fundacion: true }, formacion: true });
+  ajenas.push({ id: 'ajena', mia: false, propia: false, posicion: en(-6, 4, ajena), ruta: [], jinetes: 2, tropa: { porHeroe: [0, 0], ejercito: false }, color: AJENO, carros: { carga: 0, fundacion: true }, formacion: true });
   m.bandidos.push({ id: 'bandidos', posicion: en(-4, 12), nivel: 2 });
   m.alijos.push({ id: 'alijo', posicion: en(3, 6) });
   m.batallas.push({ id: 'batalla', posicion: en(18, -10), propia: false });

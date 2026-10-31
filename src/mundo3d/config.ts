@@ -10,11 +10,13 @@ export const MUNDO3D = {
   /** Inclinación de la cámara sobre el horizonte, en grados: libre entre `min` y `max`. */
   inclinacion: { inicial: 30, min: 10, max: 90 },
   /** Copa de los árboles (diámetro). */
-  copa: 0.3,
+  copa: 0.5,
   /** Escala de las maquetas de plazas, pueblos, avanzadas y campamentos: ×1 = la del juego. */
   maqueta: 1,
   /** Los campamentos (de mercenarios y de bandidos), al doble de la maqueta: a ×1 casi no se veían (Víctor, 2026-10-31). */
   campamento: 2,
+  /** Los alijos, al doble de la maqueta (Víctor, 2026-10-31). */
+  alijo: 2,
   /** Escala de héroes y tropa (soldado de 0,136 u a ×1). */
   tropa: 2,
   /** Lado de las teselas de terreno, el de las del paquete de relieve. */

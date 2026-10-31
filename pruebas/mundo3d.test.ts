@@ -7,6 +7,7 @@ import { arbolesDelTrozo, caucesDe, franjas, type Entorno } from '../src/mundo3d
 import { distanciaDeEncuadre } from '../src/mundo3d/camara';
 import { encuadres } from '../src/mundo3d/config';
 import { ANCHOS, dondeEstaLaSeleccion, estadoDesdeProyeccion, mundoDesdeProyeccion } from '../src/mundo3d/estado';
+import { bloquesDeTropa } from '../src/mundo3d/figuras';
 import { fuenteDesdeMapa, type FuenteDeAltura } from '../src/mundo3d/fuente';
 import { cinta, circulo, rutaPendiente, tramosEnCaja } from '../src/mundo3d/lineas';
 import { suavizar } from '../src/mundo3d/paisaje';
@@ -42,13 +43,21 @@ const proyeccion = (ejercitos: Ejercito[], resto: Record<string, unknown> = {}) 
   ({ heroeId: 'heroe-1', faccionId: 'f-1', facciones: [{ id: 'f-1', nombre: 'Troya' }, { id: 'f-2', nombre: 'Micenas' }], asentamientos: [], caravanas: [], instante: 0, ejercitos, exploracion: undefined, ...resto }) as unknown as ProyeccionJugador;
 const REGLAS = { vision: { solo: 15, ejercito: 30 }, radioZonaInicial: 6, radioProteccion: 10 };
 
+describe('la formación de la tropa', () => {
+  test('columna personal: dos filas de tres por escuadra; ejército: una fila de cuatro por escuadra, un bloque por héroe', () => {
+    expect(bloquesDeTropa({ porHeroe: [2], ejercito: false })).toEqual([{ filas: 2, ancho: 3 }, { filas: 2, ancho: 3 }]);
+    expect(bloquesDeTropa({ porHeroe: [3, 0, 3], ejercito: true })).toEqual([{ filas: 3, ancho: 4 }, { filas: 3, ancho: 4 }]);
+    expect(bloquesDeTropa({ porHeroe: [10, 10], ejercito: true })).toEqual([{ filas: 10, ancho: 4 }, { filas: 2, ancho: 4 }]); // como mucho 12 escuadras
+  });
+});
+
 describe('el estado de la vista', () => {
   test('la columna propia: la cámara la sigue y con soldados ve 30 u', () => {
     const e = estadoDesdeProyeccion(proyeccion([columna({ escuadronIds: ['e1', 'e2'], estado: 'marchando', ruta: [{ x: 10, y: 20 }, { x: 30, y: 20 }] })]), REGLAS, null);
     expect(e.heroe).toEqual({ x: 10, y: 20 });
     expect(e.radioVision).toBe(30);
     expect(e.columnas).toEqual([{
-      id: 'ej-1', mia: true, propia: true, posicion: { x: 10, y: 20 }, ruta: [{ x: 10, y: 20 }, { x: 30, y: 20 }], jinetes: 1, soldados: 12, // dos escuadras, dos filas de tres cada una
+      id: 'ej-1', mia: true, propia: true, posicion: { x: 10, y: 20 }, ruta: [{ x: 10, y: 20 }, { x: 30, y: 20 }], jinetes: 1, tropa: { porHeroe: [2], ejercito: false }, // dos escuadras de un solo héroe
       color: e.columnas[0]!.color, carros: { carga: 0, fundacion: false }, formacion: false,
     }]);
   });
@@ -109,13 +118,13 @@ describe('lo ajeno, los nombres y lo seleccionado', () => {
   test('las columnas de la Facción con su ruta y sus carros; las avistadas, sin ruta', () => {
     const [mia, faccion, ajena] = e.columnas;
     expect([mia!.mia, faccion!.mia, faccion!.propia, faccion!.ruta.length, faccion!.carros, faccion!.formacion]).toEqual([true, false, true, 2, { carga: 1, fundacion: true }, true]);
-    expect([ajena!.propia, ajena!.ruta, ajena!.jinetes, ajena!.soldados, ajena!.formacion]).toEqual([false, [], 3, 0, true]);
+    expect([ajena!.propia, ajena!.ruta, ajena!.jinetes, ajena!.tropa.porHeroe, ajena!.formacion]).toEqual([false, [], 3, [], true]);
     expect(ajena!.color).not.toBe(mia!.color);
   });
 
   test('una columna ajena con sus tropas (las escuadras de sus héroes públicos) y sus caravanas enganchadas detrás', () => {
     const conTropa = e.columnas.find((c) => c.id === 'av-2')!;
-    expect([conTropa.soldados, conTropa.carros]).toEqual([12, { carga: 1, fundacion: false }]);
+    expect([conTropa.tropa, conTropa.carros]).toEqual([{ porHeroe: [2], ejercito: false }, { carga: 1, fundacion: false }]);
   });
 
   test('caravanas sueltas: ni las enganchadas ni la de fundación que espera en su plaza; las avistadas, sin ruta', () => {
@@ -232,10 +241,10 @@ describe('los árboles', () => {
   const bosque = { config: { ancho: 64, alto: 64, seed: 0 }, rios: [], rasters: { densidadBosque: { columnas: 16, filas: 16, celda: 4, datos: new Uint8Array(256).fill(255) } } } as unknown as MapaGenerado;
   const entorno = (cambios: Partial<Entorno> = {}): Entorno => ({ fuente: llano, mapa: bosque, cauces: caucesDe(bosque), claros: [], explorada: () => true, ...cambios });
 
-  test('en bosque cerrado, las copas de 0,3 u casi se tocan: 0,55 / 0,3² árboles por u²', () => {
+  test('en bosque cerrado, las copas de 0,5 u casi se tocan: 0,55 / 0,5² árboles por u²', () => {
     const n = arbolesDelTrozo(entorno(), 0, 0, 16, 1).length / 4;
-    expect(n / 256).toBeGreaterThan(5.6);
-    expect(n / 256).toBeLessThan(6.6);
+    expect(n / 256).toBeGreaterThan(2.0);
+    expect(n / 256).toBeLessThan(2.4);
   });
 
   test('lejos quedan la mitad, y son de los mismos', () => {

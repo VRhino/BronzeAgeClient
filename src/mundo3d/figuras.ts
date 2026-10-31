@@ -81,10 +81,22 @@ function carro(fundacion: boolean): THREE.Group {
   return g;
 }
 
-/** Figuras de cada escuadra en marcha: dos filas de tres. */
-export const FIGURAS_POR_TROPA = 6;
-/** Lo que se separa una escuadra de la siguiente además del paso entre filas (en unidades de figura). */
-const HUECO_ENTRE_TROPAS = 0.08;
+/** Lo que se separa un bloque de tropa del siguiente además del paso entre filas (en unidades de figura). */
+const HUECO_ENTRE_BLOQUES = 0.08;
+/** Como mucho, escuadras que se pintan: 6 en una columna personal (36 figuras), 12 en un ejército (48). */
+const MAX_ESCUADRAS = { personal: 6, ejercito: 12 } as const;
+
+/** La tropa de una columna: cuántas escuadras lleva cada héroe, en el orden en que van, y si es un ejército. */
+export interface TropaDeColumna { porHeroe: number[]; ejercito: boolean }
+
+/** Los bloques de tropa (Víctor, 2026-10-31). En una columna personal, un bloque por escuadra de dos filas de tres; en un ejército, un bloque
+ * por héroe con una fila de cuatro por cada una de sus escuadras. Entre bloques, un hueco algo mayor que entre filas. */
+export function bloquesDeTropa(t: TropaDeColumna): { filas: number; ancho: number }[] {
+  let quedan = MAX_ESCUADRAS[t.ejercito ? 'ejercito' : 'personal'];
+  const recorta = (n: number) => { const m = Math.max(0, Math.min(n, quedan)); quedan -= m; return m; };
+  if (!t.ejercito) return Array.from({ length: recorta(t.porHeroe.reduce((s, n) => s + n, 0)) }, () => ({ filas: 2, ancho: 3 }));
+  return t.porHeroe.map(recorta).filter((n) => n > 0).map((n) => ({ filas: n, ancho: 4 }));
+}
 
 export class FigurasDeColumna {
   readonly grupo = new THREE.Group();
@@ -95,19 +107,21 @@ export class FigurasDeColumna {
   /** Cuánto va cada figura detrás de la cabeza y a qué lado (−1, 0, 1), en unidades de figura (×`MUNDO3D.tropa`). */
   private readonly sitios: { atras: number; lado: number }[] = [];
 
-  /** `jinetes`: héroes de la columna (al frente, a caballo); `soldados`: figuras de tropa detrás (la primera lleva el estandarte); `carros`:
-   * lo que arrastra al final. */
-  constructor(readonly jinetes: number, readonly soldados: number, color: number, readonly carros: Carros = { carga: 0, fundacion: false }) {
+  /** `jinetes`: héroes de la columna (al frente, a caballo); `tropa`: las escuadras detrás, por bloques (`bloquesDeTropa`; la primera figura
+   * lleva el estandarte); `carros`: lo que arrastra al final. */
+  constructor(readonly jinetes: number, tropa: TropaDeColumna, color: number, readonly carros: Carros = { carga: 0, fundacion: false }) {
     for (let k = 0; k < jinetes; k++) { this.figuras.push(heroe(color)); this.sitios.push({ atras: k * 0.15, lado: 0 }); }
-    // la tropa por bloques de FIGURAS_POR_TROPA (dos filas de tres, una por escuadra): entre filas de un bloque, el paso de siempre; entre un
-    // bloque y el siguiente, un poco más (Víctor, 2026-10-31)
-    let ultima = jinetes * 0.15 - 0.15;
-    for (let k = 0; k < soldados; k++) {
-      const tropa = Math.floor(k / FIGURAS_POR_TROPA), fila = Math.floor((k % FIGURAS_POR_TROPA) / 3);
-      ultima = (jinetes + tropa * 2 + fila) * 0.15 + tropa * HUECO_ENTRE_TROPAS;
-      this.figuras.push(soldado(color, k === 0));
-      this.sitios.push({ atras: ultima, lado: (k % 3) - 1 });
-    }
+    // entre filas de un bloque, el paso de siempre; entre un bloque y el siguiente, un poco más
+    let ultima = jinetes * 0.15 - 0.15, fila = jinetes, soldados = 0;
+    bloquesDeTropa(tropa).forEach((b, i) => {
+      for (let f = 0; f < b.filas; f++, fila++) {
+        ultima = fila * 0.15 + i * HUECO_ENTRE_BLOQUES;
+        for (let k = 0; k < b.ancho; k++) {
+          this.figuras.push(soldado(color, soldados++ === 0));
+          this.sitios.push({ atras: ultima, lado: k - (b.ancho - 1) / 2 });
+        }
+      }
+    });
     const tras = ultima + 0.15 + (jinetes + soldados ? 0.12 : 0), n = carros.carga + (carros.fundacion ? 1 : 0);
     for (let k = 0; k < n; k++) { this.figuras.push(carro(carros.fundacion && k === n - 1)); this.sitios.push({ atras: tras + k * 0.34, lado: 0 }); }
     for (const f of this.figuras) {

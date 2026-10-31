@@ -145,7 +145,7 @@ function bandidos(p: Piezas, x: number, y: number, nivel: number, sem: number): 
 
 /** Un alijo: fardos y un cofre con el oro encima. */
 function alijo(p: Piezas, x: number, y: number): void {
-  const M = MUNDO3D.maqueta;
+  const M = MUNDO3D.maqueta * MUNDO3D.alijo;
   p.caja('adobe', x - 0.06 * M, y, 0.1 * M, 0.08 * M, 0.06 * M, 0.3);
   p.caja('madera', x + 0.05 * M, y + 0.03 * M, 0.09 * M, 0.07 * M, 0.07 * M, -0.2);
   p.caja('oro', x + 0.05 * M, y + 0.03 * M, 0.06 * M, 0.05 * M, 0.025 * M, -0.2, 0.07 * M);

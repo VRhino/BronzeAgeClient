@@ -3,6 +3,13 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.70.0] — 2026-10-31 · mundo 3D: alijos, ruta punteada, copas y formación del ejército · sync con `VRhino/BronzeAge@ebadcafe`, sin cambios en el contrato
+
+- **Alijos al doble** (`MUNDO3D.alijo = 2`), con su aro de selección y su zona de clic.
+- **La ruta de tu columna, punteada**, más marcada que el rastro de las demás; el aro del destino sigue entero.
+- **Copas de los árboles de 0,5 u** (antes 0,3). La densidad del bosque va por la copa, así que hay menos árboles para tapar lo mismo.
+- **Formación del ejército.** Una columna personal sigue igual: dos filas de tres por escuadra, con un hueco entre escuadras. Un ejército pone una fila de cuatro por escuadra y agrupa por héroe: cada héroe es un bloque con sus filas y el hueco va entre héroes (2 héroes con 3 tropas = 3 filas de 4, hueco, 3 filas de 4). La tropa de cada héroe sale de sus escuadrones (los tuyos) o de `escuadrasQueLleva` (los demás); lo que no se sabe de quién es va con el último. Como mucho 12 escuadras en un ejército y 6 en una columna personal.
+
 ## [0.69.0] — 2026-10-31 · columnas ajenas con su tropa y sus caravanas · sync con `VRhino/BronzeAge@ebadcafe`
 
 - **Columnas ajenas con tropa.** En el mundo 3D, una columna ajena que se ve lleva detrás las figuras de las escuadras de sus héroes públicos (`heroesVisibles[].escuadrasQueLleva`), en filas de tres como las propias. Sirve igual para una columna personal que para un ejército de varios héroes.

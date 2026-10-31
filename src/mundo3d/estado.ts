@@ -6,6 +6,7 @@ import type { SitiosDeAldea } from '../mundo/fertilidad';
 import { faccionColor } from '../paletas';
 import type { NieblaProyectada } from '../tiposDominio';
 import { MUNDO3D } from './config';
+import type { TropaDeColumna } from './figuras';
 import { circulo } from './lineas';
 
 type Punto = { x: number; y: number };
@@ -29,8 +30,8 @@ export interface ColumnaEnVista {
   ruta: Punto[];
   /** Héroes a caballo al frente. */
   jinetes: number;
-  /** Figuras de tropa detrás. */
-  soldados: number;
+  /** La tropa detrás: escuadras por héroe y si es un ejército (cambia la formación, `bloquesDeTropa`). */
+  tropa: TropaDeColumna;
   /** El de su Facción: túnicas y penachos. */
   color: string;
   carros: Carros;
@@ -115,8 +116,8 @@ const COLOR_AJENO = '#9a927f', COLOR_CAMINO = '#8b5a2b', COLOR_ANILLO = '#2e5e8c
 /** La tropa de quien aún no tiene Facción. */
 const COLOR_SIN_FACCION = '#c0392b';
 
-/** Figuras de tropa por escuadra, y como mucho. */
-const FIGURAS_POR_ESCUADRA = 6, MAX_FIGURAS = 36, MAX_JINETES = 4;
+/** Héroes a caballo que se pintan, como mucho. */
+const MAX_JINETES = 4;
 
 /** Lo que la vista pinta y no sale de la proyección: lo seleccionado en el panel y la vista previa de fundar. */
 export interface ExtraDeVista {
@@ -131,6 +132,16 @@ export function estadoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVist
   const color = (faccionId: string | null | undefined) => (faccionId ? faccionColor(faccionId, p.facciones) : COLOR_SIN_FACCION);
   // la columna en la que marcha el héroe (como `miColumna` de `ui/ejercitos.ts`, sin traerse la interfaz)
   const mia = p.ejercitos.find((c) => c.participantes.some((x) => x.heroeId === p.heroeId));
+  // escuadras de cada héroe: las mías por mis escuadrones, las de los demás por su ficha pública (`escuadrasQueLleva`)
+  const escuadrasDe = (heroeId: string) => p.heroesVisibles?.find((h) => h.heroeId === heroeId)?.escuadrasQueLleva.length ?? 0;
+  const misEscuadrones = new Set((p.heroe?.escuadrones ?? []).map((x) => x.id));
+  const tropaPropia = (e: (typeof p.ejercitos)[number]): TropaDeColumna => {
+    const porHeroe = e.participantes.map((x) => (x.heroeId === p.heroeId ? e.escuadronIds.filter((id) => misEscuadrones.has(id)).length : escuadrasDe(x.heroeId)));
+    // lo que no se sabe de quién es (sin ficha a la vista) va con el último héroe: el total es el de la columna
+    const faltan = e.escuadronIds.length - porHeroe.reduce((s, n) => s + n, 0);
+    if (faltan > 0) { if (porHeroe.length === 0) porHeroe.push(0); porHeroe[porHeroe.length - 1]! += faltan; }
+    return { porHeroe, ejercito: e.tipo === 'ejercito' };
+  };
   const enElMapa = mia && !mia.dentroDe ? mia : undefined;
   const columnas: ColumnaEnVista[] = [];
   // las de la Facción, con su ruta y lo que arrastran; una columna que entró en un lugar no está en el mapa
@@ -148,7 +159,7 @@ export function estadoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVist
       posicion: e.posicionActual,
       ruta: e.estado !== 'estacionado' ? e.ruta ?? [] : [],
       jinetes: Math.max(1, Math.min(MAX_JINETES, e.participantes.length)),
-      soldados: Math.min(MAX_FIGURAS, e.escuadronIds.length * FIGURAS_POR_ESCUADRA),
+      tropa: tropaPropia(e),
       color: color(e.faccionId ?? p.faccionId),
       carros: { carga: Math.min(2, carga), fundacion },
       formacion: !!e.formacion,
@@ -156,12 +167,10 @@ export function estadoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVist
   }
   // las ajenas que se ven ahora: sin ruta (sería leerles el plan); su tropa son las escuadras que lleva cada héroe público que va en ella
   // (`escuadrasQueLleva`) y detrás, las caravanas que arrastra
-  const escuadrasDe = (heroeId: string) => p.heroesVisibles?.find((h) => h.heroeId === heroeId)?.escuadrasQueLleva.length ?? 0;
   for (const a of p.ejercitosAvistados ?? []) {
-    const escuadras = a.heroeIds.reduce((s, id) => s + escuadrasDe(id), 0);
     columnas.push({
       id: a.id, mia: false, propia: false, posicion: a.posicionActual, ruta: [], jinetes: Math.max(1, Math.min(MAX_JINETES, a.participantes)),
-      soldados: Math.min(MAX_FIGURAS, escuadras * FIGURAS_POR_ESCUADRA),
+      tropa: { porHeroe: a.heroeIds.map(escuadrasDe), ejercito: a.tipo === 'ejercito' },
       color: color(a.faccionId), carros: { carga: Math.min(2, a.caravanasAdjuntasIds.length), fundacion: !!a.caravanaFundacionId }, formacion: !!a.enFormacion,
     });
   }
@@ -224,7 +233,7 @@ export function dondeEstaLaSeleccion(p: ProyeccionJugador, sel: { tipo: string; 
     }
     case 'campamento': return en(p.campamentosBandidos?.find((x) => x.id === sel.id)?.posicion, 1 * M * MUNDO3D.campamento);
     case 'mercenarios': return en(p.campamentosMercenarios?.find((x) => x.id === sel.id)?.posicion, 1.1 * M * MUNDO3D.campamento);
-    case 'alijo': return en(p.alijos?.find((x) => x.id === sel.id)?.posicion, 0.5);
+    case 'alijo': return en(p.alijos?.find((x) => x.id === sel.id)?.posicion, 0.5 * MUNDO3D.alijo);
     case 'batalla': return en(p.batallas?.find((x) => x.battleId === sel.id)?.punto, 1);
     case 'puebloMapa': {
       const x = mundo.pueblos.find((y) => y.id === sel.id);
