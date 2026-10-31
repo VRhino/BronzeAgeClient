@@ -72,7 +72,7 @@ export function cablearFichaBatalla(raiz: ParentNode, proyeccion: ProyeccionJuga
 export function formacionesVisibles(proyeccion: ProyeccionJugador): EjercitoAvistado[] {
   const delaFaccion = proyeccion.ejercitos
     .filter((e) => e.formacion && !e.participantes.some((p) => p.heroeId === proyeccion.heroeId))
-    .map((e): EjercitoAvistado => ({ id: e.id, tipo: e.tipo, enFormacion: true, faccionId: e.faccionId, posicionActual: e.posicionActual, participantes: e.participantes.length, heroeIds: e.participantes.map((p) => p.heroeId) }));
+    .map((e): EjercitoAvistado => ({ id: e.id, tipo: e.tipo, enFormacion: true, faccionId: e.faccionId, posicionActual: e.posicionActual, participantes: e.participantes.length, heroeIds: e.participantes.map((p) => p.heroeId), caravanasAdjuntasIds: e.caravanasAdjuntasIds ?? [] }));
   return [...delaFaccion, ...(proyeccion.ejercitosAvistados ?? []).filter((e) => e.enFormacion)];
 }
 

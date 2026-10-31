@@ -739,9 +739,9 @@ export function radioDeProteccionMercenarios(): number {
   return balance()?.mundoYMilitar?.MERCENARIOS?.radioProteccion ?? 10;
 }
 
-/** A cuánto hay que estar de una columna para unirse a ella en campo (`LOGISTICA.radioEncuentro`); 15 mientras no llegue el balance. */
+/** A cuánto hay que estar de una columna para unirse a ella en campo (`LOGISTICA.radioEncuentro`); 1 mientras no llegue el balance. */
 export function radioDeEncuentro(): number {
-  return balance()?.mundoYMilitar?.LOGISTICA?.radioEncuentro ?? 15;
+  return balance()?.mundoYMilitar?.LOGISTICA?.radioEncuentro ?? 1;
 }
 
 /** A cuánto de tu plaza tiene que pasar un ejército para recoger tropa o reabastecerse (`LOGISTICA.radioReabastecimiento`); 60 mientras no llegue el balance. */

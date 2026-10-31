@@ -542,7 +542,7 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
       id: e.id, tipo: e.tipo === pb.TipoColumna.COLUMNA_EJERCITO ? 'ejercito' : 'personal', enFormacion: e.formacionExpiraEnMs !== undefined ? true : undefined,
       faccionId: e.faccionId, posicionActual: evaluarPlan(e.plan, e.posicion, ahora).posicion, participantes: e.participantes.length,
       heroeIds: e.participantes.map((p) => p.heroeId), teSigue: e.teSigue ? true : undefined,
-      caravanaFundacionId: opcional(e.caravanaFundacionId),
+      caravanaFundacionId: opcional(e.caravanaFundacionId), caravanasAdjuntasIds: [...e.caravanasAdjuntasIds],
     })),
     caravanasAvistadas: caravanasAjenas.map((x) => ({ id: x.id, posicionActual: evaluarPlan(x.plan, x.posicion, ahora).posicion, faccionId: x.faccionId, escoltada: x.escoltada, recursos: x.recursosAvistados })),
     // Lo que sacó tu héroe de mirar de cerca (`inspeccionar`): viaja en HEROE y vale 10 minutos.

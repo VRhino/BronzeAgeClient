@@ -919,7 +919,7 @@ export function pintarTerreno(
   // Y sin memoria, a diferencia de los asentamientos: de un ejercito no se guarda "ultimo conocido". Tiene
   // sentido — una ciudad sigue donde estaba, una columna en marcha no.
   for (const avistado of proyeccion.ejercitosAvistados || []) {
-    if (avistado.caravanaFundacionId) dibujarCaravanaDetras(ctx, avistado, avistado.posicionActual.x * escalaCanvas, avistado.posicionActual.y * escalaCanvas, escalaCanvas, true, k);
+    if (avistado.caravanaFundacionId || avistado.caravanasAdjuntasIds.length > 0) dibujarCaravanaDetras(ctx, avistado, avistado.posicionActual.x * escalaCanvas, avistado.posicionActual.y * escalaCanvas, escalaCanvas, !!avistado.caravanaFundacionId, k);
     dibujarRacimoDeRombos(
       ctx,
       avistado.posicionActual.x * escalaCanvas,

@@ -403,6 +403,8 @@ export interface EjercitoAvistado {
   teSigue?: true;
   /** Lleva enganchada una Caravana de Fundación (se pinta detrás). */
   caravanaFundacionId?: string;
+  /** Las caravanas que lleva enganchadas (motor 2026-10-31): cada una llega aparte en `caravanasAvistadas`, en la posición de la columna. */
+  caravanasAdjuntasIds: string[];
 }
 
 /**

@@ -154,22 +154,26 @@ export function estadoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVist
       formacion: !!e.formacion,
     });
   }
-  // las ajenas que se ven ahora: sin ruta (sería leerles el plan) y sin tropa (no viaja); sus héroes y lo que arrastran a la vista
+  // las ajenas que se ven ahora: sin ruta (sería leerles el plan); su tropa son las escuadras que lleva cada héroe público que va en ella
+  // (`escuadrasQueLleva`) y detrás, las caravanas que arrastra
+  const escuadrasDe = (heroeId: string) => p.heroesVisibles?.find((h) => h.heroeId === heroeId)?.escuadrasQueLleva.length ?? 0;
   for (const a of p.ejercitosAvistados ?? []) {
+    const escuadras = a.heroeIds.reduce((s, id) => s + escuadrasDe(id), 0);
     columnas.push({
-      id: a.id, mia: false, propia: false, posicion: a.posicionActual, ruta: [], jinetes: Math.max(1, Math.min(MAX_JINETES, a.participantes)), soldados: 0,
-      color: color(a.faccionId), carros: { carga: 0, fundacion: !!a.caravanaFundacionId }, formacion: !!a.enFormacion,
+      id: a.id, mia: false, propia: false, posicion: a.posicionActual, ruta: [], jinetes: Math.max(1, Math.min(MAX_JINETES, a.participantes)),
+      soldados: Math.min(MAX_FIGURAS, escuadras * FIGURAS_POR_ESCUADRA),
+      color: color(a.faccionId), carros: { carga: Math.min(2, a.caravanasAdjuntasIds.length), fundacion: !!a.caravanaFundacionId }, formacion: !!a.enFormacion,
     });
   }
-  // las caravanas sueltas: las enganchadas van con su columna y la de fundación que espera dentro de su plaza no está en el mapa
-  const adjuntas = new Set(p.ejercitos.flatMap((e) => [...(e.caravanasAdjuntasIds ?? []), ...(e.caravanaFundacionId ? [e.caravanaFundacionId] : [])]));
+  // las caravanas sueltas: las enganchadas (propias o ajenas) van con su columna y la de fundación que espera dentro de su plaza no está en el mapa
+  const adjuntas = new Set([...p.ejercitos, ...(p.ejercitosAvistados ?? [])].flatMap((e) => [...(e.caravanasAdjuntasIds ?? []), ...(e.caravanaFundacionId ? [e.caravanaFundacionId] : [])]));
   const caravanas: CaravanaEnVista[] = (p.caravanas ?? [])
     .filter((c) => !adjuntas.has(c.id) && c.estado !== 'adjunta' && !(c.tipo === 'construccion' && c.estado === 'disponible'))
     .map((c) => ({
       id: c.id, posicion: c.posicionActual, ruta: (c.ruta?.length ?? 0) >= 2 ? c.ruta! : [], fundacion: c.tipo === 'construccion',
       color: color(p.asentamientos.find((a) => a.id === c.origenAsentamientoId)?.faccionId ?? p.faccionId),
     }));
-  for (const c of p.caravanasAvistadas ?? []) caravanas.push({ id: c.id, posicion: c.posicionActual, ruta: [], fundacion: false, color: c.faccionId ? color(c.faccionId) : COLOR_AJENO });
+  for (const c of (p.caravanasAvistadas ?? []).filter((x) => !adjuntas.has(x.id))) caravanas.push({ id: c.id, posicion: c.posicionActual, ruta: [], fundacion: false, color: c.faccionId ? color(c.faccionId) : COLOR_AJENO });
   const miradas = (p.miradasIntel ?? []).map((m) => {
     const abierta = m.expiraEn > p.instante;
     return { id: m.id, centro: m.centro, radio: m.radio, abierta, minutos: Math.max(0, Math.ceil(((abierta ? m.expiraEn : m.libreEn) - p.instante) / 60_000)) };

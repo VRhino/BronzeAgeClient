@@ -3006,6 +3006,8 @@ export type Ejercito = Message<"bronzeage.v1.Ejercito"> & {
   persiguiendo?: Persecucion | undefined;
 
   /**
+   * también en la columna ajena que se ve (2026-10-31)
+   *
    * @generated from field: repeated string caravanas_adjuntas_ids = 15;
    */
   caravanasAdjuntasIds: string[];

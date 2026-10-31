@@ -2,7 +2,7 @@
 // caravanas avistadas, con la ficha pública de los héroes que van. Aquí no se decide ninguna regla: el backend valida y su rechazo se enseña tal cual.
 // Esta ficha solo APAGA con su motivo lo que el canon no permite, para que el jugador no pulse a ciegas:
 //   Inspeccionar   desde 40; el observado se entera. Vale entre cualquier clase de columna.
-//   Atacar         a 15 (`radioEncuentro`); un ejército y una columna personal nunca combaten entre sí; ni a los tuyos ni a un aliado; sin herida.
+//   Atacar         a `radioEncuentro` (1 u desde 2026-10-31); un ejército y una columna personal nunca combaten entre sí; ni a los tuyos ni a un aliado; sin herida.
 //                  De una caravana se llama «Interceptar» y es el mismo comando `atacar`; si va adjunta a un ejército se ataca al ejército.
 //   Perseguir      un ejército solo persigue a otro ejército; una columna personal, a otra o a una caravana suelta.
 //   Dejar de perseguir   si ya vas tras esa presa.
@@ -57,6 +57,8 @@ interface Objetivo {
   /** Solo columnas. */
   clase?: 'personal' | 'ejercito';
   heroeIds?: string[];
+  /** Solo columnas: lo que lleva cada caravana enganchada (qué, nunca cuánto). */
+  caravanas?: string[][];
   /** Solo caravanas: lleva escolta (adjunta a un ejército o con escuadras cedidas). */
   escoltada?: boolean;
   /** Solo caravanas: va pegada a un ejército avistado, o sea adjunta (entonces se ataca/persigue al ejército). */
@@ -164,7 +166,7 @@ function htmlFicha(p: ProyeccionJugador, o: Objetivo, kicker: string, e: Escapar
     + (apagadas.length > 0 ? `<p class="mapa-lista-vacia">Por qué no se puede${ayuda('ajeno:motivos',agrupados(apagadas).map(([etiquetas, m]) => `<strong>${etiquetas}</strong>: ${e(m)}`).join('<br>'), 'Por qué no se puede')}</p>` : '');
   const heroes = (o.heroeIds ?? []).length > 0 ? `<strong class="heroe-sub">Héroes que van</strong><div class="mapa-lista">${o.heroeIds!.map((id) => htmlHeroe(p, id, e)).join('')}</div>` : '';
   const datos = o.tipo === 'ejercito'
-    ? `<div><span>Héroes</span><strong>${(o.heroeIds ?? []).length}</strong></div>`
+    ? `<div><span>Héroes</span><strong>${(o.heroeIds ?? []).length}</strong></div>${htmlCaravanasDeColumna(o.caravanas ?? [], e)}`
     : `<div><span>Escolta</span><strong>${o.escoltada ? 'Sí' : 'No'}</strong></div><div><span>Lleva</span><strong>${o.recursos?.map((r) => e(RECURSO_NOMBRE[r] ?? r)).join(', ') || 'nada'}</strong></div>`;
   const persecucion = o.teSigue
     ? `<p class="faction-error">⚠ Va tras tu columna.${ayuda('ajeno:persecucion', `Puedes huir —marcha a otro sitio: si eres más rápido no te alcanza, y entrar en una plaza o campamento la suelta— o plantarle cara con «Plantar cara» cuando esté a ${radioDeEncuentro()}.`)}</p>`
@@ -182,10 +184,20 @@ function htmlFicha(p: ProyeccionJugador, o: Objetivo, kicker: string, e: Escapar
     <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`;
 }
 
-const deColumna = (x: EjercitoAvistado): Objetivo => ({ tipo: 'ejercito', id: x.id, posicion: x.posicionActual, faccionId: x.faccionId, clase: x.tipo, heroeIds: x.heroeIds, teSigue: x.teSigue === true });
+/** Las caravanas que arrastra una columna ajena: cuántas y qué llevan, sin cantidades. */
+function htmlCaravanasDeColumna(caravanas: string[][], e: Escapar): string {
+  if (caravanas.length === 0) return '';
+  const lleva = [...new Set(caravanas.flat())].map((r) => e(RECURSO_NOMBRE[r] ?? r)).join(', ');
+  return `<div><span>Caravanas</span><strong>${caravanas.length}${lleva ? ` · ${lleva}` : ''}</strong></div>`;
+}
+
+const deColumna = (p: ProyeccionJugador, x: EjercitoAvistado): Objetivo => ({
+  tipo: 'ejercito', id: x.id, posicion: x.posicionActual, faccionId: x.faccionId, clase: x.tipo, heroeIds: x.heroeIds, teSigue: x.teSigue === true,
+  caravanas: x.caravanasAdjuntasIds.map((id) => (p.caravanasAvistadas ?? []).find((c) => c.id === id)?.recursos ?? []),
+});
 // Adjunta = viaja pegada a un ejército avistado (misma posición): `escoltada` también es true con escolta cedida, que sí se puede perseguir e interceptar.
 const deCaravana = (p: ProyeccionJugador, c: CaravanaAvistada): Objetivo => ({ tipo: 'caravana', id: c.id, posicion: c.posicionActual, faccionId: c.faccionId, escoltada: c.escoltada, recursos: c.recursos,
-  adjunta: c.escoltada && (p.ejercitosAvistados ?? []).some((x) => distancia(x.posicionActual, c.posicionActual) < 0.5) });
+  adjunta: (p.ejercitosAvistados ?? []).some((x) => x.caravanasAdjuntasIds.includes(c.id)) || (c.escoltada && (p.ejercitosAvistados ?? []).some((x) => distancia(x.posicionActual, c.posicionActual) < 0.5)) });
 
 function cablear(cont: HTMLElement, o: Objetivo, heroeId: string, ctx: Parameters<NonNullable<FichaMapaExtra['cablear']>>[3]): void {
   cont.querySelectorAll<HTMLButtonElement>('[data-ajeno]').forEach((boton) => boton.addEventListener('click', async () => {
@@ -201,7 +213,7 @@ function cablear(cont: HTMLElement, o: Objetivo, heroeId: string, ctx: Parameter
       return;
     }
     if (accion === 'inspeccionar') ctx.aviso('Miras de cerca: el observado recibe un aviso.');
-    else if (accion === 'perseguir') ctx.aviso('Sales tras ella: a 15 podrás atacar.');
+    else if (accion === 'perseguir') ctx.aviso(`Sales tras ella: a ${radioDeEncuentro()} podrás atacar.`);
     else if (accion === 'soltar') ctx.aviso('Sueltas a tu presa.');
     else ctx.aviso((datos as { battleId?: string } | undefined)?.battleId ? 'Se abre una batalla: te unes desde Avisos.' : 'Combate resuelto: el informe llega en Avisos.');
   }));
@@ -210,8 +222,8 @@ function cablear(cont: HTMLElement, o: Objetivo, heroeId: string, ctx: Parameter
 export const FICHA_COLUMNA_AJENA: FichaMapaExtra = {
   tipo: 'ejercitoAjeno',
   buscar: (p, id) => (p.ejercitosAvistados ?? []).find((x) => x.id === id),
-  html: (p, x: EjercitoAvistado, c) => htmlFicha(p, deColumna(x), clase(x.tipo) === 'ejercito' ? 'Ejército ajeno' : 'Columna personal ajena', c.escapar),
-  cablear: (cont, p, x: EjercitoAvistado, c) => cablear(cont, deColumna(x), p.heroeId, c),
+  html: (p, x: EjercitoAvistado, c) => htmlFicha(p, deColumna(p, x), clase(x.tipo) === 'ejercito' ? 'Ejército ajeno' : 'Columna personal ajena', c.escapar),
+  cablear: (cont, p, x: EjercitoAvistado, c) => cablear(cont, deColumna(p, x), p.heroeId, c),
 };
 
 export const FICHA_CARAVANA_AJENA: FichaMapaExtra = {

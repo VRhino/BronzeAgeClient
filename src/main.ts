@@ -549,7 +549,7 @@ function cercano<T extends { posicion: { x: number; y: number } }>(lista: readon
   return lista.filter((c) => distancia(c) < radio).sort((a, b) => distancia(a) - distancia(b))[0] ?? null;
 }
 
-/** A qué distancia se ataca: `LOGISTICA.radioEncuentro` de los datos de juego del motor (3 hoy; el backend TypeScript usaba 15), para avisar
+/** A qué distancia se ataca: `LOGISTICA.radioEncuentro` de los datos de juego del motor (1 u desde 2026-10-31), para avisar
  * antes de mandar la orden. El que decide es el motor. */
 const radioDeAtaque = (): number => radioDeEncuentro();
 

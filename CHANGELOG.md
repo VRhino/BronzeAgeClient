@@ -3,6 +3,13 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.69.0] — 2026-10-31 · columnas ajenas con su tropa y sus caravanas · sync con `VRhino/BronzeAge@ebadcafe`
+
+- **Columnas ajenas con tropa.** En el mundo 3D, una columna ajena que se ve lleva detrás las figuras de las escuadras de sus héroes públicos (`heroesVisibles[].escuadrasQueLleva`), en filas de tres como las propias. Sirve igual para una columna personal que para un ejército de varios héroes.
+- **Caravanas enganchadas.** `EjercitoAvistado.caravanasAdjuntasIds` (campo 15 de `Ejercito`, que el motor manda ahora también en lo ajeno). Se pintan como carros detrás de la columna, en el 3D y en el mapa 2D, y ya no salen además como caravanas sueltas. La ficha de la columna ajena dice cuántas lleva y qué recursos (sin cantidades), y una caravana enganchada se reconoce como adjunta por su id y no solo por la posición.
+- **Radio de encuentro.** El motor lo baja a 1 u para todo. El cliente ya lo leía de `/v1/datos` (`LOGISTICA.radioEncuentro`); ahora también el valor por defecto mientras no llega es 1 (antes 15), y el aviso de perseguir ya no dice «a 15».
+- Contrato regenerado desde `ebadcafe` (solo cambia un comentario).
+
 ## [0.68.1] — 2026-10-31 · tarifas de la taberna · sync con `VRhino/BronzeAge@fb64d5b7`, sin cambios en el contrato
 
 - **Intel de la taberna.** Las tarifas iban fijas a cero, así que en la taberna de un campamento salía «Taberna al límite de Miradas» (0 / 0) y los precios y enfriamientos eran falsos. Ahora salen de `/v1/datos`: el bloque `INTEL` (Mirada, Informe y `campamento.cupoMiradas`) y el `cupoMiradas` de cada nivel de la Taberna (`apiCliente.tarifasDeIntel`).

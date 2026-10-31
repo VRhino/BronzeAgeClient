@@ -89,8 +89,15 @@ describe('lo ajeno, los nombres y lo seleccionado', () => {
       { id: 'car-3', origenAsentamientoId: 'x', posicionActual: { x: 5, y: 5 }, tipo: 'comercio', estado: 'en_transito', ruta: [{ x: 5, y: 5 }, { x: 8, y: 8 }] },
       { id: 'car-4', origenAsentamientoId: 'x', posicionActual: { x: 6, y: 6 }, tipo: 'construccion', estado: 'disponible' },
     ],
-    ejercitosAvistados: [{ id: 'av-1', faccionId: 'f-2', posicionActual: { x: 40, y: 40 }, participantes: 3, heroeIds: [], enFormacion: true }],
-    caravanasAvistadas: [{ id: 'cav-1', posicionActual: { x: 50, y: 50 }, faccionId: 'f-2', escoltada: false }],
+    ejercitosAvistados: [
+      { id: 'av-1', faccionId: 'f-2', posicionActual: { x: 40, y: 40 }, participantes: 3, heroeIds: [], enFormacion: true, caravanasAdjuntasIds: [] },
+      { id: 'av-2', faccionId: 'f-2', posicionActual: { x: 60, y: 60 }, participantes: 1, heroeIds: ['h-9'], caravanasAdjuntasIds: ['cav-2'] },
+    ],
+    heroesVisibles: [{ heroeId: 'h-9', escuadrasQueLleva: [{ tropaId: 'lanceros', cantidad: 40, nivel: 1 }, { tropaId: 'arqueros', cantidad: 20, nivel: 1 }] }],
+    caravanasAvistadas: [
+      { id: 'cav-1', posicionActual: { x: 50, y: 50 }, faccionId: 'f-2', escoltada: false },
+      { id: 'cav-2', posicionActual: { x: 60, y: 60 }, faccionId: 'f-2', escoltada: true },
+    ],
     asentamientosAvistados: [{ id: 'a-1', nombre: 'Micenas', faccionId: 'f-2', posicion: { x: 100, y: 100 }, nivel: 2, zona: circulo({ x: 100, y: 100 }, 10, 24).slice(0, -1) }],
     asentamientosConocidos: [{ asentamientoId: 'a-2', nombre: 'Tirinto', faccionId: 'f-2', posicion: { x: 300, y: 100 }, nivel: 1, conocidoEn: 0 }],
     miradasIntel: [{ id: 'm1', faccionId: 'f-1', origenId: 'o', centro: { x: 1, y: 1 }, radio: 6, compradaEn: 0, expiraEn: 90_000, libreEn: 200_000 }, { id: 'm2', faccionId: 'f-1', origenId: 'o', centro: { x: 2, y: 2 }, radio: 6, compradaEn: 0, expiraEn: -1, libreEn: 30_000 }],
@@ -99,11 +106,16 @@ describe('lo ajeno, los nombres y lo seleccionado', () => {
   });
   const e = estadoDesdeProyeccion(p, REGLAS, null, { seleccion: { tipo: 'asentamiento', id: 'a-1' } });
 
-  test('las columnas de la Facción con su ruta y sus carros; las avistadas, sin ruta ni tropa', () => {
+  test('las columnas de la Facción con su ruta y sus carros; las avistadas, sin ruta', () => {
     const [mia, faccion, ajena] = e.columnas;
     expect([mia!.mia, faccion!.mia, faccion!.propia, faccion!.ruta.length, faccion!.carros, faccion!.formacion]).toEqual([true, false, true, 2, { carga: 1, fundacion: true }, true]);
     expect([ajena!.propia, ajena!.ruta, ajena!.jinetes, ajena!.soldados, ajena!.formacion]).toEqual([false, [], 3, 0, true]);
     expect(ajena!.color).not.toBe(mia!.color);
+  });
+
+  test('una columna ajena con sus tropas (las escuadras de sus héroes públicos) y sus caravanas enganchadas detrás', () => {
+    const conTropa = e.columnas.find((c) => c.id === 'av-2')!;
+    expect([conTropa.soldados, conTropa.carros]).toEqual([12, { carga: 1, fundacion: false }]);
   });
 
   test('caravanas sueltas: ni las enganchadas ni la de fundación que espera en su plaza; las avistadas, sin ruta', () => {
