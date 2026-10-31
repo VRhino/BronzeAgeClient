@@ -180,16 +180,19 @@ function avisarDeDesercion(eventos: readonly EventoDominio[], heroeId: string, m
 
 // --- bloque J1: alianza y vasallaje con aceptación (backend 2026-10-09). Los eventos llegan a todos: solo se avisa a las Facciones implicadas.
 function avisoDeRelacion(e: EventoDominio): { texto: string; pideDecision: boolean } | null {
-  const p = e.payload as { tipo?: string; faccionAId?: string; faccionBId?: string; expiraEn?: number } | undefined;
+  const p = e.payload as { tipo?: string | number; faccionAId?: string; faccionBId?: string; expiraEn?: number; propuestaId?: string; relacionId?: string } | undefined;
   const proy = estadoCliente.proyeccionUltima;
   if (!proy?.faccionId || !p?.faccionAId || !p.faccionBId || !e.codigo.startsWith('diplomacia.relacion_')) return null;
-  const nombre = (id: string) => proy.facciones.find((f) => f.id === id)?.nombre ?? id;
-  const que = p.tipo === 'alianza' ? 'la alianza' : 'el vasallaje';
+  const nombre = (id: string) => proy.facciones.find((f) => f.id === id)?.nombre ?? proy.directorioFacciones?.find((f) => f.id === id)?.nombre ?? id;
+  // El motor manda el tipo como enumerado (1 vasallaje, 2 alianza) solo en la propuesta; al resolverla se busca en la relación que nace o en la propuesta.
+  const tipo = typeof p.tipo === 'number' ? ({ 1: 'vasallaje', 2: 'alianza' } as Record<number, string>)[p.tipo]
+    : p.tipo ?? proy.relaciones?.find((r) => r.id === p.relacionId)?.tipo ?? proy.propuestasRelacion?.find((x) => x.id === p.propuestaId)?.tipo;
+  const que = tipo === 'alianza' ? 'la alianza' : tipo === 'vasallaje' ? 'el vasallaje' : 'la propuesta';
   const soyA = p.faccionAId === proy.faccionId;
   const soyB = p.faccionBId === proy.faccionId;
   switch (e.codigo) {
     case 'diplomacia.relacion_propuesta':
-      return soyB ? { texto: `${nombre(p.faccionAId)} te propone ${p.tipo === 'alianza' ? 'una alianza' : 'un vasallaje'}: decide en la pestaña Facción (solo tu Rey responde)${p.expiraEn ? `, ${plazo(p.expiraEn, proy.instante)}` : ''}.`, pideDecision: true } : null;
+      return soyB ? { texto: `${nombre(p.faccionAId)} te propone ${tipo === 'alianza' ? 'una alianza' : 'un vasallaje'}: decide en la pestaña Facción (solo tu Rey responde)${p.expiraEn ? `, ${plazo(p.expiraEn, proy.instante)}` : ''}.`, pideDecision: true } : null;
     case 'diplomacia.relacion_aceptada':
       return soyA || soyB ? { texto: `${nombre(p.faccionBId)} acepta ${que} de ${nombre(p.faccionAId)}.`, pideDecision: false } : null;
     case 'diplomacia.relacion_rechazada':

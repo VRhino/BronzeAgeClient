@@ -6,9 +6,10 @@
 // `MURALLA.nivelMinimoConstruccion`/`nivelMaximo` (constants.ts, backend) cambian, esto hay que actualizarlo
 // aparte; el servidor sigue siendo la autoridad real (un intento con nivel insuficiente se rechaza igual,
 // esto solo evita mostrar un botón que fallaría siempre).
-import type { ProyeccionJugador } from '../apiCliente';
+import { bloqueDeDatos, catalogoDePoliticas, type ProyeccionJugador } from '../apiCliente';
 import type { Asentamiento, Recinto } from '../tiposDominio';
 import { ayuda } from './ayuda';
+import { barraDeTiempo, textoEnTiempoReal } from './estadoCliente';
 
 /** Nivel de plaza que pide cada anillo (motor: `MURALLA.nivelDePlaza`, Murallas.md): empalizada 2, muro de piedra 3, adarve 4. */
 const NIVEL_DE_PLAZA_POR_ANILLO = [2, 3, 4];
@@ -23,7 +24,35 @@ function integridadDe(recinto: Recinto): number {
   return recinto.celdas.length === 0 ? 0 : (recinto.avance + 1) / recinto.celdas.length;
 }
 
+/** Lo que tarda cada celda en ms de mundo (`MURALLA.minutosPorCelda[nivel]` × `factorTiempoMuralla` de las políticas activas); `null` sin datos. */
+function msPorCelda(a: Asentamiento, nivel: number): number | null {
+  const minutos = bloqueDeDatos<{ minutosPorCelda?: Record<string, number> }>('MURALLA')?.minutosPorCelda?.[String(nivel)];
+  if (minutos === undefined) return null;
+  const politicas = catalogoDePoliticas()?.catalogo ?? [];
+  const factor = (a.politicasActivas ?? []).reduce((t, x) => { const v = politicas.find((q) => q.id === x.politicaId)?.factorTiempoMuralla; return typeof v === 'number' ? t * v : t; }, 1);
+  return minutos * factor * 60_000;
+}
+
+/** La obra de un anillo (o su mejora): la celda que se está levantando como barra, y lo que tarda el anillo entero y lo que le queda. */
+function tiempoDeObra(recinto: Recinto, a: Asentamiento, ahora: number): string {
+  const mejora = recinto.mejorandoA !== undefined;
+  const hechas = mejora ? recinto.mejoradas ?? 0 : recinto.avance + 1;
+  const quedan = recinto.celdas.length - hechas;
+  if (quedan <= 0) return '';
+  const porCelda = msPorCelda(a, mejora ? recinto.mejorandoA! : recinto.nivel);
+  if (porCelda === null) return '';
+  const siguiente = recinto.siguienteCeldaEn;
+  // La celda en curso acaba en `siguienteCeldaEn`; sin cita (faltan materiales o la reserva no deja), espera al paso de minuto.
+  const celda = siguiente !== undefined && siguiente > ahora
+    ? barraDeTiempo(`Celda ${hechas + 1} de ${recinto.celdas.length}`, siguiente - porCelda, siguiente, ahora)
+    : '<p class="wall-note">Celda parada: falta material en el almacén o tocaría la reserva. Sigue sola en cuanto lo haya.</p>';
+  const resto = (siguiente !== undefined && siguiente > ahora ? siguiente - ahora : porCelda) + Math.max(0, quedan - 1) * porCelda;
+  return `${celda}<span class="wall-recinto-tiempo">Anillo entero: ${textoEnTiempoReal(recinto.celdas.length * porCelda)} · quedan ${textoEnTiempoReal(resto)} (${textoEnTiempoReal(porCelda)} por celda)</span>`;
+}
+
 function renderTarjetaRecinto(
+  a: Asentamiento,
+  ahora: number,
   recinto: Recinto,
   esExterior: boolean,
   esGobernador: boolean,
@@ -62,6 +91,7 @@ function renderTarjetaRecinto(
         <span>${puertas} puerta${puertas === 1 ? '' : 's'} · ${recinto.celdas.length} celdas</span>
       </div>
       <span class="wall-recinto-estado">${escaparHtml(estadoTexto)}</span>
+      ${tiempoDeObra(recinto, a, ahora)}
       ${acciones.length > 0 ? `<div class="wall-recinto-acciones">${acciones.join('')}</div>` : ''}
     </div>
   `;
@@ -84,7 +114,7 @@ export function renderPestanaMuralla(asentamiento: Asentamiento, proyeccion: Pro
   const hayExterior = recintos.length > 0;
 
   const tarjetas = recintos
-    .map((r, indice) => renderTarjetaRecinto(r, indice === recintos.length - 1, esGobernador, puedeComprometer, cargoParaComprometer, escaparHtml))
+    .map((r, indice) => renderTarjetaRecinto(asentamiento, proyeccion.instante, r, indice === recintos.length - 1, esGobernador, puedeComprometer, cargoParaComprometer, escaparHtml))
     .join('');
 
   const listaOVacio =

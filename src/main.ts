@@ -46,7 +46,7 @@ import { alCargarSigilos } from './sigilo/lienzo';
 import { cablearCampamento, campamentoActual, htmlSeccionCampamento, seccionesDeCampamento, type SeccionCampamento } from './ui/pantallaCampamento';
 import { leyendaPlanoCampamento, svgPlanoCampamento } from './ui/planoCampamento';
 import type { MapaGenerado } from './terreno';
-import { estadoCliente, medirRitmoDeMundo, TIPS_FUNDACION } from './ui/estadoCliente';
+import { barraDeTiempo, estadoCliente, medirRitmoDeMundo, TIPS_FUNDACION } from './ui/estadoCliente';
 import { actualizarTip, parcelasAlFundar, resumenRecursosFundacion, sitiosDeAldeaAlFundar } from './ui/pestanaAsentamientos';
 import { renderPanelInteraccion } from './ui/panelInteraccion';
 import { renderPanelMapa } from './ui/panelMapa';
@@ -1976,7 +1976,7 @@ const MOTIVO_BLOQUEO_ASCENSO: Record<BloqueoAscenso, string> = {
 function seccionAscenso(a: Asentamiento, evaluacion: EvaluacionAscenso | undefined, soyGobernador: boolean): string {
   const cabecera = `<div class="asent-lado-cabecera"><span class="faction-kicker">Subida de nivel ${ayuda('plaza:ascenso', 'La subida de nivel no es automática: la pide el Gobernador, se paga entera del almacén y tarda una obra. Si conquistan la plaza durante la obra, se pierde.')}</span></div>`;
   if (a.ascenso) {
-    return `${cabecera}<p class="asent-lado-nota">Obra en curso hacia el nivel ${a.ascenso.nivelObjetivo} · ${cuentaAtras(a.ascenso.completaEn)}.</p>`;
+    return `${cabecera}${barraDeTiempo(`Subiendo al nivel ${a.ascenso.nivelObjetivo}`, a.ascenso.iniciadoEn, a.ascenso.completaEn, estadoCliente.proyeccionUltima?.instante ?? Date.now())}`;
   }
   if (!evaluacion || evaluacion.nivelObjetivo === null) return '';
   const costo = Object.entries(evaluacion.costo)

@@ -3,6 +3,26 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.67.0] — 2026-10-31 · mejoras anotadas por Víctor · sync con `VRhino/BronzeAge@fb64d5b7`
+
+Sin cambios en el contrato.
+
+### Cambiado
+- **Subida de nivel de la plaza** (Centro urbano): mientras sube, una barra que se va llenando con lo que falta (`barraDeTiempo` en
+  `ui/estadoCliente.ts`), en vez de la línea de texto.
+- **Muralla**: cada recinto en obra o en mejora enseña la celda en curso como barra de tiempo y cuánto tarda el anillo entero y cuánto le
+  queda (`MURALLA.minutosPorCelda` × `factorTiempoMuralla` de las políticas activas). Si la celda está parada por falta de material o por la
+  reserva, lo dice.
+- **3D**: los campamentos de mercenarios y de bandidos van al doble de tamaño (`MUNDO3D.campamento`) y llevan cartel flotante como las plazas
+  («⛺ Mercenarios», «☠ Bandidos · nivel N»).
+
+### Corregido
+- **Títulos del servidor**: la Facción que tiene cada título salía con su id cuando no era una de las que llegan completas; ahora sale con su
+  nombre y su escudo, tomados del directorio de Facciones.
+- **Avisos de alianza**: decían «acepta el vasallaje» (y «te propone un vasallaje») también en una alianza. El tipo llega del motor como
+  número en la propuesta y no viene al resolverla: se traduce, y si no viene se busca en la relación que nace o en la propuesta.
+- **Rechazo de cambio de residencia**: «puede volver a hacerlo desde 582300140» pasa a «dentro de 3 h» (lo que falta, en tu tiempo).
+
 ## [0.66.0] — 2026-10-31 · el carro frente al almacén de la plaza · sync con `VRhino/BronzeAge@1dad4abf`
 
 Contrato regenerado (`src/contrato/REVISION` = 1dad4abf; cambio aditivo, no hace falta mundo ni partida nueva).

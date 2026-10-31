@@ -2825,6 +2825,13 @@ kbd {
 .carro-fila small { flex-basis: 100%; color: var(--text-muted); font-size: 0.7rem; }
 .carro-ocupacion { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .carro-ocupacion span { font-size: 0.75rem; color: var(--text-secondary); }
+/* Obra en curso: barra que se llena con el tiempo. */
+.wall-recinto-tiempo { display: block; font-size: 0.75rem; color: var(--text-muted); }
+.barra-tiempo { display: grid; gap: 4px; margin: 4px 0 8px; }
+.barra-tiempo-texto { display: flex; justify-content: space-between; gap: 8px; font-size: 0.8rem; color: var(--text-secondary); }
+.barra-tiempo-texto small { color: var(--oro-claro, #d9b44a); white-space: nowrap; }
+.barra-tiempo-pista { height: 10px; border-radius: 5px; background: rgba(255, 255, 255, 0.08); overflow: hidden; border: 1px solid rgba(217, 180, 74, 0.25); }
+.barra-tiempo-pista span { display: block; height: 100%; background: linear-gradient(90deg, #a9793f, #d9b44a); transition: width 0.8s linear; }
 .carro-barra { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; margin: 2px 0 6px; }
 .carro-barra span { display: block; height: 100%; transition: width 0.3s; }
 .carro-barra-ok span { background: #6fc46a; }

@@ -43,6 +43,15 @@ export function textoEnTiempoReal(msDeMundo: number): string {
   return h < 48 ? `${h} h` : `${Math.round(h / 24)} d`;
 }
 
+/** Una obra en curso como barra que se llena de `inicio` a `fin` (instantes de mundo), con lo que falta en el tiempo del jugador. */
+export function barraDeTiempo(titulo: string, inicio: number, fin: number, ahora: number): string {
+  const total = fin - inicio;
+  const pct = total > 0 ? Math.max(0, Math.min(100, ((ahora - inicio) / total) * 100)) : 100;
+  const falta = fin > ahora ? `faltan ${textoEnTiempoReal(fin - ahora)}` : 'terminando';
+  return `<div class="barra-tiempo" title="${Math.floor(pct)} % hecho"><div class="barra-tiempo-texto"><span>${titulo}</span><small>${falta}</small></div>
+    <div class="barra-tiempo-pista"><span style="width:${pct.toFixed(1)}%"></span></div></div>`;
+}
+
 export const estadoCliente: EstadoClienteJugador = {
   usuarioActivo: '',
   gameIdActivo: 'local',

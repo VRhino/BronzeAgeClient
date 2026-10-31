@@ -19,7 +19,7 @@ export class Etiquetas {
     const usadas = new Set<string>();
     for (const e of lista) {
       if (Math.hypot(e.posicion.x - cerca.x, e.posicion.y - cerca.y) > lejos) continue;
-      const v = this.v.set(e.posicion.x, alturaU(e.posicion.x, e.posicion.y) + (e.tipo === 'plaza' ? 1.2 : e.tipo === 'nodo' ? 0.5 : 0.1), e.posicion.y).project(camara);
+      const v = this.v.set(e.posicion.x, alturaU(e.posicion.x, e.posicion.y) + (e.tipo === 'plaza' ? 1.2 : e.tipo === 'campamento' ? 1.1 : e.tipo === 'nodo' ? 0.5 : 0.1), e.posicion.y).project(camara);
       if (v.z > 1 || v.z < -1 || v.x < -1.1 || v.x > 1.1 || v.y < -1.1 || v.y > 1.1) continue;
       usadas.add(e.id);
       let viva = this.vivas.get(e.id);

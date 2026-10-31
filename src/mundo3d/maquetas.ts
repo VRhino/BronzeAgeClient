@@ -123,7 +123,7 @@ function obra(p: Piezas, x: number, y: number, arrancada: boolean, color: string
 
 /** Un campamento de mercenarios: empalizada, tiendas en corro y el asta en medio. */
 function campamento(p: Piezas, x: number, y: number, sem: number): void {
-  const M = MUNDO3D.maqueta;
+  const M = MUNDO3D.maqueta * MUNDO3D.campamento;
   p.anillo(x, y, 0.6 * M, 0.07 * M, 0.03 * M, 'madera');
   for (let k = 0; k < 10; k++) {
     const a = (k / 10) * 2 * Math.PI + hash(sem, k, 1) * 0.4, d = (0.25 + 0.2 * hash(sem, k, 2)) * M;
@@ -134,7 +134,7 @@ function campamento(p: Piezas, x: number, y: number, sem: number): void {
 
 /** Un campamento de bandidos: tiendas oscuras en corro (más cuanto más nivel), la hoguera y su bandera roja. */
 function bandidos(p: Piezas, x: number, y: number, nivel: number, sem: number): void {
-  const M = MUNDO3D.maqueta, n = 2 + 2 * Math.max(1, Math.min(3, nivel));
+  const M = MUNDO3D.maqueta * MUNDO3D.campamento, n = 2 + 2 * Math.max(1, Math.min(3, nivel));
   for (let k = 0; k < n; k++) {
     const a = (k / n) * 2 * Math.PI + hash(sem, k, 1) * 0.5, d = (0.3 + 0.12 * hash(sem, k, 2)) * M;
     p.add('lonaOscura', { x: x + d * Math.cos(a), y: y + d * Math.sin(a), ancho: 0.16 * M, fondo: 0.16 * M, alto: 0.12 * M, giro: a, base: 0 });
@@ -216,11 +216,11 @@ export class Maquetas {
     }
     for (const x of m.campamentos) {
       campamento(encima, x.posicion.x, x.posicion.y, semilla(x.posicion.x, x.posicion.y));
-      claros.push({ x: x.posicion.x, y: x.posicion.y, r: 0.9 * M });
+      claros.push({ x: x.posicion.x, y: x.posicion.y, r: 0.9 * M * MUNDO3D.campamento });
     }
     for (const x of m.bandidos) {
       bandidos(encima, x.posicion.x, x.posicion.y, x.nivel, semilla(x.posicion.x, x.posicion.y));
-      claros.push({ x: x.posicion.x, y: x.posicion.y, r: 0.6 * M });
+      claros.push({ x: x.posicion.x, y: x.posicion.y, r: 0.6 * M * MUNDO3D.campamento });
     }
     for (const x of m.alijos) alijo(encima, x.posicion.x, x.posicion.y);
     for (const x of m.batallas) batalla(encima, x.posicion.x, x.posicion.y, x.propia);

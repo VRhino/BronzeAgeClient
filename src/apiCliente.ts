@@ -7,7 +7,8 @@ import { TipoEntidad } from './contrato/gen/bronzeage/v1/common_pb';
 import type { EventoDominio as EventoPb } from './contrato/gen/bronzeage/v1/events_pb';
 import { cargarMundo } from './mundo/artefacto';
 import { cargarRelieve, type Relieve } from './mundo/relieve';
-import { instante, proyectar } from './motor/proyeccion';
+import { EPOCA_CONTRATO, instante, proyectar } from './motor/proyeccion';
+import { textoEnTiempoReal } from './ui/estadoCliente';
 import { ComandoDesconocido, traducirOrden } from './motor/ordenes';
 
 import type { AcuerdoTrueque, AedaAvistado, AvanzadaDeMapa, AedaResidenteProyectado, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, CaravanaAvistada, Convocatoria, Ejercito, EjercitoAvistado, EscenaCampamento, EvaluacionAscenso, EventoDominio, Faccion, FaccionDelDirectorio, HeroeProyectado, HeroePublico, InformeDeInspeccion, ObraDeMapa, PuebloDeMapa, InformePlaza, MiradaIntel, Mision, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, PropuestaAnexion, PropuestaFusion, PropuestaRelacion, RelacionPolitica, Sigilo, TarifasIntel, TecnologiaJugador, Titulo, TrazadoAsentamiento, ZonaFaccion } from './tiposDominio';
@@ -836,18 +837,28 @@ export async function ejecutarComando(_gameId: string, tipo: string, params: unk
   }
   const ok = r.resultado === Resultado.ORDEN_ACEPTADA || r.resultado === Resultado.ORDEN_SIN_CAMBIOS || r.resultado === Resultado.ORDEN_DUPLICADA;
   const datos = r.datos as Record<string, unknown> | undefined;
+  const proyeccion = proyeccionActual(s);
   return {
     resultado: ok
       ? { ok, datos: { ...datos, creadas: r.creadas.map((c) => ({ entidad: TipoEntidad[c.entidad], id: c.id })) } }
-      : { ok, codigoError: r.rechazo?.codigo ?? 'rechazada', detalleError: detalleLegible(r.rechazo?.codigo, r.rechazo?.mensaje) },
-    proyeccion: proyeccionActual(s),
+      : { ok, codigoError: r.rechazo?.codigo ?? 'rechazada', detalleError: detalleLegible(r.rechazo?.codigo, r.rechazo?.mensaje, proyeccion.instante) },
+    proyeccion,
   };
 }
 
 /** Rechazos cuyo mensaje del motor lleva cantidades en milésimas: se pasan a unidades para el jugador. */
 const RECHAZOS_EN_MILESIMAS = new Set(['reclutamiento.sin_reserva_de_trigo']);
 
-function detalleLegible(codigo: string | undefined, mensaje: string | undefined): string | undefined {
+/** Rechazos cuyo mensaje del motor lleva un instante crudo (`desde 582300140`): se pasa a lo que falta, en el tiempo del jugador. */
+const RECHAZOS_CON_INSTANTE = new Set(['residencia.cooldown']);
+
+function detalleLegible(codigo: string | undefined, mensaje: string | undefined, ahora: number): string | undefined {
+  if (mensaje && codigo && RECHAZOS_CON_INSTANTE.has(codigo)) {
+    return mensaje.replace(/desde (-?\d+)/, (_, n: string) => {
+      const falta = Number(n) + EPOCA_CONTRATO - ahora;
+      return falta > 0 ? `dentro de ${textoEnTiempoReal(falta)}` : 'ya';
+    });
+  }
   if (!mensaje || !codigo || !RECHAZOS_EN_MILESIMAS.has(codigo)) return mensaje;
   return mensaje.replace(/-?\d+/g, (n) => String(Math.round(Number(n) / 1000)));
 }

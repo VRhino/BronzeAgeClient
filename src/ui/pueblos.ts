@@ -12,7 +12,7 @@
 //   dentro     se entra en un pueblo activo como de visita, con la columna entera (`entrarEnPueblo` / `salirDePueblo`); dentro se gestiona con esa
 //              columna (`htmlPestanasPueblo`): guarnición, carga, escolta del carro de acarreo y mejora de la aldea. La escolta también se cede desde la plaza.
 import { bloqueDeDatos, catalogoDeCaravanas, radioDePuerta, type ProyeccionJugador } from '../apiCliente';
-import { estadoCliente, textoEnTiempoReal } from './estadoCliente';
+import { barraDeTiempo, estadoCliente, textoEnTiempoReal } from './estadoCliente';
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE, faccionColor } from '../paletas';
 import { iconoEdificio } from './iconosEdificio';
 import type { Asentamiento, AvanzadaDeMapa, ObraDeMapa, Point, PuebloDeMapa } from '../tiposDominio';
@@ -349,6 +349,7 @@ export function htmlAscensoLocal(p: ProyeccionJugador, a: Asentamiento, soyGober
   const objetivo = a.nivel + 1;
   const techo = Math.min(reqs.nivelMaximo ?? 5, asc.nivelTechoProvisional ?? 5);
   const info = ayuda('plaza:ascenso', 'La subida de nivel no es automática: la pide el Gobernador, se paga entera del almacén y tarda una obra. Si conquistan la plaza durante la obra, se pierde.');
+  if (a.ascenso) return `<span class="faction-kicker">Subida de nivel${info}</span>${barraDeTiempo(`Subiendo al nivel ${a.ascenso.nivelObjetivo}`, a.ascenso.iniciadoEn, a.ascenso.completaEn, p.instante)}`;
   if (objetivo > techo) return `<p class="asent-lado-nota">La plaza está en el nivel más alto que se puede alcanzar hoy.${info}</p>`;
   const r = reqs.requisitos?.[String(objetivo)] ?? {};
   const coste = asc.porNivelObjetivo?.[String(objetivo)];
@@ -373,7 +374,6 @@ export function htmlAscensoLocal(p: ProyeccionJugador, a: Asentamiento, soyGober
     [faltaPagar.length === 0, `En el almacén: ${listaRecursos(coste?.costo ?? {}) || 'sin coste'}${faltaPagar.length ? ` (faltan ${faltaPagar.map(([k, n]) => `${Math.ceil(n - (almacen[k]?.cantidad ?? 0))} ${RECURSO_NOMBRE[k] ?? k}`).join(', ')})` : ''}`],
   ];
   const puede = !a.ascenso && filas.every(([ok]) => ok);
-  if (a.ascenso) return `<p class="asent-lado-nota">Subiendo al nivel ${a.ascenso.nivelObjetivo} · termina en ${textoEnTiempoReal(a.ascenso.completaEn - p.instante)}.${info}</p>`;
   const cumplidos = filas.filter(([ok]) => ok).length;
   const motivo = !soyGobernador ? 'Solo el Gobernador puede pedir la subida.' : puede ? '' : 'Aún no cumple todos los requisitos (despliégalos debajo).';
   // Arriba el botón (apagado si no se puede); debajo los requisitos, plegados.

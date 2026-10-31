@@ -104,7 +104,7 @@ export function htmlLateralFaccion(proyeccion: ProyeccionJugador, e: (valor: str
     <div class="faccion-lateral-pie">
       <div class="faccion-lateral-dato"><span>Plazas</span><strong>${plazasDe(proyeccion, faccion.id)}</strong></div>
       <div class="faction-list"><span class="faction-kicker">Títulos del servidor</span>
-        ${htmlTitulos(proyeccion.titulos ?? [], proyeccion.facciones, faccion.id, e)}</div>
+        ${htmlTitulos(proyeccion.titulos ?? [], [...proyeccion.facciones, ...(proyeccion.directorioFacciones ?? [])], faccion.id, e)}</div>
       ${htmlDejarFaccion(proyeccion, faccion)}
     </div>
   </aside>`;
@@ -258,7 +258,7 @@ export function renderPestanaFaccion(
       ${htmlResumenFaccion(proyeccion, faccion, escaparHtml)}
       <div class="faction-list">
         <span class="faction-kicker">Títulos del servidor</span>
-        ${htmlTitulos(proyeccion.titulos ?? [], proyeccion.facciones, faccion.id, escaparHtml)}
+        ${htmlTitulos(proyeccion.titulos ?? [], [...proyeccion.facciones, ...(proyeccion.directorioFacciones ?? [])], faccion.id, escaparHtml)}
       </div>
     `;
   }

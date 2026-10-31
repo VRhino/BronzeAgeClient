@@ -55,7 +55,8 @@ export function htmlLiga(liga: Liga, facciones: readonly Faccion[], ancho = 56):
 }
 
 /** Los títulos de servidor con su insignia y quién los tiene. `propiaId` marca el de tu Facción. */
-export function htmlTitulos(titulos: readonly Titulo[], facciones: readonly Faccion[], propiaId: string | null, escapar: (v: string) => string): string {
+/** `facciones` basta con id, nombre y sigilo: las completas de la proyección y, para las que no llegan completas, las del directorio ligero. */
+export function htmlTitulos(titulos: readonly Titulo[], facciones: readonly Pick<Faccion, 'id' | 'nombre' | 'sigilo'>[], propiaId: string | null, escapar: (v: string) => string): string {
   if (titulos.length === 0) return '<p class="legend-note">Aún no hay títulos en el servidor.</p>';
   return titulos
     .map((t) => {

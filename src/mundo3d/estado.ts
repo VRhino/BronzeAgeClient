@@ -52,7 +52,7 @@ export interface FundacionEnVista {
 /** Lo seleccionado en el mapa: un aro alrededor. */
 export interface SeleccionEnVista { posicion: Punto; radio: number }
 /** Un nombre sobre el mundo (HTML encima del lienzo). `tenue` = lo que solo se recuerda. */
-export interface EtiquetaEnVista { id: string; posicion: Punto; texto: string; tipo: 'plaza' | 'mirada' | 'territorio' | 'nodo'; color?: string; tenue?: boolean }
+export interface EtiquetaEnVista { id: string; posicion: Punto; texto: string; tipo: 'plaza' | 'mirada' | 'territorio' | 'nodo' | 'campamento'; color?: string; tenue?: boolean }
 
 /** Una plaza: la ciudad del juego ocupa el 10 % del radio de su zona. `recordada` = se vio alguna vez y ahora no (va bajo la niebla). */
 export interface PlazaEnVista { id: string; posicion: Punto; radioCiudad: number; color: string; recordada: boolean }
@@ -196,6 +196,9 @@ export function etiquetasDesdeProyeccion(p: ProyeccionJugador, columnas: readonl
   const color = (f: string) => faccionColor(f, p.facciones);
   for (const a of p.asentamientosAvistados ?? []) if (a.nombre) out.push({ id: `plaza:${a.id}`, posicion: a.posicion, texto: a.nombre, tipo: 'plaza', color: color(a.faccionId) });
   for (const c of p.asentamientosConocidos ?? []) if (c.nombre) out.push({ id: `plaza:${c.asentamientoId}`, posicion: c.posicion, texto: c.nombre, tipo: 'plaza', color: color(c.faccionId), tenue: true });
+  // Los campamentos con su cartel, como las plazas: los de mercenarios (siempre a la vista) y los de bandidos que se ven ahora.
+  for (const c of p.campamentosMercenarios ?? []) out.push({ id: `mercenarios:${c.id}`, posicion: c.posicion, texto: '⛺ Mercenarios', tipo: 'campamento', color: '#9cc3ea' });
+  for (const c of p.campamentosBandidos ?? []) out.push({ id: `bandidos:${c.id}`, posicion: c.posicion, texto: `☠ Bandidos · nivel ${c.nivel}`, tipo: 'campamento', color: '#e8826f' });
   for (const m of miradas) out.push({ id: `mirada:${m.id}`, posicion: m.centro, texto: `${m.abierta ? '👁' : '⏳'} ${m.minutos} min`, tipo: 'mirada', tenue: !m.abierta });
   for (const c of columnas) {
     const duena = c.propia ? p.territorioPorEjercito?.[c.id] : undefined;
@@ -215,8 +218,8 @@ export function dondeEstaLaSeleccion(p: ProyeccionJugador, sel: { tipo: string; 
       const plaza = mundo.plazas.find((x) => x.id === sel.id);
       return plaza ? { posicion: plaza.posicion, radio: plaza.radioCiudad * M + 0.5 } : null;
     }
-    case 'campamento': return en(p.campamentosBandidos?.find((x) => x.id === sel.id)?.posicion, 1 * M);
-    case 'mercenarios': return en(p.campamentosMercenarios?.find((x) => x.id === sel.id)?.posicion, 1.1 * M);
+    case 'campamento': return en(p.campamentosBandidos?.find((x) => x.id === sel.id)?.posicion, 1 * M * MUNDO3D.campamento);
+    case 'mercenarios': return en(p.campamentosMercenarios?.find((x) => x.id === sel.id)?.posicion, 1.1 * M * MUNDO3D.campamento);
     case 'alijo': return en(p.alijos?.find((x) => x.id === sel.id)?.posicion, 0.5);
     case 'batalla': return en(p.batallas?.find((x) => x.battleId === sel.id)?.punto, 1);
     case 'puebloMapa': {
