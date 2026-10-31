@@ -1,24 +1,58 @@
-// Lo que pinta el mundo 3D, sacado de la proyección del jugador. La vista no lee la proyección directamente: así se prueba sola (y el banco de
-// pruebas de `pruebas/mundo3d/` le da un estado de mentira).
+// Lo que pinta el mundo 3D, sacado de la proyección del jugador: las columnas y caravanas, lo que hay en el mundo (con el lado de la niebla de
+// cada capa, como en `render.ts`), las Miradas, los nombres, lo seleccionado y la vista previa de fundar. La vista no lee la proyección
+// directamente: así se prueba sola (y el banco de pruebas de `pruebas/mundo3d/` le da un estado de mentira).
 import type { ProyeccionJugador } from '../apiCliente';
+import type { SitiosDeAldea } from '../mundo/fertilidad';
 import { faccionColor } from '../paletas';
-import { circulo } from './lineas';
 import type { NieblaProyectada } from '../tiposDominio';
+import { MUNDO3D } from './config';
+import { circulo } from './lineas';
 
 type Punto = { x: number; y: number };
 
+/** Lo que una columna arrastra detrás de la tropa. */
+export interface Carros {
+  /** Carros de carga (las caravanas enganchadas). */
+  carga: number;
+  /** Lleva la Caravana de Fundación (el último carro, con lona). */
+  fundacion: boolean;
+}
+
 export interface ColumnaEnVista {
   id: string;
-  /** La columna del jugador. */
+  /** La del jugador: la cámara la sigue y lleva la mira y el destino. */
+  mia: boolean;
+  /** De su Facción (o la suya): enseña su ruta. De las avistadas no viaja la ruta, ni la tropa: se pintan sus héroes. */
   propia: boolean;
   posicion: Punto;
-  /** Lo que queda por andar (vacío si está quieta). */
+  /** Lo que queda por andar (vacío si está quieta o es ajena). */
   ruta: Punto[];
   /** Héroes a caballo al frente. */
   jinetes: number;
   /** Figuras de tropa detrás. */
   soldados: number;
+  /** El de su Facción: túnicas y penachos. */
+  color: string;
+  carros: Carros;
+  /** Quieta, esperando a ser tres para ser un ejército (Doc 5.14.4): lleva un anillo discontinuo. */
+  formacion: boolean;
 }
+
+/** Una caravana suelta en el mapa (las enganchadas van detrás de su columna): la propia con su ruta, la avistada sin ella. */
+export interface CaravanaEnVista { id: string; posicion: Punto; ruta: Punto[]; fundacion: boolean; color: string }
+/** Una Mirada de taberna (Doc 5.12.10): abierta, su círculo; caducada, un anillo discontinuo mientras la zona sigue vedada. */
+export interface MiradaEnVista { id: string; centro: Punto; radio: number; abierta: boolean; minutos: number }
+/** La vista previa de fundar alrededor de la columna: la zona con que nacería, dónde cabría una aldea y las parcelas de bosque. */
+export interface FundacionEnVista {
+  centro: Punto;
+  radio: number;
+  sitios: SitiosDeAldea | null;
+  parcelas: { centro: Punto; estado: 'libre' | 'ocupada' | 'ajena' }[];
+}
+/** Lo seleccionado en el mapa: un aro alrededor. */
+export interface SeleccionEnVista { posicion: Punto; radio: number }
+/** Un nombre sobre el mundo (HTML encima del lienzo). `tenue` = lo que solo se recuerda. */
+export interface EtiquetaEnVista { id: string; posicion: Punto; texto: string; tipo: 'plaza' | 'mirada' | 'territorio' | 'nodo'; color?: string; tenue?: boolean }
 
 /** Una plaza: la ciudad del juego ocupa el 10 % del radio de su zona. `recordada` = se vio alguna vez y ahora no (va bajo la niebla). */
 export interface PlazaEnVista { id: string; posicion: Punto; radioCiudad: number; color: string; recordada: boolean }
@@ -40,10 +74,15 @@ export interface MundoEnVista {
   avanzadas: AvanzadaEnVista[];
   obras: ObraEnVista[];
   campamentos: CampamentoEnVista[];
+  /** Campamentos de bandidos: solo los que se ven ahora (no tienen memoria). */
+  bandidos: { id: string; posicion: Punto; nivel: number }[];
+  alijos: { id: string; posicion: Punto }[];
+  /** Batallas de Unity: donde se libran; `propia` = combates en ella. */
+  batallas: { id: string; posicion: Punto; propia: boolean }[];
   trazos: TrazoEnVista[];
 }
 
-export const MUNDO_VACIO: MundoEnVista = { plazas: [], pueblos: [], avanzadas: [], obras: [], campamentos: [], trazos: [] };
+export const mundoVacio = (): MundoEnVista => ({ plazas: [], pueblos: [], avanzadas: [], obras: [], campamentos: [], bandidos: [], alijos: [], batallas: [], trazos: [] });
 
 export interface EstadoVista {
   /** Donde mira la cámara: la cabeza de la columna del jugador o, si no va en una, el sitio donde está. */
@@ -51,8 +90,13 @@ export interface EstadoVista {
   /** Radio de visión de la columna del jugador (`VISION` del servidor): decide cuánto cabe en pantalla. */
   radioVision: number;
   columnas: ColumnaEnVista[];
+  caravanas: CaravanaEnVista[];
   niebla: NieblaProyectada | null;
   mundo: MundoEnVista;
+  miradas: MiradaEnVista[];
+  etiquetas: EtiquetaEnVista[];
+  seleccion: SeleccionEnVista | null;
+  fundacion: FundacionEnVista | null;
 }
 
 /** Los radios de visión del servidor (`Movimiento_Ejercitos.VISION`): el héroe solo y la columna con soldados. */
@@ -68,35 +112,123 @@ const FRACCION_CIUDAD = 0.1;
  * gruesas que en la realidad para que se lean desde la cámara de juego. */
 export const ANCHOS = { caminos: [0.2, 0.35, 0.55], frontera: 0.12, zona: 0.18, anillo: 0.1 } as const;
 const COLOR_AJENO = '#9a927f', COLOR_CAMINO = '#8b5a2b', COLOR_ANILLO = '#2e5e8c';
+/** La tropa de quien aún no tiene Facción. */
+const COLOR_SIN_FACCION = '#c0392b';
 
 /** Figuras de tropa por escuadra, y como mucho. */
 const FIGURAS_POR_ESCUADRA = 3, MAX_FIGURAS = 18, MAX_JINETES = 4;
 
+/** Lo que la vista pinta y no sale de la proyección: lo seleccionado en el panel y la vista previa de fundar. */
+export interface ExtraDeVista {
+  seleccion?: { tipo: string; id: string } | null;
+  fundacion?: FundacionEnVista | null;
+}
+
 /** El estado de la vista para la proyección `p` (la del instante, con las columnas ya movidas). `dondeEsta` es el sitio del héroe cuando no va
  * en una columna en el mapa (dentro de una plaza o de un campamento). */
-export function estadoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVista, dondeEsta: Punto | null): EstadoVista {
+export function estadoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVista, dondeEsta: Punto | null, extra: ExtraDeVista = {}): EstadoVista {
   const radios = reglas.vision;
+  const color = (faccionId: string | null | undefined) => (faccionId ? faccionColor(faccionId, p.facciones) : COLOR_SIN_FACCION);
   // la columna en la que marcha el héroe (como `miColumna` de `ui/ejercitos.ts`, sin traerse la interfaz)
   const mia = p.ejercitos.find((c) => c.participantes.some((x) => x.heroeId === p.heroeId));
   const enElMapa = mia && !mia.dentroDe ? mia : undefined;
   const columnas: ColumnaEnVista[] = [];
-  if (enElMapa) {
+  // las de la Facción, con su ruta y lo que arrastran; una columna que entró en un lugar no está en el mapa
+  for (const e of p.ejercitos) {
+    if (e.dentroDe) continue;
+    const lleva = new Set(e.caravanasAdjuntasIds ?? []);
+    const deFundacion = (c: { id: string; tipo?: string; estado?: string; titularId?: string }) =>
+      c.tipo === 'construccion' && (lleva.has(c.id) || (c.estado === 'adjunta' && !!c.titularId && e.participantes.some((x) => x.heroeId === c.titularId)));
+    const fundacion = !!e.caravanaFundacionId || (p.caravanas ?? []).some(deFundacion);
+    const carga = (p.caravanas ?? []).filter((c) => lleva.has(c.id) && c.tipo !== 'construccion').length;
     columnas.push({
-      id: enElMapa.id,
+      id: e.id,
+      mia: e === mia,
       propia: true,
-      posicion: enElMapa.posicionActual,
-      ruta: enElMapa.estado !== 'estacionado' ? enElMapa.ruta ?? [] : [],
-      jinetes: Math.max(1, Math.min(MAX_JINETES, enElMapa.participantes.length)),
-      soldados: Math.min(MAX_FIGURAS, enElMapa.escuadronIds.length * FIGURAS_POR_ESCUADRA),
+      posicion: e.posicionActual,
+      ruta: e.estado !== 'estacionado' ? e.ruta ?? [] : [],
+      jinetes: Math.max(1, Math.min(MAX_JINETES, e.participantes.length)),
+      soldados: Math.min(MAX_FIGURAS, e.escuadronIds.length * FIGURAS_POR_ESCUADRA),
+      color: color(e.faccionId ?? p.faccionId),
+      carros: { carga: Math.min(2, carga), fundacion },
+      formacion: !!e.formacion,
     });
   }
+  // las ajenas que se ven ahora: sin ruta (sería leerles el plan) y sin tropa (no viaja); sus héroes y lo que arrastran a la vista
+  for (const a of p.ejercitosAvistados ?? []) {
+    columnas.push({
+      id: a.id, mia: false, propia: false, posicion: a.posicionActual, ruta: [], jinetes: Math.max(1, Math.min(MAX_JINETES, a.participantes)), soldados: 0,
+      color: color(a.faccionId), carros: { carga: 0, fundacion: !!a.caravanaFundacionId }, formacion: !!a.enFormacion,
+    });
+  }
+  // las caravanas sueltas: las enganchadas van con su columna y la de fundación que espera dentro de su plaza no está en el mapa
+  const adjuntas = new Set(p.ejercitos.flatMap((e) => [...(e.caravanasAdjuntasIds ?? []), ...(e.caravanaFundacionId ? [e.caravanaFundacionId] : [])]));
+  const caravanas: CaravanaEnVista[] = (p.caravanas ?? [])
+    .filter((c) => !adjuntas.has(c.id) && c.estado !== 'adjunta' && !(c.tipo === 'construccion' && c.estado === 'disponible'))
+    .map((c) => ({
+      id: c.id, posicion: c.posicionActual, ruta: (c.ruta?.length ?? 0) >= 2 ? c.ruta! : [], fundacion: c.tipo === 'construccion',
+      color: color(p.asentamientos.find((a) => a.id === c.origenAsentamientoId)?.faccionId ?? p.faccionId),
+    }));
+  for (const c of p.caravanasAvistadas ?? []) caravanas.push({ id: c.id, posicion: c.posicionActual, ruta: [], fundacion: false, color: c.faccionId ? color(c.faccionId) : COLOR_AJENO });
+  const miradas = (p.miradasIntel ?? []).map((m) => {
+    const abierta = m.expiraEn > p.instante;
+    return { id: m.id, centro: m.centro, radio: m.radio, abierta, minutos: Math.max(0, Math.ceil(((abierta ? m.expiraEn : m.libreEn) - p.instante) / 60_000)) };
+  });
+  const mundo = mundoDesdeProyeccion(p, reglas);
   return {
     heroe: enElMapa?.posicionActual ?? dondeEsta,
     radioVision: mia && mia.escuadronIds.length > 0 ? radios.ejercito : radios.solo,
     columnas,
+    caravanas,
     niebla: p.exploracion ?? null,
-    mundo: mundoDesdeProyeccion(p, reglas),
+    mundo,
+    miradas,
+    etiquetas: etiquetasDesdeProyeccion(p, columnas, miradas),
+    seleccion: dondeEstaLaSeleccion(p, extra.seleccion ?? null, mundo),
+    fundacion: extra.fundacion ?? null,
   };
+}
+
+/** Los nombres sobre el mundo: el de cada plaza (tenue el de la que solo se recuerda), los minutos de cada Mirada y, bajo una columna propia que
+ * pisa tierra ajena, de quién es (lo dice el servidor, `territorioPorEjercito`). */
+export function etiquetasDesdeProyeccion(p: ProyeccionJugador, columnas: readonly ColumnaEnVista[], miradas: readonly MiradaEnVista[]): EtiquetaEnVista[] {
+  const out: EtiquetaEnVista[] = [];
+  const color = (f: string) => faccionColor(f, p.facciones);
+  for (const a of p.asentamientosAvistados ?? []) if (a.nombre) out.push({ id: `plaza:${a.id}`, posicion: a.posicion, texto: a.nombre, tipo: 'plaza', color: color(a.faccionId) });
+  for (const c of p.asentamientosConocidos ?? []) if (c.nombre) out.push({ id: `plaza:${c.asentamientoId}`, posicion: c.posicion, texto: c.nombre, tipo: 'plaza', color: color(c.faccionId), tenue: true });
+  for (const m of miradas) out.push({ id: `mirada:${m.id}`, posicion: m.centro, texto: `${m.abierta ? '👁' : '⏳'} ${m.minutos} min`, tipo: 'mirada', tenue: !m.abierta });
+  for (const c of columnas) {
+    const duena = c.propia ? p.territorioPorEjercito?.[c.id] : undefined;
+    if (duena === undefined || duena === p.faccionId) continue;
+    out.push({ id: `territorio:${c.id}`, posicion: c.posicion, texto: `⚑ ${p.facciones.find((f) => f.id === duena)?.nombre ?? duena}`, tipo: 'territorio', color: color(duena) });
+  }
+  return out;
+}
+
+/** Dónde está lo seleccionado en el panel (`seleccionMapa` de `main.ts`) y de qué tamaño es su aro. `null` si no está en el mapa. */
+export function dondeEstaLaSeleccion(p: ProyeccionJugador, sel: { tipo: string; id: string } | null, mundo: MundoEnVista): SeleccionEnVista | null {
+  if (!sel) return null;
+  const en = (posicion: Punto | undefined, radio: number): SeleccionEnVista | null => (posicion ? { posicion, radio } : null);
+  const M = MUNDO3D.maqueta;
+  switch (sel.tipo) {
+    case 'asentamiento': {
+      const plaza = mundo.plazas.find((x) => x.id === sel.id);
+      return plaza ? { posicion: plaza.posicion, radio: plaza.radioCiudad * M + 0.5 } : null;
+    }
+    case 'campamento': return en(p.campamentosBandidos?.find((x) => x.id === sel.id)?.posicion, 1 * M);
+    case 'mercenarios': return en(p.campamentosMercenarios?.find((x) => x.id === sel.id)?.posicion, 1.1 * M);
+    case 'alijo': return en(p.alijos?.find((x) => x.id === sel.id)?.posicion, 0.5);
+    case 'batalla': return en(p.batallas?.find((x) => x.battleId === sel.id)?.punto, 1);
+    case 'puebloMapa': {
+      const x = mundo.pueblos.find((y) => y.id === sel.id);
+      return en(x?.posicion, (x?.aldea ? 1.5 : 0.9) * M);
+    }
+    case 'avanzadaMapa': return en(p.avanzadas?.find((x) => x.id === sel.id)?.posicion, 0.7 * M);
+    case 'obraMapa': return en(p.obrasDeMapa?.find((x) => x.id === sel.id)?.posicion, 0.6 * M);
+  }
+  // columnas (de la Facción, en formación o avistadas) y caravanas: por su id
+  const c = [...p.ejercitos, ...(p.ejercitosAvistados ?? []), ...(p.caravanas ?? []), ...(p.caravanasAvistadas ?? [])].find((x) => x.id === sel.id);
+  return en(c?.posicionActual, 0.7);
 }
 
 /** El radio de una zona a partir de su contorno: hasta su punto más lejano (el contorno está recortado contra los vecinos, pero no por fuera). */
@@ -135,6 +267,9 @@ export function mundoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVista
     // la mejora de una aldea no se pinta aparte: la aldea ya está
     obras: (p.obrasDeMapa ?? []).filter((o) => o.tipo !== 'mejoraAldea').map((o) => ({ id: o.id, posicion: o.posicion, arrancada: o.terminaEn !== undefined, color: colorDeMadre(o.madreId, o.propia) })),
     campamentos,
+    bandidos: (p.campamentosBandidos ?? []).map((c) => ({ id: c.id, posicion: c.posicion, nivel: c.nivel })),
+    alijos: (p.alijos ?? []).map((a) => ({ id: a.id, posicion: a.posicion })),
+    batallas: (p.batallas ?? []).map((b) => ({ id: b.battleId, posicion: b.punto, propia: !!b.ladoPropio })),
     trazos,
   };
 }

@@ -6,7 +6,7 @@ import type { ProyeccionJugador } from '../src/apiCliente';
 import { arbolesDelTrozo, caucesDe, franjas, type Entorno } from '../src/mundo3d/arboles';
 import { distanciaDeEncuadre } from '../src/mundo3d/camara';
 import { encuadres } from '../src/mundo3d/config';
-import { ANCHOS, estadoDesdeProyeccion, mundoDesdeProyeccion } from '../src/mundo3d/estado';
+import { ANCHOS, dondeEstaLaSeleccion, estadoDesdeProyeccion, mundoDesdeProyeccion } from '../src/mundo3d/estado';
 import { fuenteDesdeMapa, type FuenteDeAltura } from '../src/mundo3d/fuente';
 import { cinta, circulo, rutaPendiente, tramosEnCaja } from '../src/mundo3d/lineas';
 import { suavizar } from '../src/mundo3d/paisaje';
@@ -38,7 +38,8 @@ const columna = (cambios: Partial<Ejercito>): Ejercito => ({
   id: 'ej-1', faccionId: 'f-1', origenAsentamientoId: 'as-1', escuadronIds: [], participantes: [{ heroeId: 'heroe-1', unidoEn: 0 }],
   ruta: [], posicionActual: { x: 10, y: 20 }, estado: 'estacionado', ...cambios,
 });
-const proyeccion = (ejercitos: Ejercito[]) => ({ heroeId: 'heroe-1', ejercitos, exploracion: undefined }) as unknown as ProyeccionJugador;
+const proyeccion = (ejercitos: Ejercito[], resto: Record<string, unknown> = {}) =>
+  ({ heroeId: 'heroe-1', faccionId: 'f-1', facciones: [{ id: 'f-1', nombre: 'Troya' }, { id: 'f-2', nombre: 'Micenas' }], asentamientos: [], caravanas: [], instante: 0, ejercitos, exploracion: undefined, ...resto }) as unknown as ProyeccionJugador;
 const REGLAS = { vision: { solo: 15, ejercito: 30 }, radioZonaInicial: 6, radioProteccion: 10 };
 
 describe('el estado de la vista', () => {
@@ -46,7 +47,10 @@ describe('el estado de la vista', () => {
     const e = estadoDesdeProyeccion(proyeccion([columna({ escuadronIds: ['e1', 'e2'], estado: 'marchando', ruta: [{ x: 10, y: 20 }, { x: 30, y: 20 }] })]), REGLAS, null);
     expect(e.heroe).toEqual({ x: 10, y: 20 });
     expect(e.radioVision).toBe(30);
-    expect(e.columnas).toEqual([{ id: 'ej-1', propia: true, posicion: { x: 10, y: 20 }, ruta: [{ x: 10, y: 20 }, { x: 30, y: 20 }], jinetes: 1, soldados: 6 }]);
+    expect(e.columnas).toEqual([{
+      id: 'ej-1', mia: true, propia: true, posicion: { x: 10, y: 20 }, ruta: [{ x: 10, y: 20 }, { x: 30, y: 20 }], jinetes: 1, soldados: 6,
+      color: e.columnas[0]!.color, carros: { carga: 0, fundacion: false }, formacion: false,
+    }]);
   });
 
   test('sola y quieta, ve 15 u y no enseña ruta', () => {
@@ -74,6 +78,57 @@ test('sin paquete de relieve, la altura sale del raster de 4 u del artefacto, in
   expect(f.alturaEn(6, 2)).toBeCloseTo(1000, 6); // centro de la segunda
   expect(f.alturaEn(4, 2)).toBeCloseTo(500, 6); // a medio camino
   expect([f.aguaEn(1, 1), f.aguaEn(5, 1)]).toEqual([true, false]);
+});
+
+describe('lo ajeno, los nombres y lo seleccionado', () => {
+  const otra = columna({ id: 'ej-2', participantes: [{ heroeId: 'heroe-2', unidoEn: 0 }], escuadronIds: ['e1'], estado: 'marchando', ruta: [{ x: 0, y: 0 }, { x: 9, y: 0 }], caravanasAdjuntasIds: ['car-1', 'car-2'], formacion: { creadaEn: 0 } as never });
+  const p = proyeccion([columna({}), otra], {
+    caravanas: [
+      { id: 'car-1', origenAsentamientoId: 'x', posicionActual: { x: 0, y: 0 }, tipo: 'comercio', estado: 'adjunta' },
+      { id: 'car-2', origenAsentamientoId: 'x', posicionActual: { x: 0, y: 0 }, tipo: 'construccion', estado: 'adjunta' },
+      { id: 'car-3', origenAsentamientoId: 'x', posicionActual: { x: 5, y: 5 }, tipo: 'comercio', estado: 'en_transito', ruta: [{ x: 5, y: 5 }, { x: 8, y: 8 }] },
+      { id: 'car-4', origenAsentamientoId: 'x', posicionActual: { x: 6, y: 6 }, tipo: 'construccion', estado: 'disponible' },
+    ],
+    ejercitosAvistados: [{ id: 'av-1', faccionId: 'f-2', posicionActual: { x: 40, y: 40 }, participantes: 3, heroeIds: [], enFormacion: true }],
+    caravanasAvistadas: [{ id: 'cav-1', posicionActual: { x: 50, y: 50 }, faccionId: 'f-2', escoltada: false }],
+    asentamientosAvistados: [{ id: 'a-1', nombre: 'Micenas', faccionId: 'f-2', posicion: { x: 100, y: 100 }, nivel: 2, zona: circulo({ x: 100, y: 100 }, 10, 24).slice(0, -1) }],
+    asentamientosConocidos: [{ asentamientoId: 'a-2', nombre: 'Tirinto', faccionId: 'f-2', posicion: { x: 300, y: 100 }, nivel: 1, conocidoEn: 0 }],
+    miradasIntel: [{ id: 'm1', faccionId: 'f-1', origenId: 'o', centro: { x: 1, y: 1 }, radio: 6, compradaEn: 0, expiraEn: 90_000, libreEn: 200_000 }, { id: 'm2', faccionId: 'f-1', origenId: 'o', centro: { x: 2, y: 2 }, radio: 6, compradaEn: 0, expiraEn: -1, libreEn: 30_000 }],
+    territorioPorEjercito: { 'ej-1': 'f-2', 'ej-2': 'f-1' },
+    batallas: [{ battleId: 'b1', punto: { x: 7, y: 7 }, ladoPropio: true }],
+  });
+  const e = estadoDesdeProyeccion(p, REGLAS, null, { seleccion: { tipo: 'asentamiento', id: 'a-1' } });
+
+  test('las columnas de la Facción con su ruta y sus carros; las avistadas, sin ruta ni tropa', () => {
+    const [mia, faccion, ajena] = e.columnas;
+    expect([mia!.mia, faccion!.mia, faccion!.propia, faccion!.ruta.length, faccion!.carros, faccion!.formacion]).toEqual([true, false, true, 2, { carga: 1, fundacion: true }, true]);
+    expect([ajena!.propia, ajena!.ruta, ajena!.jinetes, ajena!.soldados, ajena!.formacion]).toEqual([false, [], 3, 0, true]);
+    expect(ajena!.color).not.toBe(mia!.color);
+  });
+
+  test('caravanas sueltas: ni las enganchadas ni la de fundación que espera en su plaza; las avistadas, sin ruta', () => {
+    expect(e.caravanas.map((c) => [c.id, c.ruta.length])).toEqual([['car-3', 2], ['cav-1', 0]]);
+  });
+
+  test('Miradas: abierta con los minutos que le quedan, caducada con los que faltan para volver a comprar', () => {
+    expect(e.miradas.map((m) => [m.id, m.abierta, m.minutos])).toEqual([['m1', true, 2], ['m2', false, 1]]);
+  });
+
+  test('nombres: plazas (tenue la recordada), Miradas y la tierra ajena bajo una columna propia', () => {
+    expect(e.etiquetas.map((x) => [x.id, x.texto, x.tenue ?? false])).toEqual([
+      ['plaza:a-1', 'Micenas', false], ['plaza:a-2', 'Tirinto', true], ['mirada:m1', '👁 2 min', false], ['mirada:m2', '⏳ 1 min', true], ['territorio:ej-1', '⚑ Micenas', false],
+    ]);
+  });
+
+  test('lo seleccionado: un aro a la medida de la ciudad, de una batalla o de una columna por su id', () => {
+    expect(e.seleccion?.posicion).toEqual({ x: 100, y: 100 });
+    expect(e.seleccion?.radio).toBeCloseTo(1.5, 6); // ciudad de 1 u (zona de 10) y medio de holgura
+    const m = e.mundo;
+    expect(dondeEstaLaSeleccion(p, { tipo: 'batalla', id: 'b1' }, m)).toEqual({ posicion: { x: 7, y: 7 }, radio: 1 });
+    expect(dondeEstaLaSeleccion(p, { tipo: 'formacion', id: 'av-1' }, m)).toEqual({ posicion: { x: 40, y: 40 }, radio: 0.7 });
+    expect(dondeEstaLaSeleccion(p, { tipo: 'caravanaAjena', id: 'cav-1' }, m)?.posicion).toEqual({ x: 50, y: 50 });
+    expect(dondeEstaLaSeleccion(p, { tipo: 'alijo', id: 'no-esta' }, m)).toBeNull();
+  });
 });
 
 describe('lo que hay en el mundo, sacado de la proyección', () => {

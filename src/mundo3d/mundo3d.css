@@ -1,0 +1,43 @@
+/* Los nombres sobre el mundo 3D (src/mundo3d/etiquetas.ts): una capa encima del lienzo que no recoge el ratón. Cada nombre se ancla en su punto
+   del mundo: encima (plazas y nodos), centrado (Miradas) o debajo (de quién es la tierra que pisa una columna). */
+.mundo3d-etiquetas {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.mundo3d-etiqueta {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  color: #f4ead2;
+  font: 600 12px/1.2 system-ui, sans-serif;
+  white-space: nowrap;
+  text-shadow: 0 0 3px rgba(10, 14, 23, 0.95), 0 1px 2px rgba(10, 14, 23, 0.9);
+}
+
+.mundo3d-etiqueta-plaza {
+  z-index: 1;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.mundo3d-etiqueta-nodo {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.mundo3d-etiqueta-mirada {
+  transform: translate(-50%, -50%);
+  color: #cfeaf8;
+}
+
+.mundo3d-etiqueta-territorio {
+  transform: translate(-50%, 12px);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.mundo3d-etiqueta.es-tenue {
+  opacity: 0.6;
+}

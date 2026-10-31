@@ -47,13 +47,13 @@ del héroe solo (`radioDeVision`); el 3D tiene que seguir a la de la columna. El
 | Niebla en el sombreado | `src/mundo3d/niebla.ts` (hecho) | `proyeccion.exploracion` |
 | Árboles instanciados por trozos | `src/mundo3d/arboles.ts` (hecho) | Densidad de bosque del artefacto (4 u), lo explorado |
 | Ríos, vados y nodos de recursos | `src/mundo3d/paisaje.ts` (hecho) | Ríos y nodos del artefacto |
-| Plazas, pueblos, avanzadas, obras, campamentos | `src/mundo3d/maquetas.ts` (hecho) | Proyección |
+| Plazas, pueblos, avanzadas, obras, campamentos, bandidos, alijos, batallas | `src/mundo3d/maquetas.ts` (hecho) | Proyección |
 | Caminos, fronteras, zona propia, anillo de los mercenarios | `src/mundo3d/trazos.ts` (hecho) | Proyección |
-| Héroe y tropa | `src/mundo3d/figuras.ts` (hecho: la columna propia) | Proyección: ruta y posición en el instante |
-| Columnas ajenas, caravanas | `src/mundo3d/figuras.ts` | Proyección |
+| Columnas (de la Facción y avistadas), sus carros y las caravanas | `src/mundo3d/figuras.ts` (hecho) | Proyección: ruta y posición en el instante |
+| Formaciones, Miradas, lo seleccionado, la vista previa de fundar | `src/mundo3d/marcas.ts` (hecho) | Proyección, `seleccionMapa` y el panel Fundar |
 | Ruta, destino, mira del héroe; cintas pegadas al relieve | `src/mundo3d/lineas.ts` (hecho) | Proyección |
 | Clic, arrastre, rueda y teclas | `src/mundo3d/entrada.ts` (hecho) | El clic acaba en `objetoBajoElClic` y `marcharA` |
-| Etiquetas | `src/mundo3d/etiquetas.ts` | Proyección |
+| Nombres: plazas, nodos, Miradas, tierra ajena | `src/mundo3d/etiquetas.ts` (hecho) | Proyección y artefacto |
 
 ## Fases
 
@@ -63,8 +63,8 @@ del héroe solo (`radioDeVision`); el 3D tiene que seguir a la de la columna. El
    `main.ts` monta `VistaMundo3D` cuando están el mapa y el relieve; lo que aún no pinta el 3D se ve en el modo mapa.
 3. **El mundo (hecho, 0.63.0):** árboles, ríos y vados, nodos, maquetas de plazas, pueblos, avanzadas, obras y campamentos; zonas,
    fronteras y caminos.
-4. **Lo ajeno y lo que falta:** columnas avistadas, caravanas, bandidos, mercenarios, alijos, batallas y formaciones; etiquetas y selección; la
-   vista previa de fundación y la elección del sitio de una aldea.
+4. **Lo ajeno y lo que falta (hecho, 0.64.0):** columnas avistadas, caravanas, bandidos, alijos, batallas y formaciones; Miradas; nombres y
+   selección; la vista previa de fundación. La elección del sitio de una aldea o de una avanzada sigue en el modo mapa, que es 2D.
 5. **Cierre:** se retira el pintor 2D del modo mundo (`render.ts` sigue para el modo mapa), una pasada de rendimiento y la documentación.
 
 ## El paquete de relieve
@@ -124,6 +124,35 @@ suelo, luego el paisaje y los árboles. Lo que se aleja se suelta.
   Son más anchas que en la realidad para que se lean desde la cámara. A diferencia del 2D, la zona propia va sin relleno.
 - **Tu columna** lleva un aro en el suelo, la mira del 2D: entre los árboles se pierde.
 
+## Cómo se pinta (fase 4)
+
+- **Columnas.** Todas las de tu Facción, con su ruta (la tuya entera, con su destino y la mira; las demás, un rastro discontinuo, como en el
+  2D) y lo que arrastran detrás de la tropa: un carro por caravana enganchada (hasta dos) y el de fundación con su lona. Las avistadas van sin
+  ruta y sin tropa, porque ni la una ni la otra viajan en la proyección: se pintan sus héroes y su carro de fundación. Túnicas y penachos van
+  del color de su Facción; quien aún no tiene Facción, en rojo. Una columna en formación lleva un anillo discontinuo de su color.
+- **Caravanas sueltas.** Su carro con el buey (con lona la de fundación). Las propias llevan su ruta, tenue; las avistadas, no. El 2D no
+  pintaba las avistadas aunque se podían seleccionar.
+- **Bandidos, alijos y batallas** son maquetas, encima de la niebla:
+  - bandidos: tiendas oscuras en corro, más cuanto más nivel, con su hoguera y su bandera roja;
+  - alijo: fardos y un cofre con el oro;
+  - batalla: dos espadas cruzadas sobre un aro, verde si combates en ella.
+- **Miradas.** Un círculo de su radio: abierta, azul; caducada (la zona sigue vedada), gris y discontinuo. Llevan su nombre con los minutos
+  que quedan.
+- **Selección.** Lo que hay bajo el clic se elige como siempre (`objetoBajoElClic`). La vista pone un aro que late a su medida: la ciudad con
+  holgura, un campamento, una columna…
+- **Fundar.** Con el panel ⚑ abierto, alrededor de la columna se ven:
+  - la zona con que nacería la plaza (discontinua, dorada);
+  - los sitios donde cabría una aldea: cuadros verdes, grises si quedan demasiado cerca de algo;
+  - las parcelas de bosque: verdes las libres, rojas las ocupadas o de otra plaza;
+  - el nombre de cada nodo de dentro, en dorado.
+- **Nombres** (HTML encima del lienzo, colocados en cada fotograma):
+  - las plazas, tenue la que solo se recuerda;
+  - los nodos ya explorados que caben en pantalla;
+  - los minutos de cada Mirada;
+  - bajo una columna propia que pisa tierra ajena, «⚑ Facción» (lo dice el servidor, `territorioPorEjercito`).
+
+  Lo que cae detrás de la cámara, fuera de la pantalla o en la bruma no se pone.
+
 ## Banco de pruebas
 
 `npm run mundo3d` abre `pruebas/mundo3d/` con el artefacto y el relieve que haya en `generador/salida/mundo/` del motor (el checkout hermano
@@ -132,7 +161,11 @@ desarrollo. Una columna propia va en línea recta adonde haces clic, a 30 u/min,
 de mercenarios son los del artefacto, y junto al héroe hay maquetas de mentira:
 - una plaza propia de nivel 3 con su zona, dos pueblos, tres avanzadas (una en ruinas) y dos obras;
 - una plaza ajena que se ve y otra que se recuerda;
-- caminos entre ellas.
+- caminos entre ellas;
+- una columna ajena en formación, una caravana propia que va y viene y otra ajena;
+- un campamento de bandidos, un alijo, una batalla y dos Miradas, con sus nombres.
+
+Un clic cerca de algo lo selecciona; en el suelo, la columna va allí. «Fundar aquí» enciende la vista previa de fundar alrededor del héroe.
 
 Parámetros:
 - `?x=…&y=…` pone el héroe en otro sitio;

@@ -1,7 +1,9 @@
-// Las maquetas de una columna: sus héroes a caballo al frente y su tropa detrás, de tres en fondo, pisando el rastro de la cabeza. Las mismas
-// de la mesa de escalas 3D, a la escala `MUNDO3D.tropa`.
+// Las maquetas de una columna: sus héroes a caballo al frente, su tropa detrás, de tres en fondo, y sus carros al final (el de fundación, con
+// lona), todos pisando el rastro de la cabeza. Las mismas de la mesa de escalas 3D, a la escala `MUNDO3D.tropa`. Una caravana suelta es una
+// columna sin gente: su carro con el buey.
 import * as THREE from 'three';
 import { MUNDO3D } from './config';
+import type { Carros } from './estado';
 
 type Punto = { x: number; y: number };
 
@@ -32,7 +34,14 @@ const PIEZAS = (() => {
     jinete: caja(0.045, 0.07, 0.035, 0, 0.145, -0.01),
     yelmo: caja(0.032, 0.034, 0.032, 0, 0.197, -0.01),
     penacho: caja(0.008, 0.03, 0.05, 0, 0.225, -0.015),
+    caja: caja(0.1, 0.05, 0.16, 0, 0.075, 0),
+    lona: caja(0.1, 0.06, 0.13, 0, 0.13, -0.01),
+    rueda: (() => { const g = new THREE.CylinderGeometry(0.032, 0.032, 0.012, 10); g.rotateZ(Math.PI / 2); return g; })(),
+    buey: caja(0.05, 0.05, 0.11, 0, 0.055, 0.17),
+    testuz: caja(0.035, 0.035, 0.04, 0, 0.075, 0.24),
     pelaje: m(0x6b4a2e),
+    blanco: m(0xd8cfbd),
+    buey_: m(0x8c7a64),
     bronce: m(0xc08a3e),
     piel: m(0xc89a78),
     madera: m(0x8a6440),
@@ -59,16 +68,35 @@ function soldado(color: number, abanderado: boolean): THREE.Group {
   return g;
 }
 
+/** Un carro con su buey; el de fundación, con la lona puesta. */
+function carro(fundacion: boolean): THREE.Group {
+  const p = PIEZAS, g = new THREE.Group();
+  g.add(new THREE.Mesh(p.caja, p.madera), new THREE.Mesh(p.buey, p.buey_), new THREE.Mesh(p.testuz, p.buey_));
+  for (const [x, z] of [[-0.058, -0.05], [0.058, -0.05], [-0.058, 0.05], [0.058, 0.05]] as const) {
+    const r = new THREE.Mesh(p.rueda, p.madera);
+    r.position.set(x, 0.032, z);
+    g.add(r);
+  }
+  if (fundacion) g.add(new THREE.Mesh(p.lona, p.blanco));
+  return g;
+}
+
 export class FigurasDeColumna {
   readonly grupo = new THREE.Group();
   private readonly figuras: THREE.Group[] = [];
   /** Por dónde ha pasado la cabeza, del más viejo al más nuevo. */
   private rastro: Punto[] = [];
 
-  /** `jinetes`: héroes de la columna (al frente, a caballo); `soldados`: figuras de tropa detrás (la primera lleva el estandarte). */
-  constructor(readonly jinetes: number, readonly soldados: number, color: number) {
-    for (let k = 0; k < jinetes; k++) this.figuras.push(heroe(color));
-    for (let k = 0; k < soldados; k++) this.figuras.push(soldado(color, k === 0));
+  /** Cuánto va cada figura detrás de la cabeza y a qué lado (−1, 0, 1), en unidades de figura (×`MUNDO3D.tropa`). */
+  private readonly sitios: { atras: number; lado: number }[] = [];
+
+  /** `jinetes`: héroes de la columna (al frente, a caballo); `soldados`: figuras de tropa detrás (la primera lleva el estandarte); `carros`:
+   * lo que arrastra al final. */
+  constructor(readonly jinetes: number, readonly soldados: number, color: number, readonly carros: Carros = { carga: 0, fundacion: false }) {
+    for (let k = 0; k < jinetes; k++) { this.figuras.push(heroe(color)); this.sitios.push({ atras: k * 0.15, lado: 0 }); }
+    for (let k = 0; k < soldados; k++) { this.figuras.push(soldado(color, k === 0)); this.sitios.push({ atras: (jinetes + Math.floor(k / 3)) * 0.15, lado: (k % 3) - 1 }); }
+    const tras = (jinetes + Math.ceil(soldados / 3)) * 0.15 + (jinetes + soldados ? 0.12 : 0), n = carros.carga + (carros.fundacion ? 1 : 0);
+    for (let k = 0; k < n; k++) { this.figuras.push(carro(carros.fundacion && k === n - 1)); this.sitios.push({ atras: tras + k * 0.34, lado: 0 }); }
     for (const f of this.figuras) {
       f.scale.setScalar(MUNDO3D.tropa);
       f.traverse((o) => { o.castShadow = true; });
@@ -81,16 +109,16 @@ export class FigurasDeColumna {
     const ultimo = this.rastro[this.rastro.length - 1];
     if (!ultimo || Math.hypot(cabeza.x - ultimo.x, cabeza.y - ultimo.y) > 6) {
       // primera vez o un salto: la columna se forma detrás, hacia el sur
-      this.rastro = Array.from({ length: 16 }, (_, k) => ({ x: cabeza.x, y: cabeza.y + (15 - k) * 0.3 }));
+      this.rastro = Array.from({ length: 30 }, (_, k) => ({ x: cabeza.x, y: cabeza.y + (29 - k) * 0.3 }));
     } else if (Math.hypot(cabeza.x - ultimo.x, cabeza.y - ultimo.y) > 0.03) {
       this.rastro.push({ x: cabeza.x, y: cabeza.y });
       if (this.rastro.length > 400) this.rastro.shift();
     }
     const M = MUNDO3D.tropa;
     this.figuras.forEach((f, k) => {
-      // los héroes uno tras otro; la tropa, de tres en fondo
-      const fila = k < this.jinetes ? k : this.jinetes + Math.floor((k - this.jinetes) / 3), lado = k < this.jinetes ? 0 : ((k - this.jinetes) % 3) - 1;
-      let atras = fila * 0.15 * M, i = this.rastro.length - 1, x = cabeza.x, y = cabeza.y, rumbo = 0;
+      // los héroes uno tras otro; la tropa, de tres en fondo; los carros, al final
+      const { lado } = this.sitios[k]!;
+      let atras = this.sitios[k]!.atras * M, i = this.rastro.length - 1, x = cabeza.x, y = cabeza.y, rumbo = 0;
       while (i > 0) {
         const a = this.rastro[i - 1]!, b = this.rastro[i]!, l = Math.hypot(b.x - a.x, b.y - a.y);
         rumbo = Math.atan2(b.y - a.y, b.x - a.x);

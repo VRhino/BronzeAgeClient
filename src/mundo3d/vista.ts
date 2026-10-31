@@ -1,23 +1,28 @@
 // La vista 3D del modo mundo: la escena, la cámara de juego, el suelo por teselas con la niebla, los árboles, los ríos y los nodos, las
-// maquetas, las rayas (caminos, fronteras, zonas), las columnas y la ruta. Pinta en su propio bucle de fotogramas y en cada uno pide el estado
-// (`estado()`: la proyección del instante, ya convertida), así las columnas andan solas. Lo que hay que construir alrededor del héroe se hace
-// poco a poco, con un presupuesto de tiempo por fotograma.
+// maquetas, las rayas (caminos, fronteras, zonas), las columnas y caravanas con sus rutas, las marcas (formaciones, Miradas, lo seleccionado,
+// la vista previa de fundar) y los nombres. Pinta en su propio bucle de fotogramas y en cada uno pide el estado (`estado()`: la proyección del
+// instante, ya convertida), así las columnas andan solas. Lo que hay que construir alrededor del héroe se hace poco a poco, con un
+// presupuesto de tiempo por fotograma.
 // Coordenadas de escena: x = x del mapa, z = y del mapa, y = altura en unidades (metros / 12).
 import * as THREE from 'three';
+import './mundo3d.css';
 import { CamaraDeJuego, type Zoom } from './camara';
 import { MUNDO3D } from './config';
 import { instalarEntrada, type Entrada } from './entrada';
-import type { ColumnaEnVista, EstadoVista } from './estado';
+import type { CaravanaEnVista, ColumnaEnVista, EstadoVista, EtiquetaEnVista } from './estado';
+import { Etiquetas } from './etiquetas';
 import { FigurasDeColumna } from './figuras';
 import type { FuenteDeAltura } from './fuente';
 import { Arboles } from './arboles';
 import { aro, cinta, circulo, linea, rutaPendiente } from './lineas';
 import { Maquetas } from './maquetas';
+import { MarcasEnSuelo } from './marcas';
 import { NieblaDeGuerra } from './niebla';
 import { Paisaje } from './paisaje';
 import { Terreno } from './terreno';
 import { Trazos } from './trazos';
 import type { MapaGenerado } from '../terreno';
+import { RECURSO_NOMBRE } from '../paletas';
 
 type Punto = { x: number; y: number };
 
@@ -34,8 +39,6 @@ export interface OpcionesVista {
   sinNiebla?: boolean;
 }
 
-/** Color de la tropa propia. */
-const COLOR_PROPIO = 0xc0392b;
 /** Milisegundos por fotograma para construir lo que falta alrededor del héroe. */
 const PRESUPUESTO = 8;
 /** Hasta dónde llegan, como mucho, los árboles y lo que va sobre el suelo (u); más allá la bruma ya casi lo tapa todo. */
@@ -54,10 +57,17 @@ export class VistaMundo3D {
   private readonly arboles: Arboles;
   private readonly maquetas: Maquetas;
   private readonly trazos: Trazos;
+  private readonly marcas: MarcasEnSuelo;
+  private readonly etiquetas: Etiquetas;
   private readonly entrada: Entrada;
-  private readonly columnas = new Map<string, FigurasDeColumna>();
+  private readonly columnas = new Map<string, { figuras: FigurasDeColumna; clave: string }>();
   private readonly lineas = new THREE.Group();
   private readonly matRuta = new THREE.LineBasicMaterial({ color: 0xf1e6c8, transparent: true, opacity: 0.85 });
+  /** Las rutas de las demás columnas de la Facción y de las caravanas: un rastro discontinuo, más tenue el de las caravanas (como en el 2D). */
+  private readonly matRutaFaccion = new THREE.LineDashedMaterial({ color: 0xf1e6c8, transparent: true, opacity: 0.6, dashSize: 0.6, gapSize: 0.4 });
+  private readonly matRutaCaravana = new THREE.LineDashedMaterial({ color: 0xf1e6c8, transparent: true, opacity: 0.35, dashSize: 0.6, gapSize: 0.4 });
+  /** Los nombres de los nodos cercanos ya explorados, y dónde y con qué niebla se calcularon. */
+  private nodos: { clave: string; lista: EtiquetaEnVista[] } = { clave: '', lista: [] };
   private readonly matMira = new THREE.MeshBasicMaterial({ color: 0xf1e6c8, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -5 });
   private readonly observador: ResizeObserver;
   private claveLineas = '';
@@ -96,7 +106,9 @@ export class VistaMundo3D {
     this.arboles = new Arboles(o.fuente, o.mapa, this.niebla);
     this.maquetas = new Maquetas(this.niebla, this.alturaU);
     this.trazos = new Trazos(this.niebla, this.alturaU);
-    this.escena.add(this.terreno.grupo, this.paisaje.grupo, this.arboles.grupo, this.maquetas.grupo, this.trazos.grupo, this.lineas);
+    this.marcas = new MarcasEnSuelo(this.alturaU);
+    this.etiquetas = new Etiquetas(contenedor);
+    this.escena.add(this.terreno.grupo, this.paisaje.grupo, this.arboles.grupo, this.maquetas.grupo, this.trazos.grupo, this.marcas.grupo, this.lineas);
     this.entrada = instalarEntrada(this.lienzo, this.camara, (e) => this.clic(e), () => {}); // el zoom se lee de la cámara en cada fotograma
     this.observador = new ResizeObserver(() => this.ajustar());
     this.observador.observe(contenedor);
@@ -184,8 +196,10 @@ export class VistaMundo3D {
     this.arboles.fijarDespejes(this.maquetas.claros, this.trazos.caminos, `${this.maquetas.claveClaros}|${this.trazos.claveCaminos}`);
     this.paisaje.actualizar(x, y, Math.min(alcance, ALCANCE.paisaje), hasta);
     this.arboles.actualizar(x, y, Math.min(alcance, ALCANCE.arboles), hasta);
-    this.ponerColumnas(estado.columnas);
-    this.ponerLineas(estado.columnas);
+    this.ponerColumnas(estado.columnas, estado.caravanas);
+    this.ponerLineas(estado.columnas, estado.caravanas);
+    this.marcas.actualizar(estado, ahora);
+    this.etiquetas.actualizar([...estado.etiquetas, ...this.etiquetasDeNodos(x, y, estado)], this.camara.camara, w, h, this.alturaU, estado.heroe, (this.bruma.near + this.bruma.far) / 2);
     // la sombra sigue al héroe y cubre lo que se ve
     const r = Math.min(120, Math.max(20, d * 1.6));
     this.sol.position.set(x - 60, this.objetivo.y + 110, y + 45);
@@ -195,48 +209,80 @@ export class VistaMundo3D {
     this.renderer.render(this.escena, this.camara.camara);
   }
 
-  private ponerColumnas(lista: ColumnaEnVista[]): void {
+  /** Las figuras de cada columna (de la Facción y avistadas) y de cada caravana suelta; se rehacen si cambia lo que llevan o su color. */
+  private ponerColumnas(lista: readonly ColumnaEnVista[], caravanas: readonly CaravanaEnVista[]): void {
     const vivas = new Set<string>();
-    for (const c of lista) {
-      vivas.add(c.id);
-      let f = this.columnas.get(c.id);
-      if (!f || f.jinetes !== c.jinetes || f.soldados !== c.soldados) {
-        f?.destruir();
-        f = new FigurasDeColumna(c.jinetes, c.soldados, COLOR_PROPIO);
-        this.columnas.set(c.id, f);
-        this.escena.add(f.grupo);
+    const poner = (id: string, jinetes: number, soldados: number, color: string, carros: { carga: number; fundacion: boolean }, posicion: Punto) => {
+      vivas.add(id);
+      const hex = new THREE.Color(color).getHex(), clave = `${jinetes}:${soldados}:${hex}:${carros.carga}:${carros.fundacion}`;
+      let f = this.columnas.get(id);
+      if (!f || f.clave !== clave) {
+        f?.figuras.destruir();
+        f = { figuras: new FigurasDeColumna(jinetes, soldados, hex, carros), clave };
+        this.columnas.set(id, f);
+        this.escena.add(f.figuras.grupo);
       }
-      f.mover(c.posicion, this.alturaU);
-    }
-    for (const [id, f] of this.columnas) if (!vivas.has(id)) { f.destruir(); this.columnas.delete(id); }
+      f.figuras.mover(posicion, this.alturaU);
+    };
+    for (const c of lista) poner(c.id, c.jinetes, c.soldados, c.color, c.carros, c.posicion);
+    for (const c of caravanas) poner(`caravana:${c.id}`, 0, 0, c.color, { carga: c.fundacion ? 0 : 1, fundacion: c.fundacion }, c.posicion);
+    for (const [id, f] of this.columnas) if (!vivas.has(id)) { f.figuras.destruir(); this.columnas.delete(id); }
   }
 
-  /** El aro en el suelo bajo cada columna propia (la mira del 2D: entre los árboles se pierde), la ruta que le queda y el aro de su destino;
-   * se rehacen cuando la cabeza avanza un poco o cambia la ruta. */
-  private ponerLineas(lista: ColumnaEnVista[]): void {
-    const propias = lista.filter((c) => c.propia);
-    const clave = propias.map((c) => `${c.id}:${c.posicion.x.toFixed(1)},${c.posicion.y.toFixed(1)}:${c.ruta.length}:${c.ruta.length ? `${c.ruta[c.ruta.length - 1]!.x},${c.ruta[c.ruta.length - 1]!.y}` : ''}`).join('|');
+  /** Bajo la columna del jugador, un aro en el suelo (la mira del 2D: entre los árboles se pierde), su ruta y el aro de su destino; las demás
+   * de la Facción y las caravanas propias, su rastro discontinuo. Se rehacen cuando una cabeza avanza un poco o cambia una ruta. */
+  private ponerLineas(lista: readonly ColumnaEnVista[], caravanas: readonly CaravanaEnVista[]): void {
+    const conRuta = [...lista.filter((c) => c.propia), ...caravanas.filter((c) => c.ruta.length >= 2)];
+    const clave = conRuta.map((c) => `${c.id}:${c.posicion.x.toFixed(1)},${c.posicion.y.toFixed(1)}:${c.ruta.length}:${c.ruta.length ? `${c.ruta[c.ruta.length - 1]!.x},${c.ruta[c.ruta.length - 1]!.y}` : ''}`).join('|');
     if (clave === this.claveLineas) return;
     this.claveLineas = clave;
     for (const l of [...this.lineas.children]) { this.lineas.remove(l); (l as THREE.Line).geometry.dispose(); }
-    for (const c of propias) {
-      const mira = cinta(circulo(c.posicion, 0.45, 32), this.alturaU, 0.05, { dy: 0.06, paso: 0.1 });
-      if (mira) this.lineas.add(new THREE.Mesh(mira, this.matMira));
+    for (const c of lista) {
+      if (!c.propia) continue;
+      if (c.mia) {
+        const mira = cinta(circulo(c.posicion, 0.45, 32), this.alturaU, 0.05, { dy: 0.06, paso: 0.1 });
+        if (mira) this.lineas.add(new THREE.Mesh(mira, this.matMira));
+      }
       if (c.ruta.length < 2) continue;
       const pendiente = rutaPendiente(c.ruta, c.posicion);
-      if (pendiente.length >= 2) this.lineas.add(linea(pendiente, this.alturaU, this.matRuta));
-      this.lineas.add(aro(c.ruta[c.ruta.length - 1]!, 0.5, this.alturaU, this.matRuta));
+      if (pendiente.length >= 2) this.lineas.add(c.mia ? linea(pendiente, this.alturaU, this.matRuta) : linea(pendiente, this.alturaU, this.matRutaFaccion).computeLineDistances());
+      if (c.mia) this.lineas.add(aro(c.ruta[c.ruta.length - 1]!, 0.5, this.alturaU, this.matRuta));
     }
+    for (const c of caravanas) {
+      if (c.ruta.length < 2) continue;
+      const pendiente = rutaPendiente(c.ruta, c.posicion);
+      if (pendiente.length >= 2) this.lineas.add(linea(pendiente, this.alturaU, this.matRutaCaravana).computeLineDistances());
+    }
+  }
+
+  /** Los nombres de los nodos de recursos que caben en pantalla y ya se exploraron; con la vista previa de fundar, los de dentro de su zona
+   * (resaltados). Se recalculan cuando el héroe se mueve, cambia la niebla o la vista previa. */
+  private etiquetasDeNodos(x: number, y: number, estado: EstadoVista): EtiquetaEnVista[] {
+    const fun = estado.fundacion, radio = this.camara.enPantalla * 0.75;
+    const clave = `${Math.round(x)},${Math.round(y)}:${radio}:${this.niebla.version}:${fun ? `${fun.centro.x.toFixed(1)},${fun.centro.y.toFixed(1)},${fun.radio}` : ''}`;
+    if (clave === this.nodos.clave) return this.nodos.lista;
+    const lista: EtiquetaEnVista[] = [];
+    for (const n of this.o.mapa.nodos) {
+      const enFundar = !!fun && Math.hypot(n.posicion.x - fun.centro.x, n.posicion.y - fun.centro.y) <= fun.radio;
+      if (!enFundar && (Math.hypot(n.posicion.x - x, n.posicion.y - y) > radio || !this.niebla.exploradaEn(n.posicion.x, n.posicion.y))) continue;
+      lista.push({ id: `nodo:${n.id}`, posicion: n.posicion, texto: RECURSO_NOMBRE[n.tipo] ?? n.tipo, tipo: 'nodo', color: enFundar ? '#f1d38b' : undefined });
+    }
+    this.nodos = { clave, lista };
+    return lista;
   }
 
   destruir(): void {
     cancelAnimationFrame(this.fotograma);
     this.observador.disconnect();
     this.entrada.destruir();
-    for (const f of this.columnas.values()) f.destruir();
+    for (const f of this.columnas.values()) f.figuras.destruir();
     for (const l of this.lineas.children) (l as THREE.Line).geometry.dispose();
     this.matRuta.dispose();
+    this.matRutaFaccion.dispose();
+    this.matRutaCaravana.dispose();
     this.matMira.dispose();
+    this.marcas.destruir();
+    this.etiquetas.destruir();
     this.terreno.destruir();
     this.paisaje.destruir();
     this.arboles.destruir();

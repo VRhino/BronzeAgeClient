@@ -1,19 +1,24 @@
-// Las maquetas de plazas, pueblos, avanzadas, obras y campamentos de mercenarios, a la escala del juego (`MUNDO3D.maqueta`, ×1): las piezas
-// de la mesa de escalas 3D (muralla, casas, empalizada, torre, tiendas) y una bandera del color de su Facción. Todas las de un material van en
-// una sola malla instanciada. Las plazas que solo se recuerdan van bajo la niebla (oscurecidas, como en `render.ts`); lo demás, encima.
+// Las maquetas de plazas, pueblos, avanzadas, obras y campamentos (de mercenarios y de bandidos), alijos y batallas, a la escala del juego
+// (`MUNDO3D.maqueta`, ×1): las piezas de la mesa de escalas 3D (muralla, casas, empalizada, torre, tiendas) y una bandera del color de su
+// Facción. Todas las de un material van en una sola malla instanciada. Las plazas que solo se recuerdan van bajo la niebla (oscurecidas, como
+// en `render.ts`); lo demás, encima: lo propio y lo que se ve ahora.
 import * as THREE from 'three';
 import type { Claro } from './arboles';
 import { MUNDO3D } from './config';
 import type { MundoEnVista } from './estado';
 import type { NieblaDeGuerra } from './niebla';
 
-const COLORES = { muro: 0xc9b48f, adobe: 0xd2bf9a, techo: 0xa8714a, madera: 0x8a6440, lona: 0xd8cfbd, ruina: 0x7d7466, campo: 0xb59a3a, mina: 0x4a4038 };
+const COLORES = {
+  muro: 0xc9b48f, adobe: 0xd2bf9a, techo: 0xa8714a, madera: 0x8a6440, lona: 0xd8cfbd, ruina: 0x7d7466, campo: 0xb59a3a, mina: 0x4a4038,
+  lonaOscura: 0x4a3f36, fuego: 0xd35400, oro: 0xe0b422, filo: 0xf4ead2, batallaPropia: 0x2f6b3a, batallaAjena: 0x8a3b12,
+};
 type Material = keyof typeof COLORES;
-/** Color de la bandera de los campamentos de mercenarios (el del 2D). */
-const COLOR_MERCENARIOS = '#6fa3d6';
+/** Color de la bandera de los campamentos de mercenarios y de los de bandidos (los del 2D). */
+const COLOR_MERCENARIOS = '#6fa3d6', COLOR_BANDIDOS = '#c0392b';
 
-/** Una pieza: caja (o tienda) en (x, y) de `ancho` × `fondo` × `alto` u, girada `giro` rad, y subida `base` u sobre el suelo. */
-interface Pieza { x: number; y: number; ancho: number; fondo: number; alto: number; giro: number; base: number }
+/** Una pieza: caja (o tienda) en (x, y) de `ancho` × `fondo` × `alto` u, girada `giro` rad, inclinada `inclina` rad de lado y subida `base` u
+ * sobre el suelo. */
+interface Pieza { x: number; y: number; ancho: number; fondo: number; alto: number; giro: number; base: number; inclina?: number }
 
 /** Un número fijo entre 0 y 1 por (a, b, c). */
 function hash(a: number, b: number, c: number): number {
@@ -37,7 +42,7 @@ const GEO = (() => {
 class Piezas {
   readonly por = new Map<string, Pieza[]>();
   readonly banderas = new Map<string, Pieza[]>();
-  add(mat: Material | 'lona', p: Pieza): void {
+  add(mat: Material, p: Pieza): void {
     let l = this.por.get(mat);
     if (!l) this.por.set(mat, (l = []));
     l.push(p);
@@ -127,6 +132,31 @@ function campamento(p: Piezas, x: number, y: number, sem: number): void {
   p.bandera(x, y, 0.5 * M, COLOR_MERCENARIOS);
 }
 
+/** Un campamento de bandidos: tiendas oscuras en corro (más cuanto más nivel), la hoguera y su bandera roja. */
+function bandidos(p: Piezas, x: number, y: number, nivel: number, sem: number): void {
+  const M = MUNDO3D.maqueta, n = 2 + 2 * Math.max(1, Math.min(3, nivel));
+  for (let k = 0; k < n; k++) {
+    const a = (k / n) * 2 * Math.PI + hash(sem, k, 1) * 0.5, d = (0.3 + 0.12 * hash(sem, k, 2)) * M;
+    p.add('lonaOscura', { x: x + d * Math.cos(a), y: y + d * Math.sin(a), ancho: 0.16 * M, fondo: 0.16 * M, alto: 0.12 * M, giro: a, base: 0 });
+  }
+  p.caja('fuego', x, y, 0.07 * M, 0.07 * M, 0.04 * M, 0.4);
+  p.bandera(x + 0.1 * M, y - 0.12 * M, 0.42 * M, COLOR_BANDIDOS);
+}
+
+/** Un alijo: fardos y un cofre con el oro encima. */
+function alijo(p: Piezas, x: number, y: number): void {
+  const M = MUNDO3D.maqueta;
+  p.caja('adobe', x - 0.06 * M, y, 0.1 * M, 0.08 * M, 0.06 * M, 0.3);
+  p.caja('madera', x + 0.05 * M, y + 0.03 * M, 0.09 * M, 0.07 * M, 0.07 * M, -0.2);
+  p.caja('oro', x + 0.05 * M, y + 0.03 * M, 0.06 * M, 0.05 * M, 0.025 * M, -0.2, 0.07 * M);
+}
+
+/** Una batalla de Unity: dos espadas cruzadas sobre un aro, verde si combates en ella. */
+function batalla(p: Piezas, x: number, y: number, propia: boolean): void {
+  p.anillo(x, y, 0.6, 0.03, 0.06, propia ? 'batallaPropia' : 'batallaAjena', -1);
+  for (const lado of [-1, 1]) p.add('filo', { x: x + lado * 0.17, y, ancho: 0.035, fondo: 0.012, alto: 0.55, giro: 0, base: 0.15, inclina: lado * 0.6 });
+}
+
 const semilla = (x: number, y: number): number => Math.round(x * 7 + y * 13);
 
 export class Maquetas {
@@ -160,6 +190,9 @@ export class Maquetas {
       ...m.avanzadas.map((x) => `A${x.id}:${f(x.posicion.x)},${f(x.posicion.y)}:${x.etapa}:${x.ruinas}:${x.color}`),
       ...m.obras.map((x) => `O${x.id}:${f(x.posicion.x)},${f(x.posicion.y)}:${x.arrancada}:${x.color}`),
       ...m.campamentos.map((x) => `C${x.id}:${f(x.posicion.x)},${f(x.posicion.y)}`),
+      ...m.bandidos.map((x) => `B${x.id}:${f(x.posicion.x)},${f(x.posicion.y)}:${x.nivel}`),
+      ...m.alijos.map((x) => `J${x.id}:${f(x.posicion.x)},${f(x.posicion.y)}`),
+      ...m.batallas.map((x) => `T${x.id}:${f(x.posicion.x)},${f(x.posicion.y)}:${x.propia}`),
     ].join('|');
     if (clave === this.clave) return false;
     this.clave = clave;
@@ -185,6 +218,12 @@ export class Maquetas {
       campamento(encima, x.posicion.x, x.posicion.y, semilla(x.posicion.x, x.posicion.y));
       claros.push({ x: x.posicion.x, y: x.posicion.y, r: 0.9 * M });
     }
+    for (const x of m.bandidos) {
+      bandidos(encima, x.posicion.x, x.posicion.y, x.nivel, semilla(x.posicion.x, x.posicion.y));
+      claros.push({ x: x.posicion.x, y: x.posicion.y, r: 0.6 * M });
+    }
+    for (const x of m.alijos) alijo(encima, x.posicion.x, x.posicion.y);
+    for (const x of m.batallas) batalla(encima, x.posicion.x, x.posicion.y, x.propia);
     this.poner(encima, false);
     this.poner(bajo, true);
     this.claros = claros;
@@ -197,7 +236,7 @@ export class Maquetas {
     const malla = (geo: THREE.BufferGeometry, mat: THREE.Material, lista: Pieza[], escala: (x: Pieza) => [number, number, number]) => {
       const im = new THREE.InstancedMesh(geo, mat, lista.length);
       lista.forEach((x, k) => {
-        e.set(0, -x.giro, 0);
+        e.set(0, -x.giro, x.inclina ?? 0);
         q.setFromEuler(e);
         s.set(...escala(x));
         v.set(x.x, this.alturaU(x.x, x.y) - 0.02 + x.base, x.y);
@@ -208,8 +247,8 @@ export class Maquetas {
       this.grupo.add(im);
     };
     for (const [mat, lista] of p.por) {
-      if (mat === 'lona') malla(GEO.tienda, this.material(COLORES.lona, bajoNiebla), lista, (x) => [x.ancho, x.alto, x.fondo]);
-      else malla(GEO.caja, this.material(COLORES[mat as Material], bajoNiebla), lista, (x) => [x.ancho, x.alto, x.fondo]);
+      const tienda = mat === 'lona' || mat === 'lonaOscura';
+      malla(tienda ? GEO.tienda : GEO.caja, this.material(COLORES[mat as Material], bajoNiebla), lista, (x) => [x.ancho, x.alto, x.fondo]);
     }
     for (const [color, lista] of p.banderas) malla(GEO.bandera, this.material(color, bajoNiebla), lista, (x) => [x.ancho, x.alto, x.fondo]);
   }

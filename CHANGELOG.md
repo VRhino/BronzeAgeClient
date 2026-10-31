@@ -3,6 +3,24 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.64.0] — 2026-10-31 · mundo 3D, fase 4: lo ajeno, los nombres y la selección · sync con `VRhino/BronzeAge@bfb9eb9`
+
+El modo mundo en 3D ya pinta todo lo que pintaba el 2D (plan en [`docs/Mundo_3D.md`](docs/Mundo_3D.md)).
+
+### Añadido
+- **Columnas.** Las de tu Facción, con su rastro discontinuo, y las avistadas, que no traen ruta ni tropa: se ven sus héroes. Cada una va con
+  su color, con un carro por caravana enganchada detrás de la tropa y el de fundación con lona, y un anillo discontinuo si está en formación.
+- **Caravanas sueltas**, las tuyas con su ruta y también las avistadas (el 2D no las pintaba aunque se podían seleccionar).
+- **Campamentos de bandidos** (más tiendas cuanto más nivel), **alijos** y **batallas** (espadas cruzadas, en verde la tuya), encima de la
+  niebla (`src/mundo3d/maquetas.ts`).
+- **Miradas**: su círculo, azul abierta y gris discontinuo caducada, con los minutos que quedan (`src/mundo3d/marcas.ts`).
+- **Selección**: lo seleccionado lleva un aro que late, a su medida.
+- **Vista previa de fundar** (panel ⚑): la zona con que nacería la plaza, los sitios de aldea, las parcelas de bosque y el nombre de cada
+  nodo de dentro.
+- **Nombres** sobre el mundo (`src/mundo3d/etiquetas.ts`): plazas (tenue la recordada), nodos cercanos ya explorados, minutos de las Miradas
+  y «⚑ Facción» bajo tu columna en tierra ajena.
+- El banco de pruebas trae lo ajeno de mentira, selecciona con un clic y tiene «Fundar aquí».
+
 ## [0.63.0] — 2026-10-31 · mundo 3D, fase 3: el mundo · sync con `VRhino/BronzeAge@bfb9eb9`
 
 El modo mundo en 3D ya pinta lo que hay en el mundo (plan en [`docs/Mundo_3D.md`](docs/Mundo_3D.md)). Cada capa conserva su lado de la

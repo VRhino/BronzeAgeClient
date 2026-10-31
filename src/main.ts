@@ -71,7 +71,7 @@ import { cablearCargos } from './ui/panelCargos';
 import { cablearDiplomacia } from './ui/panelDiplomacia';
 import { instalarZoomPan, type ControlMapa } from './ui/pantallaMapa';
 import { agarre, fijarEscalaDeAgarre } from './ui/agarre';
-import { estadoDesdeProyeccion, type RadiosDeVision } from './mundo3d/estado';
+import { estadoDesdeProyeccion, type FundacionEnVista, type RadiosDeVision } from './mundo3d/estado';
 import { fuenteDesdeMapa, fuenteDesdeRelieve } from './mundo3d/fuente';
 import { VistaMundo3D } from './mundo3d/vista';
 import { guardarVistaMapa, leerVistaMapa } from './ui/vistaMapaGuardada';
@@ -932,6 +932,18 @@ let enModoMundo = false;
 /** Los radios de visión del servidor (`VISION`), para el encuadre de la cámara 3D: el héroe solo y la columna con soldados. */
 let radiosDeVision: RadiosDeVision = { solo: 15, ejercito: 30 };
 
+/** La vista previa de fundar para la vista 3D: la zona con que nacería la plaza, dónde cabría una aldea y las parcelas de bosque alrededor del
+ * punto. Se recalcula solo cuando cambia el punto o la proyección. */
+let fundacion3d: { clave: string; valor: FundacionEnVista | null } = { clave: '', valor: null };
+function fundacionEnVista(): FundacionEnVista | null {
+  const pos = estadoCliente.modoFundacionActivo ? estadoCliente.posicionFundacion : null;
+  const clave = pos ? `${pos.x.toFixed(1)},${pos.y.toFixed(1)}:${estadoCliente.proyeccionUltima?.version ?? 0}` : '';
+  if (clave !== fundacion3d.clave) {
+    fundacion3d = { clave, valor: pos ? { centro: pos, radio: radioZonaInicial(), sitios: sitiosDeAldeaAlFundar(pos), parcelas: parcelasAlFundar(pos) } : null };
+  }
+  return fundacion3d.valor;
+}
+
 /** Monta la vista 3D del modo mundo en `lienzo` cuando están el mapa y el relieve (sin relieve, con el raster de 4 u del artefacto). `null` si
  * no se puede (sin WebGL, o el mapa sin altura): lo dice en el lienzo. */
 async function montarVista3D(lienzo: HTMLElement, alClicar: (punto: { x: number; y: number }) => void): Promise<VistaMundo3D | null> {
@@ -950,7 +962,8 @@ async function montarVista3D(lienzo: HTMLElement, alClicar: (punto: { x: number;
       mapa,
       estado: () => {
         const p = proyeccionAlInstante() ?? estadoCliente.proyeccionUltima;
-        return p ? estadoDesdeProyeccion(p, { vision: radiosDeVision, radioZonaInicial: radioZonaInicial(), radioProteccion: radioDeProteccionMercenarios() }, posicionDelHeroe(p)) : null;
+        const reglas = { vision: radiosDeVision, radioZonaInicial: radioZonaInicial(), radioProteccion: radioDeProteccionMercenarios() };
+        return p ? estadoDesdeProyeccion(p, reglas, posicionDelHeroe(p), { seleccion: seleccionMapa, fundacion: fundacionEnVista() }) : null;
       },
       alClicar: (punto) => alClicar(punto),
       alCambiarEscala: fijarEscalaDeAgarre,
