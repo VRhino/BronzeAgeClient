@@ -3,6 +3,10 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.71.1] — 2026-10-31 · cartel de plaza con el escudo por fuera · sync con `VRhino/BronzeAge@26a49c8`, sin cambios en el contrato
+
+- El escudo de la Facción en el cartel de plaza es más grande que el cartel (40 px de ancho), sobresale por arriba y por abajo y va montado sobre su borde izquierdo, como si el cartel saliera de él.
+
 ## [0.71.0] — 2026-10-31 · Diplomacia con las Facciones, Edificios en uno, extractores desde nivel 1, carteles de plaza · sync con `VRhino/BronzeAge@26a49c8`, sin cambios en el contrato
 
 - **Diplomacia y Facciones, en una pestaña.** La lista de Facciones va a la derecha: la tuya, las conocidas y las demás. Al pulsar una, el centro enseña lo que se sabe de ella (escudo, nivel, miembros, plazas conocidas, reputación, Rey, Embajador, capital, Liga, relación con la tuya) y lo que tu Facción puede hacer con ella: proponer alianza, vasallaje o guerra, contestar o retirar sus propuestas, romper, ofrecer la paz o rebelarse. Con la tuya elegida salen todas tus relaciones, la anexión, la fusión y la Liga. Si es de bots no se puede decir: el motor no lo publica.

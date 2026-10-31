@@ -215,7 +215,7 @@ export function etiquetasDesdeProyeccion(p: ProyeccionJugador, columnas: readonl
   const escudo = (f: string): string => {
     let svg = escudos.get(f);
     if (svg === undefined) {
-      svg = svgSigilo((p.facciones.find((x) => x.id === f) ?? p.directorioFacciones?.find((x) => x.id === f))?.sigilo, 20);
+      svg = svgSigilo((p.facciones.find((x) => x.id === f) ?? p.directorioFacciones?.find((x) => x.id === f))?.sigilo, 40);
       escudos.set(f, svg);
     }
     return svg;

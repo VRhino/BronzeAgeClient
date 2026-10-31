@@ -32,20 +32,26 @@
   background: rgba(10, 14, 23, 0.9);
 }
 
+/* La plaza: el escudo de su Facción, más alto que el cartel y montado sobre su borde izquierdo, como si el cartel saliera de él; a su
+   derecha, el nombre con «Nivel n» debajo (Víctor, 2026-10-31). El hueco de la izquierda del cartel es el sitio del escudo. */
 .mundo3d-etiqueta-plaza {
   z-index: 1;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 8px 3px 5px;
+  margin-left: 14px;
+  padding: 3px 10px 3px 30px;
+  border-left-width: 1px;
   font-size: 13px;
   font-weight: 700;
 }
 
-/* La plaza: el escudo de su Facción a la izquierda, y el nombre con «Nivel n» debajo. */
 .mundo3d-etiqueta-escudo {
+  position: absolute;
+  left: -20px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
-  flex: none;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.7));
 }
 
 .mundo3d-etiqueta-escudo .sigilo {
