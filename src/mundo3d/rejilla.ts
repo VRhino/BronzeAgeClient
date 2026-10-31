@@ -83,7 +83,7 @@ export class RejillaDeMovimiento {
           const ax = nav.x[ia]!, ay = nav.y[ia]!, bx = nav.x[ib]!, by = nav.y[ib]!;
           if (Math.hypot(ax - x, ay - y) > RADIO) continue;
           pos.push(ax, this.alturaU(ax, ay) + 0.08, ay, bx, this.alturaU(bx, by) + 0.08, by);
-          // 1000 = llano; a partir de ×3,5 (la montaña) ya es rojo del todo
+          // 1000 = llano; ×3,5 es el tope del coste por pendiente (motor 26a49c8): rojo del todo
           if (nav.vado[k]) c.copy(VADO);
           else c.copy(LLANO).lerp(CARO, Math.max(0, Math.min(1, (nav.coste[k]! - 1000) / 2500)));
           col.push(c.r, c.g, c.b, c.r, c.g, c.b);

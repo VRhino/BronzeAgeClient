@@ -1,3 +1,4 @@
+import { textoTiempoHasta } from './mundo/tiempoDeMarcha';
 import {
   ApiError,
   alSesionReemplazada,
@@ -733,6 +734,7 @@ function renderSeleccionMapaCuerpo(): void {
       <div><span>Nivel</span><strong>${asentamiento.nivel}</strong></div>
       ${asentamiento.recordado !== null ? `<div><span>Visto</span><strong>${escaparHtml(fechaDeMundo(asentamiento.recordado))}</strong></div>` : ''}
       ${ataque?.distancia != null ? `<div><span>Distancia</span><strong>${ataque.distancia}</strong></div>` : ''}
+      ${((t) => t ? `<div><span>Tiempo hasta allí</span><strong>${escaparHtml(t)}</strong></div>` : '')(textoTiempoHasta(proyeccion, asentamiento.posicion))}
     </div>
     <div class="mapa-seleccion-acciones">
       <button id="btn-marchar-alli" class="btn-secondary" type="button">Marchar aquí</button>
@@ -832,6 +834,7 @@ function renderSeleccionCampamento(cont: HTMLElement, proyeccion: ProyeccionJuga
       <div><span>Poder</span><strong>${campamento.poder}</strong></div>
       ${nivel ? `<div><span>Defensores</span><strong>${nivel.unidades}</strong></div><div><span>Botín por héroe</span><strong>${nivel.oroPorHeroe} de oro</strong></div>` : ''}
       ${distancia !== null ? `<div><span>Distancia</span><strong>${distancia}</strong></div>` : ''}
+      ${((t) => t ? `<div><span>Tiempo hasta allí</span><strong>${escaparHtml(t)}</strong></div>` : '')(textoTiempoHasta(proyeccion, campamento.posicion))}
       ${acosa ? `<div><span>Acosa</span><strong>${acosa}</strong></div>` : ''}
     </div>
     <div class="mapa-seleccion-acciones">
@@ -883,6 +886,7 @@ function renderSeleccionMercenarios(cont: HTMLElement, proyeccion: ProyeccionJug
     <div class="mapa-seleccion-datos">
       <div><span>Residentes</span><strong>${campamento.residentesIds.length}</strong></div>
       ${distancia !== null ? `<div><span>Distancia</span><strong>${distancia}</strong></div>` : ''}
+      ${((t) => t ? `<div><span>Tiempo hasta allí</span><strong>${escaparHtml(t)}</strong></div>` : '')(textoTiempoHasta(proyeccion, campamento.posicion))}
     </div>
     <div class="mapa-seleccion-acciones">
       <button id="btn-marchar-alli" class="btn-secondary" type="button">Marchar aquí</button>

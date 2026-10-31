@@ -8,6 +8,7 @@
 //   Dejar de perseguir   si ya vas tras esa presa.
 // Lo que da `inspeccionar` (composición de la columna, carga de la caravana o defensa de la plaza) se lee SIEMPRE de `informesDeInspeccion` de la
 // proyección (10 min de mundo): así sobrevive a recargar y a cerrar la ficha.
+import { textoTiempoHasta } from '../mundo/tiempoDeMarcha';
 import type { ProyeccionJugador } from '../apiCliente';
 import { radioDeEncuentro, radioDeInspeccion, radioDeProteccionMercenarios, tropasReclutables } from '../apiCliente';
 import { agarre } from './agarre';
@@ -175,7 +176,7 @@ function htmlFicha(p: ProyeccionJugador, o: Objetivo, kicker: string, e: Escapar
     <button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>
     <span class="faction-kicker">${kicker}</span>
     <h3>${e(faccion)}</h3>
-    <div class="mapa-seleccion-datos">${datos}<div><span>Distancia a tu columna</span><strong>${d ?? '—'}</strong></div></div>
+    <div class="mapa-seleccion-datos">${datos}<div><span>Distancia a tu columna</span><strong>${d ?? '—'}</strong></div>${((t) => t ? `<div><span>Tiempo hasta allí</span><strong>${e(t)}</strong></div>` : '')(textoTiempoHasta(p, o.posicion))}</div>
     ${persecucion}
     ${heroes}
     ${htmlInformeDeInspeccion(p, o.tipo, o.id, e)}

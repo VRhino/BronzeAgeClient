@@ -3,6 +3,10 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.72.0] — 2026-10-31 · tiempo hasta allí en las fichas del mapa · sync con `VRhino/BronzeAge@26a49c8`, sin cambios en el contrato
+
+- **Tiempo hasta allí.** Junto a la distancia, las fichas de plaza, campamento de bandidos, campamento de mercenarios y columna o caravana ajena dicen cuánto tardaría tu columna en llegar, en tiempo de jugador (`mundo/tiempoDeMarcha.ts`). Lo estima el cliente como el motor: el camino más barato por el grafo de navegación del artefacto, con el coste de cada arista, a la velocidad de la columna (el mínimo de su tropa y sus caravanas, el héroe solo a `MOVIMIENTO.velocidadJugador`, ×1,5 con marcha forzada). No cuenta los caminos construidos, que aceleran, así que el motor llega antes o igual. Sin camino por tierra lo dice.
+
 ## [0.71.1] — 2026-10-31 · cartel de plaza con el escudo por fuera · sync con `VRhino/BronzeAge@26a49c8`, sin cambios en el contrato
 
 - El escudo de la Facción en el cartel de plaza es más grande que el cartel (40 px de ancho), sobresale por arriba y por abajo y va montado sobre su borde izquierdo, como si el cartel saliera de él.
