@@ -25,6 +25,7 @@ import {
   radioDeVision,
   radioDeEncuentro,
   radioDeProteccionMercenarios,
+  radioZonaInicial,
   proyeccionAlInstante,
   obtenerMapa,
   obtenerRelieve,
@@ -949,7 +950,7 @@ async function montarVista3D(lienzo: HTMLElement, alClicar: (punto: { x: number;
       mapa,
       estado: () => {
         const p = proyeccionAlInstante() ?? estadoCliente.proyeccionUltima;
-        return p ? estadoDesdeProyeccion(p, radiosDeVision, posicionDelHeroe(p)) : null;
+        return p ? estadoDesdeProyeccion(p, { vision: radiosDeVision, radioZonaInicial: radioZonaInicial(), radioProteccion: radioDeProteccionMercenarios() }, posicionDelHeroe(p)) : null;
       },
       alClicar: (punto) => alClicar(punto),
       alCambiarEscala: fijarEscalaDeAgarre,

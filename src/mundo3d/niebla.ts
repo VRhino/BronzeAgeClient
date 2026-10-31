@@ -27,15 +27,38 @@ export class NieblaDeGuerra {
     uAlfas: { value: new THREE.Vector3(MUNDO3D.niebla.alfaSinVer / 255, MUNDO3D.niebla.alfaRecordado / 255, MUNDO3D.niebla.alfaVisible / 255) },
   };
   private ultima = '';
+  private ultimasCeldas = '';
+  private explorado: Uint8Array | null = null;
+  private rejilla = { columnas: 0, filas: 0, celda: 5 };
+  /** Sube cada vez que cambia lo explorado o se quita o pone la niebla: quien filtra por ella (los árboles) sabe cuándo rehacer. */
+  version = 0;
+
+  /** Lado de las celdas de la niebla, en u. */
+  get celda(): number {
+    return this.rejilla.celda;
+  }
+
+  /** ¿Se ha explorado alguna vez (x, y)? Sin niebla, todo. */
+  exploradaEn(x: number, y: number): boolean {
+    const e = this.explorado, r = this.rejilla;
+    if (!e || !this.uniformes.uActiva.value) return true;
+    const i = Math.floor(x / r.celda), j = Math.floor(y / r.celda);
+    return i >= 0 && j >= 0 && i < r.columnas && j < r.filas && e[j * r.columnas + i]! > 0;
+  }
 
   /** Pone la niebla de la proyección; sin ella (o con `?sinNiebla` en desarrollo) no se oscurece nada. */
   actualizar(n: NieblaProyectada | null | undefined, sinNiebla = false): void {
-    if (!n || sinNiebla || n.columnas <= 0 || n.filas <= 0) { this.uniformes.uActiva.value = 0; return; }
-    this.uniformes.uActiva.value = 1;
+    const activa = !!n && !sinNiebla && n.columnas > 0 && n.filas > 0;
+    if (activa !== (this.uniformes.uActiva.value === 1)) this.version++;
+    this.uniformes.uActiva.value = activa ? 1 : 0;
+    if (!activa) return;
     const clave = `${n.columnas}x${n.filas}:${n.celdas}|${n.visibles}`;
     if (clave === this.ultima) return;
+    if (n.celdas !== this.ultimasCeldas) { this.ultimasCeldas = n.celdas; this.version++; }
     this.ultima = clave;
     const total = n.columnas * n.filas, explorado = bits(n.celdas, total), visible = bits(n.visibles, total), datos = new Uint8Array(total * 4);
+    this.explorado = explorado;
+    this.rejilla = { columnas: n.columnas, filas: n.filas, celda: n.tamanoCelda };
     for (let i = 0; i < total; i++) { datos[4 * i] = explorado[i]!; datos[4 * i + 1] = visible[i]!; datos[4 * i + 3] = 255; }
     const t = this.uniformes.uNiebla.value;
     if (t && t.image.width === n.columnas && t.image.height === n.filas) {

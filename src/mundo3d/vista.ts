@@ -1,5 +1,7 @@
-// La vista 3D del modo mundo: la escena, la cámara de juego, el suelo por teselas con la niebla, las columnas y la ruta. Pinta en su propio
-// bucle de fotogramas y en cada uno pide el estado (`estado()`: la proyección del instante, ya convertida), así las columnas andan solas.
+// La vista 3D del modo mundo: la escena, la cámara de juego, el suelo por teselas con la niebla, los árboles, los ríos y los nodos, las
+// maquetas, las rayas (caminos, fronteras, zonas), las columnas y la ruta. Pinta en su propio bucle de fotogramas y en cada uno pide el estado
+// (`estado()`: la proyección del instante, ya convertida), así las columnas andan solas. Lo que hay que construir alrededor del héroe se hace
+// poco a poco, con un presupuesto de tiempo por fotograma.
 // Coordenadas de escena: x = x del mapa, z = y del mapa, y = altura en unidades (metros / 12).
 import * as THREE from 'three';
 import { CamaraDeJuego, type Zoom } from './camara';
@@ -8,9 +10,13 @@ import { instalarEntrada, type Entrada } from './entrada';
 import type { ColumnaEnVista, EstadoVista } from './estado';
 import { FigurasDeColumna } from './figuras';
 import type { FuenteDeAltura } from './fuente';
-import { aro, linea, rutaPendiente } from './lineas';
+import { Arboles } from './arboles';
+import { aro, cinta, circulo, linea, rutaPendiente } from './lineas';
+import { Maquetas } from './maquetas';
 import { NieblaDeGuerra } from './niebla';
+import { Paisaje } from './paisaje';
 import { Terreno } from './terreno';
+import { Trazos } from './trazos';
 import type { MapaGenerado } from '../terreno';
 
 type Punto = { x: number; y: number };
@@ -30,6 +36,10 @@ export interface OpcionesVista {
 
 /** Color de la tropa propia. */
 const COLOR_PROPIO = 0xc0392b;
+/** Milisegundos por fotograma para construir lo que falta alrededor del héroe. */
+const PRESUPUESTO = 8;
+/** Hasta dónde llegan, como mucho, los árboles y lo que va sobre el suelo (u); más allá la bruma ya casi lo tapa todo. */
+const ALCANCE = { arboles: 200, paisaje: 240, trazos: 240 };
 
 export class VistaMundo3D {
   readonly lienzo = document.createElement('canvas');
@@ -40,10 +50,15 @@ export class VistaMundo3D {
   private readonly bruma: THREE.Fog;
   private readonly niebla = new NieblaDeGuerra();
   private readonly terreno: Terreno;
+  private readonly paisaje: Paisaje;
+  private readonly arboles: Arboles;
+  private readonly maquetas: Maquetas;
+  private readonly trazos: Trazos;
   private readonly entrada: Entrada;
   private readonly columnas = new Map<string, FigurasDeColumna>();
   private readonly lineas = new THREE.Group();
   private readonly matRuta = new THREE.LineBasicMaterial({ color: 0xf1e6c8, transparent: true, opacity: 0.85 });
+  private readonly matMira = new THREE.MeshBasicMaterial({ color: 0xf1e6c8, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -5 });
   private readonly observador: ResizeObserver;
   private claveLineas = '';
   private fotograma = 0;
@@ -77,7 +92,11 @@ export class VistaMundo3D {
     this.escena.add(this.sol, this.sol.target);
 
     this.terreno = new Terreno(o.fuente, o.mapa, this.niebla);
-    this.escena.add(this.terreno.grupo, this.lineas);
+    this.paisaje = new Paisaje(o.fuente, o.mapa, this.niebla, this.alturaU);
+    this.arboles = new Arboles(o.fuente, o.mapa, this.niebla);
+    this.maquetas = new Maquetas(this.niebla, this.alturaU);
+    this.trazos = new Trazos(this.niebla, this.alturaU);
+    this.escena.add(this.terreno.grupo, this.paisaje.grupo, this.arboles.grupo, this.maquetas.grupo, this.trazos.grupo, this.lineas);
     this.entrada = instalarEntrada(this.lienzo, this.camara, (e) => this.clic(e), () => {}); // el zoom se lee de la cámara en cada fotograma
     this.observador = new ResizeObserver(() => this.ajustar());
     this.observador.observe(contenedor);
@@ -95,6 +114,13 @@ export class VistaMundo3D {
   /** Quita o vuelve a poner la niebla de guerra (para mirar el terreno entero en desarrollo). */
   fijarSinNiebla(si: boolean): void {
     this.sinNiebla = si;
+  }
+
+  /** Cuánto hay puesto (para el banco de pruebas): árboles y piezas de las maquetas. */
+  cuentas(): { arboles: number; maquetas: number; trazos: number } {
+    let maquetas = 0;
+    for (const m of this.maquetas.grupo.children) maquetas += (m as THREE.InstancedMesh).count;
+    return { arboles: this.arboles.cuantos, maquetas, trazos: this.trazos.grupo.children.length };
   }
 
   /** Deja de pintar (el modo mapa en 2D la tapa) o vuelve a hacerlo. */
@@ -151,7 +177,13 @@ export class VistaMundo3D {
     const d = this.camara.distancia;
     this.bruma.near = d * 2.2;
     this.bruma.far = d * 7;
-    this.terreno.actualizar(x, y, Math.min(320, d * 7), 2);
+    const alcance = Math.min(320, d * 7), hasta = performance.now() + PRESUPUESTO;
+    this.terreno.actualizar(x, y, alcance, hasta);
+    this.maquetas.actualizar(estado.mundo);
+    this.trazos.actualizar(estado.mundo.trazos, x, y, Math.min(alcance, ALCANCE.trazos));
+    this.arboles.fijarDespejes(this.maquetas.claros, this.trazos.caminos, `${this.maquetas.claveClaros}|${this.trazos.claveCaminos}`);
+    this.paisaje.actualizar(x, y, Math.min(alcance, ALCANCE.paisaje), hasta);
+    this.arboles.actualizar(x, y, Math.min(alcance, ALCANCE.arboles), hasta);
     this.ponerColumnas(estado.columnas);
     this.ponerLineas(estado.columnas);
     // la sombra sigue al héroe y cubre lo que se ve
@@ -179,14 +211,18 @@ export class VistaMundo3D {
     for (const [id, f] of this.columnas) if (!vivas.has(id)) { f.destruir(); this.columnas.delete(id); }
   }
 
-  /** La ruta que queda de cada columna propia y el aro de su destino; se rehacen cuando la cabeza avanza un poco o cambia la ruta. */
+  /** El aro en el suelo bajo cada columna propia (la mira del 2D: entre los árboles se pierde), la ruta que le queda y el aro de su destino;
+   * se rehacen cuando la cabeza avanza un poco o cambia la ruta. */
   private ponerLineas(lista: ColumnaEnVista[]): void {
-    const propias = lista.filter((c) => c.propia && c.ruta.length >= 2);
-    const clave = propias.map((c) => `${c.id}:${c.posicion.x.toFixed(1)},${c.posicion.y.toFixed(1)}:${c.ruta.length}:${c.ruta[c.ruta.length - 1]!.x},${c.ruta[c.ruta.length - 1]!.y}`).join('|');
+    const propias = lista.filter((c) => c.propia);
+    const clave = propias.map((c) => `${c.id}:${c.posicion.x.toFixed(1)},${c.posicion.y.toFixed(1)}:${c.ruta.length}:${c.ruta.length ? `${c.ruta[c.ruta.length - 1]!.x},${c.ruta[c.ruta.length - 1]!.y}` : ''}`).join('|');
     if (clave === this.claveLineas) return;
     this.claveLineas = clave;
     for (const l of [...this.lineas.children]) { this.lineas.remove(l); (l as THREE.Line).geometry.dispose(); }
     for (const c of propias) {
+      const mira = cinta(circulo(c.posicion, 0.45, 32), this.alturaU, 0.05, { dy: 0.06, paso: 0.1 });
+      if (mira) this.lineas.add(new THREE.Mesh(mira, this.matMira));
+      if (c.ruta.length < 2) continue;
       const pendiente = rutaPendiente(c.ruta, c.posicion);
       if (pendiente.length >= 2) this.lineas.add(linea(pendiente, this.alturaU, this.matRuta));
       this.lineas.add(aro(c.ruta[c.ruta.length - 1]!, 0.5, this.alturaU, this.matRuta));
@@ -199,7 +235,13 @@ export class VistaMundo3D {
     this.entrada.destruir();
     for (const f of this.columnas.values()) f.destruir();
     for (const l of this.lineas.children) (l as THREE.Line).geometry.dispose();
+    this.matRuta.dispose();
+    this.matMira.dispose();
     this.terreno.destruir();
+    this.paisaje.destruir();
+    this.arboles.destruir();
+    this.maquetas.destruir();
+    this.trazos.destruir();
     this.niebla.destruir();
     this.renderer.dispose();
     this.lienzo.remove();

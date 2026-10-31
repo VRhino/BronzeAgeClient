@@ -117,9 +117,9 @@ export class Terreno {
     return Math.max(base, d < 80 ? 0.5 : d < 160 ? 1 : 2);
   }
 
-  /** Pide las teselas a menos de `alcance` u de (cx, cy) y suelta las que quedan más lejos. Construye como mucho `porLlamada`, las más
-   * cercanas primero. Devuelve cuántas faltan. */
-  actualizar(cx: number, cy: number, alcance: number, porLlamada = 2): number {
+  /** Pide las teselas a menos de `alcance` u de (cx, cy) y suelta las que quedan más lejos. Construye las más cercanas primero mientras quede
+   * tiempo (`hasta`, en `performance.now()`), al menos una. Devuelve cuántas faltan. */
+  actualizar(cx: number, cy: number, alcance: number, hasta: number): number {
     const maxX = Math.ceil(this.fuente.ancho / LADO) - 1, maxY = Math.ceil(this.fuente.alto / LADO) - 1;
     const quiero = new Map<string, { tx: number; ty: number; d: number; paso: number }>();
     for (let ty = Math.max(0, Math.floor((cy - alcance) / LADO)); ty <= Math.min(maxY, Math.floor((cy + alcance) / LADO)); ty++) {
@@ -135,13 +135,16 @@ export class Terreno {
       this.soltar(clave);
     }
     const pendientes = [...quiero.entries()].filter(([clave, t]) => this.teselas.get(clave)?.paso !== t.paso).sort((a, b) => a[1].d - b[1].d);
-    for (const [clave, t] of pendientes.slice(0, porLlamada)) {
+    let hechas = 0;
+    for (const [clave, t] of pendientes) {
+      if (hechas && performance.now() > hasta) break;
       const malla = mallaDeTesela(this.fuente, this.mapa, t.tx, t.ty, t.paso, this.material);
       this.soltar(clave);
       this.grupo.add(malla);
       this.teselas.set(clave, { malla, paso: t.paso });
+      hechas++;
     }
-    return Math.max(0, pendientes.length - porLlamada);
+    return pendientes.length - hechas;
   }
 
   private soltar(clave: string): void {

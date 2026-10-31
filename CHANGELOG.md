@@ -3,6 +3,35 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.63.0] — 2026-10-31 · mundo 3D, fase 3: el mundo · sync con `VRhino/BronzeAge@bfb9eb9`
+
+El modo mundo en 3D ya pinta lo que hay en el mundo (plan en [`docs/Mundo_3D.md`](docs/Mundo_3D.md)). Cada capa conserva su lado de la
+niebla, como en el 2D.
+
+### Añadido
+- **Árboles** uno a uno donde el artefacto tiene bosque, con copas de 0,3 u (`src/mundo3d/arboles.ts`). Lejos van menos y más grandes, y solo
+  hay donde ya exploraste. Quedan fuera del agua, de los cauces, de los caminos, de las laderas muy empinadas y de los claros de las plazas.
+- **Ríos** con su anchura (1,5 u, 3 los navegables), **vados** de orilla a orilla y los **nodos** de piedra y metal como rocas
+  (`src/mundo3d/paisaje.ts`).
+- **Maquetas** a la escala del juego (`src/mundo3d/maquetas.ts`), con una bandera del color de su Facción:
+  - plazas: la ciudad al 10 % del radio de su zona, con su muralla y sus casas;
+  - pueblos: la aldea con sus campos, el extractor con su bocamina;
+  - avanzadas por etapa y en ruinas;
+  - obras, y campamentos de mercenarios.
+
+  Las plazas que solo recuerdas van oscurecidas bajo la niebla.
+- **Caminos** (sendero, camino, calzada) y **fronteras** bajo la niebla. Encima van la **zona propia** y el **anillo de protección** de los
+  campamentos de mercenarios (`src/mundo3d/trazos.ts`).
+- **La mira de tu columna**: un aro en el suelo bajo ella, para no perderla entre los árboles.
+- El banco de pruebas (`npm run mundo3d`) trae los campamentos del artefacto y maquetas de mentira junto al héroe (`?sinMaquetas` las quita).
+
+### Cambiado
+- La vista 3D construye lo que falta alrededor del héroe con un presupuesto de 8 ms por fotograma: primero el suelo, luego el paisaje y los
+  árboles.
+
+### Pendiente (fase 4)
+- Columnas ajenas, caravanas, bandidos, alijos, batallas y formaciones; los nombres sobre las maquetas; la vista previa de fundación.
+
 ## [0.62.0] — 2026-10-30 · mundo 3D, fase 2: se juega en 3D · sync con `VRhino/BronzeAge@bfb9eb9`
 
 El modo mundo pasa a 3D con three.js (plan en [`docs/Mundo_3D.md`](docs/Mundo_3D.md)). El modo mapa y la plaza siguen en 2D.

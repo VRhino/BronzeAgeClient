@@ -45,12 +45,13 @@ del héroe solo (`radioDeVision`); el 3D tiene que seguir a la de la columna. El
 | Lo que pinta, sacado de la proyección | `src/mundo3d/estado.ts` (hecho) | `proyeccionAlInstante`; el banco le da uno de mentira |
 | Terreno por teselas de 64 u alrededor del héroe | `src/mundo3d/terreno.ts` (hecho) | Relieve; color por clase, roca en laderas, sotobosque, agua |
 | Niebla en el sombreado | `src/mundo3d/niebla.ts` (hecho) | `proyeccion.exploracion` |
-| Árboles instanciados por trozos | `src/mundo3d/arboles.ts` | Densidad de bosque del artefacto (4 u) |
-| Ríos y vados | `src/mundo3d/rios.ts` | Ríos del artefacto |
-| Plazas, pueblos, avanzadas, campamentos | `src/mundo3d/maquetas.ts` | Proyección |
+| Árboles instanciados por trozos | `src/mundo3d/arboles.ts` (hecho) | Densidad de bosque del artefacto (4 u), lo explorado |
+| Ríos, vados y nodos de recursos | `src/mundo3d/paisaje.ts` (hecho) | Ríos y nodos del artefacto |
+| Plazas, pueblos, avanzadas, obras, campamentos | `src/mundo3d/maquetas.ts` (hecho) | Proyección |
+| Caminos, fronteras, zona propia, anillo de los mercenarios | `src/mundo3d/trazos.ts` (hecho) | Proyección |
 | Héroe y tropa | `src/mundo3d/figuras.ts` (hecho: la columna propia) | Proyección: ruta y posición en el instante |
 | Columnas ajenas, caravanas | `src/mundo3d/figuras.ts` | Proyección |
-| Ruta, destino, caminos, fronteras, zonas | `src/mundo3d/lineas.ts` (hecho: ruta y destino) | Proyección |
+| Ruta, destino, mira del héroe; cintas pegadas al relieve | `src/mundo3d/lineas.ts` (hecho) | Proyección |
 | Clic, arrastre, rueda y teclas | `src/mundo3d/entrada.ts` (hecho) | El clic acaba en `objetoBajoElClic` y `marcharA` |
 | Etiquetas | `src/mundo3d/etiquetas.ts` | Proyección |
 
@@ -60,7 +61,8 @@ del héroe solo (`radioDeVision`); el 3D tiene que seguir a la de la columna. El
    abren a demanda (`Relieve.alturaEn`, `aguaEn`). No cambia nada de lo que se ve.
 2. **Se juega en 3D (hecho, 0.62.0):** escena, cámara, terreno, niebla, tu columna, clic para marchar, ruta y destino. El modo mundo de
    `main.ts` monta `VistaMundo3D` cuando están el mapa y el relieve; lo que aún no pinta el 3D se ve en el modo mapa.
-3. **El mundo:** árboles, ríos y vados, maquetas de plazas, pueblos, avanzadas y campamentos; zonas, fronteras y caminos.
+3. **El mundo (hecho, 0.63.0):** árboles, ríos y vados, nodos, maquetas de plazas, pueblos, avanzadas, obras y campamentos; zonas,
+   fronteras y caminos.
 4. **Lo ajeno y lo que falta:** columnas avistadas, caravanas, bandidos, mercenarios, alijos, batallas y formaciones; etiquetas y selección; la
    vista previa de fundación y la elección del sitio de una aldea.
 5. **Cierre:** se retira el pintor 2D del modo mundo (`render.ts` sigue para el modo mapa), una pasada de rendimiento y la documentación.
@@ -93,10 +95,47 @@ y la tesela va con zstd. La semilla 42 ocupa 8,6 MB.
   ahora; desde arriba es el lado corto, como en el 2D. La cámara no baja del suelo.
 - **Clic.** Un rayo desde la cámara avanza hasta tocar el relieve; el punto pasa a `objetoBajoElClic` y a `marcharAObjetivo`, como antes.
 
+## Cómo se pinta (fase 3)
+
+Todo lo que va sobre el suelo se construye alrededor del héroe, lo más cercano primero, con **8 ms por fotograma** para construir: primero el
+suelo, luego el paisaje y los árboles. Lo que se aleja se suelta.
+
+- **Árboles** (`arboles.ts`). Uno a uno donde el raster de densidad del artefacto (4 u, interpolado) pasa de 0,2: 0,55 / 0,3² árboles por u²
+  con el bosque al máximo (la cifra de la mesa: las copas de 0,3 u casi se tocan). Por trozos de 32 u hasta 200 u del héroe, en una malla
+  instanciada por trozo. Por bandas de distancia quedan todos (< 48 u), la mitad (< 80), la cuarta parte (< 128) y la octava; las copas crecen
+  lo justo para tapar lo mismo y los que quedan son siempre los mismos, así al acercarse solo aparecen más. Tronco y sombra solo de cerca.
+  No hay árboles **en lo que nunca se exploró** (la niebla lo tapa, y un árbol ahí sería una silueta delante de lo que sí se ve), ni en el
+  agua, los cauces o los caminos, ni en laderas de más de 1,1 m/m, ni en los claros de las maquetas. Un trozo se rehace solo si cambian sus
+  celdas exploradas, su banda, los claros o los caminos.
+- **Paisaje** (`paisaje.ts`). Por teselas de 64 u hasta 240 u. Los ríos, suavizados, son una cinta de agua de 1,5 u (3 si es navegable)
+  plana a la altura del punto más bajo de su corte. Los vados son un paso de grava de orilla a orilla. Los nodos son rocas: grises las de
+  piedra y del color de su metal los afloramientos. Todo bajo la niebla.
+- **Maquetas** (`maquetas.ts`). Las piezas de la mesa a ×1. La ciudad tiene muralla al 10 % del radio de su zona (el del contorno si se
+  ve, el recordado si no) y casas dentro, más cuanto mayor. El pueblo es una empalizada con casas: la aldea agrícola lleva sus campos y el
+  extractor su bocamina. La avanzada es empalizada y torre, más alta en cada etapa, de piedra desde el fuerte, baja y gris en ruinas. La
+  obra es un andamio con su montón de material, con muros a media altura cuando ya arrancó. El campamento de mercenarios son tiendas en corro.
+  Cada una lleva una bandera del color de su Facción. Una malla instanciada por material. Las plazas recordadas van bajo la niebla; lo
+  demás, encima.
+- **Rayas** (`trazos.ts`). Cintas pegadas al relieve, recortadas a 240 u del héroe:
+  - bajo la niebla: los caminos (0,2 / 0,35 / 0,55 u: sendero, camino, calzada) y las fronteras (0,12 u), con la silueta real de lo que se
+    ve y un círculo discontinuo con el radio recordado de lo que no;
+  - encima: la zona propia (0,18 u) y el anillo de protección de los campamentos de mercenarios (0,1 u).
+
+  Son más anchas que en la realidad para que se lean desde la cámara. A diferencia del 2D, la zona propia va sin relleno.
+- **Tu columna** lleva un aro en el suelo, la mira del 2D: entre los árboles se pierde.
+
 ## Banco de pruebas
 
 `npm run mundo3d` abre `pruebas/mundo3d/` con el artefacto y el relieve que haya en `generador/salida/mundo/` del motor (el checkout hermano
 `../BronzeAgeFase0` o `../BronzeAge`, o la variable `MOTOR`); el servidor de Vite los sirve en `/__banco/mundo` y `/__banco/relieve` solo en
-desarrollo. Una columna propia va en línea recta adonde haces clic, a 30 u/min, y una niebla de mentira explora lo que se ve. `?x=…&y=…` pone
-el héroe en otro sitio; `?raster` pinta con el raster de 4 u en vez del relieve. En desarrollo, el juego deja la vista en `window.__vista3d` y
+desarrollo. Una columna propia va en línea recta adonde haces clic, a 30 u/min, y una niebla de mentira explora lo que se ve. Los campamentos
+de mercenarios son los del artefacto, y junto al héroe hay maquetas de mentira:
+- una plaza propia de nivel 3 con su zona, dos pueblos, tres avanzadas (una en ruinas) y dos obras;
+- una plaza ajena que se ve y otra que se recuerda;
+- caminos entre ellas.
+
+Parámetros:
+- `?x=…&y=…` pone el héroe en otro sitio;
+- `?raster` pinta con el raster de 4 u en vez del relieve;
+- `?sinMaquetas` quita las maquetas de mentira. En desarrollo, el juego deja la vista en `window.__vista3d` y
 `?sinNiebla` la quita.
