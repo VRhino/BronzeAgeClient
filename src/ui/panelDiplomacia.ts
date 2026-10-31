@@ -17,13 +17,15 @@ export function plazo(expiraEn: number, ahora: number): string {
   return parseInt(real, 10) <= 180 ? `caduca en ${real}` : caduca(expiraEn, ahora);
 }
 
-/** Las relaciones activas de tu Facción con lo que puedes hacer en cada una, y el formulario para proponer una nueva. Vacío si no hay nada que mostrar. */
-export function htmlDiplomacia(proyeccion: ProyeccionJugador, faccion: Faccion, escaparHtml: (valor: string) => string): string {
+/** Las relaciones activas de tu Facción con lo que puedes hacer en cada una, y el formulario para proponer una nueva. Vacío si no hay nada que mostrar.
+ * Con `con`, solo lo que hay con esa Facción, y el formulario va dirigido a ella (la ficha de la ventana de Diplomacia). */
+export function htmlDiplomacia(proyeccion: ProyeccionJugador, faccion: Faccion, escaparHtml: (valor: string) => string, con?: { id: string; nombre: string }): string {
   const conAutoridad = faccion.reyId === proyeccion.heroeId || faccion.embajadorId === proyeccion.heroeId;
-  const nombreDe = (id: string) => escaparHtml(proyeccion.facciones.find((f) => f.id === id)?.nombre ?? id);
-  const mias = (proyeccion.relaciones ?? []).filter((r) => r.estado === 'activa' && r.id && (r.faccionAId === faccion.id || r.faccionBId === faccion.id));
+  const nombreDe = (id: string) => escaparHtml(proyeccion.facciones.find((f) => f.id === id)?.nombre ?? proyeccion.directorioFacciones?.find((f) => f.id === id)?.nombre ?? id);
+  const toca = (a: string, b: string) => !con || a === con.id || b === con.id;
+  const mias = (proyeccion.relaciones ?? []).filter((r) => r.estado === 'activa' && r.id && (r.faccionAId === faccion.id || r.faccionBId === faccion.id) && toca(r.faccionAId, r.faccionBId));
   const conRelacion = new Set(mias.flatMap((r) => [r.faccionAId, r.faccionBId]));
-  const candidatas = proyeccion.facciones.filter((f) => f.id !== faccion.id && !conRelacion.has(f.id));
+  const candidatas = con ? (conRelacion.has(con.id) ? [] : [con]) : proyeccion.facciones.filter((f) => f.id !== faccion.id && !conRelacion.has(f.id));
   const boton = (atributo: string, id: string, texto: string) => `<button class="btn-secondary" type="button" ${atributo}="${escaparHtml(id)}">${texto}</button>`;
   const tributo = (r: Pick<RelacionPolitica, 'tributo'>) => r.tributo ? `${r.tributo.cantidadPorMinuto} ${escaparHtml(RECURSO_NOMBRE[r.tributo.recurso] ?? r.tributo.recurso)}/min` : 'sin tributo';
 
@@ -45,7 +47,7 @@ export function htmlDiplomacia(proyeccion: ProyeccionJugador, faccion: Faccion, 
   };
 
   // Alianza y vasallaje piden aceptación: las recibe el Rey de la Facción destino (los demás solo las leen) y las retira quien tiene autoridad en la que propone.
-  const propuestas = proyeccion.propuestasRelacion ?? [];
+  const propuestas = (proyeccion.propuestasRelacion ?? []).filter((p) => toca(p.faccionAId, p.faccionBId));
   const recibidas = propuestas.filter((p) => p.faccionBId === faccion.id);
   const enviadas = propuestas.filter((p) => p.faccionAId === faccion.id);
   const esRey = faccion.reyId === proyeccion.heroeId;
@@ -55,7 +57,7 @@ export function htmlDiplomacia(proyeccion: ProyeccionJugador, faccion: Faccion, 
   const bloquePropuestas = (titulo: string, lista: PropuestaRelacion[], pintarFila: (p: PropuestaRelacion) => string) => lista.length > 0 ? `<span class="faction-kicker">${titulo}</span>${lista.map(pintarFila).join('')}` : '';
 
   const formulario = conAutoridad && candidatas.length > 0
-    ? `<div class="faction-list-item"><select id="sel-diplomacia" class="form-input">${candidatas.map((f) => `<option value="${escaparHtml(f.id)}">${escaparHtml(f.nombre)}</option>`).join('')}</select>` +
+    ? `<div class="faction-list-item">${con ? `<input id="sel-diplomacia" type="hidden" value="${escaparHtml(con.id)}" />` : `<select id="sel-diplomacia" class="form-input">${candidatas.map((f) => `<option value="${escaparHtml(f.id)}">${escaparHtml(f.nombre)}</option>`).join('')}</select>`}` +
       `<select id="tipo-diplomacia" class="form-input"><option value="alianza">Alianza</option><option value="vasallaje">Vasallaje (tú, señora)</option><option value="guerra">Declarar guerra</option></select></div>` +
       `<div class="faction-list-item"><select id="tributo-recurso" class="form-input">${TRIBUTOS.map((t) => `<option value="${t}">${escaparHtml(RECURSO_NOMBRE[t] ?? t)}</option>`).join('')}</select>` +
       `<input id="tributo-cantidad" class="form-input" type="number" min="0" step="1" value="10" aria-label="Tributo por minuto" /><button id="btn-proponer-diplomacia" class="btn-secondary" type="button">Proponer</button></div>` +
@@ -63,7 +65,9 @@ export function htmlDiplomacia(proyeccion: ProyeccionJugador, faccion: Faccion, 
     : '';
   const info = ayuda('faccion:diplomacia', 'Tributo por minuto, solo en vasallaje. Alianza y vasallaje son propuestas: solo nacen si el Rey de la otra Facción las acepta antes de que caduquen (3 días de mundo); mientras tanto las puedes retirar. Una Facción con reputación por debajo de −40 no puede proponer alianzas. La guerra es libre y arrastra a señor y vasallos del rival; solo se acaba con la paz de las dos. Romper una alianza sin más cuesta 12 puntos de reputación; liberar a un vasallo da 6.');
 
-  if (mias.length === 0 && propuestas.length === 0 && !formulario) return '';
+  if (mias.length === 0 && propuestas.length === 0 && !formulario) {
+    return con ? `<div class="faction-list faction-list-libre"><span class="faction-kicker">Diplomacia${info}</span><p class="legend-note">Sin relación con ella. ${conAutoridad ? '' : 'Proponer alianzas, vasallajes o la guerra es cosa del Rey o del Embajador.'}</p></div>` : '';
+  }
   return `<div class="faction-list faction-list-libre"><span class="faction-kicker">Diplomacia${info}</span>${mias.map(fila).join('')}${bloquePropuestas('Propuestas recibidas', recibidas, filaRecibida)}${bloquePropuestas('Propuestas enviadas', enviadas, filaEnviada)}${formulario}<p id="error-diplomacia" class="faction-error" role="alert"></p></div>`;
 }
 
@@ -79,7 +83,7 @@ export function cablearDiplomacia(raiz: ParentNode, proyeccion: ProyeccionJugado
     if (p && nueva && boton.disabled) avisar(`Propuesta enviada: ${plazo(nueva.expiraEn, p.instante)} si su Rey no responde.`);
   };
   raiz.querySelector<HTMLButtonElement>('#btn-proponer-diplomacia')?.addEventListener('click', (ev) => {
-    const destino = raiz.querySelector<HTMLSelectElement>('#sel-diplomacia')?.value;
+    const destino = raiz.querySelector<HTMLSelectElement | HTMLInputElement>('#sel-diplomacia')?.value;
     const tipo = raiz.querySelector<HTMLSelectElement>('#tipo-diplomacia')?.value;
     if (!destino || !yo) return;
     const boton = ev.currentTarget as HTMLButtonElement;

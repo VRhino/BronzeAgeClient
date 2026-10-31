@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.71.0] — 2026-10-31 · Diplomacia con las Facciones, Edificios en uno, extractores desde nivel 1, carteles de plaza · sync con `VRhino/BronzeAge@26a49c8`, sin cambios en el contrato
+
+- **Diplomacia y Facciones, en una pestaña.** La lista de Facciones va a la derecha: la tuya, las conocidas y las demás. Al pulsar una, el centro enseña lo que se sabe de ella (escudo, nivel, miembros, plazas conocidas, reputación, Rey, Embajador, capital, Liga, relación con la tuya) y lo que tu Facción puede hacer con ella: proponer alianza, vasallaje o guerra, contestar o retirar sus propuestas, romper, ofrecer la paz o rebelarse. Con la tuya elegida salen todas tus relaciones, la anexión, la fusión y la Liga. Si es de bots no se puede decir: el motor no lo publica.
+- **Centro urbano › Edificios** junta Edificios, Producción y Cola, cada una plegable. La **Residencia** (dejar tu casa y designar la capital) pasa al pie de Resumen.
+- **Pueblos extractores desde el nivel 1** (motor 057eb7b): el valor por defecto de `nivelMadreMinimo.extractor` es 1, y los requisitos del nivel 2 entienden `pueblosActivos` (un pueblo activo, aldea o extractor). La **Cantera** ya no sale entre los edificios de la plaza.
+- **Carteles de plaza en el mundo 3D:** texto en blanco, el escudo completo de la Facción dueña a la izquierda y, bajo el nombre, «Nivel n». Todas las etiquetas van en blanco; el color de la Facción o del campamento queda en el filete de la izquierda.
+- **Fundar según la pendiente** (motor 26a49c8): sale el rechazo `fundacion.sobre_cima` y entra `fundacion.pendiente`. La vista previa de fundación avisa cuando la pendiente pasa de `FUNDACION.pendienteMaximaParaFundar` (0,3).
+
 ## [0.70.0] — 2026-10-31 · mundo 3D: alijos, ruta punteada, copas y formación del ejército · sync con `VRhino/BronzeAge@ebadcafe`, sin cambios en el contrato
 
 - **Alijos al doble** (`MUNDO3D.alijo = 2`), con su aro de selección y su zona de clic.

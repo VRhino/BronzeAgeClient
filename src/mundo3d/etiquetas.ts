@@ -7,6 +7,31 @@ import type { EtiquetaEnVista } from './estado';
 /** Las etiquetas de algo que se selecciona con un clic. */
 const PULSABLES = new Set<EtiquetaEnVista['tipo']>(['plaza', 'campamento']);
 
+/** El contenido: el escudo a la izquierda (si lo hay) y el nombre con su subtexto debajo. */
+function pintar(el: HTMLElement, e: EtiquetaEnVista): void {
+  if (!e.sigilo && !e.subtexto) { el.textContent = e.texto; return; }
+  el.replaceChildren();
+  if (e.sigilo) {
+    const escudo = document.createElement('span');
+    escudo.className = 'mundo3d-etiqueta-escudo';
+    escudo.innerHTML = e.sigilo; // SVG que genera el propio cliente (`svgSigilo`), sin texto del servidor
+    el.appendChild(escudo);
+  }
+  const textos = document.createElement('span');
+  textos.className = 'mundo3d-etiqueta-textos';
+  const nombre = document.createElement('span');
+  nombre.className = 'mundo3d-etiqueta-nombre';
+  nombre.textContent = e.texto;
+  textos.appendChild(nombre);
+  if (e.subtexto) {
+    const sub = document.createElement('span');
+    sub.className = 'mundo3d-etiqueta-sub';
+    sub.textContent = e.subtexto;
+    textos.appendChild(sub);
+  }
+  el.appendChild(textos);
+}
+
 export class Etiquetas {
   readonly capa = document.createElement('div');
   private readonly vivas = new Map<string, { el: HTMLElement; texto: string; posicion: { x: number; y: number } }>();
@@ -40,8 +65,9 @@ export class Etiquetas {
         this.vivas.set(e.id, viva);
       }
       viva.posicion = e.posicion;
-      if (viva.texto !== e.texto) { viva.el.textContent = e.texto; viva.texto = e.texto; }
-      viva.el.style.color = e.color ?? '';
+      const clave = `${e.texto}|${e.subtexto ?? ''}|${e.sigilo ?? ''}`;
+      if (viva.texto !== clave) { pintar(viva.el, e); viva.texto = clave; }
+      viva.el.style.borderLeftColor = e.color ?? '';
       viva.el.classList.toggle('es-tenue', !!e.tenue);
       viva.el.style.left = `${(((v.x + 1) / 2) * ancho).toFixed(1)}px`;
       viva.el.style.top = `${(((1 - v.y) / 2) * alto).toFixed(1)}px`;

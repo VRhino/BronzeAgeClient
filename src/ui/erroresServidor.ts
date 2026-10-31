@@ -68,7 +68,7 @@ const MENSAJES: Record<string, string> = {
   'expansion.invalida': 'No se puede expandir así.',
   'fundacion.fuera_del_mapa': 'No se puede fundar fuera del mapa.',
   'fundacion.sobre_agua': 'No se puede fundar sobre el agua: mueve tu columna a tierra firme.',
-  'fundacion.sobre_cima': 'No se puede fundar en una cima.',
+  'fundacion.pendiente': 'Demasiada pendiente para fundar aquí: busca un sitio más llano.',
   'fundacion.no_transitable': 'No se puede fundar en terreno intransitable.',
   'mision.fuera_de_ambito': 'Esa misión es de otro tablón: hay que residir en la plaza o ser ciudadano de la Facción.',
   'mision.no_disponible': 'Esa misión no está en el tablón ahora.',

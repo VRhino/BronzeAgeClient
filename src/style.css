@@ -3449,3 +3449,26 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .plaza-ajena-resumen { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .plaza-ajena-escudo { display: flex; }
 .plaza-ajena-resumen .asent-ficha-grid { width: 100%; }
+
+/* Pestaña Diplomacia de la Facción (con la lista de Facciones): la ficha de la elegida en el centro y la lista a la derecha. */
+.diplo-marco { display: flex; gap: 14px; align-items: flex-start; }
+.diplo-centro { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.diplo-lista { flex: 0 0 260px; display: flex; flex-direction: column; gap: 4px; padding: 8px; border: 1px solid var(--bronce-osc); border-radius: 3px; background: rgba(0, 0, 0, 0.2); max-height: 70vh; overflow-y: auto; }
+.diplo-fila { display: flex; align-items: center; gap: 8px; width: 100%; padding: 5px 6px; border: 1px solid transparent; border-radius: 3px; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.diplo-fila:hover { background: rgba(169, 121, 63, 0.12); }
+.diplo-fila.activo { border-color: var(--bronce); background: rgba(169, 121, 63, 0.2); }
+.diplo-fila.guerra small { color: #e0705a; }
+.diplo-fila-escudo { flex: none; display: flex; }
+.diplo-fila-escudo .sigilo { display: block; }
+.diplo-fila-texto { min-width: 0; display: flex; flex-direction: column; }
+.diplo-fila-texto strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--pergamino); }
+.diplo-fila-texto small { color: var(--text-muted); }
+.diplo-ficha-cab { display: flex; align-items: center; gap: 14px; }
+.diplo-ficha-cab h3 { margin: 2px 0; font-family: var(--fuente-titulo); color: var(--oro-claro); }
+.diplo-insignias { display: flex; flex-wrap: wrap; gap: 4px; }
+.diplo-insignias .faccion-publica-relacion { margin-left: 0; }
+.diplo-datos { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.diplo-datos div { display: flex; flex-direction: column; padding: 6px 8px; border: 1px solid rgba(169, 121, 63, 0.25); border-radius: 3px; }
+.diplo-datos span { color: var(--text-secondary); font-size: 0.78rem; }
+.diplo-datos strong { color: var(--pergamino); }
+@media (max-width: 720px) { .diplo-marco { flex-direction: column-reverse; } .diplo-lista { flex: none; width: 100%; max-height: 40vh; } }

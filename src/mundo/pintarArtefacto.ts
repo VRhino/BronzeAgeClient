@@ -312,6 +312,17 @@ export function colorDelSueloEn(mapa: MapaGenerado, p: { x: number; y: number })
   return COLOR_CLASE[mejor?.[0] ?? 3]!;
 }
 
+/** La pendiente (m/m) en la celda donde cae `p`, como la mira el motor al fundar (`fundacion.pendiente`, motor 26a49c8): diferencias centradas
+ * entre las celdas vecinas del raster de altura (u16 0..65535 = 0..1.000 m), 12 m por unidad. `null` sin la capa. */
+export function pendienteEn(mapa: MapaGenerado, p: { x: number; y: number }): number | null {
+  const r = mapa.rasters?.altura;
+  if (!r) return null;
+  const c = Math.min(r.columnas - 1, Math.max(0, Math.floor(p.x / r.celda))), f = Math.min(r.filas - 1, Math.max(0, Math.floor(p.y / r.celda)));
+  const h = (cc: number, ff: number) => (r.datos[Math.min(r.filas - 1, Math.max(0, ff)) * r.columnas + Math.min(r.columnas - 1, Math.max(0, cc))]! * 1000) / 65535;
+  const distancia = 2 * r.celda * 12;
+  return Math.hypot(h(c + 1, f) - h(c - 1, f), h(c, f + 1) - h(c, f - 1)) / distancia;
+}
+
 /** La densidad de bosque (0..1) de la celda donde cae `p`, como la mira el motor al fundar (`fundacion.bosque_denso`); `null` sin la capa. */
 export function densidadBosqueEn(mapa: MapaGenerado, p: { x: number; y: number }): number | null {
   const b = mapa.rasters?.densidadBosque;

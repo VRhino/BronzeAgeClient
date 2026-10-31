@@ -8,7 +8,7 @@
 // cifras salen de `GET /v1/datos` y el motor valida; su rechazo se enseña tal cual.
 //   plaza      la subpestaña «Territorio» del Centro urbano (lo que hay en su zona y sus pueblos) (`SUBPESTANA_PUEBLOS`): cupo, lista, marcar, mejorar, reponer carro, destruir
 //   mapa       los pueblos y las obras se pintan (`dibujarPueblosYObras`) y se seleccionan (`seleccionarPuebloUObra`, fichas `FICHA_PUEBLO`/`FICHA_OBRA`)
-//   ascenso    la subida de nivel de la plaza con sus requisitos (`htmlAscensoLocal`): el nivel 2 pide ya una aldea activa
+//   ascenso    la subida de nivel de la plaza con sus requisitos (`htmlAscensoLocal`): el nivel 2 pide un pueblo activo (aldea o extractor)
 //   dentro     se entra en un pueblo activo como de visita, con la columna entera (`entrarEnPueblo` / `salirDePueblo`); dentro se gestiona con esa
 //              columna (`htmlPestanasPueblo`): guarnición, carga, escolta del carro de acarreo y mejora de la aldea. La escolta también se cede desde la plaza.
 import { bloqueDeDatos, catalogoDeCaravanas, radioDePuerta, type ProyeccionJugador } from '../apiCliente';
@@ -44,7 +44,7 @@ interface ParamsPueblos {
   };
 }
 interface Especie { topePorCorral: number; pieDeCriaPorCorral: number; crecimientoPorHora: number; productos: Record<string, number> }
-interface RequisitoNivel { pesants?: number; artesanos?: number; edificios?: string[]; edificiosMinimo?: number; aldeasAgricolas?: number; nivelInternoMinimo?: Record<string, number>; recintoCompletoNivelMinimo?: number; edificiosConNivel?: Record<string, number> }
+interface RequisitoNivel { pesants?: number; artesanos?: number; edificios?: string[]; edificiosMinimo?: number; aldeasAgricolas?: number; pueblosActivos?: number; nivelInternoMinimo?: Record<string, number>; recintoCompletoNivelMinimo?: number; edificiosConNivel?: Record<string, number> }
 
 /** Los tipos de nodo que admiten un pueblo extractor (el ganado ya no: sale de las aldeas). */
 const NODOS_EXTRAIBLES = new Set(['piedra', 'cobre', 'estano', 'hierro', 'oro']);
@@ -226,12 +226,12 @@ function htmlMarcar(p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
   const sinCupo = total !== null && usados >= total;
   const aldea1 = pr?.aldea?.niveles?.['1'];
   const costeAldea = aldea1 ? listaRecursos(sumar(aldea1.coste, pr?.costeAdicional, costeCarro())) : '';
-  const nivelAldea = pr?.nivelMadreMinimo?.aldea ?? 1, nivelExtractor = pr?.nivelMadreMinimo?.extractor ?? 2;
+  const nivelAldea = pr?.nivelMadreMinimo?.aldea ?? 1, nivelExtractor = pr?.nivelMadreMinimo?.extractor ?? 1;
   const libres = nivel >= nivelExtractor ? nodosLibres(p, a) : [];
   if (sinCupo) return '<p class="asent-lado-nota">Cupo lleno: para marcar otro pueblo, sube la plaza de nivel o destruye uno.</p>';
   return `<strong class="heroe-sub">Marcar un pueblo nuevo</strong>
     <div class="pueblo-marcar">
-      <div><strong>Aldea agrícola</strong>${ayuda('pueblos:aldea', `Granjas y corrales en un punto fértil de la zona (fertilidad ${pr?.aldea?.fertilidadMinima ?? 0.3} o más, a ${pr?.aldea?.separacionMinima ?? 3} de toda plaza y todo pueblo, con camino hasta la plaza). Acarrea trigo y ganado; su rebaño crece solo. El nivel 2 de la plaza pide una aldea activa.`)}
+      <div><strong>Aldea agrícola</strong>${ayuda('pueblos:aldea', `Granjas y corrales en un punto fértil de la zona (fertilidad ${pr?.aldea?.fertilidadMinima ?? 0.3} o más, a ${pr?.aldea?.separacionMinima ?? 3} de toda plaza y todo pueblo, con camino hasta la plaza). Acarrea trigo y ganado; su rebaño crece solo. El nivel 2 de la plaza pide un pueblo activo: una aldea o un extractor.`)}
         <span class="asent-lado-nota">${nivel < nivelAldea ? `Desde el nivel ${nivelAldea} de la plaza.` : `Obra: ${e(costeAldea || '—')} (con el carro de acarreo y su buey), que se llevan al sitio.`}</span>
         ${htmlSitiosDeAldea(sitiosDeLaPlaza(p, a))}
         <button class="btn-primary" type="button" data-pueblo-accion="elegir-aldea"${nivel < nivelAldea ? ' disabled' : ''}>Elegir el sitio en el mapa</button></div>
@@ -357,7 +357,8 @@ export function htmlAscensoLocal(p: ProyeccionJugador, a: Asentamiento, soyGober
   const activos = (tipo: string): boolean => a.edificios.some((x) => x.tipo === tipo && x.estado === 'activo' && (x.nivelInterno ?? 1) >= (r.nivelInternoMinimo?.[tipo] ?? 1));
   const hechos = (r.edificios ?? []).filter(activos);
   const minimo = r.edificiosMinimo ?? (r.edificios ?? []).length;
-  const aldeas = (p.pueblos ?? []).filter((x) => x.propio && x.madreId === a.id && esAldea(x)).length;
+  const deLaPlaza = (p.pueblos ?? []).filter((x) => x.propio && x.madreId === a.id);
+  const aldeas = deLaPlaza.filter(esAldea).length;
   const almacen = a.almacen ?? {};
   const faltaPagar = Object.entries(coste?.costo ?? {}).filter(([k, n]) => (almacen[k]?.cantidad ?? 0) < n);
   const filas: [boolean, string][] = [
@@ -369,7 +370,9 @@ export function htmlAscensoLocal(p: ProyeccionJugador, a: Asentamiento, soyGober
       a.edificios.some((x) => x.tipo === tipo && x.estado === 'activo' && (x.nivelInterno ?? 1) >= nivel),
       `${EDIFICIO_NOMBRE[tipo] ?? tipo} a nivel ${nivel} o más, en marcha`,
     ] as [boolean, string]),
-    ...((r.aldeasAgricolas ?? 0) > 0 ? [[aldeas >= r.aldeasAgricolas!, `Una aldea agrícola activa (pestaña Pueblos)${aldeas ? '' : ': aún no tiene'}`] as [boolean, string]] : []),
+    ...((r.aldeasAgricolas ?? 0) > 0 ? [[aldeas >= r.aldeasAgricolas!, `Una aldea agrícola activa (pestaña Territorio)${aldeas ? '' : ': aún no tiene'}`] as [boolean, string]] : []),
+    // desde el 2026-10-31 vale cualquier pueblo activo, aldea o extractor (`pueblosActivos`)
+    ...((r.pueblosActivos ?? 0) > 0 ? [[deLaPlaza.length >= r.pueblosActivos!, `${r.pueblosActivos === 1 ? 'Un pueblo activo' : `${r.pueblosActivos} pueblos activos`}, aldea agrícola o extractor (pestaña Territorio)${deLaPlaza.length ? '' : ': aún no tiene'}`] as [boolean, string]] : []),
     ...(r.recintoCompletoNivelMinimo ? [[true, `Un recinto de muralla completo de nivel ${r.recintoCompletoNivelMinimo} o más (lo comprueba el servidor)`] as [boolean, string]] : []),
     [faltaPagar.length === 0, `En el almacén: ${listaRecursos(coste?.costo ?? {}) || 'sin coste'}${faltaPagar.length ? ` (faltan ${faltaPagar.map(([k, n]) => `${Math.ceil(n - (almacen[k]?.cantidad ?? 0))} ${RECURSO_NOMBRE[k] ?? k}`).join(', ')})` : ''}`],
   ];

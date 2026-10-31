@@ -4,6 +4,7 @@
 import type { ProyeccionJugador } from '../apiCliente';
 import type { SitiosDeAldea } from '../mundo/fertilidad';
 import { faccionColor } from '../paletas';
+import { svgSigilo } from '../sigilo/sigilo';
 import type { NieblaProyectada } from '../tiposDominio';
 import { MUNDO3D } from './config';
 import type { TropaDeColumna } from './figuras';
@@ -53,7 +54,9 @@ export interface FundacionEnVista {
 /** Lo seleccionado en el mapa: un aro alrededor. */
 export interface SeleccionEnVista { posicion: Punto; radio: number }
 /** Un nombre sobre el mundo (HTML encima del lienzo). `tenue` = lo que solo se recuerda. */
-export interface EtiquetaEnVista { id: string; posicion: Punto; texto: string; tipo: 'plaza' | 'mirada' | 'territorio' | 'nodo' | 'campamento'; color?: string; tenue?: boolean }
+/** Un nombre sobre el mundo. El texto va siempre en blanco; `color` (el de la Facción o el del campamento) es el filete de la izquierda. Una plaza
+ * lleva además el escudo de su Facción (`sigilo`, SVG en línea) y debajo del nombre `subtexto` («Nivel n»). */
+export interface EtiquetaEnVista { id: string; posicion: Punto; texto: string; tipo: 'plaza' | 'mirada' | 'territorio' | 'nodo' | 'campamento'; color?: string; tenue?: boolean; subtexto?: string; sigilo?: string }
 
 /** Una plaza: la ciudad del juego ocupa el 10 % del radio de su zona. `recordada` = se vio alguna vez y ahora no (va bajo la niebla). */
 export interface PlazaEnVista { id: string; posicion: Punto; radioCiudad: number; color: string; recordada: boolean }
@@ -207,8 +210,18 @@ export function estadoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVist
 export function etiquetasDesdeProyeccion(p: ProyeccionJugador, columnas: readonly ColumnaEnVista[], miradas: readonly MiradaEnVista[]): EtiquetaEnVista[] {
   const out: EtiquetaEnVista[] = [];
   const color = (f: string) => faccionColor(f, p.facciones);
-  for (const a of p.asentamientosAvistados ?? []) if (a.nombre) out.push({ id: `plaza:${a.id}`, posicion: a.posicion, texto: a.nombre, tipo: 'plaza', color: color(a.faccionId) });
-  for (const c of p.asentamientosConocidos ?? []) if (c.nombre) out.push({ id: `plaza:${c.asentamientoId}`, posicion: c.posicion, texto: c.nombre, tipo: 'plaza', color: color(c.faccionId), tenue: true });
+  // el escudo completo de la Facción dueña, de su ficha o, si no es de las que llegan enteras, del directorio
+  const escudos = new Map<string, string>();
+  const escudo = (f: string): string => {
+    let svg = escudos.get(f);
+    if (svg === undefined) {
+      svg = svgSigilo((p.facciones.find((x) => x.id === f) ?? p.directorioFacciones?.find((x) => x.id === f))?.sigilo, 20);
+      escudos.set(f, svg);
+    }
+    return svg;
+  };
+  for (const a of p.asentamientosAvistados ?? []) out.push({ id: `plaza:${a.id}`, posicion: a.posicion, texto: a.nombre || a.id, tipo: 'plaza', color: color(a.faccionId), subtexto: `Nivel ${a.nivel}`, sigilo: escudo(a.faccionId) });
+  for (const c of p.asentamientosConocidos ?? []) out.push({ id: `plaza:${c.asentamientoId}`, posicion: c.posicion, texto: c.nombre || c.asentamientoId, tipo: 'plaza', color: color(c.faccionId), tenue: true, subtexto: `Nivel ${c.nivel}`, sigilo: escudo(c.faccionId) });
   // Los campamentos con su cartel, como las plazas: los de mercenarios (siempre a la vista) y los de bandidos que se ven ahora.
   for (const c of p.campamentosMercenarios ?? []) out.push({ id: `mercenarios:${c.id}`, posicion: c.posicion, texto: '⛺ Mercenarios', tipo: 'campamento', color: '#9cc3ea' });
   for (const c of p.campamentosBandidos ?? []) out.push({ id: `bandidos:${c.id}`, posicion: c.posicion, texto: `☠ Bandidos · nivel ${c.nivel}`, tipo: 'campamento', color: '#e8826f' });

@@ -1,7 +1,7 @@
 import { bloqueDeDatos, radioZonaInicial, type ProyeccionJugador } from '../apiCliente';
 import type { Faccion } from '../tiposDominio';
 import { ayuda } from './ayuda';
-import { densidadBosqueEn } from '../mundo/pintarArtefacto';
+import { densidadBosqueEn, pendienteEn } from '../mundo/pintarArtefacto';
 import { sitiosDeAldea, type SitiosDeAldea } from '../mundo/fertilidad';
 import { dentro, fuentesOcupadas, ocupadosParaAldea, reglasDeAldea } from './pueblos';
 import { RECURSO_NOMBRE } from '../paletas';
@@ -68,8 +68,13 @@ export function resumenRecursosFundacion(escaparHtml: (valor: string) => string)
   const maxima = Number(bloqueDeDatos<{ densidadBosqueMaximaParaFundar?: number }>('FUNDACION')?.densidadBosqueMaximaParaFundar ?? 0.7);
   const densidad = densidadBosqueEn(mapa, posicion);
   const enBosqueCerrado = densidad !== null && densidad >= maxima;
+  // Ni en pendiente fuerte (`fundacion.pendiente`, motor 26a49c8): más de `FUNDACION.pendienteMaximaParaFundar` (0,3 m/m, unos 17°).
+  const pendienteMaxima = Number(bloqueDeDatos<{ pendienteMaximaParaFundar?: number }>('FUNDACION')?.pendienteMaximaParaFundar ?? 0.3);
+  const pendiente = pendienteEn(mapa, posicion);
+  const empinado = pendiente !== null && pendiente > pendienteMaxima;
   return `
     <div class="foundation-resources">
+      ${empinado ? `<span class="fundacion-gate falta">Demasiada pendiente (${Math.round(Math.atan(pendiente!) * 180 / Math.PI)}°): aquí no se puede fundar. Busca un sitio más llano.</span>` : ''}
       ${enBosqueCerrado ? '<span class="fundacion-gate falta">Bosque cerrado: aquí no se puede fundar. Busca la orilla o un claro.</span>' : ''}
       ${htmlAldeaAlFundar(sitiosDeAldeaAlFundar(posicion))}
       ${htmlParcelasAlFundar(parcelasAlFundar(posicion))}

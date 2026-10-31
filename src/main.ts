@@ -51,7 +51,7 @@ import { barraDeTiempo, estadoCliente, medirRitmoDeMundo, TIPS_FUNDACION } from 
 import { actualizarTip, parcelasAlFundar, resumenRecursosFundacion, sitiosDeAldeaAlFundar } from './ui/pestanaAsentamientos';
 import { renderPanelInteraccion } from './ui/panelInteraccion';
 import { renderPanelMapa } from './ui/panelMapa';
-import { htmlLateralFaccion, htmlListaFacciones, PESTANAS_FACCION, renderPestanaFaccion, type PestanaFaccion } from './ui/pestanaFaccion';
+import { elegirFaccion, htmlLateralFaccion, htmlListaFacciones, PESTANAS_FACCION, renderPestanaFaccion, type PestanaFaccion } from './ui/pestanaFaccion';
 import { cablearAnexion } from './ui/panelAnexion';
 import { cablearFusion } from './ui/panelFusion';
 import { cablearAdmision } from './ui/panelAdmision';
@@ -61,7 +61,7 @@ import { invalidar, olvidarEdicion, pintar, vaciar } from './ui/repintado';
 import { aplicarAyudas, ayuda } from './ui/ayuda';
 import { htmlInformeDeInspeccion } from './ui/interaccionAjena';
 import { cablearProduccionYRecetas, cablearVistaCiudad, edificioSeleccionado, htmlProduccionYRecetas, htmlTooltipEdificio, repintarFicha, tipoSeleccionado } from './ui/vistaCiudad';
-import { cablearPlegables } from './ui/plegable';
+import { cablearPlegables, plegable } from './ui/plegable';
 import { FICHAS_MAPA_EXTRA, SELECTORES_MAPA_EXTRA, SUBPESTANAS_CENTRO_EXTRA, SUBPESTANAS_MERCADO_EXTRA, type ContextoPlaza } from './ui/ganchos';
 import { montarPartidas } from './ui/pantallaPartidas';
 import { cablearCaravanas, cablearOrdenes, htmlCaravanas, htmlOrdenes } from './ui/panelMercado';
@@ -1190,6 +1190,11 @@ function renderPanelJugador(forzar = false): void {
         renderPanelJugador(true);
       }));
       panel.querySelector('[data-cerrar-faccion]')?.addEventListener('click', () => { panelJugador = null; renderPanelJugador(true); });
+      // Diplomacia: la Facción pulsada en la lista de la derecha se abre en el centro.
+      panel.querySelectorAll<HTMLButtonElement>('[data-elegir-faccion]').forEach((b) => b.addEventListener('click', () => {
+        elegirFaccion(b.dataset.elegirFaccion === proyeccion.faccionId ? null : b.dataset.elegirFaccion ?? null);
+        renderPanelJugador(true);
+      }));
       // «Ver en el mapa» de la pestaña Plazas: cierra la ventana y centra el mapa en la plaza.
       panel.querySelectorAll<HTMLButtonElement>('[data-centrar-x]').forEach((b) => b.addEventListener('click', () => {
         panelJugador = null;
@@ -1743,7 +1748,6 @@ function motivoParaConstruir(a: Asentamiento, tipo: string, def: DefEdificio, ca
   const p = estadoCliente.proyeccionUltima;
   if (!cargo) return 'Solo el Gobernador o el Maestro de Obras.';
   const hay = (a.edificios ?? []).some((e) => e.tipo === tipo);
-  if (tipo === 'cantera' && hay) return 'La plaza ya tiene su cantera: las demás son pueblos sobre nodos de piedra.';
   const unicos = bloqueDeDatos<string[]>('EDIFICIOS_UNICOS') ?? [];
   if (unicos.includes(tipo) && hay) return 'Solo puede haber uno.';
   const nivel = a.nivelActual ?? a.nivel;
@@ -1881,8 +1885,11 @@ function renderPanelEdificios(): void {
       if (seccionAsent === 'pueblos') territorio.cablear?.(ctxPlaza);
     };
   } else if (edificioAsent === 'centro') {
-    const extras = SUBPESTANAS_CENTRO_EXTRA.filter((s) => s.visible?.(ctxPlaza) ?? true);
-    const SECCIONES: [SeccionAsent, string][] = [['resumen', 'Resumen'], ['edificios', 'Edificios'], ['produccion', 'Producción'], ['cola', 'Cola'], ['cargos', 'Cargos'], ...extras.map((s) => [s.id, s.etiqueta] as [string, string])];
+    // Edificios, Producción y Cola van juntas en «Edificios», cada una plegable; la Residencia, al pie de Resumen (Víctor, 2026-10-31).
+    const residencia = SUBPESTANAS_CENTRO_EXTRA.find((s) => s.id === 'residencia');
+    const extras = SUBPESTANAS_CENTRO_EXTRA.filter((s) => s !== residencia && (s.visible?.(ctxPlaza) ?? true));
+    const SECCIONES: [SeccionAsent, string][] = [['resumen', 'Resumen'], ['edificios', 'Edificios'], ['cargos', 'Cargos'], ...extras.map((s) => [s.id, s.etiqueta] as [string, string])];
+    if (seccionAsent === 'produccion' || seccionAsent === 'cola') seccionAsent = 'edificios';
     if (!SECCIONES.some(([id]) => id === seccionAsent)) seccionAsent = 'resumen';
     const extra = extras.find((s) => s.id === seccionAsent);
     // La subida de nivel va fuera de las subpestañas, entre las pestañas de arriba y las de abajo: botón arriba y requisitos plegados.
@@ -1894,12 +1901,14 @@ function renderPanelEdificios(): void {
     const contenido = extra ? extra.html(ctxPlaza) : seccionAsent === 'resumen'
       ? seccionResumen(asentamiento) + formNombre
         + (puedeMudarme ? '<button id="btn-mudarme" class="btn-secondary" type="button" title="Hacer de esta plaza tu base: tu campamento se muda contigo">Hacer de esta plaza mi base</button>' : '')
-      : seccionAsent === 'edificios' ? seccionEdificios(asentamiento, cargo)
-        : seccionAsent === 'produccion' ? htmlProduccionYRecetas(ctxPlaza)
-          : seccionAsent === 'cola' ? seccionCola(edificios, cargo)
-            : renderCargosAsentamiento(asentamiento, proyeccion);
+        + (residencia && (residencia.visible?.(ctxPlaza) ?? true) ? `<div class="asent-resumen-residencia">${residencia.html(ctxPlaza)}</div>` : '')
+      : seccionAsent === 'edificios'
+        ? plegable(`edificios:${asentamiento.id}`, '<strong>Edificios</strong>', seccionEdificios(asentamiento, cargo), true)
+          + plegable(`produccion:${asentamiento.id}`, '<strong>Producción</strong>', htmlProduccionYRecetas(ctxPlaza))
+          + plegable(`cola:${asentamiento.id}`, `<strong>Cola</strong> <span class="asent-lado-nota">(${edificios.filter((e) => e.estado !== 'activo' || e.mejora).length})</span>`, seccionCola(edificios, cargo), true)
+        : renderCargosAsentamiento(asentamiento, proyeccion);
     html = `${ascenso ? `<section class="asent-ascenso">${ascenso}</section>` : ''}${subpestanas(SECCIONES, seccionAsent)}<div class="asent-lado-cuerpo">${contenido}</div>
-      ${!cargo && (seccionAsent === 'edificios' || seccionAsent === 'cola') ? '<p class="asent-lado-nota">Necesitas ser Gobernador o Maestro de Obras para gestionar la construcción.</p>' : ''}${pie}`;
+      ${!cargo && seccionAsent === 'edificios' ? '<p class="asent-lado-nota">Necesitas ser Gobernador o Maestro de Obras para gestionar la construcción.</p>' : ''}${pie}`;
     ambito = `centro:${seccionAsent}`;
     cablear = () => {
       cablearSub((s) => { seccionAsent = s as SeccionAsent; });
@@ -1914,7 +1923,8 @@ function renderPanelEdificios(): void {
       cablearAccionesAsentLado(cuerpo, asentamiento, cargo);
       cablearCargosAsentamiento(cuerpo, asentamiento);
       cablearPlegables(cuerpo);
-      if (seccionAsent === 'produccion') cablearProduccionYRecetas(ctxPlaza);
+      if (seccionAsent === 'edificios') cablearProduccionYRecetas(ctxPlaza);
+      if (seccionAsent === 'resumen') residencia?.cablear?.(ctxPlaza);
       extra?.cablear?.(ctxPlaza);
     };
   } else if (edificioAsent === 'mercado' && ajena) {
@@ -2029,8 +2039,10 @@ function seccionAscenso(a: Asentamiento, evaluacion: EvaluacionAscenso | undefin
 }
 
 function seccionEdificios(a: Asentamiento, cargo: 'gobernador' | 'maestroObras' | null): string {
-  const internos = (a.edificios ?? []).filter((e) => (e.ambito ?? 'asentamiento') !== 'mapa');
-  const enRegion = (a.edificios ?? []).length - internos.length;
+  // La cantera ya no es un edificio de la plaza: la piedra sale de los pueblos extractores, que se fundan desde el nivel 1 (Víctor, 2026-10-31).
+  const deLaPlaza = (a.edificios ?? []).filter((e) => e.tipo !== 'cantera');
+  const internos = deLaPlaza.filter((e) => (e.ambito ?? 'asentamiento') !== 'mapa');
+  const enRegion = deLaPlaza.length - internos.length;
 
   const grupos = new Map<string, Edificio[]>();
   for (const e of internos) grupos.set(e.tipo, [...(grupos.get(e.tipo) ?? []), e]);
@@ -2064,7 +2076,7 @@ function seccionEdificios(a: Asentamiento, cargo: 'gobernador' | 'maestroObras' 
     <div class="asent-lado-cabecera"><span class="faction-kicker">Edificios</span><strong>${internos.length}</strong></div>
     ${anadir}
     <div class="asent-edif-lista">${filas || '<p class="mapa-lista-vacia">Sin edificios.</p>'}</div>
-    ${enRegion > 0 ? `<p class="asent-edif-region">+ ${enRegion} en la región (minas, canteras)</p>` : ''}`;
+    ${enRegion > 0 ? `<p class="asent-edif-region">+ ${enRegion} en la región (minas)</p>` : ''}`;
 }
 
 function seccionCola(edificios: Edificio[], cargo: 'gobernador' | 'maestroObras' | null): string {

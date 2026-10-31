@@ -28,11 +28,14 @@ export const PESTANAS_FACCION = [
   ['tablon', 'Tablón'],
   ['misiones', 'Misiones'],
   ['diplomacia', 'Diplomacia'],
-  ['facciones', 'Facciones'],
   ['ajustes', 'Ajustes del Rey'],
 ] as const;
 /** `resumen` ya no es pestaña: lo suyo va en el panel de la izquierda; queda para los paneles sueltos (`panelInteraccion`). */
 export type PestanaFaccion = (typeof PESTANAS_FACCION)[number][0] | 'resumen';
+
+/** La Facción abierta en el centro de la pestaña Diplomacia; `null` = la tuya. Se recuerda mientras dura la sesión. */
+let faccionElegida: string | null = null;
+export function elegirFaccion(id: string | null): void { faccionElegida = id; }
 
 /** Las plazas que el cliente conoce, con su Facción: las que tiene dentro, las que ve y las que recuerda (lo visto ahora gana a lo recordado).
  * El motor no publica cuántas plazas tiene cada Facción: de las ajenas solo se cuentan las que conoces. */
@@ -205,6 +208,78 @@ export function htmlListaFacciones(p: ProyeccionJugador, e: (valor: string) => s
     ${lejanas.length ? `<div class="faction-list faction-list-libre"><span class="faction-kicker">Sin contacto (${lejanas.length})</span><div class="faccion-lejanas">${lejanas.map(sencilla).join('')}</div></div>` : ''}`;
 }
 
+/** Una Facción tal como la conoce el cliente: completa (`facciones`) o solo del directorio ligero. */
+function faccionConocida(p: ProyeccionJugador, id: string): Faccion | undefined {
+  const completa = p.facciones.find((f) => f.id === id);
+  if (completa) return completa;
+  const d = p.directorioFacciones?.find((f) => f.id === id);
+  return d ? { id: d.id, nombre: d.nombre, sigilo: d.sigilo, nivel: d.nivel } as Faccion : undefined;
+}
+
+/** El centro de la pestaña Diplomacia con otra Facción elegida: lo que se sabe de ella (lo público, sus plazas conocidas) y lo que tu Facción
+ * puede hacer con ella (`htmlDiplomacia` filtrada a ella). */
+function htmlFichaFaccion(p: ProyeccionJugador, propia: Faccion, id: string, e: (valor: string) => string): string {
+  const f = faccionConocida(p, id);
+  if (!f) return '<p class="mapa-lista-vacia">Esa Facción ya no está a la vista.</p>';
+  const completa = p.facciones.some((x) => x.id === id);
+  const directorio = p.directorioFacciones?.find((x) => x.id === id);
+  const plazas = [...plazasConocidas(p).entries()].filter(([, x]) => x.faccionId === id);
+  const nombreDe = (x: string) => faccionConocida(p, x)?.nombre ?? x;
+  const relacion = relacionCon(p, propia.id, id);
+  const derrota = f.derrotadaPor !== undefined ? (f.derrotadaPor ? `Derrotada por ${nombreDe(f.derrotadaPor)}` : 'Desaparecida') : directorio?.derrotada ? 'Derrotada' : '';
+  const capital = f.capitalId ? plazasConocidas(p).get(f.capitalId)?.nombre : undefined;
+  const filas: [string, string][] = [
+    ['Nivel', String(f.nivel)],
+    ['Miembros', String(f.ciudadanosIds?.length ?? directorio?.ciudadanos ?? 0)],
+    ['Plazas conocidas', String(plazas.length)],
+    ...(completa ? [
+      ['Reputación', String(Math.round(f.reputacion ?? 0))],
+      ['Rey', f.reyId ? nombreDeHeroe(p, f.reyId) : 'Sin designar'],
+      ['Embajador', f.embajadorId ? nombreDeHeroe(p, f.embajadorId) : 'Sin designar'],
+    ] as [string, string][] : []),
+    ...(capital ? [['Capital', capital]] as [string, string][] : []),
+    ...(f.liga ? [['Liga', `${f.liga.tieneVasallaje ? 'Por vasallaje' : 'Por alianza'}${f.liga.granReyId === f.id ? ' · Gran Rey' : f.liga.granReyId ? ` · Gran Rey: ${nombreDe(f.liga.granReyId)}` : ''}`]] as [string, string][] : []),
+    // El motor no dice de ninguna Facción si la llevan bots (ni de sus héroes públicos): hasta que lo publique, aquí no se puede saber.
+    ['¿Bot?', 'No se sabe: el servidor no lo publica'],
+  ];
+  const insignias = [
+    relacion ? `<span class="faccion-publica-relacion rel-${relacion === 'En guerra' ? 'guerra' : 'paz'}">${e(relacion)}</span>` : '',
+    derrota ? `<span class="faccion-publica-relacion rel-derrota">${e(derrota)}</span>` : '',
+    f.admiteOtrasEnAtaques ? '<span class="faccion-publica-relacion">Admite a otras en sus ataques</span>' : '',
+  ].join('');
+  const listaPlazas = plazas.length
+    ? `<div class="faction-list"><span class="faction-kicker">Sus plazas que conoces</span>${plazas.map(([pid, x]) => `<div class="faction-list-item"><div><strong>${e(x.nombre || pid)}</strong></div></div>`).join('')}</div>`
+    : '';
+  return `<div class="diplo-ficha-cab"><div class="faccion-publica-escudo">${svgSigilo(f.sigilo, 72, { granRey: f.liga?.granReyId === f.id })}</div>
+      <div><span class="faction-kicker">${completa ? 'Facción conocida' : 'Del directorio: solo lo público'}</span><h3>${e(f.nombre)}</h3><div class="diplo-insignias">${insignias}</div></div></div>
+    <div class="diplo-datos">${filas.map(([k, v]) => `<div><span>${e(k)}</span><strong>${e(v)}</strong></div>`).join('')}</div>
+    ${htmlDiplomacia(p, propia, e, { id: f.id, nombre: f.nombre })}
+    ${listaPlazas}`;
+}
+
+/** La lista de la derecha de la pestaña Diplomacia: la tuya, las conocidas y las demás del directorio; cada una se pulsa para verla en el centro. */
+function htmlListaDiplomacia(p: ProyeccionJugador, elegidaId: string, e: (valor: string) => string): string {
+  const plazas = plazasConocidas(p);
+  const directorio = new Map((p.directorioFacciones ?? []).map((x) => [x.id, x]));
+  const miembros = (f: Faccion): number => f.ciudadanosIds?.length ?? directorio.get(f.id)?.ciudadanos ?? 0;
+  const orden = (a: Faccion, b: Faccion) => Number(a.derrotadaPor !== undefined) - Number(b.derrotadaPor !== undefined) || miembros(b) - miembros(a) || a.nombre.localeCompare(b.nombre);
+  const conocidas = p.facciones.filter((f) => f.id !== p.faccionId && hayContacto(p, f, plazas)).sort(orden);
+  const vistas = new Set([p.faccionId, ...conocidas.map((f) => f.id)]);
+  const lejanas = [...(p.directorioFacciones ?? []).filter((x) => !x.derrotada).map((x) => faccionConocida(p, x.id)!), ...p.facciones.filter((f) => !directorio.has(f.id))]
+    .filter((f) => !vistas.has(f.id)).sort(orden);
+  const fila = (f: Faccion): string => {
+    const relacion = relacionCon(p, p.faccionId, f.id);
+    const sub = f.id === p.faccionId ? 'La tuya' : relacion || `Nivel ${f.nivel} · ${miembros(f)} miembro${miembros(f) === 1 ? '' : 's'}`;
+    return `<button type="button" class="diplo-fila${f.id === elegidaId ? ' activo' : ''}${relacion === 'En guerra' ? ' guerra' : ''}" data-elegir-faccion="${e(f.id)}">
+      <span class="diplo-fila-escudo">${svgSigilo(f.sigilo, 26)}</span><span class="diplo-fila-texto"><strong>${e(f.nombre)}</strong><small>${e(sub)}</small></span></button>`;
+  };
+  const propia = p.faccionId ? faccionConocida(p, p.faccionId) : undefined;
+  return `${propia ? fila(propia) : ''}
+    <span class="faction-kicker">Conocidas (${conocidas.length})${ayuda('faccion:lista', 'Con contacto: las de tu Liga, con las que tienes relación y aquellas de las que conoces alguna plaza en el mapa.')}</span>
+    ${conocidas.length ? conocidas.map(fila).join('') : '<p class="legend-note">Aún no has tenido contacto con ninguna.</p>'}
+    ${lejanas.length ? `<span class="faction-kicker">Sin contacto (${lejanas.length})</span>${lejanas.map(fila).join('')}` : ''}`;
+}
+
 /** `conLateral`: va con el panel fijo de la izquierda, que ya lleva el escudo, el nombre y Dejar la Facción.
  * `pestana`: qué parte de tu Facción se pinta (sin Facción, la elección de crear o pedir ingreso, sin pestañas). `miembros` es la lista con la
  * participación (`htmlMiembrosFaccion`), que se pinta en Miembros. */
@@ -229,10 +304,9 @@ export function renderPestanaFaccion(
           .map((id) => `<div class="faction-list-item"><div><strong>${escaparHtml(nombreDeHeroe(proyeccion, id))}</strong></div><button class="btn-secondary" type="button" data-solicitud="${escaparHtml(id)}" data-aceptar="si">Aceptar</button><button class="btn-secondary" type="button" data-solicitud="${escaparHtml(id)}" data-aceptar="no">Denegar</button></div>`)
           .join('')}</div>`
       : '';
-    if (pestana === 'facciones') return htmlListaFacciones(proyeccion, escaparHtml);
     if (pestana === 'plazas') return htmlPlazasFaccion(proyeccion, faccion, escaparHtml);
     if (pestana === 'miembros') return `${solicitudes}${htmlCargos(proyeccion, faccion, escaparHtml)}${miembros}`;
-    if (pestana === 'diplomacia') {
+    const htmlDiplomaciaPropia = (): string => {
       return `${htmlDiplomacia(proyeccion, faccion, escaparHtml)}
       ${htmlAnexion(proyeccion, faccion, escaparHtml)}
       ${htmlFusion(proyeccion, faccion, escaparHtml)}
@@ -242,6 +316,13 @@ export function renderPestanaFaccion(
           ? `<div class="liga-fila">${htmlLiga(liga, proyeccion.facciones)}<div><strong>${liga.tieneVasallaje ? 'Por vasallaje' : 'Por alianza'}</strong><span>${liga.miembrosIds.map((id) => escaparHtml(nombreDe(id))).join(', ')}</span>${liga.granReyId ? `<span>Gran Rey: ${escaparHtml(granRey(proyeccion, liga.granReyId))}</span>` : ''}</div></div>`
           : '<p class="legend-note">No perteneces a ninguna Liga.</p>'}
       </div>`;
+    };
+    if (pestana === 'diplomacia') {
+      // Diplomacia y Facciones juntas (Víctor, 2026-10-31): la lista a la derecha y, en el centro, lo que se sabe de la elegida con lo que se
+      // puede hacer con ella; con la tuya elegida, todas tus relaciones, propuestas, anexión, fusión y Liga.
+      const elegida = faccionElegida && faccionElegida !== faccion.id ? faccionElegida : null;
+      const centro = elegida ? htmlFichaFaccion(proyeccion, faccion, elegida, escaparHtml) : `<div class="diplo-ficha-cab"><div class="faccion-publica-escudo">${svgSigilo(faccion.sigilo, 56, { granRey: esGranRey })}</div><div><span class="faction-kicker">Tu facción</span><h3>${escaparHtml(faccion.nombre)}</h3></div></div>${htmlDiplomaciaPropia()}`;
+      return `<div class="diplo-marco"><section class="diplo-centro">${centro}</section><aside class="diplo-lista">${htmlListaDiplomacia(proyeccion, elegida ?? faccion.id, escaparHtml)}</aside></div>`;
     }
     if (pestana === 'ajustes') {
       const soyRey = faccion.reyId === proyeccion.heroeId;
