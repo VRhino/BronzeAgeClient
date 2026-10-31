@@ -450,7 +450,25 @@ function proyeccionActual(s: Sesion): ProyeccionJugador | PartidaSinHeroe {
   const p = proyectar({ almacen: s.almacen, bienvenida: s.bienvenida!, ahora: s.ahoraMundo(), gameId: PARTIDA, mapaId: s.bienvenida?.mundo?.hash ?? '' });
   // El Liderazgo de una escuadra va por el escalón de su tropa (LIDERAZGO.costePorEscalon), no por sus hombres: el motor no lo manda en la escuadra.
   if ('heroe' in p) for (const x of p.heroe.escuadrones) x.costeLiderazgo = costeDeLiderazgo(x.tropaId);
+  // Las tarifas de la taberna tampoco viajan en el estado: salen de `INTEL` y del cupo de cada nivel de la Taberna en `/v1/datos`.
+  if ('tarifasIntel' in p) p.tarifasIntel = tarifasDeIntel();
   return p;
+}
+
+/** Precios, enfriamientos y cupos de la intel (`INTEL` y `cupoMiradas` de los niveles de la Taberna); a cero mientras no llegue `/v1/datos`. */
+export function tarifasDeIntel(): TarifasIntel {
+  type Intel = { mirada?: Partial<TarifasIntel['mirada']>; informe?: Partial<TarifasIntel['informe']>; campamento?: { cupoMiradas?: number } };
+  const b = bloqueDeDatos<Intel>('INTEL');
+  const niveles = nivelesDeEdificio('taberna') as Record<string, { cupoMiradas?: number }> | null;
+  const porNivel = niveles ? Object.keys(niveles).map(Number).filter((n) => n > 0).sort((a, z) => a - z) : [];
+  const porNivelDeTaberna: number[] = [];
+  for (const n of porNivel) porNivelDeTaberna[n - 1] = niveles?.[String(n)]?.cupoMiradas ?? 0;
+  const m = b?.mirada ?? {}, i = b?.informe ?? {};
+  return {
+    mirada: { radio: m.radio ?? 0, duracionMinutos: m.duracionMinutos ?? 0, oroBase: m.oroBase ?? 0, oroPorUnidad: m.oroPorUnidad ?? 0, cooldownMinutos: m.cooldownMinutos ?? 0 },
+    informe: { oroPorNivel: i.oroPorNivel ?? 0, cooldownMinutos: i.cooldownMinutos ?? 0 },
+    cupoMiradas: { porNivelDeTaberna: Array.from(porNivelDeTaberna, (x) => x ?? 0), campamento: b?.campamento?.cupoMiradas ?? 0 },
+  };
 }
 
 /** Lo que cuesta en Liderazgo una escuadra de esa tropa, sea cual sea su número de hombres (0 mientras no llegue `/v1/datos`). */

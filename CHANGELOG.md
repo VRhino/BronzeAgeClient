@@ -3,6 +3,10 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.68.1] — 2026-10-31 · tarifas de la taberna · sync con `VRhino/BronzeAge@fb64d5b7`, sin cambios en el contrato
+
+- **Intel de la taberna.** Las tarifas iban fijas a cero, así que en la taberna de un campamento salía «Taberna al límite de Miradas» (0 / 0) y los precios y enfriamientos eran falsos. Ahora salen de `/v1/datos`: el bloque `INTEL` (Mirada, Informe y `campamento.cupoMiradas`) y el `cupoMiradas` de cada nivel de la Taberna (`apiCliente.tarifasDeIntel`).
+
 ## [0.68.0] — 2026-10-31 · mundo 3D: rejilla, formación, etiquetas y clic · sync con `VRhino/BronzeAge@fb64d5b7`, sin cambios en el contrato
 
 - **Rejilla de movimiento.** Nueva opción «Rejilla de movimiento» en el menú de la esquina (se recuerda en `localStorage`). Pinta sobre el relieve, alrededor del héroe (40 u), las aristas del grafo de navegación del artefacto del mundo: verde el llano, hacia rojo lo caro, azul los vados (`src/mundo3d/rejilla.ts`).
