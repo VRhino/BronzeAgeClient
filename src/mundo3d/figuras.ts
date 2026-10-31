@@ -81,6 +81,11 @@ function carro(fundacion: boolean): THREE.Group {
   return g;
 }
 
+/** Figuras de cada escuadra en marcha: dos filas de tres. */
+export const FIGURAS_POR_TROPA = 6;
+/** Lo que se separa una escuadra de la siguiente además del paso entre filas (en unidades de figura). */
+const HUECO_ENTRE_TROPAS = 0.08;
+
 export class FigurasDeColumna {
   readonly grupo = new THREE.Group();
   private readonly figuras: THREE.Group[] = [];
@@ -94,8 +99,16 @@ export class FigurasDeColumna {
    * lo que arrastra al final. */
   constructor(readonly jinetes: number, readonly soldados: number, color: number, readonly carros: Carros = { carga: 0, fundacion: false }) {
     for (let k = 0; k < jinetes; k++) { this.figuras.push(heroe(color)); this.sitios.push({ atras: k * 0.15, lado: 0 }); }
-    for (let k = 0; k < soldados; k++) { this.figuras.push(soldado(color, k === 0)); this.sitios.push({ atras: (jinetes + Math.floor(k / 3)) * 0.15, lado: (k % 3) - 1 }); }
-    const tras = (jinetes + Math.ceil(soldados / 3)) * 0.15 + (jinetes + soldados ? 0.12 : 0), n = carros.carga + (carros.fundacion ? 1 : 0);
+    // la tropa por bloques de FIGURAS_POR_TROPA (dos filas de tres, una por escuadra): entre filas de un bloque, el paso de siempre; entre un
+    // bloque y el siguiente, un poco más (Víctor, 2026-10-31)
+    let ultima = jinetes * 0.15 - 0.15;
+    for (let k = 0; k < soldados; k++) {
+      const tropa = Math.floor(k / FIGURAS_POR_TROPA), fila = Math.floor((k % FIGURAS_POR_TROPA) / 3);
+      ultima = (jinetes + tropa * 2 + fila) * 0.15 + tropa * HUECO_ENTRE_TROPAS;
+      this.figuras.push(soldado(color, k === 0));
+      this.sitios.push({ atras: ultima, lado: (k % 3) - 1 });
+    }
+    const tras = ultima + 0.15 + (jinetes + soldados ? 0.12 : 0), n = carros.carga + (carros.fundacion ? 1 : 0);
     for (let k = 0; k < n; k++) { this.figuras.push(carro(carros.fundacion && k === n - 1)); this.sitios.push({ atras: tras + k * 0.34, lado: 0 }); }
     for (const f of this.figuras) {
       f.scale.setScalar(MUNDO3D.tropa);

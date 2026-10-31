@@ -11,6 +11,7 @@ import { MUNDO3D } from './config';
 import { instalarEntrada, type Entrada } from './entrada';
 import type { CaravanaEnVista, ColumnaEnVista, EstadoVista, EtiquetaEnVista } from './estado';
 import { Etiquetas } from './etiquetas';
+import { RejillaDeMovimiento, type Navegacion } from './rejilla';
 import { FigurasDeColumna } from './figuras';
 import type { FuenteDeAltura } from './fuente';
 import { Arboles } from './arboles';
@@ -32,7 +33,7 @@ export interface OpcionesVista {
   /** El estado de ahora (se pide en cada fotograma); `null` mientras no haya proyección. */
   estado: () => EstadoVista | null;
   /** Un clic en el terreno: el punto del mapa bajo el ratón. */
-  alClicar: (punto: Punto, evento: PointerEvent) => void;
+  alClicar: (punto: Punto, evento?: PointerEvent) => void;
   /** Píxeles por unidad a la distancia del héroe, para el radio de agarre de los clics (`ui/agarre.ts`). */
   alCambiarEscala?: (pxPorUnidad: number) => void;
   /** Sin niebla (`?sinNiebla` en desarrollo). */
@@ -41,6 +42,8 @@ export interface OpcionesVista {
 
 /** Milisegundos por fotograma para construir lo que falta alrededor del héroe. */
 const PRESUPUESTO = 8;
+/** Lo mínimo que mide en pantalla la zona de clic de algo seleccionable, en px de radio. */
+const MIN_PX_CLIC = 26;
 /** Hasta dónde llegan, como mucho, los árboles y lo que va sobre el suelo (u); más allá la bruma ya casi lo tapa todo. */
 const ALCANCE = { arboles: 200, paisaje: 240, trazos: 240 };
 
@@ -59,6 +62,7 @@ export class VistaMundo3D {
   private readonly trazos: Trazos;
   private readonly marcas: MarcasEnSuelo;
   private readonly etiquetas: Etiquetas;
+  private readonly rejilla: RejillaDeMovimiento;
   private readonly entrada: Entrada;
   private readonly columnas = new Map<string, { figuras: FigurasDeColumna; clave: string }>();
   private readonly lineas = new THREE.Group();
@@ -74,6 +78,8 @@ export class VistaMundo3D {
   private fotograma = 0;
   private antes = performance.now();
   private pausada = false;
+  /** El último estado pintado: con él se decide sobre qué cae un clic. */
+  private ultimo: EstadoVista | null = null;
   private sinNiebla: boolean;
   /** Lo que tarda cada parte del fotograma (ms, media móvil), para la pasada de rendimiento: `rendimiento()`. */
   private readonly tiempos: Record<string, number> = {};
@@ -111,8 +117,9 @@ export class VistaMundo3D {
     this.maquetas = new Maquetas(this.niebla, this.alturaU);
     this.trazos = new Trazos(this.niebla, this.alturaU);
     this.marcas = new MarcasEnSuelo(this.alturaU);
-    this.etiquetas = new Etiquetas(contenedor);
-    this.escena.add(this.terreno.grupo, this.paisaje.grupo, this.arboles.grupo, this.maquetas.grupo, this.trazos.grupo, this.marcas.grupo, this.lineas);
+    this.etiquetas = new Etiquetas(contenedor, (punto) => this.o.alClicar(punto));
+    this.rejilla = new RejillaDeMovimiento(this.alturaU);
+    this.escena.add(this.terreno.grupo, this.paisaje.grupo, this.arboles.grupo, this.maquetas.grupo, this.trazos.grupo, this.marcas.grupo, this.lineas, this.rejilla.grupo);
     this.entrada = instalarEntrada(this.lienzo, this.camara, (e) => this.clic(e), () => {}); // el zoom se lee de la cámara en cada fotograma
     this.observador = new ResizeObserver(() => this.ajustar());
     this.observador.observe(contenedor);
@@ -125,6 +132,11 @@ export class VistaMundo3D {
 
   zoom(z: Zoom): void {
     this.camara.zoom = z;
+  }
+
+  /** Enseña u oculta la rejilla de movimiento del servidor alrededor del héroe. */
+  fijarRejilla(navegacion: Navegacion | null, visible: boolean): void {
+    this.rejilla.fijar(navegacion, visible);
   }
 
   /** Quita o vuelve a poner la niebla de guerra (para mirar el terreno entero en desarrollo). */
@@ -180,7 +192,34 @@ export class VistaMundo3D {
 
   private clic(evento: PointerEvent): void {
     const p = this.aMundo(evento);
-    if (p) this.o.alClicar(p, evento);
+    if (p) this.o.alClicar(this.iman(p), evento);
+  }
+
+  /** Un clic cerca de algo que se puede seleccionar cae en su centro: su zona de clic es lo que ocupa su maqueta, y como poco
+   * `MIN_PX_CLIC` píxeles de pantalla (`main.ts` busca luego qué hay en ese punto con su propio radio, que en 3D es pequeño). La columna propia
+   * no atrae: un clic a su lado es una marcha. */
+  private iman(p: Punto): Punto {
+    const e = this.ultimo;
+    if (!e) return p;
+    const M = MUNDO3D.maqueta, minimo = MIN_PX_CLIC / Math.max(1, this.camara.pxPorUnidad(this.lienzo.clientHeight || 1));
+    const m = e.mundo, candidatos: { posicion: Punto; radio: number }[] = [
+      ...m.plazas.map((x) => ({ posicion: x.posicion, radio: x.radioCiudad * M + 0.5 })),
+      ...m.pueblos.map((x) => ({ posicion: x.posicion, radio: (x.aldea ? 1.5 : 0.9) * M })),
+      ...m.avanzadas.map((x) => ({ posicion: x.posicion, radio: 0.7 * M })),
+      ...m.obras.map((x) => ({ posicion: x.posicion, radio: 0.6 * M })),
+      ...m.campamentos.map((x) => ({ posicion: x.posicion, radio: 0.9 * M * MUNDO3D.campamento })),
+      ...m.bandidos.map((x) => ({ posicion: x.posicion, radio: 0.7 * M * MUNDO3D.campamento })),
+      ...m.alijos.map((x) => ({ posicion: x.posicion, radio: 0.5 })),
+      ...m.batallas.map((x) => ({ posicion: x.posicion, radio: 1 })),
+      ...e.columnas.filter((c) => !c.mia).map((c) => ({ posicion: c.posicion, radio: 0.8 })),
+      ...e.caravanas.map((c) => ({ posicion: c.posicion, radio: 0.7 })),
+    ];
+    let mejor: Punto | null = null, mejorD = Infinity;
+    for (const c of candidatos) {
+      const d = Math.hypot(c.posicion.x - p.x, c.posicion.y - p.y);
+      if (d <= Math.max(c.radio, minimo) && d < mejorD) { mejor = c.posicion; mejorD = d; }
+    }
+    return mejor ? { x: mejor.x, y: mejor.y } : p;
   }
 
   private ajustar(): void {
@@ -198,6 +237,7 @@ export class VistaMundo3D {
     const estado = this.o.estado();
     t = this.medir('estado', t);
     if (!estado?.heroe) return;
+    this.ultimo = estado;
     this.entrada.teclas(dt);
     this.niebla.actualizar(estado.niebla, this.sinNiebla);
     this.camara.radioVision = estado.radioVision;
@@ -224,6 +264,7 @@ export class VistaMundo3D {
     this.ponerColumnas(estado.columnas, estado.caravanas);
     this.ponerLineas(estado.columnas, estado.caravanas);
     this.marcas.actualizar(estado, ahora);
+    this.rejilla.actualizar(x, y);
     t = this.medir('columnasYMarcas', t);
     this.etiquetas.actualizar([...estado.etiquetas, ...this.etiquetasDeNodos(x, y, estado)], this.camara.camara, w, h, this.alturaU, estado.heroe, (this.bruma.near + this.bruma.far) / 2);
     t = this.medir('etiquetas', t);
@@ -312,6 +353,7 @@ export class VistaMundo3D {
     this.matMira.dispose();
     this.marcas.destruir();
     this.etiquetas.destruir();
+    this.rejilla.destruir();
     this.terreno.destruir();
     this.paisaje.destruir();
     this.arboles.destruir();

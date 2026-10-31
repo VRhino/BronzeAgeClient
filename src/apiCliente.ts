@@ -6,6 +6,7 @@ import { Resultado } from './contrato/gen/bronzeage/v1/session_pb';
 import { TipoEntidad } from './contrato/gen/bronzeage/v1/common_pb';
 import type { EventoDominio as EventoPb } from './contrato/gen/bronzeage/v1/events_pb';
 import { cargarMundo } from './mundo/artefacto';
+import type { GrafoNavegacion } from './contrato/gen/bronzeage/v1/world_pb';
 import { cargarRelieve, type Relieve } from './mundo/relieve';
 import { EPOCA_CONTRATO, instante, proyectar } from './motor/proyeccion';
 import { textoEnTiempoReal } from './ui/estadoCliente';
@@ -797,9 +798,17 @@ export async function obtenerMapa(_gameId: string, mapaId: string): Promise<Mapa
   const s = await sesionAbierta();
   const mundo = s.bienvenida?.mundo;
   if (!mundo) throw new ApiError(0, 'el servidor no dijo qué mundo tiene');
-  const { mapa } = await cargarMundo(BASE, mundo.urlArtefacto, mundo.hash);
+  const { mapa, artefacto } = await cargarMundo(BASE, mundo.urlArtefacto, mundo.hash);
   mapaCargado = { hash: mundo.hash, mapa };
+  grafoCargado = artefacto.navegacion ?? null;
   return mapa;
+}
+
+let grafoCargado: GrafoNavegacion | null = null;
+
+/** La rejilla de navegación del artefacto ya cargado (para pintarla en 3D); `null` antes de cargar el mapa o si el mundo no la trae. */
+export function grafoDeNavegacion(): GrafoNavegacion | null {
+  return grafoCargado;
 }
 
 let relieveCargado: { hash: string; relieve: Promise<Relieve> } | null = null;

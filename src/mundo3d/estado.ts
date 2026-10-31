@@ -116,7 +116,7 @@ const COLOR_AJENO = '#9a927f', COLOR_CAMINO = '#8b5a2b', COLOR_ANILLO = '#2e5e8c
 const COLOR_SIN_FACCION = '#c0392b';
 
 /** Figuras de tropa por escuadra, y como mucho. */
-const FIGURAS_POR_ESCUADRA = 3, MAX_FIGURAS = 18, MAX_JINETES = 4;
+const FIGURAS_POR_ESCUADRA = 6, MAX_FIGURAS = 36, MAX_JINETES = 4;
 
 /** Lo que la vista pinta y no sale de la proyección: lo seleccionado en el panel y la vista previa de fundar. */
 export interface ExtraDeVista {

@@ -28,6 +28,7 @@ import {
   radioZonaInicial,
   proyeccionAlInstante,
   obtenerMapa,
+  grafoDeNavegacion,
   obtenerRelieve,
   radiosDeVisionDelServidor,
   unirseAPartida,
@@ -74,6 +75,7 @@ import { agarre, fijarEscalaDeAgarre } from './ui/agarre';
 import { estadoDesdeProyeccion, type EstadoVista, type FundacionEnVista, type RadiosDeVision } from './mundo3d/estado';
 import { fuenteDesdeMapa, fuenteDesdeRelieve } from './mundo3d/fuente';
 import { VistaMundo3D } from './mundo3d/vista';
+import { navegacionDesdeGrafo, type Navegacion } from './mundo3d/rejilla';
 import { guardarVistaMapa, leerVistaMapa } from './ui/vistaMapaGuardada';
 import { alCambiarAvisos, alLlegarInforme, avisarDeEventos, avisosNoLeidos, hayPeligroSinLeer, historialDeAvisos, mostrar as mostrarAviso, reiniciarAvisos } from './ui/avisos';
 import { htmlInforme, type InformeDeCombate } from './ui/informeCombate';
@@ -1051,12 +1053,32 @@ function menuEsquinaHtml(): string {
     <button class="mapa-avatar" type="button" aria-label="Menú de sesión">${iniciales}</button>
     <div class="mapa-menu" hidden>
       <button data-menu="refrescar" type="button">Refrescar</button>
+      <button data-menu="rejilla" type="button">${textoRejilla()}</button>
       <button data-menu="json" type="button">Ver proyección (JSON)</button>
       <button data-menu="legacy" type="button">Interfaz anterior</button>
       <button data-menu="partidas" type="button">Cambiar de partida</button>
       <button data-menu="logout" type="button">Cerrar sesión</button>
     </div>
     <div class="mapa-json" hidden><button class="mapa-json-cerrar" type="button" aria-label="Cerrar">×</button><pre class="mapa-json-pre"></pre></div>`;
+}
+
+/** La rejilla de movimiento del servidor sobre el 3D (menú de la esquina); se recuerda en este navegador. */
+let rejillaVisible = (() => { try { return localStorage.getItem('bronzeage.rejilla') === '1'; } catch { return false; } })();
+let navegacion3d: Navegacion | null = null;
+/** La vista 3D montada ahora, si la hay (para la rejilla). */
+let vista3dActiva: VistaMundo3D | null = null;
+
+function textoRejilla(): string {
+  return rejillaVisible ? '✓ Rejilla de movimiento' : 'Mostrar rejilla de movimiento';
+}
+
+function aplicarRejilla(): void {
+  if (!vista3dActiva) return;
+  if (rejillaVisible && !navegacion3d) {
+    const grafo = grafoDeNavegacion();
+    navegacion3d = grafo ? navegacionDesdeGrafo(grafo) : null;
+  }
+  vista3dActiva.fijarRejilla(navegacion3d, rejillaVisible);
 }
 
 function sincronizarMenuEsquina(): void {
@@ -1068,6 +1090,14 @@ function cablearMenuEsquina(contenedor: HTMLElement): void {
   const json = contenedor.querySelector<HTMLElement>('.mapa-json');
   contenedor.querySelector('.mapa-avatar')?.addEventListener('click', () => { menuEsquinaAbierto = !menuEsquinaAbierto; sincronizarMenuEsquina(); });
   contenedor.querySelector('[data-menu="refrescar"]')?.addEventListener('click', () => { menuEsquinaAbierto = false; sincronizarMenuEsquina(); void refrescarDatosJuego(); });
+  contenedor.querySelector<HTMLButtonElement>('[data-menu="rejilla"]')?.addEventListener('click', (ev) => {
+    rejillaVisible = !rejillaVisible;
+    try { localStorage.setItem('bronzeage.rejilla', rejillaVisible ? '1' : ''); } catch { /* sin almacenamiento: vale para esta sesión */ }
+    (ev.currentTarget as HTMLButtonElement).textContent = textoRejilla();
+    menuEsquinaAbierto = false;
+    sincronizarMenuEsquina();
+    aplicarRejilla();
+  });
   contenedor.querySelector('[data-menu="legacy"]')?.addEventListener('click', () => { location.hash = '#/legacy'; });
   contenedor.querySelector('[data-menu="partidas"]')?.addEventListener('click', () => volverALasPartidas());
   contenedor.querySelector('[data-menu="logout"]')?.addEventListener('click', () => cerrarSesionYVolverALogin());
@@ -1554,7 +1584,7 @@ function montarMapa(): void {
   // y selección. Se monta cuando están el mapa y el relieve.
   let vista3d: VistaMundo3D | null = null, desmontado = false;
   enModoMundo = true;
-  void montarVista3D(lienzo, alClicar).then((v) => { if (desmontado) v?.destruir(); else vista3d = v; });
+  void montarVista3D(lienzo, alClicar).then((v) => { if (desmontado) v?.destruir(); else { vista3d = vista3dActiva = v; aplicarRejilla(); } });
   // El mundo solo avanza por tick y este cliente aún no tiene tiempo real (`WS .../tiempo-real`): sin esto el
   // mapa sería una foto y la columna nunca parecería moverse. Sondeo suave mientras la pantalla Mapa esté
   // montada; se corta al cambiar de pantalla (`limpiarPantalla`).
@@ -1597,6 +1627,7 @@ function montarMapa(): void {
     clearInterval(sondeo);
     desmontado = true;
     vista3d?.destruir();
+    if (vista3dActiva === vista3d) vista3dActiva = null;
     vista3d = null;
     enModoMundo = false;
     estadoCliente.modoFundacionActivo = false;

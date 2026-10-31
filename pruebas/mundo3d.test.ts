@@ -48,7 +48,7 @@ describe('el estado de la vista', () => {
     expect(e.heroe).toEqual({ x: 10, y: 20 });
     expect(e.radioVision).toBe(30);
     expect(e.columnas).toEqual([{
-      id: 'ej-1', mia: true, propia: true, posicion: { x: 10, y: 20 }, ruta: [{ x: 10, y: 20 }, { x: 30, y: 20 }], jinetes: 1, soldados: 6,
+      id: 'ej-1', mia: true, propia: true, posicion: { x: 10, y: 20 }, ruta: [{ x: 10, y: 20 }, { x: 30, y: 20 }], jinetes: 1, soldados: 12, // dos escuadras, dos filas de tres cada una
       color: e.columnas[0]!.color, carros: { carga: 0, fundacion: false }, formacion: false,
     }]);
   });
