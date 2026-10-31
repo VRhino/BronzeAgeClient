@@ -3,6 +3,23 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.66.0] — 2026-10-31 · el carro frente al almacén de la plaza · sync con `VRhino/BronzeAge@1dad4abf`
+
+Contrato regenerado (`src/contrato/REVISION` = 1dad4abf; cambio aditivo, no hace falta mundo ni partida nueva).
+
+### Añadido
+- **Carro ↔ almacén de la plaza** (regla de Víctor), en el panel del carro con el héroe dentro de una plaza:
+  - cada recurso del carro tiene «A la plaza» (`dejarEnPlaza`): la Facción dueña y sus aliadas o vasallas;
+  - el almacén de la plaza, si es de tu Facción, tiene «Al carro» (`cargarDePlaza`), resida o no; el trigo no baja de la reserva;
+  - el Gobernador de la plaza tiene la casilla «Cerrar el almacén a los ciudadanos» (`cerrarAlmacenACiudadanos`;
+    `Asentamiento.almacenCerradoACiudadanos`). Cerrado, los demás no sacan al carro, pero dejar sigue abierto.
+- **Del carro al almacén personal por recurso**: en tu residencia, cada recurso del carro tiene «Al almacén personal»
+  (`guardarEnAlmacenPersonal`); «Todo al almacén personal» sigue vaciándolo entero.
+- Textos de los rechazos nuevos: `almacen.solo_ciudadanos`, `almacen.cerrado`, `almacen.ni_faccion_ni_aliada` y `almacen.sin_sitio`.
+
+### Corregido
+- En el panel del carro, el mismo recurso en el carro y en el almacén personal compartía el campo de cantidad: cada montón tiene ya el suyo.
+
 ## [0.65.0] — 2026-10-31 · mundo 3D, fase 5: cierre · sync con `VRhino/BronzeAge@bfb9eb9`
 
 Termina el paso del modo mundo a 3D (plan en [`docs/Mundo_3D.md`](docs/Mundo_3D.md)). El modo mapa y la plaza siguen en 2D.

@@ -2821,7 +2821,7 @@ kbd {
 .briefing-bajas td.baja { color: #e08a6f; font-weight: 600; }
 .carro-fila { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.85rem; }
 .carro-fila span { flex: 1; color: var(--text-secondary); }
-.carro-fila .form-input { width: 70px; }
+.carro-fila .form-input { width: 84px; }
 .carro-fila small { flex-basis: 100%; color: var(--text-muted); font-size: 0.7rem; }
 .carro-ocupacion { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .carro-ocupacion span { font-size: 0.75rem; color: var(--text-secondary); }

@@ -156,6 +156,7 @@ function asentamiento(a: pb.Asentamiento, ahora: number): d.Asentamiento {
     reservaManual: a.reservaManual ? cantidades(a.reservaManual) : undefined,
     politicasActivas: a.politicasActivas.map((p) => ({ id: p.id, politicaId: p.politicaId, cargo: p.cargo, activadaEn: instante(p.activadaEnMs)!, expiraEn: instante(p.expiraEnMs)! })),
     ultimaCaravanaCreadaEn: instante(a.ultimaCaravanaCreadaEnMs),
+    almacenCerradoACiudadanos: a.almacenCerradoACiudadanos,
     heroesFundadoresIds: a.fundadoresIds,
     casasCompradas: a.casasCompradas,
     cargos: a.cargos

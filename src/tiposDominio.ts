@@ -227,6 +227,8 @@ export interface Asentamiento {
   politicasActivas?: { id: string; politicaId: string; cargo: string; activadaEn: number; expiraEn: number }[];
   /** Instante de mundo en que esta plaza creó su última caravana (de Fundación o comercial): arranca el cooldown compartido. */
   ultimaCaravanaCreadaEn?: number;
+  /** El Gobernador cerró el sacar al carro a los ciudadanos (`cerrarAlmacenACiudadanos`); dejar sigue abierto. */
+  almacenCerradoACiudadanos?: boolean;
   /** Héroes residentes que llegaron fundando · comprando casa (Doc 2.5). */
   heroesFundadoresIds?: string[];
   casasCompradas?: string[];

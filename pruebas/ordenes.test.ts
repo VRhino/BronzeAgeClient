@@ -36,3 +36,21 @@ describe('traducirOrden: índices de carro', () => {
     expect(o).toMatchObject({ value: { cantidad: 5000n } });
   });
 });
+
+// El carro frente al almacén de la plaza donde se está dentro (motor 1dad4ab).
+describe('traducirOrden: carro y almacén de la plaza', () => {
+  it('cargar de la plaza, en milésimas', () => {
+    const o = traducirOrden('cargarDePlaza', { asentamientoId: 'as-3', recurso: 'madera', cantidad: 40 });
+    expect(o).toMatchObject({ case: 'cargarDePlaza', value: { asentamientoId: 'as-3', recurso: 'madera', cantidad: 40000n } });
+  });
+
+  it('dejar en la plaza', () => {
+    const o = traducirOrden('dejarEnPlaza', { asentamientoId: 'as-3', recurso: 'trigo', cantidad: 5 });
+    expect(o).toMatchObject({ case: 'dejarEnPlaza', value: { cantidad: 5000n } });
+  });
+
+  it('cerrar el almacén a los ciudadanos', () => {
+    const o = traducirOrden('cerrarAlmacenACiudadanos', { asentamientoId: 'as-3', cerrado: true });
+    expect(o).toMatchObject({ case: 'cerrarAlmacenACiudadanos', value: { asentamientoId: 'as-3', cerrado: true } });
+  });
+});
