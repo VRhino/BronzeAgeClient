@@ -3,6 +3,10 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.75.0] — 2026-11-01 · zonas de una misma Facción fusionadas · sync con `VRhino/BronzeAge@2c4bca63`, sin cambios en el contrato
+
+- Las zonas de influencia de una misma Facción que chocan o se solapan se pintan como una sola: la frontera segmentada solo por fuera y, donde se tocan dos plazas suyas, una línea fina y tenue que separa las provincias del mismo reino. Vale para todas las Facciones (también las recordadas) y para la tuya, cuya frontera exterior sigue siendo la de la zona fusionada. En el mundo 3D y en el modo mapa (`mundo/fronteras.ts`, `partirFronteras`).
+
 ## [0.74.0] — 2026-11-01 · fronteras segmentadas, barra del mundo con iconos, maquetas por nivel · sync con `VRhino/BronzeAge@2c4bca63`, sin cambios en el contrato
 
 - **Fronteras** (mundo 3D y modo mapa): raya segmentada y el doble de gruesa, corrida hacia dentro de su zona, de modo que donde chocan dos zonas se ven las dos rayas, cada una de su lado. La zona propia fusionada, igual; la frontera de cada plaza tuya ya no se pinta debajo de ella. La de una plaza que solo se recuerda, en trazos cortos.

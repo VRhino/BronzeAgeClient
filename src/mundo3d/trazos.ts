@@ -25,12 +25,12 @@ export class Trazos {
   constructor(private readonly niebla: NieblaDeGuerra, private readonly alturaU: (x: number, y: number) => number) {}
 
   private material(t: TrazoEnVista): THREE.Material {
-    const clave = `${t.tipo}|${t.color}|${t.bajoNiebla}`;
+    const clave = `${t.tipo}|${t.color}|${t.bajoNiebla}|${t.tenue ?? false}`;
     let m = this.materiales.get(clave);
     if (!m) {
       const f = CAPA[t.tipo].f, comunes = { color: t.color, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: f, polygonOffsetUnits: f };
       // el camino es suelo (le da la luz); las rayas políticas, color plano para que se lean
-      m = t.tipo === 'camino' ? new THREE.MeshLambertMaterial(comunes) : new THREE.MeshBasicMaterial({ ...comunes, transparent: t.tipo === 'anillo', opacity: t.tipo === 'anillo' ? 0.7 : 1 });
+      m = t.tipo === 'camino' ? new THREE.MeshLambertMaterial(comunes) : new THREE.MeshBasicMaterial({ ...comunes, transparent: t.tipo === 'anillo' || !!t.tenue, opacity: t.tenue ? 0.45 : t.tipo === 'anillo' ? 0.7 : 1, depthWrite: !t.tenue });
       if (t.bajoNiebla) this.niebla.aplicar(m);
       this.materiales.set(clave, m);
     }
@@ -41,7 +41,7 @@ export class Trazos {
   actualizar(trazos: readonly TrazoEnVista[], cx: number, cy: number, radio: number): void {
     const clave = trazos.map((t) => {
       const a = t.puntos[0]!, b = t.puntos[t.puntos.length - 1]!;
-      return `${t.tipo}:${t.color}:${t.bajoNiebla}:${t.discontinuo ?? false}:${t.haciaDentro ?? 0}:${t.ancho}:${t.puntos.length}:${a.x},${a.y}:${b.x},${b.y}`;
+      return `${t.tipo}:${t.color}:${t.bajoNiebla}:${t.discontinuo ?? false}:${t.haciaDentro ?? 0}:${t.tenue ?? false}:${t.ancho}:${t.puntos.length}:${a.x},${a.y}:${b.x},${b.y}`;
     }).join('|');
     if (clave === this.clave && Math.hypot(cx - this.centro.x, cy - this.centro.y) < radio / 4) return;
     if (clave !== this.clave) {

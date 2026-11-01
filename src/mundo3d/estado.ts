@@ -9,6 +9,7 @@ import type { NieblaProyectada } from '../tiposDominio';
 import { MUNDO3D } from './config';
 import type { TropaDeColumna } from './figuras';
 import { circulo, sentidoDe } from './lineas';
+import { partirFronteras, type ZonaDeFaccion } from '../mundo/fronteras';
 
 type Punto = { x: number; y: number };
 
@@ -71,7 +72,9 @@ export interface CampamentoEnVista { id: string; posicion: Punto; radioProteccio
 /** Una raya sobre el terreno: camino, frontera o zona. `bajoNiebla` = la oscurece la niebla, como en el 2D; si no, va encima. */
 export interface TrazoEnVista { puntos: Punto[]; ancho: number; color: string; bajoNiebla: boolean; discontinuo?: boolean; tipo: 'camino' | 'frontera' | 'zona' | 'anillo'; recordada?: boolean;
   /** De un contorno: 1 o -1 según su sentido, para correr la raya hacia dentro y que, donde chocan dos zonas, se vean las dos. */
-  haciaDentro?: 1 | -1 }
+  haciaDentro?: 1 | -1;
+  /** La línea entre dos provincias de la misma Facción: fina y medio transparente. */
+  tenue?: boolean }
 
 /** Lo que hay en el mundo además del suelo y las columnas: se rehace solo cuando cambia. */
 export interface MundoEnVista {
@@ -116,7 +119,7 @@ export interface ReglasDeVista { vision: RadiosDeVision; radioZonaInicial: numbe
 const FRACCION_CIUDAD = 0.1;
 /** Anchura de las rayas, en u: caminos por escalón (sendero, camino, calzada), fronteras, la zona propia y el anillo de los mercenarios. Más
  * gruesas que en la realidad para que se lean desde la cámara de juego. */
-export const ANCHOS = { caminos: [0.2, 0.35, 0.55], frontera: 0.24, zona: 0.36, anillo: 0.1 } as const;
+export const ANCHOS = { caminos: [0.2, 0.35, 0.55], frontera: 0.24, zona: 0.36, provincia: 0.08, anillo: 0.1 } as const;
 const COLOR_AJENO = '#9a927f', COLOR_CAMINO = '#8b5a2b', COLOR_ANILLO = '#2e5e8c';
 /** La tropa de quien aún no tiene Facción. */
 const COLOR_SIN_FACCION = '#c0392b';
@@ -269,6 +272,18 @@ function radioDelContorno(centro: Punto, zona: readonly Punto[]): number {
   return r;
 }
 
+/** Las rayas de las zonas de influencia, fusionadas por Facción: la frontera segmentada por fuera (la de `miFaccion` no, si ya la traza su
+ * zona fusionada) y una línea tenue entre provincias (las tuyas, encima de la niebla). */
+export function trazosDeFronteras(zonas: readonly (ZonaDeFaccion & { recordada: boolean })[], color: (faccionId: string) => string, miFaccion: string | null | undefined, conZonaPropia: boolean): TrazoEnVista[] {
+  const out: TrazoEnVista[] = [];
+  for (const t of partirFronteras(zonas)) {
+    const z = zonas[t.zona]!, mia = z.faccionId === miFaccion;
+    if (t.tipo === 'interior') out.push({ puntos: t.puntos, ancho: ANCHOS.provincia, color: color(z.faccionId), bajoNiebla: !mia, tenue: true, tipo: 'frontera' });
+    else if (!(mia && conZonaPropia)) out.push({ puntos: t.puntos, ancho: ANCHOS.frontera, color: color(z.faccionId), bajoNiebla: true, discontinuo: true, recordada: z.recordada, tipo: 'frontera', haciaDentro: sentidoDe(z.contorno) });
+  }
+  return out;
+}
+
 /** Plazas, pueblos, avanzadas, obras, campamentos y rayas de la proyección, con el lado de la niebla de cada capa como en `render.ts`. */
 export function mundoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVista): MundoEnVista {
   const color = (faccionId: string | null | undefined) => (faccionId ? faccionColor(faccionId, p.facciones) : COLOR_AJENO);
@@ -277,18 +292,21 @@ export function mundoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVista
   const trazos: TrazoEnVista[] = [];
   // bajo la niebla: caminos, fronteras de lo que se ve (su silueta real) y de lo que se recuerda (un círculo discontinuo con su radio)
   for (const c of p.caminos ?? []) if (c.puntos.length >= 2) trazos.push({ puntos: c.puntos, ancho: ANCHOS.caminos[c.escalon ?? 1] ?? ANCHOS.caminos[1], color: COLOR_CAMINO, bajoNiebla: true, tipo: 'camino' });
-  // la frontera de una plaza tuya ya la traza la zona fusionada, encima: dos rayas discontinuas sobre el mismo borde no casarían
+  // Las zonas de una misma Facción, fusionadas (`mundo/fronteras.ts`): frontera por fuera y una línea tenue entre sus provincias. La frontera
+  // exterior de lo tuyo la traza la zona fusionada, encima; de ti solo salen aquí las líneas entre provincias, también encima.
   const conZonaPropia = (p.zonasFusionadas ?? []).some((z) => z.faccionId === p.faccionId && z.contornos.length > 0);
+  const zonas: (ZonaDeFaccion & { recordada: boolean })[] = [];
   for (const a of p.asentamientosAvistados ?? []) {
     const zona = a.zona ?? [], radioZona = zona.length >= 3 ? radioDelContorno(a.posicion, zona) : reglas.radioZonaInicial;
     plazas.push({ id: a.id, posicion: a.posicion, radioCiudad: radioZona * FRACCION_CIUDAD, color: color(a.faccionId), recordada: false, nivel: a.nivel ?? 1 });
-    if (zona.length >= 3 && !(conZonaPropia && a.faccionId === p.faccionId)) trazos.push({ puntos: [...zona, zona[0]!], ancho: ANCHOS.frontera, color: color(a.faccionId), bajoNiebla: true, discontinuo: true, tipo: 'frontera', haciaDentro: sentidoDe(zona) });
+    if (zona.length >= 3) zonas.push({ faccionId: a.faccionId || `sin-${a.id}`, contorno: zona, recordada: false });
   }
   for (const c of p.asentamientosConocidos ?? []) {
     const radioZona = c.radioPotencial ?? reglas.radioZonaInicial;
     plazas.push({ id: c.asentamientoId, posicion: c.posicion, radioCiudad: radioZona * FRACCION_CIUDAD, color: color(c.faccionId), recordada: true, nivel: c.nivel ?? 1 });
-    if (c.radioPotencial !== undefined) trazos.push({ puntos: circulo(c.posicion, c.radioPotencial), ancho: ANCHOS.frontera, color: color(c.faccionId), bajoNiebla: true, discontinuo: true, recordada: true, tipo: 'frontera', haciaDentro: 1 });
+    if (c.radioPotencial !== undefined) zonas.push({ faccionId: c.faccionId || `sin-${c.asentamientoId}`, contorno: circulo(c.posicion, c.radioPotencial).slice(0, -1), recordada: true });
   }
+  trazos.push(...trazosDeFronteras(zonas, color, p.faccionId, conZonaPropia));
   // encima: la zona propia y el anillo de protección de los campamentos de mercenarios
   for (const z of p.zonasFusionadas ?? []) for (const c of z.contornos) if (c.length >= 3) trazos.push({ puntos: [...c, c[0]!], ancho: ANCHOS.zona, color: color(z.faccionId), bajoNiebla: false, discontinuo: true, tipo: 'zona', haciaDentro: sentidoDe(c) });
   const campamentos = (p.campamentosMercenarios ?? []).map((c) => ({ id: c.id, posicion: c.posicion, radioProteccion: reglas.radioProteccion }));

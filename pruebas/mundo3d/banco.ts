@@ -9,7 +9,7 @@ import { fromBinary } from '@bufbuild/protobuf';
 import { ArtefactoDeMundoSchema, PaqueteRelieveSchema } from '../../src/contrato/gen/bronzeage/v1/world_pb';
 import { mapaDesdeArtefacto } from '../../src/mundo/artefacto';
 import { Relieve } from '../../src/mundo/relieve';
-import { ANCHOS, mundoVacio, type CaravanaEnVista, type ColumnaEnVista, type EstadoVista, type EtiquetaEnVista, type FundacionEnVista, type MiradaEnVista, type MundoEnVista, type SeleccionEnVista } from '../../src/mundo3d/estado';
+import { ANCHOS, mundoVacio, trazosDeFronteras, type CaravanaEnVista, type ColumnaEnVista, type EstadoVista, type EtiquetaEnVista, type FundacionEnVista, type MiradaEnVista, type MundoEnVista, type SeleccionEnVista } from '../../src/mundo3d/estado';
 import { circulo } from '../../src/mundo3d/lineas';
 import { fuenteDesdeMapa, fuenteDesdeRelieve } from '../../src/mundo3d/fuente';
 import { VistaMundo3D } from '../../src/mundo3d/vista';
@@ -156,10 +156,15 @@ function mundoDePrueba(c: Punto, vacio: boolean): { mundo: MundoEnVista; ajenas:
   m.trazos.push({ puntos: circulo(plaza, 15, 48), ancho: ANCHOS.zona, color: PROPIO, bajoNiebla: false, discontinuo: true, tipo: 'zona', haciaDentro: 1 });
   m.trazos.push({ puntos: circulo(ajena, 10, 48), ancho: ANCHOS.frontera, color: AJENO, bajoNiebla: true, discontinuo: true, tipo: 'frontera', haciaDentro: 1 });
   m.trazos.push({ puntos: circulo(recordada, 10), ancho: ANCHOS.frontera, color: OTRO, bajoNiebla: true, discontinuo: true, recordada: true, tipo: 'frontera', haciaDentro: 1 });
-  // dos zonas ajenas que se tocan en una recta: donde chocan, cada raya va de su lado
-  const choque = en(-20, -14), cuadro = (x0: number, x1: number): Punto[] => [en(x0, -4, choque), en(x1, -4, choque), en(x1, 4, choque), en(x0, 4, choque), en(x0, -4, choque)];
-  m.trazos.push({ puntos: cuadro(-8, 0), ancho: ANCHOS.frontera, color: AJENO, bajoNiebla: false, discontinuo: true, tipo: 'frontera', haciaDentro: 1 });
-  m.trazos.push({ puntos: cuadro(0, 8), ancho: ANCHOS.frontera, color: OTRO, bajoNiebla: false, discontinuo: true, tipo: 'frontera', haciaDentro: 1 });
+  // tres zonas que se tocan: dos de la misma Facción (se fusionan, con una línea tenue entre provincias) y otra de otra Facción (cada
+  // frontera de su lado)
+  const choque = en(-20, -14), cuadro = (x0: number, x1: number, y0 = -4, y1 = 4): Punto[] => [en(x0, y0, choque), en(x1, y0, choque), en(x1, y1, choque), en(x0, y1, choque)];
+  const colores: Record<string, string> = { a: AJENO, b: OTRO };
+  m.trazos.push(...trazosDeFronteras([
+    { faccionId: 'a', contorno: cuadro(-12, -4), recordada: false },
+    { faccionId: 'a', contorno: cuadro(-4, 4), recordada: false },
+    { faccionId: 'b', contorno: cuadro(4, 12), recordada: false },
+  ], (f) => colores[f] ?? OTRO, 'propia', true));
   // caminos: calzada del héroe a la plaza, camino a la ajena y sendero a la aldea
   const camino = (puntos: Punto[], escalon: 0 | 1 | 2) => m.trazos.push({ puntos, ancho: ANCHOS.caminos[escalon], color: '#8b5a2b', bajoNiebla: true, tipo: 'camino' });
   camino([c, en(4, -1), plaza], 2);

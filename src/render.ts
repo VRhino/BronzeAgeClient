@@ -14,6 +14,7 @@ import { imagenDeSigilo } from './sigilo/lienzo';
 import { pintarSitiosDeAldea, type SitiosDeAldea } from './mundo/fertilidad';
 import { colorDelSueloEn, esDeCerca, hayArtefacto, pintarArbolesDelArtefacto, pintarSueloDelArtefacto, vistaDelLienzo } from './mundo/pintarArtefacto';
 import { dibujarPueblosYObras } from './ui/pueblos';
+import { partirFronteras, type ZonaDeFaccion } from './mundo/fronteras';
 
 /** px de pantalla por unidad con la que los glifos de las columnas salen a su tamaño de diseño (≈ la escala de visión en un portátil).
  * El héroe no tiene tamaño en el mundo, así que su glifo y su ruta se escalan con el zoom (`factorDeGlifo`) entre un mínimo y un máximo:
@@ -263,33 +264,22 @@ function dibujarAsentamiento(
   ctx.stroke();
 }
 
-/**
- * La frontera de una Facción: relleno tenue y contorno. Es el mismo trazo para la tuya y para la de un
- * rival — una frontera es una frontera— y el color de la Facción ya dice de quién es.
- *
- * `punteado` marca lo que solo se RECUERDA: una zona recordada llega como radio y no como silueta (el
- * servidor no congela el contorno real, porque está recortado contra vecinos que quizá no conozcas), así que
- * se dibuja el círculo de aquel radio y el punteado avisa de que es una aproximación, no la línea exacta.
- */
-function dibujarFrontera(
-  ctx: CanvasRenderingContext2D,
-  contorno: readonly Point[],
-  color: string,
-  escalaCanvas: number,
-  punteado = false
-): void {
-  if (contorno.length < 3) return;
-  ctx.beginPath();
-  contorno.forEach((p, i) => {
-    const x = p.x * escalaCanvas;
-    const y = p.y * escalaCanvas;
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
+/** Añade un contorno cerrado al camino actual, en píxeles del lienzo. */
+function trazarContorno(ctx: CanvasRenderingContext2D, contorno: readonly Point[], escalaCanvas: number): void {
+  contorno.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x * escalaCanvas, p.y * escalaCanvas) : ctx.lineTo(p.x * escalaCanvas, p.y * escalaCanvas)));
   ctx.closePath();
-  ctx.fillStyle = color + '22';
-  ctx.fill();
-  trazoHaciaDentro(ctx, color, punteado ? [3, 5] : [10, 6]);
+}
+
+/** La línea entre dos provincias de la misma Facción: fina, continua y medio transparente. */
+function lineaDeProvincia(ctx: CanvasRenderingContext2D, puntos: readonly Point[], color: string, escalaCanvas: number): void {
+  ctx.beginPath();
+  puntos.forEach((p, k) => (k === 0 ? ctx.moveTo(p.x * escalaCanvas, p.y * escalaCanvas) : ctx.lineTo(p.x * escalaCanvas, p.y * escalaCanvas)));
+  ctx.save();
+  ctx.globalAlpha = 0.5;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.restore();
 }
 
 /** La raya de un contorno ya trazado (`beginPath`…`closePath`): segmentada, de 4 px y solo por DENTRO (se recorta al contorno y se pinta
@@ -707,21 +697,43 @@ export function pintarTerreno(
   //
   // Silueta real (recortada contra sus vecinos) la de una plaza que ves; circulo punteado la de una que solo
   // recuerdas, porque de esa el servidor guarda el radio y no el contorno.
-  // La de una plaza tuya la traza la zona fusionada (paso 9): dos rayas segmentadas en el mismo borde no casarían.
+  // Las zonas de una misma Facción van FUSIONADAS (`mundo/fronteras.ts`): un relleno por Facción, la frontera solo por fuera y una línea
+  // tenue entre sus provincias. La frontera exterior de lo tuyo la traza la zona fusionada (paso 9); tus líneas entre provincias, encima de
+  // ella, después.
   const conZonaPropia = (proyeccion.zonasFusionadas || []).some((z) => z.faccionId === proyeccion.faccionId && z.contornos.length > 0);
-  for (const avistado of proyeccion.asentamientosAvistados || []) {
-    if (conZonaPropia && avistado.faccionId === proyeccion.faccionId) continue;
-    dibujarFrontera(ctx, avistado.zona || [], faccionColor(avistado.faccionId, proyeccion.facciones), escalaCanvas);
+  const zonas: (ZonaDeFaccion & { recordada: boolean; color: string })[] = [
+    ...(proyeccion.asentamientosAvistados || []).filter((a) => (a.zona?.length ?? 0) >= 3).map((a) => ({ faccionId: a.faccionId || `sin-${a.id}`, contorno: a.zona!, recordada: false, color: faccionColor(a.faccionId, proyeccion.facciones) })),
+    ...(proyeccion.asentamientosConocidos || []).filter((c) => c.radioPotencial !== undefined).map((c) => ({ faccionId: c.faccionId || `sin-${c.asentamientoId}`, contorno: circuloDe(c.posicion, c.radioPotencial!), recordada: true, color: faccionColor(c.faccionId, proyeccion.facciones) })),
+  ];
+  const deEstaFaccion = new Map<string, typeof zonas>();
+  for (const z of zonas) deEstaFaccion.set(z.faccionId, [...(deEstaFaccion.get(z.faccionId) ?? []), z]);
+  for (const [faccionId, lista] of deEstaFaccion) {
+    if (conZonaPropia && faccionId === proyeccion.faccionId) continue;
+    ctx.beginPath();
+    for (const z of lista) trazarContorno(ctx, z.contorno, escalaCanvas);
+    ctx.fillStyle = lista[0]!.color + '22';
+    ctx.fill('nonzero');
   }
-  for (const conocido of proyeccion.asentamientosConocidos || []) {
-    if (conocido.radioPotencial === undefined) continue;
-    dibujarFrontera(
-      ctx,
-      circuloDe(conocido.posicion, conocido.radioPotencial),
-      faccionColor(conocido.faccionId, proyeccion.facciones),
-      escalaCanvas,
-      true
-    );
+  const provinciasPropias: { puntos: Point[]; color: string }[] = [];
+  for (const t of partirFronteras(zonas)) {
+    const z = zonas[t.zona]!, mia = z.faccionId === proyeccion.faccionId;
+    if (t.tipo === 'interior') {
+      if (mia) provinciasPropias.push({ puntos: t.puntos, color: z.color });
+      else lineaDeProvincia(ctx, t.puntos, z.color, escalaCanvas);
+    } else if (!(mia && conZonaPropia)) {
+      // la frontera, solo por dentro de su zona: se recorta a su contorno y se pinta el doble de ancha
+      ctx.save();
+      ctx.beginPath();
+      trazarContorno(ctx, z.contorno, escalaCanvas);
+      ctx.clip();
+      ctx.beginPath();
+      t.puntos.forEach((p, k) => (k === 0 ? ctx.moveTo(p.x * escalaCanvas, p.y * escalaCanvas) : ctx.lineTo(p.x * escalaCanvas, p.y * escalaCanvas)));
+      ctx.setLineDash(z.recordada ? [3, 5] : [10, 6]);
+      ctx.strokeStyle = z.color;
+      ctx.lineWidth = 8;
+      ctx.stroke();
+      ctx.restore();
+    }
   }
 
   // 7. ASENTAMIENTOS RECORDADOS: los que se vieron alguna vez y ahora no se ven. Huecos, y debajo de la
@@ -760,6 +772,7 @@ export function pintarTerreno(
     ctx.fill('evenodd');
     trazoHaciaDentro(ctx, color, [10, 6]);
   }
+  for (const l of provinciasPropias) lineaDeProvincia(ctx, l.puntos, l.color, escalaCanvas);
 
   // 10. EDIFICIOS DEL MAPA (Minas, Canteras...) — solo de asentamientos propios
   const tamanoEdificio = 6;
