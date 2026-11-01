@@ -95,6 +95,7 @@ import { cablearInteriorPueblo, htmlAlmacenPueblo, htmlAscensoLocal, htmlPestana
 import { pintarSitiosDeAldea, type SitiosDeAldea } from './mundo/fertilidad';
 import { htmlMiembrosFaccion, htmlResidentesPlaza } from './ui/participacion';
 import { cablearTablon, htmlTablon } from './ui/tablon';
+import { cablearMercenariosFaccion, htmlMercenariosFaccion, mercenariosQuePidenAtencion } from './ui/mercenarios';
 import { actualizarSeguimiento, cablearMisiones, elegirPestanaMisiones, htmlListaMisiones, htmlPanelMisiones, misionesPorReclamar, pintarRastreador } from './ui/misiones';
 import { confirmar } from './ui/dialogo';
 
@@ -1173,14 +1174,17 @@ function renderPanelJugador(forzar = false): void {
     let cuerpo: string;
     if (propia && pestana === 'tablon') {
       cuerpo = propia.tablon ? `<section class="faccion-tablon">${htmlTablon(proyeccion, { tipo: 'faccion', id: propia.id, tablon: propia.tablon }, escaparHtml)}</section>` : '<p class="mapa-lista-vacia">Tu Facción aún no tiene tablón.</p>';
+    } else if (propia && pestana === 'mercenarios') {
+      cuerpo = htmlMercenariosFaccion(proyeccion, escaparHtml);
     } else if (propia && pestana === 'misiones') {
       cuerpo = `<section class="faccion-misiones" data-dueno="faccion">${htmlListaMisiones(proyeccion, 'faccion', escaparHtml)}</section>`;
     } else {
       cuerpo = renderPestanaFaccion(proyeccion, escaparHtml, pestana, propia && pestana === 'miembros' ? htmlMiembrosFaccion(proyeccion, propia, escaparHtml) : '', Boolean(propia));
     }
     const pendientes = propia?.reyId === proyeccion.heroeId ? (propia.solicitudesIds ?? []).length : 0;
+    const atencionMercenarios = propia ? mercenariosQuePidenAtencion(proyeccion) : 0;
     const pestanas = propia
-      ? `<nav class="faccion-pestanas" role="tablist">${PESTANAS_FACCION.map(([id, nombre]) => `<button type="button" role="tab" class="faccion-pestana${id === pestana ? ' activo' : ''}" aria-selected="${id === pestana}" data-pestana-faccion="${id}">${nombre}${id === 'miembros' && pendientes ? ` <span class="faccion-aviso">${pendientes}</span>` : ''}</button>`).join('')}</nav>`
+      ? `<nav class="faccion-pestanas" role="tablist">${PESTANAS_FACCION.map(([id, nombre]) => `<button type="button" role="tab" class="faccion-pestana${id === pestana ? ' activo' : ''}" aria-selected="${id === pestana}" data-pestana-faccion="${id}">${nombre}${id === 'miembros' && pendientes ? ` <span class="faccion-aviso">${pendientes}</span>` : ''}${id === 'mercenarios' && atencionMercenarios ? ` <span class="faccion-aviso" title="Contratos a punto de vencer o por valorar">${atencionMercenarios}</span>` : ''}</button>`).join('')}</nav>`
       : '';
     const cabecera = `<div class="faccion-cabecera"><div class="mapa-panel-jugador">${propia ? 'Facción' : escaparHtml(proyeccion.heroe.displayName)}</div><button class="btn-secondary" type="button" data-cerrar-faccion aria-label="Cerrar">Cerrar</button></div>`;
     // Con Facción: el panel fijo de la izquierda (escudo, nombre, plazas, títulos y Dejar) y, a la derecha, las pestañas.
@@ -1209,6 +1213,8 @@ function renderPanelJugador(forzar = false): void {
       }));
       const seccion = panel.querySelector<HTMLElement>('.faccion-misiones');
       if (seccion) cablearMisiones(seccion, proyeccion, ejecutarYRefrescar, () => renderPanelJugador(true));
+      const mercenarios = panel.querySelector<HTMLElement>('.faccion-mercenarios');
+      if (mercenarios) cablearMercenariosFaccion(mercenarios, ejecutarYRefrescar, () => renderPanelJugador(true));
       const tablon = panel.querySelector<HTMLElement>('.faccion-tablon');
       if (tablon) cablearTablon(tablon, ejecutarYRefrescar, () => renderPanelJugador(true));
     }, `faccion:${pestana}`);
@@ -2201,7 +2207,8 @@ function renderCargosAsentamiento(asentamiento: Asentamiento | undefined, proyec
   const faccion = proyeccion.facciones.find((f) => f.id === proyeccion.faccionId);
   const soyGobernador = asentamiento.cargos?.gobernadorId === proyeccion.heroeId;
   const soyRey = faccion?.reyId === proyeccion.heroeId;
-  const ciudadanos = faccion?.ciudadanosIds ?? [];
+  // Un mercenario con marca no recibe cargos (motor 7aa44b9).
+  const ciudadanos = (faccion?.ciudadanosIds ?? []).filter((id) => !faccion?.miembros?.some((m) => m.heroeId === id && m.marca));
   const cargos = [
     ['gobernadorId', 'Gobernador', soyRey],
     ['maestroObrasId', 'Maestro de Obras', soyGobernador],

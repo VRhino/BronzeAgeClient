@@ -11,6 +11,7 @@
 // (inteligencia, movimientos, tropa prestada…) no hacen toast: suman a la insignia de «Avisos», y los repetidos (misma `clave`: tipo + origen) se
 // funden en UNA línea con contador y rango de horas. La insignia cuenta líneas (grupos) sin leer, no eventos.
 // Un evento nuevo = una rama en `procesar` que llame a `anotar` con su categoría y urgencia.
+import { anotarHechoMercenario, textoDeHechoMercenario } from './mercenarios';
 import { consultarEventos } from '../apiCliente';
 import type { EventoDominio } from '../tiposDominio';
 import { esPeticionNueva, MINIMO_FORMACION } from './ejercitos';
@@ -298,6 +299,16 @@ export function procesar(e: EventoDominio, heroeId: string, modo: Modo): void {
     const terminado = e.codigo === 'comercio.encargo_terminado';
     const p = e.payload as { caravana?: number } | undefined;
     anotar({ ...base, texto, clase: 'mirada', titulo: terminado ? 'Encargo terminado' : 'Caravanas', categoria: 'economia', urgente: false, clave: `${e.codigo}|${p?.caravana ?? ''}` }, modo);
+    return;
+  }
+  if (e.codigo.startsWith('mercenarios.') && e.codigo !== 'mercenarios.prestamo_retirado') {
+    // Mercenarios por contrato (motor 7aa44b9): la pestaña de la Facción se acuerda de los que acaban, para valorarlos.
+    anotarHechoMercenario(e);
+    const texto = textoDeHechoMercenario(e.codigo, (e.payload ?? {}) as Record<string, unknown>, estadoCliente.proyeccionUltima);
+    if (!texto) return;
+    const p = e.payload as { mercenario?: number } | undefined;
+    const importante = e.codigo === 'mercenarios.terminado' || e.codigo === 'mercenarios.orden_caducada' || e.codigo === 'mercenarios.rango_subido';
+    anotar({ ...base, texto, clase: importante ? 'baja' : 'mirada', titulo: 'Mercenarios', categoria: 'diplomacia', urgente: importante, clave: `${e.codigo}|${p?.mercenario ?? ''}|${e.version}` }, modo);
     return;
   }
   if (e.codigo === 'mercenarios.prestamo_retirado') {

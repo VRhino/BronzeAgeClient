@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Banco de mercenarios</title>
+    <style>
+      body { background: #0b0805; padding: 14px; }
+      #mandos { display: flex; gap: 6px; margin-bottom: 10px; color: #e8e2d0; font: 13px system-ui; align-items: center; }
+      #mandos button { background: #1d2433; color: inherit; border: 1px solid #3a4558; border-radius: 4px; padding: 3px 8px; cursor: pointer; }
+      #lienzo { max-width: 1180px; }
+      .banco-marco { background: var(--marco-bg); border: 1px solid var(--bronce-osc); border-radius: 10px; padding: 12px; }
+      .banco-campamento { max-width: 600px; }
+    </style>
+  </head>
+  <body>
+    <div id="mandos"><strong>Banco de mercenarios</strong>
+      <button type="button" data-ver="tablon">Tablón del campamento</button>
+      <button type="button" data-ver="faccion">Facción › Mercenarios</button>
+      <button type="button" data-ver="miembros">Miembros</button>
+      <button type="button" data-ver="publico">Héroe a la vista</button>
+      <label><input type="checkbox" id="gobernador"> Soy solo Gobernador</label>
+    </div>
+    <div id="lienzo"></div>
+    <script type="module" src="./banco.ts"></script>
+  </body>
+</html>

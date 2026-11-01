@@ -6,7 +6,7 @@
 // Lo que el contrato no trae, o aún no está traducido, sale vacío (listas) o ausente (opcionales): los paneles ya lo toleran porque el
 // backend viejo tampoco lo mandaba siempre.
 import type { Almacen, Cuerpo, CuerpoDe } from '../contrato/almacen';
-import type { Punto, Ritmo, Cantidades, ParadaEncargo } from '../contrato/gen/bronzeage/v1/common_pb';
+import type { Punto, Ritmo, Cantidades, ParadaEncargo, ObjetivoMercenario } from '../contrato/gen/bronzeage/v1/common_pb';
 import { TipoEntidad } from '../contrato/gen/bronzeage/v1/common_pb';
 import * as pb from '../contrato/gen/bronzeage/v1/entities_pb';
 import type { Bienvenida } from '../contrato/gen/bronzeage/v1/session_pb';
@@ -89,7 +89,8 @@ function faccion(f: pb.Faccion, ahora: number): d.Faccion {
     admiteOtrasEnAtaques: f.admiteOtrasEnAtaques, capitalDesignadaEn: instante(f.capitalDesignadaEnMs),
     capitalId: f.capitalId, derrotadaPor: f.derrotadaPor, esBot: f.esBot,
     liga: f.liga ? { miembrosIds: f.liga.miembrosIds, tieneVasallaje: f.liga.tieneVasallaje, granReyId: f.liga.granReyId } : undefined,
-    miembros: f.miembros.length ? f.miembros.map((m) => ({ heroeId: m.heroeId, residenciaId: m.residenciaId, cargos: m.cargos, participacion: Number(m.participacion) })) : undefined,
+    miembros: f.miembros.length ? f.miembros.map((m) => ({ heroeId: m.heroeId, residenciaId: m.residenciaId, cargos: m.cargos, participacion: Number(m.participacion), marca: m.marca })) : undefined,
+    contratos: f.contratos.length ? f.contratos.map(contrato) : undefined,
     tablon: f.tablon ? tablon(f.tablon) : undefined,
   };
 }
@@ -337,6 +338,7 @@ function heroe(h: pb.Heroe, escuadrones: pb.Escuadron[], ahora: number): d.Heroe
     cupoGuarnicion: h.cupoGuarnicion,
     guarnicionOcupada: propias.filter((e) => e.enGuarnicion).reduce((s, e) => s + e.cantidad, 0),
     heridoHasta: instante(h.heridoHastaMs), desconectaEn: instante(h.desconectaEnMs),
+    contrato: h.contrato ? contrato(h.contrato) : undefined, fichaMercenario: h.fichaMercenario ? fichaMercenario(h.fichaMercenario) : undefined, contratado: h.contratado,
   };
 }
 
@@ -345,6 +347,46 @@ function heroePublico(h: pb.Heroe): d.HeroePublico {
     heroeId: h.id, displayName: h.displayName, classDefinitionId: h.classDefinitionId, nivel: h.nivel, heridoHasta: instante(h.heridoHastaMs),
     escuadrasQueLleva: h.escuadrasQueLleva.map((e) => ({ tropaId: e.tropaId, cantidad: e.cantidad, nivel: e.nivel })),
     equipamiento: { arma: null, casco: null, torso: null, guantes: null, pantalones: null, botas: null },
+    contratado: h.contratado, fichaMercenario: h.fichaMercenario ? fichaMercenario(h.fichaMercenario) : undefined,
+  };
+}
+
+// ── Mercenarios por contrato (motor 7aa44b9) ──
+
+function objetivoMercenario(o: ObjetivoMercenario | undefined): d.ObjetivoMercenario | undefined {
+  if (!o?.tipo.case) return undefined;
+  return o.tipo.case === 'punto' ? { campo: 'punto', punto: punto(o.tipo.value) } : { campo: o.tipo.case, id: o.tipo.value };
+}
+
+function ordenMercenario(o: pb.OrdenMercenario): d.OrdenMercenario {
+  return {
+    tipo: o.tipo, objetivo: objetivoMercenario(o.objetivo), dadaPorId: o.dadaPorId, puesto: o.puesto, dadaEn: instante(o.dadaEnMs), venceEn: instante(o.venceEnMs),
+    contraFaccionId: o.contraFaccionId, unido: o.unido,
+  };
+}
+
+function contrato(c: pb.Contrato): d.ContratoMercenario {
+  return {
+    mercenarioId: c.mercenarioId, faccionId: c.faccionId, asentamientoId: c.asentamientoId, trabajo: c.trabajo, objetivo: objetivoMercenario(c.objetivo),
+    plazoDias: c.plazoDias, firmadoPorId: c.firmadoPorId, puestoFirma: c.puestoFirma, firmadoEn: instante(c.firmadoEnMs), venceEn: instante(c.venceEnMs),
+    campamentoBaseId: c.campamentoBaseId, orden: c.orden ? ordenMercenario(c.orden) : undefined, finAplazado: c.finAplazado, renombre: c.renombre,
+  };
+}
+
+function fichaMercenario(f: pb.FichaMercenario): d.FichaMercenario {
+  return {
+    rango: f.rango, rangoId: f.rangoId, renombre: f.renombre, renombreSiguienteRango: f.renombreSiguienteRango,
+    medallas: f.medallas.map((m) => ({ id: m.id, grado: m.grado, cuenta: m.cuenta, siguienteUmbral: m.siguienteUmbral })),
+    historial: f.historial ? { firmados: f.historial.firmados, terminados: f.historial.terminados, despidos: f.historial.despidos, buenas: f.historial.buenas, malas: f.historial.malas } : undefined,
+    premios: f.premios,
+  };
+}
+
+function ofertaMercenario(o: pb.OfertaMercenario): d.OfertaMercenario {
+  return {
+    heroeId: o.heroeId, desde: instante(o.desdeMs), ficha: o.ficha ? fichaMercenario(o.ficha) : undefined,
+    tropa: o.tropa.map((e) => ({ tropaId: e.tropaId, cantidad: e.cantidad, nivel: e.nivel })), heridoHasta: instante(o.heridoHastaMs),
+    tarifas: o.tarifas.map((t) => ({ plazoDias: t.plazoDias, oro: mil(t.oro) })),
   };
 }
 
@@ -352,6 +394,7 @@ function campamentoMercenarios(c: pb.CampamentoMercenarios): d.CampamentoMercena
   return {
     id: c.id, posicion: punto(c.posicion), origen: c.origen, edificios: c.edificios, residentesIds: c.residentesIds, eligieronComoInicial: c.eligieronComoInicial,
     mercado: cantidades(c.mercado), fondos: Object.fromEntries(Object.entries(c.fondos).map(([k, v]) => [k, cantidades(v)])),
+    tablon: c.tablon.length ? c.tablon.map(ofertaMercenario) : undefined,
   };
 }
 

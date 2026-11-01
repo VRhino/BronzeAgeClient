@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.77.0] — 2026-11-01 · Mercenarios por contrato · sync con `VRhino/BronzeAge@7aa44b90`
+
+- **Contrato regenerado** (contrato 0.5.0): `Faccion.contratos`, `MiembroFaccion.marca`, `Heroe.contrato`, `ficha_mercenario` y `contratado`, `CampamentoMercenarios.tablon` y las órdenes 171-179.
+- **Tablón del campamento** (subpestaña «Mercenarios»): cada ofrecido en una tarjeta con su insignia de rango, el renombre hacia el rango siguiente, sus medallas (con la cuenta y el umbral siguiente), su historial y su tropa propia. El plazo se elige pulsando su precio (1, 3, 7 días o permanente), en rojo si no llega el oro del carro; el trabajo, con su icono. Solo se ofrecen los objetivos que tus cargos alcanzan, ordenados por cercanía y con la distancia, y la tarjeta dice con qué puesto firmarás. «Contratar» se apaga con el motivo (sin Facción, herido, sin cargo que firme, falta oro). Se ordena por renombre o por precio.
+- **Facción › Mercenarios**: arriba, los contratos acabados por valorar (👍/👎, mientras dura el plazo) y el recuento (a sueldo, temporales, permanentes, sin orden). Una barra de órdenes como la de un RTS: se marcan hasta 16 y solo se encienden las órdenes que admiten todos los marcados y que tus cargos pueden dar; «Guardar» de un defensor o un escolta se limita al objetivo de su contrato, e «Ir a» deja elegir un lugar tuyo o escribir el punto. Cada contrato en una tarjeta: dónde anda (📍 lo centra en el mapa), el trabajo y su objetivo, la barra del plazo (en rojo cuando queda menos de una quinta parte), la orden vigente con quién la dio y cuándo caduca, y Prorrogar, Mudar (permanente, Rey o Embajador) y Despedir, apagados para quien no podría firmarlo. La pestaña lleva una cifra con lo que pide atención.
+- **Marca:** chapa ⚔ temporal / 🏛 permanente en Miembros; un marcado no sale para el trono, la embajada ni los cargos locales. La convocatoria de un mercenario dice «Solo mercenarios». El héroe a la vista enseña su marca, rango, renombre y medallas.
+- **Héroe mercenario:** en su ficha, su contrato, su orden, su ficha entera y «Reclamar» el premio de rango.
+- Mensajes para los rechazos `mercenario.*`, `mercenarios.sin_oro` y `faccion.mercenario_ofrecido`, y avisos para los hechos `mercenarios.*` (urgentes: fin de contrato, orden caducada, rango).
+- Banco nuevo `pruebas/mercenarios/` para mirar la interfaz sin partida.
+
 ## [0.76.0] — 2026-11-01 · Cantera solo por pueblo, aldeas por anillos, Facciones de bots · sync con `VRhino/BronzeAge@abdebf43`
 
 - **Contrato regenerado** (`es_bot` en `Faccion` y `FaccionDelDirectorio`).

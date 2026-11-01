@@ -80,6 +80,8 @@ export interface Faccion {
   miembros?: MiembroFaccion[];
   /** Solo la propia: el tablón de misiones recurrentes de la Facción. */
   tablon?: Tablon;
+  /** Solo la propia: sus contratos de mercenarios vigentes (motor 7aa44b9, Mercenarios_Por_Contrato §10). */
+  contratos?: ContratoMercenario[];
   // ... ignoramos otros campos que no impactan el render ...
 }
 
@@ -90,6 +92,8 @@ export interface MiembroFaccion {
   /** `rey`, `embajador` y los locales de su plaza de residencia (`gobernador@as-3`). */
   cargos: string[];
   participacion: number;
+  /** Mercenario con contrato: `temporal` o `permanente`. Ausente en un ciudadano sin marca. */
+  marca?: string;
 }
 
 /** Una condición de una misión recurrente: el contador, lo que lleva y lo que pide. */
@@ -692,6 +696,8 @@ export interface CampamentoMercenarios {
   mercado: Record<string, number>;
   /** Fondo de refundación: `heroeId` -> recurso -> lo que aportó. */
   fondos: Record<string, Record<string, number>>;
+  /** Los mercenarios ofrecidos (solo desde dentro). */
+  tablon?: OfertaMercenario[];
 }
 
 /** Una avanzada en el mapa (atalaya, fuerte o ciudadela de una plaza madre). `propia` = de tu Facción. */
@@ -867,6 +873,12 @@ export interface HeroeProyectado {
   heridoHasta?: number;
   /** Sin ningún cliente conectado (Doc 1.10.6): sale del mundo en este instante si no vuelve antes. */
   desconectaEn?: number;
+  /** Mercenario con contrato: el suyo, con la orden vigente (solo en su propio héroe). */
+  contrato?: ContratoMercenario;
+  /** Mercenario: su ficha entera. */
+  fichaMercenario?: FichaMercenario;
+  /** Mercenario: `temporal` o `permanente` mientras tiene contrato. */
+  contratado?: string;
 }
 
 /** Un héroe ajeno que se ve (Doc 5.16.7): solo su parte pública. */
@@ -881,6 +893,73 @@ export interface HeroePublico {
   escuadrasQueLleva: { tropaId: string; cantidad: number; nivel: number }[];
   /** `itemDefinitionId` de lo que lleva puesto en cada hueco. */
   equipamiento: Record<SlotEquipo, string | null>;
+  /** Mercenario: `temporal` o `permanente` mientras tiene contrato. */
+  contratado?: string;
+  /** Mercenario: su ficha reducida (rango, renombre y el grado de cada medalla). */
+  fichaMercenario?: FichaMercenario;
+}
+
+// ── Mercenarios por contrato (motor 7aa44b9, Mercenarios_Por_Contrato) ──
+
+/** A qué apunta un contrato o una orden: el caso del `oneof ObjetivoMercenario` (`asentamientoId`, `caravanaId`… o `punto`). */
+export interface ObjetivoMercenario { campo: string; id?: string; punto?: Point }
+
+export interface OrdenMercenario {
+  /** guardar | ir_a | atacar | unirse */
+  tipo: string;
+  objetivo?: ObjetivoMercenario;
+  dadaPorId: string;
+  /** El cargo con que se dio (`rey`, `general@as-3`…); ausente en la orden inicial, que no tiene rango. */
+  puesto?: string;
+  dadaEn?: number;
+  venceEn?: number;
+  contraFaccionId?: string;
+  unido: boolean;
+}
+
+export interface ContratoMercenario {
+  mercenarioId: string;
+  faccionId: string;
+  /** La plaza que lo firmó con un cargo local; ausente si lo firmó el Rey o el Embajador. */
+  asentamientoId?: string;
+  /** defender | escoltar | atacar | acompanar | permanente */
+  trabajo: string;
+  objetivo?: ObjetivoMercenario;
+  /** Ausente en el permanente. */
+  plazoDias?: number;
+  firmadoPorId: string;
+  puestoFirma: string;
+  firmadoEn?: number;
+  venceEn?: number;
+  campamentoBaseId: string;
+  orden?: OrdenMercenario;
+  /** El contrato ya acabó y espera a que acabe su batalla: plazo | despido | plaza_perdida | sin_ciudadanos | faccion_perdida. */
+  finAplazado?: string;
+  /** Renombre ganado con este contrato y aún sin apuntar. */
+  renombre: number;
+}
+
+export interface MedallaMercenario { id: string; grado: number; cuenta: number; siguienteUmbral?: number }
+
+export interface FichaMercenario {
+  rango: number;
+  rangoId: string;
+  renombre: number;
+  renombreSiguienteRango?: number;
+  medallas: MedallaMercenario[];
+  historial?: { firmados: number; terminados: number; despidos: number; buenas: number; malas: number };
+  /** Escuadras de premio de rango sin reclamar. */
+  premios: number;
+}
+
+/** Un mercenario en el tablón de su campamento. `tarifas` en oro (unidades); `plazoDias` ausente = el permanente. */
+export interface OfertaMercenario {
+  heroeId: string;
+  desde?: number;
+  ficha?: FichaMercenario;
+  tropa: { tropaId: string; cantidad: number; nivel: number }[];
+  heridoHasta?: number;
+  tarifas: { plazoDias?: number; oro: number }[];
 }
 
 /** `params` de `repartirPuntos`: puntos a sumar por atributo, enteros ≥ 0 que no pasen de `puntosDeAtributoSinGastar`. */

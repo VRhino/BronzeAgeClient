@@ -78,3 +78,30 @@ describe('traducirOrden: encargos de caravana', () => {
     expect(traducirOrden('cancelarEncargo', { caravanaId: 'car-2' })).toMatchObject({ case: 'cancelarEncargo', value: { caravanaId: 'car-2' } });
   });
 });
+
+// Mercenarios por contrato (motor 7aa44b9): el objetivo es el `oneof` de `ObjetivoMercenario`; `ir_a` va a un punto en milésimas.
+describe('traducirOrden: mercenarios', () => {
+  it('contratar a un temporal para escoltar una caravana', () => {
+    expect(traducirOrden('contratarMercenario', { mercenarioId: 'heroe-31', trabajo: 'escoltar', objetivo: { caravanaId: 'car-5' }, plazoDias: 7 })).toMatchObject({
+      case: 'contratarMercenario', value: { mercenarioId: 'heroe-31', trabajo: 'escoltar', objetivo: { tipo: { case: 'caravanaId', value: 'car-5' } }, plazoDias: 7 },
+    });
+  });
+
+  it('contratar a un permanente con su residencia', () => {
+    expect(traducirOrden('contratarMercenario', { mercenarioId: 'heroe-31', trabajo: 'permanente', objetivo: { faccionId: 'fac-1' }, residenciaAsentamientoId: 'as-4' })).toMatchObject({
+      value: { objetivo: { tipo: { case: 'faccionId', value: 'fac-1' } }, residenciaAsentamientoId: 'as-4' },
+    });
+  });
+
+  it('ordenar a varios ir a un punto', () => {
+    expect(traducirOrden('ordenarMercenario', { mercenarioIds: ['heroe-21', 'heroe-23'], tipo: 'ir_a', objetivo: { punto: { x: 392, y: 318.5 } } })).toMatchObject({
+      case: 'ordenarMercenario', value: { mercenarioIds: ['heroe-21', 'heroe-23'], tipo: 'ir_a', objetivo: { tipo: { case: 'punto', value: { x: 392_000n, y: 318_500n } } } },
+    });
+  });
+
+  it('valorar, mudar y reclamar el premio', () => {
+    expect(traducirOrden('valorarMercenario', { mercenarioId: 'heroe-31', buena: true })).toMatchObject({ value: { mercenarioId: 'heroe-31', buena: true } });
+    expect(traducirOrden('mudarMercenario', { mercenarioId: 'heroe-23', asentamientoId: 'as-1' })).toMatchObject({ value: { asentamientoId: 'as-1' } });
+    expect(traducirOrden('reclamarPremioDeRango', { tropaId: 'arqueros' })).toMatchObject({ case: 'reclamarPremioDeRango', value: { tropaId: 'arqueros' } });
+  });
+});

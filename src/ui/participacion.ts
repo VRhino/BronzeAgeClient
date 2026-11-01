@@ -5,6 +5,7 @@ import type { ProyeccionJugador } from '../apiCliente';
 import type { Asentamiento, Faccion } from '../tiposDominio';
 import { ayuda } from './ayuda';
 import { nombreDeHeroe } from './nombres';
+import { chapaDeMarca } from './mercenarios';
 
 type Escapar = (s: string) => string;
 
@@ -64,6 +65,6 @@ export function htmlMiembrosFaccion(p: ProyeccionJugador, f: Faccion, e: Escapar
   const miembros = [...f.miembros].sort((x, y) => y.participacion - x.participacion);
   return `<section class="participacion">
     <h3>Miembros${ayuda('faccion:miembros', 'Cada ciudadano con sus cargos, dónde reside y la suma de su participación en las plazas que son hoy de la Facción.')}</h3>
-    <ul class="participacion-lista">${miembros.map((m) => `<li class="${m.heroeId === p.heroeId ? 'participacion-yo' : ''}"><span>${e(nombreDeHeroe(p, m.heroeId))}${m.cargos.length ? ` <small>· ${e(m.cargos.map(cargo).join(', '))}</small>` : ''}<small class="participacion-donde">${e(residencia(m.residenciaId))}</small></span><strong>${m.participacion}</strong></li>`).join('')}</ul>
+    <ul class="participacion-lista">${miembros.map((m) => `<li class="${m.heroeId === p.heroeId ? 'participacion-yo' : ''}"><span>${e(nombreDeHeroe(p, m.heroeId))} ${chapaDeMarca(m.marca)}${m.cargos.length ? ` <small>· ${e(m.cargos.map(cargo).join(', '))}</small>` : ''}<small class="participacion-donde">${e(residencia(m.residenciaId))}</small></span><strong>${m.participacion}</strong></li>`).join('')}</ul>
   </section>`;
 }

@@ -31,7 +31,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file bronzeage/v1/common.proto.
  */
 export const file_bronzeage_v1_common: GenFile = /*@__PURE__*/
-  fileDesc("Chlicm9uemVhZ2UvdjEvY29tbW9uLnByb3RvEgxicm9uemVhZ2UudjEiHQoFUHVudG8SCQoBeBgBIAEoEhIJCgF5GAIgASgSIjgKB1ZlcnRpY2USHgoBcBgBIAEoCzITLmJyb256ZWFnZS52MS5QdW50bxINCgVlbl9tcxgCIAEoAyJDCgRQbGFuEhIKCmdlbmVyYWNpb24YASABKA0SJwoIdmVydGljZXMYAiADKAsyFS5icm9uemVhZ2UudjEuVmVydGljZSKVAQoFUml0bW8SEwoLdmFsb3JfZW5fdDAYASABKBISDQoFdDBfbXMYAiABKAMSEgoKcG9yX21pbnV0bxgDIAEoEhITCgZtYXhpbW8YBCABKBJIAIgBARITCgZtaW5pbW8YBSABKBJIAYgBARIUCgxlbl9lc2NhbG9uZXMYBiABKAhCCQoHX21heGltb0IJCgdfbWluaW1vIoIBCgpFeGlzdGVuY2lhEiUKCGNhbnRpZGFkGAEgASgLMhMuYnJvbnplYWdlLnYxLlJpdG1vEhEKCWNhcGFjaWRhZBgCIAEoEhIcChRwcm9kdWNpZG9fcG9yX21pbnV0bxgDIAEoEhIcChRjb25zdW1pZG9fcG9yX21pbnV0bxgEIAEoEiJvCgpDYW50aWRhZGVzEjMKBnBvcl9pZBgBIAMoCzIjLmJyb256ZWFnZS52MS5DYW50aWRhZGVzLlBvcklkRW50cnkaLAoKUG9ySWRFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKBI6AjgBIp0BCg1QYXJhZGFFbmNhcmdvEisKB3JlY29nZXIYASADKAsyGi5icm9uemVhZ2UudjEuTGluZWFSZWNvZ2VyEhsKE2VzcGVyYXJfZXhpc3RlbmNpYXMYAiABKAgSJwoFZGVqYXIYAyADKAsyGC5icm9uemVhZ2UudjEuTGluZWFEZWphchIZChFkZXNlY2hhcl9zb2JyYW50ZRgEIAEoCCJZCgxMaW5lYVJlY29nZXISDwoHcmVjdXJzbxgBIAEoCRIQCghjYW50aWRhZBgCIAEoEhIXCgpwcmVjaW9fbWF4GAMgASgSSACIAQFCDQoLX3ByZWNpb19tYXgiYQoKTGluZWFEZWphchIPCgdyZWN1cnNvGAEgASgJEhEKBHRvcGUYAiABKBJIAIgBARIXCgpwcmVjaW9fbWluGAMgASgSSAGIAQFCBwoFX3RvcGVCDQoLX3ByZWNpb19taW4iugEKBlNpZ2lsbxIQCghmb3JtYV9pZBgBIAEoCRIQCghjYW1wb19pZBgCIAEoCRISCgplbWJsZW1hX2lkGAMgASgJEhkKEWNvbG9yX3ByaW1hcmlvX2lkGAQgASgJEhsKE2NvbG9yX3NlY3VuZGFyaW9faWQYBSABKAkSGAoQY29sb3JfZW1ibGVtYV9pZBgGIAEoCRIPCgdvcmxhX2lkGAcgASgJEhUKDWNvbG9yX29ybGFfaWQYCCABKAkiPAoGQW1iaXRvEiYKBHRpcG8YASABKA4yGC5icm9uemVhZ2UudjEuQW1iaXRvVGlwbxIKCgJpZBgCIAEoCSJQCgpSZWN0YW5ndWxvEiAKA21pbhgBIAEoCzITLmJyb256ZWFnZS52MS5QdW50bxIgCgNtYXgYAiABKAsyEy5icm9uemVhZ2UudjEuUHVudG8qkgUKC1RpcG9FbnRpZGFkEiAKHFRJUE9fRU5USURBRF9OT19FU1BFQ0lGSUNBRE8QABILCgdGQUNDSU9OEAESEAoMQVNFTlRBTUlFTlRPEAISCQoFSEVST0UQAxINCglFU0NVQURST04QBBIMCghFSkVSQ0lUTxAFEgwKCENBUkFWQU5BEAYSEAoMQ09OVk9DQVRPUklBEAcSGgoWQ0FNUEFNRU5UT19NRVJDRU5BUklPUxAIEhcKE0NBTVBBTUVOVE9fQkFORElET1MQCRIJCgVBTElKTxAKEhMKD0FDVUVSRE9fVFJVRVFVRRALEhEKDU9SREVOX01FUkNBRE8QDBIVChFSRUxBQ0lPTl9QT0xJVElDQRANEg0KCVBST1BVRVNUQRAOEgoKBlRJVFVMTxAPEggKBEFFREEQEBIQCgxNSVJBREFfSU5URUwQERIRCg1JTkZPUk1FX1BMQVpBEBISCwoHQkFUQUxMQRATEgoKBlBVRUJMTxAUEgwKCEFWQU5aQURBEBUSEAoMT0JSQV9ERV9NQVBBEBYSEAoMTk9ET19SRUNVUlNPEBcSEwoPTUVNT1JJQV9GQUNDSU9OEBgSDwoLUkVEX0NBTUlOT1MQGRIWChJURUNOT0xPR0lBX0ZBQ0NJT04QGhIQCgxaT05BX0ZBQ0NJT04QGxIWChJJTkZPUk1FX0lOU1BFQ0NJT04QHBIMCghFRElGSUNJTxAdEgsKB1JFQ0lOVE8QHhIRCg1JTkNPUlBPUkFDSU9OEB8SCwoHTE9BRE9VVBAgEhIKDkZJQ0hBX0NPTk9DSURBECESFQoRRVNUQURPX1RFQ05PTE9HSUEQIhIYChRESVJFQ1RPUklPX0ZBQ0NJT05FUxAjKrYBCgpBbWJpdG9UaXBvEhoKFkFNQklUT19OT19FU1BFQ0lGSUNBRE8QABIQCgxBTUJJVE9fSEVST0UQARIXChNBTUJJVE9fQVNFTlRBTUlFTlRPEAISFQoRQU1CSVRPX0NBTVBBTUVOVE8QAxISCg5BTUJJVE9fQkFUQUxMQRAEEhIKDkFNQklUT19GQUNDSU9OEAUSEAoMQU1CSVRPX1ZJU1RBEAYSEAoMQU1CSVRPX0FETUlOEAdCGKoCFUJyb256ZUFnZS5Db250cmFjdC5WMWIGcHJvdG8z");
+  fileDesc("Chlicm9uemVhZ2UvdjEvY29tbW9uLnByb3RvEgxicm9uemVhZ2UudjEiHQoFUHVudG8SCQoBeBgBIAEoEhIJCgF5GAIgASgSIjgKB1ZlcnRpY2USHgoBcBgBIAEoCzITLmJyb256ZWFnZS52MS5QdW50bxINCgVlbl9tcxgCIAEoAyJDCgRQbGFuEhIKCmdlbmVyYWNpb24YASABKA0SJwoIdmVydGljZXMYAiADKAsyFS5icm9uemVhZ2UudjEuVmVydGljZSKVAQoFUml0bW8SEwoLdmFsb3JfZW5fdDAYASABKBISDQoFdDBfbXMYAiABKAMSEgoKcG9yX21pbnV0bxgDIAEoEhITCgZtYXhpbW8YBCABKBJIAIgBARITCgZtaW5pbW8YBSABKBJIAYgBARIUCgxlbl9lc2NhbG9uZXMYBiABKAhCCQoHX21heGltb0IJCgdfbWluaW1vIoIBCgpFeGlzdGVuY2lhEiUKCGNhbnRpZGFkGAEgASgLMhMuYnJvbnplYWdlLnYxLlJpdG1vEhEKCWNhcGFjaWRhZBgCIAEoEhIcChRwcm9kdWNpZG9fcG9yX21pbnV0bxgDIAEoEhIcChRjb25zdW1pZG9fcG9yX21pbnV0bxgEIAEoEiJvCgpDYW50aWRhZGVzEjMKBnBvcl9pZBgBIAMoCzIjLmJyb256ZWFnZS52MS5DYW50aWRhZGVzLlBvcklkRW50cnkaLAoKUG9ySWRFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKBI6AjgBIp0BCg1QYXJhZGFFbmNhcmdvEisKB3JlY29nZXIYASADKAsyGi5icm9uemVhZ2UudjEuTGluZWFSZWNvZ2VyEhsKE2VzcGVyYXJfZXhpc3RlbmNpYXMYAiABKAgSJwoFZGVqYXIYAyADKAsyGC5icm9uemVhZ2UudjEuTGluZWFEZWphchIZChFkZXNlY2hhcl9zb2JyYW50ZRgEIAEoCCJZCgxMaW5lYVJlY29nZXISDwoHcmVjdXJzbxgBIAEoCRIQCghjYW50aWRhZBgCIAEoEhIXCgpwcmVjaW9fbWF4GAMgASgSSACIAQFCDQoLX3ByZWNpb19tYXgiYQoKTGluZWFEZWphchIPCgdyZWN1cnNvGAEgASgJEhEKBHRvcGUYAiABKBJIAIgBARIXCgpwcmVjaW9fbWluGAMgASgSSAGIAQFCBwoFX3RvcGVCDQoLX3ByZWNpb19taW4igQIKEk9iamV0aXZvTWVyY2VuYXJpbxIZCg9hc2VudGFtaWVudG9faWQYASABKAlIABITCglwdWVibG9faWQYAiABKAlIABIVCgthdmFuemFkYV9pZBgDIAEoCUgAEhUKC2NhcmF2YW5hX2lkGAQgASgJSAASFwoNY2FtcGFtZW50b19pZBgFIAEoCUgAEhUKC2VqZXJjaXRvX2lkGAYgASgJSAASGQoPY29udm9jYXRvcmlhX2lkGAcgASgJSAASFAoKZmFjY2lvbl9pZBgIIAEoCUgAEiQKBXB1bnRvGAkgASgLMhMuYnJvbnplYWdlLnYxLlB1bnRvSABCBgoEdGlwbyK6AQoGU2lnaWxvEhAKCGZvcm1hX2lkGAEgASgJEhAKCGNhbXBvX2lkGAIgASgJEhIKCmVtYmxlbWFfaWQYAyABKAkSGQoRY29sb3JfcHJpbWFyaW9faWQYBCABKAkSGwoTY29sb3Jfc2VjdW5kYXJpb19pZBgFIAEoCRIYChBjb2xvcl9lbWJsZW1hX2lkGAYgASgJEg8KB29ybGFfaWQYByABKAkSFQoNY29sb3Jfb3JsYV9pZBgIIAEoCSI8CgZBbWJpdG8SJgoEdGlwbxgBIAEoDjIYLmJyb256ZWFnZS52MS5BbWJpdG9UaXBvEgoKAmlkGAIgASgJIlAKClJlY3Rhbmd1bG8SIAoDbWluGAEgASgLMhMuYnJvbnplYWdlLnYxLlB1bnRvEiAKA21heBgCIAEoCzITLmJyb256ZWFnZS52MS5QdW50byqSBQoLVGlwb0VudGlkYWQSIAocVElQT19FTlRJREFEX05PX0VTUEVDSUZJQ0FETxAAEgsKB0ZBQ0NJT04QARIQCgxBU0VOVEFNSUVOVE8QAhIJCgVIRVJPRRADEg0KCUVTQ1VBRFJPThAEEgwKCEVKRVJDSVRPEAUSDAoIQ0FSQVZBTkEQBhIQCgxDT05WT0NBVE9SSUEQBxIaChZDQU1QQU1FTlRPX01FUkNFTkFSSU9TEAgSFwoTQ0FNUEFNRU5UT19CQU5ESURPUxAJEgkKBUFMSUpPEAoSEwoPQUNVRVJET19UUlVFUVVFEAsSEQoNT1JERU5fTUVSQ0FETxAMEhUKEVJFTEFDSU9OX1BPTElUSUNBEA0SDQoJUFJPUFVFU1RBEA4SCgoGVElUVUxPEA8SCAoEQUVEQRAQEhAKDE1JUkFEQV9JTlRFTBAREhEKDUlORk9STUVfUExBWkEQEhILCgdCQVRBTExBEBMSCgoGUFVFQkxPEBQSDAoIQVZBTlpBREEQFRIQCgxPQlJBX0RFX01BUEEQFhIQCgxOT0RPX1JFQ1VSU08QFxITCg9NRU1PUklBX0ZBQ0NJT04QGBIPCgtSRURfQ0FNSU5PUxAZEhYKElRFQ05PTE9HSUFfRkFDQ0lPThAaEhAKDFpPTkFfRkFDQ0lPThAbEhYKEklORk9STUVfSU5TUEVDQ0lPThAcEgwKCEVESUZJQ0lPEB0SCwoHUkVDSU5UTxAeEhEKDUlOQ09SUE9SQUNJT04QHxILCgdMT0FET1VUECASEgoORklDSEFfQ09OT0NJREEQIRIVChFFU1RBRE9fVEVDTk9MT0dJQRAiEhgKFERJUkVDVE9SSU9fRkFDQ0lPTkVTECMqtgEKCkFtYml0b1RpcG8SGgoWQU1CSVRPX05PX0VTUEVDSUZJQ0FETxAAEhAKDEFNQklUT19IRVJPRRABEhcKE0FNQklUT19BU0VOVEFNSUVOVE8QAhIVChFBTUJJVE9fQ0FNUEFNRU5UTxADEhIKDkFNQklUT19CQVRBTExBEAQSEgoOQU1CSVRPX0ZBQ0NJT04QBRIQCgxBTUJJVE9fVklTVEEQBhIQCgxBTUJJVE9fQURNSU4QB0IYqgIVQnJvbnplQWdlLkNvbnRyYWN0LlYxYgZwcm90bzM");
 
 /**
  * Punto del mapa estratégico, en milésimas de unidad.
@@ -331,6 +331,80 @@ export const LineaDejarSchema: GenMessage<LineaDejar> = /*@__PURE__*/
   messageDesc(file_bronzeage_v1_common, 8);
 
 /**
+ * A qué apunta un contrato o una orden de mercenario (Mercenarios_Por_Contrato §4 y §6; 2026-11-01). Lo comparten las órdenes y las entidades. `caravana_id` vale también
+ * para el carro de acarreo de un pueblo, un encargo o una ruta: en el motor todo eso es una caravana. `campamento_id` es un campamento de bandidos. `punto`, solo para `ir_a`.
+ *
+ * @generated from message bronzeage.v1.ObjetivoMercenario
+ */
+export type ObjetivoMercenario = Message<"bronzeage.v1.ObjetivoMercenario"> & {
+  /**
+   * @generated from oneof bronzeage.v1.ObjetivoMercenario.tipo
+   */
+  tipo: {
+    /**
+     * @generated from field: string asentamiento_id = 1;
+     */
+    value: string;
+    case: "asentamientoId";
+  } | {
+    /**
+     * @generated from field: string pueblo_id = 2;
+     */
+    value: string;
+    case: "puebloId";
+  } | {
+    /**
+     * @generated from field: string avanzada_id = 3;
+     */
+    value: string;
+    case: "avanzadaId";
+  } | {
+    /**
+     * @generated from field: string caravana_id = 4;
+     */
+    value: string;
+    case: "caravanaId";
+  } | {
+    /**
+     * @generated from field: string campamento_id = 5;
+     */
+    value: string;
+    case: "campamentoId";
+  } | {
+    /**
+     * @generated from field: string ejercito_id = 6;
+     */
+    value: string;
+    case: "ejercitoId";
+  } | {
+    /**
+     * @generated from field: string convocatoria_id = 7;
+     */
+    value: string;
+    case: "convocatoriaId";
+  } | {
+    /**
+     * @generated from field: string faccion_id = 8;
+     */
+    value: string;
+    case: "faccionId";
+  } | {
+    /**
+     * @generated from field: bronzeage.v1.Punto punto = 9;
+     */
+    value: Punto;
+    case: "punto";
+  } | { case: undefined; value?: undefined };
+};
+
+/**
+ * Describes the message bronzeage.v1.ObjetivoMercenario.
+ * Use `create(ObjetivoMercenarioSchema)` to create a new message.
+ */
+export const ObjetivoMercenarioSchema: GenMessage<ObjetivoMercenario> = /*@__PURE__*/
+  messageDesc(file_bronzeage_v1_common, 9);
+
+/**
  * @generated from message bronzeage.v1.Sigilo
  */
 export type Sigilo = Message<"bronzeage.v1.Sigilo"> & {
@@ -380,7 +454,7 @@ export type Sigilo = Message<"bronzeage.v1.Sigilo"> & {
  * Use `create(SigiloSchema)` to create a new message.
  */
 export const SigiloSchema: GenMessage<Sigilo> = /*@__PURE__*/
-  messageDesc(file_bronzeage_v1_common, 9);
+  messageDesc(file_bronzeage_v1_common, 10);
 
 /**
  * @generated from message bronzeage.v1.Ambito
@@ -402,7 +476,7 @@ export type Ambito = Message<"bronzeage.v1.Ambito"> & {
  * Use `create(AmbitoSchema)` to create a new message.
  */
 export const AmbitoSchema: GenMessage<Ambito> = /*@__PURE__*/
-  messageDesc(file_bronzeage_v1_common, 10);
+  messageDesc(file_bronzeage_v1_common, 11);
 
 /**
  * Rectángulo en el mapa estratégico (milésimas), para fijar el interés de la vista.
@@ -426,7 +500,7 @@ export type Rectangulo = Message<"bronzeage.v1.Rectangulo"> & {
  * Use `create(RectanguloSchema)` to create a new message.
  */
 export const RectanguloSchema: GenMessage<Rectangulo> = /*@__PURE__*/
-  messageDesc(file_bronzeage_v1_common, 11);
+  messageDesc(file_bronzeage_v1_common, 12);
 
 /**
  * Tipos de entidad con identidad propia en el almacén del cliente.

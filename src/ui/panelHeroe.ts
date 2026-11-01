@@ -3,13 +3,14 @@
 // (coste de Liderazgo de cada escuadra, lo que suma cada loadout, cupo y ocupación de la guarnición): aquí no se
 // decide ninguna regla, solo se suma el loadout que se está editando para avisar antes de guardar. Quien valida
 // es el backend (`heroe.invalido`).
-import { asignarGuarnicion, borrarLoadout, guardarLoadout, repartirPuntos, retirarGuarnicion, type ProyeccionJugador, type RespuestaComando } from '../apiCliente';
+import { asignarGuarnicion, borrarLoadout, ejecutarComando, guardarLoadout, repartirPuntos, retirarGuarnicion, type ProyeccionJugador, type RespuestaComando } from '../apiCliente';
 import type { AtributoHeroe, HeroeProyectado, Loadout } from '../tiposDominio';
 import { ayuda } from './ayuda';
 import { estadoCliente } from './estadoCliente';
 import { invalidar, pintar } from './repintado';
 import { confirmar } from './dialogo';
 import { iconoEnFila } from './iconosTropa';
+import { cablearHeroeMercenario, htmlHeroeMercenario } from './mercenarios';
 
 /** Manda el comando, comprueba `resultado.ok` y refresca; devuelve el mensaje de error o `null`. Lo pone `main.ts`. */
 export type Aplicar = (peticion: Promise<RespuestaComando>) => Promise<string | null>;
@@ -140,7 +141,7 @@ function renderLoadouts(h: HeroeProyectado, e: Escapar): string {
 export function pintarPanelHeroe(panel: HTMLElement, proyeccion: ProyeccionJugador, e: Escapar, aplicar: Aplicar, forzar = false): void {
   if (borrador && !forzar) return;
   const h = proyeccion.heroe;
-  const cuerpo = pestana === 'ficha' ? renderFicha(h, proyeccion, e) : pestana === 'escuadras' ? renderEscuadras(h, proyeccion, e) : renderLoadouts(h, e);
+  const cuerpo = pestana === 'ficha' ? renderFicha(h, proyeccion, e) + htmlHeroeMercenario(proyeccion, e) : pestana === 'escuadras' ? renderEscuadras(h, proyeccion, e) : renderLoadouts(h, e);
   const html = `<div class="heroe-panel">
     <div class="mapa-panel-jugador">${e(h.displayName)}</div>
     <div class="asent-tabs">${PESTANAS.map(([id, nombre]) => `<button class="asent-tab${id === pestana ? ' activo' : ''}" type="button" data-pestana="${id}">${nombre}</button>`).join('')}</div>
@@ -169,6 +170,7 @@ function cablear(panel: HTMLElement, h: HeroeProyectado, e: Escapar, aplicar: Ap
     repintar();
   };
   const loadout = (id: string | undefined): Loadout | undefined => h.loadouts.find((l) => l.id === id);
+  cablearHeroeMercenario(panel, async (tipo, params) => { const m = await aplicar(ejecutarComando(gameId, tipo, params)); if (!m) repintar(); return m; });
 
   panel.querySelectorAll<HTMLButtonElement>('[data-pestana]').forEach((boton) => boton.addEventListener('click', () => {
     pestana = boton.dataset.pestana as Pestana;

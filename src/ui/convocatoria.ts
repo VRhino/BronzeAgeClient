@@ -249,9 +249,11 @@ export function htmlConvocatoriasAbiertas(p: ProyeccionJugador, e: Escapar): str
   if (abiertas.length === 0) return '<p class="asent-lado-nota">Nadie de tu Facción está preparando un ejército aquí. Puedes convocar uno tú.</p>';
   return abiertas.map((c) => {
     const mia = c.peticiones.find((x) => x.heroeId === p.heroeId && x.expiraEn > p.instante);
+    // La convocatoria de un mercenario solo admite mercenarios con la orden de unirse a ella (motor 7aa44b9).
+    const deMercenario = p.facciones.find((f) => f.id === p.faccionId)?.miembros?.some((m) => m.heroeId === c.liderId && m.marca);
     return `<div class="ejercito-fila"><div><strong>Ejército de ${e(nombreDeHeroe(p, c.liderId))}</strong>
-        <span>${c.integrantes.length} héroe(s) · ${e(POLITICA[c.politicaDeUnion])}</span></div>
-      <button class="btn-primary" type="button" data-unirse-conv="${e(c.id)}"${mia ? ' disabled' : ''}>${mia ? 'Petición enviada' : c.politicaDeUnion === 'preguntar' ? 'Pedir unirme' : 'Unirme'}</button></div>`;
+        <span>${c.integrantes.length} héroe(s) · ${deMercenario ? 'de mercenarios' : e(POLITICA[c.politicaDeUnion])}</span></div>
+      <button class="btn-primary" type="button" data-unirse-conv="${e(c.id)}"${mia || deMercenario ? ' disabled' : ''}${deMercenario ? ' title="La lidera un mercenario: solo se unen mercenarios con la orden de unirse a ella"' : ''}>${mia ? 'Petición enviada' : deMercenario ? 'Solo mercenarios' : c.politicaDeUnion === 'preguntar' ? 'Pedir unirme' : 'Unirme'}</button></div>`;
   }).join('');
 }
 

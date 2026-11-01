@@ -9,14 +9,15 @@ import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { CampamentoMercenarios, Escuadron } from '../tiposDominio';
 import { confirmar } from './dialogo';
 import { iconoEnFila } from './iconosTropa';
+import { cablearTablonMercenarios, htmlTablonMercenarios } from './mercenarios';
 
 /** Manda el comando y refresca; devuelve el mensaje de error o `null`. Lo pone `main.ts`. */
 export type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
 type Escapar = (valor: string) => string;
 
-export type SeccionCampamento = 'resumen' | 'tropa' | 'mercado' | 'fondo' | 'taberna';
+export type SeccionCampamento = 'resumen' | 'tropa' | 'mercado' | 'mercenarios' | 'fondo' | 'taberna';
 
-const ETIQUETA: Record<SeccionCampamento, string> = { resumen: 'Resumen', tropa: 'Tropa', mercado: 'Mercado', fondo: 'Fondo', taberna: 'Taberna' };
+const ETIQUETA: Record<SeccionCampamento, string> = { resumen: 'Resumen', tropa: 'Tropa', mercado: 'Mercado', mercenarios: 'Mercenarios', fondo: 'Fondo', taberna: 'Taberna' };
 
 /** Las tres tropas de leva comunal que presta el campamento (backend `TROPAS_RECLUTABLES`, tecnología `leva_comunal`). */
 const TROPAS_PRESTAMO: [string, string][] = [['milicia_lanceros', 'Milicia de lanceros'], ['lenadores', 'Leñadores'], ['granjeros', 'Granjeros']];
@@ -39,7 +40,7 @@ function faccionConPlaza(p: ProyeccionJugador): boolean {
 
 /** Las subpestañas que hay ahora: el Fondo de refundación solo aparece mientras tu Facción no tiene plaza. */
 export function seccionesDeCampamento(p: ProyeccionJugador): { id: SeccionCampamento; etiqueta: string }[] {
-  const ids: SeccionCampamento[] = ['resumen', 'tropa', 'mercado', ...(p.faccionId !== null && !faccionConPlaza(p) ? ['fondo' as const] : []), 'taberna'];
+  const ids: SeccionCampamento[] = ['resumen', 'tropa', 'mercado', 'mercenarios', ...(p.faccionId !== null && !faccionConPlaza(p) ? ['fondo' as const] : []), 'taberna'];
   return ids.map((id) => ({ id, etiqueta: ETIQUETA[id] }));
 }
 
@@ -295,6 +296,7 @@ export function htmlSeccionCampamento(seccion: SeccionCampamento, p: ProyeccionJ
     case 'resumen': return resumen(p, c, e);
     case 'tropa': return tropa(p, c, e);
     case 'mercado': return mercado(p, c, e);
+    case 'mercenarios': return htmlTablonMercenarios(p, c.tablon, e);
     case 'fondo': return fondo(p, c, e);
     case 'taberna': return '<div id="camp-taberna"></div>';
   }
@@ -389,6 +391,7 @@ export function cablearCampamento(root: HTMLElement, p: ProyeccionJugador, c: Ca
   root.querySelector<HTMLSelectElement>('#reclutar-pagar-con')?.addEventListener('change', (ev) => { pagarConElegido = (ev.target as HTMLSelectElement).value as typeof pagarConElegido; opciones.repintar(); });
   conBoton('[data-reclutar]', 'reclutarEnCampamento', function () { return { tropaId: this.dataset.reclutar!, pagarCon: pagarConElegido }; });
   cablearMercado(root, c, opciones);
+  cablearTablonMercenarios(root, ejecutar, (m) => { if (error) error.textContent = m; }, opciones.repintar);
   for (const tipo of ['aportarARefundacion', 'retirarDeRefundacion']) {
     conBoton(`[data-fondo="${tipo}"]`, tipo, () => ({
       recurso: root.querySelector<HTMLSelectElement>('#fondo-recurso')?.value ?? '',

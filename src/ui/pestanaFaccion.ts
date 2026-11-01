@@ -27,6 +27,7 @@ export const PESTANAS_FACCION = [
   ['plazas', 'Plazas'],
   ['tablon', 'Tablón'],
   ['misiones', 'Misiones'],
+  ['mercenarios', 'Mercenarios'],
   ['diplomacia', 'Diplomacia'],
   ['ajustes', 'Ajustes del Rey'],
 ] as const;

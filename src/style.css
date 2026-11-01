@@ -3511,3 +3511,109 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .diplo-datos span { color: var(--text-secondary); font-size: 0.78rem; }
 .diplo-datos strong { color: var(--pergamino); }
 @media (max-width: 720px) { .diplo-marco { flex-direction: column-reverse; } .diplo-lista { flex: none; width: 100%; max-height: 40vh; } }
+
+/* ── Mercenarios por contrato (0.77.0): tablón del campamento, pestaña de la Facción y ficha ── */
+.merc-tablon-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.merc-bolsa { font-weight: 700; color: var(--oro-claro); background: rgba(0, 0, 0, 0.35); border: 1px solid var(--bronce-osc); border-radius: 999px; padding: 2px 10px; font-size: 0.85rem; }
+.merc-orden-tablon { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-secondary); margin: 4px 0 8px; }
+.merc-chip { background: rgba(0, 0, 0, 0.3); color: var(--text-secondary); border: 1px solid var(--bronce-osc); border-radius: 999px; padding: 2px 10px; font-size: 0.78rem; cursor: pointer; }
+.merc-chip.activo, .merc-chip:hover:not(:disabled) { color: var(--tinta); background: var(--oro); border-color: var(--oro); }
+.merc-chip:disabled { opacity: 0.4; cursor: default; }
+.merc-ofertas, .merc-contratos { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.merc-oferta, .merc-contrato { display: flex; flex-direction: column; gap: 7px; padding: 10px 11px; background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-panel)); border: 1px solid var(--bronce-osc); border-radius: 8px; box-shadow: inset 0 0 0 1px rgba(241, 220, 174, 0.06); min-width: 0; }
+.merc-oferta.herido { opacity: 0.7; }
+.merc-oferta-cab, .merc-contrato-cab { display: flex; align-items: center; gap: 8px; }
+.merc-oferta-cab > div, .merc-nombre { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.merc-oferta-cab strong, .merc-nombre strong { color: var(--oro-claro); font-family: var(--fuente-titulo); font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.merc-oferta-cab small, .merc-nombre small { color: var(--text-secondary); font-size: 0.75rem; }
+.merc-herido { color: var(--terracota); }
+.merc-insignia { flex: none; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6)); }
+.merc-ficha { display: flex; flex-direction: column; gap: 5px; }
+.merc-rango { display: flex; align-items: center; gap: 6px; }
+.merc-rango > div { display: flex; flex-direction: column; line-height: 1.15; }
+.merc-rango strong { color: var(--oro); font-size: 0.85rem; }
+.merc-rango small { color: var(--text-secondary); font-size: 0.72rem; }
+.merc-renombre { height: 5px; }
+.merc-medallas { display: flex; flex-wrap: wrap; gap: 4px; }
+.merc-medalla { display: inline-flex; align-items: center; gap: 2px; font-size: 0.85rem; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--bronce-osc); background: rgba(0, 0, 0, 0.35); cursor: help; }
+.merc-medalla small { font-size: 0.65rem; color: var(--text-secondary); }
+.merc-grado-1 { border-color: #a9793f; box-shadow: inset 0 0 6px rgba(169, 121, 63, 0.45); }
+.merc-grado-2 { border-color: #c7ccd4; box-shadow: inset 0 0 6px rgba(199, 204, 212, 0.4); }
+.merc-grado-3 { border-color: #e9c46a; box-shadow: inset 0 0 8px rgba(233, 196, 106, 0.55); }
+.merc-grado-0 { opacity: 0.55; }
+.merc-historial { display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.72rem; color: var(--text-secondary); }
+.merc-fiable { color: var(--oro-claro); }
+.merc-tropa { display: flex; flex-wrap: wrap; gap: 6px; font-size: 0.8rem; }
+.merc-tropa span { display: inline-flex; align-items: center; gap: 3px; background: rgba(0, 0, 0, 0.3); border-radius: 4px; padding: 1px 6px 1px 2px; }
+.merc-seccion { font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--bronce); margin-top: 2px; }
+.merc-tarifas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.merc-tarifa { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 4px 2px; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--bronce-osc); border-radius: 6px; color: var(--text-secondary); cursor: pointer; font-size: 0.7rem; }
+.merc-tarifa strong { color: var(--oro-claro); font-size: 0.82rem; }
+.merc-tarifa.activo { border-color: var(--oro); background: rgba(216, 184, 120, 0.16); color: var(--oro-claro); box-shadow: 0 0 0 1px var(--oro) inset; }
+.merc-tarifa.caro strong { color: var(--terracota); }
+.merc-trabajos, .merc-ordenes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.merc-ordenes { grid-template-columns: repeat(4, 1fr); }
+.merc-trabajo, .merc-orden { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 5px 2px; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--bronce-osc); border-radius: 6px; color: var(--text-secondary); font-size: 0.68rem; cursor: pointer; }
+.merc-trabajo span, .merc-orden span { font-size: 1.15rem; line-height: 1; filter: sepia(0.5) saturate(1.4); }
+.merc-trabajo.activo, .merc-orden.activo { color: var(--oro-claro); border-color: var(--oro); background: rgba(216, 184, 120, 0.16); box-shadow: 0 0 0 1px var(--oro) inset; }
+.merc-trabajo:disabled, .merc-orden:disabled { opacity: 0.32; cursor: not-allowed; }
+.merc-trabajo:hover:not(:disabled):not(.activo), .merc-orden:hover:not(:disabled):not(.activo), .merc-tarifa:hover:not(.activo) { border-color: var(--bronce); color: var(--text-primary); }
+.merc-contratar label { display: flex; flex-direction: column; gap: 2px; font-size: 0.72rem; color: var(--text-secondary); }
+.merc-oferta-pie { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 2px; }
+.merc-oferta-pie small { font-size: 0.72rem; color: var(--text-secondary); }
+.merc-oferta-pie strong { color: var(--oro-claro); }
+.merc-oferta-pie .btn-primary, .merc-ordenar-fila .btn-primary { width: auto; padding: 7px 12px; font-size: 0.85rem; white-space: nowrap; }
+.merc-oferta-pie .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+.merc-motivo { font-size: 0.72rem; color: var(--terracota); }
+.merc-resumen { margin-bottom: 8px; }
+.merc-aviso, .merc-aviso strong { color: var(--terracota) !important; }
+.merc-barra-ordenes { position: sticky; top: 0; z-index: 2; display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; margin-bottom: 10px; background: rgba(14, 10, 7, 0.94); border: 1px solid var(--bronce); border-radius: 8px; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45); }
+.merc-barra-ordenes.vacia { border-color: var(--bronce-osc); }
+.merc-barra-cab { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; font-size: 0.85rem; color: var(--oro-claro); }
+.merc-barra-cab span { display: flex; gap: 4px; }
+.merc-ordenar-fila { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.merc-ordenar-fila select { flex: 1; min-width: 160px; }
+.merc-punto { display: inline-flex; align-items: center; gap: 4px; flex: 1; font-size: 0.8rem; color: var(--text-secondary); }
+.merc-num { width: 80px; }
+.merc-mini { width: auto; max-width: 150px; padding: 4px 6px; font-size: 0.78rem; }
+.merc-contrato.marcado { border-color: var(--oro); box-shadow: 0 0 0 1px var(--oro) inset, 0 0 14px rgba(216, 184, 120, 0.18); }
+.merc-contrato.pronto { border-color: var(--terracota); }
+.merc-contrato.acabado { opacity: 0.6; }
+.merc-contrato-cab input { width: 16px; height: 16px; accent-color: var(--oro); cursor: pointer; }
+.merc-icono-btn { flex: none; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--bronce-osc); border-radius: 6px; padding: 1px 5px; cursor: pointer; font-size: 0.85rem; }
+.merc-icono-btn:hover { border-color: var(--oro); }
+.merc-linea { display: flex; align-items: center; gap: 7px; font-size: 0.82rem; min-width: 0; }
+.merc-linea > span:nth-child(2) { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.merc-linea strong { color: var(--oro-claro); }
+.merc-linea small { color: var(--text-secondary); font-size: 0.7rem; }
+.merc-linea-icono, .merc-orden-icono { flex: none; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--bronce-osc); font-size: 0.9rem; }
+.merc-orden-actual { background: rgba(0, 0, 0, 0.22); border-radius: 6px; padding: 4px 6px; }
+.merc-sin-orden { color: var(--text-secondary); font-style: italic; }
+.merc-tiempo { display: flex; flex-direction: column; gap: 3px; font-size: 0.75rem; color: var(--text-secondary); }
+.merc-plazo { height: 5px; border-radius: 3px; background: rgba(0, 0, 0, 0.4); overflow: hidden; }
+.merc-plazo span { display: block; height: 100%; background: linear-gradient(90deg, var(--bronce), var(--oro)); }
+.merc-plazo.pronto span { background: var(--terracota); }
+.merc-acciones { display: flex; flex-direction: column; gap: 5px; border-top: 1px solid rgba(169, 121, 63, 0.25); padding-top: 6px; }
+.merc-firma { font-size: 0.7rem; color: var(--text-muted); }
+.merc-acciones-botones { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.merc-acciones-botones .btn-secondary { padding: 4px 9px; font-size: 0.78rem; }
+.merc-acciones-botones button:disabled { opacity: 0.35; cursor: not-allowed; }
+.merc-peligro:not(:disabled):hover { border-color: var(--terracota); color: var(--terracota); }
+.merc-valorar { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; margin-bottom: 10px; border: 1px dashed var(--oro); border-radius: 8px; background: rgba(216, 184, 120, 0.06); }
+.merc-valorar-fila { display: flex; align-items: center; gap: 6px; }
+.merc-valorar-fila > span { flex: 1; display: flex; flex-direction: column; }
+.merc-valorar-fila small { font-size: 0.72rem; color: var(--text-secondary); }
+.merc-marca { display: inline-flex; align-items: center; gap: 2px; font-size: 0.66rem; padding: 0 6px; border-radius: 999px; border: 1px solid var(--bronce); color: var(--oro); background: rgba(0, 0, 0, 0.3); vertical-align: middle; }
+.merc-marca-perm { border-color: var(--oro); }
+.merc-premio { display: flex; flex-direction: column; gap: 5px; padding: 6px 8px; border: 1px solid var(--oro); border-radius: 8px; background: rgba(216, 184, 120, 0.08); }
+.heroe-mercenario { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; }
+.merc-oferta [hidden], .merc-contrato [hidden], .merc-barra-ordenes [hidden] { display: none !important; }
+.merc-rango-nombre { color: var(--oro); font-weight: 700; }
+.merc-renombre-texto { font-size: 0.72rem; color: var(--text-secondary); }
+.merc-resumen { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.merc-resumen > div { padding: 6px 8px; }
+.merc-publico { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 4px; padding: 4px 6px; border-radius: 6px; background: rgba(0, 0, 0, 0.28); border: 1px solid var(--bronce-osc); }
+.merc-publico > span:nth-child(2) { display: flex; flex-direction: column; line-height: 1.2; }
+.merc-publico strong { color: var(--oro-claro); font-size: 0.8rem; }
+.merc-publico small { color: var(--text-secondary); font-size: 0.7rem; }
+.merc-punto select { flex: 1; min-width: 150px; }

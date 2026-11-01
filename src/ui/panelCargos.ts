@@ -12,7 +12,9 @@ import { confirmar } from './dialogo';
 export function htmlCargos(proyeccion: ProyeccionJugador, faccion: Faccion, escaparHtml: (valor: string) => string): string {
   if (faccion.reyId !== proyeccion.heroeId) return '';
   const opciones = (ids: string[]) => ids.map((id) => `<option value="${escaparHtml(id)}">${escaparHtml(nombreDeHeroe(proyeccion, id))}</option>`).join('');
-  const ciudadanos = faccion.ciudadanosIds ?? [];
+  // Un mercenario con marca no recibe trono ni cargos (motor 7aa44b9, `mercenario.marcado`).
+  const marcados = new Set((faccion.miembros ?? []).filter((m) => m.marca).map((m) => m.heroeId));
+  const ciudadanos = (faccion.ciudadanosIds ?? []).filter((id) => !marcados.has(id));
   const otros = ciudadanos.filter((id) => id !== proyeccion.heroeId);
   const embajadores = ciudadanos.filter((id) => id !== faccion.embajadorId);
   const info = ayuda('faccion:cargos', `${embajadores.length > 0 ? 'El Embajador propone, con el Rey, alianzas y vasallajes, declara guerra y ofrece la paz. ' : ''}${otros.length > 0 ? 'Al traspasar el trono dejas de ser Rey en el acto; solo el nuevo Rey podría devolvértelo.' : ''}`);
