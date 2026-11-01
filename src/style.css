@@ -3276,7 +3276,12 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .tablon-etiquetas, .tablon-premio { display: flex; flex-wrap: wrap; gap: 4px; }
 .tablon-chip { font-size: 0.7rem; padding: 1px 6px; border-radius: 3px; border: 1px solid var(--bronce-osc); color: var(--text-secondary); white-space: nowrap; }
 .tablon-chip-xp { border-color: #7aa0d8; color: #a9c4ee; }
-.tablon-chip-part { border-color: #8fbf7a; color: #b5dba3; }
+.tablon-chip-participacion { border-color: #8fbf7a; color: #b5dba3; }
+.tablon-chip-tropa { border-color: #c9895a; color: #e6b48c; }
+.tablon-chip.fija { font-weight: 600; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
+.tablon-chip { display: inline-flex; align-items: center; gap: 3px; }
+.tablon-chip-icono { display: inline-flex; font-size: 0.8rem; line-height: 1; }
+.tablon-chip-icono .icono-tropa { color: currentColor; }
 .tablon-chip-oro { border-color: var(--oro); color: var(--oro); }
 .tablon-pie { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
 .tablon-pie button { padding: 3px 12px; font-size: 0.8rem; }
@@ -3340,6 +3345,12 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .diario-premio strong { color: var(--oro-claro); }
 .diario-premio.oro { border-color: var(--oro); }
 .diario-premio.xp { border-color: #7aa0d8; }
+.diario-premio { display: inline-flex; align-items: center; gap: 5px; }
+.diario-premio.participacion { border-color: #8fbf7a; }
+.diario-premio.tropa { border-color: #c9895a; }
+.diario-premio.fija { background: rgba(216, 184, 120, 0.08); }
+.diario-premio-icono { display: inline-flex; line-height: 1; }
+.diario-premio-icono .icono-tropa { color: var(--oro); }
 .diario-nota { margin: 4px 0 0; font-size: 0.8rem; color: var(--text-muted); }
 .diario-pie { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--bronce-osc); background: var(--marco-panel); }
 .diario-pie:empty { display: none; }

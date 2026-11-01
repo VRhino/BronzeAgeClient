@@ -9,7 +9,7 @@
 //   rastreador las seguidas, arriba a la derecha en el mundo y al principio de la columna izquierda en la plaza y el campamento
 import { textosDeMisiones, type ProyeccionJugador } from '../apiCliente';
 import type { Mision } from '../tiposDominio';
-import { RECURSO_NOMBRE } from '../paletas';
+import { premiosDeMision, textoDePremios, type CobroMision } from './recompensasMision';
 import { estadoCliente } from './estadoCliente';
 import { ayuda } from './ayuda';
 import { cablearPlegables, plegable } from './plegable';
@@ -111,11 +111,10 @@ export function misionesPorReclamar(p: ProyeccionJugador): number {
   return PESTANAS.reduce((n, [d]) => n + (quienReclama(p, d) ? 0 : delDueno(p, d).misiones.filter((m) => m.estado === 'cumplida').length), 0);
 }
 
-function recompensa(m: Mision): string {
-  const partes = Object.entries(m.recompensa).filter(([, n]) => n > 0).map(([r, n]) => `${Math.round(n)} ${r === 'oro' ? 'oro' : (RECURSO_NOMBRE[r] ?? r).toLowerCase()}`);
-  if (m.recompensaExperiencia > 0) partes.push(`${Math.round(m.recompensaExperiencia)} XP de Facción`);
-  return partes.join(', ') || 'sin recompensa';
-}
+const COBRO: Record<DuenoMision, CobroMision> = { heroe: 'personal', plaza: 'plaza', faccion: 'faccion' };
+/** La fija de su tipo (plaza → participación, Facción → XP) y la lista libre (recompensas flexibles, motor 168a3be). */
+const premios = (d: DuenoMision, m: Mision) => premiosDeMision({ participacion: m.participacion, xp: m.recompensaExperiencia }, m.recompensas, COBRO[d]);
+const recompensa = (d: DuenoMision, m: Mision): string => textoDePremios(premios(d, m));
 
 function barras(m: Mision, e: Escapar, fino = false): string {
   return m.condiciones.map((c) => {
@@ -187,11 +186,11 @@ function tarjeta(p: ProyeccionJugador, d: DuenoMision, m: Mision, e: Escapar): s
   const otro = quienReclama(p, d);
   const reclamar = m.estado !== 'cumplida' ? '' : otro
     ? `<small class="asent-lado-nota">${e(otro)}</small>`
-    : `<button class="btn-primary" type="button" data-mision-reclamar="${e(m.id)}" data-dueno="${d}">Reclamar ${e(recompensa(m))}</button>`;
+    : `<button class="btn-primary" type="button" data-mision-reclamar="${e(m.id)}" data-dueno="${d}">Reclamar ${e(recompensa(d, m))}</button>`;
   const seguir = m.estado === 'reclamada' ? ''
     : `<button class="btn-secondary" type="button" data-mision-seguir="${e(k)}"${!seguida && (s?.seguidas.length ?? 0) >= MAX_SEGUIDAS ? ` disabled title="Ya sigues ${MAX_SEGUIDAS}: deja de seguir alguna"` : ''}>${seguida ? 'Dejar de seguir' : 'Seguir'}</button>`;
   return `<div class="mision mision-${m.estado}${nueva ? ' mision-sin-leer' : ''}" data-mision="${e(k)}">
-    <div class="mision-cab"><strong>${e(t.titulo)}</strong>${nueva ? '<span class="mision-nueva">nueva</span>' : ''}<span class="mision-premio">${m.estado === 'cumplida' ? '¡Cumplida! ' : ''}${e(recompensa(m))}</span></div>
+    <div class="mision-cab"><strong>${e(t.titulo)}</strong>${nueva ? '<span class="mision-nueva">nueva</span>' : ''}<span class="mision-premio">${m.estado === 'cumplida' ? '¡Cumplida! ' : ''}${e(recompensa(d, m))}</span></div>
     ${t.texto ? `<p class="mision-texto">${e(t.texto)}</p>` : ''}
     ${t.explicacion ? `<details class="mision-explicacion"><summary>Más</summary><p>${e(t.explicacion)}</p></details>` : ''}
     ${m.estado === 'activa' ? barras(m, e) : ''}
@@ -208,7 +207,7 @@ export function htmlListaMisiones(p: ProyeccionJugador, d: DuenoMision, e: Escap
   const hechas = de('reclamada');
   const vivas = [...de('cumplida'), ...de('activa')];
   return `${vivas.length ? vivas.map((m) => tarjeta(p, d, m, e)).join('') : '<p class="mapa-lista-vacia">Ninguna en marcha ahora.</p>'}
-    ${hechas.length ? `<details class="misiones-hechas"><summary>Hechas: ${hechas.length}</summary>${hechas.map((m) => `<div class="mision mision-reclamada"><div class="mision-cab"><strong>${e(textoDeMision(m.id).titulo)}</strong><span class="mision-premio">${e(recompensa(m))}</span></div></div>`).join('')}</details>` : ''}`;
+    ${hechas.length ? `<details class="misiones-hechas"><summary>Hechas: ${hechas.length}</summary>${hechas.map((m) => `<div class="mision mision-reclamada"><div class="mision-cab"><strong>${e(textoDeMision(m.id).titulo)}</strong><span class="mision-premio">${e(recompensa(d, m))}</span></div></div>`).join('')}</details>` : ''}`;
 }
 
 // ---------------------------------------------------------------- la ventana (como el diario de misiones de WoW)
@@ -230,9 +229,8 @@ function elegida(p: ProyeccionJugador): { d: DuenoMision; m: Mision } | undefine
 }
 
 /** Las recompensas en etiquetas, como la parte «Recompensas» del diario. */
-function htmlRecompensas(m: Mision, e: Escapar): string {
-  const r = Object.entries(m.recompensa).filter(([, n]) => n > 0).map(([k, n]) => `<span class="diario-premio${k === 'oro' ? ' oro' : ''}"><strong>${Math.round(n)}</strong> ${e(k === 'oro' ? 'oro' : (RECURSO_NOMBRE[k] ?? k).toLowerCase())}</span>`);
-  if (m.recompensaExperiencia > 0) r.push(`<span class="diario-premio xp"><strong>${Math.round(m.recompensaExperiencia)}</strong> XP de Facción</span>`);
+function htmlRecompensas(d: DuenoMision, m: Mision, e: Escapar): string {
+  const r = premios(d, m).map((x) => `<span class="diario-premio ${x.tipo}${x.fija ? ' fija' : ''}" title="${e(x.destino)}${x.fija ? ' · recompensa fija' : ''}"><span class="diario-premio-icono">${x.icono}</span><strong>${e(x.cifra)}</strong> ${e(x.nombre)}</span>`);
   return r.join('') || '<span class="diario-premio">Sin recompensa</span>';
 }
 
@@ -275,7 +273,7 @@ function htmlDetalle(p: ProyeccionJugador, x: { d: DuenoMision; m: Mision } | un
     ${t.texto ? `<p class="diario-texto">${e(t.texto)}</p>` : ''}
     ${m.estado === 'activa' && m.condiciones.length ? `<h3 class="diario-seccion">Objetivos</h3>${barras(m, e)}` : ''}
     ${t.explicacion ? `<h3 class="diario-seccion">Detalles</h3><p class="diario-texto">${e(t.explicacion)}</p>` : ''}
-    <h3 class="diario-seccion">Recompensas</h3><div class="diario-premios">${htmlRecompensas(m, e)}</div>
+    <h3 class="diario-seccion">Recompensas</h3><div class="diario-premios">${htmlRecompensas(d, m, e)}</div>
     ${m.estado === 'cumplida' && otro ? `<p class="diario-nota">${e(otro)}</p>` : ''}
     <p class="faction-error" data-mision-error="${e(m.id)}" role="alert"></p>`;
   const seguir = m.estado === 'reclamada' ? ''

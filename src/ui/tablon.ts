@@ -8,6 +8,7 @@ import { textoEnTiempoReal } from './estadoCliente';
 import { nombreDeContador } from './misiones';
 import { nombreDeHeroe } from './nombres';
 import { cablearPlegables, plegable } from './plegable';
+import { premiosDeMision, textoDePremios, type Premio } from './recompensasMision';
 import type { SubpestanaPlaza } from './ganchos';
 
 type Escapar = (s: string) => string;
@@ -54,21 +55,21 @@ function misCargos(p: ProyeccionJugador, d: DuenoTablon): Set<string> {
   return r;
 }
 
-function recompensa(x: DefinicionRecurrente): string {
-  const partes: string[] = [];
-  if (x.experiencia > 0) partes.push(`${Math.round(x.experiencia)} XP de Facción`);
-  if (x.participacion > 0) partes.push(`${x.participacion} de participación`);
-  if (x.oro > 0) partes.push(`${Math.round(x.oro)} oro`);
-  return partes.join(', ') || 'sin recompensa';
+/** La fija de su tipo (plaza → participación, Facción → XP) y la lista libre (recompensas flexibles, motor 168a3be). Una individual la cobra el
+ * héroe; una grupal, la plaza o la Facción del tablón. */
+function premios(x: DefinicionRecurrente, d: DuenoTablon): Premio[] {
+  const cobro = x.tipo === 'individual' ? 'personal' : d.tipo === 'plaza' ? 'plaza' : 'faccion';
+  return premiosDeMision({ participacion: x.participacion, xp: x.experiencia }, x.recompensas, cobro, x.tipo === 'grupal');
 }
 
-/** La recompensa en etiquetas cortas (para el pie de la tarjeta), con el nombre largo de cada una en el `title`. */
-function etiquetasDeRecompensa(x: DefinicionRecurrente): string {
-  const e: string[] = [];
-  if (x.experiencia > 0) e.push(`<span class="tablon-chip tablon-chip-xp" title="Experiencia de Facción">${Math.round(x.experiencia)} XP</span>`);
-  if (x.participacion > 0) e.push(`<span class="tablon-chip tablon-chip-part" title="Participación en la plaza">${x.participacion} part.</span>`);
-  if (x.oro > 0) e.push(`<span class="tablon-chip tablon-chip-oro" title="Oro a tu almacén personal">${Math.round(x.oro)} oro</span>`);
-  return e.join('') || '<span class="tablon-chip">sin recompensa</span>';
+function recompensa(x: DefinicionRecurrente, d: DuenoTablon): string {
+  return textoDePremios(premios(x, d));
+}
+
+/** La recompensa en etiquetas cortas (para el pie de la tarjeta), con adónde va cada una en el `title`. */
+function etiquetasDeRecompensa(x: DefinicionRecurrente, d: DuenoTablon, e: Escapar): string {
+  const r = premios(x, d).map((p) => `<span class="tablon-chip tablon-chip-${p.tipo}${p.fija ? ' fija' : ''}" title="${e(p.cifra)} ${e(p.nombre)}: ${e(p.destino)}${p.fija ? ' (recompensa fija)' : ''}"><span class="tablon-chip-icono">${p.icono}</span>${e(p.cifra)}${p.tipo === 'recurso' || p.tipo === 'oro' ? '' : ` ${e(p.tipo === 'participacion' ? 'part.' : p.tipo === 'xp' ? 'XP' : p.nombre)}`}</span>`);
+  return r.join('') || '<span class="tablon-chip">sin recompensa</span>';
 }
 
 function barras(cs: CondicionRecurrente[], e: Escapar): string {
@@ -91,7 +92,7 @@ function tarjeta(p: ProyeccionJugador, d: DuenoTablon, m: MisionRecurrente, e: E
   let accion = '';
   let nota = '';
   if (estado === 'cumplida') {
-    if (x.tipo === 'individual' || reclamasGrupal(p, d)) accion = `<button class="btn-primary" type="button" data-tablon-reclamar="${e(x.id)}" title="${e(recompensa(x))}">Reclamar</button>`;
+    if (x.tipo === 'individual' || reclamasGrupal(p, d)) accion = `<button class="btn-primary" type="button" data-tablon-reclamar="${e(x.id)}" title="${e(recompensa(x, d))}">Reclamar</button>`;
     else nota = d.tipo === 'faccion' ? 'La reclama el Rey.' : 'La reclama el Gobernador (o un residente si no hay).';
   } else if (x.tipo === 'individual' && !mia && !vencida) {
     const tope = x.limiteSemanal > 0 && m.aceptadasSemana >= x.limiteSemanal;
@@ -112,7 +113,7 @@ function tarjeta(p: ProyeccionJugador, d: DuenoTablon, m: MisionRecurrente, e: E
     <div class="tablon-etiquetas">${etiquetas.map((t) => `<span class="tablon-chip">${e(t)}</span>`).join('')}</div>
     ${estado === 'en_curso' ? barras(avance, e) : ''}
     ${mas ? `<details class="mision-explicacion"><summary>Más</summary>${mas}</details>` : ''}
-    <div class="tablon-pie"><div class="tablon-premio">${etiquetasDeRecompensa(x)}</div>${accion}</div>
+    <div class="tablon-pie"><div class="tablon-premio">${etiquetasDeRecompensa(x, d, e)}</div>${accion}</div>
     ${nota ? `<small class="tablon-nota">${e(nota)}</small>` : ''}
     <p class="faction-error" data-tablon-error="${e(x.id)}" role="alert"></p>
   </div>`;
@@ -141,7 +142,7 @@ function elegir(p: ProyeccionJugador, d: DuenoTablon, e: Escapar): string {
     return `<fieldset class="tablon-elegir"><legend>${duracion === 'diaria' ? 'Diarias' : 'Semanales'} (${marcadas.size}/${MAX_ELEGIDAS})</legend>
       ${del.map((x) => {
         const on = marcadas.has(x.id);
-        return `<label title="${e(x.texto)}"><input type="checkbox" data-tablon-elegir="${duracion}" value="${e(x.id)}"${on ? ' checked' : ''}${!on && marcadas.size >= MAX_ELEGIDAS ? ' disabled' : ''}> ${e(x.titulo || x.id)} <small>· ${x.tipo}${x.cargo ? ` · ${e(CARGO_NOMBRE[x.cargo] ?? x.cargo)}` : ''} · ${e(recompensa(x))}</small></label>`;
+        return `<label title="${e(x.texto)}"><input type="checkbox" data-tablon-elegir="${duracion}" value="${e(x.id)}"${on ? ' checked' : ''}${!on && marcadas.size >= MAX_ELEGIDAS ? ' disabled' : ''}> ${e(x.titulo || x.id)} <small>· ${x.tipo}${x.cargo ? ` · ${e(CARGO_NOMBRE[x.cargo] ?? x.cargo)}` : ''} · ${e(recompensa(x, d))}</small></label>`;
       }).join('') || '<p class="mapa-lista-vacia">El catálogo no tiene ninguna.</p>'}</fieldset>`;
   };
   const cuerpo = `<p class="asent-lado-nota">Lo que elijas sale desde la próxima renovación semanal (en ${e(textoEnTiempoReal(t.renovacionSemanal - p.instante))}); hasta ${MAX_ELEGIDAS} de cada. ${t.conEleccion ? '' : 'Sin elección, salen las primeras del catálogo.'}</p>
@@ -155,7 +156,7 @@ function elegir(p: ProyeccionJugador, d: DuenoTablon, e: Escapar): string {
 export function htmlTablon(p: ProyeccionJugador, d: DuenoTablon, e: Escapar): string {
   return `<div class="tablon" data-tablon-dueno="${e(d.id)}" data-tablon-tipo="${d.tipo}">
     <p class="asent-lado-nota">Misiones que vuelven cada día y cada semana.${ayuda(`tablon:${d.tipo}`, d.tipo === 'plaza'
-      ? 'Las individuales las acepta cada residente y cuentan desde que la aceptas; las grupales cuentan lo de todos los residentes. Dan experiencia a la Facción, participación en la plaza y, algunas, oro a tu almacén personal. Lo cumplido se reclama aunque haya pasado el día.'
+      ? 'Las individuales las acepta cada residente y cuentan desde que la aceptas; las grupales cuentan lo de todos los residentes. Dan participación en la plaza y, algunas, experiencia de Facción, recursos, oro o tropa: en una individual, a tu almacén personal (la tropa nace en tu campamento); en una grupal, al almacén de la plaza. Pasa el ratón por cada premio para ver adónde va. Lo cumplido se reclama aunque haya pasado el día.'
       : 'Las individuales las acepta cada ciudadano y cuentan desde que la aceptas; las grupales cuentan lo de toda la Facción. Lo cumplido se reclama aunque haya pasado el periodo; las grupales las reclama el Rey.')}</p>
     <div class="tablon-columnas">${columna(p, d, 'diaria', e)}${columna(p, d, 'semanal', e)}</div>
     ${eligesTu(p, d) && d.tablon.catalogo.length ? elegir(p, d, e) : ''}

@@ -110,11 +110,12 @@ export interface DefinicionRecurrente {
   /** Solo la acepta el titular de ese cargo. */
   cargo?: string;
   condiciones: CondicionRecurrente[];
-  /** Experiencia de Facción (unidades). */
+  /** La recompensa fija de una de Facción: experiencia de Facción (unidades). */
   experiencia: number;
+  /** La recompensa fija de una de plaza: participación (la del héroe en una individual; la que se reparte en una grupal). */
   participacion: number;
-  /** Oro al almacén personal (unidades). */
-  oro: number;
+  /** La lista libre (recompensas flexibles, motor 168a3be). */
+  recompensas: RecompensaMision[];
   titulo: string;
   texto: string;
   explicacion: string;
@@ -371,14 +372,26 @@ export interface Encargo {
  * Solo los campos que pinta el mapa; el resto (suministro, objetivo, caravanas adjuntas) llegará cuando haya
  * un panel de campaña que los muestre. */
 /** Una misión (motor f859ef5, `Docs/Mechanics/Misiones.md`): de un héroe, de una plaza o de una Facción. Solo llegan las activas, las cumplidas
- * (por reclamar) y las reclamadas. Los contadores van en unidades; la recompensa, en unidades (oro o recursos) o en experiencia de Facción. */
+ * (por reclamar) y las reclamadas. Los contadores van en unidades; la recompensa es la fija de su tipo y la lista libre (`RecompensaMision`). */
 export interface Mision {
   id: string;
   estado: 'activa' | 'cumplida' | 'reclamada';
   condiciones: { contador: string; avance: number; umbral: number }[];
   previa?: string;
-  recompensa: Record<string, number>;
+  /** La recompensa fija de una de Facción: experiencia de Facción (unidades). */
   recompensaExperiencia: number;
+  /** La recompensa fija de una de plaza: participación para quien la reclama. */
+  participacion: number;
+  /** La lista libre (recompensas flexibles, motor 168a3be). */
+  recompensas: RecompensaMision[];
+}
+
+/** Un elemento de la lista libre de una recompensa de misión (Misiones §4): recurso, oro y xp en unidades; una tropa, en soldados. */
+export interface RecompensaMision {
+  tipo: 'recurso' | 'oro' | 'xp' | 'tropa';
+  /** El recurso o la tropa; sin ella en oro y xp. */
+  clave?: string;
+  cantidad: number;
 }
 
 export interface Ejercito {

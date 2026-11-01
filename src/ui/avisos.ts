@@ -12,7 +12,7 @@
 // funden en UNA línea con contador y rango de horas. La insignia cuenta líneas (grupos) sin leer, no eventos.
 // Un evento nuevo = una rama en `procesar` que llame a `anotar` con su categoría y urgencia.
 import { anotarHechoMercenario, textoDeHechoMercenario } from './mercenarios';
-import { consultarEventos } from '../apiCliente';
+import { consultarEventos, tropasReclutables } from '../apiCliente';
 import type { EventoDominio } from '../tiposDominio';
 import { esPeticionNueva, MINIMO_FORMACION } from './ejercitos';
 import { estadoCliente, textoEnTiempoReal } from './estadoCliente';
@@ -253,14 +253,22 @@ export function procesar(e: EventoDominio, heroeId: string, modo: Modo): void {
     return;
   }
   if (e.codigo === 'mision.cumplida' || e.codigo === 'mision.reclamada') {
-    // Misiones (motor, mecánica 49): `mision` y `dueno` (`heroe-N`, `as-N`, `f-N`); al reclamar, `oro` o `xp` en milésimas.
-    const p = e.payload as { mision?: string; dueno?: string; oro?: number; xp?: number } | undefined;
+    // Misiones (motor, mecánica 49): `mision` y `dueno` (`heroe-N`, `as-N`, `f-N`). Al reclamar (recompensas flexibles, motor 168a3be), solo
+    // lo que se dio: `participacion` (la de cada uno), `xp` y `oro` en milésimas, `recursos` ([recurso, milésimas]) y `escuadras` ([tropa, soldados, id]).
+    const p = e.payload as { mision?: string; dueno?: string; participacion?: number; oro?: number; xp?: number; recursos?: [string, number][]; escuadras?: [string, number, string][] } | undefined;
     // Una recurrente (mecánica 55) es del tablón de su plaza o Facción: su título viaja en el catálogo del tablón.
     const recurrente = tituloRecurrente(p?.mision ?? '');
     const titulo = recurrente ?? textoDeMision(p?.mision ?? '').titulo;
     const deQuien = p?.dueno?.startsWith('as-') ? ' de la plaza' : p?.dueno?.startsWith('f-') ? ' de la Facción' : '';
     const cumplida = e.codigo === 'mision.cumplida';
-    const premio = p?.oro ? `+${Math.round(p.oro / 1000)} oro` : p?.xp ? `+${Math.round(p.xp / 1000)} XP de Facción` : 'Recompensa';
+    const dado = [
+      ...(p?.participacion ? [`+${p.participacion} de participación`] : []),
+      ...(p?.xp ? [`+${Math.round(p.xp / 1000)} XP de Facción`] : []),
+      ...(p?.oro ? [`+${Math.round(p.oro / 1000)} oro`] : []),
+      ...(p?.recursos ?? []).map(([r, n]) => `+${Math.round(n / 1000)} ${(RECURSO_NOMBRE[r] ?? r).toLowerCase()}`),
+      ...(p?.escuadras ?? []).map(([t, n]) => `+${n} ${tropasReclutables()?.find((x) => x.id === t)?.nombre ?? t} en tu campamento`),
+    ];
+    const premio = dado.join(', ') || 'Recompensa';
     const texto = cumplida ? `¡Misión${deQuien} cumplida: ${titulo}! Reclama la recompensa en ${recurrente ? 'el Tablón' : 'Misiones'}.` : `${premio} por la misión${deQuien} «${titulo}».`;
     anotar({ ...base, texto, clase: 'mirada', titulo: cumplida ? 'Misión cumplida' : 'Recompensa de misión', categoria: 'economia', urgente: cumplida, clave: `${e.codigo}|${p?.dueno ?? ''}|${p?.mision ?? ''}` }, modo);
     return;

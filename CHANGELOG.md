@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.79.0] — 2026-11-01 · Recompensas de misión flexibles · sync con `VRhino/BronzeAge@168a3bea`
+
+- **Contrato regenerado** (`RecompensaMision`; `Mision.participacion` y `recompensas`; `DefinicionMisionRecurrente.recompensas`; fuera `Mision.recompensa` y `DefinicionMisionRecurrente.oro`). Hace falta **partida nueva** (cambia la huella de las reglas).
+- **La recompensa de cada misión** es la fija de su tipo (plaza → participación, Facción → XP de Facción) y la lista libre (recurso, oro, XP y tropa), con su icono, en la ventana de Misiones, en las listas de la plaza y la Facción, en el botón Reclamar y en el tablón (tarjetas y elección de la semana). La fija va destacada; cada premio dice en su `title` adónde va al reclamar (almacén personal, de la plaza o de la capital; la tropa nace en el campamento donde resides y completa tu escuadra, lo que sobra se pierde; la participación de una grupal se reparte entre los que aportaron) (`ui/recompensasMision.ts`).
+- El aviso de **misión reclamada** dice todo lo que se dio: participación, XP, oro, recursos y soldados.
+- Mensaje para el rechazo nuevo `mision.sin_capital`, y los de `almacen_personal.lleno`, `mision.almacen_lleno` y `heroe.sin_residencia` explican que reclamar es todo o nada.
+- Banco nuevo `pruebas/misiones/`.
+
 ## [0.78.0] — 2026-11-01 · Elegir campamento con el mapa · sync con `VRhino/BronzeAge@b57d4b27`, sin cambios en el contrato
 
 - **Pantalla nueva para elegir dónde nace el héroe** (`ui/eleccionCampamento.ts`), como la de elegir punto de partida de un juego de estrategia: el mapa del mundo con cada campamento como un estandarte de color; al elegir uno, la cámara vuela hasta él, marca su zona cercana (150 u) y su frontera (250 u), pinta su suelo de cerca y deja en penumbra lo de fuera. Se arrastra y se acerca con la rueda; un minimapa con todos los estandartes lleva a cualquiera. Lista y mapa van a la par (clic en la tarjeta o en el estandarte, flechas en la lista).

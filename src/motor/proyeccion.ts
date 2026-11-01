@@ -102,7 +102,7 @@ function definicionRecurrente(x: pb.DefinicionMisionRecurrente): d.DefinicionRec
   return {
     id: x.id, duracion: x.duracion === pb.DuracionMision.MISION_SEMANAL ? 'semanal' : 'diaria', tipo: x.tipo === pb.TipoMision.MISION_GRUPAL ? 'grupal' : 'individual',
     limiteSemanal: x.limiteSemanal, cargo: x.cargo, condiciones: condicionesRecurrentes(x.condiciones), experiencia: mil(x.experiencia),
-    participacion: Number(x.participacion), oro: mil(x.oro), titulo: x.titulo, texto: x.texto, explicacion: x.explicacion,
+    participacion: Number(x.participacion), recompensas: recompensasMision(x.recompensas), titulo: x.titulo, texto: x.texto, explicacion: x.explicacion,
   };
 }
 
@@ -276,8 +276,19 @@ function mision(m: pb.Mision): d.Mision {
   return {
     id: m.id, estado: ESTADO_MISION[m.estado] ?? 'activa', previa: opcional(m.previa),
     condiciones: m.condiciones.map((c) => ({ contador: c.contador, avance: Number(c.avance), umbral: Number(c.umbral) })),
-    recompensa: cantidades(m.recompensa), recompensaExperiencia: mil(m.recompensaExperiencia),
+    recompensaExperiencia: mil(m.recompensaExperiencia), participacion: Number(m.participacion), recompensas: recompensasMision(m.recompensas),
   };
+}
+
+const TIPOS_RECOMPENSA = new Set(['recurso', 'oro', 'xp', 'tropa']);
+/** La lista libre de una recompensa de misión: recurso, oro y xp vienen en milésimas; una tropa, en soldados. Un tipo que este cliente no
+ * conoce no se enseña. */
+function recompensasMision(rs: pb.RecompensaMision[]): d.RecompensaMision[] {
+  return rs.filter((r) => TIPOS_RECOMPENSA.has(r.tipo)).map((r) => ({
+    tipo: r.tipo as d.RecompensaMision['tipo'],
+    ...(r.clave ? { clave: r.clave } : {}),
+    cantidad: r.tipo === 'tropa' ? Number(r.cantidad) : mil(r.cantidad),
+  }));
 }
 
 function escuadron(e: pb.Escuadron, ahora: number): d.Escuadron {
