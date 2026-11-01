@@ -48,6 +48,8 @@ export interface FaccionDelDirectorio {
   /** Cuántos ciudadanos tiene. */
   ciudadanos: number;
   derrotada: boolean;
+  /** Facción de bots: su Rey es un bot (motor afd53b8). */
+  esBot?: boolean;
 }
 
 export interface Faccion {
@@ -70,6 +72,8 @@ export interface Faccion {
   capitalId?: string;
   /** Ausente: no derrotada. `''`: colapsó sin ganador; si no, la Facción que la derrotó. */
   derrotadaPor?: string;
+  /** Facción de bots: su Rey es un bot (motor afd53b8). Un jugador no entra en una de bots ni un bot en una que no lo es. */
+  esBot?: boolean;
   /** La Liga en que está, derivada de las relaciones activas; ausente si no está en ninguna. */
   liga?: { miembrosIds: string[]; tieneVasallaje: boolean; granReyId?: string };
   /** Solo la propia: un ciudadano por entrada, en orden de ingreso, con sus cargos y su participación sumada en las plazas de la Facción. */

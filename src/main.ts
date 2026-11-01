@@ -282,8 +282,10 @@ function cablearFaccion(root: ParentNode, proyeccion: ProyeccionJugador, rerende
   const busqueda = root.querySelector<HTMLInputElement>('#input-buscar-faccion');
   if (lista && busqueda) {
     const pintarLista = (): void => {
+      const deBots = (faccion: Faccion): boolean => !!(faccion.esBot || proyeccion.directorioFacciones?.find((x) => x.id === faccion.id)?.esBot);
       const pedir = (faccion: Faccion): string => (faccion.solicitudesIds ?? []).includes(proyeccion.heroeId)
         ? '<span class="faccion-pedido">Pedido: decide su Rey</span>'
+        : deBots(faccion) ? '<span class="faccion-pedido" title="Un jugador no entra en una Facción de bots">🤖 De bots</span>'
         : `<button class="btn-join-faction" type="button" data-faccion-id="${escaparHtml(faccion.id)}">Pedir ingreso</button>`;
       lista.innerHTML = htmlListaFacciones(proyeccion, escaparHtml, { termino: busqueda.value, accion: pedir });
       lista.querySelectorAll<HTMLButtonElement>('.btn-join-faction').forEach((boton) => boton.addEventListener('click', async () => {
@@ -1739,7 +1741,7 @@ let seccionAsent: SeccionAsent = 'edificios';
 /** Edificios que un Gobernador / Maestro de Obras puede añadir a mano (el backend gatea nivel, únicos y
  * topes; aquí solo se ofrece el catálogo). Fuera: centroUrbano, puestoMercado y los extractores de `mapa`. */
 const EDIFICIOS_MANUALES = [
-  'vivienda', 'almacen', 'granero', 'granja', 'lenera', 'corral',
+  'vivienda', 'almacen', 'granero', 'granja', 'lenera',
   'barracon', 'galeriaDeTiro', 'palacio', 'mercado', 'taberna',
   'fundicion', 'granFundicion', 'curtiduria', 'armeria', 'carpinteria', 'maravilla',
 ] as const;
@@ -1767,12 +1769,12 @@ function motivoParaConstruir(a: Asentamiento, tipo: string, def: DefEdificio, ca
 }
 
 /** Los botones para añadir a la cola: uno por edificio, con su icono; encendidos los que se pueden construir ahora y apagados, con el motivo, los demás.
- * Fuera: los que nacen solos (sin coste), los de pueblo (minas) y el Corral, que es de la aldea. */
+ * Fuera: los que nacen solos (sin coste), los de pueblo (minas y Cantera, desde el motor 5907aa6) y el Corral, que es de la aldea. */
 function htmlBotonesConstruir(a: Asentamiento, cargo: 'gobernador' | 'maestroObras' | null): string {
   if (!cargo) return '';
   const catalogo = bloqueDeDatos<Record<string, DefEdificio>>('EDIFICIO_CATALOGO');
   const tipos = catalogo
-    ? Object.keys(catalogo).filter((t) => Object.keys(catalogo[t]!.costo ?? {}).length > 0 && !t.startsWith('mina') && t !== 'corral')
+    ? Object.keys(catalogo).filter((t) => Object.keys(catalogo[t]!.costo ?? {}).length > 0 && !t.startsWith('mina') && t !== 'cantera' && t !== 'corral')
     : [...EDIFICIOS_MANUALES];
   const botones = tipos.map((t) => {
     const def = catalogo?.[t] ?? {};

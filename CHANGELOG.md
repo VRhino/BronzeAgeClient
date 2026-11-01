@@ -3,6 +3,15 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.76.0] — 2026-11-01 · Cantera solo por pueblo, aldeas por anillos, Facciones de bots · sync con `VRhino/BronzeAge@abdebf43`
+
+- **Contrato regenerado** (`es_bot` en `Faccion` y `FaccionDelDirectorio`).
+- **Cantera fuera de la plaza** (motor 5907aa6): ya no sale entre los edificios que se pueden construir (como las minas y el Corral); la piedra solo llega de un pueblo de cantera. Rechazo `obra.solo_por_pueblo` con su mensaje. La ayuda del extractor lo explica, y que en el nivel 1 caben dos pueblos (cupo 2/3/4/5/6, leído de los datos). Los requisitos del nivel 2 (200 pesants, Leñera, Granja a nivel 2 y un pueblo activo) salen de `NIVEL_ASENTAMIENTO` como antes.
+- **Aldeas por anillos:** Territorio dice en qué anillo va la siguiente aldea (las dos primeras hasta 10 u, la tercera de 10 a 15 u…, con los techos de `reglas.territorio.techos` y el cupo de los datos) y los sitios verdes del mapa solo salen dentro de él. Rechazo `pueblo.fuera_de_su_anillo` con su mensaje.
+- **Facciones de bots:** la ficha de Diplomacia dice si la Facción es de bots (su Rey es un bot) y la lista lo marca con 🤖; «Pedir ingreso» no se ofrece en una de bots. Rechazos `faccion.de_bots` y `faccion.no_es_de_bots`.
+- `ascenso.falta_aldea` dice ahora «un pueblo activo: una aldea agrícola o un extractor».
+- La Leñera a 8 de madera, las costas, el bosque y los metales nuevos del generador no piden cambios: salen de los datos y del mundo.
+
 ## [0.75.0] — 2026-11-01 · zonas de una misma Facción fusionadas · sync con `VRhino/BronzeAge@2c4bca63`, sin cambios en el contrato
 
 - Las zonas de influencia de una misma Facción que chocan o se solapan se pintan como una sola: la frontera segmentada solo por fuera y, donde se tocan dos plazas suyas, una línea fina y tenue que separa las provincias del mismo reino. Vale para todas las Facciones (también las recordadas) y para la tuya, cuya frontera exterior sigue siendo la de la zona fusionada. En el mundo 3D y en el modo mapa (`mundo/fronteras.ts`, `partirFronteras`).

@@ -511,7 +511,7 @@ function pedirVistaEntera(s: Sesion): void {
 
 /** El archivo común de datos de juego del motor (`GET /v1/datos`, el vigente): los bloques de parámetros de `Docs/Mechanics`, por documento. Se pide una vez. */
 let datosDeJuego: Promise<DatosDeJuego | null> | null = null;
-interface DatosDeJuego { documentos?: Record<string, Record<string, unknown>>; reglas?: { territorio?: { radio_inicial?: number } } }
+interface DatosDeJuego { documentos?: Record<string, Record<string, unknown>>; reglas?: { territorio?: { radio_inicial?: number; techos?: number[] } } }
 /** `reglas` de `/v1/datos` (territorio en milésimas), guardadas al llegar el balance. */
 let reglasDePartida: DatosDeJuego['reglas'] | null = null;
 
@@ -649,6 +649,13 @@ export function radioZonaInicial(alCargar?: () => void): number {
   balance(alCargar);
   const r = Number(reglasDePartida?.territorio?.radio_inicial) / 1000;
   return r > 0 ? r : 6;
+}
+
+/** Los techos de la zona de una plaza por nivel, en u (`reglas.territorio.techos` de `/v1/datos`); 10 / 15 / 20 / 25 / 30 mientras no lleguen. */
+export function techosDeZona(alCargar?: () => void): number[] {
+  balance(alCargar);
+  const t = reglasDePartida?.territorio?.techos;
+  return Array.isArray(t) && t.length ? t.map((x) => Number(x) / 1000) : [10, 15, 20, 25, 30];
 }
 
 /** Un bloque de parámetros de `GET /v1/datos` por su nombre (`PUEBLOS_EXTRACTORES`, `NIVEL_ASENTAMIENTO`…); `null` mientras no llegue. */

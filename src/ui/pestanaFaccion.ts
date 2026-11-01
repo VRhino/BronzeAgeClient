@@ -213,7 +213,7 @@ function faccionConocida(p: ProyeccionJugador, id: string): Faccion | undefined 
   const completa = p.facciones.find((f) => f.id === id);
   if (completa) return completa;
   const d = p.directorioFacciones?.find((f) => f.id === id);
-  return d ? { id: d.id, nombre: d.nombre, sigilo: d.sigilo, nivel: d.nivel } as Faccion : undefined;
+  return d ? { id: d.id, nombre: d.nombre, sigilo: d.sigilo, nivel: d.nivel, esBot: d.esBot } as Faccion : undefined;
 }
 
 /** El centro de la pestaña Diplomacia con otra Facción elegida: lo que se sabe de ella (lo público, sus plazas conocidas) y lo que tu Facción
@@ -239,8 +239,8 @@ function htmlFichaFaccion(p: ProyeccionJugador, propia: Faccion, id: string, e: 
     ] as [string, string][] : []),
     ...(capital ? [['Capital', capital]] as [string, string][] : []),
     ...(f.liga ? [['Liga', `${f.liga.tieneVasallaje ? 'Por vasallaje' : 'Por alianza'}${f.liga.granReyId === f.id ? ' · Gran Rey' : f.liga.granReyId ? ` · Gran Rey: ${nombreDe(f.liga.granReyId)}` : ''}`]] as [string, string][] : []),
-    // El motor no dice de ninguna Facción si la llevan bots (ni de sus héroes públicos): hasta que lo publique, aquí no se puede saber.
-    ['¿Bot?', 'No se sabe: el servidor no lo publica'],
+    // Facción de bots: su Rey es un bot (motor afd53b8, `es_bot` en la Facción y en el directorio).
+    ['¿Bot?', f.esBot || directorio?.esBot ? 'Sí: la lleva un Rey bot' : 'No'],
   ];
   const insignias = [
     relacion ? `<span class="faccion-publica-relacion rel-${relacion === 'En guerra' ? 'guerra' : 'paz'}">${e(relacion)}</span>` : '',
@@ -269,7 +269,8 @@ function htmlListaDiplomacia(p: ProyeccionJugador, elegidaId: string, e: (valor:
     .filter((f) => !vistas.has(f.id)).sort(orden);
   const fila = (f: Faccion): string => {
     const relacion = relacionCon(p, p.faccionId, f.id);
-    const sub = f.id === p.faccionId ? 'La tuya' : relacion || `Nivel ${f.nivel} · ${miembros(f)} miembro${miembros(f) === 1 ? '' : 's'}`;
+    const bot = f.esBot || directorio.get(f.id)?.esBot ? ' · 🤖 bots' : '';
+    const sub = (f.id === p.faccionId ? 'La tuya' : relacion || `Nivel ${f.nivel} · ${miembros(f)} miembro${miembros(f) === 1 ? '' : 's'}`) + bot;
     return `<button type="button" class="diplo-fila${f.id === elegidaId ? ' activo' : ''}${relacion === 'En guerra' ? ' guerra' : ''}" data-elegir-faccion="${e(f.id)}">
       <span class="diplo-fila-escudo">${svgSigilo(f.sigilo, 26)}</span><span class="diplo-fila-texto"><strong>${e(f.nombre)}</strong><small>${e(sub)}</small></span></button>`;
   };

@@ -87,7 +87,7 @@ function faccion(f: pb.Faccion, ahora: number): d.Faccion {
     id: f.id, nombre: f.nombre, sigilo: sigilo(f.sigilo), reyId: f.reyId ?? null, embajadorId: f.embajadorId ?? null, nivel: f.nivel,
     experiencia: mil(f.experiencia), ciudadanosIds: f.ciudadanosIds, solicitudesIds: f.solicitudesIds, reputacion: valorDeRitmo(f.reputacion, ahora),
     admiteOtrasEnAtaques: f.admiteOtrasEnAtaques, capitalDesignadaEn: instante(f.capitalDesignadaEnMs),
-    capitalId: f.capitalId, derrotadaPor: f.derrotadaPor,
+    capitalId: f.capitalId, derrotadaPor: f.derrotadaPor, esBot: f.esBot,
     liga: f.liga ? { miembrosIds: f.liga.miembrosIds, tieneVasallaje: f.liga.tieneVasallaje, granReyId: f.liga.granReyId } : undefined,
     miembros: f.miembros.length ? f.miembros.map((m) => ({ heroeId: m.heroeId, residenciaId: m.residenciaId, cargos: m.cargos, participacion: Number(m.participacion) })) : undefined,
     tablon: f.tablon ? tablon(f.tablon) : undefined,
@@ -521,7 +521,7 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
     faccionId,
     mapaId: c.mapaId,
     facciones: [...todasFacciones.values()].map((f) => faccion(f, ahora)),
-    directorioFacciones: deAmbito('VISTA:', 'directorioFacciones')[0]?.facciones.map((f) => ({ id: f.id, nombre: f.nombre, sigilo: sigilo(f.sigilo), nivel: f.nivel, ciudadanos: f.ciudadanos, derrotada: f.derrotada })),
+    directorioFacciones: deAmbito('VISTA:', 'directorioFacciones')[0]?.facciones.map((f) => ({ id: f.id, nombre: f.nombre, sigilo: sigilo(f.sigilo), nivel: f.nivel, ciudadanos: f.ciudadanos, derrotada: f.derrotada, esBot: f.esBot })),
     // Lo de siempre: SOLO la plaza donde el jugador está (cero o un elemento), con todo su interior.
     asentamientos: interior ? [asentamiento(interior, ahora)] : [],
     asentamientosAvistados: [...ajenas, ...propias].filter((p) => p.id !== interior?.id).map((p) => ({

@@ -11,7 +11,7 @@
 //   ascenso    la subida de nivel de la plaza con sus requisitos (`htmlAscensoLocal`): el nivel 2 pide un pueblo activo (aldea o extractor)
 //   dentro     se entra en un pueblo activo como de visita, con la columna entera (`entrarEnPueblo` / `salirDePueblo`); dentro se gestiona con esa
 //              columna (`htmlPestanasPueblo`): guarnición, carga, escolta del carro de acarreo y mejora de la aldea. La escolta también se cede desde la plaza.
-import { bloqueDeDatos, catalogoDeCaravanas, radioDePuerta, type ProyeccionJugador } from '../apiCliente';
+import { bloqueDeDatos, catalogoDeCaravanas, radioDePuerta, techosDeZona, type ProyeccionJugador } from '../apiCliente';
 import { barraDeTiempo, estadoCliente, textoEnTiempoReal } from './estadoCliente';
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE, faccionColor } from '../paletas';
 import { iconoEdificio } from './iconosEdificio';
@@ -231,11 +231,12 @@ function htmlMarcar(p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
   if (sinCupo) return '<p class="asent-lado-nota">Cupo lleno: para marcar otro pueblo, sube la plaza de nivel o destruye uno.</p>';
   return `<strong class="heroe-sub">Marcar un pueblo nuevo</strong>
     <div class="pueblo-marcar">
-      <div><strong>Aldea agrícola</strong>${ayuda('pueblos:aldea', `Granjas y corrales en un punto fértil de la zona (fertilidad ${pr?.aldea?.fertilidadMinima ?? 0.3} o más, a ${pr?.aldea?.separacionMinima ?? 3} de toda plaza y todo pueblo, con camino hasta la plaza). Acarrea trigo y ganado; su rebaño crece solo. El nivel 2 de la plaza pide un pueblo activo: una aldea o un extractor.`)}
+      <div><strong>Aldea agrícola</strong>${ayuda('pueblos:aldea', `Granjas y corrales en un punto fértil de la zona (fertilidad ${pr?.aldea?.fertilidadMinima ?? 0.3} o más, a ${pr?.aldea?.separacionMinima ?? 3} de toda plaza y todo pueblo, con camino hasta la plaza). Acarrea trigo y ganado; su rebaño crece solo. Cada aldea va en su anillo: las dos primeras hasta el techo de la zona del nivel 1, la tercera en el anillo que añade el nivel 2, y así, para que no se junten. El nivel 2 de la plaza pide un pueblo activo: una aldea o un extractor.`)}
         <span class="asent-lado-nota">${nivel < nivelAldea ? `Desde el nivel ${nivelAldea} de la plaza.` : `Obra: ${e(costeAldea || '—')} (con el carro de acarreo y su buey), que se llevan al sitio.`}</span>
+        <span class="asent-lado-nota">${(() => { const r = anilloDeAldea(p, a); return `La siguiente aldea va ${r.desde > 0 ? `a más de ${n0(r.desde)} u y ` : ''}hasta ${n0(r.hasta)} u de la plaza.`; })()}</span>
         ${htmlSitiosDeAldea(sitiosDeLaPlaza(p, a))}
         <button class="btn-primary" type="button" data-pueblo-accion="elegir-aldea"${nivel < nivelAldea ? ' disabled' : ''}>Elegir el sitio en el mapa</button></div>
-      <div><strong>Extractor</strong>${ayuda('pueblos:extractor', 'Una cantera o una mina sobre un nodo libre de la zona. Pide su edificio, 50 de madera y el carro de acarreo con su buey, que se llevan al sitio.')}
+      <div><strong>Extractor</strong>${ayuda('pueblos:extractor', 'Una cantera o una mina sobre un nodo libre de la zona. La piedra solo sale de un pueblo de cantera (la Cantera ya no se construye en la plaza), y en el nivel 1 caben dos pueblos: la cantera y la aldea. Pide su edificio, 50 de madera y el carro de acarreo con su buey, que se llevan al sitio.')}
         ${nivel < nivelExtractor ? `<span class="asent-lado-nota">Desde el nivel ${nivelExtractor} de la plaza.</span>`
           : libres.length === 0 ? '<span class="asent-lado-nota">No hay nodos de piedra ni de mineral libres en la zona.</span>'
             : `<div class="campamento-fila"><select class="form-input" data-pueblo-nodo>${libres.map((n) => `<option value="${e(n.id)}">${e(RECURSO_NOMBRE[n.tipo] ?? n.tipo)} · a ${n0(n.d)}</option>`).join('')}</select>
@@ -248,9 +249,9 @@ function htmlSitiosDeAldea(s: SitiosDeAldea | null): string {
   if (!s) return '';
   const { fertilidadMinima, separacionMinima } = reglasDeAldea();
   const coma = (n: number) => n.toFixed(2).replace('.', ',');
-  if (s.validos.length) return `<span class="fundacion-gate ok">Hay tierra fértil para la aldea en la zona (mejor fertilidad ${coma(s.mejor)}).</span>`;
+  if (s.validos.length) return `<span class="fundacion-gate ok">Hay tierra fértil para la aldea en su anillo (mejor fertilidad ${coma(s.mejor)}).</span>`;
   if (s.cerca.length) return `<span class="fundacion-gate falta">La tierra fértil de la zona está a menos de ${separacionMinima} de una plaza o un pueblo. Crecerá la zona con los edificios.</span>`;
-  return `<span class="fundacion-gate falta">La zona no tiene tierra con fertilidad ${coma(fertilidadMinima)} o más: no cabe una aldea. La zona crece con cada edificio terminado.</span>`;
+  return `<span class="fundacion-gate falta">El anillo de la siguiente aldea no tiene tierra con fertilidad ${coma(fertilidadMinima)} o más dentro de la zona: no cabe. La zona crece con cada edificio terminado.</span>`;
 }
 
 function htmlPueblos(c: ContextoPlaza): string {
@@ -288,13 +289,25 @@ export function reglasDeAldea(): { fertilidadMinima: number; separacionMinima: n
   return { fertilidadMinima: r?.fertilidadMinima ?? 0.3, separacionMinima: r?.separacionMinima ?? 3 };
 }
 
+/** El anillo de la siguiente aldea de la plaza (motor 5907aa6, `anillo_de_aldea`): la k-ésima (contando las que tiene en cualquier estado) va
+ * en el anillo que añade a la zona el primer nivel cuyo cupo de pueblos llega a k. Con el cupo 2/3/4/5/6 y los techos 10/15/20/25/30 u: las
+ * dos primeras hasta 10 u, la tercera de 10 a 15 u, y así. */
+export function anilloDeAldea(p: ProyeccionJugador, a: Asentamiento): { desde: number; hasta: number } {
+  const { pueblos, obras } = deLaPlaza(p, a);
+  const k = pueblos.filter(esAldea).length + obras.filter((o) => o.tipo === 'aldea').length + 1;
+  const techos = techosDeZona(alLlegarDatos);
+  const cupos = params()?.cupoPorNivel ?? { 1: 2, 2: 3, 3: 4, 4: 5, 5: 6 };
+  const nivel = Math.min(techos.length, Math.max(1, Number(Object.keys(cupos).map(Number).sort((x, y) => x - y).find((n) => (cupos[String(n)] ?? 0) >= k) ?? techos.length)));
+  return { desde: nivel === 1 ? 0 : techos[nivel - 2]!, hasta: techos[nivel - 1]! };
+}
+
 /** Dónde cabe la aldea de esta plaza, con el mapa ya bajado; `null` si aún no está o no trae la capa de fertilidad. */
 function sitiosDeLaPlaza(p: ProyeccionJugador, a: Asentamiento): SitiosDeAldea | null {
   const mapa = estadoCliente.mapaCache?.mapa;
   if (!mapa) return null;
   const { fertilidadMinima, separacionMinima } = reglasDeAldea();
   const radio = Math.max(...(a.zonaReal ?? []).map((q) => Math.hypot(q.x - a.posicion.x, q.y - a.posicion.y)), 6);
-  return sitiosDeAldea(mapa, { centro: a.posicion, radio, poligono: a.zonaReal }, ocupadosParaAldea(p), fertilidadMinima, separacionMinima);
+  return sitiosDeAldea(mapa, { centro: a.posicion, radio, poligono: a.zonaReal, anillo: anilloDeAldea(p, a) }, ocupadosParaAldea(p), fertilidadMinima, separacionMinima);
 }
 
 function cablearPueblos(c: ContextoPlaza): void {

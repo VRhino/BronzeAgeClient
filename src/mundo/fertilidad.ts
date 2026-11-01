@@ -53,7 +53,7 @@ function dentroDelPoligono(p: Point, poligono: readonly Point[]): boolean {
  */
 export function sitiosDeAldea(
   mapa: MapaGenerado,
-  zona: { centro: Point; radio: number; poligono?: readonly Point[] },
+  zona: { centro: Point; radio: number; poligono?: readonly Point[]; anillo?: { desde: number; hasta: number } },
   ocupados: readonly Point[],
   fertilidadMinima: number,
   separacionMinima: number,
@@ -70,6 +70,8 @@ export function sitiosDeAldea(
     for (let x = Math.ceil(caja.x0 / PASO) * PASO; x <= caja.x1; x += PASO) {
       const p = { x, y };
       if (!dentro(p) || !firme(mapa, p)) continue;
+      // la siguiente aldea va en su anillo, (desde, hasta] u de la plaza
+      if (zona.anillo) { const d = Math.hypot(x - zona.centro.x, y - zona.centro.y); if (d <= zona.anillo.desde || d > zona.anillo.hasta) continue; }
       const f = fertilidadEn(mapa, p) ?? 0;
       if (f < fertilidadMinima) continue;
       if (ocupados.some((o) => (o.x - x) ** 2 + (o.y - y) ** 2 < s2)) { r.cerca.push(p); continue; }
