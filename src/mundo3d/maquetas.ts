@@ -70,17 +70,96 @@ class Piezas {
   }
 }
 
-/** La ciudad del juego: muralla al radio de la ciudad, la casa grande en medio y casas dentro; cuántas, según su tamaño. */
-function ciudad(p: Piezas, x: number, y: number, rc: number, color: string, sem: number): void {
-  const M = MUNDO3D.maqueta, r = rc * M;
-  p.anillo(x, y, r, 0.14 * M, 0.05 * M, 'muro');
-  p.caja('muro', x, y, 0.34 * M, 0.26 * M, 0.22 * M);
-  const n = Math.max(8, Math.min(160, Math.round(26 * rc * rc))), dentro = Math.max(0.27 * M, r - 0.3 * M);
+/** Una torre cuadrada de `lado` y `alto` u con su almena (un remate algo más ancho arriba). */
+function torre(p: Piezas, mat: Material, x: number, y: number, lado: number, alto: number, giro = 0): void {
+  p.caja(mat, x, y, lado, lado, alto, giro);
+  p.caja(mat, x, y, lado * 1.25, lado * 1.25, lado * 0.3, giro, alto);
+}
+
+/** Torres repartidas por un anillo de radio `r` (sin la de la puerta, en el tramo 7 de `anillo`). */
+function torresEnAnillo(p: Piezas, mat: Material, x: number, y: number, r: number, n: number, lado: number, alto: number): void {
   for (let k = 0; k < n; k++) {
-    const a = hash(sem, k, 1) * 2 * Math.PI, d = 0.25 * M + (dentro - 0.25 * M) * Math.sqrt(hash(sem, k, 2));
-    p.caja(hash(sem, k, 6) < 0.3 ? 'techo' : 'adobe', x + d * Math.cos(a), y + d * Math.sin(a), (0.1 + 0.08 * hash(sem, k, 3)) * M, (0.1 + 0.08 * hash(sem, k, 4)) * M, (0.07 + 0.06 * hash(sem, k, 5)) * M, a);
+    const a = ((k + 0.5) / n) * 2 * Math.PI;
+    torre(p, mat, x + r * Math.cos(a), y + r * Math.sin(a), lado, alto, a);
   }
-  p.bandera(x + 0.12 * M, y + 0.1 * M, 0.55 * M, color);
+}
+
+/** Casas repartidas entre `desde` y `hasta` u del centro. */
+function casas(p: Piezas, x: number, y: number, n: number, desde: number, hasta: number, tam: number, sem: number, techo: number): void {
+  for (let k = 0; k < n; k++) {
+    const a = hash(sem, k, 1) * 2 * Math.PI, d = desde + (hasta - desde) * Math.sqrt(hash(sem, k, 2));
+    p.caja(hash(sem, k, 6) < techo ? 'techo' : 'adobe', x + d * Math.cos(a), y + d * Math.sin(a), (0.1 + 0.08 * hash(sem, k, 3)) * tam, (0.1 + 0.08 * hash(sem, k, 4)) * tam, (0.07 + 0.06 * hash(sem, k, 5)) * tam, a);
+  }
+}
+
+/**
+ * La ciudad del juego, distinta en cada nivel y más elaborada cuanto más alto (Víctor, 2026-11-01). Los niveles 1 y 2 no tienen muralla:
+ *  1. un caserío: la casa del jefe y un puñado de chozas;
+ *  2. un poblado: casa grande con su patio, granero y más casas;
+ *  3. ciudad amurallada: muralla de piedra con puerta, palacio y templo;
+ *  4. muralla con torres, palacio de dos plantas y templo con columnas;
+ *  5. doble muralla con torres, ciudadela interior y zigurat escalonado.
+ */
+function ciudad(p: Piezas, x: number, y: number, rc: number, nivel: number, color: string, sem: number): void {
+  const M = MUNDO3D.maqueta, r = rc * M, n = Math.max(1, Math.min(5, Math.round(nivel)));
+  const lleno = [0.35, 0.6, 0.8, 1, 1.15][n - 1]!;
+  const cuantas = Math.max(5, Math.min(170, Math.round(26 * rc * rc * lleno)));
+  const borde = Math.max(0.3 * M, r - 0.3 * M);
+  if (n === 1) {
+    // la casa del jefe, chozas y un corral de madera
+    p.caja('techo', x, y, 0.2 * M, 0.16 * M, 0.11 * M);
+    casas(p, x, y, cuantas, 0.2 * M, borde * 0.7, M * 0.85, sem, 0.15);
+    p.anillo(x + 0.3 * M, y - 0.25 * M, 0.12 * M, 0.04 * M, 0.015 * M, 'madera', -1);
+    p.bandera(x + 0.12 * M, y + 0.1 * M, 0.4 * M, color);
+    return;
+  }
+  if (n === 2) {
+    // casa grande con su patio (cuatro alas bajas), el granero y más casas
+    p.caja('adobe', x, y, 0.3 * M, 0.24 * M, 0.16 * M);
+    p.caja('techo', x, y, 0.32 * M, 0.26 * M, 0.03 * M, 0, 0.16 * M);
+    p.caja('adobe', x, y + 0.2 * M, 0.36 * M, 0.06 * M, 0.06 * M);
+    p.caja('adobe', x, y - 0.2 * M, 0.36 * M, 0.06 * M, 0.06 * M);
+    p.caja('madera', x - 0.32 * M, y + 0.05 * M, 0.12 * M, 0.12 * M, 0.14 * M);
+    casas(p, x, y, cuantas, 0.3 * M, borde * 0.85, M, sem, 0.3);
+    p.bandera(x + 0.14 * M, y + 0.1 * M, 0.5 * M, color);
+    return;
+  }
+  // desde el 3, amurallada: cuanto más nivel, muralla más alta y gruesa
+  const alto = [0.14, 0.18, 0.22][n - 3]! * M, grueso = [0.05, 0.065, 0.08][n - 3]! * M;
+  p.anillo(x, y, r, alto, grueso, 'muro');
+  // la puerta: dos torres a los lados del hueco (tramo 7)
+  const seg = Math.max(14, Math.round((2 * Math.PI * r) / 0.25));
+  for (const k of [7, 8]) {
+    const a = (k / seg) * 2 * Math.PI;
+    torre(p, 'muro', x + r * Math.cos(a), y + r * Math.sin(a), grueso * 2, alto * 1.35, a);
+  }
+  if (n >= 4) torresEnAnillo(p, 'muro', x, y, r, Math.max(6, Math.round(r / (0.45 * M))), grueso * 1.9, alto * 1.3);
+  if (n === 3) {
+    // palacio y templo
+    p.caja('muro', x, y, 0.34 * M, 0.26 * M, 0.22 * M);
+    p.caja('techo', x + 0.32 * M, y - 0.12 * M, 0.16 * M, 0.24 * M, 0.16 * M);
+  } else if (n === 4) {
+    // palacio de dos plantas y templo con columnas sobre su basa
+    p.caja('muro', x, y, 0.4 * M, 0.3 * M, 0.18 * M);
+    p.caja('muro', x, y, 0.26 * M, 0.2 * M, 0.14 * M, 0, 0.18 * M);
+    p.caja('muro', x + 0.38 * M, y - 0.12 * M, 0.24 * M, 0.32 * M, 0.03 * M);
+    for (const dx of [-0.08, 0.08]) for (const dy of [-0.12, -0.04, 0.04, 0.12]) p.caja('filo', x + 0.38 * M + dx * M, y - 0.12 * M + dy * M, 0.025 * M, 0.025 * M, 0.14 * M, 0, 0.03 * M);
+    p.caja('techo', x + 0.38 * M, y - 0.12 * M, 0.24 * M, 0.32 * M, 0.04 * M, 0, 0.17 * M);
+  } else {
+    // ciudadela interior con su muro y torres, zigurat escalonado y templo
+    const ri = Math.min(0.75 * M, r * 0.45);
+    p.anillo(x, y, ri, alto * 0.85, grueso * 0.8, 'muro', 3);
+    torresEnAnillo(p, 'muro', x, y, ri, 4, grueso * 1.7, alto * 1.15);
+    for (let k = 0; k < 4; k++) p.caja('muro', x, y, (0.42 - 0.09 * k) * M, (0.42 - 0.09 * k) * M, 0.09 * M, 0, k * 0.09 * M);
+    p.caja('techo', x, y, 0.1 * M, 0.1 * M, 0.08 * M, 0, 0.36 * M);
+    const tx = x + (ri + 0.35 * M), ty = y + 0.2 * M;
+    p.caja('muro', tx, ty, 0.26 * M, 0.34 * M, 0.03 * M);
+    for (const dx of [-0.09, 0.09]) for (const dy of [-0.13, -0.045, 0.045, 0.13]) p.caja('filo', tx + dx * M, ty + dy * M, 0.025 * M, 0.025 * M, 0.15 * M, 0, 0.03 * M);
+    p.caja('techo', tx, ty, 0.26 * M, 0.34 * M, 0.045 * M, 0, 0.18 * M);
+  }
+  const desde = n === 5 ? Math.min(0.75 * M, r * 0.45) + 0.15 * M : 0.3 * M;
+  casas(p, x, y, cuantas, desde, borde, M, sem, 0.25 + 0.1 * (n - 3));
+  p.bandera(x + 0.12 * M, y + 0.1 * M, (n === 5 ? 0.7 : 0.55) * M, color, n === 5 ? 0.36 * M : n === 4 ? 0.32 * M : 0.22 * M);
 }
 
 /** Un pueblo: empalizada y casas; la aldea agrícola con sus campos alrededor, el extractor con su bocamina. */
@@ -102,14 +181,52 @@ function pueblo(p: Piezas, x: number, y: number, aldea: boolean, color: string, 
   p.bandera(x - 0.1 * M, y + 0.05 * M, 0.4 * M, color);
 }
 
-/** Una avanzada: empalizada (de piedra desde el fuerte) y la torre, más alta en cada etapa. En ruinas, baja y gris, sin bandera. */
+/**
+ * Una avanzada, distinta en cada etapa (Doc 5.17): la ATALAYA es una torre de vigía de madera con su plataforma y una cerca; el FUERTE,
+ * un recinto cuadrado de piedra con torres en las esquinas y la torre del homenaje; la CIUDADELA, un recinto redondo y alto con torres,
+ * su torre mayor, cuartel y almacén. En ruinas, baja y gris, sin bandera.
+ */
 function avanzada(p: Piezas, x: number, y: number, etapa: number, ruinas: boolean, color: string): void {
-  const M = MUNDO3D.maqueta, e = Math.max(1, Math.min(3, etapa)), torre = [0.42, 0.55, 0.7][e - 1]! * M, lado = [0.13, 0.16, 0.2][e - 1]! * M;
+  const M = MUNDO3D.maqueta, e = Math.max(1, Math.min(3, etapa)), b = ruinas ? 0.4 : 1;
   const mat = (m: Material): Material => (ruinas ? 'ruina' : m);
-  p.anillo(x, y, (0.3 + 0.05 * (e - 1)) * M, (ruinas ? 0.04 : 0.1) * M, 0.03 * M, mat(e >= 2 ? 'muro' : 'madera'), 3);
-  p.caja(mat(e >= 2 ? 'muro' : 'madera'), x, y, lado, lado, ruinas ? torre * 0.4 : torre);
-  p.caja(mat('adobe'), x + 0.12 * M, y + 0.08 * M, 0.1 * M, 0.08 * M, 0.07 * M);
-  if (!ruinas) p.bandera(x, y, 0.14 * M, color, torre);
+  let cima: number;
+  if (e === 1) {
+    // cuatro postes, la plataforma, su tejadillo y una cerca baja
+    const alto = 0.5 * M * b;
+    for (const [dx, dy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]] as const) p.caja(mat('madera'), x + dx * 0.06 * M, y + dy * 0.06 * M, 0.025 * M, 0.025 * M, alto);
+    p.caja(mat('madera'), x, y, 0.18 * M, 0.18 * M, 0.025 * M, 0, alto);
+    if (!ruinas) p.caja('techo', x, y, 0.2 * M, 0.2 * M, 0.035 * M, 0, alto + 0.12 * M);
+    p.anillo(x, y, 0.26 * M, 0.05 * M * b, 0.02 * M, mat('madera'), 3);
+    p.caja(mat('adobe'), x + 0.15 * M, y + 0.1 * M, 0.08 * M, 0.07 * M, 0.06 * M);
+    cima = alto + 0.15 * M;
+  } else if (e === 2) {
+    // recinto cuadrado de piedra, torres en las esquinas y la torre del homenaje
+    const l = 0.32 * M, alto = 0.12 * M * b, g = 0.035 * M;
+    for (const [dx, dy, gi] of [[0, -1, 0], [0, 1, 0], [-1, 0, Math.PI / 2], [1, 0, Math.PI / 2]] as const) {
+      if (dy === 1) {
+        // la puerta, en el lado norte
+        p.caja(mat('muro'), x - l * 0.6, y + l, l * 0.8, g, alto, gi);
+        p.caja(mat('muro'), x + l * 0.6, y + l, l * 0.8, g, alto, gi);
+      } else p.caja(mat('muro'), x + dx * l, y + dy * l, 2 * l, g, alto, gi);
+    }
+    for (const [dx, dy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]] as const) torre(p, mat('muro'), x + dx * l, y + dy * l, 0.08 * M, alto * 1.5);
+    const homenaje = 0.45 * M * b;
+    torre(p, mat('muro'), x, y - 0.06 * M, 0.15 * M, homenaje);
+    p.caja(mat('techo'), x + 0.14 * M, y + 0.12 * M, 0.12 * M, 0.08 * M, 0.06 * M);
+    cima = homenaje + 0.05 * M;
+  } else {
+    // recinto redondo y alto con torres, torre mayor, cuartel y almacén
+    const r = 0.45 * M, alto = 0.16 * M * b, g = 0.045 * M;
+    p.anillo(x, y, r, alto, g, mat('muro'), 3);
+    torresEnAnillo(p, mat('muro'), x, y, r, 6, 0.09 * M, alto * 1.4);
+    const mayor = 0.62 * M * b;
+    torre(p, mat('muro'), x, y, 0.18 * M, mayor);
+    p.caja(mat('muro'), x, y, 0.28 * M, 0.28 * M, 0.1 * M * b);
+    p.caja(mat('techo'), x - 0.24 * M, y + 0.06 * M, 0.1 * M, 0.22 * M, 0.07 * M, 0.3);
+    p.caja(mat('madera'), x + 0.22 * M, y - 0.12 * M, 0.12 * M, 0.12 * M, 0.08 * M, -0.4);
+    cima = mayor + 0.055 * M;
+  }
+  if (!ruinas) p.bandera(x, y, 0.14 * M, color, cima);
 }
 
 /** Una obra: andamio de cuatro postes y el montón de material; ya arrancada, con los muros a media altura. */
@@ -185,7 +302,7 @@ export class Maquetas {
   actualizar(m: MundoEnVista): boolean {
     const f = (v: number) => v.toFixed(2);
     const clave = [
-      ...m.plazas.map((x) => `P${x.id}:${f(x.posicion.x)},${f(x.posicion.y)}:${f(x.radioCiudad)}:${x.color}:${x.recordada}`),
+      ...m.plazas.map((x) => `P${x.id}:${f(x.posicion.x)},${f(x.posicion.y)}:${f(x.radioCiudad)}:${x.nivel}:${x.color}:${x.recordada}`),
       ...m.pueblos.map((x) => `U${x.id}:${f(x.posicion.x)},${f(x.posicion.y)}:${x.aldea}:${x.color}`),
       ...m.avanzadas.map((x) => `A${x.id}:${f(x.posicion.x)},${f(x.posicion.y)}:${x.etapa}:${x.ruinas}:${x.color}`),
       ...m.obras.map((x) => `O${x.id}:${f(x.posicion.x)},${f(x.posicion.y)}:${x.arrancada}:${x.color}`),
@@ -199,7 +316,7 @@ export class Maquetas {
     this.vaciar();
     const M = MUNDO3D.maqueta, encima = new Piezas(), bajo = new Piezas(), claros: Claro[] = [];
     for (const x of m.plazas) {
-      ciudad(x.recordada ? bajo : encima, x.posicion.x, x.posicion.y, x.radioCiudad, x.color, semilla(x.posicion.x, x.posicion.y));
+      ciudad(x.recordada ? bajo : encima, x.posicion.x, x.posicion.y, x.radioCiudad, x.nivel, x.color, semilla(x.posicion.x, x.posicion.y));
       claros.push({ x: x.posicion.x, y: x.posicion.y, r: x.radioCiudad * M + 0.4 });
     }
     for (const x of m.pueblos) {

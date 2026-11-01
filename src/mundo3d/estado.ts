@@ -8,7 +8,7 @@ import { svgSigilo } from '../sigilo/sigilo';
 import type { NieblaProyectada } from '../tiposDominio';
 import { MUNDO3D } from './config';
 import type { TropaDeColumna } from './figuras';
-import { circulo } from './lineas';
+import { circulo, sentidoDe } from './lineas';
 
 type Punto = { x: number; y: number };
 
@@ -59,7 +59,7 @@ export interface SeleccionEnVista { posicion: Punto; radio: number }
 export interface EtiquetaEnVista { id: string; posicion: Punto; texto: string; tipo: 'plaza' | 'mirada' | 'territorio' | 'nodo' | 'campamento'; color?: string; tenue?: boolean; subtexto?: string; sigilo?: string }
 
 /** Una plaza: la ciudad del juego ocupa el 10 % del radio de su zona. `recordada` = se vio alguna vez y ahora no (va bajo la niebla). */
-export interface PlazaEnVista { id: string; posicion: Punto; radioCiudad: number; color: string; recordada: boolean }
+export interface PlazaEnVista { id: string; posicion: Punto; radioCiudad: number; color: string; recordada: boolean; nivel: number }
 /** Un pueblo: extractor sobre su nodo o aldea agrícola. */
 export interface PuebloEnVista { id: string; posicion: Punto; aldea: boolean; color: string }
 /** Una avanzada: 1 atalaya, 2 fuerte, 3 ciudadela. */
@@ -69,7 +69,9 @@ export interface ObraEnVista { id: string; posicion: Punto; arrancada: boolean; 
 /** Un campamento de mercenarios con su anillo de protección. */
 export interface CampamentoEnVista { id: string; posicion: Punto; radioProteccion: number }
 /** Una raya sobre el terreno: camino, frontera o zona. `bajoNiebla` = la oscurece la niebla, como en el 2D; si no, va encima. */
-export interface TrazoEnVista { puntos: Punto[]; ancho: number; color: string; bajoNiebla: boolean; discontinuo?: boolean; tipo: 'camino' | 'frontera' | 'zona' | 'anillo' }
+export interface TrazoEnVista { puntos: Punto[]; ancho: number; color: string; bajoNiebla: boolean; discontinuo?: boolean; tipo: 'camino' | 'frontera' | 'zona' | 'anillo'; recordada?: boolean;
+  /** De un contorno: 1 o -1 según su sentido, para correr la raya hacia dentro y que, donde chocan dos zonas, se vean las dos. */
+  haciaDentro?: 1 | -1 }
 
 /** Lo que hay en el mundo además del suelo y las columnas: se rehace solo cuando cambia. */
 export interface MundoEnVista {
@@ -114,7 +116,7 @@ export interface ReglasDeVista { vision: RadiosDeVision; radioZonaInicial: numbe
 const FRACCION_CIUDAD = 0.1;
 /** Anchura de las rayas, en u: caminos por escalón (sendero, camino, calzada), fronteras, la zona propia y el anillo de los mercenarios. Más
  * gruesas que en la realidad para que se lean desde la cámara de juego. */
-export const ANCHOS = { caminos: [0.2, 0.35, 0.55], frontera: 0.12, zona: 0.18, anillo: 0.1 } as const;
+export const ANCHOS = { caminos: [0.2, 0.35, 0.55], frontera: 0.24, zona: 0.36, anillo: 0.1 } as const;
 const COLOR_AJENO = '#9a927f', COLOR_CAMINO = '#8b5a2b', COLOR_ANILLO = '#2e5e8c';
 /** La tropa de quien aún no tiene Facción. */
 const COLOR_SIN_FACCION = '#c0392b';
@@ -275,18 +277,20 @@ export function mundoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVista
   const trazos: TrazoEnVista[] = [];
   // bajo la niebla: caminos, fronteras de lo que se ve (su silueta real) y de lo que se recuerda (un círculo discontinuo con su radio)
   for (const c of p.caminos ?? []) if (c.puntos.length >= 2) trazos.push({ puntos: c.puntos, ancho: ANCHOS.caminos[c.escalon ?? 1] ?? ANCHOS.caminos[1], color: COLOR_CAMINO, bajoNiebla: true, tipo: 'camino' });
+  // la frontera de una plaza tuya ya la traza la zona fusionada, encima: dos rayas discontinuas sobre el mismo borde no casarían
+  const conZonaPropia = (p.zonasFusionadas ?? []).some((z) => z.faccionId === p.faccionId && z.contornos.length > 0);
   for (const a of p.asentamientosAvistados ?? []) {
     const zona = a.zona ?? [], radioZona = zona.length >= 3 ? radioDelContorno(a.posicion, zona) : reglas.radioZonaInicial;
-    plazas.push({ id: a.id, posicion: a.posicion, radioCiudad: radioZona * FRACCION_CIUDAD, color: color(a.faccionId), recordada: false });
-    if (zona.length >= 3) trazos.push({ puntos: [...zona, zona[0]!], ancho: ANCHOS.frontera, color: color(a.faccionId), bajoNiebla: true, tipo: 'frontera' });
+    plazas.push({ id: a.id, posicion: a.posicion, radioCiudad: radioZona * FRACCION_CIUDAD, color: color(a.faccionId), recordada: false, nivel: a.nivel ?? 1 });
+    if (zona.length >= 3 && !(conZonaPropia && a.faccionId === p.faccionId)) trazos.push({ puntos: [...zona, zona[0]!], ancho: ANCHOS.frontera, color: color(a.faccionId), bajoNiebla: true, discontinuo: true, tipo: 'frontera', haciaDentro: sentidoDe(zona) });
   }
   for (const c of p.asentamientosConocidos ?? []) {
     const radioZona = c.radioPotencial ?? reglas.radioZonaInicial;
-    plazas.push({ id: c.asentamientoId, posicion: c.posicion, radioCiudad: radioZona * FRACCION_CIUDAD, color: color(c.faccionId), recordada: true });
-    if (c.radioPotencial !== undefined) trazos.push({ puntos: circulo(c.posicion, c.radioPotencial), ancho: ANCHOS.frontera, color: color(c.faccionId), bajoNiebla: true, discontinuo: true, tipo: 'frontera' });
+    plazas.push({ id: c.asentamientoId, posicion: c.posicion, radioCiudad: radioZona * FRACCION_CIUDAD, color: color(c.faccionId), recordada: true, nivel: c.nivel ?? 1 });
+    if (c.radioPotencial !== undefined) trazos.push({ puntos: circulo(c.posicion, c.radioPotencial), ancho: ANCHOS.frontera, color: color(c.faccionId), bajoNiebla: true, discontinuo: true, recordada: true, tipo: 'frontera', haciaDentro: 1 });
   }
   // encima: la zona propia y el anillo de protección de los campamentos de mercenarios
-  for (const z of p.zonasFusionadas ?? []) for (const c of z.contornos) if (c.length >= 3) trazos.push({ puntos: [...c, c[0]!], ancho: ANCHOS.zona, color: color(z.faccionId), bajoNiebla: false, tipo: 'zona' });
+  for (const z of p.zonasFusionadas ?? []) for (const c of z.contornos) if (c.length >= 3) trazos.push({ puntos: [...c, c[0]!], ancho: ANCHOS.zona, color: color(z.faccionId), bajoNiebla: false, discontinuo: true, tipo: 'zona', haciaDentro: sentidoDe(c) });
   const campamentos = (p.campamentosMercenarios ?? []).map((c) => ({ id: c.id, posicion: c.posicion, radioProteccion: reglas.radioProteccion }));
   for (const c of campamentos) trazos.push({ puntos: circulo(c.posicion, c.radioProteccion), ancho: ANCHOS.anillo, color: COLOR_ANILLO, bajoNiebla: false, tipo: 'anillo' });
   return {

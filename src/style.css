@@ -2789,6 +2789,37 @@ kbd {
 .jugador-badge { margin-left: 6px; padding: 0 6px; font-size: 0.7rem; border-radius: 9px; background: var(--bronce); color: #201509; }
 .jugador-badge.peligro { background: var(--terracota); color: #fff; }
 .jugador-badge[hidden] { display: none; }
+.jugador-botones button { display: inline-flex; align-items: center; gap: 6px; }
+.jugador-icono { flex-shrink: 0; color: var(--oro); }
+
+/* En el mundo (modo mapa) la barra es transparente sobre el terreno y sus botones son solo iconos: fondo oscuro casi opaco, icono en oro. */
+.mapa-screen > .jugador-barra {
+  background: transparent;
+  border-bottom: none;
+  box-shadow: none;
+  pointer-events: none;
+}
+.mapa-screen > .jugador-barra > * { pointer-events: auto; }
+.mapa-screen > .jugador-barra .jugador-quien { text-shadow: 0 1px 3px #000, 0 0 8px rgba(0, 0, 0, 0.8); }
+.mapa-screen > .jugador-barra .jugador-quien small { color: var(--pergamino); }
+.mapa-screen .jugador-botones { gap: 6px; }
+.mapa-screen .jugador-botones button {
+  position: relative;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  background: rgba(14, 10, 7, 0.86);
+  border: 1px solid rgba(169, 121, 63, 0.55);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+.mapa-screen .jugador-botones button:hover { background: rgba(26, 19, 12, 0.92); border-color: var(--oro); }
+.mapa-screen .jugador-botones button:hover .jugador-icono,
+.mapa-screen .jugador-botones button.activo .jugador-icono { color: var(--oro-claro); }
+.mapa-screen .jugador-botones button.activo { background: rgba(48, 34, 18, 0.9); border-color: var(--oro); }
+.mapa-screen .jugador-nombre { display: none; }
+.mapa-screen .jugador-botones .jugador-badge { position: absolute; top: -5px; right: -6px; margin: 0; min-width: 16px; line-height: 16px; text-align: center; padding: 0 4px; }
 .aviso-global.peligro { border-color: var(--terracota); }
 .aviso-peligro { border-color: var(--terracota); }
 .avisos-grupos { display: flex; flex-direction: column; gap: 10px; }

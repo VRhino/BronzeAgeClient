@@ -177,9 +177,9 @@ describe('lo que hay en el mundo, sacado de la proyección', () => {
     expect(t).toEqual([
       ['camino', true, ANCHOS.caminos[2], false],
       ['camino', true, ANCHOS.caminos[0], false],
-      ['frontera', true, ANCHOS.frontera, false],
       ['frontera', true, ANCHOS.frontera, true],
-      ['zona', false, ANCHOS.zona, false],
+      ['frontera', true, ANCHOS.frontera, true],
+      ['zona', false, ANCHOS.zona, true],
       ['anillo', false, ANCHOS.anillo, false],
     ]);
     // los contornos se cierran

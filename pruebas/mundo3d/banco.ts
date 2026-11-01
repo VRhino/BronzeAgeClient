@@ -139,20 +139,27 @@ function mundoDePrueba(c: Punto, vacio: boolean): { mundo: MundoEnVista; ajenas:
   const PROPIO = '#d4a017', AJENO = '#8e44ad', OTRO = '#16a085';
   const en = (dx: number, dy: number, desde = c) => ({ x: desde.x + dx, y: desde.y + dy });
   const plaza = en(9, -5), ajena = en(34, 16), recordada = en(-26, 20);
-  m.plazas.push({ id: 'propia', posicion: plaza, radioCiudad: 1.5, color: PROPIO, recordada: false });
-  m.plazas.push({ id: 'ajena', posicion: ajena, radioCiudad: 1, color: AJENO, recordada: false });
-  m.plazas.push({ id: 'recordada', posicion: recordada, radioCiudad: 1, color: OTRO, recordada: true });
+  m.plazas.push({ id: 'propia', posicion: plaza, radioCiudad: 1.5, color: PROPIO, recordada: false, nivel: 3 });
+  m.plazas.push({ id: 'ajena', posicion: ajena, radioCiudad: 1, color: AJENO, recordada: false, nivel: 4 });
+  m.plazas.push({ id: 'recordada', posicion: recordada, radioCiudad: 1, color: OTRO, recordada: true, nivel: 2 });
+  // `?niveles`: una fila con una plaza de cada nivel (1 a 5) al sur del héroe
+  if (parametros.has('niveles')) for (let n = 1; n <= 5; n++) m.plazas.push({ id: `nivel-${n}`, posicion: en(-14 + 7 * n, -10), radioCiudad: 1.5, color: PROPIO, recordada: false, nivel: n });
   m.pueblos.push({ id: 'aldea', posicion: en(6, 5, plaza), aldea: true, color: PROPIO }, { id: 'cantera', posicion: en(-6, 6, plaza), aldea: false, color: PROPIO });
   m.avanzadas.push(
     { id: 'atalaya', posicion: en(11, -3, plaza), etapa: 1, ruinas: false, color: PROPIO },
+    { id: 'fuerte', posicion: en(-3, 12, plaza), etapa: 2, ruinas: false, color: PROPIO },
     { id: 'ciudadela', posicion: en(-10, -6, plaza), etapa: 3, ruinas: false, color: PROPIO },
     { id: 'ruinas', posicion: en(3, -12, plaza), etapa: 2, ruinas: true, color: PROPIO },
   );
   m.obras.push({ id: 'obra-en-marcha', posicion: en(8, 9, plaza), arrancada: true, color: PROPIO }, { id: 'obra-pendiente', posicion: en(-7, 2, plaza), arrancada: false, color: PROPIO });
   // la zona propia (encima de la niebla) y las fronteras (bajo ella)
-  m.trazos.push({ puntos: circulo(plaza, 15, 48), ancho: ANCHOS.zona, color: PROPIO, bajoNiebla: false, tipo: 'zona' });
-  m.trazos.push({ puntos: circulo(ajena, 10, 48), ancho: ANCHOS.frontera, color: AJENO, bajoNiebla: true, tipo: 'frontera' });
-  m.trazos.push({ puntos: circulo(recordada, 10), ancho: ANCHOS.frontera, color: OTRO, bajoNiebla: true, discontinuo: true, tipo: 'frontera' });
+  m.trazos.push({ puntos: circulo(plaza, 15, 48), ancho: ANCHOS.zona, color: PROPIO, bajoNiebla: false, discontinuo: true, tipo: 'zona', haciaDentro: 1 });
+  m.trazos.push({ puntos: circulo(ajena, 10, 48), ancho: ANCHOS.frontera, color: AJENO, bajoNiebla: true, discontinuo: true, tipo: 'frontera', haciaDentro: 1 });
+  m.trazos.push({ puntos: circulo(recordada, 10), ancho: ANCHOS.frontera, color: OTRO, bajoNiebla: true, discontinuo: true, recordada: true, tipo: 'frontera', haciaDentro: 1 });
+  // dos zonas ajenas que se tocan en una recta: donde chocan, cada raya va de su lado
+  const choque = en(-20, -14), cuadro = (x0: number, x1: number): Punto[] => [en(x0, -4, choque), en(x1, -4, choque), en(x1, 4, choque), en(x0, 4, choque), en(x0, -4, choque)];
+  m.trazos.push({ puntos: cuadro(-8, 0), ancho: ANCHOS.frontera, color: AJENO, bajoNiebla: false, discontinuo: true, tipo: 'frontera', haciaDentro: 1 });
+  m.trazos.push({ puntos: cuadro(0, 8), ancho: ANCHOS.frontera, color: OTRO, bajoNiebla: false, discontinuo: true, tipo: 'frontera', haciaDentro: 1 });
   // caminos: calzada del héroe a la plaza, camino a la ajena y sendero a la aldea
   const camino = (puntos: Punto[], escalon: 0 | 1 | 2) => m.trazos.push({ puntos, ancho: ANCHOS.caminos[escalon], color: '#8b5a2b', bajoNiebla: true, tipo: 'camino' });
   camino([c, en(4, -1), plaza], 2);

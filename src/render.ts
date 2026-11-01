@@ -289,11 +289,19 @@ function dibujarFrontera(
   ctx.closePath();
   ctx.fillStyle = color + '22';
   ctx.fill();
-  if (punteado) ctx.setLineDash([6, 5]);
+  trazoHaciaDentro(ctx, color, punteado ? [3, 5] : [10, 6]);
+}
+
+/** La raya de un contorno ya trazado (`beginPath`…`closePath`): segmentada, de 4 px y solo por DENTRO (se recorta al contorno y se pinta
+ * el doble de ancha). Donde chocan dos zonas, cada raya queda de su lado y se ven las dos. */
+function trazoHaciaDentro(ctx: CanvasRenderingContext2D, color: string, segmentos: number[]): void {
+  ctx.save();
+  ctx.clip('evenodd');
+  ctx.setLineDash(segmentos);
   ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 8;
   ctx.stroke();
-  ctx.setLineDash([]);
+  ctx.restore();
 }
 
 /** El contorno de una zona RECORDADA: un círculo del radio que se recuerda, ya que la silueta real no se
@@ -699,7 +707,10 @@ export function pintarTerreno(
   //
   // Silueta real (recortada contra sus vecinos) la de una plaza que ves; circulo punteado la de una que solo
   // recuerdas, porque de esa el servidor guarda el radio y no el contorno.
+  // La de una plaza tuya la traza la zona fusionada (paso 9): dos rayas segmentadas en el mismo borde no casarían.
+  const conZonaPropia = (proyeccion.zonasFusionadas || []).some((z) => z.faccionId === proyeccion.faccionId && z.contornos.length > 0);
   for (const avistado of proyeccion.asentamientosAvistados || []) {
+    if (conZonaPropia && avistado.faccionId === proyeccion.faccionId) continue;
     dibujarFrontera(ctx, avistado.zona || [], faccionColor(avistado.faccionId, proyeccion.facciones), escalaCanvas);
   }
   for (const conocido of proyeccion.asentamientosConocidos || []) {
@@ -746,10 +757,8 @@ export function pintarTerreno(
       ctx.closePath();
     }
     ctx.fillStyle = color + '33'; // 20% alpha hex
-    ctx.fill();
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    ctx.fill('evenodd');
+    trazoHaciaDentro(ctx, color, [10, 6]);
   }
 
   // 10. EDIFICIOS DEL MAPA (Minas, Canteras...) — solo de asentamientos propios

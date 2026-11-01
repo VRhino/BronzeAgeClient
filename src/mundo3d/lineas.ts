@@ -54,6 +54,8 @@ export interface OpcionesCinta {
   trazo?: readonly [number, number];
   /** Cada cuánto se muestrea, en u. */
   paso?: number;
+  /** Corre la cinta de lado, en u: positivo hacia la izquierda del sentido de los puntos (el interior de un contorno antihorario). */
+  desplazar?: number;
 }
 
 /** Una cinta de `ancho` u a lo largo de `puntos`, pegada al relieve: una muestra cada `paso` u con un vértice a cada lado. Las caras miran
@@ -77,7 +79,7 @@ export function cinta(puntos: readonly Punto[], alturaU: (x: number, y: number) 
   const pos = new Float32Array(m * 6), nor = new Float32Array(m * 6);
   for (let k = 0; k < m; k++) {
     const a = Math.max(0, k - 1), b = Math.min(m - 1, k + 1), tx = xs[b]! - xs[a]!, ty = ys[b]! - ys[a]!, l = Math.hypot(tx, ty) || 1;
-    const nx = (-ty / l) * medio, ny = (tx / l) * medio, x = xs[k]!, y = ys[k]!;
+    const ux = -ty / l, uy = tx / l, nx = ux * medio, ny = uy * medio, x = xs[k]! + ux * (o.desplazar ?? 0), y = ys[k]! + uy * (o.desplazar ?? 0);
     const hc = alturaU(x, y), hi = alturaU(x + nx, y + ny), hd = alturaU(x - nx, y - ny);
     let izq: number, der: number;
     if (o.asiento === 'bajo') izq = der = Math.min(hc, hi, hd);
@@ -101,6 +103,16 @@ export function cinta(puntos: readonly Punto[], alturaU: (x: number, y: number) 
   geo.setIndex(indices);
   geo.computeBoundingSphere();
   return geo;
+}
+
+/** El signo del área de un contorno en (x, y): 1 si va en sentido antihorario (su interior queda a la izquierda), -1 si no. */
+export function sentidoDe(puntos: readonly Punto[]): 1 | -1 {
+  let a = 0;
+  for (let k = 0; k < puntos.length; k++) {
+    const p = puntos[k]!, q = puntos[(k + 1) % puntos.length]!;
+    a += p.x * q.y - q.x * p.y;
+  }
+  return a >= 0 ? 1 : -1;
 }
 
 /** Los puntos de un círculo (cerrado: el último repite el primero). */

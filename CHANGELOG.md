@@ -3,6 +3,13 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.74.0] — 2026-11-01 · fronteras segmentadas, barra del mundo con iconos, maquetas por nivel · sync con `VRhino/BronzeAge@2c4bca63`, sin cambios en el contrato
+
+- **Fronteras** (mundo 3D y modo mapa): raya segmentada y el doble de gruesa, corrida hacia dentro de su zona, de modo que donde chocan dos zonas se ven las dos rayas, cada una de su lado. La zona propia fusionada, igual; la frontera de cada plaza tuya ya no se pinta debajo de ella. La de una plaza que solo se recuerda, en trazos cortos.
+- **Barra superior en el mundo:** transparente sobre el terreno; los botones son solo iconos (yelmo, lanzas, rueda, estandarte, tablilla, diana, campana, mapa) en oro sobre un fondo oscuro casi opaco, con el nombre en el `title`. En las demás pantallas, icono y nombre.
+- **Maquetas de plaza por nivel:** 1, caserío (casa del jefe, chozas y corral); 2, poblado (casa grande con patio, granero), ambos sin muralla; 3, muralla de piedra con puerta, palacio y templo; 4, muralla con torres, palacio de dos plantas y templo con columnas; 5, doble muralla con torres, ciudadela interior y zigurat.
+- **Maquetas de avanzada por etapa:** atalaya (torre de vigía de madera con plataforma y cerca), fuerte (recinto cuadrado de piedra con torres en las esquinas y torre del homenaje) y ciudadela (recinto redondo alto con torres, torre mayor, cuartel y almacén).
+
 ## [0.73.0] — 2026-11-01 · encargos de caravana (rutas y envíos automáticos) · sync con `VRhino/BronzeAge@2c4bca63`
 
 - **Contrato regenerado** (órdenes `encargarCaravana`, `cambiarEncargo`, `cancelarEncargo`; `Caravana.encargo`; estado `esperando`; cargo `maestroCaravanas`).

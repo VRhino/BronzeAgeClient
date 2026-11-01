@@ -9,8 +9,9 @@ import type { NieblaDeGuerra } from './niebla';
 
 /** Lo que sube cada clase de raya sobre el suelo y cuánto se adelanta en el z-buffer: lo de encima tapa a lo de debajo. */
 const CAPA = { camino: { dy: 0.04, f: -2 }, frontera: { dy: 0.06, f: -3 }, zona: { dy: 0.08, f: -4 }, anillo: { dy: 0.08, f: -4 } } as const;
-/** Raya discontinua: lleno y hueco, en u. */
-const DISCONTINUA = [0.8, 0.6] as const;
+/** Raya discontinua: lleno y hueco, en u. La frontera va en segmentos largos; la de una zona que solo se recuerda, en trazos cortos. */
+const DISCONTINUA = [1.2, 0.7] as const;
+const RECORDADA = [0.4, 0.6] as const;
 
 export class Trazos {
   readonly grupo = new THREE.Group();
@@ -40,7 +41,7 @@ export class Trazos {
   actualizar(trazos: readonly TrazoEnVista[], cx: number, cy: number, radio: number): void {
     const clave = trazos.map((t) => {
       const a = t.puntos[0]!, b = t.puntos[t.puntos.length - 1]!;
-      return `${t.tipo}:${t.color}:${t.bajoNiebla}:${t.discontinuo ?? false}:${t.ancho}:${t.puntos.length}:${a.x},${a.y}:${b.x},${b.y}`;
+      return `${t.tipo}:${t.color}:${t.bajoNiebla}:${t.discontinuo ?? false}:${t.haciaDentro ?? 0}:${t.ancho}:${t.puntos.length}:${a.x},${a.y}:${b.x},${b.y}`;
     }).join('|');
     if (clave === this.clave && Math.hypot(cx - this.centro.x, cy - this.centro.y) < radio / 4) return;
     if (clave !== this.clave) {
@@ -53,7 +54,9 @@ export class Trazos {
     for (const t of trazos) {
       const capa = CAPA[t.tipo];
       for (const tramo of tramosEnCaja(t.puntos, cx - radio, cy - radio, cx + radio, cy + radio)) {
-        const geo = cinta(tramo, this.alturaU, t.ancho, { dy: capa.dy, trazo: t.discontinuo ? DISCONTINUA : undefined });
+        // un contorno va corrido medio ancho hacia dentro: donde se tocan dos zonas, cada raya queda de su lado y se ven las dos
+        const desplazar = t.haciaDentro ? t.haciaDentro * (t.ancho / 2 + 0.02) : 0;
+        const geo = cinta(tramo, this.alturaU, t.ancho, { dy: capa.dy, trazo: t.discontinuo ? (t.recordada ? RECORDADA : DISCONTINUA) : undefined, desplazar });
         if (!geo) continue;
         const malla = new THREE.Mesh(geo, this.material(t));
         malla.receiveShadow = t.tipo === 'camino';
