@@ -606,7 +606,7 @@ interface BalancePublico {
   cuposYNiveles?: { POLITICAS?: ReglasDePoliticas; CAP_FUNDACION_POR_NIVEL?: number[]; CIUDADANIA?: { cooldownCambioResidenciaDias?: number; cooldownCreacionFaccionDias?: number } };
   caravanas?: { CARAVANA_COOLDOWN?: { cooldownMinutos?: number }; CARRO_CATALOGO?: Record<string, CarroDelCatalogo>; ANIMAL_CATALOGO?: Record<string, AnimalDelCatalogo>; CARAVANA_PREPARACION?: { kPorCarro?: number; maxProgramacionDias?: number }; CARAVANA_ESCOLTA?: { liderazgoPorNivelMercado?: number[] } };
   politica?: { PUERTA?: { cerradaAPorDefecto?: string[] }; CAPITAL?: { cooldownDias?: number } };
-  mundoYMilitar?: { LOGISTICA?: { capacidadViveresPorHeroe?: number; radioEncuentro?: number; radioReabastecimiento?: number }; FUNDACION?: { materialesIniciales?: Record<string, number>; viviendasIniciales?: number; costoMaderaExtraCaravana?: number }; MERCENARIOS?: { refundacion?: { porcentajeCoste?: number }; radioProteccion?: number }; MOVIMIENTO?: { radioPuerta?: number; radioInspeccion?: number }; RECLUTAMIENTO_ORO_POR_ESCALON?: Record<string, number>; ORO_POR_CABALLO?: number };
+  mundoYMilitar?: { LOGISTICA?: { capacidadViveresPorHeroe?: number; radioEncuentro?: number; radioReabastecimiento?: number }; FUNDACION?: { materialesIniciales?: Record<string, number>; viviendasIniciales?: number; costoMaderaExtraCaravana?: number }; MERCENARIOS?: { refundacion?: { porcentajeCoste?: number }; radioProteccion?: number; edificiosMilitares?: string[]; nivelEdificios?: number }; MOVIMIENTO?: { radioPuerta?: number; radioInspeccion?: number }; RECLUTAMIENTO_ORO_POR_ESCALON?: Record<string, number>; ORO_POR_CABALLO?: number };
   tecnologia?: CatalogoTecnologia;
   internas?: { CAMPAMENTOS_BANDIDOS?: { niveles?: Record<string, NivelDeBandidos> } };
 }
@@ -740,6 +740,13 @@ export function capacidadDeViveres(alCargar?: () => void): number {
   return balance(alCargar)?.mundoYMilitar?.LOGISTICA?.capacidadViveresPorHeroe ?? 350;
 }
 
+/** Los edificios militares entre los que la posición elige el de cada campamento (`MERCENARIOS.edificiosMilitares`, en su orden) y el nivel al
+ * que los tiene (`nivelEdificios`); `null` mientras no llegue el balance. */
+export function edificiosMilitaresDeCampamento(alCargar?: () => void): { lista: string[]; nivel: number } | null {
+  const m = balance(alCargar)?.mundoYMilitar?.MERCENARIOS;
+  return m?.edificiosMilitares?.length ? { lista: m.edificiosMilitares, nivel: m.nivelEdificios ?? 3 } : null;
+}
+
 /** Alrededor de un campamento de mercenarios nadie inicia un combate (`MERCENARIOS.radioProteccion`); 10 mientras no llegue el balance (el backend
  * TypeScript usaba 60). */
 export function radioDeProteccionMercenarios(): number {
@@ -819,10 +826,11 @@ export function catalogoDeTecnologia(alCargar?: () => void): CatalogoTecnologia 
 /** El mapa como asset (Fase C11a): se pide una sola vez por `mapaId` y se cachea */
 /** El mapa del mundo: el artefacto de la `Bienvenida` (por hash, con caché en IndexedDB), como `MapaGenerado`. */
 export async function obtenerMapa(_gameId: string, mapaId: string): Promise<MapaGenerado> {
-  if (mapaCargado?.hash === mapaId) return mapaCargado.mapa;
+  if (mapaId && mapaCargado?.hash === mapaId) return mapaCargado.mapa;
   const s = await sesionAbierta();
   const mundo = s.bienvenida?.mundo;
   if (!mundo) throw new ApiError(0, 'el servidor no dijo qué mundo tiene');
+  if (mapaCargado?.hash === mundo.hash) return mapaCargado.mapa; // sin `mapaId` (antes de tener héroe): el mundo de la sesión, si ya está
   const { mapa, artefacto } = await cargarMundo(BASE, mundo.urlArtefacto, mundo.hash);
   mapaCargado = { hash: mundo.hash, mapa };
   grafoCargado = artefacto.navegacion ?? null;

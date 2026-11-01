@@ -84,6 +84,10 @@ export interface MapaGenerado {
   fertilidad?: CampoFertilidad;
   elevacion?: CampoElevacion;
   rios: RioZona[];
+  /** Los campamentos de mercenarios del artefacto, en su orden (su índice N es el `camp-N` del motor) y en el centro de su planta. */
+  campamentos?: { id: string; posicion: Point; origen: number }[];
+  /** Los campamentos de bandidos con que nace el mundo (`bandidos_iniciales`): dónde están y su nivel. */
+  bandidos?: { id: string; posicion: Point; nivel: number; vetaId?: string }[];
   /** Las capas raster del artefacto de mundo (contrato 06), en unidades estratégicas: con ellas no se recalcula nada. */
   rasters?: RastersDeMundo;
 }

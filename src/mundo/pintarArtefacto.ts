@@ -127,7 +127,7 @@ function mezcla(c: readonly number[], d: readonly number[], t: number): [number,
 const imagenesDeLejos = new WeakMap<MapaGenerado, HTMLCanvasElement>();
 
 /** Una celda del raster por píxel, con relieve, bosque y ríos. Se hace una vez por mundo. */
-function imagenDeLejos(mapa: MapaGenerado): HTMLCanvasElement {
+export function imagenDeLejos(mapa: MapaGenerado): HTMLCanvasElement {
   const hecha = imagenesDeLejos.get(mapa);
   if (hecha) return hecha;
   const t = mapa.rasters!.terreno!;
@@ -208,7 +208,7 @@ function imagenDeCerca(mapa: MapaGenerado, v: VistaDelMundo): HTMLCanvasElement 
 }
 
 /** Rellena `capa` (`ancho` × `alto` px) con el rectángulo de mundo `x0,y0 – x1,y1`, muestreando los rasters punto a punto. */
-function muestrear(mapa: MapaGenerado, capa: HTMLCanvasElement, x0: number, y0: number, x1: number, y1: number, ancho: number, alto: number): void {
+function muestrear(mapa: MapaGenerado, capa: HTMLCanvasElement, x0: number, y0: number, x1: number, y1: number, ancho: number, alto: number, bosqueDeLejos = false): void {
   const v = { x0, y0, x1, y1 };
   const t = mapa.rasters!.terreno!;
   const alt = mapa.rasters!.altura!;
@@ -231,7 +231,10 @@ function muestrear(mapa: MapaGenerado, capa: HTMLCanvasElement, x0: number, y0: 
       // El suelo del bosque, más oscuro donde es denso (los árboles van encima), como el admin.
       if (bosque && clase > 1) {
         const dens = bilineal(bosque, x, y);
-        if (dens >= UMBRAL_BOSQUE) color = mezcla(color, COLOR_BOSQUE.map((v) => v * 1.1), Math.min(0.55, (dens / 255) * 0.7));
+        // Sin árboles encima (`bosqueDeLejos`), el verde del bosque como en la imagen de lejos.
+        if (dens >= UMBRAL_BOSQUE) color = bosqueDeLejos
+          ? mezcla(color, COLOR_BOSQUE.map((v) => v * (0.85 + 0.3 * (bilineal(alt, x, y) / 65535))), Math.min(0.85, (dens / 255) * 1.15))
+          : mezcla(color, COLOR_BOSQUE.map((v) => v * 1.1), Math.min(0.55, (dens / 255) * 0.7));
       }
       const k = clase <= 1 ? 1 : luz((h(x + dz, y) - h(x - dz, y)) / (2 * dz), (h(x, y + dz) - h(x, y - dz)) / (2 * dz));
       const p = (j * ancho + i) * 4;
@@ -242,6 +245,21 @@ function muestrear(mapa: MapaGenerado, capa: HTMLCanvasElement, x0: number, y0: 
     }
   }
   cctx.putImageData(img, 0, 0);
+}
+
+/** El suelo de un círculo de mundo (`centro`, `radio`) en un lienzo de `px` × `px`, con el relieve y los bordes de clase de cerca pero el bosque
+ * pintado como de lejos (sin árboles encima), y el borde difuminado para posarlo sobre la imagen de lejos. Para enseñar una zona concreta. */
+export function imagenDeZona(mapa: MapaGenerado, centro: { x: number; y: number }, radio: number, px: number): HTMLCanvasElement {
+  const capa = document.createElement('canvas');
+  muestrear(mapa, capa, centro.x - radio, centro.y - radio, centro.x + radio, centro.y + radio, px, px, true);
+  const ctx = capa.getContext('2d')!;
+  const fundido = ctx.createRadialGradient(px / 2, px / 2, px * 0.4, px / 2, px / 2, px / 2);
+  fundido.addColorStop(0, 'rgba(0,0,0,1)');
+  fundido.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.globalCompositeOperation = 'destination-in';
+  ctx.fillStyle = fundido;
+  ctx.fillRect(0, 0, px, px);
+  return capa;
 }
 
 /** Árboles sueltos, como el admin: uno como mucho cada 1,2 u si la densidad lo pide (azar fijo por sitio), copa redonda de verde

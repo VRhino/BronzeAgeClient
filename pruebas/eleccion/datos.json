@@ -1,0 +1,215 @@
+{
+ "tropas": [
+  {
+   "id": "lanceros_mimbre",
+   "nombre": "Lanceros con escudo de mimbre",
+   "tecnologia": "escudos_ligeros",
+   "edificio": "barracon",
+   "nivelRequerido": 1,
+   "escalon": 2,
+   "unidadesPorDefecto": 25
+  },
+  {
+   "id": "espadachines_cobre",
+   "nombre": "Espadachines de espada corta de cobre",
+   "tecnologia": "armamento_palacial",
+   "edificio": "barracon",
+   "nivelRequerido": 1,
+   "escalon": 2,
+   "unidadesPorDefecto": 20
+  },
+  {
+   "id": "hacheros_ligeros",
+   "nombre": "Hacheros ligeros",
+   "tecnologia": "armamento_palacial",
+   "edificio": "barracon",
+   "nivelRequerido": 2,
+   "escalon": 3,
+   "unidadesPorDefecto": 18
+  },
+  {
+   "id": "espadachines_bronce",
+   "nombre": "Espadachines con espadas y escudos de bronce",
+   "tecnologia": "aleacion_bronce",
+   "edificio": "barracon",
+   "nivelRequerido": 2,
+   "escalon": 3,
+   "unidadesPorDefecto": 18
+  },
+  {
+   "id": "lanceros_pesados",
+   "nombre": "Lanceros pesados micénicos",
+   "tecnologia": "panoplia_bronce",
+   "edificio": "barracon",
+   "nivelRequerido": 3,
+   "escalon": 4,
+   "unidadesPorDefecto": 15
+  },
+  {
+   "id": "hacheros_armados",
+   "nombre": "Hacheros armados",
+   "tecnologia": "aleacion_bronce",
+   "edificio": "barracon",
+   "nivelRequerido": 2,
+   "escalon": 3,
+   "unidadesPorDefecto": 15
+  },
+  {
+   "id": "honderos",
+   "nombre": "Honderos",
+   "tecnologia": "hostigamiento_tribal",
+   "edificio": "galeriaDeTiro",
+   "nivelRequerido": 1,
+   "escalon": 2,
+   "unidadesPorDefecto": 20
+  },
+  {
+   "id": "escaramuzadores_jabalina",
+   "nombre": "Escaramuzadores con jabalina",
+   "tecnologia": "hostigamiento_tribal",
+   "edificio": "galeriaDeTiro",
+   "nivelRequerido": 2,
+   "escalon": 3,
+   "unidadesPorDefecto": 18
+  },
+  {
+   "id": "arqueros",
+   "nombre": "Arqueros",
+   "tecnologia": "arqueria_palacial",
+   "edificio": "galeriaDeTiro",
+   "nivelRequerido": 2,
+   "escalon": 3,
+   "unidadesPorDefecto": 18
+  },
+  {
+   "id": "arqueros_compuesto",
+   "nombre": "Arqueros con arco compuesto",
+   "tecnologia": "arco_compuesto",
+   "edificio": "galeriaDeTiro",
+   "nivelRequerido": 3,
+   "escalon": 5,
+   "unidadesPorDefecto": 12
+  },
+  {
+   "id": "exploradores_caballo",
+   "nombre": "Exploradores a caballo",
+   "tecnologia": "cria_caballar",
+   "edificio": "caballerizas",
+   "nivelRequerido": 1,
+   "escalon": 2,
+   "unidadesPorDefecto": 20
+  },
+  {
+   "id": "carros_guerra",
+   "nombre": "Carros de guerra",
+   "tecnologia": "carros_guerra",
+   "edificio": "caballerizas",
+   "nivelRequerido": 2,
+   "escalon": 4,
+   "unidadesPorDefecto": 15
+  },
+  {
+   "id": "jinetes_asirios",
+   "nombre": "Jinetes asirios",
+   "tecnologia": "equitacion_militar",
+   "edificio": "caballerizas",
+   "nivelRequerido": 1,
+   "escalon": 2,
+   "unidadesPorDefecto": 20
+  },
+  {
+   "id": "guerreros_filisteos",
+   "nombre": "Guerreros filisteos (Peleset)",
+   "tecnologia": "forja_hierro_temprana",
+   "edificio": "barracon",
+   "nivelRequerido": 2,
+   "escalon": 3,
+   "unidadesPorDefecto": 18
+  },
+  {
+   "id": "shardana",
+   "nombre": "Shardana",
+   "tecnologia": "bronce_calidad_militar",
+   "edificio": "barracon",
+   "nivelRequerido": 2,
+   "escalon": 4,
+   "unidadesPorDefecto": 15
+  },
+  {
+   "id": "hequetai",
+   "nombre": "Hequetai",
+   "tecnologia": "panoplia_bronce",
+   "edificio": "barracon",
+   "nivelRequerido": 3,
+   "escalon": 5,
+   "unidadesPorDefecto": 12
+  },
+  {
+   "id": "honderos_rodios",
+   "nombre": "Honderos rodios",
+   "tecnologia": "pantalla_escaramuzadores",
+   "edificio": "galeriaDeTiro",
+   "nivelRequerido": 2,
+   "escalon": 3,
+   "unidadesPorDefecto": 18
+  },
+  {
+   "id": "peltastas",
+   "nombre": "Peltastas",
+   "tecnologia": "pantalla_escaramuzadores",
+   "edificio": "galeriaDeTiro",
+   "nivelRequerido": 2,
+   "escalon": 3,
+   "unidadesPorDefecto": 18
+  },
+  {
+   "id": "jinetes_escitas",
+   "nombre": "Jinetes escitas",
+   "tecnologia": "caballeria_organizada",
+   "edificio": "caballerizas",
+   "nivelRequerido": 2,
+   "escalon": 3,
+   "unidadesPorDefecto": 18
+  },
+  {
+   "id": "hoplitas_ciudadanos",
+   "nombre": "Hoplitas ciudadanos",
+   "tecnologia": "ciudadania_militar",
+   "edificio": "barracon",
+   "nivelRequerido": 2,
+   "escalon": 3,
+   "unidadesPorDefecto": 18
+  },
+  {
+   "id": "caballeria_asiria",
+   "nombre": "Caballería asiria",
+   "tecnologia": "caballeria_organizada",
+   "edificio": "caballerizas",
+   "nivelRequerido": 2,
+   "escalon": 3,
+   "unidadesPorDefecto": 18
+  },
+  {
+   "id": "arqueros_escitas",
+   "nombre": "Arqueros escitas",
+   "tecnologia": "arqueria_especializada",
+   "edificio": "galeriaDeTiro",
+   "nivelRequerido": 3,
+   "escalon": 5,
+   "unidadesPorDefecto": 12
+  },
+  {
+   "id": "espartiatas",
+   "nombre": "Espartiatas",
+   "tecnologia": "falange_hoplita",
+   "edificio": "barracon",
+   "nivelRequerido": 3,
+   "escalon": 4,
+   "unidadesPorDefecto": 15
+  }
+ ],
+ "deArranque": [
+  "hostigamiento_tribal",
+  "leva_comunal"
+ ]
+}

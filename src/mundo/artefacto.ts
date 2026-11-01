@@ -55,6 +55,8 @@ export function mapaDesdeArtefacto(a: ArtefactoDeMundo): MapaGenerado {
     nodos: nodosConIdDelMotor(a).map(({ n, id }) => ({ id, tipo: n.tipo, rareza: n.rareza, posicion: punto(n.posicion), cantidadInicial: Number(n.cantidadInicial) / MIL })),
     parcelas: a.parcelas.map((x) => ({ id: x.id, bosqueId: x.bosqueId, centro: punto(x.centro), densidad: x.densidadMilesimas / MIL })),
     rios: a.rios.map((r) => ({ id: r.id, puntos: r.puntos.map(punto), terminaEnLago: r.terminaEnLago, navegable: r.navegable, vados: r.vados.map(punto) })),
+    campamentos: a.campamentos.map((c) => ({ id: c.id, posicion: punto(c.posicion), origen: c.origen })),
+    bandidos: a.bandidosIniciales.map((b) => ({ id: b.id, posicion: punto(b.posicion), nivel: b.nivel, ...(b.vetaId ? { vetaId: b.vetaId } : {}) })),
     rasters,
   };
 }

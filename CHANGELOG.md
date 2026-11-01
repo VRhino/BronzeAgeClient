@@ -3,6 +3,15 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.78.0] — 2026-11-01 · Elegir campamento con el mapa · sync con `VRhino/BronzeAge@b57d4b27`, sin cambios en el contrato
+
+- **Pantalla nueva para elegir dónde nace el héroe** (`ui/eleccionCampamento.ts`), como la de elegir punto de partida de un juego de estrategia: el mapa del mundo con cada campamento como un estandarte de color; al elegir uno, la cámara vuela hasta él, marca su zona cercana (150 u) y su frontera (250 u), pinta su suelo de cerca y deja en penumbra lo de fuera. Se arrastra y se acerca con la rueda; un minimapa con todos los estandartes lleva a cualquiera. Lista y mapa van a la par (clic en la tarjeta o en el estandarte, flechas en la lista).
+- **Nombre por región:** cada campamento se llama como la región del generador donde cae (con el rumbo si dos comparten región), sin tocar el motor. Es aproximado cerca de las lindes: el artefacto no trae la semilla que las mueve.
+- **Ficha de cada campamento:** su edificio militar (derivado como el motor, `edificiosMilitares[huella mod 3]`) con las tropas que recluta desde el primer día y las que se abrirán con la tecnología; la gente que reside y que nació allí; y lo que hay alrededor, leído del artefacto: mezcla de terreno, fertilidad y bosque del foco, yacimientos (cerca y en la frontera, con el más cercano), río, costa o lago, bandidos y el campamento vecino.
+- **«Recomendado», «Elegir por mí» y comparar:** una nota del cliente (poca gente, tierra fértil, yacimientos en el foco, pocos bandidos, agua cerca) marca el recomendado y sus razones; «Elegir por mí» sortea entre los tres mejores; marcando «Comparar» en dos tarjetas se ven lado a lado, con lo mejor de cada fila en verde.
+- `MapaGenerado` trae ahora los campamentos y los bandidos iniciales del artefacto; `obtenerMapa` sirve sin `mapaId` (antes de tener héroe).
+- Banco nuevo `pruebas/eleccion/` (con el artefacto que sirve `/__banco/mundo`) y pruebas de la lectura (`pruebas/eleccionCampamento.test.ts`).
+
 ## [0.77.0] — 2026-11-01 · Mercenarios por contrato · sync con `VRhino/BronzeAge@7aa44b90`
 
 - **Contrato regenerado** (contrato 0.5.0): `Faccion.contratos`, `MiembroFaccion.marca`, `Heroe.contrato`, `ficha_mercenario` y `contratado`, `CampamentoMercenarios.tablon` y las órdenes 171-179.

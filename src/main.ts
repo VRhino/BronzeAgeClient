@@ -29,6 +29,9 @@ import {
   radioZonaInicial,
   proyeccionAlInstante,
   obtenerMapa,
+  edificiosMilitaresDeCampamento,
+  tropasReclutables,
+  catalogoDeTecnologia,
   grafoDeNavegacion,
   obtenerRelieve,
   radiosDeVisionDelServidor,
@@ -36,6 +39,7 @@ import {
   type ProyeccionJugador,
   type RespuestaComando,
 } from './apiCliente';
+import { montarEleccionCampamento } from './ui/eleccionCampamento';
 import { pintarVentanaSalida, reiniciarVentanaSalida, type LugarDeSalida } from './ui/ventanaSalida';
 import { elegirPestanaHeroe, minutosHerido, pintarPanelHeroe } from './ui/panelHeroe';
 import { htmlBarraJugador, type PanelJugador } from './ui/barraJugador';
@@ -59,7 +63,7 @@ import { cablearAdmision } from './ui/panelAdmision';
 import { cablearFichaBatalla, cablearFichaFormacion, formacionesVisibles, htmlFichaBatalla, htmlFichaFormacion } from './ui/panelBatalla';
 import { cablearPanelEjercito, ejercitosDeLaFaccion, htmlFichaEjercito, htmlPanelEjercito, peticionesNuevas } from './ui/ejercitos';
 import { invalidar, olvidarEdicion, pintar, vaciar } from './ui/repintado';
-import { aplicarAyudas, ayuda } from './ui/ayuda';
+import { ayuda } from './ui/ayuda';
 import { htmlInformeDeInspeccion } from './ui/interaccionAjena';
 import { cablearProduccionYRecetas, cablearVistaCiudad, edificioSeleccionado, htmlProduccionYRecetas, htmlTooltipEdificio, repintarFicha, tipoSeleccionado } from './ui/vistaCiudad';
 import { cablearPlegables, plegable } from './ui/plegable';
@@ -340,36 +344,21 @@ const HEROE_PROVISIONAL: Omit<ParamsCrearHeroe, 'displayName' | 'campamentoId'> 
   avatar: { cabezaId: '', peloId: '', barbaId: '', cejasId: '' },
 };
 
-/** Pantalla HÉROE: se llega con `sinHeroe` (membresía sin héroe; el backend no admite otro comando que
- * `crearHeroe`). PROVISIONAL: pide el nombre y el campamento de mercenarios donde nace (Doc 1.3); las dos cifras de
- * cada campamento solo informan. */
+/** Pantalla HÉROE: se llega con `sinHeroe` (membresía sin héroe; el backend no admite otro comando que `crearHeroe`). Se elige el campamento de
+ * mercenarios donde nace (Doc 1.3) sobre el mapa del mundo, con lo que tiene alrededor (`ui/eleccionCampamento.ts`), y se le pone nombre. */
 function montarHeroe(): void {
-  const opciones = campamentosParaElegir
-    .map((c, i) => `<label class="mapa-lista-item"><div><strong>${escaparHtml(c.id)}</strong><span>(${Math.round(c.posicion.x)}, ${Math.round(c.posicion.y)}) · lo eligieron ${c.eligieronComoInicial} · residen ${c.residentes}</span></div><input type="radio" name="campamento" value="${escaparHtml(c.id)}"${i === 0 ? ' checked' : ''} /></label>`)
-    .join('');
-  app.innerHTML = `<div class="login-container"><div class="login-card">
-    <div class="login-header"><h1 class="login-title">Tu héroe${ayuda('heroe:crear', 'Nace dentro de un campamento de mercenarios.')}</h1></div>
-    <form id="form-crear-heroe">
-      <div class="form-group"><label class="form-label" for="input-nombre-heroe">Nombre</label><input type="text" id="input-nombre-heroe" class="form-input" required maxlength="24" autocomplete="off" /></div>
-      <div class="form-group"><span class="form-label">Campamento</span><div class="mapa-lista">${opciones || '<p class="mapa-lista-vacia">Esta partida no tiene campamentos.</p>'}</div></div>
-      <button type="submit" id="btn-crear-heroe" class="btn-primary">Crear héroe</button>
-      <p id="error-heroe" class="faction-error" role="alert"></p>
-    </form>
-  </div><button id="btn-partidas" class="text-link" type="button">Cambiar de partida</button> <button id="btn-logout" class="text-link" type="button">Cerrar sesión</button></div>`;
-  aplicarAyudas(app);
+  app.innerHTML = `<div class="elegir-raiz"></div><div class="elegir-pie"><button id="btn-partidas" class="text-link" type="button">Cambiar de partida</button> <button id="btn-logout" class="text-link" type="button">Cerrar sesión</button></div>`;
   document.querySelector('#btn-partidas')?.addEventListener('click', () => volverALasPartidas());
   document.querySelector('#btn-logout')?.addEventListener('click', () => cerrarSesionYVolverALogin());
-  document.querySelector<HTMLFormElement>('#form-crear-heroe')?.addEventListener('submit', async (evento) => {
-    evento.preventDefault();
-    const nombre = document.querySelector<HTMLInputElement>('#input-nombre-heroe')?.value.trim() ?? '';
-    const boton = document.querySelector<HTMLButtonElement>('#btn-crear-heroe');
-    if (boton) boton.disabled = true;
-    const campamentoId = document.querySelector<HTMLInputElement>('input[name="campamento"]:checked')?.value ?? '';
-    const mensaje = await crearHeroe({ ...HEROE_PROVISIONAL, displayName: nombre, campamentoId });
-    if (!mensaje) return;
-    if (boton) boton.disabled = false;
-    const error = document.querySelector<HTMLElement>('#error-heroe');
-    if (error) error.textContent = mensaje;
+  limpiarPantalla = montarEleccionCampamento(app.querySelector<HTMLElement>('.elegir-raiz')!, {
+    campamentos: campamentosParaElegir,
+    mapa: obtenerMapa(estadoCliente.gameIdActivo, ''),
+    edificiosMilitares: () => edificiosMilitaresDeCampamento(),
+    tropas: () => tropasReclutables(),
+    deArranque: (t) => Boolean(catalogoDeTecnologia()?.TECNOLOGIAS[t]?.deArranque),
+    crear: (nombre, campamentoId) => crearHeroe({ ...HEROE_PROVISIONAL, displayName: nombre, campamentoId }),
+    escapar: escaparHtml,
+    alCargarDatos: (f) => { edificiosMilitaresDeCampamento(f); tropasReclutables(f); catalogoDeTecnologia(f); },
   });
 }
 
