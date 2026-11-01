@@ -1954,7 +1954,7 @@ function renderPanelEdificios(): void {
     cablear = () => {
       cablearSub((s) => { seccionMercado = s as SeccionMercado; });
       if (extraMercado) extraMercado.cablear?.(ctxPlaza);
-      else if (seccionMercado === 'caravanas') cablearCaravanas(cuerpo, proyeccion, asentamiento, ejecutarYRefrescar);
+      else if (seccionMercado === 'caravanas') cablearCaravanas(cuerpo, proyeccion, asentamiento, ejecutarYRefrescar, renderPanelEdificios);
       else cablearOrdenes(cuerpo, asentamiento, ejecutarYRefrescar);
     };
   }
@@ -2204,6 +2204,7 @@ function renderCargosAsentamiento(asentamiento: Asentamiento | undefined, proyec
     ['gobernadorId', 'Gobernador', soyRey],
     ['maestroObrasId', 'Maestro de Obras', soyGobernador],
     ['tesoreroId', 'Tesorero', soyGobernador],
+    ['maestroCaravanasId', 'Maestro de Caravanas', soyGobernador],
     ['generalId', 'General', soyGobernador],
     ['sacerdoteId', 'Sacerdote', soyGobernador],
   ] as const;

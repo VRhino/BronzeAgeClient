@@ -6,7 +6,7 @@
 // Lo que el contrato no trae, o aún no está traducido, sale vacío (listas) o ausente (opcionales): los paneles ya lo toleran porque el
 // backend viejo tampoco lo mandaba siempre.
 import type { Almacen, Cuerpo, CuerpoDe } from '../contrato/almacen';
-import type { Punto, Ritmo, Cantidades } from '../contrato/gen/bronzeage/v1/common_pb';
+import type { Punto, Ritmo, Cantidades, ParadaEncargo } from '../contrato/gen/bronzeage/v1/common_pb';
 import { TipoEntidad } from '../contrato/gen/bronzeage/v1/common_pb';
 import * as pb from '../contrato/gen/bronzeage/v1/entities_pb';
 import type { Bienvenida } from '../contrato/gen/bronzeage/v1/session_pb';
@@ -70,7 +70,7 @@ const GRUPO_PUERTA: Record<number, d.GrupoPuerta> = { 1: 'neutrales', 2: 'aliado
 const CLASE_CELDA: Record<number, d.CeldaMuro['clase']> = { 1: 'muro', 2: 'puerta', 3: 'torre' };
 const TIPO_RELACION: Record<number, string> = { 1: 'vasallaje', 2: 'alianza', 3: 'guerra' };
 const POLITICA_UNION: Record<number, 'rechazar' | 'aceptar' | 'preguntar'> = { 1: 'rechazar', 2: 'aceptar', 3: 'preguntar' };
-const ESTADO_CARAVANA: Record<number, NonNullable<d.Caravana['estado']>> = { 1: 'disponible', 2: 'preparando', 3: 'adjunta', 4: 'aparcada', 5: 'en_transito', 6: 'retornando' };
+const ESTADO_CARAVANA: Record<number, NonNullable<d.Caravana['estado']>> = { 1: 'disponible', 2: 'preparando', 3: 'adjunta', 4: 'aparcada', 5: 'en_transito', 6: 'retornando', 7: 'esperando' };
 const TIPO_CARAVANA: Record<number, NonNullable<d.Caravana['tipo']>> = { 1: 'comercial', 2: 'construccion', 3: 'comercial', 4: 'acarreo' };
 const ESTADO_TRUEQUE: Record<number, d.AcuerdoTrueque['estado']> = { 1: 'propuesto', 2: 'activo', 3: 'rechazado', 4: 'cumplido', 5: 'expirado' };
 const ESTADO_ORDEN: Record<number, d.OrdenMercado['estado']> = { 1: 'activa', 2: 'cumplida', 3: 'expirada' };
@@ -160,7 +160,7 @@ function asentamiento(a: pb.Asentamiento, ahora: number): d.Asentamiento {
     heroesFundadoresIds: a.fundadoresIds,
     casasCompradas: a.casasCompradas,
     cargos: a.cargos
-      ? { gobernadorId: a.cargos.gobernadorId ?? null, maestroObrasId: a.cargos.maestroObrasId ?? null, tesoreroId: a.cargos.tesoreroId ?? null, generalId: a.cargos.generalId ?? null, sacerdoteId: a.cargos.sacerdoteId ?? null }
+      ? { gobernadorId: a.cargos.gobernadorId ?? null, maestroObrasId: a.cargos.maestroObrasId ?? null, maestroCaravanasId: a.cargos.maestroCaravanasId ?? null, tesoreroId: a.cargos.tesoreroId ?? null, generalId: a.cargos.generalId ?? null, sacerdoteId: a.cargos.sacerdoteId ?? null }
       : undefined,
     recintos: a.recintos.map(recinto),
     ascenso: a.ascenso ? { nivelObjetivo: a.ascenso.nivelObjetivo, iniciadoEn: instante(a.ascenso.iniciadoEnMs)!, completaEn: instante(a.ascenso.completaEnMs)! } : undefined,
@@ -224,6 +224,26 @@ function caravana(c: pb.Caravana, ahora: number): d.Caravana {
     estado: ESTADO_CARAVANA[c.estado], tipo: TIPO_CARAVANA[c.tipo], origenCampamentoId: c.origenCampamentoId, faccionId: c.faccionId, titularId: c.titularId,
     escoltaIds: c.escoltaIds, carros: c.carros.map((x) => ({ tipoCarro: x.tipoCarro as 'basico' | 'reforzado', animal: x.animal as 'buey' | 'caballo' | 'camello' | undefined })),
     reservadaManual: c.reservadaManual, contenido: cantidades(c.contenido), caducaEn: instante(c.caducaEnMs), preparaHasta: instante(c.preparaHastaMs),
+    encargo: c.encargo ? encargo(c.encargo) : undefined,
+  };
+}
+
+function parada(p: ParadaEncargo | undefined): d.ParadaEncargo | undefined {
+  if (!p) return undefined;
+  return {
+    recoger: p.recoger.map((l) => ({ recurso: l.recurso, cantidad: mil(l.cantidad), precioMax: l.precioMax === undefined ? undefined : mil(l.precioMax) })),
+    esperarExistencias: p.esperarExistencias,
+    dejar: p.dejar.map((l) => ({ recurso: l.recurso, tope: l.tope === undefined ? undefined : mil(l.tope), precioMin: l.precioMin === undefined ? undefined : mil(l.precioMin) })),
+    desecharSobrante: p.desecharSobrante,
+  };
+}
+
+function encargo(e: pb.Encargo): d.Encargo {
+  return {
+    modo: e.modo === 'envio' ? 'envio' : 'ruta', destinoAsentamientoId: e.destinoAsentamientoId, salirEn: instante(e.salirEnMs),
+    paradaOrigen: parada(e.paradaOrigen), paradaDestino: parada(e.paradaDestino), vueltas: e.vueltas,
+    paradaActual: e.paradaActual === 'destino' ? 'destino' : 'origen', fase: (['espera', 'descarga', 'carga'].includes(e.fase) ? e.fase : '') as d.Encargo['fase'],
+    finPaso: instante(e.finPasoMs), cancelado: e.cancelado,
   };
 }
 

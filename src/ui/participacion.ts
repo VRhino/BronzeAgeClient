@@ -9,7 +9,7 @@ import { nombreDeHeroe } from './nombres';
 type Escapar = (s: string) => string;
 
 const CARGO_NOMBRE: Record<string, string> = {
-  rey: 'Rey', embajador: 'Embajador', gobernador: 'Gobernador', maestroObras: 'Maestro de Obras', tesorero: 'Tesorero', general: 'General', sacerdote: 'Sacerdote',
+  rey: 'Rey', embajador: 'Embajador', gobernador: 'Gobernador', maestroObras: 'Maestro de Obras', maestroCaravanas: 'Maestro de Caravanas', tesorero: 'Tesorero', general: 'General', sacerdote: 'Sacerdote',
 };
 const nombreCargo = (c: string): string => CARGO_NOMBRE[c] ?? c;
 

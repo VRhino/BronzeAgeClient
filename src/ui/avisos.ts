@@ -19,6 +19,7 @@ import { nombreDeHeroe } from './nombres';
 import { informeDeEvento, type InformeDeCombate } from './informeCombate';
 import { plazo } from './panelDiplomacia';
 import { textoDeMision } from './misiones';
+import { RECURSO_NOMBRE } from '../paletas';
 
 /** Los eventos de «alguien te ha mirado»: el backend los emite sin decir quién. */
 const CODIGOS_DE_AVISO = new Set(['asentamiento.observado', 'columna.observada', 'caravana.observada', 'asentamiento.informe_pedido']);
@@ -290,6 +291,15 @@ export function procesar(e: EventoDominio, heroeId: string, modo: Modo): void {
     anotar({ ...base, texto, clase: 'mirada', titulo: 'Unirse en campo', categoria: 'movimientos', urgente, clave: e.codigo }, modo, e.codigo !== 'columna.union_en_campo');
     return;
   }
+  if (CODIGOS_DE_ENCARGO.has(e.codigo)) {
+    // Encargos de caravana (motor 2c4bca6, Comercio_Caravanas §12): narración de economía, agrupada por caravana y tipo.
+    const texto = textoDeEncargo(e.codigo, (e.payload ?? {}) as Record<string, unknown>);
+    if (!texto) return;
+    const terminado = e.codigo === 'comercio.encargo_terminado';
+    const p = e.payload as { caravana?: number } | undefined;
+    anotar({ ...base, texto, clase: 'mirada', titulo: terminado ? 'Encargo terminado' : 'Caravanas', categoria: 'economia', urgente: false, clave: `${e.codigo}|${p?.caravana ?? ''}` }, modo);
+    return;
+  }
   if (e.codigo === 'mercenarios.prestamo_retirado') {
     // El campamento te retira la tropa prestada al dejar de residir en él (backend D45): antes desaparecía sin aviso.
     const p = e.payload as { campamentoId?: string; escuadras?: { tropaId: string; cantidad: number }[] } | undefined;
@@ -308,6 +318,42 @@ export function procesar(e: EventoDominio, heroeId: string, modo: Modo): void {
   if (!informe) return;
   anotar({ ...base, texto: informe.resumen, clase: informe.teAtacaron ? 'peligro' : 'combate', categoria: 'combate', urgente: true, informe }, modo, informe.teAtacaron);
   if (!silencioso) alInforme?.(informe);
+}
+
+const CODIGOS_DE_ENCARGO = new Set(['comercio.encargo_dado', 'comercio.caravana_espera', 'comercio.caravana_carga', 'comercio.caravana_descarga', 'comercio.encargo_terminado']);
+const DATOS_DE_ENCARGO = new Set(['caravana', 'plaza', 'destino', 'modo', 'carros', 'finPaso', 'tirado', 'aBordo', 'comision', 'motivo', 'volcado', 'perdido']);
+
+/** El texto de un hecho del encargo de una caravana; las cifras llegan en milésimas y los recursos, como claves sueltas del payload. */
+export function textoDeEncargo(codigo: string, p: Record<string, unknown>): string | null {
+  const proy = estadoCliente.proyeccionUltima;
+  const num = (k: string): number => Number(p[k] ?? 0) / 1000;
+  const cifra = (n: number): string => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+  const plaza = (k: string): string => {
+    const id = `as-${String(p[k] ?? '')}`;
+    return proy?.asentamientos.find((x) => x.id === id)?.nombre ?? proy?.asentamientosAvistados.find((x) => x.id === id)?.nombre ?? proy?.asentamientosConocidos.find((x) => x.asentamientoId === id)?.nombre ?? id;
+  };
+  const caravana = `La caravana car-${String(p.caravana ?? '?')}`;
+  const recursos = Object.entries(p).filter(([k, v]) => !DATOS_DE_ENCARGO.has(k) && Number(v) > 0).map(([k, v]) => `${cifra(Number(v) / 1000)} ${RECURSO_NOMBRE[k]?.toLowerCase() ?? k}`).join(', ');
+  const ajena = (k: string): boolean => {
+    const id = `as-${String(p[k] ?? '')}`;
+    const x = proy?.asentamientos.find((y) => y.id === id) ?? proy?.asentamientosAvistados.find((y) => y.id === id);
+    return !!proy && !!x && x.faccionId !== proy.faccionId;
+  };
+  switch (codigo) {
+    case 'comercio.encargo_dado': return `${caravana} recibe ${p.modo === 1 ? 'un envío' : 'una ruta'} hacia ${plaza('destino')}.`;
+    case 'comercio.caravana_espera': return `${caravana} espera en ${plaza('plaza')}${recursos ? `: faltan ${recursos}` : ''}.`;
+    case 'comercio.caravana_carga': return `${caravana} ${ajena('plaza') ? 'compra' : 'carga'} en ${plaza('plaza')}${recursos ? ` ${recursos}` : ''}.`;
+    case 'comercio.caravana_descarga': {
+      const tirado = num('tirado'), comision = num('comision');
+      return `${caravana} ${ajena('plaza') ? 'vende' : 'descarga'} en ${plaza('plaza')}${recursos ? ` ${recursos}` : ''}${tirado > 0 ? ` (tira ${cifra(tirado)} que no cabe)` : ''}${comision > 0 ? ` · comisión ${cifra(comision)} oro` : ''}.`;
+    }
+    case 'comercio.encargo_terminado': {
+      const motivo = ['cumplido', 'cancelado', 'su destino se perdió', 'la caravana fue destruida'][Number(p.motivo ?? 0)] ?? 'terminado';
+      const volcado = num('volcado'), perdido = num('perdido');
+      return `${caravana} termina su encargo: ${motivo}.${volcado > 0 ? ` Vuelca ${cifra(volcado)} en el almacén.` : ''}${perdido > 0 ? ` Se pierden ${cifra(perdido)}.` : ''}`;
+    }
+  }
+  return null;
 }
 
 /** Recorta el historial, lo guarda y avisa a quien pinte (el panel, la insignia). */

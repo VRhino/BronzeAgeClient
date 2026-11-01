@@ -6,7 +6,7 @@ import type { ContextoPlaza, SubpestanaPlaza } from './ganchos';
 import { confirmar } from './dialogo';
 
 const DIA_MS = 86_400_000;
-const CARGO_NOMBRE: Record<string, string> = { gobernadorId: 'Gobernador', maestroObrasId: 'Maestro de Obras', tesoreroId: 'Tesorero', generalId: 'General', sacerdoteId: 'Sacerdote' };
+const CARGO_NOMBRE: Record<string, string> = { gobernadorId: 'Gobernador', maestroObrasId: 'Maestro de Obras', maestroCaravanasId: 'Maestro de Caravanas', tesoreroId: 'Tesorero', generalId: 'General', sacerdoteId: 'Sacerdote' };
 
 /** El enfriamiento de residencia sale del balance (`CIUDADANIA.cooldownCambioResidenciaDias`); mientras no llegue, el aviso es genérico. */
 function esperaParaMudarse(c: ContextoPlaza): string {

@@ -31,7 +31,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file bronzeage/v1/common.proto.
  */
 export const file_bronzeage_v1_common: GenFile = /*@__PURE__*/
-  fileDesc("Chlicm9uemVhZ2UvdjEvY29tbW9uLnByb3RvEgxicm9uemVhZ2UudjEiHQoFUHVudG8SCQoBeBgBIAEoEhIJCgF5GAIgASgSIjgKB1ZlcnRpY2USHgoBcBgBIAEoCzITLmJyb256ZWFnZS52MS5QdW50bxINCgVlbl9tcxgCIAEoAyJDCgRQbGFuEhIKCmdlbmVyYWNpb24YASABKA0SJwoIdmVydGljZXMYAiADKAsyFS5icm9uemVhZ2UudjEuVmVydGljZSKVAQoFUml0bW8SEwoLdmFsb3JfZW5fdDAYASABKBISDQoFdDBfbXMYAiABKAMSEgoKcG9yX21pbnV0bxgDIAEoEhITCgZtYXhpbW8YBCABKBJIAIgBARITCgZtaW5pbW8YBSABKBJIAYgBARIUCgxlbl9lc2NhbG9uZXMYBiABKAhCCQoHX21heGltb0IJCgdfbWluaW1vIoIBCgpFeGlzdGVuY2lhEiUKCGNhbnRpZGFkGAEgASgLMhMuYnJvbnplYWdlLnYxLlJpdG1vEhEKCWNhcGFjaWRhZBgCIAEoEhIcChRwcm9kdWNpZG9fcG9yX21pbnV0bxgDIAEoEhIcChRjb25zdW1pZG9fcG9yX21pbnV0bxgEIAEoEiJvCgpDYW50aWRhZGVzEjMKBnBvcl9pZBgBIAMoCzIjLmJyb256ZWFnZS52MS5DYW50aWRhZGVzLlBvcklkRW50cnkaLAoKUG9ySWRFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKBI6AjgBIroBCgZTaWdpbG8SEAoIZm9ybWFfaWQYASABKAkSEAoIY2FtcG9faWQYAiABKAkSEgoKZW1ibGVtYV9pZBgDIAEoCRIZChFjb2xvcl9wcmltYXJpb19pZBgEIAEoCRIbChNjb2xvcl9zZWN1bmRhcmlvX2lkGAUgASgJEhgKEGNvbG9yX2VtYmxlbWFfaWQYBiABKAkSDwoHb3JsYV9pZBgHIAEoCRIVCg1jb2xvcl9vcmxhX2lkGAggASgJIjwKBkFtYml0bxImCgR0aXBvGAEgASgOMhguYnJvbnplYWdlLnYxLkFtYml0b1RpcG8SCgoCaWQYAiABKAkiUAoKUmVjdGFuZ3VsbxIgCgNtaW4YASABKAsyEy5icm9uemVhZ2UudjEuUHVudG8SIAoDbWF4GAIgASgLMhMuYnJvbnplYWdlLnYxLlB1bnRvKpIFCgtUaXBvRW50aWRhZBIgChxUSVBPX0VOVElEQURfTk9fRVNQRUNJRklDQURPEAASCwoHRkFDQ0lPThABEhAKDEFTRU5UQU1JRU5UTxACEgkKBUhFUk9FEAMSDQoJRVNDVUFEUk9OEAQSDAoIRUpFUkNJVE8QBRIMCghDQVJBVkFOQRAGEhAKDENPTlZPQ0FUT1JJQRAHEhoKFkNBTVBBTUVOVE9fTUVSQ0VOQVJJT1MQCBIXChNDQU1QQU1FTlRPX0JBTkRJRE9TEAkSCQoFQUxJSk8QChITCg9BQ1VFUkRPX1RSVUVRVUUQCxIRCg1PUkRFTl9NRVJDQURPEAwSFQoRUkVMQUNJT05fUE9MSVRJQ0EQDRINCglQUk9QVUVTVEEQDhIKCgZUSVRVTE8QDxIICgRBRURBEBASEAoMTUlSQURBX0lOVEVMEBESEQoNSU5GT1JNRV9QTEFaQRASEgsKB0JBVEFMTEEQExIKCgZQVUVCTE8QFBIMCghBVkFOWkFEQRAVEhAKDE9CUkFfREVfTUFQQRAWEhAKDE5PRE9fUkVDVVJTTxAXEhMKD01FTU9SSUFfRkFDQ0lPThAYEg8KC1JFRF9DQU1JTk9TEBkSFgoSVEVDTk9MT0dJQV9GQUNDSU9OEBoSEAoMWk9OQV9GQUNDSU9OEBsSFgoSSU5GT1JNRV9JTlNQRUNDSU9OEBwSDAoIRURJRklDSU8QHRILCgdSRUNJTlRPEB4SEQoNSU5DT1JQT1JBQ0lPThAfEgsKB0xPQURPVVQQIBISCg5GSUNIQV9DT05PQ0lEQRAhEhUKEUVTVEFET19URUNOT0xPR0lBECISGAoURElSRUNUT1JJT19GQUNDSU9ORVMQIyq2AQoKQW1iaXRvVGlwbxIaChZBTUJJVE9fTk9fRVNQRUNJRklDQURPEAASEAoMQU1CSVRPX0hFUk9FEAESFwoTQU1CSVRPX0FTRU5UQU1JRU5UTxACEhUKEUFNQklUT19DQU1QQU1FTlRPEAMSEgoOQU1CSVRPX0JBVEFMTEEQBBISCg5BTUJJVE9fRkFDQ0lPThAFEhAKDEFNQklUT19WSVNUQRAGEhAKDEFNQklUT19BRE1JThAHQhiqAhVCcm9uemVBZ2UuQ29udHJhY3QuVjFiBnByb3RvMw");
+  fileDesc("Chlicm9uemVhZ2UvdjEvY29tbW9uLnByb3RvEgxicm9uemVhZ2UudjEiHQoFUHVudG8SCQoBeBgBIAEoEhIJCgF5GAIgASgSIjgKB1ZlcnRpY2USHgoBcBgBIAEoCzITLmJyb256ZWFnZS52MS5QdW50bxINCgVlbl9tcxgCIAEoAyJDCgRQbGFuEhIKCmdlbmVyYWNpb24YASABKA0SJwoIdmVydGljZXMYAiADKAsyFS5icm9uemVhZ2UudjEuVmVydGljZSKVAQoFUml0bW8SEwoLdmFsb3JfZW5fdDAYASABKBISDQoFdDBfbXMYAiABKAMSEgoKcG9yX21pbnV0bxgDIAEoEhITCgZtYXhpbW8YBCABKBJIAIgBARITCgZtaW5pbW8YBSABKBJIAYgBARIUCgxlbl9lc2NhbG9uZXMYBiABKAhCCQoHX21heGltb0IJCgdfbWluaW1vIoIBCgpFeGlzdGVuY2lhEiUKCGNhbnRpZGFkGAEgASgLMhMuYnJvbnplYWdlLnYxLlJpdG1vEhEKCWNhcGFjaWRhZBgCIAEoEhIcChRwcm9kdWNpZG9fcG9yX21pbnV0bxgDIAEoEhIcChRjb25zdW1pZG9fcG9yX21pbnV0bxgEIAEoEiJvCgpDYW50aWRhZGVzEjMKBnBvcl9pZBgBIAMoCzIjLmJyb256ZWFnZS52MS5DYW50aWRhZGVzLlBvcklkRW50cnkaLAoKUG9ySWRFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKBI6AjgBIp0BCg1QYXJhZGFFbmNhcmdvEisKB3JlY29nZXIYASADKAsyGi5icm9uemVhZ2UudjEuTGluZWFSZWNvZ2VyEhsKE2VzcGVyYXJfZXhpc3RlbmNpYXMYAiABKAgSJwoFZGVqYXIYAyADKAsyGC5icm9uemVhZ2UudjEuTGluZWFEZWphchIZChFkZXNlY2hhcl9zb2JyYW50ZRgEIAEoCCJZCgxMaW5lYVJlY29nZXISDwoHcmVjdXJzbxgBIAEoCRIQCghjYW50aWRhZBgCIAEoEhIXCgpwcmVjaW9fbWF4GAMgASgSSACIAQFCDQoLX3ByZWNpb19tYXgiYQoKTGluZWFEZWphchIPCgdyZWN1cnNvGAEgASgJEhEKBHRvcGUYAiABKBJIAIgBARIXCgpwcmVjaW9fbWluGAMgASgSSAGIAQFCBwoFX3RvcGVCDQoLX3ByZWNpb19taW4iugEKBlNpZ2lsbxIQCghmb3JtYV9pZBgBIAEoCRIQCghjYW1wb19pZBgCIAEoCRISCgplbWJsZW1hX2lkGAMgASgJEhkKEWNvbG9yX3ByaW1hcmlvX2lkGAQgASgJEhsKE2NvbG9yX3NlY3VuZGFyaW9faWQYBSABKAkSGAoQY29sb3JfZW1ibGVtYV9pZBgGIAEoCRIPCgdvcmxhX2lkGAcgASgJEhUKDWNvbG9yX29ybGFfaWQYCCABKAkiPAoGQW1iaXRvEiYKBHRpcG8YASABKA4yGC5icm9uemVhZ2UudjEuQW1iaXRvVGlwbxIKCgJpZBgCIAEoCSJQCgpSZWN0YW5ndWxvEiAKA21pbhgBIAEoCzITLmJyb256ZWFnZS52MS5QdW50bxIgCgNtYXgYAiABKAsyEy5icm9uemVhZ2UudjEuUHVudG8qkgUKC1RpcG9FbnRpZGFkEiAKHFRJUE9fRU5USURBRF9OT19FU1BFQ0lGSUNBRE8QABILCgdGQUNDSU9OEAESEAoMQVNFTlRBTUlFTlRPEAISCQoFSEVST0UQAxINCglFU0NVQURST04QBBIMCghFSkVSQ0lUTxAFEgwKCENBUkFWQU5BEAYSEAoMQ09OVk9DQVRPUklBEAcSGgoWQ0FNUEFNRU5UT19NRVJDRU5BUklPUxAIEhcKE0NBTVBBTUVOVE9fQkFORElET1MQCRIJCgVBTElKTxAKEhMKD0FDVUVSRE9fVFJVRVFVRRALEhEKDU9SREVOX01FUkNBRE8QDBIVChFSRUxBQ0lPTl9QT0xJVElDQRANEg0KCVBST1BVRVNUQRAOEgoKBlRJVFVMTxAPEggKBEFFREEQEBIQCgxNSVJBREFfSU5URUwQERIRCg1JTkZPUk1FX1BMQVpBEBISCwoHQkFUQUxMQRATEgoKBlBVRUJMTxAUEgwKCEFWQU5aQURBEBUSEAoMT0JSQV9ERV9NQVBBEBYSEAoMTk9ET19SRUNVUlNPEBcSEwoPTUVNT1JJQV9GQUNDSU9OEBgSDwoLUkVEX0NBTUlOT1MQGRIWChJURUNOT0xPR0lBX0ZBQ0NJT04QGhIQCgxaT05BX0ZBQ0NJT04QGxIWChJJTkZPUk1FX0lOU1BFQ0NJT04QHBIMCghFRElGSUNJTxAdEgsKB1JFQ0lOVE8QHhIRCg1JTkNPUlBPUkFDSU9OEB8SCwoHTE9BRE9VVBAgEhIKDkZJQ0hBX0NPTk9DSURBECESFQoRRVNUQURPX1RFQ05PTE9HSUEQIhIYChRESVJFQ1RPUklPX0ZBQ0NJT05FUxAjKrYBCgpBbWJpdG9UaXBvEhoKFkFNQklUT19OT19FU1BFQ0lGSUNBRE8QABIQCgxBTUJJVE9fSEVST0UQARIXChNBTUJJVE9fQVNFTlRBTUlFTlRPEAISFQoRQU1CSVRPX0NBTVBBTUVOVE8QAxISCg5BTUJJVE9fQkFUQUxMQRAEEhIKDkFNQklUT19GQUNDSU9OEAUSEAoMQU1CSVRPX1ZJU1RBEAYSEAoMQU1CSVRPX0FETUlOEAdCGKoCFUJyb256ZUFnZS5Db250cmFjdC5WMWIGcHJvdG8z");
 
 /**
  * Punto del mapa estratégico, en milésimas de unidad.
@@ -225,6 +225,112 @@ export const CantidadesSchema: GenMessage<Cantidades> = /*@__PURE__*/
   messageDesc(file_bronzeage_v1_common, 5);
 
 /**
+ * Una parada del encargo de una caravana (rutas de caravanas automáticas, 2026-10-31): qué recoge y qué deja en una punta; primero deja y luego
+ * recoge. En una plaza ajena, dejar es venderle a sus órdenes de compra y recoger es comprar a sus órdenes de venta;
+ * allí cada línea lleva su precio (en la unidad de `OrdenMercado.precio_unitario`) y en una plaza propia no lleva ninguno.
+ *
+ * @generated from message bronzeage.v1.ParadaEncargo
+ */
+export type ParadaEncargo = Message<"bronzeage.v1.ParadaEncargo"> & {
+  /**
+   * @generated from field: repeated bronzeage.v1.LineaRecoger recoger = 1;
+   */
+  recoger: LineaRecoger[];
+
+  /**
+   * Con `true`, la caravana no carga hasta que el almacén tiene todo lo pedido (sin plazo); con `false`, sale con lo que haya.
+   *
+   * @generated from field: bool esperar_existencias = 2;
+   */
+  esperarExistencias: boolean;
+
+  /**
+   * @generated from field: repeated bronzeage.v1.LineaDejar dejar = 3;
+   */
+  dejar: LineaDejar[];
+
+  /**
+   * Con `true`, lo que no cabe en el almacén se tira; con `false`, se queda a bordo. En una plaza ajena no cuenta: lo que no se vende vuelve a bordo.
+   *
+   * @generated from field: bool desechar_sobrante = 4;
+   */
+  desecharSobrante: boolean;
+};
+
+/**
+ * Describes the message bronzeage.v1.ParadaEncargo.
+ * Use `create(ParadaEncargoSchema)` to create a new message.
+ */
+export const ParadaEncargoSchema: GenMessage<ParadaEncargo> = /*@__PURE__*/
+  messageDesc(file_bronzeage_v1_common, 6);
+
+/**
+ * @generated from message bronzeage.v1.LineaRecoger
+ */
+export type LineaRecoger = Message<"bronzeage.v1.LineaRecoger"> & {
+  /**
+   * id de catálogo
+   *
+   * @generated from field: string recurso = 1;
+   */
+  recurso: string;
+
+  /**
+   * milésimas (unidades enteras)
+   *
+   * @generated from field: sint64 cantidad = 2;
+   */
+  cantidad: bigint;
+
+  /**
+   * solo en una plaza ajena: compra a las órdenes de venta con precio ≤ este
+   *
+   * @generated from field: optional sint64 precio_max = 3;
+   */
+  precioMax?: bigint | undefined;
+};
+
+/**
+ * Describes the message bronzeage.v1.LineaRecoger.
+ * Use `create(LineaRecogerSchema)` to create a new message.
+ */
+export const LineaRecogerSchema: GenMessage<LineaRecoger> = /*@__PURE__*/
+  messageDesc(file_bronzeage_v1_common, 7);
+
+/**
+ * @generated from message bronzeage.v1.LineaDejar
+ */
+export type LineaDejar = Message<"bronzeage.v1.LineaDejar"> & {
+  /**
+   * id de catálogo
+   *
+   * @generated from field: string recurso = 1;
+   */
+  recurso: string;
+
+  /**
+   * milésimas; sin tope deja todo lo que lleve de ese recurso
+   *
+   * @generated from field: optional sint64 tope = 2;
+   */
+  tope?: bigint | undefined;
+
+  /**
+   * solo en una plaza ajena: vende a las órdenes de compra con precio ≥ este
+   *
+   * @generated from field: optional sint64 precio_min = 3;
+   */
+  precioMin?: bigint | undefined;
+};
+
+/**
+ * Describes the message bronzeage.v1.LineaDejar.
+ * Use `create(LineaDejarSchema)` to create a new message.
+ */
+export const LineaDejarSchema: GenMessage<LineaDejar> = /*@__PURE__*/
+  messageDesc(file_bronzeage_v1_common, 8);
+
+/**
  * @generated from message bronzeage.v1.Sigilo
  */
 export type Sigilo = Message<"bronzeage.v1.Sigilo"> & {
@@ -274,7 +380,7 @@ export type Sigilo = Message<"bronzeage.v1.Sigilo"> & {
  * Use `create(SigiloSchema)` to create a new message.
  */
 export const SigiloSchema: GenMessage<Sigilo> = /*@__PURE__*/
-  messageDesc(file_bronzeage_v1_common, 6);
+  messageDesc(file_bronzeage_v1_common, 9);
 
 /**
  * @generated from message bronzeage.v1.Ambito
@@ -296,7 +402,7 @@ export type Ambito = Message<"bronzeage.v1.Ambito"> & {
  * Use `create(AmbitoSchema)` to create a new message.
  */
 export const AmbitoSchema: GenMessage<Ambito> = /*@__PURE__*/
-  messageDesc(file_bronzeage_v1_common, 7);
+  messageDesc(file_bronzeage_v1_common, 10);
 
 /**
  * Rectángulo en el mapa estratégico (milésimas), para fijar el interés de la vista.
@@ -320,7 +426,7 @@ export type Rectangulo = Message<"bronzeage.v1.Rectangulo"> & {
  * Use `create(RectanguloSchema)` to create a new message.
  */
 export const RectanguloSchema: GenMessage<Rectangulo> = /*@__PURE__*/
-  messageDesc(file_bronzeage_v1_common, 8);
+  messageDesc(file_bronzeage_v1_common, 11);
 
 /**
  * Tipos de entidad con identidad propia en el almacén del cliente.

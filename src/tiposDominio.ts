@@ -236,6 +236,7 @@ export interface Asentamiento {
   cargos?: {
     gobernadorId?: string | null;
     maestroObrasId?: string | null;
+    maestroCaravanasId?: string | null;
     tesoreroId?: string | null;
     generalId?: string | null;
     sacerdoteId?: string | null;
@@ -308,7 +309,9 @@ export interface Caravana {
   /** Estado de la caravana (motor, Doc 3.13). `'aparcada'` (2026-09-09, Doc 3.13.7) = una caravana adjunta
    * que su ejército dejó en una plaza de la Facción al `guarnecer`: sigue siendo de su origen, no la usa la
    * anfitriona. Sin interfaz que lo lea todavía — el mapa solo pinta la posición. */
-  estado?: 'disponible' | 'preparando' | 'adjunta' | 'aparcada' | 'en_transito' | 'retornando';
+  estado?: 'disponible' | 'preparando' | 'adjunta' | 'aparcada' | 'en_transito' | 'retornando' | 'esperando';
+  /** Su ruta o envío automático (motor 2c4bca6, Comercio_Caravanas §5.8): solo en las propias. `esperando` = dentro de una parada. */
+  encargo?: Encargo;
   /** `construccion` = Caravana de Fundación (Doc 1.8): la de un campamento y la que lanza una plaza son la misma entidad. */
   /** `acarreo`: el carro de un pueblo, que va y vuelve solo entre el pueblo y su plaza madre. */
   tipo?: 'comercial' | 'construccion' | 'militar' | 'contrabando' | 'acarreo';
@@ -330,6 +333,30 @@ export interface Caravana {
   caducaEn?: number;
   /** Instante de mundo en que sale, solo en `preparando`. */
   preparaHasta?: number;
+}
+
+/** Lo que se deja y se recoge en una parada de un encargo (cantidades, topes y precios en unidades; los precios solo en una plaza ajena). */
+export interface ParadaEncargo {
+  recoger: { recurso: string; cantidad: number; precioMax?: number }[];
+  esperarExistencias: boolean;
+  dejar: { recurso: string; tope?: number; precioMin?: number }[];
+  desecharSobrante: boolean;
+}
+
+/** El encargo de una caravana comercial: una ruta permanente entre dos plazas propias o un envío de una ida y vuelta (Comercio_Caravanas §5.8). */
+export interface Encargo {
+  modo: 'ruta' | 'envio';
+  destinoAsentamientoId: string;
+  salirEn?: number;
+  paradaOrigen?: ParadaEncargo;
+  paradaDestino?: ParadaEncargo;
+  vueltas: number;
+  /** Donde espera o hacia donde va. */
+  paradaActual: 'origen' | 'destino';
+  /** Solo cuenta con la caravana `esperando`. */
+  fase: 'espera' | 'descarga' | 'carga' | '';
+  finPaso?: number;
+  cancelado: boolean;
 }
 
 /** Copia local de `Ejercito` (motor, Doc 5.12) — los de TU Facción, que la proyección manda completos.

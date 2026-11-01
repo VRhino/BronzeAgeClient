@@ -54,3 +54,27 @@ describe('traducirOrden: carro y almacén de la plaza', () => {
     expect(o).toMatchObject({ case: 'cerrarAlmacenACiudadanos', value: { asentamientoId: 'as-3', cerrado: true } });
   });
 });
+
+// Encargos de caravana (motor 2c4bca6): paradas anidadas en milésimas y la hora de salida como instante del contrato.
+describe('traducirOrden: encargos de caravana', () => {
+  it('dar un envío a una plaza ajena con precios y hora', () => {
+    const salir = Date.UTC(2026, 0, 2);
+    const o = traducirOrden('encargarCaravana', {
+      caravanaId: 'car-2', destinoAsentamientoId: 'as-9', modo: 'envio', salirEnMs: salir,
+      paradaOrigen: { recoger: [{ recurso: 'oro', cantidad: 50 }], esperarExistencias: true, dejar: [], desecharSobrante: false },
+      paradaDestino: { recoger: [{ recurso: 'cobre', cantidad: 20, precioMax: 1.5 }], esperarExistencias: false, dejar: [{ recurso: 'trigo', tope: 100, precioMin: 0.8 }], desecharSobrante: false },
+    });
+    expect(o).toMatchObject({
+      case: 'encargarCaravana',
+      value: {
+        caravanaId: 'car-2', destinoAsentamientoId: 'as-9', modo: 'envio', salirEnMs: 86_400_000n,
+        paradaOrigen: { recoger: [{ recurso: 'oro', cantidad: 50_000n }], esperarExistencias: true },
+        paradaDestino: { recoger: [{ recurso: 'cobre', cantidad: 20_000n, precioMax: 1500n }], dejar: [{ recurso: 'trigo', tope: 100_000n, precioMin: 800n }] },
+      },
+    });
+  });
+
+  it('cancelar el encargo', () => {
+    expect(traducirOrden('cancelarEncargo', { caravanaId: 'car-2' })).toMatchObject({ case: 'cancelarEncargo', value: { caravanaId: 'car-2' } });
+  });
+});

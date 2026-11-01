@@ -2938,6 +2938,14 @@ kbd {
 .caravana-seccion { display: grid; gap: 6px; padding-top: 8px; border-top: 1px solid #3a362b; }
 .caravana-seccion-cab { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
 .caravana-seccion-cab .heroe-sub { margin: 0; }
+.encargo-form { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.encargo-paradas { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 6px; }
+.encargo-parada { border: 1px solid var(--borde, rgba(255,255,255,.15)); border-radius: 6px; padding: 4px 8px 8px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.encargo-parada legend { font-weight: 600; padding: 0 4px; }
+.encargo-linea { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 4px; }
+.encargo-linea .form-input { min-width: 0; }
+.encargo-linea [hidden], .encargo-salida[hidden] { display: none; }
+.encargo-salida input { width: 80px; display: inline-block; }
 .caravana-botones { display: flex; gap: 4px; flex-wrap: wrap; }
 .carro-lista { display: grid; gap: 4px; }
 .carro-row { display: grid; grid-template-columns: 88px 1fr auto; align-items: center; gap: 6px; padding: 3px 6px; background: rgba(0, 0, 0, 0.18); border-radius: 4px; font-size: 0.8rem; min-height: 32px; }

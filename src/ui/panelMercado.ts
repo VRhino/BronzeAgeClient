@@ -11,6 +11,7 @@ import { textoEnTiempoReal } from './estadoCliente';
 import { chipLiderazgo } from './liderazgo';
 import type { Ejecutar } from './panelCarro';
 import { iconoEnFila } from './iconosTropa';
+import { cablearEncargo, htmlEncargo } from './encargoCaravana';
 
 type Escapar = (valor: string) => string;
 
@@ -22,6 +23,7 @@ const ESTADO: Record<string, string> = {
   aparcada: 'aparcada',
   en_transito: 'en camino',
   retornando: 'de vuelta',
+  esperando: 'con encargo, en una parada',
 };
 const CARRO: Record<string, string> = { basico: 'Carro básico', reforzado: 'Carro reforzado' };
 const ANIMAL: Record<string, string> = { buey: 'Buey', caballo: 'Caballo', camello: 'Camello' };
@@ -247,8 +249,8 @@ function tarjeta(c: Caravana, p: ProyeccionJugador, a: Asentamiento, reside: boo
   const reservar = parada ? `<label class="asent-toggle caravana-reservar" title="Reservada: la plaza no la usa en sus envíos automáticos; sin reservar, una caravana con animal puede salir sola en el reparto"><input type="checkbox" data-reservar="${e(c.id)}"${c.reservadaManual ? ' checked' : ''}${reside ? '' : ' disabled'} /> Reservada</label>` : '';
   return `<div class="escolta-caravana caravana-tarjeta">
     <div class="caravana-cab">${titulo}${reservar}</div>
-    ${chips}${carrosHtml}${viaje}
-    <div class="caravana-seccion">${escolta(c, p, reside, parada, d?.escoltaPts, e)}</div></div>`;
+    ${chips}${carrosHtml}${viaje}${htmlEncargo(c, p, a, reside, capacidad, tira.length > 0, e)}
+    <div class="caravana-seccion">${escolta(c, p, reside, parada || (estado === 'esperando' && c.encargo?.paradaActual === 'origen'), d?.escoltaPts, e)}</div></div>`;
 }
 
 /** Los puntos de Liderazgo de escolta por caravana que da el Mercado activo de la plaza (`escoltaPorNivelMercado`); `undefined` sin Mercado o sin datos. */
@@ -309,7 +311,7 @@ export function htmlCaravanas(p: ProyeccionJugador, a: Asentamiento, e: Escapar,
     <p class="faction-error" data-campo="error-mercado" role="alert"></p>`;
 }
 
-export function cablearCaravanas(raiz: HTMLElement, p: ProyeccionJugador, a: Asentamiento, ejecutar: Ejecutar): void {
+export function cablearCaravanas(raiz: HTMLElement, p: ProyeccionJugador, a: Asentamiento, ejecutar: Ejecutar, repintar: () => void = () => {}): void {
   const error = raiz.querySelector<HTMLElement>('[data-campo="error-mercado"]');
   const lanzar = async (boton: HTMLButtonElement, tipo: string, params: object): Promise<void> => {
     boton.disabled = true;
@@ -370,6 +372,7 @@ export function cablearCaravanas(raiz: HTMLElement, p: ProyeccionJugador, a: Ase
   raiz.querySelectorAll<HTMLButtonElement>('[data-cancelar-caravana]').forEach((b) => b.addEventListener('click', () => void lanzar(b, 'cancelarCaravana', { caravanaId: b.dataset.cancelarCaravana! })));
 
   cablearEscolta(raiz, p, ejecutar, error);
+  cablearEncargo(raiz, p, ejecutar, error, repintar);
 
   // Aparcadas: pasar carga entre su carro y el almacén de esta plaza, o mandarla a su origen.
   const base = { heroeId: p.heroeId, asentamientoId: a.id };

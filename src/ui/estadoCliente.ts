@@ -33,6 +33,11 @@ export function medirRitmoDeMundo(instante: number, real = Date.now()): void {
   } else if (!medida) medida = { instante, real };
 }
 
+/** Cuántos ms de mundo corren por cada ms real (lo medido; 1 hasta tener dos medidas). */
+export function ritmoDelMundo(): number {
+  return ritmoMundo;
+}
+
 /** Un plazo de mundo (ms) dicho en tiempo REAL: «5 s», «2 min», «3 h», «2 d». */
 export function textoEnTiempoReal(msDeMundo: number): string {
   const s = Math.max(0, Math.ceil(msDeMundo / ritmoMundo / 1000));

@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.73.0] — 2026-11-01 · encargos de caravana (rutas y envíos automáticos) · sync con `VRhino/BronzeAge@2c4bca63`
+
+- **Contrato regenerado** (órdenes `encargarCaravana`, `cambiarEncargo`, `cancelarEncargo`; `Caravana.encargo`; estado `esperando`; cargo `maestroCaravanas`).
+- **Mercado › Caravanas:** cada caravana de la flota tiene su sección «Encargo». Parada en su origen y con algún carro con animal, «Dar encargo» abre el formulario: ruta permanente (solo a plazas tuyas) o envío (también a una plaza ajena, ya o dentro de N minutos), y por parada qué deja (con tope) y qué recoge, con «esperar a que haya todo» y «tirar lo que no quepa». Hacia una plaza ajena cada línea lleva su precio (mínimo al vender, máximo al comprar). Con encargo se ve el modo, el destino, las vueltas, dónde está y qué hace (espera, descarga o carga, con lo que falta), y los botones «Cambiar» y «Cancelar encargo». Solo los usan el Gobernador, el Tesorero o el Maestro de Caravanas de la plaza, residentes y dentro; el resto lo ve con el motivo.
+- La escolta se puede ceder o retirar también con la caravana esperando en su origen.
+- **Cargo nuevo** «Maestro de Caravanas» en Cargos, la Residencia, el tablón y las misiones.
+- **Avisos** (Economía) de los hechos `comercio.encargo_dado`, `caravana_espera`, `caravana_carga`, `caravana_descarga` y `encargo_terminado` (con su motivo, lo volcado y lo perdido).
+- **Rechazos** `encargo.*` y `caravana.salida_invalida`, `no_es_comercial`, `no_disponible`, `sin_capacidad` y `sin_ruta` con su mensaje.
+- Las órdenes mandan los instantes `sint64` acabados en `Ms` (`salirEnMs`) como instante del contrato, no en milésimas.
+
 ## [0.72.0] — 2026-10-31 · tiempo hasta allí en las fichas del mapa · sync con `VRhino/BronzeAge@26a49c8`, sin cambios en el contrato
 
 - **Tiempo hasta allí.** Junto a la distancia, las fichas de plaza, campamento de bandidos, campamento de mercenarios y columna o caravana ajena dicen cuánto tardaría tu columna en llegar, en tiempo de jugador (`mundo/tiempoDeMarcha.ts`). Lo estima el cliente como el motor: el camino más barato por el grafo de navegación del artefacto, con el coste de cada arista, a la velocidad de la columna (el mínimo de su tropa y sus caravanas, el héroe solo a `MOVIMIENTO.velocidadJugador`, ×1,5 con marcha forzada). No cuenta los caminos construidos, que aceleran, así que el motor llega antes o igual. Sin camino por tierra lo dice.

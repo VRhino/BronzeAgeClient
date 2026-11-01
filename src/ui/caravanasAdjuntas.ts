@@ -17,7 +17,7 @@ type Escapar = (valor: string) => string;
 type Punto = { x: number; y: number };
 
 const ESTADO: Record<NonNullable<Caravana['estado']>, string> = {
-  disponible: 'suelta', preparando: 'preparándose', adjunta: 'enganchada', aparcada: 'aparcada', en_transito: 'en camino', retornando: 'de vuelta',
+  disponible: 'suelta', preparando: 'preparándose', adjunta: 'enganchada', aparcada: 'aparcada', en_transito: 'en camino', retornando: 'de vuelta', esperando: 'esperando en una parada',
 };
 const nombre = (r: string): string => RECURSO_NOMBRE[r] ?? r;
 const icono = (r: string): string => RECURSO_ICONO[r] ?? '📦';

@@ -20,7 +20,7 @@ export interface DuenoTablon { tipo: 'plaza' | 'faccion'; id: string; tablon: Ta
 const MAX_ELEGIDAS = 7;
 
 const CARGO_NOMBRE: Record<string, string> = {
-  rey: 'Rey', embajador: 'Embajador', gobernador: 'Gobernador', maestroObras: 'Maestro de Obras', tesorero: 'Tesorero', general: 'General', sacerdote: 'Sacerdote',
+  rey: 'Rey', embajador: 'Embajador', gobernador: 'Gobernador', maestroObras: 'Maestro de Obras', maestroCaravanas: 'Maestro de Caravanas', tesorero: 'Tesorero', general: 'General', sacerdote: 'Sacerdote',
 };
 const ESTADO_TEXTO: Record<EstadoRecurrente, string> = { en_curso: 'en curso', cumplida: '¡Cumplida!', reclamada: 'reclamada', caducada: 'caducada' };
 

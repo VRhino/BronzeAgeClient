@@ -1039,7 +1039,7 @@ export type CargoAsignado = Message<"bronzeage.v1.CargoAsignado"> & {
   heroeId: string;
 
   /**
-   * gobernador | tesorero | general | maestroObras | sacerdote | rey | embajador
+   * gobernador | tesorero | general | maestroObras | sacerdote | maestroCaravanas | rey | embajador
    *
    * @generated from field: string cargo = 2;
    */
