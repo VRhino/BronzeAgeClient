@@ -10,7 +10,7 @@ import type { ProyeccionJugador } from '../../src/apiCliente';
 import { bloqueDeDatos } from '../../src/apiCliente';
 import { estadoCliente } from '../../src/ui/estadoCliente';
 import { plegable, cablearPlegables } from '../../src/ui/plegable';
-import { htmlPanelObras } from '../../src/ui/panelObras';
+import { cablearPanelObras, htmlPanelObras } from '../../src/ui/panelObras';
 import { htmlProduccionYRecetas } from '../../src/ui/vistaCiudad';
 import type { Asentamiento, Edificio } from '../../src/tiposDominio';
 
@@ -59,6 +59,7 @@ function ver(v: string): void {
   const ctx = { proyeccion: p, asentamiento: plaza, cuerpo, ejecutar: async (t: string, x: object) => { banco.enviadas.push([t, x]); return null; }, refrescar: () => ver(v), cargo, resideAqui: true, escapar: e };
   cuerpo.innerHTML = `<div class="asent-lado-cuerpo">${htmlPanelObras(ctx as never)}</div>`;
   cablearPlegables(cuerpo);
+  cablearPanelObras(cuerpo, () => ver(v));
 }
 void plegable; void htmlProduccionYRecetas;
 banco.ver = ver;

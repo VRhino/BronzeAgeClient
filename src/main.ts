@@ -64,7 +64,7 @@ import { cablearPanelEjercito, ejercitosDeLaFaccion, htmlFichaEjercito, htmlPane
 import { invalidar, olvidarEdicion, pintar, vaciar } from './ui/repintado';
 import { ayuda } from './ui/ayuda';
 import { htmlInformeDeInspeccion } from './ui/interaccionAjena';
-import { htmlPanelObras } from './ui/panelObras';
+import { cablearPanelObras, htmlPanelObras } from './ui/panelObras';
 import { cablearProduccionYRecetas, cablearVistaCiudad, edificioSeleccionado, htmlTooltipEdificio, repintarFicha } from './ui/vistaCiudad';
 import { cablearPlegables } from './ui/plegable';
 import { FICHAS_MAPA_EXTRA, SELECTORES_MAPA_EXTRA, SUBPESTANAS_CENTRO_EXTRA, SUBPESTANAS_MERCADO_EXTRA, type ContextoPlaza } from './ui/ganchos';
@@ -1877,7 +1877,7 @@ function renderPanelEdificios(): void {
       cablearAccionesAsentLado(cuerpo, asentamiento, cargo);
       cablearCargosAsentamiento(cuerpo, asentamiento);
       cablearPlegables(cuerpo);
-      if (seccionAsent === 'edificios') cablearProduccionYRecetas(ctxPlaza);
+      if (seccionAsent === 'edificios') { cablearProduccionYRecetas(ctxPlaza); cablearPanelObras(cuerpo, renderPanelEdificios); }
       if (seccionAsent === 'resumen') residencia?.cablear?.(ctxPlaza);
       extra?.cablear?.(ctxPlaza);
     };

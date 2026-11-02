@@ -125,18 +125,47 @@ function chipsDeCoste(a: Asentamiento, coste: Record<string, number>, esc: Escap
   }).join('') + (resto ? `<span class="obra-coste${faltaEnResto ? ' falta' : ''}">+${resto}</span>` : '');
 }
 
-/** Construir: una casilla por edificio con su icono y su coste. Las que no se pueden, con candado y el motivo en el título (al pulsarlas, sale flotando). */
+/** Los tipos de edificio para las pestañas de «Construir» (petición de Víctor, 2026-11-02). El catálogo del motor no los agrupa: es solo cómo se
+ * enseñan. Un edificio nuevo del catálogo que no esté en ninguno cae en «Otros». */
+const GRUPOS_CONSTRUIR: { id: string; nombre: string; icono: string; tipos: string[] }[] = [
+  { id: 'ciudad', nombre: 'Ciudad', icono: 'vivienda', tipos: ['vivienda', 'almacen', 'granero', 'pozo', 'parque', 'plaza'] },
+  { id: 'recursos', nombre: 'Recursos', icono: 'granja', tipos: ['granja', 'lenera'] },
+  { id: 'talleres', nombre: 'Talleres', icono: 'fundicion', tipos: ['fundicion', 'granFundicion', 'curtiduria', 'armeria', 'carpinteria', 'patioDeGremios'] },
+  { id: 'militar', nombre: 'Militar', icono: 'barracon', tipos: ['barracon', 'galeriaDeTiro', 'caballerizas', 'plazaDeArmas'] },
+  { id: 'gobierno', nombre: 'Gobierno', icono: 'palacio', tipos: ['salaConsejo', 'palacio', 'taberna', 'mercado', 'maravilla'] },
+];
+const grupoDe = (tipo: string): string => GRUPOS_CONSTRUIR.find((g) => g.tipos.includes(tipo))?.id ?? 'otros';
+
+/** La pestaña de «Construir» elegida ('todos' = sin filtro). Vive entre repintados. */
+let grupoConstruir = 'todos';
+
+/** Construir: pestañas por tipo (todos, ciudad, recursos, talleres, militar, gobierno) con cuántos se pueden levantar ya, y una casilla por edificio
+ * con su icono y su coste. Las que no se pueden, con candado y el motivo en el título (al pulsarlas, sale flotando). */
 function htmlBotonesConstruir(a: Asentamiento, cargo: Cargo, esc: Escapar): string {
   if (!cargo) return '';
   const cat = catalogo();
   const tipos = cat
     ? Object.keys(cat).filter((t) => Object.keys(cat[t]!.costo ?? {}).length > 0 && !t.startsWith('mina') && t !== 'cantera' && t !== 'corral')
     : [...EDIFICIOS_MANUALES];
-  const casillas = tipos.map((t) => {
+  const info = tipos.map((t) => {
     const def = cat?.[t] ?? {};
     const motivo = cat ? motivoParaConstruir(a, t, def, cargo) : '';
     const coste = def.costo ?? {};
     const caro = Object.entries(coste).some(([r, n]) => (a.almacen?.[r]?.cantidad ?? 0) < n);
+    return { t, def, motivo, coste, caro, grupo: grupoDe(t) };
+  });
+  const grupos = [...GRUPOS_CONSTRUIR, { id: 'otros', nombre: 'Otros', icono: 'centroUrbano', tipos: [] }].filter((g) => info.some((x) => x.grupo === g.id));
+  if (grupoConstruir !== 'todos' && !grupos.some((g) => g.id === grupoConstruir)) grupoConstruir = 'todos';
+  // En cada pestaña, cuántos se pueden poner ya en la cola (sin candado y con qué pagarlos).
+  const listos = (id: string): number => info.filter((x) => (id === 'todos' || x.grupo === id) && !x.motivo && !x.caro).length;
+  const pestana = (id: string, nombre: string, icono: string): string => {
+    const n = listos(id);
+    return `<button class="obra-grupo${grupoConstruir === id ? ' activo' : ''}" type="button" data-grupo-construir="${esc(id)}" title="${esc(`${nombre}: ${n} para construir ya`)}" aria-pressed="${grupoConstruir === id}">
+      <span class="obra-grupo-icono">${icono}</span><span class="obra-grupo-nombre">${esc(nombre)}</span>${n ? `<span class="obra-grupo-n">${n}</span>` : ''}
+    </button>`;
+  };
+  const pestanas = `<div class="obra-grupos" role="tablist">${pestana('todos', 'Todos', '<span class="obra-grupo-todos" aria-hidden="true">▦</span>')}${grupos.map((g) => pestana(g.id, g.nombre, iconoEdificio(g.icono, 20))).join('')}</div>`;
+  const casillas = info.filter((x) => grupoConstruir === 'todos' || x.grupo === grupoConstruir).map(({ t, def, motivo, coste, caro }) => {
     const tiempo = def.tiempoConstruccionMinutos ? ` · ${duracion(Math.round(def.tiempoConstruccionMinutos * factorDePoliticas(a, 'factorTiempoConstruccion')))}` : '';
     const costeTexto = Object.entries(coste).map(([r, n]) => `${n} ${RECURSO_NOMBRE[r] ?? r}`).join(', ');
     const titulo = `${nombreDe(t)}${costeTexto ? ` · ${costeTexto}` : ''}${tiempo}${motivo ? ` · ${motivo}` : caro ? ' · No hay bastante en el almacén' : ''}`;
@@ -146,8 +175,14 @@ function htmlBotonesConstruir(a: Asentamiento, cargo: Cargo, esc: Escapar): stri
       ${motivo ? '<span class="obra-candado" aria-hidden="true">🔒</span>' : ''}
     </button>`;
   });
-  return `<div class="obra-titulo"><span class="faction-kicker">Construir</span>${ayuda('plaza:construir', 'Pulsa un edificio para ponerlo en la cola: se paga al encolar. El coste va debajo, en rojo lo que no hay en el almacén. Con candado: no se puede todavía (el motivo, al pasar el ratón o al pulsarlo). Lo que el cliente no sabe (sitio, topes, cola llena) lo dice el servidor.')}</div>
+  return `<div class="obra-titulo"><span class="faction-kicker">Construir</span>${ayuda('plaza:construir', 'Elige un tipo arriba (el número dice cuántos puedes poner ya en la cola) o «Todos». Pulsa un edificio para ponerlo en la cola: se paga al encolar. El coste va debajo, en rojo lo que no hay en el almacén. Con candado: no se puede todavía (el motivo, al pasar el ratón o al pulsarlo). Lo que el cliente no sabe (sitio, topes, cola llena) lo dice el servidor.')}</div>
+    ${pestanas}
     <div class="obra-construir-rejilla">${casillas.join('')}</div>`;
+}
+
+/** Las pestañas de «Construir»: cambian el tipo que se ve y repintan. */
+export function cablearPanelObras(raiz: ParentNode, repintar: () => void): void {
+  raiz.querySelectorAll<HTMLButtonElement>('[data-grupo-construir]').forEach((b) => b.addEventListener('click', () => { grupoConstruir = b.dataset.grupoConstruir!; repintar(); }));
 }
 
 /** Edificios: una tarjeta por tipo. Pulsarla elige en el plano el primero de ese tipo (y, otra vez, el siguiente). */

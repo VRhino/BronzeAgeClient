@@ -3,6 +3,10 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.85.0] — 2026-11-02 · «Construir» por tipos · sin cambios de contrato (`VRhino/BronzeAge@168a3bea`)
+
+- **Construir** lleva pestañas por tipo encima de la rejilla: Todos, Ciudad (vivienda, almacén, granero), Recursos (granja, leñera), Talleres (fundiciones, curtiduría, armería, carpintería), Militar (barracón, galería de tiro, caballerizas) y Gobierno (sala del consejo, palacio, taberna, mercado, maravilla). La elegida enseña solo los suyos y sigue elegida entre repintados; cada pestaña lleva en verde cuántos se pueden poner ya en la cola. Los grupos son solo de la interfaz (el catálogo del motor no los trae): un edificio nuevo cae en «Otros» (`GRUPOS_CONSTRUIR`, `cablearPanelObras` en `ui/panelObras.ts`).
+
 ## [0.84.0] — 2026-11-02 · Panel de obras de la plaza con aire de juego de estrategia · sin cambios de contrato (`VRhino/BronzeAge@168a3bea`)
 
 - **Centro urbano › Edificios** rediseñado (`ui/panelObras.ts`, sacado de `main.ts`): más iconos, estados y barras que texto.
