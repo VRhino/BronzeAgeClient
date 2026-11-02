@@ -1723,10 +1723,8 @@ async function mudarseAEstaPlaza(): Promise<void> {
   const prestadas = p.heroe.escuadrones.filter((s) => s.prestada);
   const guarnicion = p.heroe.escuadrones.some((s) => s.enGuarnicion);
   const aviso = `Vas a hacer de ${a.nombre ?? a.id} tu base: dejas de residir donde vives ahora y tu campamento se muda contigo.${prestadas.length > 0 ? ` Se te retira la tropa prestada por tu campamento anterior (${prestadas.map((s) => `${s.nombre}: ${s.cantidad}`).join(', ')}).` : ''}${guarnicion ? ' Tu guarnición se suelta.' : ''} Después hay que esperar un tiempo para volver a mudarte. ¿Seguro?`;
-  const error = document.querySelector<HTMLElement>('#asent-lado-error');
   if (!(await confirmar(aviso, { titulo: '¿Hacer de esta plaza tu base?', aceptar: 'Hacerla mi base' }))) return;
-  const mensaje = await ejecutarYRefrescar('cambiarResidencia', { destinoId: a.id, heroeId: p.heroeId });
-  if (error) error.textContent = mensaje ?? '';
+  errorDePlaza(await ejecutarYRefrescar('cambiarResidencia', { destinoId: a.id, heroeId: p.heroeId }));
 }
 
 // --- PANEL DE GESTIÓN DEL ASENTAMIENTO (columna derecha): Resumen · Edificios · Cola ------------
@@ -1807,15 +1805,20 @@ function duracion(minutos: number): string {
   return h === 0 ? `${min} min` : min === 0 ? `${h} h` : `${h} h ${min} min`;
 }
 
-/** Lanza un comando de gestión del asentamiento y refresca; el error va a `#asent-lado-error`. */
+/** Un rechazo en la gestión de la plaza: sale flotando arriba al centro, como los avisos de combate (`.aviso-global`), para que no se pierda al pie
+ * de un panel largo (petición de Víctor, 2026-11-02). `null` o vacío: nada. */
+function errorDePlaza(mensaje: string | null | undefined): void {
+  if (mensaje) mostrarAviso(mensaje, true);
+}
+
+/** Lanza un comando de gestión del asentamiento y refresca; el rechazo sale flotando (`errorDePlaza`). */
 async function ejecutarAccionAsent(tipo: string, params: Record<string, unknown>): Promise<void> {
   try {
     const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, tipo, params);
     if (!respuesta.resultado.ok) throw errorDeRechazo(respuesta.resultado, 'El servidor rechazó la operación.');
     await refrescarDatosJuego();
   } catch (err) {
-    const error = document.querySelector<HTMLElement>('#asent-lado-error');
-    if (error) error.textContent = mensajeError(err);
+    errorDePlaza(mensajeError(err));
   }
 }
 
@@ -1869,7 +1872,7 @@ function renderPanelEdificios(): void {
   repintarFicha();
 
   const cargo = cargoConstructor(asentamiento, proyeccion.heroeId);
-  const pie = '<p id="asent-lado-error" class="faction-error" role="alert"></p>';
+  const pie = '';
   const ctxPlaza: ContextoPlaza = { proyeccion, asentamiento, cuerpo, ejecutar: ejecutarYRefrescar, refrescar: renderPanelEdificios, cargo, resideAqui: resideEnLaPlaza(proyeccion, asentamiento), escapar: escaparHtml };
   let html = '';
   let cablear: () => void = () => undefined;
@@ -1920,8 +1923,7 @@ function renderPanelEdificios(): void {
       cuerpo.querySelector('#btn-renombrar')?.addEventListener('click', async () => {
         const nombre = cuerpo.querySelector<HTMLInputElement>('[data-campo="nombre-plaza"]')?.value ?? '';
         const mensaje = await ejecutarYRefrescar('renombrarAsentamiento', { asentamientoId: asentamiento.id, nombre });
-        const error = cuerpo.querySelector<HTMLElement>('#asent-lado-error');
-        if (error) error.textContent = mensaje ?? '';
+        errorDePlaza(mensaje);
         if (mensaje === null) olvidarEdicion(cuerpo);
       });
       cablearAccionesAsentLado(cuerpo, asentamiento, cargo);
@@ -2119,7 +2121,7 @@ function cablearAccionesAsentLado(cont: HTMLElement, a: Asentamiento, cargo: 'go
   if (!cargo) return;
   cont.querySelectorAll<HTMLButtonElement>('[data-construir]').forEach((b) => b.addEventListener('click', () => {
     // Uno apagado dice por qué no, en vez de pedirlo.
-    if (b.classList.contains('apagado')) { const error = document.querySelector<HTMLElement>('#asent-lado-error'); if (error) error.textContent = b.title; return; }
+    if (b.classList.contains('apagado')) { errorDePlaza(b.title); return; }
     void ejecutarAccionAsent('anadirEdificioManualmente', { asentamientoId: a.id, cargo, tipo: b.dataset.construir });
   }));
   cont.querySelectorAll<HTMLButtonElement>('[data-mejorar]').forEach((b) => {

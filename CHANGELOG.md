@@ -3,6 +3,10 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.83.0] — 2026-11-02 · Rechazos de la plaza flotando arriba al centro · sin cambios de contrato (`VRhino/BronzeAge@168a3bea`)
+
+- **Los rechazos de la gestión de la plaza** (construir, mejorar, la cola, recetas, renombrar, mudarse, pedir ascenso y la ficha de un edificio) ya no se escriben al pie del panel, donde se perdían: salen como el aviso flotante de los combates (`.aviso-global`), arriba al centro, con el borde de peligro. Desaparecen `#asent-lado-error` y `[data-ficha-error]`.
+
 ## [0.82.0] — 2026-11-02 · Velocidad de la columna a la vista, caravana de fundación en tarjetas y aviso de madera al fundar · sin cambios de contrato (`VRhino/BronzeAge@168a3bea`)
 
 - **Velocidad de la columna en «Salir al mundo»** (y con un ejército en preparación): una línea encima de la tropa con la cifra en u/min, un icono de cuatro flechas y quién marca el paso. Se rehace al quitar o añadir escuadras, al cambiar de loadout y al elegir llevarse la Caravana de Fundación; de visita enseña la de tu columna con sus caravanas. **Rojo** por debajo de la infantería ligera, **blanco** igual, **azul** por encima. Sale de las mismas reglas que el motor (`velocidad_de_columna`): `TROPAS_RECLUTABLES.velocidad`, `CARAVANA_CATALOGO`, `ANIMAL_CATALOGO` y `MOVIMIENTO` de `GET /v1/datos`; la «ligera» es la velocidad más común del catálogo de tropas (hoy 30). Nuevo `ui/velocidadColumna.ts`; `velocidadDeColumna` (`mundo/tiempoDeMarcha.ts`) pasa a usarlo.

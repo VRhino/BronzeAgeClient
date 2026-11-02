@@ -14,6 +14,7 @@ import type { Ejecutar } from './panelCarro';
 import { renderPestanaInformacion } from './pestanaInformacion';
 import { pintar } from './repintado';
 import { cablearPlegables, plegable } from './plegable';
+import { mostrar as mostrarAviso } from './avisos';
 
 type Escapar = (valor: string) => string;
 type Cargo = 'gobernador' | 'maestroObras' | null;
@@ -98,8 +99,7 @@ function htmlFicha(p: ProyeccionJugador, a: Asentamiento, edificio: Edificio, e:
     ${notas.length ? `<p class="asent-lado-nota">${e(notas.join(' · '))}</p>` : ''}
     ${prod ? `<span class="faction-kicker">Producción</span><ul class="asent-ficha-lista">${prod}</ul>` : ''}
     ${recetas ? `<span class="faction-kicker">Recetas de este nivel ${ayuda('plaza:ficha-recetas', 'Consumo por edificio: no lo publica el servidor.')}</span><ul class="asent-ficha-lista">${recetas}</ul>` : ''}
-    ${acciones}
-    <p class="faction-error" role="alert" data-ficha-error></p>`;
+    ${acciones}`;
 }
 
 let estadoSolicitado: (() => ProyeccionJugador | undefined) | null = null;
@@ -127,10 +127,10 @@ export function repintarFicha(): void {
   if (!p || !a || !edificio) { seleccion = null; fichaEl.hidden = true; return; }
   fichaEl.hidden = false;
   pintar(fichaEl, htmlFicha(p, a, edificio, escaparFicha), () => {
-    const error = fichaEl!.querySelector<HTMLElement>('[data-ficha-error]');
+    // El rechazo sale flotando arriba al centro (`.aviso-global`), no al pie de la ficha, donde se perdía.
     const lanzar = async (tipo: string, params: object): Promise<void> => {
       const mensaje = await ejecutarFicha!(tipo, params);
-      if (error) error.textContent = mensaje ?? '';
+      if (mensaje) mostrarAviso(mensaje, true);
     };
     fichaEl!.querySelector('[data-ficha-cerrar]')?.addEventListener('click', () => { seleccion = null; alCambiar(); });
     fichaEl!.querySelector<HTMLElement>('[data-ficha-mejorar]')?.addEventListener('click', () => void lanzar('mejorarEdificioAhora', { asentamientoId: a.id, cargo: cargoDe(a, p.heroeId), edificioId: edificio.id }));
@@ -225,8 +225,7 @@ function htmlRecetas(c: ContextoPlaza): string {
 function cablearRecetas(c: ContextoPlaza): void {
   c.cuerpo.querySelectorAll<HTMLButtonElement>('[data-receta]').forEach((b) => b.addEventListener('click', async () => {
     const mensaje = await c.ejecutar('alternarReceta', { asentamientoId: c.asentamiento.id, recurso: b.dataset.receta, pausada: b.dataset.pausar === '1' });
-    const error = c.cuerpo.querySelector<HTMLElement>('#asent-lado-error');
-    if (error) error.textContent = mensaje ?? '';
+    if (mensaje) mostrarAviso(mensaje, true);
   }));
 }
 
