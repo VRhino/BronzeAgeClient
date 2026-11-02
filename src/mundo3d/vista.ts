@@ -19,6 +19,7 @@ import { aro, cinta, circulo, linea, rutaPendiente } from './lineas';
 import { Maquetas } from './maquetas';
 import { MarcasEnSuelo } from './marcas';
 import { NieblaDeGuerra } from './niebla';
+import { Cielo, colorHorizonte } from './cielo';
 import { Paisaje } from './paisaje';
 import { Terreno } from './terreno';
 import { Trazos } from './trazos';
@@ -55,6 +56,9 @@ export class VistaMundo3D {
   private readonly escena = new THREE.Scene();
   private readonly sol = new THREE.DirectionalLight(0xfff0d8, 2.2);
   private readonly bruma: THREE.Fog;
+  /** Hacia dónde está el sol (la luz que da sombra), desde el héroe. */
+  private static readonly SOL = new THREE.Vector3(-60, 110, 45);
+  private readonly cielo = new Cielo(VistaMundo3D.SOL);
   private readonly niebla = new NieblaDeGuerra();
   private readonly terreno: Terreno;
   private readonly paisaje: Paisaje;
@@ -105,10 +109,11 @@ export class VistaMundo3D {
     this.lienzo.setAttribute('aria-label', 'El mundo alrededor de tu héroe. Arrastra para girar la cámara, la rueda acerca y aleja, y un clic en el terreno manda tu columna.');
     contenedor.appendChild(this.lienzo);
 
-    // el cielo y la bruma lejana, del color de la niebla de guerra: lo que no se ve se funde con ella
-    const fondo = new THREE.Color().setRGB(...(MUNDO3D.niebla.color.map((c) => c / 255) as [number, number, number]), THREE.SRGBColorSpace);
-    this.escena.background = fondo;
-    this.bruma = new THREE.Fog(fondo, 60, 200);
+    // el cielo, y la bruma lejana del color de su horizonte: el suelo se funde con él a lo lejos
+    const horizonte = colorHorizonte();
+    this.escena.background = horizonte;
+    this.bruma = new THREE.Fog(horizonte, 60, 200);
+    this.escena.add(this.cielo.malla);
     this.escena.fog = this.bruma;
     this.escena.add(new THREE.HemisphereLight(0xdfe9f0, 0x6b5a40, 1.4));
     this.sol.castShadow = true;
@@ -279,10 +284,11 @@ export class VistaMundo3D {
     t = this.medir('etiquetas', t);
     // la sombra sigue al héroe y cubre lo que se ve
     const r = Math.min(120, Math.max(20, d * 1.6));
-    this.sol.position.set(x - 60, this.objetivo.y + 110, y + 45);
+    this.sol.position.set(x + VistaMundo3D.SOL.x, this.objetivo.y + VistaMundo3D.SOL.y, y + VistaMundo3D.SOL.z);
     this.sol.target.position.copy(this.objetivo);
     const sc = this.sol.shadow.camera;
     if (sc.right !== r) { sc.left = -r; sc.right = r; sc.top = r; sc.bottom = -r; sc.near = 1; sc.far = 600; sc.updateProjectionMatrix(); }
+    this.cielo.actualizar(this.camara.camara, ahora);
     this.renderer.render(this.escena, this.camara.camara);
     this.medir('render', t);
     this.medir('total', inicio);
@@ -370,6 +376,7 @@ export class VistaMundo3D {
     this.maquetas.destruir();
     this.trazos.destruir();
     this.niebla.destruir();
+    this.cielo.destruir();
     this.renderer.dispose();
     this.lienzo.remove();
   }

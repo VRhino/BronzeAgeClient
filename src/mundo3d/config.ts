@@ -29,6 +29,8 @@ export const MUNDO3D = {
   /** La niebla de guerra del 3D: la del 2D, salvo lo nunca visto, que aquí deja ver el mapa a media luz, entre el recordado (158) y el opaco
    * (255) (Víctor, 2026-11-02). */
   niebla: { ...NIEBLA, alfaSinVer: 206 },
+  /** El cielo (sRGB): cénit, horizonte (también el de la bruma lejana) y lo que asoma bajo el horizonte. */
+  cielo: { cenit: 0x3d72b0, horizonte: 0xb7c6cf, bajoHorizonte: 0x8e9a98 },
 } as const;
 
 /** Lo que cabe en pantalla, normal y alejado, según el radio de visión de la columna (`VISION` del servidor): el diámetro del círculo

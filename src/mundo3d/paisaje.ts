@@ -1,6 +1,7 @@
 // Lo que el artefacto pone sobre el suelo, por teselas de 64 u alrededor del héroe: los ríos (una cinta de agua de 1,5 u, 3 si es
-// navegable, a la altura del punto más bajo de su corte), sus vados (un paso de grava de orilla a orilla) y los nodos de recursos (rocas:
-// grises la piedra, del color de su metal los afloramientos). Todo va bajo la niebla, como en `render.ts`.
+// navegable, a la altura del punto más bajo de su corte, con su corriente más clara en medio y una orilla de tierra mojada a cada lado que
+// sigue al relieve), sus vados (un paso de grava de orilla a orilla) y los nodos de recursos (rocas: grises la piedra, del color de su metal
+// los afloramientos). Donde el suelo ya es agua (un lago, el mar) el río se acaba en la orilla y no lleva vados. Todo va bajo la niebla.
 import * as THREE from 'three';
 import { RECURSO_COLOR } from '../paletas';
 import type { MapaGenerado } from '../terreno';
@@ -13,7 +14,7 @@ import type { NieblaDeGuerra } from './niebla';
 type Punto = { x: number; y: number };
 
 const LADO = MUNDO3D.ladoTesela;
-const COLOR = { agua: 0x3f6f96, vado: 0xd9c79a, piedra: 0x8d8d8d };
+const COLOR = { agua: 0x45769a, corriente: 0x5d8fb4, orilla: 0x7a6a4c, vado: 0xd9c79a, piedra: 0x8d8d8d };
 
 /** Chaikin: redondea los quiebros de la polilínea del artefacto (cada pasada, dos puntos por tramo al 25 y al 75 %). */
 export function suavizar(puntos: readonly Punto[], pasadas = 2): Punto[] {
@@ -54,12 +55,53 @@ const colorDeNodo = (tipo: string): THREE.Color => {
   return tipo === 'piedra' ? gris : gris.lerp(new THREE.Color(RECURSO_COLOR[tipo] ?? '#8a4b3a'), 0.7);
 };
 
-interface RioSuave { rio: RioZona; puntos: Punto[]; ancho: number; x0: number; y0: number; x1: number; y1: number }
+interface RioSuave { rio: RioZona; tramos: TramoDeRio[]; puntos: Punto[]; ancho: number; x0: number; y0: number; x1: number; y1: number }
+
+/** Si el cauce acaba a poco de un lago o del mar (el generador lo deja en la orilla de su raster, más basto que el relieve), lo alarga en su
+ * último rumbo hasta el agua, `hasta` u como mucho; si no hay agua tan cerca, lo deja como está. */
+export function alargarHastaElAgua(puntos: readonly Punto[], aguaEn: (x: number, y: number) => boolean, hasta = 8, paso = 0.25): Punto[] {
+  const n = puntos.length;
+  if (n < 2) return [...puntos];
+  const b = puntos[n - 1]!, a = puntos[n - 2]!, l = Math.hypot(b.x - a.x, b.y - a.y) || 1, ux = (b.x - a.x) / l, uy = (b.y - a.y) / l;
+  for (let d = 0; d <= hasta; d += paso) if (aguaEn(b.x + ux * d, b.y + uy * d)) return d ? [...puntos, { x: b.x + ux * d, y: b.y + uy * d }] : [...puntos];
+  return [...puntos];
+}
+
+/** Un tramo del cauce por tierra: `tierra` acaba en la orilla; `agua` sigue un poco dentro del lago o del mar para que la cinta se funda con él. */
+export interface TramoDeRio { tierra: Punto[]; agua: Punto[] }
+
+/**
+ * Los tramos del cauce que van por tierra: se parte donde el suelo ya es agua (el río entra en un lago o en el mar). Las muestras van cada
+ * 0,5 u; en cada corte `tierra` llega a la primera muestra de agua y `agua` se mete `entra` u más.
+ */
+export function tramosEnTierra(puntos: readonly Punto[], aguaEn: (x: number, y: number) => boolean, paso = 0.5, entra = 2): TramoDeRio[] {
+  const m: Punto[] = [];
+  for (let k = 0; k < puntos.length; k++) {
+    const b = puntos[k]!;
+    if (k === 0) { m.push(b); continue; }
+    const a = puntos[k - 1]!, n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / paso));
+    for (let i = 1; i <= n; i++) m.push({ x: a.x + ((b.x - a.x) * i) / n, y: a.y + ((b.y - a.y) * i) / n });
+  }
+  const tierra = m.map((p) => !aguaEn(p.x, p.y)), extra = Math.round(entra / paso), out: TramoDeRio[] = [];
+  let desde = -1;
+  const cerrar = (hasta: number) => {
+    const t0 = Math.max(0, desde - 1), t1 = Math.min(m.length - 1, hasta + 1);
+    if (t1 - t0 >= 1) out.push({ tierra: m.slice(t0, t1 + 1), agua: m.slice(Math.max(0, t0 - extra), Math.min(m.length, t1 + 1 + extra)) });
+  };
+  for (let k = 0; k < m.length; k++) {
+    if (tierra[k] && desde < 0) desde = k;
+    else if (!tierra[k] && desde >= 0) { cerrar(k - 1); desde = -1; }
+  }
+  if (desde >= 0) cerrar(m.length - 1);
+  return out;
+}
 
 export class Paisaje {
   readonly grupo = new THREE.Group();
   private readonly agua: THREE.MeshLambertMaterial;
   private readonly vado: THREE.MeshLambertMaterial;
+  private readonly corriente: THREE.MeshLambertMaterial;
+  private readonly orilla: THREE.MeshLambertMaterial;
   private readonly roca: THREE.MeshLambertMaterial;
   private readonly rios: RioSuave[];
   private readonly teselas = new Map<string, THREE.Group>();
@@ -68,12 +110,14 @@ export class Paisaje {
     const sobre = (factor: number) => ({ polygonOffset: true, polygonOffsetFactor: factor, polygonOffsetUnits: factor });
     this.agua = niebla.aplicar(new THREE.MeshLambertMaterial({ color: COLOR.agua, ...sobre(-2) }));
     this.vado = niebla.aplicar(new THREE.MeshLambertMaterial({ color: COLOR.vado, ...sobre(-4) }));
+    this.corriente = niebla.aplicar(new THREE.MeshLambertMaterial({ color: COLOR.corriente, ...sobre(-3) }));
+    this.orilla = niebla.aplicar(new THREE.MeshLambertMaterial({ color: COLOR.orilla, ...sobre(-1) }));
     this.roca = niebla.aplicar(new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true }));
     this.rios = mapa.rios.filter((r) => r.puntos.length >= 2).map((rio) => {
-      const puntos = suavizar(rio.puntos);
+      const puntos = alargarHastaElAgua(suavizar(rio.puntos), (x, y) => fuente.aguaEn(x, y));
       let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
       for (const p of puntos) { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); }
-      return { rio, puntos, ancho: rio.navegable ? 3 : 1.5, x0, y0, x1, y1 };
+      return { rio, tramos: tramosEnTierra(puntos, (x, y) => fuente.aguaEn(x, y)), puntos, ancho: rio.navegable ? 3 : 1.5, x0, y0, x1, y1 };
     });
   }
 
@@ -105,13 +149,27 @@ export class Paisaje {
     const dentro = (p: Punto) => p.x >= x0 && p.x < x1 && p.y >= y0 && p.y < y1;
     for (const r of this.rios) {
       if (r.x1 + 2 < x0 || r.x0 - 2 > x1 || r.y1 + 2 < y0 || r.y0 - 2 > y1) continue;
-      for (const tramo of tramosEnCaja(r.puntos, x0 - 1, y0 - 1, x1 + 1, y1 + 1)) {
-        const geo = cinta(tramo, this.alturaU, r.ancho, { asiento: 'bajo', dy: 0.04 });
-        if (geo) g.add(new THREE.Mesh(geo, this.agua));
+      for (const t of r.tramos) {
+        // el agua al nivel más bajo del corte (del color del lago, en el que se mete un poco), la corriente más clara en medio y la orilla
+        // mojada a cada lado, sobre el relieve
+        for (const tramo of tramosEnCaja(t.agua, x0 - 1, y0 - 1, x1 + 1, y1 + 1)) {
+          const agua = cinta(tramo, this.alturaU, r.ancho, { asiento: 'bajo', dy: 0.04 });
+          if (agua) g.add(new THREE.Mesh(agua, this.agua));
+        }
+        for (const tramo of tramosEnCaja(t.tierra, x0 - 1, y0 - 1, x1 + 1, y1 + 1)) {
+          const corriente = cinta(tramo, this.alturaU, r.ancho * 0.3, { asiento: 'bajo', dy: 0.05 });
+          if (corriente) g.add(new THREE.Mesh(corriente, this.corriente));
+          for (const lado of [1, -1]) {
+            const orilla = cinta(tramo, this.alturaU, 0.6, { dy: 0.03, desplazar: lado * (r.ancho / 2 + 0.15) });
+            if (orilla) g.add(new THREE.Mesh(orilla, this.orilla));
+          }
+        }
       }
-      // los vados, de orilla a orilla (cada uno en la tesela donde cae)
+      // los vados, de orilla a orilla (cada uno en la tesela donde cae); no en un lago ni en el mar, ni pegados a su orilla
       for (const v of r.rio.vados ?? []) {
         if (!dentro(v)) continue;
+        const cerca = r.ancho / 2 + 1;
+        if ([[0, 0], [cerca, 0], [-cerca, 0], [0, cerca], [0, -cerca]].some(([dx, dy]) => this.fuente.aguaEn(v.x + dx!, v.y + dy!))) continue;
         const d = rumboJunto(r.puntos, v), largo = (r.ancho * 1.4 + 0.6) / 2;
         const geo = cinta([{ x: v.x - d.y * largo, y: v.y + d.x * largo }, { x: v.x + d.y * largo, y: v.y - d.x * largo }], this.alturaU, 0.8, { dy: 0.07, paso: 0.25 });
         if (geo) g.add(new THREE.Mesh(geo, this.vado));
@@ -157,6 +215,8 @@ export class Paisaje {
     for (const clave of [...this.teselas.keys()]) this.soltar(clave);
     this.agua.dispose();
     this.vado.dispose();
+    this.corriente.dispose();
+    this.orilla.dispose();
     this.roca.dispose();
   }
 }

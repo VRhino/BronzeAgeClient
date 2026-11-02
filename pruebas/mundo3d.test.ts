@@ -10,7 +10,7 @@ import { ANCHOS, dondeEstaLaSeleccion, estadoDesdeProyeccion, mundoDesdeProyecci
 import { bloquesDeTropa } from '../src/mundo3d/figuras';
 import { fuenteDesdeMapa, type FuenteDeAltura } from '../src/mundo3d/fuente';
 import { cinta, circulo, rutaPendiente, tramosEnCaja } from '../src/mundo3d/lineas';
-import { suavizar } from '../src/mundo3d/paisaje';
+import { alargarHastaElAgua, suavizar, tramosEnTierra } from '../src/mundo3d/paisaje';
 import type { MapaGenerado } from '../src/terreno';
 import type { Ejercito } from '../src/tiposDominio';
 
@@ -274,5 +274,25 @@ describe('los árboles', () => {
   test('ni en el agua ni en una ladera muy empinada', () => {
     expect(arbolesDelTrozo(entorno({ fuente: { ...llano, aguaEn: () => true } }), 0, 0, 8, 1).length).toBe(0);
     expect(arbolesDelTrozo(entorno({ fuente: { ...llano, alturaEn: (x) => x * 24 } }), 0, 0, 8, 1).length).toBe(0); // 2 m/m
+  });
+});
+
+describe('ríos que llegan a un lago', () => {
+  // un lago en x >= 10
+  const lago = (x: number) => x >= 10;
+  test('el cauce se corta en la orilla: la tierra llega a la primera muestra de agua y el agua se mete 2 u', () => {
+    const t = tramosEnTierra([{ x: 0, y: 0 }, { x: 20, y: 0 }], lago);
+    expect(t.length).toBe(1);
+    expect(t[0]!.tierra.at(-1)!.x).toBe(10);
+    expect(t[0]!.agua.at(-1)!.x).toBe(12);
+    expect(t[0]!.agua[0]!.x).toBe(0);
+  });
+  test('un río que cruza el lago son dos tramos, y uno que va todo por agua, ninguno', () => {
+    expect(tramosEnTierra([{ x: 0, y: 0 }, { x: 30, y: 0 }], (x) => x >= 10 && x <= 20).length).toBe(2);
+    expect(tramosEnTierra([{ x: 10, y: 0 }, { x: 20, y: 0 }], lago).length).toBe(0);
+  });
+  test('si acaba a poco del agua se alarga hasta ella; si no, se queda', () => {
+    expect(alargarHastaElAgua([{ x: 0, y: 0 }, { x: 7, y: 0 }], lago).at(-1)!.x).toBe(10);
+    expect(alargarHastaElAgua([{ x: 0, y: 0 }, { x: 1, y: 0 }], lago).length).toBe(2);
   });
 });

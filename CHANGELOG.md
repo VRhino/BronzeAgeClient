@@ -3,6 +3,12 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.81.0] — 2026-11-02 · Ríos con orilla, cielo en el mundo 3D y aviso a la altura de las misiones · sin cambios de contrato (`VRhino/BronzeAge@168a3bea`)
+
+- **El aviso que se va solo** sale centrado a la altura del rastreador de misiones, justo bajo la barra del jugador.
+- **Ríos en el mundo 3D**: donde el suelo ya es agua (un lago, el mar) el río se acaba en la orilla, y su agua, del color del lago, se mete un poco en él para fundirse; un cauce que el generador deja a pocas u del agua se alarga hasta ella. Ya **no se pintan vados en medio de un lago** (ni pegados a su orilla). Cada río lleva una orilla de tierra mojada a cada lado que sigue al relieve y una corriente más clara en medio (`tramosEnTierra`, `alargarHastaElAgua` en `mundo3d/paisaje.ts`).
+- **Cielo** en el mundo 3D (`mundo3d/cielo.ts`): una bóveda que va con la cámara, del horizonte claro al cénit azul, con el halo del sol donde está la luz de la escena y nubes altas que derivan despacio. La bruma lejana es del color del horizonte, así el suelo se funde con el cielo.
+
 ## [0.80.0] — 2026-11-02 · Niebla al elegir campamento, avisos arriba y cámara 3D suave · sin cambios de contrato (`VRhino/BronzeAge@168a3bea`)
 
 - **Elegir campamento**: todo lo que queda fuera de la frontera (250 u) de algún campamento va bajo **niebla de guerra**, nubes oscuras que derivan despacio, en el mapa y en el minimapa; de lejos solo se ven los círculos de tierra de cada campamento. Los yacimientos y bandidos de fuera no se pintan, y fuera del mundo la niebla no se abre.
