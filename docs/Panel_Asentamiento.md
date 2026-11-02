@@ -236,6 +236,12 @@ La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, es
 > siguiente, y el techo del nivel (`NIVEL_ASENTAMIENTO.techoPoblacion`); medidores de mantenimiento y nutrición en color; interruptor de
 > auto-construcción; la Residencia y la capital, en tarjetas (sin residir, «Hacerla mi base»). **Cargos**: una silla por cargo con su emblema
 > (lápiz para cambiar, ＋ en una vacante) y los residentes en ranking (medallas, emblemas de sus cargos, barra de puntos).
+>
+> **Reclutamiento y Taberna** (0.87.0, 2026-11-02, `ui/reclutamiento.ts`, `ui/panelIntel.ts`; banco `pruebas/centro/`). **Reclutamiento**: la ficha
+> de la tropa como una carta (retrato, escalón en estrellas, poder y velocidad en barras contra lo mejor del catálogo, liderazgo, hombres libres,
+> tu escuadra con su barra, coste en chips y botón Reclutar / Reponer / Completa) y una rejilla por edificio militar con barra de escuadra en cada
+> casilla. **Taberna**: cabecera con oro y Miradas en ojos, tarjetas de servicio (Mirada, Informe) con el precio en chip, Miradas con su barra de
+> tiempo e Informes con el nivel en escudo; el Informe abierto con edificios y guarnición en iconos y la muralla en barras.
 
 1. **Resumen** ✅ — nivel/nivel operativo, población (pesants/artesanos/nobleza + total), medidores de
    mantenimiento y nutrición, aviso de ocupación, toggle auto-construcción (`alternarAutoConstruccion`).

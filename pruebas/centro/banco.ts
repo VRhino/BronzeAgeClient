@@ -1,4 +1,4 @@
-// Banco de Centro urbano (`/pruebas/centro/`): la subida de nivel, el Resumen (con la Residencia al pie) y los Cargos, con una plaza de mentira y
+// Banco del panel derecho de la plaza (`/pruebas/centro/`): la subida de nivel, el Resumen (con la Residencia al pie), los Cargos, Reclutamiento y Taberna, con una plaza de mentira y
 // sin servidor. Los datos de juego son los bloques de Docs/Mechanics del motor (`../plaza/datos.json`, como `GET /v1/datos`). Las órdenes no
 // salen: se anotan en `window.__banco.enviadas`.
 import datos from '../plaza/datos.json';
@@ -12,6 +12,9 @@ import { cablearPlegables } from '../../src/ui/plegable';
 import { cablearCargosPlaza, cablearResumenPlaza, htmlAscensoPlaza, htmlCargosPlaza, htmlResumenPlaza } from '../../src/ui/panelCentro';
 import { htmlResidentesPlaza } from '../../src/ui/participacion';
 import { SUBPESTANA_RESIDENCIA } from '../../src/ui/panelResidencia';
+import { cablearReclutamiento, htmlReclutamiento } from '../../src/ui/reclutamiento';
+import { cablearPanelIntel, renderPanelIntel } from '../../src/ui/panelIntel';
+import { tarifasDeIntel } from '../../src/apiCliente';
 import { escena, type Escena } from './datos-escena';
 
 const e = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -28,6 +31,13 @@ function ver(): void {
   const cargo = a.cargos?.gobernadorId === p.heroeId ? 'gobernador' as const : null;
   const ctx = { proyeccion: p, asentamiento: a, cuerpo, ejecutar: async (t: string, x: object) => { banco.enviadas.push([t, x]); return null; }, refrescar: ver, cargo, resideAqui: reside, escapar: e };
   const ascenso = htmlAscensoPlaza(p, a, cargo === 'gobernador', e, ver);
+  (p as unknown as { tarifasIntel: unknown }).tarifasIntel = tarifasDeIntel();
+  if (sub === 'reclutamiento' || sub === 'taberna') {
+    const ejecutar = ctx.ejecutar;
+    cuerpo.innerHTML = sub === 'reclutamiento' ? `<div class="asent-lado-cuerpo">${htmlReclutamiento(p, a, e, ver)}</div>` : renderPanelIntel(p, e);
+    if (sub === 'reclutamiento') cablearReclutamiento(cuerpo, p, a, ejecutar, ver); else cablearPanelIntel(cuerpo, p, ejecutar, ver);
+    return;
+  }
   const contenido = sub === 'resumen'
     ? htmlResumenPlaza(ctx) + `<div class="asent-resumen-residencia">${SUBPESTANA_RESIDENCIA.html(ctx)}</div>`
     : htmlCargosPlaza(ctx, htmlResidentesPlaza(p, a, e));

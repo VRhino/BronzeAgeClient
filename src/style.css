@@ -2597,9 +2597,6 @@ body {
 .faction-detail-header .sigilo { display: block; margin: 6px 0; }
 
 /* --- Intel de las tabernas (Doc 5.12.10) --- */
-.intel-panel { display: flex; flex-direction: column; gap: 12px; }
-.intel-plano { align-self: center; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--border-glass); border-radius: var(--radius-sm, 6px); }
-.intel-informe { display: flex; flex-direction: column; gap: 8px; padding-top: 8px; border-top: 1px solid var(--border-glass); }
 
 /* --- Planta del campamento y avisos --- */
 .campamento-plano { align-self: center; max-width: 100%; height: auto; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border-glass); border-radius: var(--radius-sm, 6px); }
@@ -2965,8 +2962,6 @@ kbd {
 /* Columna de la plaza por edificio: pestañas bloqueadas y reclutamiento */
 .asent-tab.bloqueada { opacity: 0.45; cursor: not-allowed; }
 .asent-subtabs { margin-bottom: 8px; flex-wrap: wrap; }
-.recl-fila { align-items: flex-start; }
-.recl-esc { font-size: 0.75em; opacity: 0.7; border: 1px solid currentColor; border-radius: 4px; padding: 0 4px; }
 .recl-costes { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 2px; font-size: 0.85em; }
 .recl-coste.falta { color: #d9534f; }
 .mercado-form { display: grid; gap: 6px; margin: 8px 0; }
@@ -3372,19 +3367,6 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .asent-edif-icono .icono-edificio { flex: 0 0 auto; color: var(--oro); --relleno: rgba(205, 160, 90, 0.3); }
 
 /* Reclutamiento: rejilla de tropas con icono y ficha de la elegida (0.51.0). */
-.recl-tropa { position: relative; }
-.recl-tropa.elegida { border-color: var(--oro); box-shadow: 0 0 0 1px var(--oro), inset 0 0 8px rgba(232, 190, 100, 0.25); }
-.recl-tropa-cuenta { position: absolute; right: 1px; bottom: 0; font-size: 0.62rem; line-height: 1; padding: 1px 2px; border-radius: 2px; background: rgba(20, 14, 8, 0.85); color: var(--oro-claro); }
-.recl-ficha { display: flex; gap: 12px; align-items: flex-start; padding: 10px; margin: 4px 0 8px; border: 1px solid var(--bronce); border-radius: 4px; background: rgba(30, 22, 14, 0.55); }
-.recl-ficha-icono { flex: none; display: flex; align-items: center; justify-content: center; width: 72px; height: 72px; border: 1px solid var(--bronce); border-radius: 3px; background: linear-gradient(180deg, rgba(60, 44, 26, 0.9), rgba(30, 22, 14, 0.9)); color: var(--oro-claro); --relleno: rgba(205, 160, 90, 0.3); }
-.recl-ficha-cuerpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
-.recl-ficha-titulo strong { font-size: 1.02rem; }
-.recl-ficha-sub, .recl-tienes { color: var(--text-muted); font-size: 0.75rem; }
-.recl-datos { display: flex; flex-wrap: wrap; gap: 4px 14px; }
-.recl-datos span { display: flex; flex-direction: column; }
-.recl-datos small { color: var(--text-muted); font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.04em; }
-.recl-datos b { font-size: 0.88rem; }
-.btn-primary.recl-boton { align-self: flex-start; width: auto; padding: 4px 12px; font-size: 0.72rem; letter-spacing: 0.06em; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 1px 0 var(--tinta), 0 3px 8px rgba(0, 0, 0, 0.4); }
 
 /* Dentro de un pueblo o una aldea (0.52.0): como la plaza. El trazado al centro, con sus huecos (vacíos los de niveles por llegar). */
 .pueblo-lienzo { position: relative; background: radial-gradient(circle at 50% 50%, rgba(120, 140, 70, 0.28), rgba(60, 70, 35, 0.2) 48%, rgba(30, 24, 16, 0.92) 72%); }
@@ -3735,7 +3717,7 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 
 /* ===== Panel de obras de la plaza (ui/panelObras.ts y la producción de ui/vistaCiudad.ts), estilo juego de estrategia (2026-11-02) ===== */
 :root { --obra-verde: #7fcf6a; --obra-rojo: #e2675a; --obra-ambar: #e0a53a; --obra-azul: #6fb6ff; }
-.obra-titulo { display: flex; align-items: center; gap: 8px; margin: 10px 0 6px; }
+.obra-titulo { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 10px 0 6px; }
 .obra-titulo:first-child { margin-top: 2px; }
 .obra-titulo .faction-kicker { margin: 0; }
 .obra-titulo > small { color: var(--text-muted); font-size: 0.72rem; }
@@ -4049,3 +4031,121 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .ranking-barra i { display: block; height: 100%; background: linear-gradient(90deg, #8a6a3c, var(--oro)); }
 .ranking-fila.visita .ranking-barra i { background: #7a7266; }
 .ranking-fila strong { text-align: right; color: var(--oro-claro); }
+
+/* ===== Reclutamiento (ui/reclutamiento.ts), estilo juego (2026-11-02) ===== */
+.recl-ficha { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: 'retrato cuerpo' 'pie pie' 'bloqueo bloqueo'; gap: 8px 12px; padding: 10px; margin: 2px 0 12px; border: 1px solid var(--bronce); border-radius: 3px; background: radial-gradient(ellipse at 12% 30%, rgba(169, 121, 63, 0.28), transparent 55%), linear-gradient(180deg, rgba(40, 30, 18, 0.95), rgba(18, 14, 9, 0.95)); box-shadow: inset 0 1px 0 rgba(241, 220, 174, 0.08); }
+.recl-retrato { grid-area: retrato; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.recl-ficha-icono { display: grid; place-items: center; width: 76px; height: 76px; border: 1px solid var(--oro); border-radius: 3px; background: radial-gradient(circle at 50% 35%, rgba(169, 121, 63, 0.45), rgba(0, 0, 0, 0.55)); color: var(--oro-claro); --relleno: rgba(205, 160, 90, 0.35); box-shadow: 0 0 10px rgba(232, 190, 100, 0.2); }
+.recl-estrellas { display: flex; gap: 1px; font-size: 0.7rem; line-height: 1; }
+.recl-estrellas i { font-style: normal; color: rgba(160, 140, 110, 0.35); }
+.recl-estrellas i.llena { color: #ffd24a; text-shadow: 0 0 4px rgba(255, 210, 74, 0.6); }
+.recl-ficha-cuerpo { grid-area: cuerpo; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.recl-ficha-titulo strong { font-family: var(--fuente-titulo); font-size: 1rem; letter-spacing: 0.03em; color: var(--oro-claro); }
+.recl-ficha-sub { display: flex; align-items: center; gap: 4px; color: var(--text-muted); font-size: 0.72rem; color: var(--text-secondary); --relleno: rgba(205, 160, 90, 0.3); }
+.recl-ficha-sub .icono-edificio { color: var(--oro); }
+.recl-stats { display: flex; flex-direction: column; gap: 4px; }
+.recl-stat { display: grid; grid-template-columns: 22px 4.6rem 1.8rem minmax(0, 1fr); align-items: center; gap: 4px; font-size: 0.76rem; }
+.recl-stat-icono { display: grid; place-items: center; font-size: 0.9rem; }
+.recl-stat small { color: var(--text-secondary); }
+.recl-stat b { text-align: right; color: var(--pergamino); }
+.recl-stat-barra { height: 6px; border-radius: 3px; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(107, 74, 41, 0.8); overflow: hidden; }
+.recl-stat-barra i { display: block; height: 100%; background: linear-gradient(90deg, #8a6a3c, var(--oro)); }
+.recl-stat.ritmo-lenta .recl-stat-barra i { background: var(--ritmo-lenta); }
+.recl-stat.ritmo-ligera .recl-stat-barra i { background: var(--ritmo-ligera); }
+.recl-stat.ritmo-rapida .recl-stat-barra i { background: var(--ritmo-rapida); }
+.recl-stat[class*='ritmo-'] .recl-stat-icono { color: currentColor; }
+.recl-stat[class*='ritmo-'] b, .recl-stat[class*='ritmo-'] small { color: inherit; }
+.recl-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.recl-chips .obra-chip { margin-left: 0; }
+.recl-escuadra { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 6px; font-size: 0.74rem; color: var(--text-secondary); }
+.recl-escuadra.nueva { grid-template-columns: auto auto; justify-content: start; }
+.recl-escuadra b { color: var(--oro-claro); font-size: 0.82rem; }
+.recl-escuadra b small { color: var(--text-muted); font-weight: 400; }
+.recl-escuadra-barra { height: 8px; border-radius: 4px; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(107, 74, 41, 0.8); overflow: hidden; }
+.recl-escuadra-barra i { display: block; height: 100%; background: var(--obra-verde); box-shadow: 0 0 5px rgba(127, 207, 106, 0.5); }
+.recl-pie { grid-area: pie; display: flex; align-items: center; gap: 10px; padding-top: 8px; border-top: 1px solid rgba(107, 74, 41, 0.6); }
+.recl-pie .recl-costes { flex: 1; display: flex; flex-wrap: wrap; gap: 3px 10px; margin: 0; font-size: 1em; }
+.recl-pie .obra-coste { font-size: 0.82rem; }
+.recl-boton { flex: none; padding: 7px 16px; border: 1px solid var(--obra-verde); border-radius: 3px; background: linear-gradient(180deg, rgba(90, 160, 70, 0.95), rgba(30, 70, 25, 0.95)); color: #eaffdf; font-family: var(--fuente-titulo); font-size: 0.82rem; font-weight: 700; letter-spacing: 0.05em; cursor: pointer; box-shadow: 0 0 10px rgba(127, 207, 106, 0.35); transition: transform 0.1s, box-shadow 0.15s; }
+.recl-boton:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 0 16px rgba(127, 207, 106, 0.6); }
+.recl-boton:disabled { border-color: rgba(107, 74, 41, 0.6); background: rgba(20, 16, 11, 0.8); color: rgba(160, 140, 110, 0.5); box-shadow: none; cursor: help; }
+.recl-bloqueo { grid-area: bloqueo; font-size: 0.72rem; color: #ffb3a8; }
+.recl-grupo-cab { display: flex; align-items: center; gap: 6px; margin: 10px 0 6px; padding-bottom: 4px; border-bottom: 1px solid rgba(107, 74, 41, 0.6); color: var(--oro-claro); --relleno: rgba(205, 160, 90, 0.3); }
+.recl-grupo-cab strong { font-size: 0.84rem; color: var(--pergamino); }
+.recl-grupo-cab .obra-marcas { margin-left: auto; }
+.recl-rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 6px; }
+.recl-tropa { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 3px 8px; min-width: 0; border: 1px solid var(--bronce); border-radius: 3px; background: linear-gradient(180deg, rgba(60, 44, 26, 0.92), rgba(24, 18, 11, 0.95)); color: var(--oro-claro); --relleno: rgba(205, 160, 90, 0.3); cursor: pointer; overflow: hidden; transition: transform 0.1s, box-shadow 0.15s, border-color 0.15s; }
+.recl-tropa:hover { border-color: var(--oro); box-shadow: 0 0 10px rgba(232, 190, 100, 0.3); transform: translateY(-1px); }
+.recl-tropa.elegida { border-color: #ffd24a; box-shadow: 0 0 0 1px #ffd24a, 0 0 14px rgba(255, 210, 74, 0.35); }
+.recl-tropa-icono { display: flex; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6)); }
+.recl-tropa-nombre { max-width: 100%; font-size: 0.62rem; line-height: 1.15; color: var(--pergamino); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recl-tropa-cuenta { position: absolute; top: 3px; right: 3px; min-width: 16px; padding: 0 3px; border-radius: 7px; background: rgba(0, 0, 0, 0.65); border: 1px solid var(--bronce-osc); font-size: 0.6rem; font-weight: 700; line-height: 1.4; color: var(--oro-claro); text-align: center; }
+.recl-tropa.completa .recl-tropa-cuenta { border-color: var(--obra-verde); color: #c8f5b8; }
+.recl-tropa > .obra-barra { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; border: none; border-radius: 0; }
+.recl-tropa > .obra-barra i { background: var(--obra-verde); box-shadow: none; }
+
+/* ===== Taberna e intel (ui/panelIntel.ts), estilo juego (2026-11-02) ===== */
+.intel-panel { display: flex; flex-direction: column; gap: 4px; }
+.intel-cab { display: flex; align-items: center; gap: 10px; padding: 8px 10px; margin-bottom: 6px; border: 1px solid rgba(169, 121, 63, 0.55); border-radius: 3px; background: radial-gradient(ellipse at 0% 50%, rgba(169, 121, 63, 0.25), transparent 65%), linear-gradient(180deg, rgba(40, 30, 18, 0.95), rgba(18, 14, 9, 0.95)); }
+.intel-cab-icono { display: grid; place-items: center; width: 46px; height: 46px; flex: none; border: 1px solid var(--bronce); border-radius: 3px; background: radial-gradient(circle at 50% 35%, rgba(169, 121, 63, 0.4), rgba(0, 0, 0, 0.55)); color: var(--oro-claro); --relleno: rgba(205, 160, 90, 0.35); }
+.intel-cab-cuerpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.intel-cab-cuerpo strong { font-family: var(--fuente-titulo); font-size: 0.92rem; color: var(--oro-claro); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.intel-cab-cuerpo select { height: 30px; padding: 0 6px; font-size: 0.84rem; }
+.intel-cab-chips { display: flex; align-items: center; gap: 8px; }
+.intel-cab-chips .obra-chip { margin-left: 0; }
+.intel-ojos { display: flex; align-items: center; gap: 2px; }
+.intel-ojos i { font-style: normal; font-size: 0.85rem; filter: grayscale(1); opacity: 0.3; }
+.intel-ojos i.abierto { filter: none; opacity: 1; text-shadow: 0 0 6px rgba(111, 182, 255, 0.8); }
+.intel-ojos small { margin-left: 3px; font-size: 0.7rem; color: var(--text-secondary); }
+.intel-servicios { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 6px; margin-bottom: 6px; }
+.intel-servicio { display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid rgba(107, 74, 41, 0.7); border-top: 3px solid var(--bronce); border-radius: 3px; background: linear-gradient(180deg, rgba(36, 27, 17, 0.95), rgba(18, 14, 9, 0.95)); }
+.intel-servicio .form-input { height: 30px; padding: 0 6px; font-size: 0.8rem; min-width: 0; width: 100%; }
+.intel-servicio .mapa-lista-vacia { margin: 0; }
+.intel-servicio-cab { display: flex; align-items: center; gap: 8px; }
+.intel-servicio-cab > span:nth-child(2) { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.intel-servicio-cab strong { font-size: 0.86rem; color: var(--oro-claro); }
+.intel-servicio-cab small { font-size: 0.7rem; color: var(--text-secondary); }
+.intel-servicio-icono { display: grid; place-items: center; width: 32px; height: 32px; flex: none; border: 1px solid var(--bronce); border-radius: 50%; background: radial-gradient(circle at 50% 35%, rgba(169, 121, 63, 0.4), rgba(0, 0, 0, 0.55)); font-size: 1rem; }
+.intel-coords { display: flex; align-items: center; gap: 4px; }
+.intel-coords .form-input { flex: 1; }
+.intel-comprar { margin-top: auto; padding: 6px 10px; border: 1px solid var(--oro); border-radius: 3px; background: linear-gradient(180deg, rgba(110, 80, 40, 0.95), rgba(50, 36, 18, 0.95)); color: var(--oro-claro); font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+.intel-comprar:hover:not(:disabled) { box-shadow: 0 0 10px rgba(232, 190, 100, 0.4); }
+.intel-comprar:disabled { border-color: rgba(107, 74, 41, 0.6); background: rgba(20, 16, 11, 0.8); color: rgba(160, 140, 110, 0.5); cursor: default; }
+.intel-precio { margin-left: 4px; padding: 0 6px; border-radius: 8px; background: rgba(0, 0, 0, 0.45); color: #ffe08a; }
+.intel-precio.falta { color: var(--obra-rojo); }
+.intel-sin-taberna { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px dashed rgba(169, 121, 63, 0.5); border-radius: 3px; color: var(--text-secondary); font-size: 0.82rem; }
+.intel-sin-taberna > span { font-size: 1.6rem; filter: grayscale(0.6); }
+.intel-sin-taberna p { margin: 0; }
+.intel-miradas, .intel-informes { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
+.intel-mirada { position: relative; display: flex; align-items: center; gap: 6px; padding: 6px 8px 9px; border: 1px solid rgba(107, 74, 41, 0.7); border-radius: 3px; background: rgba(18, 14, 9, 0.85); color: var(--pergamino); text-align: left; cursor: pointer; overflow: hidden; }
+.intel-mirada.abierta { border-color: rgba(111, 182, 255, 0.6); background: linear-gradient(90deg, rgba(40, 70, 110, 0.4), rgba(18, 14, 9, 0.85)); }
+.intel-mirada-icono { font-size: 1.15rem; }
+.intel-mirada-cuerpo { display: flex; flex-direction: column; min-width: 0; }
+.intel-mirada-cuerpo b { font-size: 0.8rem; }
+.intel-mirada-cuerpo small { font-size: 0.66rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.intel-mirada > .obra-barra { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; border: none; border-radius: 0; }
+.intel-mirada.abierta > .obra-barra i { background: var(--obra-azul); box-shadow: 0 0 5px rgba(111, 182, 255, 0.6); }
+.intel-mirada:not(.abierta) > .obra-barra i { background: #7a7266; box-shadow: none; }
+.intel-informe-btn { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border: 1px solid rgba(107, 74, 41, 0.7); border-radius: 3px; background: rgba(18, 14, 9, 0.85); color: var(--pergamino); text-align: left; cursor: pointer; }
+.intel-informe-btn .medallon-nivel { width: 28px; height: 32px; }
+.intel-informe-btn .medallon-nivel b { font-size: 0.85rem; }
+.intel-informe-btn > span:last-child { display: flex; flex-direction: column; min-width: 0; }
+.intel-informe-btn b { font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.intel-informe-btn small { font-size: 0.66rem; color: var(--text-secondary); }
+.intel-informe-btn.abierto { border-color: #ffd24a; box-shadow: 0 0 0 1px #ffd24a; }
+.intel-informe { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; padding: 10px; border: 1px solid rgba(169, 121, 63, 0.55); border-radius: 3px; background: linear-gradient(180deg, rgba(36, 27, 17, 0.95), rgba(18, 14, 9, 0.95)); }
+.intel-informe .obra-titulo { margin: 6px 0 2px; }
+.intel-informe-cab { display: flex; align-items: center; gap: 8px; }
+.intel-informe-cab > span:nth-child(2) { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.intel-informe-cab strong { font-family: var(--fuente-titulo); font-size: 1rem; color: var(--oro-claro); }
+.intel-informe-cab small { font-size: 0.74rem; color: var(--text-secondary); }
+.intel-informe-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.intel-informe-chips .obra-chip { margin-left: 0; }
+.intel-plano { align-self: center; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(107, 74, 41, 0.7); border-radius: 3px; }
+.intel-iconos { display: flex; flex-wrap: wrap; gap: 5px; }
+.intel-icono { position: relative; display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid rgba(107, 74, 41, 0.8); border-bottom: 2px solid var(--swatch, var(--bronce)); border-radius: 3px; background: rgba(0, 0, 0, 0.4); color: var(--oro-claro); --relleno: rgba(205, 160, 90, 0.3); }
+.intel-icono b { position: absolute; right: 1px; bottom: 0; padding: 0 2px; border-radius: 2px; background: rgba(0, 0, 0, 0.7); font-size: 0.62rem; line-height: 1.3; color: var(--oro-claro); }
+.intel-icono.tropa { border-bottom-color: var(--obra-rojo); }
+.intel-recinto { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto auto; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--pergamino); }
+.intel-recinto small { color: var(--text-secondary); }
+.intel-recinto .obra-chip { margin-left: 0; }
