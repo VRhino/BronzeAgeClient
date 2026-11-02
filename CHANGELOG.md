@@ -3,6 +3,12 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.95.0] — 2026-11-02 · La subida de nivel a la vista en la plaza · sin cambios de contrato (`VRhino/BronzeAge@a17f8536`)
+
+- **Mientras la plaza sube de nivel**, en la vista de la plaza aparece bajo el blasón, colgando de él y encima del minimapa, una placa con
+  «Subiendo a nivel N», el porcentaje, la barra de la obra y lo que falta. Avanza cada segundo, sin esperar al servidor, y desaparece al
+  terminar. Sin obra de ascenso, no está.
+
 ## [0.94.0] — 2026-11-02 · Las calles de la plaza 3D · sin cambios de contrato (`VRhino/BronzeAge@a17f8536`)
 
 - **Las calles, celda a celda** (`src/ciudad3d/calles.ts`, `src/ciudad3d/calzada.ts`). El motor las manda en tiras de una celda de alto, y

@@ -119,8 +119,10 @@ remata cabeceras y paneles con la moldura clásica. `opacity: .5` para que sea s
   pantalla completa, también bajo la barra del jugador, que es transparente y de iconos como en el mundo. Encima, como el HUD
   de un juego de estrategia:
   - arriba a la izquierda, en columna: el blasón (`.asent-blason`: escudo completo de la Facción dueña con el medallón del
-    nivel prendido en su esquina, el nombre de la ciudad y la Facción), el minimapa 2D (`.asent-minimapa`), la ficha del
-    edificio elegido y el rastreador de misiones; los clics fuera de las cajas pasan a la escena;
+    nivel prendido en su esquina, el nombre de la ciudad y la Facción); mientras la plaza sube de nivel, colgando de él, la
+    placa de la subida (`.asent-ascenso-hud`, 0.95.0: «Subiendo a nivel N», el porcentaje, la barra y lo que falta, que
+    avanza cada segundo); el minimapa 2D (`.asent-minimapa`), la ficha del edificio elegido y el rastreador de misiones; los
+    clics fuera de las cajas pasan a la escena;
   - arriba a la derecha, bajo la barra: «Ejércitos» (su panel se abre debajo) y «Salir al mundo»;
   - abajo al centro: el almacén (`.asent-recursos`) flotando;
   - en la barra, el primero por la derecha: el botón «Asentamiento» (`.jugador-boton-asent`, en oro y con su nombre), que abre

@@ -4936,3 +4936,14 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .eleccion-clic-texto small { font-size: 0.72rem; color: var(--text-secondary); overflow-wrap: anywhere; }
 /* mientras se elige, el aviso que hubiera en ese sitio espera debajo */
 body:has(.eleccion-clic) .aviso-global { visibility: hidden; }
+
+/* La subida de nivel en curso, bajo el blasón y encima del minimapa: a qué nivel sube, cuánto lleva, lo que falta y la barra. Pegada al
+   blasón, como una placa que cuelga de él. */
+.asent-ascenso-hud { order: -3; margin-top: -8px; display: flex; flex-direction: column; gap: 6px; padding: 7px 10px 9px; background: linear-gradient(180deg, rgba(38, 28, 17, 0.94), rgba(18, 13, 8, 0.94)); border: 1px solid var(--bronce); border-radius: 3px; box-shadow: var(--placa-sutil); color: var(--pergamino); }
+.asent-ascenso-hud[hidden] { display: none; }
+.asent-ascenso-hud-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 0.8rem; }
+.asent-ascenso-hud-cab b { font-family: var(--fuente-titulo); font-weight: 600; color: var(--oro-claro); }
+.asent-ascenso-hud-cab > span { min-width: 0; }
+.asent-ascenso-hud-pct { font-size: 0.8rem; color: var(--oro); white-space: nowrap; }
+.asent-ascenso-hud-falta { font-size: 0.7rem; color: var(--obra-ambar); }
+.asent-ascenso-hud .obra-barra { height: 8px; }

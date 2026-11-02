@@ -27,6 +27,7 @@ import {
   radioDeEncuentro,
   radioDeProteccionMercenarios,
   radioZonaInicial,
+  instanteDeMundo,
   proyeccionAlInstante,
   obtenerMapa,
   edificiosMilitaresDeCampamento,
@@ -51,7 +52,7 @@ import { alCargarSigilos } from './sigilo/lienzo';
 import { cablearCampamento, campamentoActual, htmlSeccionCampamento, seccionesDeCampamento, type SeccionCampamento } from './ui/pantallaCampamento';
 import { leyendaPlanoCampamento, svgPlanoCampamento } from './ui/planoCampamento';
 import type { MapaGenerado } from './terreno';
-import { estadoCliente, medirRitmoDeMundo, TIPS_FUNDACION } from './ui/estadoCliente';
+import { estadoCliente, medirRitmoDeMundo, textoEnTiempoReal, TIPS_FUNDACION } from './ui/estadoCliente';
 import { actualizarTip, parcelasAlFundar, resumenRecursosFundacion, sitiosDeAldeaAlFundar } from './ui/pestanaAsentamientos';
 import { renderPanelInteraccion } from './ui/panelInteraccion';
 import { renderPanelMapa } from './ui/panelMapa';
@@ -70,7 +71,7 @@ import { ciudadEnVista } from './ciudad3d/estado';
 import { Minimapa } from './ciudad3d/minimapa';
 import { VistaCiudad3D } from './ciudad3d/vista';
 import { colorDelSueloEn } from './mundo/pintarArtefacto';
-import { cuentaAtras, medallonNivel } from './ui/juegoVisual';
+import { barraAvance, cuentaAtras, medallonNivel } from './ui/juegoVisual';
 import { iconoEdificio } from './ui/iconosEdificio';
 import { cablearPlegables } from './ui/plegable';
 import { FICHAS_MAPA_EXTRA, SELECTORES_MAPA_EXTRA, SUBPESTANAS_CENTRO_EXTRA, SUBPESTANAS_MERCADO_EXTRA, type ContextoPlaza } from './ui/ganchos';
@@ -2018,6 +2019,7 @@ function montarAsentamiento(): void {
       </div>
       <aside class="asent-izq">
         <div class="asent-blason"></div>
+        <div class="asent-ascenso-hud" role="status" hidden></div>
         <div class="asent-lienzo asent-minimapa" title="Minimapa: un clic lleva la vista ahí"><canvas id="mapa" width="900" height="900"></canvas></div>
       </aside>
       <header class="asent-barra">
@@ -2078,7 +2080,9 @@ function montarAsentamiento(): void {
     sondeando = true;
     void refrescarDatosJuego().catch(() => {}).finally(() => { sondeando = false; });
   }, 3000);
-  limpiarPantalla = () => { clearInterval(sondeo); desmontarCiudad3D(); };
+  // la barra de la subida de nivel avanza entre mensajes del servidor
+  const relojAscenso = setInterval(pintarAscensoHud, 1000);
+  limpiarPantalla = () => { clearInterval(sondeo); clearInterval(relojAscenso); desmontarCiudad3D(); };
   renderPanelEdificios();
   renderPanelRecursos();
   renderPanelAsent();
@@ -2119,10 +2123,31 @@ function pintarBlasones(p: ProyeccionJugador, a: Asentamiento): void {
   if (hud) pintar(hud, `<span class="asent-blason-escudo">${svgSigilo(f?.sigilo, 64, { granRey: f?.granRey })}</span>
       <span class="asent-blason-texto"><strong class="asent-nombre">${nombre}</strong><small>${faccion}</small>${opera}</span>
       ${medallonNivel(a.nivel, '', `Plaza de nivel ${a.nivel}`)}`, undefined, 'blason');
+  pintarAscensoHud();
   const grande = document.querySelector<HTMLElement>('.asent-ventana-blason');
   if (grande) pintar(grande, `<span class="asent-ventana-escudo">${svgSigilo(f?.sigilo, 132, { granRey: f?.granRey })}</span>
       <h2 class="asent-ventana-nombre">${nombre}</h2><span class="asent-ventana-faccion">${faccion}</span>
       <span class="asent-ventana-nivel">${medallonNivel(a.nivel, '', `Plaza de nivel ${a.nivel}`)}<span>Nivel ${a.nivel}</span>${opera}</span>`, undefined, 'blason-grande');
+}
+
+/** La subida de nivel en curso de la plaza (`ascenso`), bajo el blasón y encima del minimapa (Víctor, 2026-11-02): a qué nivel sube, cuánto
+ * lleva, lo que falta y la barra, que avanza cada segundo. Sin obra de ascenso no se ve. */
+function pintarAscensoHud(): void {
+  const hud = document.querySelector<HTMLElement>('.asent-ascenso-hud');
+  if (!hud) return;
+  const p = estadoCliente.proyeccionUltima, x = p?.asentamientos[0]?.ascenso;
+  hud.hidden = !x;
+  if (!p || !x) { delete hud.dataset.nivel; return; }
+  if (hud.dataset.nivel !== String(x.nivelObjetivo)) {
+    hud.dataset.nivel = String(x.nivelObjetivo);
+    hud.innerHTML = `<span class="asent-ascenso-hud-cab"><span>Subiendo a <b>nivel ${x.nivelObjetivo}</b></span><b class="asent-ascenso-hud-pct"></b></span>${barraAvance(0)}<small class="asent-ascenso-hud-falta"></small>`;
+  }
+  const t = instanteDeMundo() ?? p.instante, total = x.completaEn - x.iniciadoEn;
+  const hecho = total > 0 ? Math.max(0, Math.min(1, (t - x.iniciadoEn) / total)) : 1;
+  const textos: [string, string][] = [['.asent-ascenso-hud-pct', `${Math.floor(hecho * 100)} %`], ['.asent-ascenso-hud-falta', x.completaEn > t ? `⏳ faltan ${textoEnTiempoReal(x.completaEn - t)}` : '⏳ terminando']];
+  for (const [sel, texto] of textos) { const el = hud.querySelector<HTMLElement>(sel); if (el && el.textContent !== texto) el.textContent = texto; }
+  const barra = hud.querySelector<HTMLElement>('.obra-barra i');
+  if (barra) barra.style.width = `${(hecho * 100).toFixed(1)}%`;
 }
 
 /** La vista 3D de la plaza montada ahora (`src/ciudad3d/`), con el 2D de siempre de minimapa en su esquina. */

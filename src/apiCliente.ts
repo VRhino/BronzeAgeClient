@@ -480,6 +480,12 @@ export function costeDeLiderazgo(tropaId: string): number {
 
 /** La proyección recalculada en este instante, sin red y sin esperar a un cambio: las columnas avanzan por su plan (`Plan`) y el servidor no
  * manda nada mientras marchan, así que el mapa la pide en cada fotograma para que se muevan seguido. `null` sin sesión o sin héroe. */
+/** El instante de mundo de ahora (ms del contrato), contando lo que corrió desde el último mensaje; `null` sin sesión. Para lo que avanza
+ * solo entre mensajes, como la barra de una obra. */
+export function instanteDeMundo(): number | null {
+  return sesion?.bienvenida ? sesion.ahoraMundo() : null;
+}
+
 export function proyeccionAlInstante(): ProyeccionJugador | null {
   if (!sesion?.bienvenida || sesion.estado === 'cerrada') return null;
   const p = proyeccionActual(sesion);
