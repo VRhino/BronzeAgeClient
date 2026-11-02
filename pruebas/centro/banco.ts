@@ -9,9 +9,10 @@ import '../../src/style.css';
 import { bloqueDeDatos } from '../../src/apiCliente';
 import { estadoCliente } from '../../src/ui/estadoCliente';
 import { cablearPlegables } from '../../src/ui/plegable';
-import { cablearCargosPlaza, cablearResumenPlaza, htmlAscensoPlaza, htmlCargosPlaza, htmlResumenPlaza } from '../../src/ui/panelCentro';
+import { cablearCargosPlaza, htmlAscensoPlaza, htmlAutoConstruccion, htmlCargosPlaza } from '../../src/ui/panelCentro';
+import { htmlPieDePlaza } from '../../src/ui/hudPlaza';
 import { htmlResidentesPlaza } from '../../src/ui/participacion';
-import { SUBPESTANA_RESIDENCIA } from '../../src/ui/panelResidencia';
+import { cablearResidencia, htmlCapital, htmlResidencia } from '../../src/ui/panelResidencia';
 import { cablearReclutamiento, htmlReclutamiento } from '../../src/ui/reclutamiento';
 import { cablearPanelIntel, renderPanelIntel } from '../../src/ui/panelIntel';
 import { tarifasDeIntel } from '../../src/apiCliente';
@@ -62,12 +63,14 @@ function ver(): void {
     return;
   }
   const contenido = sub === 'resumen'
-    ? htmlResumenPlaza(ctx) + `<div class="asent-resumen-residencia">${SUBPESTANA_RESIDENCIA.html(ctx)}</div>`
+    // desde la 0.97.0 no hay Resumen: la población y los medidores van en la barra de abajo, la auto-construcción en Construcción y la residencia y
+    // la capital cuelgan del blasón; aquí se ven juntos para probarlos
+    ? `<div class="asent-pie" style="position:static">${htmlPieDePlaza(a, e)}</div>${htmlAutoConstruccion(a)}<div class="resid-tarjetas">${htmlResidencia(ctx)}${htmlCapital(ctx)}</div>`
     : htmlCargosPlaza(ctx, htmlResidentesPlaza(p, a, e));
   const tabs = `<div class="asent-tabs asent-subtabs">${[['resumen', 'Resumen'], ['edificios', 'Edificios'], ['cargos', 'Cargos'], ['muralla', 'Muralla'], ['puerta', 'Puerta']].map(([id, n]) => `<button class="asent-tab${id === sub ? ' activo' : ''}" type="button">${n}</button>`).join('')}</div>`;
   cuerpo.innerHTML = `${ascenso ? `<section class="asent-ascenso">${ascenso}</section>` : ''}${tabs}<div class="asent-lado-cuerpo">${contenido}</div>`;
   cablearPlegables(cuerpo);
-  if (sub === 'resumen') { cablearResumenPlaza(ctx); SUBPESTANA_RESIDENCIA.cablear?.(ctx); } else cablearCargosPlaza(ctx);
+  if (sub === 'resumen') cablearResidencia(ctx); else cablearCargosPlaza(ctx);
 }
 document.querySelectorAll<HTMLButtonElement>('[data-escena]').forEach((b) => b.addEventListener('click', () => { esc = b.dataset.escena as Escena; ver(); }));
 document.querySelectorAll<HTMLButtonElement>('#mandos [data-sub]').forEach((b) => b.addEventListener('click', () => { sub = b.dataset.sub!; ver(); }));

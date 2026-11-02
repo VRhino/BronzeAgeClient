@@ -3267,6 +3267,12 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .diario-cab { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--bronce-osc); background: linear-gradient(180deg, rgba(169, 121, 63, 0.18), transparent); }
 .diario-cab-titulo { flex: 1; font-family: var(--fuente-titulo); font-size: 1.15rem; letter-spacing: 0.06em; color: var(--oro-claro); }
 .diario-cab small { color: var(--text-secondary); font-size: 0.78rem; }
+.diario-vistas { display: flex; gap: 4px; }
+.diario-vista { padding: 4px 12px; font-family: var(--fuente-titulo); font-size: 0.78rem; letter-spacing: 0.05em; color: var(--pergamino); background: rgba(18, 14, 9, 0.6); border: 1px solid var(--bronce-osc); border-radius: 2px; cursor: pointer; }
+.diario-vista:hover { border-color: var(--bronce); color: var(--oro-claro); }
+.diario-vista.activo { color: var(--oro-claro); border-color: var(--oro); background: linear-gradient(180deg, rgba(118, 86, 42, 0.9), rgba(52, 37, 18, 0.9)); }
+/* el tablón de la plaza, a todo lo ancho de la ventana */
+.diario-cuerpo.diario-tablon { display: block; overflow-y: auto; padding: 12px 16px 16px; }
 .diario-cerrar { background: none; border: 1px solid var(--bronce-osc); color: var(--oro); width: 28px; height: 28px; border-radius: 3px; cursor: pointer; }
 .diario-cerrar:hover { border-color: var(--oro); color: var(--oro-claro); }
 .diario-cuerpo { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(200px, 34%) 1fr; }
@@ -4626,14 +4632,20 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .obra-mapa .anillo-estado, .pueblo-tarjeta .pueblo-alerta { margin-left: auto; }
 
 /* =====================================================================================
-   PLAZA EN 3D A PANTALLA COMPLETA (`.plaza-3d`; petición de Víctor del 2026-11-02)
-   La escena 3D llena la pantalla y todo lo demás flota encima, como el HUD de un juego de estrategia: la barra del jugador transparente
-   (como en el mundo) con el botón «Asentamiento»; arriba a la izquierda el blasón de la plaza (escudo de la Facción dueña, nombre y nivel),
-   el minimapa, la ficha del edificio elegido y el rastreador de misiones; arriba a la derecha «Ejércitos» y «Salir al mundo»; abajo al
-   centro, el almacén. «Asentamiento» abre a pantalla completa la ventana con lo que antes iba en la columna derecha. Solo la plaza: el
-   campamento y el pueblo comparten las clases `asent-*` y no cambian.
+   PLAZA EN 3D A PANTALLA COMPLETA (`.plaza-3d`; peticiones de Víctor del 2026-11-02)
+   La escena 3D llena la pantalla y todo lo demás flota encima, repartido por los bordes como el HUD de un juego de estrategia («rehacer la
+   interfaz de asentamiento», 0.97.0): arriba a la izquierda el blasón, la subida en curso, el riel de las ventanas y las obras en marcha; al
+   borde derecho el rastreador de misiones y la ficha del edificio elegido; arriba a la derecha «Ejércitos» y «Salir al mundo»; arriba al
+   centro la franja de la ocupación; abajo, Población, Almacén y Estado; abajo a la derecha, pegado a los bordes, el minimapa. Cada ventana
+   del riel se abre a media pantalla junto a él, sin tapar la ciudad entera. Solo la plaza: el campamento y el pueblo comparten las clases
+   `asent-*` y no cambian.
    ===================================================================================== */
-.plaza-3d { background: #0b0805; }
+.plaza-3d {
+  --col-izq: clamp(240px, 28vmin, 300px);
+  --minimapa: clamp(170px, 25vmin, 260px);
+  --pie-alto: 66px;
+  background: #0b0805;
+}
 
 /* La barra del jugador, transparente sobre la escena y con los botones en icono (igual que en el mundo). */
 .plaza-3d > .jugador-barra {
@@ -4667,29 +4679,16 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .plaza-3d .jugador-botones button.activo { background: rgba(48, 34, 18, 0.9); border-color: var(--oro); }
 .plaza-3d .jugador-nombre { display: none; }
 .plaza-3d .jugador-botones .jugador-badge { position: absolute; top: -5px; right: -6px; margin: 0; min-width: 16px; line-height: 16px; text-align: center; padding: 0 4px; }
-/* «Asentamiento»: el botón extra, con su nombre y en oro, el primero de la derecha. */
-.plaza-3d .jugador-botones .jugador-boton-asent {
-  width: auto;
-  gap: 7px;
+/* «?»: Información (el glosario de la plaza), el primero de la derecha, en oro. */
+.plaza-3d .jugador-botones .jugador-boton-info {
   margin-right: 6px;
-  padding: 0 16px 0 11px;
-  border-radius: 19px;
   border-color: var(--oro);
-  background: linear-gradient(180deg, rgba(118, 86, 42, 0.96), rgba(52, 37, 18, 0.96));
   color: var(--oro-claro);
   font-family: var(--fuente-titulo);
-  font-size: 0.86rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 1.1rem;
+  font-weight: 700;
 }
-.plaza-3d .jugador-botones .jugador-boton-asent .jugador-nombre { display: inline; }
-.plaza-3d .jugador-botones .jugador-boton-asent .jugador-icono { color: var(--oro-claro); }
-.plaza-3d .jugador-botones .jugador-boton-asent:hover { background: linear-gradient(180deg, rgba(150, 110, 52, 0.96), rgba(70, 50, 24, 0.96)); }
-.plaza-3d .jugador-botones .jugador-boton-asent.activo {
-  background: linear-gradient(180deg, rgba(170, 126, 60, 0.98), rgba(84, 60, 28, 0.98));
-  box-shadow: 0 0 0 1px #ffd24a, 0 0 14px rgba(255, 210, 74, 0.4);
-}
+.plaza-3d .jugador-botones .jugador-boton-info.activo { box-shadow: 0 0 0 1px #ffd24a, 0 0 14px rgba(255, 210, 74, 0.4); }
 
 /* La escena, a toda la pantalla (también bajo la barra). */
 .plaza-3d .asent-cuerpo,
@@ -4703,14 +4702,15 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
   overflow: hidden;
 }
 
-/* Arriba a la izquierda: blasón, minimapa, ficha del edificio y rastreador, en una columna que flota (los clics pasan a la escena). */
+/* Arriba a la izquierda: blasón, lo que cuelga de él, la subida en curso, el riel y las obras, en una columna que flota (los clics pasan a la
+   escena). */
 .plaza-3d .asent-izq {
   position: absolute;
   top: calc(var(--jugador-alto) + 8px);
   left: 16px;
   z-index: 2;
-  width: clamp(240px, 28vmin, 300px);
-  max-height: calc(100% - var(--jugador-alto) - 84px);
+  width: var(--col-izq);
+  max-height: calc(100% - var(--jugador-alto) - var(--pie-alto) - 24px);
   padding: 0;
   gap: 10px;
   order: 0;
@@ -4723,14 +4723,27 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
   pointer-events: none;
 }
 .plaza-3d .asent-izq > * { pointer-events: auto; }
-.plaza-3d .asent-izq .asent-ficha { order: -1; }
-.plaza-3d .asent-izq .misiones-rastreador { margin-bottom: 0; }
-.plaza-3d .asent-izq .asent-minimapa {
-  order: -2;
-  position: relative;
-  width: 100%;
-  cursor: pointer;
+.plaza-3d .asent-izq > [hidden] { display: none; }
+
+/* Al borde derecho, bajo «Ejércitos» y «Salir al mundo»: el rastreador de misiones y la ficha del edificio elegido. */
+.asent-der {
+  position: absolute;
+  top: calc(var(--jugador-alto) + 62px);
+  right: 16px;
+  bottom: calc(var(--minimapa) + 12px);
+  z-index: 2;
+  width: clamp(230px, 22vw, 320px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  scrollbar-width: none;
+  pointer-events: none;
 }
+.asent-der > * { pointer-events: auto; flex-shrink: 0; }
+.asent-der:empty, .asent-der:not(:has(> :not([hidden]))) { display: none; }
+.asent-der .misiones-rastreador { margin-bottom: 0; }
+.asent-der .asent-ficha { order: 1; }
 
 /* El blasón: el escudo completo de la Facción dueña, el nombre de la ciudad, su Facción y el medallón del nivel. */
 .asent-blason {
@@ -4753,8 +4766,36 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .asent-blason-texto small { font-size: 0.74rem; color: var(--pergamino); overflow-wrap: break-word; }
 .asent-blason-texto small.asent-blason-opera,
 .asent-ventana-nivel .asent-blason-opera { font-size: 0.7rem; color: var(--obra-ambar); }
-.asent-blason .medallon-nivel { position: absolute; left: 50px; bottom: 4px; width: 28px; height: 32px; }
+.asent-blason { order: -5; }
+.asent-blason-medallon { position: absolute; left: 50px; bottom: 4px; display: flex; padding: 0; background: none; border: 0; border-radius: 50%; }
+button.asent-blason-medallon { cursor: pointer; }
+button.asent-blason-medallon:hover .medallon-nivel, button.asent-blason-medallon:focus-visible .medallon-nivel { filter: drop-shadow(0 0 6px rgba(255, 210, 74, 0.7)); }
+.asent-blason .medallon-nivel { width: 28px; height: 32px; }
 .asent-blason .medallon-nivel b { font-size: 0.85rem; }
+/* ya se puede pedir la subida: el medallón late en oro */
+.asent-blason-medallon.listo .medallon-nivel { animation: medallon-listo 1.8s ease-in-out infinite; }
+.asent-blason-medallon.listo::after { content: "⬆"; position: absolute; right: -9px; top: -7px; width: 15px; height: 15px; display: grid; place-items: center; border-radius: 50%; background: var(--obra-verde); color: #0f1a0b; font-size: 0.6rem; font-weight: 700; box-shadow: 0 0 6px rgba(127, 207, 106, 0.8); }
+@keyframes medallon-listo { 50% { filter: drop-shadow(0 0 8px rgba(255, 210, 74, 0.95)); } }
+/* el nombre con su lápiz, y el campo para cambiarlo */
+.asent-blason-nombre { display: flex; align-items: baseline; gap: 4px; min-width: 0; }
+.asent-blason-lapiz { flex: none; padding: 0 4px; font-size: 0.8rem; line-height: 1.3; color: var(--oro); background: none; border: 1px solid transparent; border-radius: 2px; cursor: pointer; opacity: 0.6; }
+.asent-blason-lapiz:hover, .asent-blason-lapiz:focus-visible { opacity: 1; border-color: var(--bronce-osc); }
+.asent-blason-renombrar { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.asent-blason:has(.asent-blason-renombrar) .asent-blason-iconos { display: none; }
+.asent-blason-renombrar input { flex: 1; min-width: 0; padding: 3px 6px; font-size: 0.88rem; }
+.asent-blason-renombrar button { flex: none; width: 24px; height: 24px; padding: 0; display: grid; place-items: center; background: rgba(20, 15, 10, 0.9); border: 1px solid var(--bronce-osc); border-radius: 2px; color: var(--pergamino); cursor: pointer; }
+.asent-blason-renombrar .asent-blason-ok { border-color: var(--obra-verde); color: #c8f5b8; }
+/* la casa (resides aquí o no) y la corona (capital), a la derecha del blasón */
+.asent-blason-iconos { flex: none; align-self: flex-start; display: flex; flex-direction: column; gap: 6px; }
+.asent-blason-icono { width: 28px; height: 28px; display: grid; place-items: center; padding: 0; background: rgba(14, 10, 7, 0.86); border: 1px solid rgba(169, 121, 63, 0.55); border-radius: 50%; color: var(--text-secondary); cursor: pointer; }
+.asent-blason-icono:hover { border-color: var(--oro); color: var(--oro-claro); }
+.asent-blason-icono.dentro { color: var(--oro-claro); border-color: var(--oro); background: radial-gradient(circle, rgba(118, 86, 42, 0.95), rgba(52, 37, 18, 0.95)); }
+.asent-blason-icono.fuera { border-style: dashed; }
+.asent-blason-icono[aria-expanded="true"] { box-shadow: 0 0 0 1px #ffd24a, 0 0 10px rgba(255, 210, 74, 0.4); }
+/* lo que cuelga de la casa o de la corona: su tarjeta, pegada al blasón */
+.asent-blason-pop { order: -4; margin-top: -8px; padding: 8px; background: linear-gradient(180deg, rgba(38, 28, 17, 0.96), rgba(18, 13, 8, 0.96)); border: 1px solid var(--bronce); border-radius: 3px; box-shadow: var(--placa-sutil); }
+.asent-blason-pop .resid-tarjeta { grid-template-columns: auto minmax(0, 1fr); }
+.asent-blason-pop .resid-tarjeta > button { grid-column: 1 / -1; justify-self: end; }
 
 /* Arriba a la derecha, bajo la barra: «Ejércitos» y «Salir al mundo»; el panel de Ejércitos se abre debajo. */
 .plaza-3d .asent-barra {
@@ -4784,137 +4825,158 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
   overflow-y: auto;
 }
 
-/* Abajo al centro: el almacén, flotando. */
-.plaza-3d .asent-recursos {
+/* Abajo: Población, Almacén y Estado, tres placas separadas con su letrero encima, centradas en lo que deja el minimapa. */
+.asent-pie[hidden] { display: none; }
+.plaza-3d .asent-pie {
   position: absolute;
   left: 16px;
-  right: 16px;
-  bottom: 16px;
+  right: calc(var(--minimapa) + 16px);
+  bottom: 12px;
   z-index: 2;
-  width: fit-content;
-  max-width: calc(100% - 32px);
-  margin: 0 auto;
-  box-shadow: var(--placa);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 16px 10px;
+  pointer-events: none;
 }
+.asent-pie-grupo {
+  --acento: var(--oro);
+  position: relative;
+  pointer-events: auto;
+  padding: 11px 8px 6px;
+  background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg));
+  border: 1px solid var(--bronce);
+  border-radius: 3px;
+  box-shadow: inset 0 2px 0 var(--acento), var(--placa);
+}
+.asent-pie-poblacion { --acento: #9fb7c9; }
+.asent-pie-estado { --acento: var(--obra-verde); }
+.asent-pie-titulo { position: absolute; top: -9px; left: 10px; padding: 1px 8px; font-family: var(--fuente-titulo); font-size: 0.62rem; line-height: 1.4; letter-spacing: 0.14em; text-transform: uppercase; color: var(--acento); background: var(--marco-bg); border: 1px solid var(--bronce); border-radius: 2px; }
+.asent-pie-piezas { display: flex; flex-wrap: wrap; justify-content: center; align-items: stretch; gap: 5px; }
+.asent-pie .asent-recurso { padding: 4px 8px 8px; }
+.asent-pie-raya { width: 1px; margin: 2px 3px; background: rgba(169, 121, 63, 0.45); }
+/* Estado: el color va con cómo está (verde, ámbar, rojo; en rojo late) */
+.asent-recurso.tono-bien { --tono: var(--obra-verde); }
+.asent-recurso.tono-medio { --tono: var(--obra-ambar); }
+.asent-recurso.tono-mal { --tono: var(--obra-rojo); border-color: var(--obra-rojo); animation: obra-latido 1.6s ease-in-out infinite; }
+.asent-recurso[class*="tono-"] { color: var(--tono); }
+.asent-recurso[class*="tono-"] .asent-recurso-barra::before { background: var(--tono); box-shadow: 0 0 4px var(--tono); }
+
+/* Abajo a la derecha, pegado a los bordes: el minimapa (un clic lleva la vista ahí). */
+.plaza-3d .asent-minimapa {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  width: var(--minimapa);
+  border-width: 1px 0 0 1px;
+  border-radius: 4px 0 0 0;
+  cursor: pointer;
+}
+
+/* Arriba al centro, mientras dura: la ocupación militar. */
+.asent-ocupacion[hidden] { display: none; }
+.asent-ocupacion { position: absolute; top: calc(var(--jugador-alto) + 6px); left: 50%; transform: translateX(-50%); z-index: 3; display: flex; align-items: center; gap: 8px; padding: 6px 14px; background: linear-gradient(180deg, rgba(110, 28, 20, 0.95), rgba(60, 14, 10, 0.95)); border: 1px solid #d9573f; border-radius: 3px; box-shadow: 0 0 14px rgba(217, 87, 63, 0.4), var(--placa-sutil); color: #f4d6c8; font-size: 0.85rem; white-space: nowrap; }
+.asent-ocupacion strong { font-family: var(--fuente-titulo); letter-spacing: 0.05em; color: #ffe2d6; }
+.asent-ocupacion span:last-child { font-size: 0.78rem; color: #f0b39f; }
+body:has(.asent-ocupacion:not([hidden])) .aviso-global,
+body:has(.asent-ocupacion:not([hidden])) .eleccion-clic { top: calc(var(--jugador-alto) + 52px); }
+
+/* El riel: una columna de iconos, uno por ventana; al pasar, su nombre a la derecha. */
+.asent-riel { order: -2; display: flex; flex-direction: column; gap: 6px; width: fit-content; }
+.asent-riel-boton { position: relative; width: 46px; height: 46px; display: grid; place-items: center; padding: 0; background: linear-gradient(180deg, rgba(38, 28, 17, 0.94), rgba(18, 13, 8, 0.94)); border: 1px solid var(--bronce); border-radius: 3px; box-shadow: var(--placa-sutil); color: var(--oro); cursor: pointer; }
+.asent-riel-boton .icono-edificio { display: block; }
+.asent-riel-boton:hover, .asent-riel-boton:focus-visible { border-color: var(--oro); color: var(--oro-claro); --relleno: rgba(216, 184, 120, 0.35); outline: none; }
+.asent-riel-boton.activo { border-color: var(--oro); color: var(--oro-claro); --relleno: rgba(216, 184, 120, 0.4); background: linear-gradient(180deg, rgba(118, 86, 42, 0.96), rgba(52, 37, 18, 0.96)); box-shadow: inset 3px 0 0 var(--oro), 0 0 12px rgba(255, 210, 74, 0.3); }
+.asent-riel-boton.bloqueada { color: var(--text-muted); border-color: var(--bronce-osc); --relleno: rgba(120, 100, 70, 0.15); }
+.asent-riel-boton.bloqueada::before { content: "🔒"; position: absolute; right: 2px; bottom: 1px; font-size: 0.6rem; }
+.asent-riel-boton::after { content: attr(data-etiqueta); position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%); padding: 4px 10px; white-space: nowrap; font-family: var(--fuente-titulo); font-size: 0.78rem; letter-spacing: 0.05em; color: var(--oro-claro); background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg)); border: 1px solid var(--bronce); border-radius: 2px; box-shadow: var(--placa-sutil); opacity: 0; pointer-events: none; transition: opacity 0.12s; z-index: 5; }
+.asent-riel-boton:hover::after, .asent-riel-boton:focus-visible::after { opacity: 1; }
+.asent-riel-insignia { position: absolute; top: -5px; right: -6px; min-width: 16px; padding: 0 4px; line-height: 16px; text-align: center; font-size: 0.66rem; font-style: normal; color: #1b1308; background: var(--obra-ambar); border-radius: 8px; }
+/* el riel va pegado al borde: la columna no recorta sus nombres */
+.plaza-3d .asent-izq:has(.asent-riel-boton:hover) { overflow: visible; }
+
+/* Bajo el riel: las obras en marcha (las 3 que antes acaban) y cuántas esperan; un clic abre Construcción. */
+.asent-obras-hud { order: -1; }
+.obras-hud { width: 100%; display: flex; flex-direction: column; gap: 4px; padding: 7px 9px 8px; text-align: left; font: inherit; color: var(--pergamino); background: linear-gradient(180deg, rgba(38, 28, 17, 0.92), rgba(18, 13, 8, 0.92)); border: 1px solid var(--bronce); border-radius: 3px; box-shadow: var(--placa-sutil); cursor: pointer; }
+.obras-hud:hover { border-color: var(--oro); }
+.obras-hud-cab { font-family: var(--fuente-titulo); font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--oro); }
+.obras-hud-fila { display: flex; align-items: center; gap: 8px; }
+.obras-hud-icono { flex: none; display: flex; color: var(--obra-ambar); }
+.obras-hud-texto { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.obras-hud-texto strong { font-size: 0.8rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.obras-hud-texto small { font-size: 0.68rem; color: var(--text-secondary); }
+.obras-hud-falta { flex: none; font-size: 0.74rem; font-weight: 600; color: var(--obra-ambar); font-variant-numeric: tabular-nums; }
+.obras-hud-mas { font-size: 0.68rem; color: var(--text-secondary); }
 
 /* Sin WebGL: el 2D vuelve al centro, a pantalla entera, entre la barra y el almacén. */
 .plaza-3d.sin-3d .asent-mapa { padding: calc(var(--jugador-alto) + 16px) 16px 72px; }
 
-/* La ventana «Asentamiento»: a pantalla completa bajo la barra, con el aire de la de Facción (escudo, nombre, nivel y las pestañas de los
-   edificios en el lateral; el contenido a la derecha). Se cierra con ✕, Esc, el mismo botón o un clic fuera del marco. */
+/* Las ventanas de la plaza: a media pantalla, junto a la columna izquierda y entre la barra de arriba y la de abajo, sin tapar el resto de la
+   ciudad (se sigue viendo y se puede tocar). Una sola abierta; se cierra con ✕, Esc o su icono del riel. Mercado y Reclutamiento van más
+   anchas; la subida de nivel, más estrecha. */
 .asent-ventana[hidden] { display: none; }
 .asent-ventana {
   position: absolute;
-  inset: 0;
+  top: calc(var(--jugador-alto) + 8px);
+  left: calc(16px + var(--col-izq) + 12px);
   z-index: 4;
+  width: min(600px, calc(100% - var(--col-izq) - 60px));
+  max-height: calc(100% - var(--jugador-alto) - var(--pie-alto) - 30px);
   display: flex;
-  padding: calc(var(--jugador-alto) + 12px) 16px 16px;
-  background: rgba(6, 4, 2, 0.5);
-  color-scheme: dark;
-}
-.asent-ventana-marco {
-  position: relative;
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  gap: 18px;
-  padding: 18px;
+  flex-direction: column;
   background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg));
   border: 1px solid var(--bronce);
   border-radius: 3px;
   box-shadow: var(--placa);
+  color-scheme: dark;
+  animation: ventana-plaza-entra 0.16s ease-out;
 }
-.asent-ventana-marco::after {
-  content: "";
-  position: absolute;
-  left: 8px;
-  right: 8px;
-  top: 6px;
-  height: 4px;
-  background: var(--denticulo);
-  opacity: 0.5;
-  pointer-events: none;
-}
-.asent-ventana-lateral {
-  flex: 0 0 25%;
-  min-width: 220px;
-  max-width: 340px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 14px 12px;
-  overflow-y: auto;
-  border: 1px solid var(--bronce-osc);
-  border-radius: 3px;
-  background: rgba(0, 0, 0, 0.2);
-}
-.asent-ventana-blason {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid rgba(169, 121, 63, 0.3);
-  text-align: center;
-}
-.asent-ventana-escudo { display: flex; justify-content: center; width: 100%; padding: 6px 0 2px; }
-.asent-ventana-escudo .sigilo { display: block; width: min(150px, 62%); height: auto; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5)); }
-.asent-ventana-nombre { margin: 4px 0 0; font-family: var(--fuente-titulo); font-size: 1.4rem; color: var(--oro-claro); overflow-wrap: anywhere; }
-.asent-ventana-faccion { font-size: 0.85rem; color: var(--text-secondary); }
-.asent-ventana-nivel { display: flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: 4px 8px; margin-top: 4px; font-family: var(--fuente-titulo); font-size: 1rem; color: var(--oro); }
-/* Las pestañas de los edificios, en vertical y con su icono. */
-.asent-ventana-lateral .asent-tabs { flex-direction: column; flex-wrap: nowrap; gap: 6px; margin: 0; }
-.asent-ventana-lateral .asent-tabs-ancho .asent-tab {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 12px;
-  text-align: left;
-  font-family: var(--fuente-titulo);
-  font-size: 0.92rem;
-  letter-spacing: 0.04em;
-}
-.asent-ventana-lateral .asent-tab.activo { box-shadow: inset 3px 0 0 var(--oro), inset 0 0 12px rgba(216, 184, 120, 0.2); }
-.asent-ventana-lateral .asent-lado-nota { margin-top: 10px; }
-.asent-tab-icono { display: inline-flex; flex: none; }
-.asent-tab-icono svg { display: block; width: 26px; height: 26px; }
-.asent-ventana-principal { flex: 1; min-width: 0; overflow-y: auto; padding: 4px 44px 4px 4px; }
-.asent-ventana-principal .asent-edif-cuerpo { width: min(100%, 980px); margin: 0 auto; }
-.asent-ventana-cerrar {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  z-index: 1;
-  width: 30px;
-  height: 30px;
-  background: rgba(20, 15, 10, 0.9);
-  border: 1px solid var(--bronce-osc);
-  border-radius: 3px;
-  color: var(--oro);
-  cursor: pointer;
-}
+.asent-ventana[data-ancho="ancha"] { width: min(920px, calc(100% - var(--col-izq) - 60px)); }
+.asent-ventana[data-ancho="estrecha"] { width: min(460px, calc(100% - var(--col-izq) - 60px)); }
+@keyframes ventana-plaza-entra { from { opacity: 0; transform: translateX(-10px); } }
+.asent-ventana::after { content: ""; position: absolute; left: 8px; right: 8px; top: 5px; height: 4px; background: var(--denticulo); opacity: 0.5; pointer-events: none; }
+.asent-ventana-cab { flex: none; display: flex; align-items: center; gap: 10px; padding: 14px 12px 10px 16px; border-bottom: 1px solid rgba(169, 121, 63, 0.3); }
+.asent-ventana-titulo { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; color: var(--oro); }
+.asent-ventana-titulo h2 { margin: 0; font-family: var(--fuente-titulo); font-size: 1.15rem; letter-spacing: 0.06em; color: var(--oro-claro); }
+.asent-ventana-icono { flex: none; display: flex; }
+.asent-ventana-icono .medallon-nivel { width: 26px; height: 30px; }
+.asent-ventana-interrogacion { width: 26px; height: 26px; display: grid; place-items: center; border: 1px solid var(--oro); border-radius: 50%; font-family: var(--fuente-titulo); color: var(--oro-claro); }
+.asent-ventana-cerrar { flex: none; width: 30px; height: 30px; background: rgba(20, 15, 10, 0.9); border: 1px solid var(--bronce-osc); border-radius: 3px; color: var(--oro); cursor: pointer; }
 .asent-ventana-cerrar:hover { border-color: var(--oro); color: var(--oro-claro); }
+.asent-ventana .asent-edif-cuerpo { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px 16px; }
+.asent-ventana .asent-subtabs { margin-top: 0; }
 
-/* Estrecho: la columna izquierda más estrecha, el botón «Asentamiento» en icono y la ventana en una sola columna. */
+/* Pantallas medianas (1280 × 720): la barra de abajo más apretada para que quepa en una fila, y el riel más bajo. */
+@media (max-width: 1440px) {
+  .plaza-3d .asent-pie { gap: 16px 6px; }
+  .asent-pie-grupo { padding: 10px 5px 5px; }
+  .asent-pie-piezas { gap: 3px; }
+  .asent-pie .asent-recurso { gap: 3px; padding: 3px 5px 7px; font-size: 0.76rem; }
+  .asent-pie .asent-recurso-icono { font-size: 0.85rem; }
+}
+@media (max-height: 820px) {
+  .asent-riel { gap: 4px; }
+  .asent-riel-boton { width: 40px; height: 40px; }
+  .asent-riel-boton .icono-edificio { width: 24px; height: 24px; }
+  .obras-hud-fila:nth-of-type(n + 4) { display: none; }
+}
+
+/* Estrecho: la columna izquierda más estrecha, el minimapa más pequeño y la ventana a todo lo ancho, encima de todo. */
 @media (max-width: 900px) {
-  .plaza-3d .asent-izq { width: clamp(150px, 40vw, 240px); }
+  .plaza-3d { --col-izq: clamp(150px, 40vw, 240px); --minimapa: clamp(110px, 28vmin, 170px); }
   .plaza-3d .asent-blason { gap: 6px; padding: 6px; }
   .plaza-3d .asent-blason-escudo .sigilo { width: 40px; }
   .plaza-3d .asent-blason-texto .asent-nombre { font-size: 0.92rem; }
-  .plaza-3d .asent-blason .medallon-nivel { left: 32px; bottom: 2px; width: 22px; height: 25px; }
+  .plaza-3d .asent-blason-medallon { left: 32px; bottom: 2px; }
+  .plaza-3d .asent-blason .medallon-nivel { width: 22px; height: 25px; }
   .plaza-3d .asent-blason .medallon-nivel b { font-size: 0.72rem; }
-  .plaza-3d .jugador-botones .jugador-boton-asent { width: 38px; margin-right: 0; padding: 0; border-radius: 50%; }
-  .plaza-3d .jugador-botones .jugador-boton-asent .jugador-nombre { display: none; }
   .plaza-3d .asent-barra-acciones { flex-direction: column; align-items: flex-end; }
-  .asent-ventana { padding: calc(var(--jugador-alto) + 6px) 6px 6px; }
-  .asent-ventana-marco { flex-direction: column; gap: 12px; padding: 12px; overflow-y: auto; }
-  .asent-ventana-lateral { flex: none; min-width: 0; max-width: none; overflow: visible; }
-  .asent-ventana-escudo .sigilo { width: 84px; }
-  .asent-ventana-lateral .asent-tabs { flex-direction: row; flex-wrap: wrap; }
-  .asent-ventana-lateral .asent-tabs-ancho .asent-tab { flex: 1 1 40%; }
-  .asent-ventana-principal { overflow: visible; padding: 0; }
+  .asent-der { width: clamp(180px, 38vw, 260px); top: calc(var(--jugador-alto) + 96px); }
+  .asent-ventana, .asent-ventana[data-ancho] { left: 6px; right: 6px; width: auto; top: calc(var(--jugador-alto) + 6px); max-height: calc(100% - var(--jugador-alto) - 12px); z-index: 6; }
+  .asent-riel-boton { width: 40px; height: 40px; }
+  .asent-riel-boton .icono-edificio { width: 24px; height: 24px; }
 }
 /* Móvil: no caben el nombre del héroe y once botones; el nombre ya lo dicen el blasón y el avatar, y los botones se desplazan de lado. */
 @media (max-width: 600px) {

@@ -166,7 +166,8 @@ export function cablearVistaCiudad(
   fichaEl = document.createElement('aside');
   fichaEl.className = 'asent-ficha';
   fichaEl.hidden = true;
-  (contenedor.querySelector('.asent-izq') ?? mapa).appendChild(fichaEl);
+  // en la plaza, al borde derecho (`.asent-der`, desde la 0.97.0); en las demás pantallas, en la columna izquierda
+  (contenedor.querySelector('.asent-der') ?? contenedor.querySelector('.asent-izq') ?? mapa).appendChild(fichaEl);
   alCambiar = () => { o.redibujar(); o.repintarLista(); repintarFicha(); };
   alElegirDeLista = o.enfocar ?? (() => undefined);
 

@@ -3,6 +3,30 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.98.0] — 2026-11-02 · La plaza repartida por los bordes · sin cambios de contrato (`VRhino/BronzeAge@a17f8536`)
+
+Petición de Víctor (2026-11-02): la interfaz del asentamiento metía demasiado en muy poco espacio. Se reparte por los bordes de la
+pantalla y cada parte va en su propia ventana (`src/ui/hudPlaza.ts`).
+
+- **El pie de la pantalla, en tres grupos separados por color**: **Población** (total frente al techo del nivel y cada clase frente a su
+  sitio), **Almacén** y **Estado** (nutrición y mantenimiento en verde, ámbar o rojo). El detalle, al pasar el ratón.
+- **El minimapa, abajo a la derecha y pegado a los bordes.**
+- **El blasón lo reúne todo de la plaza**: el nombre se cambia ahí mismo con el lápiz ✎ (si resides en ella); la casa dice si resides
+  aquí y abre la tarjeta de la residencia; la corona marca la capital y, al Rey, le deja designarla. El medallón del nivel abre «Subir de
+  nivel» y brilla con una ⬆ cuando la plaza ya puede subir.
+- **Un riel de iconos bajo el blasón**, cada uno con su ventana: Construcción (con las obras en marcha en una insignia), Gobierno (Cargos y
+  Tesorería), Defensa (Muralla y Puerta), Territorio (Pueblos y aldeas, Fundación), Reclutamiento, Taberna y Mercado. Con candado si falta
+  el edificio.
+- **Las ventanas, una a la vez y a media pantalla** junto al riel, con ✕ o Esc para cerrar; la ciudad sigue a la vista. Reclutamiento y
+  Mercado, más anchas.
+- **Un clic en el Barracón, la Galería de tiro o las Caballerizas abre Reclutamiento**; en la Taberna o el Mercado, la suya.
+- **El Resumen desaparece**: la auto-construcción pasa a Construcción y la ocupación militar, a una franja roja arriba al centro.
+- **Las obras en marcha, bajo el riel**: hasta tres con su cuenta atrás, y un clic abre Construcción.
+- **El rastreador de misiones y la ficha del edificio, al borde derecho.**
+- **Misiones y Tablón de la plaza, en el botón «Misiones» de la barra**, en dos pestañas. Información, en el «?» de la barra.
+- Se quita el botón «Asentamiento» de la barra y su ventana a pantalla completa (0.92.0).
+- Pantallas pequeñas: el pie se compacta bajo 1440 px, el riel encoge con poca altura y, bajo 900 px, la ventana ocupa todo el ancho.
+
 ## [0.97.0] — 2026-11-02 · El campamento de mercenarios en 3D · sin cambios de contrato (`VRhino/BronzeAge@a17f8536`)
 
 - **La pantalla del campamento lleva la vista 3D en el centro** (`src/ciudad3d/campamento.ts`), con la planta en SVG de minimapa en la

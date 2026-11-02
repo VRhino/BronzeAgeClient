@@ -219,11 +219,14 @@ completa de plazas con sus cargos (hoy no lo hace — `Features_Pendientes.md` �
 
 La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, estilo city-builder.
 
-> **Desde 0.92.0 (2026-11-02) ya no es una columna**: en la plaza en 3D a pantalla completa, todo este panel vive en la ventana
-> «Asentamiento» (`.asent-ventana`), que se abre con el botón «Asentamiento» de la barra del jugador. Las pestañas de los edificios
-> (Centro urbano, Reclutamiento, Taberna, Mercado) van en vertical, con su icono, en el lateral de la ventana, bajo el escudo de la
-> Facción dueña, el nombre y el nivel; el contenido de cada una, a la derecha y sin cambios. El campamento y el pueblo conservan su
-> columna derecha.
+> **Desde 0.92.0 (2026-11-02) ya no es una columna** y **desde 0.98.0 tampoco una sola ventana**: en la plaza en 3D a pantalla
+> completa, cada parte se abre en su propia ventana desde el riel de iconos bajo el blasón (Víctor, 2026-11-02: había demasiado en muy
+> poco espacio). **Construcción** (auto-construcción y Edificios, Obras, Producción), **Gobierno** (Cargos con los residentes,
+> Tesorería), **Defensa** (Muralla, Puerta), **Territorio** (Pueblos y aldeas, Fundación), **Reclutamiento**, **Taberna** y
+> **Mercado** (Órdenes, Caravanas, Trueques); «Subir de nivel» sale del medallón del blasón e «Información», del «?» de la barra. El
+> Resumen desaparece: la población, el almacén, la nutrición y el mantenimiento van al pie de la pantalla en tres grupos; el nombre,
+> la residencia (casa) y la capital (corona), al blasón; la ocupación, a una franja arriba al centro. Las Misiones y el Tablón de la
+> plaza, al botón «Misiones» de la barra. El campamento y el pueblo conservan su columna derecha.
 
 > **Centro urbano › Edificios** (0.84.0, 2026-11-02, `ui/panelObras.ts`; banco `pruebas/plaza/`): tres plegables con aire de juego de
 > estrategia, más iconos que texto. **Edificios**: rejilla «Construir» (icono y coste en chips, en rojo lo que falta en el almacén, candado
@@ -235,13 +238,14 @@ La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, es
 >
 > **Centro urbano › subida de nivel, Resumen y Cargos** (0.86.0, 2026-11-02, `ui/panelCentro.ts`; banco `pruebas/centro/`). **Subida**: tarjeta
 > con el escudo de ahora ➜ el del nivel siguiente (apagado, o dorado si se puede), un piloto por requisito (verde, rojo, gris = lo comprueba el
-> servidor), el tiempo de obra y el botón ⬆; los requisitos plegados, con barras (pesants, artesanos, pueblos), los edificios pedidos en iconos
-> (encendidos si están en marcha) y el coste en chips. Durante la obra, su barra y lo que falta. **Resumen**: cabecera con el escudo de la
-> Facción, el nombre (lápiz ✎ para cambiarlo, si resides), etiquetas 👑 Capital / 🏠 Tu base y el nivel en escudo; población por clases con
-> su sitio (Viviendas activas × `capacidadPesants` / `capacidadArtesanos`; nobleza, `capacidadNobles` del Palacio) y la marca del nivel
-> siguiente, y el techo del nivel (`NIVEL_ASENTAMIENTO.techoPoblacion`); medidores de mantenimiento y nutrición en color; interruptor de
-> auto-construcción; la Residencia y la capital, en tarjetas (sin residir, «Hacerla mi base»). **Cargos**: una silla por cargo con su emblema
-> (lápiz para cambiar, ＋ en una vacante) y los residentes en ranking (medallas, emblemas de sus cargos, barra de puntos).
+> servidor), el tiempo de obra y el botón ⬆; los requisitos, con barras (pesants, artesanos, pueblos), los edificios pedidos en iconos
+> (encendidos si están en marcha) y el coste en chips. Durante la obra, su barra y lo que falta. Desde 0.98.0 es la ventana «Subir de nivel»
+> (requisitos abiertos) y el medallón brilla cuando todo está en verde (`ascensoPosible`). **Resumen** (hasta 0.97.0): sus piezas se
+> repartieron en 0.98.0. La población por clases con su sitio (Viviendas activas × `capacidadPesants` / `capacidadArtesanos`; nobleza,
+> `capacidadNobles` del Palacio) y el techo del nivel (`NIVEL_ASENTAMIENTO.techoPoblacion`), la nutrición y el mantenimiento van al pie
+> (`ui/hudPlaza.ts`); el nombre, la Residencia y la capital, al blasón; el interruptor de auto-construcción, a Construcción. **Cargos**: una
+> silla por cargo con su emblema (lápiz para cambiar, ＋ en una vacante) y los residentes en ranking (medallas, emblemas de sus cargos, barra de
+> puntos), en la ventana Gobierno.
 >
 > **Reclutamiento y Taberna** (0.87.0, 2026-11-02, `ui/reclutamiento.ts`, `ui/panelIntel.ts`; banco `pruebas/centro/`). **Reclutamiento**: la ficha
 > de la tropa como una carta (retrato, escalón en estrellas, poder y velocidad en barras contra lo mejor del catálogo, liderazgo, hombres libres,
@@ -279,8 +283,9 @@ La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, es
 > en fichas con barra, marcar en dos cartas (aldea y extractor, con los nodos libres como casillas) y las avanzadas en tarjetas. Todos los
 > rechazos salen flotando.
 
-1. **Resumen** ✅ — nivel/nivel operativo, población (pesants/artesanos/nobleza + total), medidores de
-   mantenimiento y nutrición, aviso de ocupación, toggle auto-construcción (`alternarAutoConstruccion`).
+1. **Resumen** ✅ (repartido en 0.98.0: pie, blasón, Construcción) — nivel/nivel operativo, población
+   (pesants/artesanos/nobleza + total), medidores de mantenimiento y nutrición, aviso de ocupación, toggle
+   auto-construcción (`alternarAutoConstruccion`).
    *Falta*: progreso al siguiente nivel (`progresoNivelAsentamiento`, no viaja).
 2. **Edificios** ✅ — lista por tipo con estado y avisos; añadir a la cola (catálogo `EDIFICIOS_MANUALES`,
    `anadirEdificioManualmente`); ⬆ mejorar el de menor nivel de cada tipo (`mejorarEdificioAhora`).

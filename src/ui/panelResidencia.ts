@@ -1,5 +1,6 @@
-// Subpestaña «Residencia» de Centro urbano: dejar tu casa sin dejar la Facción (`dejarResidencia`, Doc 2.5) y, si eres el Rey, designar esta plaza capital (`designarCapital`, Doc 2.2).
-// Va al pie del Resumen, en tarjetas (2026-11-02): sin residir aquí, la tarjeta ofrece «Hacerla mi base» (`cambiarResidencia`, la cablea `main.ts`).
+// Residencia y capital de la plaza, en tarjetas: dejar tu casa sin dejar la Facción (`dejarResidencia`, Doc 2.5) y, si eres el Rey, designar esta
+// plaza capital (`designarCapital`, Doc 2.2). Cuelgan del blasón de la vista 3D (Víctor, 2026-11-02): la de la residencia, del icono de la casa
+// (sin residir aquí ofrece «Hacerla mi base», `cambiarResidencia`, que cablea `main.ts`), y la de la capital, de la corona.
 import { diasDeEnfriamientoDeCapital, diasDeEnfriamientoDeResidencia } from '../apiCliente';
 import { ayuda } from './ayuda';
 import type { ContextoPlaza, SubpestanaPlaza } from './ganchos';
@@ -19,7 +20,8 @@ function esperaParaMudarse(c: ContextoPlaza): string {
 const tarjeta = (clase: string, icono: string, titulo: string, linea: string, boton = ''): string =>
   `<div class="resid-tarjeta ${clase}"><span class="resid-icono" aria-hidden="true">${icono}</span><span class="resid-cuerpo"><strong>${titulo}</strong><small>${linea}</small></span>${boton}</div>`;
 
-function seccionResidencia(c: ContextoPlaza): string {
+/** La tarjeta de la residencia: resides aquí (con tus cargos y «Dejar») o no (con «Hacerla mi base» si la plaza es de tu Facción). */
+export function htmlResidencia(c: ContextoPlaza): string {
   const { proyeccion: p, asentamiento: a } = c;
   if (!c.resideAqui) {
     // Mudar tu base a esta plaza (`cambiarResidencia`): lo cablea `main.ts` (`#btn-mudarme`), con su confirmación.
@@ -33,7 +35,8 @@ function seccionResidencia(c: ContextoPlaza): string {
     '<button class="resid-boton peligro" type="button" data-dejar-residencia title="Dejar tu residencia aquí (sigues en tu Facción)">Dejar</button>');
 }
 
-function seccionCapital(c: ContextoPlaza): string {
+/** La tarjeta de la capital: lo es, puedes designarla (eres el Rey; con lo que falte) o no lo es. La abre la corona del blasón. */
+export function htmlCapital(c: ContextoPlaza): string {
   const { proyeccion: p, asentamiento: a } = c;
   const faccion = p.facciones.find((f) => f.id === a.faccionId);
   const esCapital = a.capitalDeFaccionId === a.faccionId;
@@ -49,10 +52,11 @@ function seccionCapital(c: ContextoPlaza): string {
 }
 
 function html(c: ContextoPlaza): string {
-  return `<div class="resid-tarjetas">${seccionResidencia(c)}${seccionCapital(c)}</div>`;
+  return `<div class="resid-tarjetas">${htmlCapital(c)}</div>`;
 }
 
-function cablear(c: ContextoPlaza): void {
+/** «Dejar» la residencia (con su confirmación) y «Designar» la capital, donde estén. */
+export function cablearResidencia(c: ContextoPlaza): void {
   const { cuerpo, ejecutar, asentamiento: a, proyeccion: p } = c;
   const lanzar = async (boton: HTMLButtonElement, tipo: string, params: object): Promise<void> => {
     boton.disabled = true;
@@ -68,4 +72,4 @@ function cablear(c: ContextoPlaza): void {
   cuerpo.querySelector<HTMLButtonElement>('[data-designar-capital]')?.addEventListener('click', (ev) => void lanzar(ev.currentTarget as HTMLButtonElement, 'designarCapital', { faccionId: a.faccionId, asentamientoId: a.id }));
 }
 
-export const SUBPESTANA_RESIDENCIA: SubpestanaPlaza = { id: 'residencia', etiqueta: 'Residencia', html, cablear };
+export const SUBPESTANA_RESIDENCIA: SubpestanaPlaza = { id: 'residencia', etiqueta: 'Residencia', html, cablear: cablearResidencia };

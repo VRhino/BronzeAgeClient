@@ -44,9 +44,9 @@ import {
 import { montarEleccionCampamento } from './ui/eleccionCampamento';
 import { pintarVentanaSalida, reiniciarVentanaSalida, type LugarDeSalida } from './ui/ventanaSalida';
 import { elegirPestanaHeroe, minutosHerido, pintarPanelHeroe } from './ui/panelHeroe';
-import { htmlBarraJugador, icono as iconoBarra, type PanelJugador } from './ui/barraJugador';
+import { htmlBarraJugador, type PanelJugador } from './ui/barraJugador';
 import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
-import { RECURSO_ICONO, RECURSO_NOMBRE } from './paletas';
+import { RECURSO_NOMBRE } from './paletas';
 import type { Alijo, Asentamiento, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, EscenaCampamento, Faccion, ParamsCrearHeroe, Sigilo } from './tiposDominio';
 import { svgSigilo } from './sigilo/sigilo';
 import { alCargarSigilos } from './sigilo/lienzo';
@@ -76,7 +76,7 @@ import { colorDelSueloEn } from './mundo/pintarArtefacto';
 import { barraAvance, cuentaAtras, medallonNivel } from './ui/juegoVisual';
 import { iconoEdificio } from './ui/iconosEdificio';
 import { cablearPlegables } from './ui/plegable';
-import { FICHAS_MAPA_EXTRA, SELECTORES_MAPA_EXTRA, SUBPESTANAS_CENTRO_EXTRA, SUBPESTANAS_MERCADO_EXTRA, type ContextoPlaza } from './ui/ganchos';
+import { FICHAS_MAPA_EXTRA, SELECTORES_MAPA_EXTRA, SUBPESTANAS_CENTRO_EXTRA, SUBPESTANAS_MERCADO_EXTRA, type ContextoPlaza, type SubpestanaPlaza } from './ui/ganchos';
 import { abrirEleccionClic, cerrarEleccionClic, eleccionClicAbierta, sinRepetir, type ObjetoDelClic } from './ui/eleccionClic';
 import { montarPartidas } from './ui/pantallaPartidas';
 import { cablearCaravanas, cablearOrdenes, htmlCaravanas, htmlOrdenes } from './ui/panelMercado';
@@ -108,7 +108,9 @@ import { htmlEstados } from './ui/estados';
 import { cablearInteriorPueblo, htmlAlmacenPueblo, htmlPestanasPueblo, htmlTrazadoPueblo, nombreDePueblo, puebloActual, selectorDePunto } from './ui/pueblos';
 import { pintarSitiosDeAldea, type SitiosDeAldea } from './mundo/fertilidad';
 import { htmlMiembrosFaccion, htmlResidentesPlaza } from './ui/participacion';
-import { cablearCargosPlaza, cablearResumenPlaza, htmlAscensoPlaza, htmlCargosPlaza, htmlResumenPlaza } from './ui/panelCentro';
+import { ascensoPosible, cablearCargosPlaza, htmlAscensoPlaza, htmlAutoConstruccion, htmlCargosPlaza } from './ui/panelCentro';
+import { cablearBlasonHud, htmlBlasonHud, htmlObrasHud, htmlOcupacion, htmlPieDePlaza, ICONO_RIEL, type BlasonHud } from './ui/hudPlaza';
+import { cablearResidencia, htmlCapital, htmlResidencia } from './ui/panelResidencia';
 import { cablearTablon, htmlTablon } from './ui/tablon';
 import { cablearMercenariosFaccion, htmlMercenariosFaccion, mercenariosQuePidenAtencion } from './ui/mercenarios';
 import { actualizarSeguimiento, cablearMisiones, elegirPestanaMisiones, htmlListaMisiones, htmlPanelMisiones, misionesPorReclamar, pintarRastreador } from './ui/misiones';
@@ -1287,12 +1289,17 @@ function renderPanelJugador(forzar = false): void {
     return;
   }
   if (panelJugador === 'misiones') {
-    // La ventana de misiones va centrada, como el diario de misiones de WoW: lista a la izquierda y la misión abierta a la derecha.
+    // La ventana de misiones va centrada, como el diario de misiones de WoW: lista a la izquierda y la misión abierta a la derecha. Dentro de una
+    // plaza con tablón, con la pestaña de su tablón (que antes iba en la plaza, en Centro urbano).
     panel.classList.add('jugador-panel-diario');
-    pintar(panel, htmlPanelMisiones(proyeccion, escaparHtml), () => {
-      cablearMisiones(panel, proyeccion, ejecutarYRefrescar, () => renderPanelJugador(true));
+    const plaza = proyeccion.heroe.ubicacion.tipo === 'asentamiento' ? proyeccion.asentamientos[0] : undefined;
+    const tablon = plaza?.tablon ? { html: htmlTablon(proyeccion, { tipo: 'plaza', id: plaza.id, tablon: plaza.tablon }, escaparHtml), plaza: plaza.nombre ?? plaza.id, viendo: misionesEnTablon } : undefined;
+    pintar(panel, htmlPanelMisiones(proyeccion, escaparHtml, tablon), () => {
+      if (tablon?.viendo) cablearTablon(panel.querySelector<HTMLElement>('.diario-tablon') ?? panel, ejecutarYRefrescar, () => renderPanelJugador(true));
+      else cablearMisiones(panel, proyeccion, ejecutarYRefrescar, () => renderPanelJugador(true));
+      panel.querySelectorAll<HTMLButtonElement>('[data-diario-vista]').forEach((b) => b.addEventListener('click', () => { misionesEnTablon = b.dataset.diarioVista === 'tablon'; renderPanelJugador(true); }));
       panel.querySelector('[data-mision-cerrar]')?.addEventListener('click', () => { panelJugador = null; renderPanelJugador(true); });
-    }, 'misiones');
+    }, `misiones:${tablon?.viendo ? 'tablon' : 'lista'}`);
     return;
   }
   if (panelJugador === 'tecnologia') {
@@ -1345,9 +1352,13 @@ function mostrarInforme(informe: InformeDeCombate): void {
   document.body.appendChild(fondo);
 }
 
+/** En la ventana Misiones, dentro de una plaza con tablón: ¿se está viendo el tablón en vez de la lista? */
+let misionesEnTablon = false;
+
 /** Desde el rastreador: abre el panel Misiones en la pestaña de ese dueño. */
 function abrirMisiones(d: Parameters<typeof elegirPestanaMisiones>[0], id?: string): void {
   elegirPestanaMisiones(d, id);
+  misionesEnTablon = false;
   panelJugador = 'misiones';
   renderPanelJugador(true);
 }
@@ -1792,8 +1803,16 @@ function renderVentanaSalida(): void {
 
 type PanelAsent = 'ejercito';
 let panelAsentAbierto: PanelAsent | null = null;
-/** ¿Está abierta la ventana «Asentamiento» (todo lo de la plaza a pantalla completa, sobre la vista 3D)? */
-let ventanaAsentAbierta = false;
+/** Las ventanas de la plaza (Víctor, 2026-11-02, «rehacer la interfaz de asentamiento»): cada una con su icono en el riel de la izquierda, salvo la
+ * subida de nivel (el medallón del blasón) e Información (el «?» de la barra). Solo hay una abierta, a media pantalla, junto al riel. */
+type VentanaPlaza = 'construccion' | 'gobierno' | 'defensa' | 'territorio' | 'reclutamiento' | 'taberna' | 'mercado' | 'ascenso' | 'informacion';
+let ventanaPlaza: VentanaPlaza | null = null;
+/** La subpestaña elegida en cada ventana que tiene varias. */
+const subDeVentana: Partial<Record<VentanaPlaza, string>> = {};
+/** Lo que cuelga del blasón: la tarjeta de la residencia (la casa) o la de la capital (la corona). */
+let popBlason: 'residencia' | 'capital' | null = null;
+/** ¿Se está cambiando el nombre en el blasón? Sobrevive a los repintados del sondeo. */
+let editandoNombrePlaza = false;
 
 /** ¿Resides en la plaza donde estás? (fundadores y quienes compraron casa: así lo cuenta la proyección). */
 function resideEnLaPlaza(p: ProyeccionJugador, a: Asentamiento): boolean {
@@ -1816,12 +1835,9 @@ async function mudarseAEstaPlaza(): Promise<void> {
   errorDePlaza(await ejecutarYRefrescar('cambiarResidencia', { destinoId: a.id, heroeId: p.heroeId }));
 }
 
-// --- PANEL DE GESTIÓN DEL ASENTAMIENTO (columna derecha): Resumen · Edificios · Cola ------------
+// --- LAS VENTANAS DE LA PLAZA: Construcción · Gobierno · Defensa · Territorio · Reclutamiento · Taberna · Mercado ------------
 // Solo con lo que ya trae la proyección. Las acciones sin dato previo (mejorar, añadir) se mandan y se
 // muestra el error del backend si lo rechaza. Ver docs/Panel_Asentamiento.md.
-
-type SeccionAsent = string; // 'resumen' | 'edificios' | 'produccion' | 'cola' | 'cargos' o el id de una subpestaña de `SUBPESTANAS_CENTRO_EXTRA`
-let seccionAsent: SeccionAsent = 'edificios';
 
 /** El cargo de construcción que el héroe tiene en esta plaza, o `null`. */
 function cargoConstructor(asentamiento: Asentamiento, heroeId: string): 'gobernador' | 'maestroObras' | null {
@@ -1847,158 +1863,198 @@ async function ejecutarAccionAsent(tipo: string, params: Record<string, unknown>
   }
 }
 
-type EdificioAsent = 'centro' | 'reclutamiento' | 'taberna' | 'mercado';
-let edificioAsent: EdificioAsent = 'centro';
-type SeccionMercado = string; // 'ordenes' | 'caravanas' o el id de una subpestaña de `SUBPESTANAS_MERCADO_EXTRA`
-let seccionMercado: SeccionMercado = 'ordenes';
-
-/** Una pestaña por edificio. Taberna y Mercado existen siempre pero se abren al tener el edificio activo (decir qué falta es parte de la interfaz). */
-const PESTANAS_EDIFICIO: { id: EdificioAsent; etiqueta: string; icono: string; requiere?: { tipo: string; nombre: string } }[] = [
-  { id: 'centro', etiqueta: 'Centro urbano', icono: 'centroUrbano' },
-  { id: 'reclutamiento', etiqueta: 'Reclutamiento', icono: 'barracon' },
-  { id: 'taberna', etiqueta: 'Taberna', icono: 'taberna', requiere: { tipo: 'taberna', nombre: 'una Taberna' } },
-  { id: 'mercado', etiqueta: 'Mercado', icono: 'mercado', requiere: { tipo: 'mercado', nombre: 'un Mercado' } },
+/** Las ventanas del riel. De visita en una plaza ajena solo quedan Territorio y Mercado (decisión de Víctor del 2026-10-29: lo que se ve o se usa
+ * desde fuera; el motor solo deja reclutar y comprar intel en las plazas de tu Facción). Taberna y Mercado están siempre, con su candado hasta tener
+ * el edificio activo (decir qué falta es parte de la interfaz). */
+const RIEL: { id: VentanaPlaza; titulo: string; icono: string; requiere?: { tipo: string; nombre: string }; deVisita?: true }[] = [
+  { id: 'construccion', titulo: 'Construcción', icono: ICONO_RIEL.construccion },
+  { id: 'gobierno', titulo: 'Gobierno', icono: ICONO_RIEL.gobierno },
+  { id: 'defensa', titulo: 'Defensa', icono: iconoEdificio('muralla', 28) },
+  { id: 'territorio', titulo: 'Territorio', icono: ICONO_RIEL.territorio, deVisita: true },
+  { id: 'reclutamiento', titulo: 'Reclutamiento', icono: iconoEdificio('barracon', 28) },
+  { id: 'taberna', titulo: 'Taberna', icono: iconoEdificio('taberna', 28), requiere: { tipo: 'taberna', nombre: 'una Taberna' } },
+  { id: 'mercado', titulo: 'Mercado', icono: iconoEdificio('mercado', 28), requiere: { tipo: 'mercado', nombre: 'un Mercado' }, deVisita: true },
 ];
+
+/** Un clic en uno de estos edificios (en pie) en la vista 3D abre su ventana, además de su ficha. */
+const VENTANA_DE_EDIFICIO: Record<string, VentanaPlaza> = { barracon: 'reclutamiento', galeriaDeTiro: 'reclutamiento', caballerizas: 'reclutamiento', taberna: 'taberna', mercado: 'mercado' };
+
+/** Las subpestañas extra de Centro urbano que ya tienen ventana; las que se añadan sin sitio salen en Gobierno. Misiones y Tablón van en el botón
+ * Misiones de la barra; la Residencia, en la casa del blasón; Información, en el «?». */
+const EXTRAS_CON_SITIO = new Set(['muralla', 'puerta', 'residencia', 'tesoreria', 'fundacion', 'misiones', 'tablon', 'pueblos', 'informacion']);
 
 function subpestanas(lista: [string, string][], actual: string): string {
   return `<div class="asent-tabs asent-subtabs">${lista.map(([id, nombre]) => `<button class="asent-tab${id === actual ? ' activo' : ''}" type="button" data-sub="${id}">${nombre}</button>`).join('')}</div>`;
 }
 
-/** Pinta y cablea la columna derecha completa (pestañas por edificio + su contenido). Se llama al montar y en cada
- * refresco/sondeo. Guarda el nombre `renderPanelEdificios` por los sitios que ya lo llaman. */
+/** Lo que reciben las piezas de la plaza para pintarse en `cuerpo`. */
+function contextoPlaza(p: ProyeccionJugador, a: Asentamiento, cuerpo: HTMLElement): ContextoPlaza {
+  return { proyeccion: p, asentamiento: a, cuerpo, ejecutar: ejecutarYRefrescar, refrescar: renderPanelEdificios, cargo: cargoConstructor(a, p.heroeId), resideAqui: resideEnLaPlaza(p, a), escapar: escaparHtml };
+}
+
+/** ¿Se puede abrir ahora esa ventana en esta plaza? */
+function ventanaDisponible(v: VentanaPlaza, p: ProyeccionJugador, a: Asentamiento): boolean {
+  const ajena = esPlazaAjena(p, a);
+  if (v === 'informacion') return true;
+  if (v === 'ascenso') return !ajena;
+  const def = RIEL.find((x) => x.id === v);
+  if (!def || (ajena && !def.deVisita)) return false;
+  return !def.requiere || a.edificios.some((e) => e.tipo === def.requiere!.tipo && e.estado === 'activo');
+}
+
+/** Abre una ventana de la plaza (o ninguna, con `null`) y repinta. */
+function abrirVentanaPlaza(v: VentanaPlaza | null): void {
+  ventanaPlaza = v;
+  if (v && panelAsentAbierto) { panelAsentAbierto = null; renderPanelAsent(); }
+  renderPanelEdificios();
+}
+const alternarVentanaPlaza = (v: VentanaPlaza): void => abrirVentanaPlaza(ventanaPlaza === v ? null : v);
+
+/**
+ * Pinta lo de la plaza que sale de la proyección: el blasón (con lo que cuelga de él), la franja de ocupación, las obras en marcha, el riel, la
+ * ficha del edificio elegido y la ventana abierta. Se llama al montar y en cada refresco o sondeo; guarda el nombre de cuando pintaba la columna
+ * derecha por los sitios que ya lo llaman. Cada pieza solo se repinta si cambió.
+ */
 function renderPanelEdificios(): void {
-  const raiz = document.querySelector<HTMLElement>('.asent-edificios');
-  const tabsEl = raiz?.querySelector<HTMLElement>('.asent-edif-tabs');
-  const cuerpo = raiz?.querySelector<HTMLElement>('.asent-edif-cuerpo');
-  const proyeccion = estadoCliente.proyeccionUltima;
-  const asentamiento = proyeccion?.asentamientos[0];
-  if (!tabsEl || !cuerpo || !proyeccion || !asentamiento) return;
-
-  const nombreBarra = document.querySelector<HTMLElement>('.asent-barra .asent-nombre');
-  if (nombreBarra) nombreBarra.textContent = asentamiento.nombre ?? asentamiento.id;
-  pintarBlasones(proyeccion, asentamiento);
-  const edificios = asentamiento.edificios ?? [];
-  const construido = (tipo: string): boolean => edificios.some((e) => e.tipo === tipo && e.estado === 'activo');
-  // De visita en una plaza de otra Facción solo queda lo que se puede ver o usar desde fuera de ella (decisión de Víctor, 2026-10-29): Centro urbano
-  // con Resumen y Territorio, y Mercado (con su candado si no lo hay) con las órdenes abiertas. Reclutamiento y Taberna no: el motor solo deja
-  // reclutar y comprar intel en las plazas de tu Facción.
-  const ajena = esPlazaAjena(proyeccion, asentamiento);
-  const pestanas = ajena ? PESTANAS_EDIFICIO.filter((t) => t.id === 'centro' || t.id === 'mercado') : PESTANAS_EDIFICIO;
-  const abierta = (id: EdificioAsent): boolean => { const t = pestanas.find((x) => x.id === id); return Boolean(t) && (!t!.requiere || construido(t!.requiere.tipo)); };
-  if (!abierta(edificioAsent)) edificioAsent = 'centro';
-
-  const icono = (t: (typeof pestanas)[number]): string => `<span class="asent-tab-icono" aria-hidden="true">${iconoEdificio(t.icono, 26)}</span>`;
-  const tabs = pestanas.map((t) => abierta(t.id)
-    ? `<button class="asent-tab${t.id === edificioAsent ? ' activo' : ''}" type="button" data-edificio="${t.id}">${icono(t)}<span>${t.etiqueta}</span></button>`
-    : `<button class="asent-tab bloqueada" type="button" disabled title="Necesitas construir ${t.requiere!.nombre}">${icono(t)}<span>${t.etiqueta} 🔒</span></button>`).join('');
-  const bloqueadas = pestanas.filter((t) => !abierta(t.id)).map((t) => `🔒 ${t.etiqueta}: necesitas construir ${t.requiere!.nombre}.`);
-  const faltan = bloqueadas.length ? `<p class="asent-lado-nota">Pestañas bloqueadas ${ayuda('plaza:pestanas-bloqueadas', bloqueadas.join('<br>'))}</p>` : '';
-  pintar(tabsEl, `<div class="asent-tabs asent-tabs-ancho">${tabs}</div>${faltan}`, () => {
-    tabsEl.querySelectorAll<HTMLButtonElement>('[data-edificio]').forEach((boton) => boton.addEventListener('click', () => { edificioAsent = boton.dataset.edificio as EdificioAsent; renderPanelEdificios(); }));
-  }, 'edificios');
-  repintarFicha();
-
-  const cargo = cargoConstructor(asentamiento, proyeccion.heroeId);
-  const pie = '';
-  const ctxPlaza: ContextoPlaza = { proyeccion, asentamiento, cuerpo, ejecutar: ejecutarYRefrescar, refrescar: renderPanelEdificios, cargo, resideAqui: resideEnLaPlaza(proyeccion, asentamiento), escapar: escaparHtml };
-  let html = '';
-  let cablear: () => void = () => undefined;
-  let ambito: string = edificioAsent;
-  const cablearSub = (alCambiar: (sub: string) => void): void => cuerpo.querySelectorAll<HTMLButtonElement>('[data-sub]').forEach((b) => b.addEventListener('click', () => { alCambiar(b.dataset.sub!); renderPanelEdificios(); }));
-
-  if (edificioAsent === 'centro' && ajena) {
-    const SECCIONES: [SeccionAsent, string][] = [['resumen', 'Resumen'], ['pueblos', 'Territorio']];
-    if (!SECCIONES.some(([id]) => id === seccionAsent)) seccionAsent = 'resumen';
-    const territorio = SUBPESTANAS_CENTRO_EXTRA.find((s) => s.id === 'pueblos')!;
-    const contenido = seccionAsent === 'pueblos' ? territorio.html(ctxPlaza) : seccionResumenAjena(proyeccion, asentamiento);
-    html = `${subpestanas(SECCIONES, seccionAsent)}<div class="asent-lado-cuerpo">${contenido}</div>${pie}`;
-    ambito = `ajena:${seccionAsent}`;
-    cablear = () => {
-      cablearSub((s) => { seccionAsent = s as SeccionAsent; });
-      cablearPlegables(cuerpo);
-      if (seccionAsent === 'pueblos') territorio.cablear?.(ctxPlaza);
-    };
-  } else if (edificioAsent === 'centro') {
-    // Edificios, Producción y Cola van juntas en «Edificios», cada una plegable; la Residencia, al pie de Resumen (Víctor, 2026-10-31).
-    const residencia = SUBPESTANAS_CENTRO_EXTRA.find((s) => s.id === 'residencia');
-    const extras = SUBPESTANAS_CENTRO_EXTRA.filter((s) => s !== residencia && (s.visible?.(ctxPlaza) ?? true));
-    const SECCIONES: [SeccionAsent, string][] = [['resumen', 'Resumen'], ['edificios', 'Edificios'], ['cargos', 'Cargos'], ...extras.map((s) => [s.id, s.etiqueta] as [string, string])];
-    if (seccionAsent === 'produccion' || seccionAsent === 'cola') seccionAsent = 'edificios';
-    if (!SECCIONES.some(([id]) => id === seccionAsent)) seccionAsent = 'resumen';
-    const extra = extras.find((s) => s.id === seccionAsent);
-    // La subida de nivel va fuera de las subpestañas, entre las pestañas de arriba y las de abajo: tarjeta con el botón y requisitos plegados.
-    const ascenso = htmlAscensoPlaza(proyeccion, asentamiento, cargo === 'gobernador', escaparHtml, renderPanelEdificios);
-    const contenido = extra ? extra.html(ctxPlaza) : seccionAsent === 'resumen'
-      ? htmlResumenPlaza(ctxPlaza)
-        + (residencia && (residencia.visible?.(ctxPlaza) ?? true) ? `<div class="asent-resumen-residencia">${residencia.html(ctxPlaza)}</div>` : '')
-      : seccionAsent === 'edificios'
-        ? htmlPanelObras(ctxPlaza)
-        : htmlCargosPlaza(ctxPlaza, htmlResidentesPlaza(proyeccion, asentamiento, escaparHtml));
-    html = `${ascenso ? `<section class="asent-ascenso">${ascenso}</section>` : ''}${subpestanas(SECCIONES, seccionAsent)}<div class="asent-lado-cuerpo">${contenido}</div>
-      ${!cargo && seccionAsent === 'edificios' ? '<p class="asent-lado-nota">Necesitas ser Gobernador o Maestro de Obras para gestionar la construcción.</p>' : ''}${pie}`;
-    ambito = `centro:${seccionAsent}`;
-    cablear = () => {
-      cablearSub((s) => { seccionAsent = s as SeccionAsent; });
-      cuerpo.querySelector('#btn-mudarme')?.addEventListener('click', () => void mudarseAEstaPlaza());
-      cablearAccionesAsentLado(cuerpo, asentamiento, cargo);
-      cablearPlegables(cuerpo);
-      if (seccionAsent === 'edificios') { cablearProduccionYRecetas(ctxPlaza); cablearPanelObras(cuerpo, renderPanelEdificios); }
-      if (seccionAsent === 'resumen') { cablearResumenPlaza(ctxPlaza); residencia?.cablear?.(ctxPlaza); }
-      if (seccionAsent === 'cargos') cablearCargosPlaza(ctxPlaza);
-      extra?.cablear?.(ctxPlaza);
-    };
-  } else if (edificioAsent === 'mercado' && ajena) {
-    // Las órdenes abiertas de la plaza, que se toman con el carro de tu columna (`comerciarEnPlaza`), como desde su ficha en el mapa.
-    const ordenes = htmlMercadoDePlaza(proyeccion, asentamiento.id, escaparHtml);
-    html = `<div class="asent-lado-cuerpo">${ordenes || '<p class="asent-lado-nota">No hay órdenes abiertas de compra ni de venta a la vista.</p>'}<p id="mapa-seleccion-error" class="faction-error" role="alert"></p></div>${pie}`;
-    ambito = 'mercado:ajena';
-    cablear = () => cablearMercadoDePlaza(cuerpo, asentamiento.id, { ejecutarConDatos: ejecutarConDatosYRefrescar, aviso: avisoMapa }, proyeccion.heroeId);
-  } else if (edificioAsent === 'reclutamiento') {
-    html = `<div class="asent-lado-cuerpo">${htmlReclutamiento(proyeccion, asentamiento, escaparHtml, renderPanelEdificios)}</div>${pie}`;
-    cablear = () => cablearReclutamiento(cuerpo, proyeccion, asentamiento, ejecutarYRefrescar, renderPanelEdificios);
-  } else if (edificioAsent === 'taberna') {
-    html = `${renderPanelIntel(proyeccion, escaparHtml)}${pie}`;
-    cablear = () => cablearPanelIntel(cuerpo, proyeccion, ejecutarYRefrescar, () => { olvidarEdicion(cuerpo); invalidar(cuerpo); renderPanelEdificios(); });
-  } else {
-    const SECCIONES: [SeccionMercado, string][] = [['ordenes', 'Órdenes'], ['caravanas', 'Caravanas'], ...SUBPESTANAS_MERCADO_EXTRA.map((s) => [s.id, s.etiqueta] as [string, string])];
-    const extraMercado = SUBPESTANAS_MERCADO_EXTRA.find((s) => s.id === seccionMercado);
-    const contenido = extraMercado ? extraMercado.html(ctxPlaza)
-      : seccionMercado === 'caravanas' ? htmlCaravanas(proyeccion, asentamiento, escaparHtml, renderPanelEdificios)
-        : htmlOrdenes(proyeccion, asentamiento, escaparHtml);
-    html = `${subpestanas(SECCIONES, seccionMercado)}<div class="asent-lado-cuerpo">${contenido}</div>${pie}`;
-    ambito = `mercado:${seccionMercado}`;
-    cablear = () => {
-      cablearSub((s) => { seccionMercado = s as SeccionMercado; });
-      if (extraMercado) extraMercado.cablear?.(ctxPlaza);
-      else if (seccionMercado === 'caravanas') cablearCaravanas(cuerpo, proyeccion, asentamiento, ejecutarYRefrescar, renderPanelEdificios);
-      else cablearOrdenes(cuerpo, asentamiento, ejecutarYRefrescar);
-    };
+  const p = estadoCliente.proyeccionUltima, a = p?.asentamientos[0];
+  const riel = document.querySelector<HTMLElement>('.asent-riel');
+  if (!p || !a || !riel) return;
+  const ajena = esPlazaAjena(p, a);
+  pintarBlasones(p, a);
+  const ocupacion = document.querySelector<HTMLElement>('.asent-ocupacion');
+  if (ocupacion) { const html = htmlOcupacion(a); ocupacion.hidden = !html; pintar(ocupacion, html, undefined, 'ocupacion'); }
+  const obras = document.querySelector<HTMLElement>('.asent-obras-hud');
+  if (obras) {
+    const html = ajena ? '' : htmlObrasHud(a, escaparHtml);
+    obras.hidden = !html;
+    pintar(obras, html, () => obras.querySelector('[data-ventana-plaza]')?.addEventListener('click', () => abrirVentanaPlaza('construccion')), 'obras');
   }
-  // Solo se repinta si cambió (la ciudad produce a cada tick), y lo elegido en los formularios vuelve a su sitio.
-  pintar(cuerpo, html, cablear, ambito);
+  repintarFicha();
+  if (ventanaPlaza && !ventanaDisponible(ventanaPlaza, p, a)) ventanaPlaza = null;
+  const enMarcha = a.edificios.filter((e) => e.mejora || e.estado === 'en_construccion').length;
+  const botones = RIEL.filter((v) => !ajena || v.deVisita).map((v) => {
+    const libre = ventanaDisponible(v.id, p, a);
+    const nombre = libre ? v.titulo : `${v.titulo} 🔒`;
+    const ayudaBoton = libre ? v.titulo : `${v.titulo}: necesitas construir ${v.requiere?.nombre ?? 'su edificio'}`;
+    const insignia = v.id === 'construccion' && enMarcha ? `<b class="asent-riel-insignia">${enMarcha}</b>` : '';
+    return `<button type="button" class="asent-riel-boton${v.id === ventanaPlaza ? ' activo' : ''}${libre ? '' : ' bloqueada'}" data-ventana-plaza="${v.id}" data-etiqueta="${escaparHtml(nombre)}" aria-label="${escaparHtml(ayudaBoton)}" aria-pressed="${v.id === ventanaPlaza}">${v.icono}${insignia}</button>`;
+  }).join('');
+  pintar(riel, botones, () => riel.querySelectorAll<HTMLButtonElement>('[data-ventana-plaza]').forEach((b) => b.addEventListener('click', () => {
+    const v = b.dataset.ventanaPlaza as VentanaPlaza;
+    if (b.classList.contains('bloqueada')) {
+      const def = RIEL.find((x) => x.id === v);
+      mostrarAviso(`Para abrir ${def?.titulo ?? v} necesitas construir ${def?.requiere?.nombre ?? 'su edificio'}.`, true);
+      return;
+    }
+    alternarVentanaPlaza(v);
+  })), 'riel');
+  pintarVentanaPlaza(p, a, ajena);
+}
+
+/** Una ventana de la plaza: su título e icono, sus subpestañas (si tiene varias), lo que pinta y lo que cablea, y si va ancha o estrecha. */
+interface ContenidoVentana { titulo: string; icono: string; subs: [string, string][]; sub: string; html: string; cablear: () => void; ancho?: 'ancha' | 'estrecha' }
+
+/** La ventana abierta, junto al riel; sin ventana, escondida y vacía. */
+function pintarVentanaPlaza(p: ProyeccionJugador, a: Asentamiento, ajena: boolean): void {
+  const ventana = document.querySelector<HTMLElement>('.asent-ventana');
+  const titulo = ventana?.querySelector<HTMLElement>('.asent-ventana-titulo');
+  const cuerpo = ventana?.querySelector<HTMLElement>('.asent-edif-cuerpo');
+  document.querySelector('[data-ventana-info]')?.classList.toggle('activo', ventanaPlaza === 'informacion');
+  if (!ventana || !titulo || !cuerpo) return;
+  if (!ventanaPlaza) { ventana.hidden = true; vaciar(cuerpo); return; }
+  const v = ventanaPlaza;
+  const x = contenidoDeVentana(v, contextoPlaza(p, a, cuerpo), ajena);
+  ventana.hidden = false;
+  ventana.dataset.ancho = x.ancho ?? 'normal';
+  ventana.setAttribute('aria-label', x.titulo);
+  pintar(titulo, `<span class="asent-ventana-icono" aria-hidden="true">${x.icono}</span><h2>${x.titulo}</h2>`, undefined, 'titulo');
+  pintar(cuerpo, `${x.subs.length > 1 ? subpestanas(x.subs, x.sub) : ''}<div class="asent-lado-cuerpo">${x.html}</div>`, () => {
+    cuerpo.querySelectorAll<HTMLButtonElement>('[data-sub]').forEach((b) => b.addEventListener('click', () => { subDeVentana[v] = b.dataset.sub!; renderPanelEdificios(); }));
+    x.cablear();
+  }, `${v}:${x.sub}`);
+}
+
+/** Qué lleva cada ventana. Lo que antes era una subpestaña de Centro urbano sigue pintándose con lo suyo (`SUBPESTANAS_CENTRO_EXTRA`). */
+function contenidoDeVentana(v: VentanaPlaza, c: ContextoPlaza, ajena: boolean): ContenidoVentana {
+  const { proyeccion: p, asentamiento: a, cuerpo } = c;
+  const def = RIEL.find((x) => x.id === v);
+  const base = { titulo: def?.titulo ?? '', icono: def?.icono ?? '', subs: [] as [string, string][], sub: '' };
+  const extra = (id: string): SubpestanaPlaza | undefined => SUBPESTANAS_CENTRO_EXTRA.find((s) => s.id === id && (s.visible?.(c) ?? true));
+  const elegir = (subs: [string, string][]): string => (subs.some(([id]) => id === subDeVentana[v]) ? subDeVentana[v]! : subs[0]?.[0] ?? '');
+  // una ventana hecha de subpestañas extra (Defensa, Territorio): cada una con su html y su cableado
+  const deExtras = (ids: string[], nombres: Record<string, string> = {}): ContenidoVentana => {
+    const lista = ids.flatMap((id) => { const s = extra(id); return s ? [s] : []; });
+    const subs = lista.map((s) => [s.id, nombres[s.id] ?? s.etiqueta] as [string, string]);
+    const sub = elegir(subs);
+    const s = lista.find((x) => x.id === sub);
+    return { ...base, subs, sub, html: s ? s.html(c) : '<p class="asent-lado-nota">Aquí no hay nada que ver todavía.</p>', cablear: () => { cablearPlegables(cuerpo); s?.cablear?.(c); } };
+  };
+  switch (v) {
+    case 'construccion':
+      // Edificios, Producción y Cola, cada una plegable; arriba, la auto-construcción (que estaba en el Resumen)
+      return {
+        ...base,
+        html: `${htmlAutoConstruccion(a)}${htmlPanelObras(c)}${c.cargo ? '' : '<p class="asent-lado-nota">Necesitas ser Gobernador o Maestro de Obras para gestionar la construcción.</p>'}`,
+        cablear: () => { cablearAccionesAsentLado(cuerpo, a, c.cargo); cablearPlegables(cuerpo); cablearProduccionYRecetas(c); cablearPanelObras(cuerpo, renderPanelEdificios); },
+      };
+    case 'gobierno': {
+      // Cargos (con los residentes debajo), Tesorería y lo que se añada sin sitio
+      const otras = [extra('tesoreria'), ...SUBPESTANAS_CENTRO_EXTRA.filter((s) => !EXTRAS_CON_SITIO.has(s.id) && (s.visible?.(c) ?? true))].filter((s): s is SubpestanaPlaza => Boolean(s));
+      const subs: [string, string][] = [['cargos', 'Cargos'], ...otras.map((s) => [s.id, s.etiqueta] as [string, string])];
+      const sub = elegir(subs);
+      const s = otras.find((x) => x.id === sub);
+      return {
+        ...base, subs, sub,
+        html: s ? s.html(c) : htmlCargosPlaza(c, htmlResidentesPlaza(p, a, escaparHtml)),
+        cablear: () => { cablearPlegables(cuerpo); if (s) s.cablear?.(c); else cablearCargosPlaza(c); },
+      };
+    }
+    case 'defensa': return deExtras(['muralla', 'puerta']);
+    case 'territorio': return deExtras(ajena ? ['pueblos'] : ['pueblos', 'fundacion'], { pueblos: 'Pueblos y aldeas' });
+    case 'reclutamiento':
+      return { ...base, ancho: 'ancha', html: htmlReclutamiento(p, a, escaparHtml, renderPanelEdificios), cablear: () => cablearReclutamiento(cuerpo, p, a, ejecutarYRefrescar, renderPanelEdificios) };
+    case 'taberna':
+      return { ...base, html: renderPanelIntel(p, escaparHtml), cablear: () => cablearPanelIntel(cuerpo, p, ejecutarYRefrescar, () => { olvidarEdicion(cuerpo); invalidar(cuerpo); renderPanelEdificios(); }) };
+    case 'mercado': {
+      if (ajena) {
+        // las órdenes abiertas de la plaza, que se toman con el carro de tu columna (`comerciarEnPlaza`), como desde su ficha en el mapa
+        const ordenes = htmlMercadoDePlaza(p, a.id, escaparHtml);
+        return {
+          ...base,
+          html: `${ordenes || '<p class="asent-lado-nota">No hay órdenes abiertas de compra ni de venta a la vista.</p>'}<p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`,
+          cablear: () => cablearMercadoDePlaza(cuerpo, a.id, { ejecutarConDatos: ejecutarConDatosYRefrescar, aviso: avisoMapa }, p.heroeId),
+        };
+      }
+      const subs: [string, string][] = [['ordenes', 'Órdenes'], ['caravanas', 'Caravanas'], ...SUBPESTANAS_MERCADO_EXTRA.map((s) => [s.id, s.etiqueta] as [string, string])];
+      const sub = elegir(subs);
+      const s = SUBPESTANAS_MERCADO_EXTRA.find((x) => x.id === sub);
+      return {
+        ...base, ancho: 'ancha', subs, sub,
+        html: s ? s.html(c) : sub === 'caravanas' ? htmlCaravanas(p, a, escaparHtml, renderPanelEdificios) : htmlOrdenes(p, a, escaparHtml),
+        cablear: () => {
+          if (s) s.cablear?.(c);
+          else if (sub === 'caravanas') cablearCaravanas(cuerpo, p, a, ejecutarYRefrescar, renderPanelEdificios);
+          else cablearOrdenes(cuerpo, a, ejecutarYRefrescar);
+        },
+      };
+    }
+    case 'ascenso':
+      // la tarjeta de la subida con los requisitos desplegados (antes, encima de las subpestañas de Centro urbano)
+      return {
+        titulo: 'Subir de nivel', icono: medallonNivel(a.nivel), subs: [], sub: '', ancho: 'estrecha',
+        html: htmlAscensoPlaza(p, a, c.cargo === 'gobernador', escaparHtml, renderPanelEdificios, true) || '<p class="asent-lado-nota">Cargando los requisitos…</p>',
+        cablear: () => { cablearAccionesAsentLado(cuerpo, a, c.cargo); cablearPlegables(cuerpo); },
+      };
+    case 'informacion': {
+      const s = SUBPESTANAS_CENTRO_EXTRA.find((x) => x.id === 'informacion');
+      return { titulo: 'Información', icono: '<b class="asent-ventana-interrogacion">?</b>', subs: [], sub: '', html: s ? s.html(c) : '', cablear: () => { cablearPlegables(cuerpo); s?.cablear?.(c); } };
+    }
+  }
 }
 
 /** Una plaza de otra Facción (o de una Facción, si no tienes): de visita solo se ve lo de fuera. */
 function esPlazaAjena(p: ProyeccionJugador, a: Asentamiento): boolean {
   return Boolean(a.faccionId) && a.faccionId !== p.faccionId;
-}
-
-/** El Resumen de una plaza ajena: su nombre, su Rey y la Facción dueña con su escudo completo. */
-function seccionResumenAjena(p: ProyeccionJugador, a: Asentamiento): string {
-  const f = p.facciones.find((x) => x.id === a.faccionId);
-  const dir = p.directorioFacciones?.find((x) => x.id === a.faccionId);
-  const nombre = f?.nombre ?? dir?.nombre ?? a.faccionId ?? '';
-  const sigilo = f?.sigilo ?? dir?.sigilo;
-  const rey = f?.reyId ? nombreDeHeroe(p, f.reyId) : null;
-  return `<div class="plaza-ajena-resumen">
-      ${sigilo ? `<span class="plaza-ajena-escudo">${svgSigilo(sigilo, 96)}</span>` : ''}
-      <div class="asent-ficha-grid">
-        <div><span>Plaza</span><strong>${escaparHtml(a.nombre ?? a.id)}</strong></div>
-        <div><span>Facción</span><strong>${escaparHtml(nombre)}</strong></div>
-        <div><span>Rey</span><strong>${rey ? escaparHtml(rey) : '—'}</strong></div>
-      </div>
-      <p class="asent-lado-nota">Estás de visita: esta plaza es de otra Facción.</p>
-    </div>`;
 }
 
 function cablearAccionesAsentLado(cont: HTMLElement, a: Asentamiento, cargo: 'gobernador' | 'maestroObras' | null): void {
@@ -2023,35 +2079,14 @@ function cablearAccionesAsentLado(cont: HTMLElement, a: Asentamiento, cargo: 'go
   });
 }
 
-/** Tira de recursos del almacén de la plaza que se pisa. La proyección solo trae `asentamientos[0]` cuando
- * es una plaza de tu Facción y con su almacén completo, así que no hace falta comprobar nada más. Solo se
- * listan los recursos con cantidad > 0. */
-function renderPanelRecursos(): void {
-  const contenedor = document.querySelector<HTMLElement>('.asent-recursos');
-  if (!contenedor) return;
-  const almacen = estadoCliente.proyeccionUltima?.asentamientos[0]?.almacen ?? {};
-  const items = Object.entries(almacen)
-    .filter(([, recurso]) => Math.floor(recurso.cantidad) >= 1)
-    .sort(([a], [b]) => a.localeCompare(b));
-  if (items.length === 0) {
-    contenedor.hidden = true;
-    vaciar(contenedor);
-    return;
-  }
-  contenedor.hidden = false;
-  const htmlRecursos = items
-    .map(([recurso, { cantidad, capacidad }]) => {
-      const llenado = capacidad > 0 ? Math.min(100, Math.round((cantidad / capacidad) * 100)) : 0;
-      const casiLleno = llenado >= 90;
-      const nombre = escaparHtml(RECURSO_NOMBRE[recurso] ?? recurso);
-      const detalle = escaparHtml(`${Math.floor(cantidad)}${capacidad > 0 ? ` / ${Math.floor(capacidad)}` : ''}`);
-      return `<span class="asent-recurso${casiLleno ? ' lleno' : ''}" data-nombre="${nombre}" data-detalle="${detalle}">
-        <span class="asent-recurso-icono" aria-hidden="true">${RECURSO_ICONO[recurso] ?? '📦'}</span>${Math.floor(cantidad)}
-        <span class="asent-recurso-barra" style="--llenado:${llenado}%"></span>
-      </span>`;
-    })
-    .join('');
-  pintar(contenedor, htmlRecursos, undefined, 'recursos');
+/** La barra de abajo de la plaza: Población, Almacén y Estado, cada placa solo si llega lo suyo (`ui/hudPlaza.ts`). */
+function renderPieDePlaza(): void {
+  const pie = document.querySelector<HTMLElement>('.asent-pie');
+  if (!pie) return;
+  const a = estadoCliente.proyeccionUltima?.asentamientos[0];
+  const html = a ? htmlPieDePlaza(a, escaparHtml, renderPieDePlaza) : '';
+  pie.hidden = !html;
+  pintar(pie, html, undefined, 'pie');
 }
 
 /** Pinta el panel flotante de la barra (Ejércitos) según `panelAsentAbierto`. */
@@ -2076,8 +2111,13 @@ function renderPanelAsent(): void {
   }
 }
 
-/** Pantalla ASENTAMIENTO: la plaza en 3D a pantalla completa, con su HUD encima (blasón, minimapa, almacén, Ejércitos y Salir al mundo) y
- * la ventana «Asentamiento» (pestañas de los edificios) que se abre desde la barra del jugador. */
+/**
+ * Pantalla ASENTAMIENTO: la plaza en 3D a pantalla completa y su HUD encima, repartido por los bordes (Víctor, 2026-11-02, «rehacer la interfaz
+ * de asentamiento»: había demasiado en muy poco espacio). Arriba a la izquierda, el blasón (con el nombre, la casa, la corona y el medallón que
+ * abre la subida), la subida en curso, el riel de las ventanas y las obras en marcha; al borde derecho, el rastreador de misiones y la ficha del
+ * edificio elegido; arriba a la derecha, «Ejércitos» y «Salir al mundo»; arriba al centro, la ocupación militar; abajo, Población, Almacén y Estado;
+ * abajo a la derecha, pegado a los bordes, el minimapa. El «?» de la barra abre Información.
+ */
 function montarAsentamiento(): void {
   const proyeccion = estadoCliente.proyeccionUltima;
   const asentamiento = proyeccion?.asentamientos[0];
@@ -2085,25 +2125,29 @@ function montarAsentamiento(): void {
   estadoCliente.modoVista = 'asentamiento';
   panelAsentAbierto = null;
   menuEsquinaAbierto = false;
-  ventanaAsentAbierta = false;
-  // La plaza a pantalla completa (petición de Víctor, 2026-11-02): la escena 3D llena la pantalla; arriba a la izquierda, el blasón (escudo de la
-  // Facción dueña, nombre y nivel) y debajo el minimapa; abajo al centro, el almacén flotando; arriba a la derecha, «Asentamiento» en la barra del
-  // jugador, que abre a pantalla completa la ventana con todo lo que antes iba en la columna derecha, y «Ejércitos» y «Salir al mundo».
-  const botonAsent = `<button type="button" class="jugador-boton-asent" data-ventana-asent title="Asentamiento: edificios, mercado, reclutamiento y todo lo de la plaza" aria-label="Asentamiento" aria-expanded="false">${iconoBarra('asentamiento')}<span class="jugador-nombre">Asentamiento</span></button>`;
+  ventanaPlaza = null;
+  popBlason = null;
+  editandoNombrePlaza = false;
+  const botonInfo = '<button type="button" class="jugador-boton-info" data-ventana-info title="Información: qué es cada cosa de la plaza" aria-label="Información">?</button>';
   app.innerHTML = `<div class="asent-screen plaza-3d">
-    ${htmlBarraJugador(proyeccion, escaparHtml, botonAsent)}
+    ${htmlBarraJugador(proyeccion, escaparHtml, botonInfo)}
     <div class="asent-cuerpo">
       <div class="asent-centro">
         <div class="asent-mapa asent-mapa-3d">
           <div class="ciudad3d-escena"></div>
         </div>
-        <div class="asent-recursos" hidden></div>
       </div>
       <aside class="asent-izq">
         <div class="asent-blason"></div>
+        <div class="asent-blason-pop" hidden></div>
         <div class="asent-ascenso-hud" role="status" hidden></div>
-        <div class="asent-lienzo asent-minimapa" title="Minimapa: un clic lleva la vista ahí"><canvas id="mapa" width="900" height="900"></canvas></div>
+        <nav class="asent-riel" aria-label="Ventanas de la plaza"></nav>
+        <div class="asent-obras-hud" hidden></div>
       </aside>
+      <aside class="asent-der"></aside>
+      <div class="asent-ocupacion" role="status" hidden></div>
+      <div class="asent-pie" hidden></div>
+      <div class="asent-lienzo asent-minimapa" title="Minimapa: un clic lleva la vista ahí"><canvas id="mapa" width="900" height="900"></canvas></div>
       <header class="asent-barra">
         <div class="asent-barra-acciones">
           <button type="button" data-panel-asent="ejercito">Ejércitos</button>
@@ -2111,18 +2155,10 @@ function montarAsentamiento(): void {
         </div>
         <aside class="asent-panel" hidden></aside>
       </header>
-    </div>
-    <div class="asent-ventana" hidden>
-      <div class="asent-ventana-marco asent-edificios" role="dialog" aria-modal="true" aria-label="Asentamiento">
-        <aside class="asent-ventana-lateral">
-          <div class="asent-ventana-blason"></div>
-          <div class="asent-edif-tabs"></div>
-        </aside>
-        <div class="asent-ventana-principal">
-          <button class="asent-ventana-cerrar" type="button" data-ventana-cerrar title="Cerrar (Esc)" aria-label="Cerrar">✕</button>
-          <div class="asent-edif-cuerpo"></div>
-        </div>
-      </div>
+      <section class="asent-ventana asent-edificios" role="dialog" aria-label="Plaza" hidden>
+        <header class="asent-ventana-cab"><div class="asent-ventana-titulo"></div><button class="asent-ventana-cerrar" type="button" data-ventana-cerrar title="Cerrar (Esc)" aria-label="Cerrar">✕</button></header>
+        <div class="asent-edif-cuerpo"></div>
+      </section>
     </div>
     <div class="asent-tooltip" hidden></div>
     ${HTML_VELO_SALIDA}
@@ -2139,10 +2175,9 @@ function montarAsentamiento(): void {
     });
   });
   contenedor.querySelector('#btn-salir-mundo')?.addEventListener('click', () => { panelAsentAbierto = null; menuEsquinaAbierto = false; sincronizarMenuEsquina(); renderPanelAsent(); abrirVentanaSalida(); });
-  contenedor.querySelector('[data-ventana-asent]')?.addEventListener('click', () => alternarVentanaAsent(!ventanaAsentAbierta));
-  contenedor.querySelector('[data-ventana-cerrar]')?.addEventListener('click', () => alternarVentanaAsent(false));
-  // Un clic en el fondo de la ventana (fuera del marco) también la cierra.
-  contenedor.querySelector('.asent-ventana')?.addEventListener('click', (ev) => { if (ev.target === ev.currentTarget) alternarVentanaAsent(false); });
+  contenedor.querySelector('[data-ventana-info]')?.addEventListener('click', () => alternarVentanaPlaza('informacion'));
+  contenedor.querySelector('[data-ventana-cerrar]')?.addEventListener('click', () => abrirVentanaPlaza(null));
+  document.addEventListener('pointerdown', cerrarPopFuera, true);
   cablearMenuEsquina(contenedor);
   cablearBarraJugador(contenedor);
   cablearTooltipEdificios(contenedor);
@@ -2151,8 +2186,8 @@ function montarAsentamiento(): void {
     proyeccion: () => estadoCliente.proyeccionUltima ?? undefined, ejecutar: ejecutarYRefrescar, escapar: escaparHtml,
     redibujar: () => { if (estadoCliente.proyeccionUltima) void dibujarPantallaSegunModo(estadoCliente.proyeccionUltima); },
     repintarLista: renderPanelEdificios,
-    // elegir en la lista de la ventana «Asentamiento» la cierra, para ver cómo la cámara va al edificio
-    enfocar: (id) => { if (ventanaAsentAbierta) alternarVentanaAsent(false); ciudad3d?.vista.enfocar(id); },
+    // elegir un edificio en la lista de Construcción cierra la ventana, para ver cómo la cámara va a él
+    enfocar: (id) => { if (ventanaPlaza) abrirVentanaPlaza(null); ciudad3d?.vista.enfocar(id); },
   });
   // La ciudad tiene vida (almacén, producción, población) aunque el jugador no toque nada: mismo sondeo
   // suave que el mapa, hasta que exista el canal de tiempo real.
@@ -2164,25 +2199,25 @@ function montarAsentamiento(): void {
   }, 3000);
   // la barra de la subida de nivel avanza entre mensajes del servidor
   const relojAscenso = setInterval(pintarAscensoHud, 1000);
-  limpiarPantalla = () => { clearInterval(sondeo); clearInterval(relojAscenso); desmontarCiudad3D(); };
+  limpiarPantalla = () => { clearInterval(sondeo); clearInterval(relojAscenso); document.removeEventListener('pointerdown', cerrarPopFuera, true); desmontarCiudad3D(); };
   renderPanelEdificios();
-  renderPanelRecursos();
+  renderPieDePlaza();
   renderPanelAsent();
   void dibujarPantallaSegunModo(proyeccion);
 }
 
-/** Abre o cierra la ventana «Asentamiento» (todo lo de la plaza a pantalla completa, sobre la vista 3D). */
-function alternarVentanaAsent(abrir: boolean): void {
-  ventanaAsentAbierta = abrir;
-  const ventana = document.querySelector<HTMLElement>('.asent-ventana');
-  const boton = document.querySelector<HTMLElement>('[data-ventana-asent]');
-  if (ventana) ventana.hidden = !abrir;
-  boton?.classList.toggle('activo', abrir);
-  boton?.setAttribute('aria-expanded', String(abrir));
-  if (abrir) { panelAsentAbierto = null; renderPanelAsent(); renderPanelEdificios(); }
+/** Un clic fuera del blasón y de lo que cuelga de él lo recoge (salvo en un diálogo de confirmación, que es suyo). */
+function cerrarPopFuera(ev: PointerEvent): void {
+  if (!popBlason || (ev.target as Element | null)?.closest?.('.asent-blason, .asent-blason-pop, .dialogo-velo')) return;
+  popBlason = null;
+  renderPanelEdificios();
 }
+
+// Esc recoge lo que cuelga del blasón y, si no hay nada, cierra la ventana abierta de la plaza.
 document.addEventListener('keydown', (ev) => {
-  if (ev.key === 'Escape' && ventanaAsentAbierta && !document.querySelector('.dialogo-velo') && document.querySelector('.asent-ventana:not([hidden])')) alternarVentanaAsent(false);
+  if (ev.key !== 'Escape' || !document.querySelector('.plaza-3d') || ventanaSalidaAbierta || document.querySelector('.dialogo-velo, .eleccion-clic')) return;
+  if (popBlason) { popBlason = null; renderPanelEdificios(); return; }
+  if (ventanaPlaza) abrirVentanaPlaza(null);
 });
 
 /** La Facción dueña de la plaza (la tuya o una ajena que conoces), para su escudo. */
@@ -2194,22 +2229,72 @@ function faccionDuena(p: ProyeccionJugador, a: Asentamiento): { nombre: string; 
   return f ? { nombre: f.nombre, sigilo: f.sigilo, granRey: propia?.liga?.granReyId === a.faccionId } : { nombre: a.faccionId, granRey: false };
 }
 
-/** El blasón de la plaza: el escudo completo de la Facción dueña, el nombre de la ciudad y su nivel. Arriba a la izquierda de la vista 3D y,
- * en grande, a la cabeza de la ventana «Asentamiento». Solo se repinta si cambió. */
+/**
+ * El blasón de la plaza, arriba a la izquierda de la vista 3D (`ui/hudPlaza.ts`): el escudo de la Facción dueña con el medallón del nivel (abre la
+ * subida; brilla si ya se puede pedir), el nombre con su lápiz si resides aquí, la Facción (y su Rey, si es ajena), la casa de la residencia y la
+ * corona de la capital. Debajo, la tarjeta que cuelga de la casa o de la corona, y la subida en curso. Solo se repinta lo que cambió.
+ */
 function pintarBlasones(p: ProyeccionJugador, a: Asentamiento): void {
-  const f = faccionDuena(p, a);
-  const nombre = escaparHtml(a.nombre ?? a.id);
-  const faccion = f ? escaparHtml(f.nombre) : 'Sin Facción';
-  const opera = a.nivelActual !== undefined && a.nivelActual !== a.nivel ? `<small class="asent-blason-opera" title="Por el mantenimiento, funciona como una plaza de nivel ${a.nivelActual}">rinde como ${a.nivelActual}</small>` : '';
   const hud = document.querySelector<HTMLElement>('.asent-blason');
-  if (hud) pintar(hud, `<span class="asent-blason-escudo">${svgSigilo(f?.sigilo, 64, { granRey: f?.granRey })}</span>
-      <span class="asent-blason-texto"><strong class="asent-nombre">${nombre}</strong><small>${faccion}</small>${opera}</span>
-      ${medallonNivel(a.nivel, '', `Plaza de nivel ${a.nivel}`)}`, undefined, 'blason');
+  const f = faccionDuena(p, a);
+  const propia = Boolean(p.faccionId) && a.faccionId === p.faccionId;
+  const reside = resideEnLaPlaza(p, a);
+  const real = p.facciones.find((x) => x.id === a.faccionId);
+  const capital = a.capitalDeFaccionId !== undefined && a.capitalDeFaccionId === a.faccionId;
+  const corona: BlasonHud['capital'] = propia && capital ? 'si' : propia && real?.reyId === p.heroeId ? 'puede' : null;
+  if ((popBlason === 'residencia' && !propia) || (popBlason === 'capital' && !corona)) popBlason = null;
+  if (!reside) editandoNombrePlaza = false;
+  if (hud) {
+    const b: BlasonHud = {
+      nombre: a.nombre ?? a.id,
+      faccion: f?.nombre ?? 'Sin Facción',
+      rey: !propia && real?.reyId ? nombreDeHeroe(p, real.reyId) : undefined,
+      escudo: svgSigilo(f?.sigilo, 64, { granRey: f?.granRey }),
+      nivel: a.nivel,
+      nivelActual: a.nivelActual,
+      renombrar: reside,
+      editando: editandoNombrePlaza,
+      residencia: propia ? (reside ? 'dentro' : 'fuera') : null,
+      capital: corona,
+      abierto: popBlason,
+      ascenso: propia ? (ascensoPosible(p, a, renderPanelEdificios) ? 'listo' : 'abrir') : null,
+    };
+    pintar(hud, htmlBlasonHud(b, escaparHtml), () => cablearBlasonHud(hud, {
+      editar: () => {
+        editandoNombrePlaza = true;
+        pintarBlasones(p, a);
+        const campo = hud.querySelector<HTMLInputElement>('[data-campo="nombre-plaza"]');
+        campo?.focus();
+        campo?.select();
+      },
+      cancelar: () => { editandoNombrePlaza = false; olvidarEdicion(hud); renderPanelEdificios(); },
+      guardar: (nombre) => void (async () => {
+        const mensaje = await ejecutarYRefrescar('renombrarAsentamiento', { asentamientoId: a.id, nombre });
+        if (mensaje) { errorDePlaza(mensaje); return; }
+        editandoNombrePlaza = false;
+        olvidarEdicion(hud);
+        renderPanelEdificios();
+      })(),
+      residencia: () => { popBlason = popBlason === 'residencia' ? null : 'residencia'; renderPanelEdificios(); },
+      capital: () => { popBlason = popBlason === 'capital' ? null : 'capital'; renderPanelEdificios(); },
+      ascenso: () => alternarVentanaPlaza('ascenso'),
+    }), 'blason');
+  }
+  pintarPopBlason(p, a);
   pintarAscensoHud();
-  const grande = document.querySelector<HTMLElement>('.asent-ventana-blason');
-  if (grande) pintar(grande, `<span class="asent-ventana-escudo">${svgSigilo(f?.sigilo, 132, { granRey: f?.granRey })}</span>
-      <h2 class="asent-ventana-nombre">${nombre}</h2><span class="asent-ventana-faccion">${faccion}</span>
-      <span class="asent-ventana-nivel">${medallonNivel(a.nivel, '', `Plaza de nivel ${a.nivel}`)}<span>Nivel ${a.nivel}</span>${opera}</span>`, undefined, 'blason-grande');
+}
+
+/** La tarjeta que cuelga del blasón: la de la residencia (resides aquí y «Dejar», o «Hacerla mi base») o la de la capital («Designar», si eres el Rey). */
+function pintarPopBlason(p: ProyeccionJugador, a: Asentamiento): void {
+  const pop = document.querySelector<HTMLElement>('.asent-blason-pop');
+  if (!pop) return;
+  if (!popBlason) { pop.hidden = true; vaciar(pop); return; }
+  const c = contextoPlaza(p, a, pop);
+  pop.hidden = false;
+  pintar(pop, `<div class="resid-tarjetas">${popBlason === 'residencia' ? htmlResidencia(c) : htmlCapital(c)}</div>`, () => {
+    cablearResidencia(c);
+    pop.querySelector('#btn-mudarme')?.addEventListener('click', () => void mudarseAEstaPlaza());
+  }, `pop:${popBlason}`);
 }
 
 /** La subida de nivel en curso de la plaza (`ascenso`), bajo el blasón y encima del minimapa (Víctor, 2026-11-02): a qué nivel sube, cuánto
@@ -2245,7 +2330,14 @@ function montarCiudad3D(contenedor: HTMLElement): void {
   const minimapa = new Minimapa(lienzo);
   try {
     const vista = new VistaCiudad3D(escena, {
-      alElegir: elegirEdificio,
+      // su ficha y, si es el Barracón, la Taberna o el Mercado (en pie), también su ventana
+      alElegir: (id) => {
+        elegirEdificio(id);
+        const p = estadoCliente.proyeccionUltima, a = p?.asentamientos[0];
+        const e = id && a ? a.edificios.find((x) => x.id === id) : undefined;
+        const v = e?.estado === 'activo' ? VENTANA_DE_EDIFICIO[e.tipo] : undefined;
+        if (v && p && a && ventanaPlaza !== v && ventanaDisponible(v, p, a)) abrirVentanaPlaza(v);
+      },
       alPasar: (id, evento) => {
         const p = estadoCliente.proyeccionUltima;
         const edificio = id ? p?.asentamientos[0]?.edificios.find((e) => e.id === id) : undefined;
@@ -2269,9 +2361,9 @@ function montarCiudad3D(contenedor: HTMLElement): void {
     centro?.classList.remove('asent-mapa-3d');
     const caja = lienzo.parentElement;
     caja?.classList.remove('asent-minimapa');
-    // el minimapa vive arriba a la izquierda: sin 3D, el 2D vuelve al centro de la pantalla
+    // el minimapa vive abajo a la derecha: sin 3D, el 2D vuelve al centro de la pantalla
     if (caja && centro) centro.appendChild(caja);
-    contenedor.querySelector('.asent-screen')?.classList.add('sin-3d');
+    contenedor.classList.add('sin-3d');
   }
 }
 
@@ -2658,7 +2750,7 @@ function refrescarPantalla(pantalla: Pantalla): void {
   if (pantalla === 'campamento' || pantalla === 'pueblo' || pantalla === 'asentamiento') renderVentanaSalida();
   if (pantalla === 'campamento') { const c = campamentoActual(proyeccion); if (c) pintarCampamento(proyeccion, c); return; }
   if (pantalla === 'pueblo') { pintarPueblo(proyeccion); return; }
-  if (pantalla === 'asentamiento') { void dibujarPantallaSegunModo(proyeccion); renderPanelEdificios(); renderPanelRecursos(); renderPanelAsent(); return; }
+  if (pantalla === 'asentamiento') { void dibujarPantallaSegunModo(proyeccion); renderPanelEdificios(); renderPieDePlaza(); renderPanelAsent(); return; }
   if (pantalla !== 'legacy') return;
   renderizarPanelInteraccion(proyeccion);
   void dibujarPantallaSegunModo(proyeccion);

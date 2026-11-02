@@ -113,7 +113,7 @@ lados, las calles y la empalizada celda a celda).
 - **Táctil**: con dos dedos, pellizco.
 - **Clic en un edificio**: lo elige, igual que antes en el 2D (la ficha de la izquierda y el resalte dorado; los demás de su tipo, en tenue).
   Al pasar por encima, el mismo tooltip de siempre.
-- **Elegir en la lista de edificios** (en la ventana «Asentamiento»): la ventana se cierra y la cámara va a él.
+- **Elegir en la lista de edificios** (en la ventana Construcción, desde 0.98.0): la ventana se cierra y la cámara va a él.
 - **Minimapa** (el 2D): dibuja en dorado lo que abarca la cámara. Un clic en él lleva la vista ahí (en el minimapa, el clic ya no elige).
 - **Al entrar**: la cámara encuadra lo construido (el 90 % de los edificios más cercanos y la muralla), no el radio entero de la plaza.
 - **Sin WebGL**: queda el 2D de siempre a pantalla entera, entre la barra y el almacén.

@@ -115,25 +115,36 @@ remata cabeceras y paneles con la moldura clásica. `opacity: .5` para que sea s
 - **Avisos y elecciones, arriba al centro**: bajo la barra salen los avisos (`.aviso-global`) y, en el mundo y en el modo
   mapa, la lista de qué hay bajo un clic cuando son dos o más cosas (`.eleccion-clic`, 0.93.0): una placa de bronce con una
   fila por cosa (símbolo en un medallón, qué es y un detalle). Mientras está abierta, el aviso que hubiera espera debajo.
-- **Vista de la plaza** (`.plaza-3d`, 0.92.0, petición de Víctor del 2026-11-02): la plaza en 3D (`docs/Ciudad_3D.md`) a
-  pantalla completa, también bajo la barra del jugador, que es transparente y de iconos como en el mundo. Encima, como el HUD
-  de un juego de estrategia:
-  - arriba a la izquierda, en columna: el blasón (`.asent-blason`: escudo completo de la Facción dueña con el medallón del
-    nivel prendido en su esquina, el nombre de la ciudad y la Facción); mientras la plaza sube de nivel, colgando de él, la
-    placa de la subida (`.asent-ascenso-hud`, 0.95.0: «Subiendo a nivel N», el porcentaje, la barra y lo que falta, que
-    avanza cada segundo); el minimapa 2D (`.asent-minimapa`), la ficha del edificio elegido y el rastreador de misiones; los
-    clics fuera de las cajas pasan a la escena;
+- **Vista de la plaza** (`.plaza-3d`; 0.92.0 la llevó a pantalla completa, 0.98.0 la repartió por los bordes a petición de
+  Víctor del 2026-11-02, «se siente demasiado en muy poco espacio»): la plaza en 3D (`docs/Ciudad_3D.md`) a pantalla
+  completa, también bajo la barra del jugador, que es transparente y de iconos como en el mundo. Encima, como el HUD de un
+  juego de estrategia (piezas en `ui/hudPlaza.ts`):
+  - arriba a la izquierda, en columna (`.asent-izq`): el blasón (`.asent-blason`: escudo de la Facción dueña con el medallón
+    del nivel prendido en su esquina, el nombre con su lápiz ✎ si resides aquí, que lo cambia ahí mismo, y la Facción, con su
+    Rey si es ajena). El medallón abre la ventana «Subir de nivel» y brilla con una ⬆ cuando la plaza ya puede subir. Junto al
+    nombre, dos iconos: la casa (resides aquí o no; abre la tarjeta de la residencia, con «Hacerla mi base» o «Dejar») y la
+    corona (capital; si eres el Rey, la tarjeta para designarla). Las tarjetas cuelgan del blasón (`.asent-blason-pop`) y se
+    recogen con Esc o un clic fuera. Debajo, la placa de la subida en curso (`.asent-ascenso-hud`, 0.95.0), el riel de
+    ventanas (`.asent-riel`: Construcción, Gobierno, Defensa, Territorio, Reclutamiento, Taberna y Mercado, iconos con su
+    nombre al pasar el ratón; con candado si falta el edificio; Construcción lleva en una insignia las obras en marcha) y las
+    obras en marcha (`.obras-hud`, hasta tres con su cuenta atrás y «N más · N en cola»; un clic abre Construcción);
+  - al borde derecho (`.asent-der`): el rastreador de misiones y la ficha del edificio elegido;
   - arriba a la derecha, bajo la barra: «Ejércitos» (su panel se abre debajo) y «Salir al mundo»;
-  - abajo al centro: el almacén (`.asent-recursos`) flotando;
-  - en la barra, el primero por la derecha: el botón «Asentamiento» (`.jugador-boton-asent`, en oro y con su nombre), que abre
-    la ventana «Asentamiento» (`.asent-ventana`) a pantalla completa bajo la barra, con el aire de la de Facción: en el lateral,
-    el escudo grande, el nombre, la Facción y el nivel, y debajo las pestañas de los edificios en vertical con su icono; a la
-    derecha, el contenido (lo que antes iba en la columna derecha). Se cierra con ✕, Esc, el mismo botón o un clic fuera.
-  - El campamento y el pueblo siguen con barra superior en flujo, columna izquierda, mapa centrado y columna derecha. En el
+  - arriba al centro, si la hay, la ocupación militar en una franja roja (`.asent-ocupacion`);
+  - abajo (`.asent-pie`), tres grupos separados por color: **Población** (total frente al techo del nivel y cada clase frente a
+    su sitio), **Almacén** (cada recurso con su barra, en rojo al llenarse) y **Estado** (nutrición y mantenimiento en verde,
+    ámbar o rojo); el detalle, al pasar el ratón;
+  - abajo a la derecha, pegado a los bordes: el minimapa 2D (`.asent-minimapa`);
+  - las ventanas (`.asent-ventana`): una sola a la vez, a media pantalla junto al riel, con su título, sus subpestañas si las
+    tiene y ✕ (o Esc) para cerrar; Reclutamiento y Mercado son más anchas y «Subir de nivel», estrecha. Un clic en el Barracón,
+    la Galería de tiro o las Caballerizas abre Reclutamiento; en la Taberna o el Mercado, la suya. El «?» de la barra del
+    jugador abre Información. Las Misiones y el Tablón de la plaza van en el botón «Misiones» de la barra, en dos pestañas;
+  - el campamento y el pueblo siguen con barra superior en flujo, columna izquierda, mapa centrado y columna derecha. En el
     campamento (0.97.0) el centro es su vista 3D, con la planta en SVG de minimapa abajo a la derecha (`.camp-lienzo`).
 - **Login / Facción**: tarjeta central (`.login-card`) sobre el fondo, como un menú de campaña.
-- Bajo ~820 px la columna lateral se oculta y el mapa ocupa todo. En la plaza en 3D, bajo 900 px, la columna de la
-  izquierda se estrecha, «Asentamiento» queda en icono y la ventana pasa a una sola columna (lateral arriba, pestañas en fila).
+- Bajo ~820 px la columna lateral se oculta y el mapa ocupa todo. En la plaza en 3D, por debajo de 1440 px el pie se
+  compacta; con poca altura (≤ 820 px) el riel encoge y las obras enseñan tres; bajo 900 px de ancho la columna de la izquierda
+  se estrecha y la ventana ocupa todo el ancho.
 
 ## 6. Reglas al añadir UI
 

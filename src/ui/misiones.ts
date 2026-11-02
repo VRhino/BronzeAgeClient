@@ -288,19 +288,29 @@ function htmlDetalle(p: ProyeccionJugador, x: { d: DuenoMision; m: Mision } | un
   return { cuerpo, pie: `${seguir}<span class="diario-pie-hueco"></span>${reclamar}` };
 }
 
-/** La ventana del botón Misiones de la barra: centrada, con la lista a la izquierda y la misión abierta a la derecha. */
-export function htmlPanelMisiones(p: ProyeccionJugador, e: Escapar): string {
+/** El tablón de la plaza donde estás, para la ventana de Misiones: su HTML ya pintado, el nombre de la plaza y si es lo que se está viendo. */
+export interface TablonEnMisiones { html: string; plaza: string; viendo: boolean }
+
+/**
+ * La ventana del botón Misiones de la barra: centrada, con la lista a la izquierda y la misión abierta a la derecha. Dentro de una plaza con
+ * tablón lleva arriba dos pestañas, «Misiones» y «Tablón de …» (Víctor, 2026-11-02: el tablón sale de la ventana de la plaza y va aquí, con las
+ * misiones de la plaza, que ya estaban en el grupo «Mi plaza»). Las pestañas las cablea `main.ts` (`data-diario-vista`).
+ */
+export function htmlPanelMisiones(p: ProyeccionJugador, e: Escapar, tablon?: TablonEnMisiones): string {
   const x = elegida(p);
   const abierta = x ? claveDe(x.d, x.m.id) : undefined;
   const { cuerpo, pie } = htmlDetalle(p, x, e);
   const s = cargarSeguimiento(p);
+  const vistas = tablon ? `<span class="diario-vistas" role="tablist">
+      <button type="button" role="tab" class="diario-vista${tablon.viendo ? '' : ' activo'}" aria-selected="${!tablon.viendo}" data-diario-vista="misiones">Misiones</button>
+      <button type="button" role="tab" class="diario-vista${tablon.viendo ? ' activo' : ''}" aria-selected="${tablon.viendo}" data-diario-vista="tablon">Tablón de ${e(tablon.plaza)}</button></span>` : '';
   return `<div class="diario">
     <header class="diario-cab"><span class="diario-cab-titulo">Misiones${ayuda('jugador:misiones', `Se activan solas: cuando cumples una, aparecen las que venían detrás. Sigue hasta ${MAX_SEGUIDAS} para verlas en pantalla. La recompensa no llega sola: pulsa Reclamar cuando esté cumplida.`)}</span>
-      <small>Sigues ${s?.seguidas.length ?? 0}/${MAX_SEGUIDAS}</small><button class="diario-cerrar" type="button" data-mision-cerrar aria-label="Cerrar">✕</button></header>
-    <div class="diario-cuerpo">
+      ${vistas}<small>Sigues ${s?.seguidas.length ?? 0}/${MAX_SEGUIDAS}</small><button class="diario-cerrar" type="button" data-mision-cerrar aria-label="Cerrar">✕</button></header>
+    ${tablon?.viendo ? `<div class="diario-cuerpo diario-tablon">${tablon.html}</div>` : `<div class="diario-cuerpo">
       <nav class="diario-indice">${htmlIndice(p, abierta, e)}</nav>
       <section class="diario-detalle"><div class="diario-pagina">${cuerpo}</div><footer class="diario-pie">${pie}</footer></section>
-    </div>
+    </div>`}
   </div>`;
 }
 
@@ -366,11 +376,12 @@ export const SUBPESTANA_MISIONES: SubpestanaPlaza = {
 // ---------------------------------------------------------------- rastreador
 
 /**
- * Las seguidas que se ven ahora, con su barra fina; las cumplidas, en dorado. En el mundo flota arriba a la derecha; en la plaza y el
- * campamento va al principio de su columna izquierda (allí arriba a la izquierda está la leyenda). Plegado, una línea.
+ * Las seguidas que se ven ahora, con su barra fina; las cumplidas, en dorado. En el mundo flota arriba a la derecha; en la plaza, al borde
+ * derecho, encima de la ficha del edificio; en el campamento, al principio de su columna izquierda. Plegado, una línea.
  */
 export function pintarRastreador(p: ProyeccionJugador, abrir: (d: DuenoMision, id?: string) => void, e: Escapar): void {
-  const izq = document.querySelector<HTMLElement>('.asent-izq');
+  // en la plaza va al borde derecho (`.asent-der`); en el campamento, al principio de su columna izquierda
+  const izq = document.querySelector<HTMLElement>('.asent-der') ?? document.querySelector<HTMLElement>('.asent-izq');
   const mundo = document.querySelector<HTMLElement>('.mapa-screen:not(.mapa-interior)');
   const sitio = izq ?? mundo;
   let el = document.querySelector<HTMLElement>('.misiones-rastreador');
