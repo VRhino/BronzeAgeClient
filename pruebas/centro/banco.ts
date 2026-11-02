@@ -1,4 +1,4 @@
-// Banco del panel derecho de la plaza (`/pruebas/centro/`): la subida de nivel, el Resumen (con la Residencia al pie), los Cargos, Reclutamiento y Taberna, con una plaza de mentira y
+// Banco del panel derecho de la plaza (`/pruebas/centro/`): la subida de nivel, el Resumen (con la Residencia al pie), los Cargos, Reclutamiento, Taberna y Mercado (Órdenes, Caravanas y Trueques), con una plaza de mentira y
 // sin servidor. Los datos de juego son los bloques de Docs/Mechanics del motor (`../plaza/datos.json`, como `GET /v1/datos`). Las órdenes no
 // salen: se anotan en `window.__banco.enviadas`.
 import datos from '../plaza/datos.json';
@@ -15,6 +15,8 @@ import { SUBPESTANA_RESIDENCIA } from '../../src/ui/panelResidencia';
 import { cablearReclutamiento, htmlReclutamiento } from '../../src/ui/reclutamiento';
 import { cablearPanelIntel, renderPanelIntel } from '../../src/ui/panelIntel';
 import { tarifasDeIntel } from '../../src/apiCliente';
+import { cablearCaravanas, cablearOrdenes, htmlCaravanas, htmlOrdenes } from '../../src/ui/panelMercado';
+import { SUBPESTANA_TRUEQUES } from '../../src/ui/panelTrueques';
 import { escena, type Escena } from './datos-escena';
 
 const e = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -36,6 +38,14 @@ function ver(): void {
     const ejecutar = ctx.ejecutar;
     cuerpo.innerHTML = sub === 'reclutamiento' ? `<div class="asent-lado-cuerpo">${htmlReclutamiento(p, a, e, ver)}</div>` : renderPanelIntel(p, e);
     if (sub === 'reclutamiento') cablearReclutamiento(cuerpo, p, a, ejecutar, ver); else cablearPanelIntel(cuerpo, p, ejecutar, ver);
+    return;
+  }
+  if (sub === 'ordenes' || sub === 'caravanas' || sub === 'trueques') {
+    const tabs = `<div class="asent-tabs asent-subtabs">${[['ordenes', 'Órdenes'], ['caravanas', 'Caravanas'], ['trueques', 'Trueques']].map(([id, n]) => `<button class="asent-tab${id === sub ? ' activo' : ''}" type="button">${n}</button>`).join('')}</div>`;
+    const contenido = sub === 'ordenes' ? htmlOrdenes(p, a, e) : sub === 'caravanas' ? htmlCaravanas(p, a, e, ver) : SUBPESTANA_TRUEQUES.html(ctx);
+    cuerpo.innerHTML = `${tabs}<div class="asent-lado-cuerpo">${contenido}</div>`;
+    cablearPlegables(cuerpo);
+    if (sub === 'ordenes') cablearOrdenes(cuerpo, a, ctx.ejecutar); else if (sub === 'caravanas') cablearCaravanas(cuerpo, p, a, ctx.ejecutar, ver); else SUBPESTANA_TRUEQUES.cablear?.(ctx);
     return;
   }
   const contenido = sub === 'resumen'

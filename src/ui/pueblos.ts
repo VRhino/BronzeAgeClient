@@ -312,7 +312,7 @@ function cablearPueblos(c: ContextoPlaza): void {
   const { proyeccion: p, asentamiento: a, cuerpo } = c;
   alCargarDatos = c.refrescar;
   const error = cuerpo.querySelector<HTMLElement>('[data-pueblo-error]');
-  cablearEscolta(cuerpo, p, c.ejecutar, error);
+  cablearEscolta(cuerpo, p, c.ejecutar);
   const enviar = async (b: HTMLButtonElement, tipo: string, params: object): Promise<void> => {
     b.disabled = true;
     const mensaje = await c.ejecutar(tipo, params);

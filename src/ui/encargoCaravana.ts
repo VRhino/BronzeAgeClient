@@ -8,6 +8,7 @@ import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { Asentamiento, Caravana, Encargo, ParadaEncargo } from '../tiposDominio';
 import { ritmoDelMundo, textoEnTiempoReal } from './estadoCliente';
 import type { Ejecutar } from './panelCarro';
+import { mostrar as mostrarAviso } from './avisos';
 
 type Escapar = (valor: string) => string;
 type Punta = 'origen' | 'destino';
@@ -171,12 +172,12 @@ function leerParada(raiz: HTMLElement, id: string, punta: Punta, ajena: boolean)
   return { recoger, esperarExistencias, dejar, desecharSobrante };
 }
 
-export function cablearEncargo(raiz: HTMLElement, p: ProyeccionJugador, ejecutar: Ejecutar, error: HTMLElement | null, repintar: () => void): void {
+export function cablearEncargo(raiz: HTMLElement, p: ProyeccionJugador, ejecutar: Ejecutar, repintar: () => void): void {
   const lanzar = async (boton: HTMLButtonElement, tipo: string, params: object): Promise<boolean> => {
     boton.disabled = true;
     const mensaje = await ejecutar(tipo, params);
     boton.disabled = false;
-    if (error) error.textContent = mensaje ?? '';
+    if (mensaje) mostrarAviso(mensaje, true);
     return mensaje === null;
   };
   raiz.querySelectorAll<HTMLButtonElement>('[data-enc-abrir]').forEach((b) => b.addEventListener('click', () => {

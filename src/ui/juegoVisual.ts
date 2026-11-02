@@ -73,3 +73,6 @@ export function medidor(icono: string, etiqueta: string, valor: number, estados:
 
 /** Números con separador de miles. */
 export const miles = (n: number): string => Math.floor(n).toLocaleString('es-ES');
+
+/** Una carreta de bueyes (la Caravana de Fundación al convocar, las caravanas del Mercado). */
+export const ICONO_CARRETA = `<svg viewBox="0 0 40 28" width="40" height="28" aria-hidden="true"><path d="M6 6h22l2 10H4Z" fill="var(--relleno, rgba(205,160,90,0.3))" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 6c1-3 4-4 7-4s5 2 6 4M30 13h8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="11" cy="20" r="5" fill="rgba(20,16,11,0.9)" stroke="currentColor" stroke-width="1.6"/><circle cx="24" cy="20" r="5" fill="rgba(20,16,11,0.9)" stroke="currentColor" stroke-width="1.6"/><path d="M11 15v10M6 20h10M24 15v10M19 20h10" stroke="currentColor" stroke-width="1"/></svg>`;

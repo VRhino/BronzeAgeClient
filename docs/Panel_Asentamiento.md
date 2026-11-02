@@ -242,6 +242,15 @@ La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, es
 > tu escuadra con su barra, coste en chips y botón Reclutar / Reponer / Completa) y una rejilla por edificio militar con barra de escuadra en cada
 > casilla. **Taberna**: cabecera con oro y Miradas en ojos, tarjetas de servicio (Mirada, Informe) con el precio en chip, Miradas con su barra de
 > tiempo e Informes con el nivel en escudo; el Informe abierto con edificios y guarnición en iconos y la muralla en barras.
+>
+> **Mercado** (0.88.0, 2026-11-02, `ui/panelMercado.ts`, `ui/panelTrueques.ts`; banco `pruebas/centro/`). **Órdenes**: una boleta con ▲ Vender
+> (ámbar) / ▼ Comprar (azul), el almacén como inventario de casillas (lo que hay primero; lo vacío, apagado), cantidad y precio con lo que se cobra
+> o paga, y las órdenes en pie como fichas con su barra de cumplido. **Caravanas**: cabecera con el Mercado, los cupos de caravanas y carros en
+> casillas, el Liderazgo de escolta y «＋ Crear»; cada caravana, una tarjeta con su carreta, el color de su estado, cuatro cifras (carga, velocidad
+> con el color de ritmo, preparación, carros que tiran) y los carros con su animal en una casilla (punteada en rojo si no tiene); «Reservada», en
+> interruptor; la aparcada aquí, con su carga en fichas. **Trueques**: cada pacto con las dos plazas frente a frente (escudo, lo que da cada una en
+> fichas con lo entregado), el estado como sello y «Aceptar» / «Rechazar»; para proponer, la plaza en tarjetas y una balanza Das / Recibes.
+> Todos los rechazos salen flotando.
 
 1. **Resumen** ✅ — nivel/nivel operativo, población (pesants/artesanos/nobleza + total), medidores de
    mantenimiento y nutrición, aviso de ocupación, toggle auto-construcción (`alternarAutoConstruccion`).
