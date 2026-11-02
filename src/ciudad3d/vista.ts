@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import './ciudad3d.css';
 import { Cielo, colorHorizonte } from '../mundo3d/cielo';
+import { Calzada } from './calzada';
 import { CamaraDeCiudad } from './camara';
 import { CIUDAD3D, COLOR } from './config';
 import { instalarEntrada, type EntradaDeCiudad } from './entrada';
@@ -42,6 +43,7 @@ export class VistaCiudad3D {
   private readonly bruma: THREE.Fog;
   private readonly cielo = new Cielo(SOL);
   private readonly suelo: Suelo;
+  private readonly calzada: Calzada;
   private readonly lejano: THREE.Mesh;
   private readonly material = new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true });
   private readonly matResalte = new THREE.MeshBasicMaterial({ color: COLOR.seleccion });
@@ -93,12 +95,13 @@ export class VistaCiudad3D {
     this.escena.add(this.sol, this.sol.target);
 
     this.suelo = new Suelo(this.renderer.capabilities.getMaxAnisotropy());
+    this.calzada = new Calzada(this.renderer.capabilities.getMaxAnisotropy());
     // más allá del suelo pintado, un llano del mismo color hasta la bruma
     this.lejano = new THREE.Mesh(new THREE.PlaneGeometry(6000, 6000), new THREE.MeshLambertMaterial({ color: new THREE.Color().setHex(this.base, THREE.SRGBColorSpace) }));
     this.lejano.rotation.x = -Math.PI / 2;
     this.lejano.position.y = -0.03;
     this.lejano.receiveShadow = true;
-    this.escena.add(this.lejano, this.suelo.malla, this.resalte);
+    this.escena.add(this.lejano, this.suelo.malla, this.calzada.malla, this.resalte);
 
     this.entrada = instalarEntrada(this.lienzo, this.camara, { alClicar: (e) => this.clic(e), alPasar: (e) => { this.pasando = e; if (!e) this.avisarPaso(null, null); } });
     this.observador = new ResizeObserver(() => this.ajustar());
@@ -129,7 +132,7 @@ export class VistaCiudad3D {
       montarMurallas(p, c.recintos);
       this.murallas = this.cambiar(this.murallas, p);
     }
-    const cr = `${c.id}:${c.nivel}:${c.radio}:${c.extension}:${c.libres.map((r) => `${r.x},${r.y}${r.tipo[0]}`).join(';')}:${cm.length}:${ce.length}`;
+    const cr = `${c.id}:${c.nivel}:${c.radio}:${c.extension}:${c.libres.map((r) => `${r.x},${r.y}${r.tipo[0]}`).join(';')}:${cm.length}:${ce.length}:${c.red.length}`;
     if (cr !== this.claves.relleno) {
       this.claves.relleno = cr;
       const p = new Piezas();
@@ -137,6 +140,7 @@ export class VistaCiudad3D {
       this.relleno = this.cambiar(this.relleno, p);
     }
     this.suelo.actualizar(c, this.base);
+    this.calzada.actualizar(c);
     this.claves.seleccion = '';
     this.medir('fijar', t0);
   }
@@ -331,6 +335,7 @@ export class VistaCiudad3D {
     for (const m of [this.edificios, this.murallas, this.relleno]) m?.destruir();
     for (const b of this.resalte.children) (b as THREE.Mesh).geometry.dispose();
     this.suelo.destruir();
+    this.calzada.destruir();
     this.lejano.geometry.dispose();
     (this.lejano.material as THREE.Material).dispose();
     this.material.dispose();

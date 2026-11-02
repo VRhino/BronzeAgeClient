@@ -19,12 +19,21 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 const DIAS: Record<string, number> = { aldea: 3, pueblo: 8, ciudad: 16 };
 const HORA = 3_600_000;
 
+/** Lee una ciudad. En la página publicada van dentro como `data:` (y la política de la página no deja hacer `fetch` de un `data:`): se decodifica aquí. */
+async function leerBinario(url: string): Promise<Uint8Array> {
+  if (url.startsWith('data:')) {
+    const b64 = url.slice(url.indexOf(',') + 1), s = atob(b64), u = new Uint8Array(s.length);
+    for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i);
+    return u;
+  }
+  return new Uint8Array(await (await fetch(url)).arrayBuffer());
+}
+
 const cache = new Map<string, { asentamiento: Asentamiento; trazado: TrazadoAsentamiento | undefined }>();
 async function cargar(nombre: string): Promise<{ asentamiento: Asentamiento; trazado: TrazadoAsentamiento | undefined }> {
   const hecho = cache.get(nombre);
   if (hecho) return hecho;
-  const r = await fetch(new URL(`./ciudades/${nombre}.bin`, import.meta.url));
-  const pb = fromBinary(AsentamientoSchema, new Uint8Array(await r.arrayBuffer()));
+  const pb = fromBinary(AsentamientoSchema, await leerBinario(new URL(`./ciudades/${nombre}.bin`, import.meta.url).href));
   const p = plazaDeContrato(pb, DIAS[nombre]! * 24 * HORA);
   cache.set(nombre, p);
   return p;

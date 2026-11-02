@@ -3,6 +3,25 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.94.0] — 2026-11-02 · Las calles de la plaza 3D · sin cambios de contrato (`VRhino/BronzeAge@a17f8536`)
+
+- **Las calles, celda a celda** (`src/ciudad3d/calles.ts`, `src/ciudad3d/calzada.ts`). El motor las manda en tiras de una celda de alto, y
+  antes las rodadas iban todas de este a oeste y los cruces eran iguales. Ahora se juntan en una red y cada celda sabe con qué vecinas se une:
+  tramo, esquina, cruce en T, cruce en X o final.
+  - Las rodadas siguen la calle: rectas en los tramos, en curva en las esquinas, girando en las T y cruzándose en las X. En los finales, la
+    vuelta del carro.
+  - Los cruces se ensanchan y se gastan en el centro, a veces con un charco. Llevan un guardacantón de piedra en las esquinas que dan a una
+    casa.
+  - **Principales y callejones**: se cuentan los recorridos de cada edificio y de cada puerta hasta el centro urbano. Las más usadas son
+    principales (más anchas, con rodadas) y las demás, callejones (con una senda de pisadas). Los bloques de 2 × 2 celdas son explanadas.
+    Los caminos de fuera serpentean, con dos rodadas y hierba en medio.
+  - **Losas**: en el nivel 4, las principales y las explanadas; en el 5, todas. Van en hiladas que siguen la calle, con bordillo y un rosetón
+    en los cruces en X. En el 5, las principales llevan en medio la calzada de losas grandes de Cnosos.
+  - Las juntas no se notan: en el borde, la anchura es la media de las dos celdas y las rodadas van en el mismo sitio. Las teselas iguales se
+    pintan una vez, en un atlas (unas 140 en una ciudad de 480 celdas de calle), y todas las calles van en una sola malla.
+- El trazado no se toca: solo cambia cómo se pinta cada celda que el motor da por calle.
+- **Banco publicado**: las ciudades ya no se leen con `fetch` (la página publicada no lo deja con un `data:` y salía vacía).
+
 ## [0.93.0] — 2026-11-02 · El mundo 3D: zoom de cerca, caminos, carros y la lista bajo el clic · sin cambios de contrato (`VRhino/BronzeAge@a17f8536`)
 
 - **Zoom de cerca**: un tercer zoom a 0,6 veces el normal (9 u en pantalla el héroe solo, 18 con soldados), además del normal y el alejado.

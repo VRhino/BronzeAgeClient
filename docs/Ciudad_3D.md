@@ -59,10 +59,27 @@ formas, reutilizando del mundo 3D el cielo, la luz y la manera de pintar miles d
   Puertas y torres van donde dice la clase de la celda. Las celdas planificadas salen como zanja, y las que se están mejorando, con andamio.
 - **Suelo** (`suelo.ts`): una textura pintada una vez, con:
   - el color del terreno del mapa donde está la plaza;
-  - la tierra pisada alrededor de lo poblado;
-  - las calles de tierra con rodadas, enlosadas desde el nivel 4;
-  - los caminos y la tierra apisonada bajo cada edificio;
+  - la tierra pisada alrededor de lo poblado y bajo las calles y los caminos;
+  - la tierra apisonada bajo cada edificio;
   - los surcos de las granjas, el césped de los parques y las losas de plazas y mercados.
+- **Calles** (`calles.ts` y `calzada.ts`). El motor manda las calles en tiras de una celda de alto; aquí se vuelven a juntar en una red, celda
+  a celda, y cada celda sabe con qué vecinas se une. De ahí sale:
+  - **su forma**: tramo recto, esquina (redonda), cruce en T, cruce en X, final (con la vuelta del carro) o suelta;
+  - **su clase**, según cuánto se pasa por ella. Se cuentan los recorridos de cada edificio (los que no son viviendas, el triple) y de cada
+    puerta de la muralla hasta el centro urbano. Las más usadas son **principales** (más anchas, con rodadas), las demás **callejones** (más
+    estrechos, con una senda de pisadas en medio). Un bloque de 2 × 2 celdas de calle es una **explanada** (tierra abierta, sin rodadas). Los
+    caminos de fuera son **sendas** que serpentean, con dos rodadas y hierba en medio.
+  - **Cómo se pinta**: cada celda lleva su tesela, pintada según la forma, la clase y la de sus vecinas:
+    - las rodadas siguen la calle (rectas en los tramos, en curva en las esquinas, girando en las T, cruzándose en las X);
+    - los cruces se ensanchan y se gastan en el centro, a veces con un charco;
+    - en el borde con la vecina, la anchura es la media de las dos y las rodadas van en el mismo sitio, así no se notan las juntas.
+  - **Losas**: en el nivel 4 se enlosan las principales y las explanadas; en el 5, todas las calles. Van en hiladas que siguen la calle, con
+    bordillo y un rosetón en los cruces en X. En el 5, las principales llevan en medio la calzada de losas grandes (como la de Cnosos) y las
+    explanadas, losas grandes.
+  - **Guardacantones**: una piedra en las esquinas de los cruces que dan a una casa.
+
+  Las teselas iguales se pintan una vez (unas 140 distintas en una ciudad de 480 celdas de calle) en un atlas, y todas las calles van en una
+  sola malla.
 
 ## Manejo
 
@@ -96,6 +113,7 @@ formas, reutilizando del mundo 3D el cielo, la luz y la manera de pintar miles d
 
 - **Piezas**: una ciudad de nivel 5 con 244 edificios son unas 8.000 piezas de edificios, 1.700 de muralla y 17.500 de relleno.
 - **Dibujo**: van en una malla instanciada por forma (una docena de llamadas de dibujo).
-- **Cuándo se rehace**: solo lo que cambia (edificios, muralla, relleno, suelo, cada uno con su clave). Las obras se rehacen a saltos del 5 %
-  de avance.
-- **Coste**: en el Chromium sin GPU de la nube, 10-30 ms por fotograma y unos 70 ms para montar la ciudad entera.
+- **Cuándo se rehace**: solo lo que cambia (edificios, muralla, relleno, suelo y calles, cada uno con su clave). Las obras se rehacen a
+  saltos del 5 % de avance.
+- **Coste**: en el Chromium sin GPU de la nube, 10-30 ms por fotograma y unos 70 ms para montar la ciudad entera, más medio segundo para
+  pintar las teselas de las calles (una vez por ciudad, o al cambiar la red o el nivel).

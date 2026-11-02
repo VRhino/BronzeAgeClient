@@ -3,6 +3,7 @@
 // las rellena (huertos, patios, árboles…). Nada se mueve ni sale de su huella: el trazado manda (Víctor, 2026-11-02).
 // Coordenadas: unidades locales del trazado (ul), x a la derecha e y hacia abajo, como el 2D; la celda del trazado mide `celda` ul.
 import type { Asentamiento, Edificio, RectanguloLocal, TrazadoAsentamiento } from '../tiposDominio';
+import { redDeCalles, type CeldaDeCalle } from './calles';
 
 type Punto = { x: number; y: number };
 
@@ -82,6 +83,8 @@ export interface CiudadEnVista {
   extension: number;
   /** El radio de lo construido (sin caminos ni lo suelto de las afueras), en ul: lo que encuadra la cámara al entrar. */
   nucleo: number;
+  /** Las calles y los caminos celda a celda: con qué vecinas se une cada una y cuánto se usa (`calles.ts`). */
+  red: CeldaDeCalle[];
 }
 
 /** Un número fijo entre 0 y 1 por texto. */
@@ -244,7 +247,13 @@ export function ciudadEnVista(a: Asentamiento, t: TrazadoAsentamiento | undefine
     }
   }
 
-  return { id: a.id, nivel: a.nivel, radio, celda: T, calles: t.calles, caminos: t.caminos, edificios, recintos, libres, extension: Math.max(extension, radio), nucleo: Math.max(15, Math.min(nucleo, radio)) };
+  const gobierno = edificios.find((e) => e.tipo === 'centroUrbano') ?? edificios.find((e) => e.tipo === 'palacio');
+  const red = redDeCalles(t.calles, t.caminos, T, {
+    edificios,
+    centro: gobierno ? { x: gobierno.x + gobierno.ancho / 2, y: gobierno.y + gobierno.alto / 2 } : undefined,
+    salidas: recintos.flatMap((r) => r.celdas.filter((k) => k.clase === 'puerta')),
+  });
+  return { id: a.id, nivel: a.nivel, radio, celda: T, calles: t.calles, caminos: t.caminos, edificios, recintos, libres, extension: Math.max(extension, radio), nucleo: Math.max(15, Math.min(nucleo, radio)), red };
 }
 
 /** Si un punto (ul) cae en una huella; la de encima si se pisan (no debería). */

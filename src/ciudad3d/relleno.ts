@@ -1,5 +1,7 @@
 // Lo que llena las celdas libres de la ciudad (la textura del suelo pone los huertos y los patios; aquí va lo que tiene bulto: árboles,
-// rediles de piedra, hornos, leña, almiares) y los árboles del campo de alrededor (`estado.ts` decide qué va en cada celda).
+// rediles de piedra, hornos, leña, almiares), los árboles del campo de alrededor (`estado.ts` decide qué va en cada celda) y los guardacantones
+// de los cruces (`calzada.ts`).
+import { montarGuardacantones } from './calzada';
 import { COLOR } from './config';
 import { hash3, type CiudadEnVista, type Relleno } from './estado';
 import { arbol } from './modelos';
@@ -67,4 +69,5 @@ function celda(p: Piezas, r: Relleno, T: number, estilo: number): void {
 export function montarRelleno(p: Piezas, c: CiudadEnVista, estilo: number): void {
   const T = c.celda;
   for (const r of c.libres) celda(p, r, T, estilo);
+  montarGuardacantones(p, c);
 }

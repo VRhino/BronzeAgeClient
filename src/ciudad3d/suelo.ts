@@ -1,6 +1,7 @@
 // El suelo de la plaza: un plano con una textura pintada una vez en un lienzo 2D. Lleva el color del terreno donde está la plaza (el del mapa),
-// moteado; el disco urbano pisado; los caminos y las calles (enlosadas desde el nivel 4); la tierra apisonada bajo cada edificio; los campos
-// en surcos de las granjas; los huertos y patios de las celdas libres; el césped de los parques y las losas de las plazas.
+// moteado; el disco urbano pisado; la tierra pisada bajo las calles y los caminos (la calzada va encima, en `calzada.ts`); la tierra apisonada
+// bajo cada edificio; los campos en surcos de las granjas; los huertos y patios de las celdas libres; el césped de los parques y las losas de
+// las plazas.
 import * as THREE from 'three';
 import { CIUDAD3D, COLOR } from './config';
 import { hash3, type CiudadEnVista } from './estado';
@@ -83,26 +84,13 @@ function pintar(g: CanvasRenderingContext2D, c: CiudadEnVista, base: number, X: 
     else if ((e.tipo === 'plaza' || e.tipo === 'patioDeGremios' || e.tipo === 'mercado') && e.estado === 'activo' && e.estilo >= 3) losas(g, x, y, w, h, px, COLOR.losa);
     else { g.fillStyle = rgb(COLOR.tierra, 0.55); g.fillRect(x + px * 0.1, y + px * 0.1, w - px * 0.2, h - px * 0.2); }
   }
-  // los caminos y las calles
-  borroso(g, () => { for (const r of c.caminos) { g.fillStyle = rgb(0xb39d78, 0.9); g.fillRect(X(r.x), X(r.y), r.ancho * px, r.alto * px); } });
-  for (const r of c.calles) {
-    if (alto) losas(g, X(r.x), X(r.y), r.ancho * px, r.alto * px, px, 0xb3a58e);
-    else { g.fillStyle = rgb(0x9a7e5c, 0.92); g.fillRect(X(r.x), X(r.y), r.ancho * px, r.alto * px); }
-  }
-  // rodadas y pisadas en las calles de tierra
-  if (!alto) {
-    g.strokeStyle = 'rgba(70, 52, 32, 0.18)';
-    g.lineWidth = Math.max(1, px * 0.12);
-    for (const r of c.calles) {
-      const largoX = r.ancho >= r.alto;
-      g.beginPath();
-      for (const k of [0.35, 0.65]) {
-        if (largoX) { g.moveTo(X(r.x), X(r.y + r.alto * k)); g.lineTo(X(r.x + r.ancho), X(r.y + r.alto * k)); }
-        else { g.moveTo(X(r.x + r.ancho * k), X(r.y)); g.lineTo(X(r.x + r.ancho * k), X(r.y + r.alto)); }
-      }
-      g.stroke();
-    }
-  }
+  // bajo las calles y los caminos, tierra pisada (la calzada, con su forma, sus rodadas y sus losas, va encima: `calzada.ts`)
+  borroso(g, () => {
+    g.fillStyle = rgb(COLOR.tierra, 0.4);
+    for (const r of c.calles) g.fillRect(X(r.x), X(r.y), r.ancho * px, r.alto * px);
+    g.fillStyle = rgb(COLOR.tierra, 0.22);
+    for (const r of c.caminos) g.fillRect(X(r.x), X(r.y), r.ancho * px, r.alto * px);
+  }, 3);
   // el foso de las empalizadas va en 3D; aquí, la tierra removida al pie de la muralla
   for (const r of c.recintos) for (const k of r.celdas) {
     g.fillStyle = rgb(k.enPie ? COLOR.tierra : COLOR.tierraOscura, k.enPie ? 0.5 : 0.35);

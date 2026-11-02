@@ -5,6 +5,8 @@ import { readFileSync } from 'node:fs';
 import { fromBinary } from '@bufbuild/protobuf';
 import * as THREE from 'three';
 import { describe, expect, test } from 'vitest';
+import { FORMA_BASE, girarLados } from '../src/ciudad3d/calles';
+import { montarGuardacantones, teselasDe } from '../src/ciudad3d/calzada';
 import { ciudadEnVista, estiloDe, type CiudadEnVista } from '../src/ciudad3d/estado';
 import { montarEdificio } from '../src/ciudad3d/modelos';
 import { Piezas, type Pieza } from '../src/ciudad3d/piezas';
@@ -72,6 +74,40 @@ describe('la plaza que se dibuja', () => {
       expect(v.celdas.filter((k) => k.enPie).length).toBe(Math.min(r.avance, r.celdas.length));
     }
   });
+});
+
+describe('las calles', () => {
+  for (const nombre of ['aldea', 'pueblo', 'ciudad']) {
+    test(`${nombre}: la red son las celdas de calle y camino del trazado, y la forma de cada una casa con sus vecinas`, () => {
+      const { c } = plaza(nombre);
+      const T = c.celda, celdas = new Set<string>();
+      for (const r of [...c.calles, ...c.caminos]) {
+        for (let x = r.x; x < r.x + r.ancho - 1e-6; x += T) for (let y = r.y; y < r.y + r.alto - 1e-6; y += T) celdas.add(`${Math.round(x / T)},${Math.round(y / T)}`);
+      }
+      expect(new Set(c.red.map((x) => `${x.c},${x.f}`))).toEqual(celdas);
+      const hay = (a: number, b: number) => celdas.has(`${a},${b}`);
+      const malas = c.red.filter((x) => {
+        const lados = (hay(x.c + 1, x.f) ? 1 : 0) | (hay(x.c, x.f + 1) ? 2 : 0) | (hay(x.c - 1, x.f) ? 4 : 0) | (hay(x.c, x.f - 1) ? 8 : 0);
+        return x.lados !== lados || girarLados(FORMA_BASE[x.forma], x.giro) !== x.lados;
+      });
+      expect(malas.slice(0, 3)).toEqual([]);
+      // hay calles principales y callejones, y las principales llevan a las salidas
+      if (nombre !== 'aldea') expect(c.red.filter((x) => x.clase === 'callejon').length).toBeGreaterThan(0);
+      expect(c.red.filter((x) => x.clase === 'principal').length).toBeGreaterThan(0);
+    });
+
+    test(`${nombre}: los guardacantones van en celdas de calle, y las teselas iguales se pintan una vez`, () => {
+      const { c } = plaza(nombre);
+      const T = c.celda, celdas = new Set(c.red.map((x) => `${x.c},${x.f}`)), p = new Piezas();
+      montarGuardacantones(p, c);
+      for (const q of p.lista) expect(celdas.has(`${Math.floor(q.x / T)},${Math.floor(q.z / T)}`)).toBe(true);
+      for (const nivel of [1, 4, 5]) {
+        const { deCelda, distintas } = teselasDe(c.red, nivel);
+        expect(deCelda.length).toBe(c.red.length);
+        expect(distintas.size).toBeLessThanOrEqual(420);
+      }
+    });
+  }
 });
 
 describe('el estilo de cada casa', () => {
