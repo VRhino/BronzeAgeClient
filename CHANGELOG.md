@@ -3,6 +3,12 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.96.0] — 2026-11-02 · Cerrar sesión saca al héroe del mundo en el acto · sync con `VRhino/BronzeAge@a17f8536`
+
+- **Contrato regenerado** (orden nueva `cerrar_sesion`, campo 180). Sin rechazos nuevos ni cambios de foto.
+- **«Cerrar sesión» y «Cambiar de partida»** mandan `cerrar_sesion` con tu héroe, esperan el resultado (4 s como mucho) y luego cierran la conexión: el héroe sale del mundo en el acto, aunque le persigan; si está en batalla, en cuanto acaba (`salirDelMundo` en `apiCliente.ts`).
+- Cerrar la pestaña sin más sigue siendo una caída (2:30, hasta 5 min si le persiguen). El servidor ya lleva la presencia por la conexión, así que el cliente no manda `conectarse` ni `desconectarse`.
+
 ## [0.95.0] — 2026-11-02 · La subida de nivel a la vista en la plaza · sin cambios de contrato (`VRhino/BronzeAge@a17f8536`)
 
 - **Mientras la plaza sube de nivel**, en la vista de la plaza aparece bajo el blasón, colgando de él y encima del minimapa, una placa con

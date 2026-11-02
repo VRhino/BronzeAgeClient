@@ -6,6 +6,7 @@ import {
   retomarSesion,
   cargarSesionLocal,
   cerrarSesion,
+  salirDelMundo,
   consultarProyeccion,
   ejecutarComando,
   guardarSesionLocal,
@@ -2326,8 +2327,9 @@ function montarPantallaPartidas(): void {
   });
 }
 
-/** Deja la partida actual (sin cerrar sesión) y vuelve a la lista de partidas. */
-function volverALasPartidas(): void {
+/** Deja la partida actual (sin cerrar sesión de la cuenta) y vuelve a la lista de partidas: el héroe sale del mundo en el acto. */
+async function volverALasPartidas(): Promise<void> {
+  await salirDelMundo();
   cerrarPresencia();
   reiniciarAvisos();
   recordarPartida('');
@@ -2595,7 +2597,8 @@ function enrutar(): void {
   refrescarPantalla(destino);
 }
 
-function cerrarSesionYVolverALogin(mensaje?: string): void {
+async function cerrarSesionYVolverALogin(mensaje?: string): Promise<void> {
+  await salirDelMundo();
   cerrarSesion();
   reiniciarAvisos();
   estadoCliente.usuarioActivo = '';

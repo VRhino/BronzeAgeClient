@@ -417,6 +417,21 @@ export function abrirPresencia(_gameId: string): void {
   void sesionAbierta().catch(() => {});
 }
 
+/**
+ * Saca al héroe del mundo en el acto (`cerrar_sesion`, motor a17f8536): se manda al «Cerrar sesión» y al «Cambiar de partida», antes de cerrar
+ * el socket; si combate, sale en cuanto acaba la batalla. Sin héroe o sin sesión abierta no hace nada. Espera el resultado unos segundos como
+ * mucho: si no llega, se cierra igual y el servidor lo trata como una caída (2:30). Cerrar la pestaña sin más también es una caída.
+ */
+export async function salirDelMundo(esperaMs = 4000): Promise<void> {
+  const s = sesion, heroeId = s?.bienvenida?.heroeId;
+  if (!s || !heroeId || s.estado !== 'abierta') return;
+  try {
+    await Promise.race([s.ordenar({ case: 'cerrarSesion', value: { heroeId } }), new Promise((ok) => setTimeout(ok, esperaMs))]);
+  } catch {
+    /* sesión caída o rechazo (`heroe.fuera_del_mundo`): da igual, se sale igual */
+  }
+}
+
 export function cerrarPresencia(): void {
   sesion?.cerrar();
   sesion = null;
