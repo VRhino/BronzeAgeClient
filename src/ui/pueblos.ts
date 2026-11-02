@@ -8,16 +8,15 @@
 // cifras salen de `GET /v1/datos` y el motor valida; su rechazo se enseña tal cual.
 //   plaza      la subpestaña «Territorio» del Centro urbano (lo que hay en su zona y sus pueblos) (`SUBPESTANA_PUEBLOS`): cupo, lista, marcar, mejorar, reponer carro, destruir
 //   mapa       los pueblos y las obras se pintan (`dibujarPueblosYObras`) y se seleccionan (`seleccionarPuebloUObra`, fichas `FICHA_PUEBLO`/`FICHA_OBRA`)
-//   ascenso    la subida de nivel de la plaza con sus requisitos (`htmlAscensoLocal`): el nivel 2 pide un pueblo activo (aldea o extractor)
+//   ascenso    la subida de nivel de la plaza (el nivel 2 pide un pueblo activo, aldea o extractor) se pinta en `panelCentro.ts`
 //   dentro     se entra en un pueblo activo como de visita, con la columna entera (`entrarEnPueblo` / `salirDePueblo`); dentro se gestiona con esa
 //              columna (`htmlPestanasPueblo`): guarnición, carga, escolta del carro de acarreo y mejora de la aldea. La escolta también se cede desde la plaza.
 import { bloqueDeDatos, catalogoDeCaravanas, radioDePuerta, techosDeZona, type ProyeccionJugador } from '../apiCliente';
-import { barraDeTiempo, estadoCliente, textoEnTiempoReal } from './estadoCliente';
+import { estadoCliente, textoEnTiempoReal } from './estadoCliente';
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE, faccionColor } from '../paletas';
 import { iconoEdificio } from './iconosEdificio';
 import type { Asentamiento, AvanzadaDeMapa, ObraDeMapa, Point, PuebloDeMapa } from '../tiposDominio';
 import { ayuda } from './ayuda';
-import { plegable } from './plegable';
 import { agarre } from './agarre';
 import { miColumna } from './ejercitos';
 import { dibujarIconoMapa } from '../mundo/iconosMapa';
@@ -44,7 +43,6 @@ interface ParamsPueblos {
   };
 }
 interface Especie { topePorCorral: number; pieDeCriaPorCorral: number; crecimientoPorHora: number; productos: Record<string, number> }
-interface RequisitoNivel { pesants?: number; artesanos?: number; edificios?: string[]; edificiosMinimo?: number; aldeasAgricolas?: number; pueblosActivos?: number; nivelInternoMinimo?: Record<string, number>; recintoCompletoNivelMinimo?: number; edificiosConNivel?: Record<string, number> }
 
 /** Los tipos de nodo que admiten un pueblo extractor (el ganado ya no: sale de las aldeas). */
 const NODOS_EXTRAIBLES = new Set(['piedra', 'cobre', 'estano', 'hierro', 'oro']);
@@ -347,58 +345,6 @@ function cablearPueblos(c: ContextoPlaza): void {
 }
 
 export const SUBPESTANA_PUEBLOS: SubpestanaPlaza = { id: 'pueblos', etiqueta: 'Territorio', html: htmlPueblos, cablear: cablearPueblos };
-
-// ---------------------------------------------------------------- subida de nivel de la plaza
-
-/**
- * La subida de nivel con sus requisitos, calculados con `NIVEL_ASENTAMIENTO` y `ASCENSO_ASENTAMIENTO` de los datos (el motor no proyecta su evaluación):
- * población, edificios, aldea activa y coste en el almacén. El cupo de la Facción y la solvencia los comprueba el motor al pedirla.
- */
-export function htmlAscensoLocal(p: ProyeccionJugador, a: Asentamiento, soyGobernador: boolean, e: Escapar, alCargar?: () => void): string {
-  if (alCargar) alCargarDatos = alCargar;
-  const reqs = bloqueDeDatos<{ nivelMaximo?: number; requisitos?: Record<string, RequisitoNivel> }>('NIVEL_ASENTAMIENTO', alLlegarDatos);
-  const asc = bloqueDeDatos<{ porNivelObjetivo?: Record<string, { costo: Record<string, number>; obraMinutos: number }>; nivelTechoProvisional?: number }>('ASCENSO_ASENTAMIENTO', alLlegarDatos);
-  if (!reqs || !asc) return '';
-  const objetivo = a.nivel + 1;
-  const techo = Math.min(reqs.nivelMaximo ?? 5, asc.nivelTechoProvisional ?? 5);
-  const info = ayuda('plaza:ascenso', 'La subida de nivel no es automática: la pide el Gobernador, se paga entera del almacén y tarda una obra. Si conquistan la plaza durante la obra, se pierde.');
-  if (a.ascenso) return `<span class="faction-kicker">Subida de nivel${info}</span>${barraDeTiempo(`Subiendo al nivel ${a.ascenso.nivelObjetivo}`, a.ascenso.iniciadoEn, a.ascenso.completaEn, p.instante)}`;
-  if (objetivo > techo) return `<p class="asent-lado-nota">La plaza está en el nivel más alto que se puede alcanzar hoy.${info}</p>`;
-  const r = reqs.requisitos?.[String(objetivo)] ?? {};
-  const coste = asc.porNivelObjetivo?.[String(objetivo)];
-  const pob = a.poblacion ?? { pesants: 0, artesanos: 0, nobleza: 0 };
-  const activos = (tipo: string): boolean => a.edificios.some((x) => x.tipo === tipo && x.estado === 'activo' && (x.nivelInterno ?? 1) >= (r.nivelInternoMinimo?.[tipo] ?? 1));
-  const hechos = (r.edificios ?? []).filter(activos);
-  const minimo = r.edificiosMinimo ?? (r.edificios ?? []).length;
-  const deLaPlaza = (p.pueblos ?? []).filter((x) => x.propio && x.madreId === a.id);
-  const aldeas = deLaPlaza.filter(esAldea).length;
-  const almacen = a.almacen ?? {};
-  const faltaPagar = Object.entries(coste?.costo ?? {}).filter(([k, n]) => (almacen[k]?.cantidad ?? 0) < n);
-  const filas: [boolean, string][] = [
-    [Math.floor(pob.pesants) >= (r.pesants ?? 0), `${r.pesants ?? 0} pesants (tiene ${n0(pob.pesants)})`],
-    ...((r.artesanos ?? 0) > 0 ? [[Math.floor(pob.artesanos) >= r.artesanos!, `${r.artesanos} artesanos (tiene ${n0(pob.artesanos)})`] as [boolean, string]] : []),
-    ...((r.edificios ?? []).length ? [[hechos.length >= minimo, `${minimo === (r.edificios ?? []).length ? 'Todos' : `${minimo}`} de: ${(r.edificios ?? []).map((t) => EDIFICIO_NOMBRE[t] ?? t).join(', ')} (${hechos.length ? `activos: ${hechos.map((t) => EDIFICIO_NOMBRE[t] ?? t).join(', ')}` : 'ninguno activo'})`] as [boolean, string]] : []),
-    // Un edificio activo de ese tipo a ese nivel o más (nivel 2: una Granja a nivel 2).
-    ...Object.entries(r.edificiosConNivel ?? {}).map(([tipo, nivel]) => [
-      a.edificios.some((x) => x.tipo === tipo && x.estado === 'activo' && (x.nivelInterno ?? 1) >= nivel),
-      `${EDIFICIO_NOMBRE[tipo] ?? tipo} a nivel ${nivel} o más, en marcha`,
-    ] as [boolean, string]),
-    ...((r.aldeasAgricolas ?? 0) > 0 ? [[aldeas >= r.aldeasAgricolas!, `Una aldea agrícola activa (pestaña Territorio)${aldeas ? '' : ': aún no tiene'}`] as [boolean, string]] : []),
-    // desde el 2026-10-31 vale cualquier pueblo activo, aldea o extractor (`pueblosActivos`)
-    ...((r.pueblosActivos ?? 0) > 0 ? [[deLaPlaza.length >= r.pueblosActivos!, `${r.pueblosActivos === 1 ? 'Un pueblo activo' : `${r.pueblosActivos} pueblos activos`}, aldea agrícola o extractor (pestaña Territorio)${deLaPlaza.length ? '' : ': aún no tiene'}`] as [boolean, string]] : []),
-    ...(r.recintoCompletoNivelMinimo ? [[true, `Un recinto de muralla completo de nivel ${r.recintoCompletoNivelMinimo} o más (lo comprueba el servidor)`] as [boolean, string]] : []),
-    [faltaPagar.length === 0, `En el almacén: ${listaRecursos(coste?.costo ?? {}) || 'sin coste'}${faltaPagar.length ? ` (faltan ${faltaPagar.map(([k, n]) => `${Math.ceil(n - (almacen[k]?.cantidad ?? 0))} ${RECURSO_NOMBRE[k] ?? k}`).join(', ')})` : ''}`],
-  ];
-  const puede = !a.ascenso && filas.every(([ok]) => ok);
-  const cumplidos = filas.filter(([ok]) => ok).length;
-  const motivo = !soyGobernador ? 'Solo el Gobernador puede pedir la subida.' : puede ? '' : 'Aún no cumple todos los requisitos (despliégalos debajo).';
-  // Arriba el botón (apagado si no se puede); debajo los requisitos, plegados.
-  return `<button id="btn-solicitar-ascenso" class="btn-primary" type="button"${puede && soyGobernador ? '' : ` disabled title="${e(motivo)}"`}>Subir a nivel ${objetivo}</button>
-    ${plegable('ascenso:requisitos', `<span class="plegable-titulo">Requisitos del nivel ${objetivo}${info}</span><span class="plegable-meta${cumplidos === filas.length ? '' : ' falta'}">${cumplidos} de ${filas.length}</span>`,
-      `${coste ? `<p class="asent-lado-nota">Obra de ${Math.round(coste.obraMinutos / 60)} h.</p>` : ''}
-      <ul class="ascenso-requisitos">${filas.map(([ok, t]) => `<li class="${ok ? 'ok' : 'falta'}">${ok ? '✓' : '✗'} ${e(t)}</li>`).join('')}</ul>
-      <p class="asent-lado-nota">El servidor comprueba además el cupo de tu Facción y que los ingresos cubran el mantenimiento del nivel nuevo.${soyGobernador ? '' : ' Solo el Gobernador puede pedir la subida.'}</p>`)}`;
-}
 
 // ---------------------------------------------------------------- mapa: pintar, seleccionar y fichas
 

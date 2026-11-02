@@ -226,6 +226,16 @@ La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, es
 > espera en casillas numeradas con ◀ ✕ ▶. **Producción**: el almacén en fichas (neto ▲▼ con color, lleno/cabe, entra frente a sale, «LLENO»
 > o cuándo se acaba), la mano de obra en un medidor, los extractores como edificio ➜ recurso y los talleres como insumos ➜ producto con el
 > interruptor ▶ / ❚❚. Las cifras van en los títulos (al pasar el ratón).
+>
+> **Centro urbano › subida de nivel, Resumen y Cargos** (0.86.0, 2026-11-02, `ui/panelCentro.ts`; banco `pruebas/centro/`). **Subida**: tarjeta
+> con el escudo de ahora ➜ el del nivel siguiente (apagado, o dorado si se puede), un piloto por requisito (verde, rojo, gris = lo comprueba el
+> servidor), el tiempo de obra y el botón ⬆; los requisitos plegados, con barras (pesants, artesanos, pueblos), los edificios pedidos en iconos
+> (encendidos si están en marcha) y el coste en chips. Durante la obra, su barra y lo que falta. **Resumen**: cabecera con el escudo de la
+> Facción, el nombre (lápiz ✎ para cambiarlo, si resides), etiquetas 👑 Capital / 🏠 Tu base y el nivel en escudo; población por clases con
+> su sitio (Viviendas activas × `capacidadPesants` / `capacidadArtesanos`; nobleza, `capacidadNobles` del Palacio) y la marca del nivel
+> siguiente, y el techo del nivel (`NIVEL_ASENTAMIENTO.techoPoblacion`); medidores de mantenimiento y nutrición en color; interruptor de
+> auto-construcción; la Residencia y la capital, en tarjetas (sin residir, «Hacerla mi base»). **Cargos**: una silla por cargo con su emblema
+> (lápiz para cambiar, ＋ en una vacante) y los residentes en ranking (medallas, emblemas de sus cargos, barra de puntos).
 
 1. **Resumen** ✅ — nivel/nivel operativo, población (pesants/artesanos/nobleza + total), medidores de
    mantenimiento y nutrición, aviso de ocupación, toggle auto-construcción (`alternarAutoConstruccion`).

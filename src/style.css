@@ -1844,9 +1844,6 @@ pre#proyeccion {
   color: var(--text-muted);
   line-height: 1.4;
 }
-.asent-aviso-ocupacion {
-  color: var(--terracota);
-}
 
 .asent-ficha-grid {
   display: grid;
@@ -1870,30 +1867,6 @@ pre#proyeccion {
 .asent-ficha-grid strong {
   color: var(--oro-claro);
   font-size: 0.95rem;
-}
-
-.asent-medidor {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.76rem;
-  color: var(--text-secondary);
-}
-.asent-medidor-track {
-  height: 6px;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid var(--bronce-osc);
-  border-radius: 2px;
-  overflow: hidden;
-}
-.asent-medidor-track span {
-  display: block;
-  height: 100%;
-  background: var(--oro);
-}
-.asent-medidor strong {
-  color: var(--oro-claro);
 }
 
 .asent-toggle {
@@ -1976,49 +1949,22 @@ pre#proyeccion {
   gap: 3px;
 }
 
-/* --- Cargos del asentamiento (en el panel de Facción) --- */
-.asent-cargos {
-  margin-top: 16px;
-  padding-top: 14px;
-  border-top: 1px solid var(--bronce-osc);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.asent-cargo {
-  display: grid;
-  grid-template-columns: 8.5rem minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-}
-.asent-cargo-nombre { color: var(--text-muted); }
-/* El nombre y el combo ocupan el mismo hueco: nunca se ven a la vez. */
-.asent-cargo-titular { display: block; min-width: 0; }
-.asent-cargo-texto, .asent-cargo-sel {
+/* El combo de cargos lo usa también el nombre del héroe (panelHeroe). */
+.asent-cargo-sel {
   display: block;
   width: 100%;
   height: 28px;
   box-sizing: border-box;
   padding: 0 6px;
   line-height: 26px;
-  border: 1px solid transparent;
+  border: 1px solid var(--bronce-osc);
   border-radius: 2px;
   font-size: 0.8rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.asent-cargo-texto { color: var(--pergamino); }
-.asent-cargo-texto.vacante { color: var(--text-muted); font-style: italic; }
-.asent-cargo-sel { background: #12100b; border-color: var(--bronce-osc); color: var(--pergamino); }
-.asent-cargo-texto[hidden], .asent-cargo-sel[hidden] { display: none; }
-.asent-cargo-btn {
-  padding: 3px 8px;
-  border-radius: 2px;
-  cursor: pointer;
-  font-size: 0.72rem;
+  background: #12100b;
+  color: var(--pergamino);
 }
 
 /* Columna izquierda: lo que antes flotaba sobre el mapa (Ejércitos / Salir al mundo, ficha del edificio, recursos del almacén,
@@ -3168,16 +3114,12 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .pueblo-fila.obra strong { color: var(--oro); }
 .pueblo-marcar { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
 .pueblo-marcar > div { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border: 1px solid var(--bronce-osc); border-radius: 3px; }
-.ascenso-requisitos { margin: 4px 0 8px; padding-left: 4px; list-style: none; font-size: 0.82rem; display: flex; flex-direction: column; gap: 3px; }
-.ascenso-requisitos li.ok { color: #9fd49a; }
-.ascenso-requisitos li.falta { color: #e8a08f; }
 .mapa-eleccion { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 4; max-width: min(560px, calc(100% - 32px)); padding: 8px 14px; background: rgba(20, 16, 12, 0.92); border: 1px solid var(--oro); border-radius: 4px; color: var(--pergamino); font-size: 0.85rem; text-align: center; }
 .mapa-eleccion .faction-error:empty { display: none; }
 .mapa-interior:has(.mapa-eleccion) canvas { cursor: crosshair; }
 
 /* Subida de nivel: entre las pestañas de edificio y las subpestañas del Centro urbano. */
 .asent-ascenso { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 10px; padding: 8px 0 10px; border-bottom: 1px solid var(--bronce-osc); }
-.asent-ascenso > .btn-primary { width: 100%; }
 .asent-ascenso .asent-lado-nota { margin: 0; }
 
 /* Secciones plegables (producción, recetas, requisitos). */
@@ -3797,7 +3739,7 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .obra-titulo:first-child { margin-top: 2px; }
 .obra-titulo .faction-kicker { margin: 0; }
 .obra-titulo > small { color: var(--text-muted); font-size: 0.72rem; }
-.obra-chip { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; padding: 0 7px; border-radius: 9px; border: 1px solid var(--bronce-osc); background: rgba(0, 0, 0, 0.35); color: var(--oro-claro); font-size: 0.72rem; line-height: 1.5; font-weight: 600; }
+.obra-chip { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; white-space: nowrap; padding: 0 7px; border-radius: 9px; border: 1px solid var(--bronce-osc); background: rgba(0, 0, 0, 0.35); color: var(--oro-claro); font-size: 0.72rem; line-height: 1.5; font-weight: 600; }
 .obra-chip.activa { border-color: var(--obra-ambar); color: #ffd590; }
 .obra-chip.baja { border-color: var(--obra-rojo); color: #ffb3a8; }
 .obra-chip.lleno, .obra-chip.parado { border-color: var(--obra-ambar); color: #ffd590; }
@@ -3935,3 +3877,175 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .obra-grupo-todos { font-size: 1.05rem; line-height: 1; }
 .obra-grupo-nombre { max-width: 100%; font-size: 0.62rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .obra-grupo-n { position: absolute; top: -5px; right: -3px; min-width: 15px; padding: 0 3px; border-radius: 8px; background: var(--obra-verde); color: #10200a; font-size: 0.6rem; font-weight: 800; line-height: 15px; text-align: center; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6); }
+
+/* ===== Centro urbano de la plaza (ui/panelCentro.ts, ui/panelResidencia.ts y el ranking de ui/participacion.ts), estilo juego (2026-11-02) ===== */
+/* Medallón de nivel: escudo de bronce con la cifra. */
+.medallon-nivel { position: relative; display: inline-grid; place-items: center; width: 40px; height: 46px; flex: none; color: var(--oro-claro); }
+.medallon-nivel svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.medallon-nivel path { fill: #5a3f22; stroke: var(--oro); stroke-width: 2; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6)); }
+.medallon-nivel b { position: relative; margin-top: -3px; font-family: var(--fuente-titulo); font-size: 1.15rem; font-weight: 700; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8); }
+.medallon-nivel.apagado { color: rgba(241, 220, 174, 0.45); }
+.medallon-nivel.apagado path { fill: #1d1710; stroke: var(--bronce-osc); stroke-dasharray: 4 3; }
+.medallon-nivel.listo path { fill: #6b4f20; stroke: #ffd24a; filter: drop-shadow(0 0 6px rgba(255, 210, 74, 0.55)); }
+.medallon-nivel.en-obra path { fill: #3a2c18; stroke: var(--obra-ambar); stroke-dasharray: 5 3; animation: medallon-gira 2.4s linear infinite; }
+@keyframes medallon-gira { to { stroke-dashoffset: -16; } }
+
+/* Subida de nivel: tarjeta con los dos escudos, pilotos de requisitos, tiempo y botón. */
+.asent-ascenso { gap: 6px; }
+.ascenso-tarjeta { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid rgba(169, 121, 63, 0.6); border-radius: 3px; background: radial-gradient(ellipse at 15% 50%, rgba(169, 121, 63, 0.22), transparent 60%), linear-gradient(180deg, rgba(36, 27, 17, 0.95), rgba(18, 14, 9, 0.95)); }
+.ascenso-tarjeta.lista { border-color: rgba(127, 207, 106, 0.6); box-shadow: 0 0 12px rgba(127, 207, 106, 0.18); }
+.ascenso-tarjeta.en-obra { border-color: rgba(224, 165, 58, 0.6); grid-template-columns: auto minmax(0, 1fr); }
+.ascenso-tarjeta.tope { grid-template-columns: auto minmax(0, 1fr); }
+.ascenso-niveles { display: flex; align-items: center; gap: 4px; }
+.ascenso-flecha { color: var(--oro); font-size: 0.9rem; }
+.ascenso-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ascenso-info strong { display: flex; align-items: center; gap: 4px; font-family: var(--fuente-titulo); font-size: 0.86rem; letter-spacing: 0.03em; color: var(--oro-claro); }
+.ascenso-info > small { color: var(--text-secondary); font-size: 0.72rem; }
+.ascenso-info .obra-tiempo { margin-left: 0; }
+.ascenso-pilotos { display: flex; align-items: center; gap: 4px; }
+.ascenso-pilotos i { width: 9px; height: 9px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, 0.6); }
+.ascenso-pilotos i.ok { background: var(--obra-verde); box-shadow: 0 0 4px rgba(127, 207, 106, 0.7); }
+.ascenso-pilotos i.falta { background: var(--obra-rojo); }
+.ascenso-pilotos i.servidor { background: #7a7266; }
+.ascenso-pilotos small { margin-left: 2px; font-size: 0.7rem; color: var(--text-secondary); }
+.ascenso-obra { color: #ffd590 !important; }
+.ascenso-boton { width: 44px; height: 44px; display: grid; place-items: center; padding: 0; border: 1px solid var(--obra-verde); border-radius: 4px; background: radial-gradient(circle at 50% 35%, rgba(90, 160, 70, 0.95), rgba(30, 70, 25, 0.95)); color: #eaffdf; font-size: 1.3rem; font-weight: 700; cursor: pointer; box-shadow: 0 0 10px rgba(127, 207, 106, 0.45); transition: transform 0.1s, box-shadow 0.15s; }
+.ascenso-boton:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 0 16px rgba(127, 207, 106, 0.7); }
+.ascenso-boton:disabled { border-color: rgba(107, 74, 41, 0.6); background: rgba(20, 16, 11, 0.8); color: rgba(160, 140, 110, 0.45); box-shadow: none; cursor: help; }
+.ascenso-reqs { list-style: none; margin: 0; padding: 6px 2px 2px; display: flex; flex-direction: column; gap: 6px; }
+.ascenso-req { display: grid; grid-template-columns: 16px 24px minmax(0, 1fr); align-items: start; gap: 6px; font-size: 0.8rem; color: var(--pergamino); }
+.ascenso-req-marca { font-weight: 800; text-align: center; line-height: 22px; }
+.ascenso-req.ok .ascenso-req-marca { color: var(--obra-verde); }
+.ascenso-req.falta .ascenso-req-marca { color: var(--obra-rojo); }
+.ascenso-req.servidor .ascenso-req-marca { color: #9a927f; }
+.ascenso-req.servidor { color: var(--text-secondary); }
+.ascenso-req-icono { display: grid; place-items: center; width: 24px; height: 22px; font-size: 1rem; color: var(--oro-claro); --relleno: rgba(205, 160, 90, 0.3); }
+.ascenso-req-cuerpo { display: flex; flex-direction: column; gap: 3px; min-width: 0; line-height: 22px; }
+.ascenso-req-cuerpo > span:first-child { line-height: 1.3; padding-top: 3px; }
+.ascenso-req-medida { display: flex; align-items: center; gap: 6px; }
+.ascenso-req-medida small { font-size: 0.7rem; color: var(--text-secondary); white-space: nowrap; }
+.ascenso-req-barra { flex: 1; height: 6px; border-radius: 3px; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(107, 74, 41, 0.8); overflow: hidden; }
+.ascenso-req-barra i { display: block; height: 100%; background: var(--obra-rojo); }
+.ascenso-req.ok .ascenso-req-barra i { background: var(--obra-verde); }
+.ascenso-req-extra { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.ascenso-edif { display: grid; place-items: center; width: 30px; height: 30px; border: 1px dashed rgba(169, 121, 63, 0.5); border-radius: 3px; background: rgba(10, 8, 5, 0.6); color: rgba(160, 140, 110, 0.45); --relleno: rgba(120, 100, 80, 0.12); }
+.ascenso-edif.hecho { border-style: solid; border-color: var(--obra-verde); background: rgba(40, 70, 30, 0.45); color: var(--oro-claro); --relleno: rgba(205, 160, 90, 0.35); }
+.ascenso-chips { display: flex; flex-wrap: wrap; gap: 3px 8px; }
+.ascenso-chips .obra-coste { font-size: 0.76rem; }
+
+/* Resumen: cabecera con escudo, nombre y nivel. */
+.resumen-cab { display: flex; align-items: center; gap: 10px; padding: 8px 10px; margin-bottom: 8px; border: 1px solid rgba(169, 121, 63, 0.55); border-radius: 3px; background: radial-gradient(ellipse at 0% 50%, rgba(169, 121, 63, 0.25), transparent 65%), linear-gradient(180deg, rgba(40, 30, 18, 0.95), rgba(18, 14, 9, 0.95)); }
+.resumen-escudo { display: flex; flex: none; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6)); }
+.resumen-titulo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.resumen-nombre { display: flex; align-items: center; gap: 6px; margin: 0; min-width: 0; font-family: var(--fuente-titulo); font-size: 1.15rem; letter-spacing: 0.04em; color: var(--oro-claro); }
+.resumen-nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.resumen-lapiz { flex: none; width: 22px; height: 22px; display: grid; place-items: center; padding: 0; border: 1px solid var(--bronce-osc); border-radius: 3px; background: rgba(0, 0, 0, 0.35); color: var(--oro); font-size: 0.75rem; cursor: pointer; }
+.resumen-lapiz:hover { border-color: var(--oro); color: var(--oro-claro); }
+.resumen-etiquetas { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 0.74rem; color: var(--text-secondary); }
+.resumen-etq { padding: 0 6px; border-radius: 9px; border: 1px solid var(--bronce-osc); background: rgba(0, 0, 0, 0.35); color: var(--oro-claro); font-size: 0.7rem; line-height: 1.5; }
+.resumen-etq.capital { border-color: #ffd24a; color: #ffe08a; }
+.resumen-nivel { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: none; }
+.resumen-opera { padding: 0 4px; border-radius: 3px; background: rgba(226, 103, 90, 0.85); color: #fff; font-size: 0.6rem; font-weight: 700; white-space: nowrap; }
+.resumen-renombrar { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.resumen-renombrar .form-input { flex: 1; min-width: 0; height: 30px; padding: 0 8px; font-size: 0.9rem; }
+.resumen-ok, .resumen-cancelar { flex: none; width: 30px; height: 30px; padding: 0; border-radius: 3px; cursor: pointer; font-weight: 700; }
+.resumen-ok { border: 1px solid var(--obra-verde); background: rgba(40, 70, 30, 0.85); color: #c8f5b8; }
+.resumen-cancelar { border: 1px solid var(--bronce-osc); background: rgba(0, 0, 0, 0.4); color: var(--oro); }
+.resumen-ocupacion { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 6px 10px; border: 1px solid rgba(226, 103, 90, 0.7); border-radius: 3px; background: repeating-linear-gradient(-45deg, rgba(120, 30, 20, 0.55) 0 10px, rgba(80, 20, 14, 0.55) 10px 20px); color: #ffd2c9; font-size: 0.82rem; }
+.resumen-ocupacion span { margin-left: auto; font-weight: 700; white-space: nowrap; }
+
+/* Población por clases: barra contra su sitio y la marca de lo que pide el nivel siguiente. */
+.resumen-poblacion { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; margin-bottom: 8px; border: 1px solid rgba(107, 74, 41, 0.7); border-radius: 3px; background: linear-gradient(180deg, rgba(36, 27, 17, 0.95), rgba(18, 14, 9, 0.95)); }
+.pob-cab { display: flex; align-items: baseline; gap: 6px; font-size: 0.8rem; color: var(--pergamino); }
+.pob-cab strong { font-size: 1.1rem; color: var(--oro-claro); }
+.pob-cab small { color: var(--text-muted); font-size: 0.72rem; }
+.pob-cab .ayuda-btn, .pob-cab button { margin-left: auto; }
+.pob-techo { display: block; height: 4px; border-radius: 2px; background: rgba(0, 0, 0, 0.5); overflow: hidden; }
+.pob-techo i { display: block; height: 100%; background: linear-gradient(90deg, #8a6a3c, var(--oro)); }
+.pob-clase { display: grid; grid-template-columns: 22px 5.5rem minmax(0, 1fr) auto; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--pergamino); }
+.pob-icono { font-size: 1rem; text-align: center; }
+.pob-nombre { color: var(--text-secondary); }
+.pob-pista { position: relative; height: 10px; border-radius: 5px; background: repeating-linear-gradient(-45deg, rgba(226, 103, 90, 0.18) 0 4px, rgba(0, 0, 0, 0.5) 4px 8px); border: 1px solid rgba(107, 74, 41, 0.8); overflow: visible; }
+.pob-pista > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: linear-gradient(90deg, #8a6a3c, var(--oro)); box-shadow: 0 0 5px rgba(232, 190, 100, 0.45); }
+.pob-sitio { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: #2a2116; box-shadow: inset -2px 0 0 rgba(241, 220, 174, 0.55); }
+.pob-meta { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: #ffd24a; box-shadow: 0 0 4px rgba(255, 210, 74, 0.8); }
+.pob-clase.llena .pob-pista > i { background: var(--obra-ambar); }
+.pob-clase strong { min-width: 4.5rem; text-align: right; color: var(--oro-claro); white-space: nowrap; }
+.pob-clase strong small { color: var(--text-muted); font-weight: 400; }
+
+/* Medidores de mantenimiento y nutrición. */
+.resumen-medidores { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; margin-bottom: 8px; }
+.medidor { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: 'icono cab' 'icono pista' 'icono estado'; align-items: center; gap: 2px 8px; padding: 6px 8px; border: 1px solid rgba(107, 74, 41, 0.7); border-left: 3px solid var(--tono); border-radius: 3px; background: linear-gradient(90deg, color-mix(in srgb, var(--tono) 14%, transparent), rgba(18, 14, 9, 0.9)); cursor: help; }
+.medidor.bien { --tono: var(--obra-verde); }
+.medidor.medio { --tono: var(--obra-ambar); }
+.medidor.mal { --tono: var(--obra-rojo); }
+.medidor-icono { grid-area: icono; font-size: 1.4rem; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.7)); }
+.medidor-cab { grid-area: cab; display: flex; align-items: baseline; justify-content: space-between; gap: 6px; font-size: 0.76rem; color: var(--text-secondary); }
+.medidor-cab strong { font-size: 1rem; color: var(--tono); }
+.medidor-pista { grid-area: pista; display: block; height: 6px; border-radius: 3px; background: rgba(0, 0, 0, 0.55); overflow: hidden; }
+.medidor-pista i { display: block; height: 100%; background: var(--tono); box-shadow: 0 0 6px var(--tono); }
+.medidor-estado { grid-area: estado; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--tono); }
+.medidor.mal .medidor-estado { animation: obra-latido 1.6s ease-in-out infinite; }
+
+/* Interruptor (casilla con aspecto de palanca). */
+.interruptor { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.82rem; color: var(--pergamino); cursor: pointer; }
+.interruptor input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.interruptor-pista { position: relative; width: 36px; height: 20px; flex: none; border-radius: 10px; border: 1px solid #7a7266; background: rgba(0, 0, 0, 0.55); transition: background 0.15s, border-color 0.15s; }
+.interruptor-pista i { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #9a927f; transition: transform 0.15s, background 0.15s; }
+.interruptor input:checked + .interruptor-pista { border-color: var(--obra-verde); background: rgba(40, 70, 30, 0.85); box-shadow: 0 0 8px rgba(127, 207, 106, 0.4); }
+.interruptor input:checked + .interruptor-pista i { transform: translateX(16px); background: #c8f5b8; }
+.interruptor input:focus-visible + .interruptor-pista { outline: 2px solid var(--oro); outline-offset: 2px; }
+.interruptor small { margin-left: auto; color: var(--text-muted); font-size: 0.72rem; }
+.interruptor input:checked ~ small { color: var(--obra-verde); }
+
+/* Residencia y capital, en tarjetas. */
+.resid-tarjetas { display: flex; flex-direction: column; gap: 6px; }
+.resid-tarjeta { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 7px 10px; border: 1px solid rgba(107, 74, 41, 0.7); border-left: 3px solid var(--bronce); border-radius: 3px; background: linear-gradient(90deg, rgba(50, 37, 22, 0.8), rgba(18, 14, 9, 0.9)); }
+.resid-tarjeta.dentro { border-left-color: var(--obra-verde); }
+.resid-tarjeta.capital { border-left-color: #ffd24a; background: radial-gradient(ellipse at 0% 50%, rgba(255, 210, 74, 0.2), transparent 60%), linear-gradient(90deg, rgba(60, 45, 22, 0.9), rgba(18, 14, 9, 0.9)); }
+.resid-tarjeta.apagada { opacity: 0.75; border-left-color: #7a7266; }
+.resid-tarjeta.apagada .resid-icono { filter: grayscale(0.8); }
+.resid-icono { font-size: 1.5rem; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7)); }
+.resid-cuerpo { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.resid-cuerpo strong { display: flex; align-items: center; gap: 4px; font-size: 0.84rem; color: var(--oro-claro); }
+.resid-cuerpo small { font-size: 0.72rem; color: var(--text-secondary); }
+.resid-boton { padding: 5px 10px; border: 1px solid var(--bronce); border-radius: 3px; background: linear-gradient(180deg, rgba(90, 66, 34, 0.95), rgba(40, 29, 16, 0.95)); color: var(--oro-claro); font-size: 0.76rem; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.resid-boton:hover:not(:disabled) { border-color: var(--oro); box-shadow: 0 0 8px rgba(232, 190, 100, 0.35); }
+.resid-boton:disabled { opacity: 0.45; cursor: help; }
+.resid-boton.peligro { border-color: rgba(226, 103, 90, 0.7); background: rgba(70, 22, 16, 0.85); color: #ffc4b8; }
+.resid-boton.peligro:hover { box-shadow: 0 0 8px rgba(226, 103, 90, 0.45); }
+.asent-resumen-residencia { margin-top: 2px; }
+
+/* Cargos: una silla por cargo con su emblema. */
+.cargos-rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px; margin-bottom: 12px; }
+.cargo-silla { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 7px 8px; border: 1px solid rgba(169, 121, 63, 0.6); border-radius: 3px; background: radial-gradient(ellipse at 0% 50%, rgba(169, 121, 63, 0.2), transparent 60%), linear-gradient(180deg, rgba(36, 27, 17, 0.95), rgba(18, 14, 9, 0.95)); }
+.cargo-silla.vacante { border-style: dashed; border-color: rgba(169, 121, 63, 0.45); background: rgba(10, 8, 5, 0.6); }
+.cargo-silla.vacante .cargo-emblema { filter: grayscale(1); opacity: 0.45; }
+.cargo-silla.yo { border-color: #ffd24a; box-shadow: inset 0 0 0 1px rgba(255, 210, 74, 0.35); }
+.cargo-silla.editando { border-color: var(--oro); box-shadow: 0 0 10px rgba(232, 190, 100, 0.3); }
+.cargo-emblema { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--bronce); border-radius: 50%; background: radial-gradient(circle at 50% 35%, rgba(169, 121, 63, 0.4), rgba(0, 0, 0, 0.55)); font-size: 1.05rem; }
+.cargo-cuerpo { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.cargo-cuerpo small { font-size: 0.64rem; line-height: 1.15; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+.cargo-titular { font-size: 0.86rem; color: var(--pergamino); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cargo-titular.vacante { color: var(--text-muted); font-style: italic; font-weight: 400; }
+.cargo-silla.yo .cargo-titular { color: #ffe08a; }
+.cargo-sel { width: 100%; min-width: 0; height: 26px; padding: 0 4px; border: 1px solid var(--bronce-osc); border-radius: 2px; background: #12100b; color: var(--pergamino); font-size: 0.8rem; }
+.cargo-botones { display: flex; gap: 3px; }
+.cargo-boton { width: 26px; height: 26px; display: grid; place-items: center; padding: 0; border: 1px solid var(--bronce-osc); border-radius: 3px; background: rgba(0, 0, 0, 0.4); color: var(--oro); font-size: 0.8rem; cursor: pointer; }
+.cargo-boton:hover:not(:disabled) { border-color: var(--oro); color: var(--oro-claro); }
+.cargo-boton.ok { border-color: var(--obra-verde); background: rgba(40, 70, 30, 0.85); color: #c8f5b8; }
+
+/* Residentes por participación: ranking con medallas y barras. */
+.ranking { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.ranking-fila { display: grid; grid-template-columns: 26px minmax(0, 9rem) minmax(0, 1fr) 2.6rem; align-items: center; gap: 8px; padding: 4px 8px; border: 1px solid rgba(107, 74, 41, 0.5); border-radius: 3px; background: rgba(18, 14, 9, 0.75); font-size: 0.82rem; color: var(--pergamino); }
+.ranking-fila.yo { border-color: rgba(255, 210, 74, 0.6); background: linear-gradient(90deg, rgba(90, 66, 24, 0.55), rgba(18, 14, 9, 0.75)); }
+.ranking-fila.visita { opacity: 0.75; border-style: dashed; }
+.ranking-puesto { text-align: center; font-weight: 700; color: var(--text-secondary); font-size: 0.8rem; }
+.ranking-nombre { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.ranking-nombre > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ranking-fila.yo .ranking-nombre > span:first-child { color: #ffe08a; }
+.ranking-cargos { display: flex; gap: 1px; font-size: 0.78rem; flex: none; }
+.ranking-barra { height: 6px; border-radius: 3px; background: rgba(0, 0, 0, 0.5); overflow: hidden; }
+.ranking-barra i { display: block; height: 100%; background: linear-gradient(90deg, #8a6a3c, var(--oro)); }
+.ranking-fila.visita .ranking-barra i { background: #7a7266; }
+.ranking-fila strong { text-align: right; color: var(--oro-claro); }

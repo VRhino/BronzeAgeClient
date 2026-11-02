@@ -8,34 +8,20 @@
 // `obraMinutos` del nivel o `× MEJORA_EDIFICIO.multiplicadorPorNivel`), con las políticas de hoy (`factorTiempoConstruccion`) y, si se reconstruye,
 // `OCUPACION.fraccionCosteReconstruccion`.
 import { bloqueDeDatos } from '../apiCliente';
-import { EDIFICIO_COLOR, EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
+import { EDIFICIO_COLOR, EDIFICIO_NOMBRE, RECURSO_NOMBRE } from '../paletas';
 import type { Asentamiento, Edificio } from '../tiposDominio';
 import { ayuda } from './ayuda';
 import { estadoCliente } from './estadoCliente';
 import type { ContextoPlaza } from './ganchos';
 import { iconoEdificio } from './iconosEdificio';
+import { ahora, barraAvance, chipsDeCoste, cuentaAtras, duracion, marcasNivel } from './juegoVisual';
 import { plegable } from './plegable';
 import { htmlProduccionYRecetas, resumenProduccion, tipoSeleccionado } from './vistaCiudad';
 
 type Escapar = (valor: string) => string;
 type Cargo = 'gobernador' | 'maestroObras' | null;
 
-const ahora = (): number => estadoCliente.proyeccionUltima?.instante ?? Date.now();
 const nombreDe = (tipo: string): string => EDIFICIO_NOMBRE[tipo] ?? tipo;
-
-/** "3 min" / "45 s" que faltan para un instante de mundo. */
-function cuentaAtras(instanteFin: number | undefined): string {
-  if (typeof instanteFin !== 'number') return '';
-  const ms = instanteFin - ahora();
-  if (ms <= 0) return 'listo';
-  return ms >= 60_000 ? duracion(Math.round(ms / 60_000)) : `${Math.round(ms / 1000)} s`;
-}
-
-function duracion(minutos: number): string {
-  const h = Math.floor(minutos / 60);
-  const min = Math.round(minutos % 60);
-  return h === 0 ? `${min} min` : min === 0 ? `${h} h` : `${h} h ${min} min`;
-}
 
 /** Edificios que un Gobernador / Maestro de Obras puede añadir a mano (el backend gatea nivel, únicos y
  * topes; aquí solo se ofrece el catálogo). Fuera: centroUrbano, puestoMercado y los extractores de `mapa`. */
@@ -104,26 +90,8 @@ function avance(fin: number | undefined, minutos: number | null): number | null 
   return Math.max(0, Math.min(1, 1 - (fin - ahora()) / (minutos * 60_000)));
 }
 
-const barraAvance = (x: number | null): string => `<span class="obra-barra${x === null ? ' indefinida' : ''}"><i style="width:${x === null ? 100 : (x * 100).toFixed(1)}%"></i></span>`;
-
 /** Cuántos niveles tiene un tipo en el catálogo (para las marcas de nivel). */
 const nivelesDe = (tipo: string): number => Math.max(1, Object.keys(catalogo()?.[tipo]?.niveles ?? {}).length);
-
-/** Las marcas de nivel: llenas hasta `nivel`, vacías hasta el máximo del catálogo. */
-const marcasNivel = (nivel: number, maximo: number): string =>
-  `<span class="obra-marcas" aria-label="Nivel ${nivel} de ${maximo}">${Array.from({ length: Math.max(nivel, maximo) }, (_, i) => `<i${i < nivel ? ' class="llena"' : ''}></i>`).join('')}</span>`;
-
-/** El coste en chips con icono; en rojo lo que el almacén no cubre. */
-function chipsDeCoste(a: Asentamiento, coste: Record<string, number>, esc: Escapar, maximo = Infinity): string {
-  const lista = Object.entries(coste);
-  // Con más recursos que `maximo`, los primeros y «+N» (el coste entero va en el título de la casilla).
-  const resto = lista.length > maximo ? lista.length - maximo + 1 : 0;
-  const faltaEnResto = resto > 0 && lista.slice(maximo - 1).some(([r, n]) => (a.almacen?.[r]?.cantidad ?? 0) < n);
-  return (resto ? lista.slice(0, maximo - 1) : lista).map(([r, n]) => {
-    const falta = (a.almacen?.[r]?.cantidad ?? 0) < n;
-    return `<span class="obra-coste${falta ? ' falta' : ''}" title="${esc(`${n} ${RECURSO_NOMBRE[r] ?? r}${falta ? ` (hay ${Math.floor(a.almacen?.[r]?.cantidad ?? 0)})` : ''}`)}">${RECURSO_ICONO[r] ?? '📦'}${n}</span>`;
-  }).join('') + (resto ? `<span class="obra-coste${faltaEnResto ? ' falta' : ''}">+${resto}</span>` : '');
-}
 
 /** Los tipos de edificio para las pestañas de «Construir» (petición de Víctor, 2026-11-02). El catálogo del motor no los agrupa: es solo cómo se
  * enseñan. Un edificio nuevo del catálogo que no esté en ninguno cae en «Otros». */

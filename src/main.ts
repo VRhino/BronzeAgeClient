@@ -45,13 +45,13 @@ import { elegirPestanaHeroe, minutosHerido, pintarPanelHeroe } from './ui/panelH
 import { htmlBarraJugador, type PanelJugador } from './ui/barraJugador';
 import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from './paletas';
-import type { Alijo, Asentamiento, BloqueoAscenso, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, EvaluacionAscenso, Faccion, ParamsCrearHeroe, Sigilo } from './tiposDominio';
+import type { Alijo, Asentamiento, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Faccion, ParamsCrearHeroe, Sigilo } from './tiposDominio';
 import { svgSigilo } from './sigilo/sigilo';
 import { alCargarSigilos } from './sigilo/lienzo';
 import { cablearCampamento, campamentoActual, htmlSeccionCampamento, seccionesDeCampamento, type SeccionCampamento } from './ui/pantallaCampamento';
 import { leyendaPlanoCampamento, svgPlanoCampamento } from './ui/planoCampamento';
 import type { MapaGenerado } from './terreno';
-import { barraDeTiempo, estadoCliente, medirRitmoDeMundo, TIPS_FUNDACION } from './ui/estadoCliente';
+import { estadoCliente, medirRitmoDeMundo, TIPS_FUNDACION } from './ui/estadoCliente';
 import { actualizarTip, parcelasAlFundar, resumenRecursosFundacion, sitiosDeAldeaAlFundar } from './ui/pestanaAsentamientos';
 import { renderPanelInteraccion } from './ui/panelInteraccion';
 import { renderPanelMapa } from './ui/panelMapa';
@@ -95,9 +95,10 @@ import { explicarError } from './ui/erroresServidor';
 import { motivosParaCrearFaccion } from './ui/validarFaccion';
 import { nombreDeHeroe } from './ui/nombres';
 import { htmlEstados } from './ui/estados';
-import { cablearInteriorPueblo, htmlAlmacenPueblo, htmlAscensoLocal, htmlPestanasPueblo, htmlTrazadoPueblo, nombreDePueblo, puebloActual, selectorDePunto } from './ui/pueblos';
+import { cablearInteriorPueblo, htmlAlmacenPueblo, htmlPestanasPueblo, htmlTrazadoPueblo, nombreDePueblo, puebloActual, selectorDePunto } from './ui/pueblos';
 import { pintarSitiosDeAldea, type SitiosDeAldea } from './mundo/fertilidad';
 import { htmlMiembrosFaccion, htmlResidentesPlaza } from './ui/participacion';
+import { cablearCargosPlaza, cablearResumenPlaza, htmlAscensoPlaza, htmlCargosPlaza, htmlResumenPlaza } from './ui/panelCentro';
 import { cablearTablon, htmlTablon } from './ui/tablon';
 import { cablearMercenariosFaccion, htmlMercenariosFaccion, mercenariosQuePidenAtencion } from './ui/mercenarios';
 import { actualizarSeguimiento, cablearMisiones, elegirPestanaMisiones, htmlListaMisiones, htmlPanelMisiones, misionesPorReclamar, pintarRastreador } from './ui/misiones';
@@ -1740,21 +1741,6 @@ function cargoConstructor(asentamiento: Asentamiento, heroeId: string): 'goberna
   return null;
 }
 
-/** "3 min" / "45 s" que faltan para un instante de mundo. */
-function cuentaAtras(instanteFin: number | undefined): string {
-  if (typeof instanteFin !== 'number') return '';
-  const ms = instanteFin - (estadoCliente.proyeccionUltima?.instante ?? Date.now());
-  if (ms <= 0) return 'listo';
-  return ms >= 60_000 ? duracion(Math.round(ms / 60_000)) : `${Math.round(ms / 1000)} s`;
-}
-
-/** "2 h 15 min" / "40 min": las obras van por horas desde el backend del 2026-09-26. */
-function duracion(minutos: number): string {
-  const h = Math.floor(minutos / 60);
-  const min = Math.round(minutos % 60);
-  return h === 0 ? `${min} min` : min === 0 ? `${h} h` : `${h} h ${min} min`;
-}
-
 /** Un rechazo en la gestión de la plaza: sale flotando arriba al centro, como los avisos de combate (`.aviso-global`), para que no se pierda al pie
  * de un panel largo (petición de Víctor, 2026-11-02). `null` o vacío: nada. */
 function errorDePlaza(mensaje: string | null | undefined): void {
@@ -1849,36 +1835,25 @@ function renderPanelEdificios(): void {
     if (seccionAsent === 'produccion' || seccionAsent === 'cola') seccionAsent = 'edificios';
     if (!SECCIONES.some(([id]) => id === seccionAsent)) seccionAsent = 'resumen';
     const extra = extras.find((s) => s.id === seccionAsent);
-    // La subida de nivel va fuera de las subpestañas, entre las pestañas de arriba y las de abajo: botón arriba y requisitos plegados.
-    const ascenso = proyeccion.ascensoDeAsentamiento ? seccionAscenso(asentamiento, proyeccion.ascensoDeAsentamiento, cargo === 'gobernador') : htmlAscensoLocal(proyeccion, asentamiento, cargo === 'gobernador', escaparHtml, renderPanelEdificios);
-    const puedeMudarme = Boolean(proyeccion.faccionId) && asentamiento.faccionId === proyeccion.faccionId && !resideEnLaPlaza(proyeccion, asentamiento);
-    const formNombre = resideEnLaPlaza(proyeccion, asentamiento)
-      ? `<div class="asent-renombrar"><span class="faction-kicker">Nombre de la ciudad ${ayuda('plaza:nombre', 'Vacío = vuelve a mostrarse el identificador.')}</span><div class="mercado-acciones"><input class="form-input" type="text" maxlength="40" data-campo="nombre-plaza" value="${escaparHtml(asentamiento.nombre ?? '')}" placeholder="${escaparHtml(asentamiento.id)}" /><button id="btn-renombrar" class="btn-secondary" type="button">Cambiar nombre</button></div></div>`
-      : '';
+    // La subida de nivel va fuera de las subpestañas, entre las pestañas de arriba y las de abajo: tarjeta con el botón y requisitos plegados.
+    const ascenso = htmlAscensoPlaza(proyeccion, asentamiento, cargo === 'gobernador', escaparHtml, renderPanelEdificios);
     const contenido = extra ? extra.html(ctxPlaza) : seccionAsent === 'resumen'
-      ? seccionResumen(asentamiento) + formNombre
-        + (puedeMudarme ? '<button id="btn-mudarme" class="btn-secondary" type="button" title="Hacer de esta plaza tu base: tu campamento se muda contigo">Hacer de esta plaza mi base</button>' : '')
+      ? htmlResumenPlaza(ctxPlaza)
         + (residencia && (residencia.visible?.(ctxPlaza) ?? true) ? `<div class="asent-resumen-residencia">${residencia.html(ctxPlaza)}</div>` : '')
       : seccionAsent === 'edificios'
         ? htmlPanelObras(ctxPlaza)
-        : renderCargosAsentamiento(asentamiento, proyeccion);
+        : htmlCargosPlaza(ctxPlaza, htmlResidentesPlaza(proyeccion, asentamiento, escaparHtml));
     html = `${ascenso ? `<section class="asent-ascenso">${ascenso}</section>` : ''}${subpestanas(SECCIONES, seccionAsent)}<div class="asent-lado-cuerpo">${contenido}</div>
       ${!cargo && seccionAsent === 'edificios' ? '<p class="asent-lado-nota">Necesitas ser Gobernador o Maestro de Obras para gestionar la construcción.</p>' : ''}${pie}`;
     ambito = `centro:${seccionAsent}`;
     cablear = () => {
       cablearSub((s) => { seccionAsent = s as SeccionAsent; });
       cuerpo.querySelector('#btn-mudarme')?.addEventListener('click', () => void mudarseAEstaPlaza());
-      cuerpo.querySelector('#btn-renombrar')?.addEventListener('click', async () => {
-        const nombre = cuerpo.querySelector<HTMLInputElement>('[data-campo="nombre-plaza"]')?.value ?? '';
-        const mensaje = await ejecutarYRefrescar('renombrarAsentamiento', { asentamientoId: asentamiento.id, nombre });
-        errorDePlaza(mensaje);
-        if (mensaje === null) olvidarEdicion(cuerpo);
-      });
       cablearAccionesAsentLado(cuerpo, asentamiento, cargo);
-      cablearCargosAsentamiento(cuerpo, asentamiento);
       cablearPlegables(cuerpo);
       if (seccionAsent === 'edificios') { cablearProduccionYRecetas(ctxPlaza); cablearPanelObras(cuerpo, renderPanelEdificios); }
-      if (seccionAsent === 'resumen') residencia?.cablear?.(ctxPlaza);
+      if (seccionAsent === 'resumen') { cablearResumenPlaza(ctxPlaza); residencia?.cablear?.(ctxPlaza); }
+      if (seccionAsent === 'cargos') cablearCargosPlaza(ctxPlaza);
       extra?.cablear?.(ctxPlaza);
     };
   } else if (edificioAsent === 'mercado' && ajena) {
@@ -1933,63 +1908,6 @@ function seccionResumenAjena(p: ProyeccionJugador, a: Asentamiento): string {
       </div>
       <p class="asent-lado-nota">Estás de visita: esta plaza es de otra Facción.</p>
     </div>`;
-}
-
-function seccionResumen(a: Asentamiento): string {
-  const pob = a.poblacion;
-  const total = pob ? pob.pesants + pob.artesanos + pob.nobleza : null;
-  const ocupado = typeof a.ocupacionHasta === 'number' && a.ocupacionHasta > (estadoCliente.proyeccionUltima?.instante ?? 0);
-  const medidor = (etiqueta: string, valor: number | undefined) =>
-    typeof valor === 'number'
-      ? `<div class="asent-medidor"><span>${etiqueta}</span><div class="asent-medidor-track"><span style="width:${Math.max(0, Math.min(100, valor))}%"></span></div><strong>${Math.round(valor)}</strong></div>`
-      : '';
-  return `
-    <div class="asent-ficha-grid">
-      <div><span>Nivel</span><strong>${a.nivel}${a.nivelActual !== undefined && a.nivelActual !== a.nivel ? ` (op. ${a.nivelActual})` : ''}</strong></div>
-      <div><span>Población</span><strong>${total ?? '—'}</strong></div>
-      ${pob ? `<div><span>Pesants</span><strong>${pob.pesants}</strong></div><div><span>Artesanos</span><strong>${pob.artesanos}</strong></div>` : ''}
-      ${pob && pob.nobleza > 0 ? `<div><span>Nobleza</span><strong>${pob.nobleza}</strong></div>` : ''}
-    </div>
-    ${medidor('Mantenimiento', a.medidorMantenimiento)}
-    ${medidor('Nutrición', a.nutricionPoblacion)}
-    ${ocupado ? `<p class="asent-lado-nota asent-aviso-ocupacion">⚔ Bajo ocupación militar — ${cuentaAtras(a.ocupacionHasta)} restantes.</p>` : ''}
-    <label class="asent-toggle"><input type="checkbox" id="chk-autoconstruccion" ${a.autoConstruccionPausada ? '' : 'checked'} /> Auto-construcción</label>`;
-}
-
-const MOTIVO_BLOQUEO_ASCENSO: Record<BloqueoAscenso, string> = {
-  nivel_maximo: 'Ya está en el nivel máximo.',
-  ascenso_en_curso: 'Ya hay una obra de ascenso en curso.',
-  falta_poblacion: 'Falta población para el nivel siguiente.',
-  faltan_edificios: 'Faltan edificios para el nivel siguiente.',
-  sin_cupo_de_faccion: 'Tu Facción no tiene cupo para otra plaza de ese nivel.',
-  recursos_insuficientes: 'No hay en el almacén con qué pagar la obra.',
-  insolvente: 'Los ingresos no cubrirían el mantenimiento del nivel siguiente.',
-};
-
-/** Subida de nivel (Doc 4.5): ya no sube sola al cumplir los requisitos; la pide el Gobernador, se paga entera del
- * almacén y tarda una obra. La evaluación (bloqueos, coste, solvencia) la calcula el servidor. */
-function seccionAscenso(a: Asentamiento, evaluacion: EvaluacionAscenso | undefined, soyGobernador: boolean): string {
-  const cabecera = `<div class="asent-lado-cabecera"><span class="faction-kicker">Subida de nivel ${ayuda('plaza:ascenso', 'La subida de nivel no es automática: la pide el Gobernador, se paga entera del almacén y tarda una obra. Si conquistan la plaza durante la obra, se pierde.')}</span></div>`;
-  if (a.ascenso) {
-    return `${cabecera}${barraDeTiempo(`Subiendo al nivel ${a.ascenso.nivelObjetivo}`, a.ascenso.iniciadoEn, a.ascenso.completaEn, estadoCliente.proyeccionUltima?.instante ?? Date.now())}`;
-  }
-  if (!evaluacion || evaluacion.nivelObjetivo === null) return '';
-  const costo = Object.entries(evaluacion.costo)
-    .map(([recurso, cantidad]) => `${RECURSO_ICONO[recurso] ?? '📦'} ${Math.ceil(cantidad ?? 0)} ${escaparHtml(RECURSO_NOMBRE[recurso] ?? recurso)}`)
-    .join(' · ');
-  const fmt = (n: number) => (n >= 10 ? Math.round(n).toString() : n.toFixed(1));
-  const deficit = evaluacion.solvencia
-    .filter((s) => s.ingresoPorMinuto < s.costoPorMinuto)
-    .map((s) => `${escaparHtml(RECURSO_NOMBRE[s.recurso] ?? s.recurso)}: ${fmt(s.ingresoPorMinuto)} de ${fmt(s.costoPorMinuto)}/min`)
-    .join(' · ');
-  const motivos = evaluacion.bloqueos.map((b) => `<li>${escaparHtml(MOTIVO_BLOQUEO_ASCENSO[b] ?? b)}</li>`).join('');
-  return `${cabecera}
-    <p class="asent-lado-nota">Al nivel ${evaluacion.nivelObjetivo}: ${costo || 'sin coste'} · obra de ${duracion(evaluacion.obraMinutos)}.</p>
-    ${deficit ? `<p class="asent-lado-nota">No cubre el mantenimiento: ${deficit}.</p>` : ''}
-    ${motivos ? `<ul class="asent-lado-nota">${motivos}</ul>` : ''}
-    ${soyGobernador
-      ? `<button id="btn-solicitar-ascenso" class="btn-primary" type="button"${evaluacion.puede ? '' : ' disabled'}>Subir a nivel ${evaluacion.nivelObjetivo}</button>`
-      : '<p class="asent-lado-nota">Solo el Gobernador puede pedir la subida.</p>'}`;
 }
 
 function cablearAccionesAsentLado(cont: HTMLElement, a: Asentamiento, cargo: 'gobernador' | 'maestroObras' | null): void {
@@ -2065,86 +1983,6 @@ function renderPanelAsent(): void {
     pintar(panel, htmlUnirseDesdePlaza(proyeccion, asentamiento, escaparHtml), () => cablearUnirseDesdePlaza(panel, proyeccion, asentamiento, ejecutarYRefrescar), 'ejercito');
     return;
   }
-}
-
-/** Sección "Cargos" del panel de Facción, acotada al asentamiento que se pisa. Solo aparecen los cargos que
- * el jugador PUEDE asignar aquí: Gobernador si eres el REY de la Facción; los otros cuatro si eres el
- * Gobernador (Doc 2.2, `asignarCargoLocal` en el backend, 2026-09-10). */
-/** Los cargos que se están cambiando (combo a la vista): sobreviven a los repintados del sondeo hasta que se asigna. */
-const cargosEditando = new Set<string>();
-
-/** Subpestaña «Cargos»: cada cargo con quien lo ocupa (o «vacante») y, si puedes nombrarlo, un botón «Cambiar» al lado. Al pulsarlo el nombre deja
- * su sitio a un combo con los ciudadanos y el botón pasa a «Asignar»; al asignar vuelve el nombre. El Rey nombra al Gobernador; el Gobernador, al resto. */
-function renderCargosAsentamiento(asentamiento: Asentamiento | undefined, proyeccion: ProyeccionJugador): string {
-  if (!asentamiento) return '';
-  const faccion = proyeccion.facciones.find((f) => f.id === proyeccion.faccionId);
-  const soyGobernador = asentamiento.cargos?.gobernadorId === proyeccion.heroeId;
-  const soyRey = faccion?.reyId === proyeccion.heroeId;
-  // Un mercenario con marca no recibe cargos (motor 7aa44b9).
-  const ciudadanos = (faccion?.ciudadanosIds ?? []).filter((id) => !faccion?.miembros?.some((m) => m.heroeId === id && m.marca));
-  const cargos = [
-    ['gobernadorId', 'Gobernador', soyRey],
-    ['maestroObrasId', 'Maestro de Obras', soyGobernador],
-    ['tesoreroId', 'Tesorero', soyGobernador],
-    ['maestroCaravanasId', 'Maestro de Caravanas', soyGobernador],
-    ['generalId', 'General', soyGobernador],
-    ['sacerdoteId', 'Sacerdote', soyGobernador],
-  ] as const;
-  return `
-    <section class="asent-cargos">
-      <span class="faction-kicker">Cargos de ${escaparHtml(asentamiento.nombre ?? asentamiento.id)} ${ayuda('plaza:cargos', 'El Rey nombra al Gobernador y el Gobernador, al resto.')}</span>
-      ${cargos.map(([clave, nombre, puede]) => {
-        const cargo = clave.replace('Id', '');
-        const actual = asentamiento.cargos?.[clave] ?? null;
-        const editando = puede && cargosEditando.has(cargo);
-        return `<div class="asent-cargo" data-cargo="${cargo}">
-          <span class="asent-cargo-nombre">${nombre}</span>
-          <span class="asent-cargo-titular">
-            <span class="asent-cargo-texto${actual ? '' : ' vacante'}"${editando ? ' hidden' : ''}>${actual ? escaparHtml(nombreDeHeroe(proyeccion, actual)) : 'vacante'}</span>
-            ${puede ? `<select class="asent-cargo-sel"${editando ? '' : ' hidden'}>${ciudadanos.map((id) => `<option value="${escaparHtml(id)}"${id === actual ? ' selected' : ''}>${escaparHtml(nombreDeHeroe(proyeccion, id))}</option>`).join('')}</select>` : ''}
-          </span>
-          ${puede ? `<button class="btn-secondary asent-cargo-btn" type="button">${editando ? 'Asignar' : 'Cambiar'}</button>` : ''}
-        </div>`;
-      }).join('')}
-      ${soyGobernador || soyRey ? '' : '<p class="asent-lado-nota">Solo el Rey (al Gobernador) y el Gobernador (al resto) pueden cambiar los cargos.</p>'}
-      <p id="asent-cargo-error" class="faction-error" role="alert"></p>
-    </section>
-    ${htmlResidentesPlaza(proyeccion, asentamiento, escaparHtml)}`;
-}
-
-function cablearCargosAsentamiento(panel: HTMLElement, asentamiento: Asentamiento | undefined): void {
-  if (!asentamiento) return;
-  panel.querySelectorAll<HTMLElement>('.asent-cargo').forEach((fila) => {
-    const cargo = fila.dataset.cargo!;
-    const texto = fila.querySelector<HTMLElement>('.asent-cargo-texto');
-    const select = fila.querySelector<HTMLSelectElement>('.asent-cargo-sel');
-    const boton = fila.querySelector<HTMLButtonElement>('.asent-cargo-btn');
-    boton?.addEventListener('click', async () => {
-      const error = panel.querySelector<HTMLElement>('#asent-cargo-error');
-      if (!cargosEditando.has(cargo)) {
-        // «Cambiar»: el combo ocupa el sitio del nombre.
-        cargosEditando.add(cargo);
-        texto?.toggleAttribute('hidden', true);
-        select?.toggleAttribute('hidden', false);
-        boton.textContent = 'Asignar';
-        select?.focus();
-        return;
-      }
-      const heroeId = select?.value;
-      if (!heroeId) return;
-      boton.disabled = true;
-      try {
-        const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'asignarCargoLocal', { asentamientoId: asentamiento.id, cargo, heroeId });
-        if (!respuesta.resultado.ok) throw errorDeRechazo(respuesta.resultado, 'No se pudo asignar el cargo.');
-        cargosEditando.delete(cargo);
-        if (error) error.textContent = '';
-        await refrescarDatosJuego();
-      } catch (err) {
-        boton.disabled = false;
-        if (error) error.textContent = mensajeError(err);
-      }
-    });
-  });
 }
 
 /** Pantalla ASENTAMIENTO (rediseño estilo estrategia): barra superior (nombre + nivel + acciones), el mapa

@@ -18,7 +18,7 @@ const nombreCargo = (c: string): string => CARGO_NOMBRE[c] ?? c;
 function cargosEnPlaza(a: Asentamiento, f: Faccion | undefined, heroeId: string): string[] {
   const c = a.cargos;
   const locales: [string, string | null | undefined][] = [
-    ['gobernador', c?.gobernadorId], ['maestroObras', c?.maestroObrasId], ['tesorero', c?.tesoreroId], ['general', c?.generalId], ['sacerdote', c?.sacerdoteId],
+    ['gobernador', c?.gobernadorId], ['maestroObras', c?.maestroObrasId], ['tesorero', c?.tesoreroId], ['maestroCaravanas', c?.maestroCaravanasId], ['general', c?.generalId], ['sacerdote', c?.sacerdoteId],
   ];
   return [
     ...(f?.reyId === heroeId ? ['rey'] : []),
@@ -27,7 +27,13 @@ function cargosEnPlaza(a: Asentamiento, f: Faccion | undefined, heroeId: string)
   ];
 }
 
-/** Residentes de la plaza, de más a menos participación, y debajo quien ha sumado puntos aquí sin residir. */
+/** El emblema de cada cargo (sillas de «Cargos» y el ranking de residentes). */
+export const CARGO_EMBLEMA: Record<string, string> = {
+  rey: '👑', embajador: '📜', gobernador: '🏛️', maestroObras: '🔨', maestroCaravanas: '🐂', tesorero: '💰', general: '⚔️', sacerdote: '🔥',
+};
+
+/** Residentes de la plaza como un ranking: puesto (medalla a los tres primeros), nombre con los emblemas de sus cargos, barra de sus puntos contra
+ * los del primero y la cifra. Debajo, en otro tono, quien ha sumado puntos aquí sin residir. */
 export function htmlResidentesPlaza(p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
   const f = p.facciones.find((x) => x.id === a.faccionId);
   const puntos = a.participacion ?? {};
@@ -37,15 +43,25 @@ export function htmlResidentesPlaza(p: ProyeccionJugador, a: Asentamiento, e: Es
     ...(f?.miembros ?? []).filter((m) => m.residenciaId === a.id).map((m) => m.heroeId),
   ]);
   const orden = (ids: Iterable<string>) => [...ids].sort((x, y) => (puntos[y] ?? 0) - (puntos[x] ?? 0) || nombreDeHeroe(p, x).localeCompare(nombreDeHeroe(p, y)));
-  const fila = (id: string) => {
-    const cargos = cargosEnPlaza(a, f, id).map(nombreCargo).join(', ');
-    return `<li class="${id === p.heroeId ? 'participacion-yo' : ''}"><span>${e(nombreDeHeroe(p, id))}${cargos ? ` <small>· ${e(cargos)}</small>` : ''}</span><strong>${puntos[id] ?? 0}</strong></li>`;
+  const maximo = Math.max(1, ...Object.values(puntos));
+  const MEDALLA = ['🥇', '🥈', '🥉'];
+  const fila = (id: string, i: number, visita: boolean) => {
+    const cargos = cargosEnPlaza(a, f, id);
+    const emblemas = cargos.map((c) => `<span title="${e(nombreCargo(c))}">${CARGO_EMBLEMA[c] ?? '•'}</span>`).join('');
+    const pts = puntos[id] ?? 0;
+    const puesto = !visita && pts > 0 && i < 3 ? MEDALLA[i] : String(i + 1);
+    return `<li class="ranking-fila${id === p.heroeId ? ' yo' : ''}${visita ? ' visita' : ''}" title="${e(`${nombreDeHeroe(p, id)}${cargos.length ? ` · ${cargos.map(nombreCargo).join(', ')}` : ''} · ${pts} puntos`)}">
+      <span class="ranking-puesto">${visita ? '🧳' : puesto}</span>
+      <span class="ranking-nombre"><span>${e(nombreDeHeroe(p, id))}</span>${emblemas ? `<span class="ranking-cargos">${emblemas}</span>` : ''}</span>
+      <span class="ranking-barra"><i style="width:${((pts / maximo) * 100).toFixed(1)}%"></i></span>
+      <strong>${pts}</strong>
+    </li>`;
   };
   const visitantes = orden(Object.keys(puntos).filter((id) => !residentes.has(id) && (puntos[id] ?? 0) > 0));
-  return `<section class="participacion">
-    <div class="asent-lado-cabecera"><span class="faction-kicker">Residentes y participación${ayuda('plaza:participacion', 'Puntos que gana cada héroe en esta plaza: al defenderla en un asedio, al defender sus pueblos, aldeas o caravanas, y al ganar una batalla residiendo aquí. Lo ganado en una plaza se queda en ella.')}</span></div>
-    ${residentes.size ? `<ul class="participacion-lista">${orden(residentes).map(fila).join('')}</ul>` : '<p class="mapa-lista-vacia">Nadie reside aquí.</p>'}
-    ${visitantes.length ? `<p class="asent-lado-nota">También han sumado aquí sin residir:</p><ul class="participacion-lista">${visitantes.map(fila).join('')}</ul>` : ''}
+  return `<section class="participacion plaza">
+    <div class="obra-titulo"><span class="faction-kicker">Residentes y participación</span><span class="obra-chip">🏠 ${residentes.size}</span>${ayuda('plaza:participacion', 'Puntos que gana cada héroe en esta plaza: al defenderla en un asedio, al defender sus pueblos, aldeas o caravanas, y al ganar una batalla residiendo aquí. Lo ganado en una plaza se queda en ella. Con 🧳, quien ha sumado aquí sin residir.')}</div>
+    ${residentes.size ? `<ol class="ranking">${orden(residentes).map((id, i) => fila(id, i, false)).join('')}</ol>` : '<p class="mapa-lista-vacia">Nadie reside aquí.</p>'}
+    ${visitantes.length ? `<ol class="ranking">${visitantes.map((id, i) => fila(id, i, true)).join('')}</ol>` : ''}
   </section>`;
 }
 
