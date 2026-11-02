@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.82.0] — 2026-11-02 · Velocidad de la columna a la vista, caravana de fundación en tarjetas y aviso de madera al fundar · sin cambios de contrato (`VRhino/BronzeAge@168a3bea`)
+
+- **Velocidad de la columna en «Salir al mundo»** (y con un ejército en preparación): una línea encima de la tropa con la cifra en u/min, un icono de cuatro flechas y quién marca el paso. Se rehace al quitar o añadir escuadras, al cambiar de loadout y al elegir llevarse la Caravana de Fundación; de visita enseña la de tu columna con sus caravanas. **Rojo** por debajo de la infantería ligera, **blanco** igual, **azul** por encima. Sale de las mismas reglas que el motor (`velocidad_de_columna`): `TROPAS_RECLUTABLES.velocidad`, `CARAVANA_CATALOGO`, `ANIMAL_CATALOGO` y `MOVIMIENTO` de `GET /v1/datos`; la «ligera» es la velocidad más común del catálogo de tropas (hoy 30). Nuevo `ui/velocidadColumna.ts`; `velocidadDeColumna` (`mundo/tiempoDeMarcha.ts`) pasa a usarlo.
+- **Barra de víveres**: al lado de «Marcha forzada», la velocidad de tu columna solo con el icono (1-2 flechas rojas, 3 blancas, 4 azules); la cifra y quién marca el paso van en el título. Con marcha forzada se enciende en azul.
+- **Caravana de Fundación al convocar**: el radio pasa a dos tarjetas («Se queda aquí» con una puerta, «Llevárnosla» con una carreta y su carga en iconos), cada una con el paso al que marcharía el ejército.
+- **Fundar asentamiento**: sin parcelas de bosque libres el aviso añade que sin madera no se pueden construir edificios nuevos.
+- Banco `pruebas/velocidad/` (salida, ejército en preparación, barra de víveres y aviso de fundar, sin servidor) y prueba `pruebas/velocidadColumna.test.ts`.
+
 ## [0.81.0] — 2026-11-02 · Ríos con orilla, cielo en el mundo 3D y aviso a la altura de las misiones · sin cambios de contrato (`VRhino/BronzeAge@168a3bea`)
 
 - **El aviso que se va solo** sale centrado a la altura del rastreador de misiones, justo bajo la barra del jugador.

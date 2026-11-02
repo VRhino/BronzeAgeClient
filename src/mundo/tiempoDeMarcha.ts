@@ -3,10 +3,11 @@
 // (`GrafoNavegacion`, la misma autoridad de rutas que usa el motor), cada arista a su coste de terreno, a la velocidad de la columna (el mínimo
 // de su tropa y sus caravanas; el héroe solo, `MOVIMIENTO.velocidadJugador`; ×1,5 con marcha forzada). No cuenta los caminos construidos, que
 // aceleran: el motor llega antes o igual. Sin grafo, en línea recta y en llano.
-import { bloqueDeDatos, grafoDeNavegacion, tropasReclutables, type ProyeccionJugador } from '../apiCliente';
+import { grafoDeNavegacion, type ProyeccionJugador } from '../apiCliente';
 import { navegacionDesdeGrafo, type Navegacion } from '../mundo3d/rejilla';
 import type { Ejercito } from '../tiposDominio';
 import { textoEnTiempoReal } from '../ui/estadoCliente';
+import { piezaDeCaravana, piezaDeFundacion, piezaDeTropa, velocidadDePiezas, type PiezaDeColumna, type VelocidadEstimada } from '../ui/velocidadColumna';
 
 type Punto = { x: number; y: number };
 
@@ -95,28 +96,29 @@ function costeDeRuta(r: Red, desde: number, hasta: number): number | null {
   return null;
 }
 
-/** La velocidad de la columna (u/min antes del terreno), como `velocidad_de_ejercito` del motor. */
-export function velocidadDeColumna(p: ProyeccionJugador, c: Ejercito): number {
-  const tropas = tropasReclutables() ?? [];
-  const vel = (tropaId: string) => tropas.find((t) => t.id === tropaId)?.velocidad;
+/** Lo que va en la columna `c` y puede frenarla: las escuadras con soldados (tuyas y de los demás participantes), sus caravanas enganchadas y la de Fundación. */
+export function piezasDeColumna(p: ProyeccionJugador, c: Ejercito): PiezaDeColumna[] {
   const mias = new Set(c.escuadronIds);
-  const velocidades: (number | undefined)[] = [
-    ...p.heroe.escuadrones.filter((s) => mias.has(s.id) && s.cantidad > 0).map((s) => vel(s.tropaId)),
-    ...c.participantes.filter((x) => x.heroeId !== p.heroeId).flatMap((x) => p.heroesVisibles.find((h) => h.heroeId === x.heroeId)?.escuadrasQueLleva ?? []).filter((s) => s.cantidad > 0).map((s) => vel(s.tropaId)),
+  const piezas: PiezaDeColumna[] = [
+    ...p.heroe.escuadrones.filter((s) => mias.has(s.id) && s.cantidad > 0).map((s) => piezaDeTropa(s.tropaId)),
+    ...c.participantes.filter((x) => x.heroeId !== p.heroeId).flatMap((x) => p.heroesVisibles.find((h) => h.heroeId === x.heroeId)?.escuadrasQueLleva ?? []).filter((s) => s.cantidad > 0).map((s) => piezaDeTropa(s.tropaId)),
   ];
-  const caravanas = bloqueDeDatos<Record<string, { velocidad?: number }>>('CARAVANA_CATALOGO');
-  const animales = bloqueDeDatos<Record<string, { velocidad?: number }>>('ANIMAL_CATALOGO');
   for (const id of c.caravanasAdjuntasIds ?? []) {
     const car = (p.caravanas ?? []).find((x) => x.id === id);
-    if (!car) continue;
-    const conAnimal = (car.carros ?? []).filter((x) => x.animal).map((x) => animales?.[x.animal!]?.velocidad);
-    velocidades.push(conAnimal.length ? Math.min(...conAnimal.map((v) => v ?? Infinity)) : caravanas?.[car.tipo ?? '']?.velocidad);
+    if (car) piezas.push(piezaDeCaravana(car));
   }
-  if (c.caravanaFundacionId) velocidades.push(caravanas?.['construccion']?.velocidad);
-  const conocidas = velocidades.filter((v): v is number => typeof v === 'number' && v > 0);
-  const mov = bloqueDeDatos<{ velocidadJugador?: number; factorVelocidadMarchaForzada?: number }>('MOVIMIENTO');
-  const base = conocidas.length ? Math.min(...conocidas) : mov?.velocidadJugador ?? 66;
-  return base * (c.marchaForzada ? mov?.factorVelocidadMarchaForzada ?? 1.5 : 1);
+  if (c.caravanaFundacionId) piezas.push(piezaDeFundacion());
+  return piezas;
+}
+
+/** La velocidad de la columna con quién marca el paso y su ritmo frente a la infantería ligera. */
+export function velocidadEstimadaDeColumna(p: ProyeccionJugador, c: Ejercito): VelocidadEstimada {
+  return velocidadDePiezas(piezasDeColumna(p, c), c.marchaForzada === true);
+}
+
+/** La velocidad de la columna (u/min antes del terreno), como `velocidad_de_ejercito` del motor. */
+export function velocidadDeColumna(p: ProyeccionJugador, c: Ejercito): number {
+  return velocidadEstimadaDeColumna(p, c).valor;
 }
 
 /** Lo ya calculado: el A* es caro y la ficha se repinta en cada refresco. Se rehace si la columna se movió un poco o cambió el destino. */

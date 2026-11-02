@@ -20,6 +20,8 @@ import { cablearCargaDeSalida, htmlCargaDeSalida, leerCarga } from './cargaDeSal
 import { cablearPreparacion, htmlPreparacion } from './convocatoria';
 import { actualizarConvocatorias, cablearSalidaComoEjercito, htmlSalidaComoEjercito } from './salidaComoEjercito';
 import type { Ejecutar } from './panelCarro';
+import { htmlLineaVelocidad, piezaDeTropa, velocidadDePiezas, type VelocidadEstimada } from './velocidadColumna';
+import { velocidadEstimadaDeColumna } from '../mundo/tiempoDeMarcha';
 
 type Escapar = (valor: string) => string;
 
@@ -131,13 +133,25 @@ function htmlTropa(p: ProyeccionJugador, l: LugarDeSalida, e: Escapar): string {
   const nota = editable
     ? (disponibles.length === 0 ? `<p class="asent-lado-nota">${l.tipo === 'residencia' ? 'No tienes tropa libre en la plaza (la de guarnición no sale). Puedes salir solo.' : 'No tienes tropa en el campamento. Puedes salir solo.'}</p>` : '')
     : `<p class="asent-lado-nota">${elegidas.length ? 'Sales con la columna con la que entraste, tal cual.' : 'Tu columna no lleva escuadras.'}</p>`;
-  return `<div class="salida-tropa-cab">
+  return `${htmlLineaVelocidad(velocidadDeSalida(p, l), e)}
+    <div class="salida-tropa-cab">
       <strong class="heroe-sub">Tropa${ayuda('salida:tropa', editable ? 'Sale cargado tu loadout activo. Quita escuadras con ✕ o añade con «+»: vale solo para esta salida, salvo que pulses «Guardar loadout», que lo guarda en el loadout elegido.' : 'De visita sales con la columna con la que entraste: no se cambia nada.')}</strong>
       <span class="salida-liderazgo${libre < 0 ? ' excedido' : ''}">Liderazgo ${usado} / ${h.liderazgoBase}</span>
       ${loadouts}
     </div>
     <div class="salida-huecos">${huecos}</div>
     ${lista}${nota}${editable && libre < 0 ? `<p class="faction-error">${e(avisoExceso(usado, h.liderazgoBase))}</p>` : ''}`;
+}
+
+/** A qué velocidad saldría la columna: con la tropa elegida (donde se elige) o la de tu columna tal cual (de visita, con sus caravanas). */
+function velocidadDeSalida(p: ProyeccionJugador, l: LugarDeSalida): VelocidadEstimada {
+  if (!seElige(p, l)) {
+    const columna = miColumna(p);
+    if (columna) return velocidadEstimadaDeColumna(p, columna);
+  }
+  const disponibles = tropaDe(p, l);
+  const ids = seElige(p, l) ? prepararEleccion(p, l).ids : disponibles.map((s) => s.id);
+  return velocidadDePiezas(ids.flatMap((id) => disponibles.filter((s) => s.id === id && s.cantidad > 0)).map((s) => piezaDeTropa(s.tropaId)));
 }
 
 /** Si la tropa elegida no es la del loadout elegido (las escuadras de ese loadout que están aquí). */

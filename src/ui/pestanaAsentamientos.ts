@@ -41,11 +41,13 @@ export function parcelasAlFundar(posicion: { x: number; y: number }): ParcelaAlF
 }
 
 /** Cuántas Leñeras aprovecharía la plaza nueva: las parcelas libres del círculo. */
-function htmlParcelasAlFundar(parcelas: ParcelaAlFundar[]): string {
+export function htmlParcelasAlFundar(parcelas: ParcelaAlFundar[]): string {
   const libres = parcelas.filter((x) => x.estado === 'libre').length;
   const otras = parcelas.length - libres;
-  if (parcelas.length === 0) return '<span class="fundacion-gate falta">Ninguna parcela de bosque en la zona inicial: no habrá Leñeras hasta que la zona crezca.</span>';
-  return `<span class="fundacion-gate ${libres ? 'ok' : 'falta'}">${libres} parcela${libres === 1 ? '' : 's'} de bosque libre${libres === 1 ? '' : 's'} en la zona inicial: ${libres === 1 ? 'cabe 1 Leñera' : `caben ${libres} Leñeras`}${otras ? ` (${otras} más ocupada${otras === 1 ? '' : 's'} o en la zona de otra plaza)` : ''}. En verde en el mapa.</span>`;
+  // Sin Leñera no entra madera, y casi todo edificio la pide: se avisa también de eso (petición de Víctor, 2026-11-02).
+  const sinMadera = 'Sin madera no se pueden construir edificios nuevos.';
+  if (parcelas.length === 0) return `<span class="fundacion-gate falta">Ninguna parcela de bosque en la zona inicial: no habrá Leñeras hasta que la zona crezca. ${sinMadera}</span>`;
+  return `<span class="fundacion-gate ${libres ? 'ok' : 'falta'}">${libres} parcela${libres === 1 ? '' : 's'} de bosque libre${libres === 1 ? '' : 's'} en la zona inicial: ${libres === 1 ? 'cabe 1 Leñera' : `caben ${libres} Leñeras`}${otras ? ` (${otras} más ocupada${otras === 1 ? '' : 's'} o en la zona de otra plaza)` : ''}.${libres ? '' : ` ${sinMadera}`} En verde en el mapa.</span>`;
 }
 
 export function resumenRecursosFundacion(escaparHtml: (valor: string) => string): string {

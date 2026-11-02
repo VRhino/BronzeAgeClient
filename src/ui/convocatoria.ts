@@ -14,6 +14,8 @@ import type { Ejecutar } from './panelCarro';
 import { cablearCargaDeSalida, htmlCargaDeSalida, leerCarga } from './cargaDeSalida';
 import { iconoTropa } from './iconosTropa';
 import { tropasReclutables } from '../apiCliente';
+import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
+import { cifraVelocidad, htmlLineaVelocidad, iconoRitmo, piezaDeFundacion, piezaDeTropa, velocidadDePiezas, type PiezaDeColumna, type VelocidadEstimada } from './velocidadColumna';
 
 type Escapar = (valor: string) => string;
 
@@ -114,23 +116,67 @@ function htmlMiTropa(p: ProyeccionJugador, c: Convocatoria, e: Escapar): string 
 }
 
 /** Las Caravanas de Fundación de tu Facción que esperan dentro del lugar de la convocatoria (motor d8ef09c): el Líder puede llevársela al partir. */
-function caravanasQueEsperan(p: ProyeccionJugador, c: Convocatoria): { id: string; contenido: string }[] {
+function caravanasQueEsperan(p: ProyeccionJugador, c: Convocatoria): { id: string; contenido: [string, number][] }[] {
   return (p.caravanas ?? [])
     .filter((x) => x.tipo === 'construccion' && x.estado === 'disponible' && (c.lugar.tipo === 'campamento' ? x.origenCampamentoId === c.lugar.id : x.origenAsentamientoId === c.lugar.id))
-    .map((x) => ({ id: x.id, contenido: Object.entries(x.contenido ?? {}).filter(([, n]) => n > 0).map(([r, n]) => `${Math.floor(n)} ${r}`).join(', ') }));
+    .map((x) => ({ id: x.id, contenido: Object.entries(x.contenido ?? {}).filter(([, n]) => n >= 1).map(([r, n]): [string, number] => [r, Math.floor(n)]) }));
 }
 
 /** Qué Caravana de Fundación eligió llevarse el Líder ('' = ninguna), por convocatoria. Vive entre repintados. */
 const caravanaElegida = new Map<string, string>();
 
-/** La pregunta al Líder: si hay una Caravana de Fundación esperando aquí, ¿se la lleva el ejército? */
+/** La caravana que se llevará el ejército al partir, si el Líder eligió una y aún espera aquí. */
+function caravanaQueSeLleva(p: ProyeccionJugador, c: Convocatoria): string | undefined {
+  const id = caravanaElegida.get(c.id);
+  return id && caravanasQueEsperan(p, c).some((x) => x.id === id) ? id : undefined;
+}
+
+/** La tropa con la que saldría el ejército: la tuya (con tus cambios sin guardar) y la de los demás integrantes (la que eligieron). */
+function piezasDeTropa(p: ProyeccionJugador, c: Convocatoria): PiezaDeColumna[] {
+  return c.integrantes.flatMap((x) => {
+    if (x.heroeId === p.heroeId && resideEnElLugar(p, c)) {
+      const ids = borrador?.convocatoriaId === c.id ? borrador.ids : x.escuadronIds;
+      return ids.flatMap((id) => p.heroe.escuadrones.filter((s) => s.id === id && s.cantidad > 0)).map((s) => piezaDeTropa(s.tropaId));
+    }
+    // Una escuadra cuya tropa se conoce con sus hombres solo frena si le quedan; de las ajenas se sabe solo la tropa.
+    const conocidas = new Map(x.tropas.map((t) => [t.escuadronId, t]));
+    return x.escuadronIds.flatMap((id, i) => {
+      const t = conocidas.get(id);
+      if (t) return t.cantidad > 0 ? [piezaDeTropa(t.tropaId)] : [];
+      return x.tropaIds[i] ? [piezaDeTropa(x.tropaIds[i]!)] : [];
+    });
+  });
+}
+
+/** La velocidad del ejército al salir, con o sin la Caravana de Fundación. */
+function velocidadDelEjercito(p: ProyeccionJugador, c: Convocatoria, conCaravana: boolean): VelocidadEstimada {
+  return velocidadDePiezas([...piezasDeTropa(p, c), ...(conCaravana ? [piezaDeFundacion()] : [])]);
+}
+
+/** Una carreta con su carga, para las tarjetas de la caravana. */
+const CARRETA = `<svg viewBox="0 0 40 28" width="40" height="28" aria-hidden="true"><path d="M6 6h22l2 10H4Z" fill="var(--relleno, rgba(205,160,90,0.3))" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 6c1-3 4-4 7-4s5 2 6 4M30 13h8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="11" cy="20" r="5" fill="rgba(20,16,11,0.9)" stroke="currentColor" stroke-width="1.6"/><circle cx="24" cy="20" r="5" fill="rgba(20,16,11,0.9)" stroke="currentColor" stroke-width="1.6"/><path d="M11 15v10M6 20h10M24 15v10M19 20h10" stroke="currentColor" stroke-width="1"/></svg>`;
+/** Una puerta: la caravana se queda dentro. */
+const PUERTA = `<svg viewBox="0 0 40 28" width="40" height="28" aria-hidden="true"><path d="M8 26V10l12-7 12 7v16Z" fill="var(--relleno, rgba(205,160,90,0.3))" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M15 26v-9a5 5 0 0 1 10 0v9" fill="rgba(20,16,11,0.9)" stroke="currentColor" stroke-width="1.6"/></svg>`;
+
+/** La pregunta al Líder: si hay una Caravana de Fundación esperando aquí, ¿se la lleva el ejército? Una tarjeta por opción, con lo que cambia la marcha. */
 function htmlPreguntaCaravana(p: ProyeccionJugador, c: Convocatoria, e: Escapar): string {
   const esperan = caravanasQueEsperan(p, c);
   if (!c.soyLider || esperan.length === 0) return '';
   const elegida = caravanaElegida.get(c.id) ?? '';
-  const opcion = (id: string, texto: string): string => `<label class="conv-caravana"><input type="radio" name="conv-caravana" value="${e(id)}"${id === elegida ? ' checked' : ''} /> ${texto}</label>`;
-  return `<strong class="heroe-sub">¿Os lleváis la Caravana de Fundación?${ayuda('convocatoria:caravana', 'Espera aquí dentro. Si el ejército se la lleva, va enganchada detrás y, si su titular no sale con vosotros, pasas a serlo tú.')}</strong>
-    <div class="conv-caravanas">${opcion('', 'No, se queda aquí')}${esperan.map((x) => opcion(x.id, `Sí, llevar ${e(x.id)}${x.contenido ? ` <small>(${e(x.contenido)})</small>` : ''}`)).join('')}</div>`;
+  const ritmo = (v: VelocidadEstimada): string => `<span class="conv-caravana-ritmo ritmo-${v.ritmo ?? 'ligera'}">${iconoRitmo(v, 14)} ${cifraVelocidad(v.valor)} u/min</span>`;
+  const sin = velocidadDelEjercito(p, c, false);
+  const con = velocidadDelEjercito(p, c, true);
+  const carta = (id: string, icono: string, titulo: string, cuerpo: string, v: VelocidadEstimada): string =>
+    `<label class="conv-caravana${id === elegida ? ' elegida' : ''}"><input type="radio" name="conv-caravana" value="${e(id)}"${id === elegida ? ' checked' : ''} />
+      <span class="conv-caravana-icono">${icono}</span>
+      <span class="conv-caravana-cuerpo"><strong>${titulo}</strong>${cuerpo}</span>
+      ${ritmo(v)}
+    </label>`;
+  const carga = (contenido: [string, number][]): string => contenido.length
+    ? `<span class="conv-caravana-carga">${contenido.map(([r, n]) => `<span class="conv-caravana-recurso" title="${e(RECURSO_NOMBRE[r] ?? r)}">${RECURSO_ICONO[r] ?? '📦'} ${n}</span>`).join('')}</span>`
+    : '<small>Vacía</small>';
+  return `<strong class="heroe-sub">Caravana de Fundación${ayuda('convocatoria:caravana', 'Espera aquí dentro. Si el ejército se la lleva, va enganchada detrás y, si su titular no sale con vosotros, pasas a serlo tú. El ejército marcha entonces a su paso, más lento.')}</strong>
+    <div class="conv-caravanas" role="radiogroup">${carta('', PUERTA, 'Se queda aquí', '<small>El ejército sale sin ella</small>', sin)}${esperan.map((x) => carta(x.id, CARRETA, `Llevárnosla${esperan.length > 1 ? ` <small>${e(x.id)}</small>` : ''}`, carga(x.contenido), con)).join('')}</div>`;
 }
 
 /** Si TU tropa guardada en la convocatoria pasa de tu Liderazgo: así no se sale (el Líder no puede partir). */
@@ -177,7 +223,8 @@ export function htmlPreparacion(p: ProyeccionJugador, e: Escapar): { izquierda: 
         <button class="btn-primary" type="button" data-conv-peticion="${e(x.heroeId)}" data-aceptar="si">Aceptar</button><button class="btn-secondary" type="button" data-conv-peticion="${e(x.heroeId)}" data-aceptar="no">Rechazar</button></div>`).join('')}` : ''}
     ${htmlPreguntaCaravana(p, c, e)}`;
   const derecha = htmlMiCarga(p, c, e) || '<p class="asent-lado-nota">No resides aquí: sales con el carro de tu columna, tal cual.</p>';
-  const pie = `${htmlMiTropa(p, c, e)}
+  const pie = `${htmlLineaVelocidad(velocidadDelEjercito(p, c, caravanaQueSeLleva(p, c) !== undefined), e)}
+    ${htmlMiTropa(p, c, e)}
     <div class="salida-acciones"><p class="faction-error" data-campo="error-conv" role="alert"></p>${c.soyLider
       ? `<button class="btn-secondary" type="button" data-conv="cancelar">Cancelar la salida</button><button class="btn-primary" type="button" data-conv="partir"${excedeLoGuardado(p, c) ? ' disabled title="Te pasas de Liderazgo: quita escuadras y guarda"' : ''}>Salir con el ejército</button>`
       : '<button class="btn-primary" type="button" data-conv="separarme">Separarme (sigues dentro)</button>'}</div>`;
@@ -226,8 +273,8 @@ export function cablearPreparacion(raiz: ParentNode, p: ProyeccionJugador, ejecu
     }
     const tipo = { partir: 'partirConvocatoria', cancelar: 'cancelarConvocatoria', separarme: 'separarseDeConvocatoria' }[b.dataset.conv!];
     // Al partir, la Caravana de Fundación elegida (si aún espera aquí) se engancha al ejército.
-    const caravana = caravanaElegida.get(c.id);
-    const conCaravana = b.dataset.conv === 'partir' && caravana && caravanasQueEsperan(p, c).some((x) => x.id === caravana) ? { caravanaFundacionId: caravana } : {};
+    const caravana = caravanaQueSeLleva(p, c);
+    const conCaravana = b.dataset.conv === 'partir' && caravana ? { caravanaFundacionId: caravana } : {};
     if (tipo) void enviar(b, tipo, { heroeId: p.heroeId, ...conCaravana });
   }));
   const bloqueCarga = raiz.querySelector<HTMLElement>('[data-conv-carga]');

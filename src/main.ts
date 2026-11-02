@@ -1,4 +1,5 @@
-import { textoTiempoHasta } from './mundo/tiempoDeMarcha';
+import { textoTiempoHasta, velocidadEstimadaDeColumna } from './mundo/tiempoDeMarcha';
+import { htmlIndicadorVelocidad } from './ui/velocidadColumna';
 import {
   ApiError,
   alSesionReemplazada,
@@ -1510,7 +1511,9 @@ function pintarComida(p: ProyeccionJugador): void {
   // Marcha forzada a la izquierda de los víveres: encendida o apagada; solo el Líder la cambia (`marchaForzada { ejercitoId, activa }`).
   const forzada = columna.marchaForzada === true;
   const botonForzada = `<button type="button" class="mapa-forzada${forzada ? ' activa' : ''}" data-viveres="forzada" aria-pressed="${forzada}"${esLider ? '' : ' disabled'} title="${escaparHtml(`Marcha forzada ${forzada ? 'puesta' : 'quitada'}: ×1,5 de velocidad y, solo mientras marcha, ×2 de víveres.${esLider ? ` Pulsa para ${forzada ? 'quitarla' : 'ponerla'}.` : ' Solo el Líder la cambia.'}`)}">» Marcha forzada</button>`;
-  const html = `${botonForzada}<span>🌾 Víveres</span><div class="mapa-comida-barra"><i style="width:${(fraccion * 100).toFixed(1)}%"></i></div><strong>${viveres} / ${capacidad}</strong>
+  // Al lado, la velocidad de la columna en iconos, del color de su ritmo frente a la infantería ligera (ui/velocidadColumna.ts).
+  const velocidad = htmlIndicadorVelocidad(velocidadEstimadaDeColumna(p, columna), escaparHtml);
+  const html = `${botonForzada}${velocidad}<span>🌾 Víveres</span><div class="mapa-comida-barra"><i style="width:${(fraccion * 100).toFixed(1)}%"></i></div><strong>${viveres} / ${capacidad}</strong>
     <button type="button" class="btn-secondary" data-viveres="abrir"${motivo ? ' disabled' : ''} title="${escaparHtml(motivo || 'Pasa trigo del carro a tus víveres: lo que cabe.')}">＋ desde el carro</button>
     ${selectorViveres.abierto ? `<div class="mapa-comida-selector"><span>Trigo del carro: ${enElCarro} · cabe ${hueco}</span><input type="range" min="1" max="${maximo}" value="${selectorViveres.cantidad}" data-viveres="barra" /><input type="number" class="form-input" min="1" max="${maximo}" value="${selectorViveres.cantidad}" data-viveres="cantidad" /><button type="button" class="btn-primary" data-viveres="confirmar">Pasar a víveres</button><p class="faction-error" data-campo="error-viveres" role="alert"></p></div>` : ''}`;
   caja.hidden = false;

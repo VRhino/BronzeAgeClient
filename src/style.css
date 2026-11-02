@@ -3129,8 +3129,36 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .rastreador-item strong { display: block; font-size: 0.78rem; font-weight: 600; color: var(--pergamino); }
 .rastreador-item small { font-size: 0.72rem; color: var(--oro); }
 .rastreador-item.cumplida strong { color: var(--oro); }
-.conv-caravanas { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 8px; }
-.conv-caravana { display: flex; gap: 6px; align-items: baseline; font-size: 0.85rem; cursor: pointer; }
+/* Velocidad de la columna (ui/velocidadColumna.ts): rojo por debajo de la infantería ligera, blanco igual, azul por encima. */
+:root { --ritmo-lenta: #e2675a; --ritmo-ligera: #f4efe4; --ritmo-rapida: #6fb6ff; }
+.ritmo-lenta { color: var(--ritmo-lenta); }
+.ritmo-ligera { color: var(--ritmo-ligera); }
+.ritmo-rapida { color: var(--ritmo-rapida); }
+.ritmo-icono { display: inline-block; vertical-align: middle; flex: 0 0 auto; }
+.salida-velocidad { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 5px 10px; border: 1px solid currentColor; border-radius: 3px; background: rgba(20, 16, 11, 0.55); box-shadow: inset 3px 0 0 currentColor; }
+.salida-velocidad-etq { font-family: var(--fuente-titulo); font-size: 0.78rem; color: var(--oro); margin-right: 4px; }
+.salida-velocidad strong { font-size: 1.05rem; line-height: 1; }
+.salida-velocidad small { font-size: 0.72rem; opacity: 0.85; }
+.salida-velocidad-texto { font-size: 0.78rem; color: var(--text-secondary); }
+.mapa-comida > .mapa-velocidad { display: inline-flex; align-items: center; padding: 3px 7px; border-radius: 4px; border: 1px solid currentColor; background: rgba(20, 16, 11, 0.7); cursor: help; }
+.mapa-comida > .mapa-velocidad.ritmo-lenta { box-shadow: 0 0 6px rgba(226, 103, 90, 0.45); }
+.mapa-comida > .mapa-velocidad.ritmo-rapida { box-shadow: 0 0 6px rgba(111, 182, 255, 0.45); }
+
+/* Caravana de Fundación al convocar: una tarjeta por opción (se queda / llevárnosla), con el paso al que marcharía el ejército. */
+.conv-caravanas { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; margin: 6px 0 10px; }
+.conv-caravana { position: relative; display: grid; grid-template-columns: auto 1fr; grid-template-rows: 1fr auto; align-items: center; gap: 4px 10px; padding: 8px 10px; border: 1px solid rgba(169, 121, 63, 0.45); border-radius: 4px; background: linear-gradient(180deg, rgba(50, 37, 22, 0.85), rgba(24, 18, 11, 0.9)); color: var(--oro); --relleno: rgba(205, 160, 90, 0.22); cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s, background 0.15s; }
+.conv-caravana input { position: absolute; opacity: 0; pointer-events: none; }
+.conv-caravana:hover { border-color: var(--oro); }
+.conv-caravana:has(input:focus-visible) { outline: 2px solid var(--oro-claro); outline-offset: 2px; }
+.conv-caravana.elegida { border-color: var(--oro-claro); color: var(--oro-claro); background: linear-gradient(180deg, rgba(92, 66, 34, 0.95), rgba(40, 29, 16, 0.95)); box-shadow: 0 0 0 1px var(--oro-claro), 0 0 12px rgba(216, 184, 120, 0.35); --relleno: rgba(216, 184, 120, 0.45); }
+.conv-caravana.elegida::after { content: '✓'; position: absolute; top: 4px; right: 7px; font-size: 0.8rem; color: var(--oro-claro); }
+.conv-caravana-icono { grid-row: span 2; display: flex; }
+.conv-caravana-cuerpo { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.conv-caravana-cuerpo strong { font-size: 0.86rem; color: var(--pergamino); }
+.conv-caravana-cuerpo small { font-size: 0.72rem; color: var(--text-secondary); }
+.conv-caravana-carga { display: flex; flex-wrap: wrap; gap: 3px; }
+.conv-caravana-recurso { font-size: 0.72rem; padding: 0 5px; border-radius: 2px; background: rgba(0, 0, 0, 0.3); color: var(--pergamino); }
+.conv-caravana-ritmo { display: inline-flex; align-items: center; gap: 4px; font-size: 0.74rem; justify-self: start; }
 .mapa-comida > .mapa-forzada { padding: 3px 10px; font-size: 12px; border-radius: 4px; border: 1px solid #4a4538; background: #2a2620; color: #9a927f; cursor: pointer; }
 .mapa-comida > .mapa-forzada.activa { background: var(--terracota); border-color: #e8806f; color: #fff; box-shadow: 0 0 8px rgba(191, 82, 51, 0.6); }
 .mapa-comida > .mapa-forzada:disabled { cursor: default; opacity: 0.8; }
