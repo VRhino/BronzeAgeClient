@@ -117,6 +117,7 @@ import { cablearTablon, htmlTablon } from './ui/tablon';
 import { cablearMercenariosFaccion, htmlMercenariosFaccion, mercenariosQuePidenAtencion } from './ui/mercenarios';
 import { actualizarSeguimiento, cablearMisiones, elegirPestanaMisiones, htmlListaMisiones, htmlPanelMisiones, misionesPorReclamar, pintarRastreador } from './ui/misiones';
 import { confirmar } from './ui/dialogo';
+import { abrirCarga, cargaAbierta, cargarCatalogoDeCarga, cerrarCarga, type VistaDeCarga } from './ui/pantallaCarga';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 /** Los campamentos donde se puede nacer, de la última respuesta `sinHeroe` (pantalla Héroe). */
@@ -1781,7 +1782,7 @@ function montarMapa(): void {
   // y selección. Se monta cuando están el mapa y el relieve.
   let vista3d: VistaMundo3D | null = null, desmontado = false;
   enModoMundo = true;
-  void montarVista3D(lienzo, alClicar).then((v) => { if (desmontado) v?.destruir(); else { vista3d = vista3dActiva = v; aplicarRejilla(); } });
+  listoDeLaVista = montarVista3D(lienzo, alClicar).then((v) => { if (desmontado) v?.destruir(); else { vista3d = vista3dActiva = v; aplicarRejilla(); } });
   // El mundo solo avanza por tick y este cliente aún no tiene tiempo real (`WS .../tiempo-real`): sin esto el
   // mapa sería una foto y la columna nunca parecería moverse. Sondeo suave mientras la pantalla Mapa esté
   // montada; se corta al cambiar de pantalla (`limpiarPantalla`).
@@ -2872,12 +2873,50 @@ function refrescarPantalla(pantalla: Pantalla): void {
   if (json) json.textContent = JSON.stringify(proyeccion, null, 2);
 }
 
+// --- PANTALLAS DE CARGA ---------------------------------------------------------------------------
+// Entre el mundo y las vistas de dentro (plaza, campamento, pueblo) y al entrar en la partida (Víctor, 2026-11-02; `ui/pantallaCarga.ts`).
+const EN_PARTIDA = new Set<Pantalla>(['mapa', 'asentamiento', 'campamento', 'pueblo']);
+const VISTA_DE_PANTALLA: Partial<Record<Pantalla, VistaDeCarga>> = { mapa: 'mundo', asentamiento: 'asentamiento', campamento: 'campamento', pueblo: 'pueblo' };
+/** La promesa de la vista que se acaba de montar, si pinta algo que tarda (el mundo en 3D baja el relieve y arma el terreno). */
+let listoDeLaVista: Promise<unknown> | null = null;
+
+/** Hay pantalla de carga al pasar de una vista de la partida a otra, y al entrar en ella (desde la lista de partidas o la espera de «cargando»). */
+function hayQueCargar(desde: Pantalla | null, hacia: Pantalla): boolean {
+  if (!EN_PARTIDA.has(hacia) && hacia !== 'cargando') return false;
+  return desde === null || desde === 'partidas' || desde === 'cargando' || EN_PARTIDA.has(desde);
+}
+
+function tituloDeCarga(hacia: Pantalla): string {
+  const p = estadoCliente.proyeccionUltima;
+  switch (hacia) {
+    case 'mapa': return pantallaMontada && EN_PARTIDA.has(pantallaMontada) ? 'Saliendo al mundo' : 'Entrando en el mundo';
+    case 'asentamiento': return `Entrando en ${p?.asentamientos[0]?.nombre ?? 'la plaza'}`;
+    case 'campamento': return 'Entrando en el campamento';
+    case 'pueblo': { const x = p && puebloActual(p); return x ? `Entrando en ${nombreDePueblo(x)}` : 'Entrando en el pueblo'; }
+    default: return 'Cargando la partida';
+  }
+}
+
+/** La vista recién montada ya se ve: lo que tarde su promesa (si la tiene) y dos fotogramas más, para que haya pintado al menos uno. */
+async function vistaLista(): Promise<void> {
+  const pendiente = listoDeLaVista;
+  listoDeLaVista = null;
+  if (pendiente) await pendiente.catch(() => {});
+  await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+}
+
 function enrutar(): void {
   const destino = pantallaActual();
   if (destino !== pantallaMontada) {
     ventanaSalidaAbierta = false;
+    const conCarga = hayQueCargar(pantallaMontada, destino);
+    if (conCarga) abrirCarga(VISTA_DE_PANTALLA[destino] ?? null, tituloDeCarga(destino));
+    else if (cargaAbierta()) cerrarCarga();
+    listoDeLaVista = null;
     montar(destino);
     pantallaMontada = destino;
+    // «cargando» es solo la espera de la proyección: la pantalla sigue hasta que se monte la vista de verdad.
+    if (conCarga && destino !== 'cargando') void vistaLista().then(cerrarCarga);
   }
   refrescarPantalla(destino);
 }
@@ -2935,6 +2974,7 @@ function arrancar(): void {
   alCambiarAvisos(() => renderPanelJugador());
   // Cerrar la pestaña o la ventana cierra el socket de presencia (lo haría el navegador, pero así es explícito y también vale al recargar).
   window.addEventListener('pagehide', () => cerrarPresencia());
+  void cargarCatalogoDeCarga(); // los consejos de las pantallas de carga y sus imágenes, ya precargados para la primera
   const sesion = cargarSesionLocal();
   if (sesion) {
     estadoCliente.usuarioActivo = sesion.usuario;

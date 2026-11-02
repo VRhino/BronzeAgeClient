@@ -144,6 +144,11 @@ remata cabeceras y paneles con la moldura clásica. `opacity: .5` para que sea s
     pueblo y la aldea (0.101.0), igual (`.pueblo-mini`), con la franja roja de batalla arriba (`.pueblo-aviso-batalla`); sin
     planta del motor o sin WebGL, el anillo de huecos de siempre (`.pueblo-lienzo`).
 - **Login / Facción**: tarjeta central (`.login-card`) sobre el fondo, como un menú de campaña.
+- **Pantalla de carga** (`.pantalla-carga`, 0.102.0, petición de Víctor del 2026-11-02): al pasar del mundo a una plaza, un
+  campamento o un pueblo, al volver y al entrar en la partida. Una imagen a pantalla completa (de la mesa de escalas 3D o de la
+  vista 3D de la plaza) con un acercamiento lento; el consejo centrado en el cuarto inferior, con «Consejo» encima en Cinzel oro,
+  sobre un fondo opaco en el centro que se aclara hacia las orillas; abajo del todo, lo que se carga y la barra de bronce a oro.
+  Los consejos se editan sin recompilar (`public/carga/consejos.json`); detalle en `docs/Pantallas_De_Carga.md`.
 - Bajo ~820 px la columna lateral se oculta y el mapa ocupa todo. En la plaza en 3D, por debajo de 1440 px el pie se
   compacta; con poca altura (≤ 820 px) el riel encoge y las obras enseñan tres; bajo 900 px de ancho la columna de la izquierda
   se estrecha y la ventana ocupa todo el ancho.

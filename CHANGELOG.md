@@ -3,6 +3,23 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.102.0] — 2026-11-02 · Pantallas de carga con consejos · sin cambio de contrato
+
+Petición de Víctor (2026-11-02): pantallas de carga entre la vista del mundo y las de dentro, con consejos del juego e imágenes tomadas de la
+mesa. Es todo del cliente: el motor no guarda ni sirve nada de esto.
+
+- **Al pasar del mundo a una plaza, un campamento o un pueblo, al volver al mundo y al entrar en la partida**, sale una pantalla de carga:
+  la imagen del consejo a pantalla completa, el consejo centrado en el cuarto inferior sobre un fondo opaco que se aclara hacia las orillas,
+  y abajo lo que se está haciendo («Entrando en Pesinunte», «Saliendo al mundo») con la barra de carga.
+- Dura lo que tarde en pintarse la vista nueva (el mundo en 3D baja el relieve y arma el terreno) y como poco 2,2 s, para leer el consejo.
+  No repite el mismo consejo dos veces seguidas, tampoco al recargar.
+- **Los consejos están en un archivo del cliente**, `public/carga/consejos.json`, con sus imágenes en `public/carga/img/`. Se lee al jugar,
+  así que se cambia sin recompilar. Cada consejo dice en qué vistas sale (mundo, plaza, campamento o pueblo) y se puede apartar sin borrarlo.
+  Lo editará una página nueva del cliente de administración, como la de misiones.
+- De salida, 19 consejos y 12 imágenes: seis de la mesa de escalas 3D del motor y seis de la vista 3D de la plaza.
+- Código en `src/ui/pantallaCarga.ts`; la abre el router de pantallas. Formato del archivo en `docs/Pantallas_De_Carga.md`. Pruebas de la
+  elección del consejo y de que el catálogo que va con el cliente vale (ids únicos, vistas válidas, imágenes que existen).
+
 ## [0.101.0] — 2026-11-02 · Los pueblos y las aldeas en 3D · contrato 0.9.0 (`VRhino/BronzeAge@61366539`)
 
 Petición de Víctor (2026-11-02): la vista 3D también dentro de los pueblos extractores y las aldeas agrícolas. El motor manda ahora su

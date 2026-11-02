@@ -5022,3 +5022,34 @@ body:has(.eleccion-clic) .aviso-global { visibility: hidden; }
 .asent-ascenso-hud-pct { font-size: 0.8rem; color: var(--oro); white-space: nowrap; }
 .asent-ascenso-hud-falta { font-size: 0.7rem; color: var(--obra-ambar); }
 .asent-ascenso-hud .obra-barra { height: 8px; }
+
+/* ---- Pantalla de carga (ui/pantallaCarga.ts, Víctor 2026-11-02) ---------------------------------------------------------------------
+   La imagen del consejo a pantalla completa; el consejo, centrado en el cuarto inferior, sobre un fondo opaco en el centro que se aclara
+   hacia las orillas; la barra, abajo del todo. */
+.pantalla-carga { position: fixed; inset: 0; z-index: 2000; overflow: hidden; background: var(--tinta); color: var(--pergamino); animation: carga-entra 0.22s ease-out; }
+.pantalla-carga.saliendo { opacity: 0; transition: opacity 0.45s ease; pointer-events: none; }
+@keyframes carga-entra { from { opacity: 0; } to { opacity: 1; } }
+.carga-imagen { position: absolute; inset: 0; background: var(--tinta) center / cover no-repeat; opacity: 0; transform: scale(1.015); transition: opacity 0.6s ease; }
+.carga-imagen.cargada { opacity: 1; animation: carga-acerca 16s ease-out forwards; }
+@keyframes carga-acerca { from { transform: scale(1.015); } to { transform: scale(1.07); } }
+.carga-velo { position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 85% 75% at 50% 42%, transparent 55%, rgba(11, 8, 5, 0.55) 100%), linear-gradient(to bottom, rgba(11, 8, 5, 0.3), transparent 22%); }
+.carga-consejo { position: absolute; left: 0; right: 0; bottom: 0; height: 25vh; min-height: 170px; padding: 0 max(16px, 14vw) 62px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; isolation: isolate; }
+/* El fondo, aparte para poder difuminarlo también por arriba sin difuminar el texto: opaco en el centro, transparente en las orillas. */
+.carga-consejo::before { content: ''; position: absolute; inset: -6vh 0 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(ellipse 50% 100% at 50% 70%, rgba(14, 10, 6, 0.94) 0%, rgba(14, 10, 6, 0.86) 36%, rgba(14, 10, 6, 0.52) 64%, rgba(14, 10, 6, 0.16) 86%, rgba(14, 10, 6, 0) 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 42%); mask-image: linear-gradient(to bottom, transparent 0, #000 42%); }
+.carga-kicker { font-family: var(--fuente-titulo); font-size: 0.78rem; letter-spacing: 0.32em; text-transform: uppercase; color: var(--oro); }
+.carga-kicker::before, .carga-kicker::after { content: '—'; margin: 0 0.7em; color: var(--bronce); }
+.carga-texto { max-width: 46rem; font-size: clamp(1rem, 1.5vw, 1.24rem); line-height: 1.5; color: var(--pergamino); text-wrap: balance; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9); }
+.carga-pie { position: absolute; left: 50%; bottom: 20px; width: min(620px, calc(100% - 32px)); transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 7px; }
+.carga-titulo { font-family: var(--fuente-titulo); font-size: 0.82rem; letter-spacing: 0.14em; color: var(--oro-claro); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9); }
+.carga-titulo::after { content: '…'; }
+.carga-barra { position: relative; width: 100%; height: 7px; border: 1px solid var(--bronce-osc); border-radius: 4px; background: rgba(0, 0, 0, 0.6); box-shadow: 0 0 0 1px var(--tinta); overflow: hidden; }
+.carga-barra i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--bronce-osc), var(--bronce) 45%, var(--oro) 100%); box-shadow: 0 0 8px rgba(216, 184, 120, 0.55); transition: width 0.25s ease-out; }
+@media (prefers-reduced-motion: reduce) { .carga-imagen.cargada { animation: none; } .pantalla-carga { animation: none; } }
+@media (max-width: 600px) {
+  .carga-consejo { height: 34vh; padding-bottom: 60px; }
+  .carga-consejo::before { background: radial-gradient(ellipse 90% 100% at 50% 70%, rgba(14, 10, 6, 0.94) 0%, rgba(14, 10, 6, 0.86) 40%, rgba(14, 10, 6, 0.5) 70%, rgba(14, 10, 6, 0.14) 90%, rgba(14, 10, 6, 0) 100%); }
+}
