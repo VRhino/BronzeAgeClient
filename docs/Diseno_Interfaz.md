@@ -140,7 +140,9 @@ remata cabeceras y paneles con la moldura clásica. `opacity: .5` para que sea s
     la Galería de tiro o las Caballerizas abre Reclutamiento; en la Taberna o el Mercado, la suya. El «?» de la barra del
     jugador abre Información. Las Misiones y el Tablón de la plaza van en el botón «Misiones» de la barra, en dos pestañas;
   - el campamento y el pueblo siguen con barra superior en flujo, columna izquierda, mapa centrado y columna derecha. En el
-    campamento (0.97.0) el centro es su vista 3D, con la planta en SVG de minimapa abajo a la derecha (`.camp-lienzo`).
+    campamento (0.97.0) el centro es su vista 3D, con la planta en SVG de minimapa abajo a la derecha (`.camp-lienzo`); en el
+    pueblo y la aldea (0.101.0), igual (`.pueblo-mini`), con la franja roja de batalla arriba (`.pueblo-aviso-batalla`); sin
+    planta del motor o sin WebGL, el anillo de huecos de siempre (`.pueblo-lienzo`).
 - **Login / Facción**: tarjeta central (`.login-card`) sobre el fondo, como un menú de campaña.
 - Bajo ~820 px la columna lateral se oculta y el mapa ocupa todo. En la plaza en 3D, por debajo de 1440 px el pie se
   compacta; con poca altura (≤ 820 px) el riel encoge y las obras enseñan tres; bajo 900 px de ancho la columna de la izquierda

@@ -12,7 +12,7 @@ import { EPOCA_CONTRATO, instante, proyectar } from './motor/proyeccion';
 import { textoEnTiempoReal } from './ui/estadoCliente';
 import { ComandoDesconocido, traducirOrden } from './motor/ordenes';
 
-import type { AcuerdoTrueque, AedaAvistado, AvanzadaDeMapa, AedaResidenteProyectado, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, CaravanaAvistada, Convocatoria, Ejercito, EjercitoAvistado, EscenaCampamento, EvaluacionAscenso, EventoDominio, Faccion, FaccionDelDirectorio, HeroeProyectado, HeroePublico, InformeDeInspeccion, ObraDeMapa, PuebloDeMapa, InformePlaza, MiradaIntel, Mision, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, PropuestaAnexion, PropuestaFusion, PropuestaRelacion, RelacionPolitica, Sigilo, TarifasIntel, TecnologiaJugador, Titulo, TrazadoAsentamiento, ZonaFaccion } from './tiposDominio';
+import type { AcuerdoTrueque, AedaAvistado, AvanzadaDeMapa, AedaResidenteProyectado, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, CaravanaAvistada, Convocatoria, Ejercito, EjercitoAvistado, EscenaCampamento, EscenaPueblo, EvaluacionAscenso, EventoDominio, Faccion, FaccionDelDirectorio, HeroeProyectado, HeroePublico, InformeDeInspeccion, ObraDeMapa, PuebloDeMapa, InformePlaza, MiradaIntel, Mision, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, PropuestaAnexion, PropuestaFusion, PropuestaRelacion, RelacionPolitica, Sigilo, TarifasIntel, TecnologiaJugador, Titulo, TrazadoAsentamiento, ZonaFaccion } from './tiposDominio';
 
 export class ApiError extends Error {
   constructor(
@@ -94,6 +94,8 @@ export interface ProyeccionJugador {
   campamentosMercenarios: CampamentoMercenarios[];
   /** La planta de cada campamento cuyo ámbito `CAMPAMENTO` tiene el héroe (puede tener más de uno: donde reside y donde está). */
   escenasCampamento: EscenaCampamento[];
+  /** La planta del pueblo o la aldea donde estás (la manda el motor a quien está dentro); vacía fuera, o si el motor aún no la manda. */
+  escenasPueblo: EscenaPueblo[];
   /** El mostrador del campamento donde estás (backend 2026-10-07): precio de UNA unidad de cada bien que te venden (n cuestan `ceil(n × precio)`)
    * y lo que te queda del cupo de hoy (sin entrada = sin cupo). Ausente fuera, o con un backend anterior. */
   mercadoCampamento?: {

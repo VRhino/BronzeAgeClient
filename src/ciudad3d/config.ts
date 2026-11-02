@@ -35,6 +35,14 @@ export const COLOR = {
   cultivo: 0x7d9443, trigo: 0xc4a24d, rastrojo: 0xa38a58,
   fuego: 0xc8501c, carbon: 0x2f2a26, bronce: 0xa8783a, cuero: 0x8a5a36,
   lona: 0xd6cbb0, lonaVieja: 0xb9a888, piel: 0x987350, pielOscura: 0x6f5238,
+  /** Lo que sale de cada mina: la escombrera (la roca de caja) y el mineral apartado. Oro en cuarzo, malaquita, casiterita y hematites. */
+  mina: {
+    mina: { escombrera: 0xb3a47e, mineral: 0xd6b544 },
+    minaCobre: { escombrera: 0x7c766a, mineral: 0x4f8f6f },
+    minaEstano: { escombrera: 0x6c655b, mineral: 0x34302d },
+    minaHierro: { escombrera: 0x7f5b45, mineral: 0x8e3f2a },
+  } as Record<string, { escombrera: number; mineral: number }>,
+  roca: 0x9b9384, rocaClara: 0xc9c1ad,
   estaca: 0xd8c08a, cuerda: 0xe8d8a8, ruina: 0x6f655a, quemado: 0x3f3730,
   seleccion: 0xffd24a,
 };

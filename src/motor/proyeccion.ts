@@ -437,6 +437,18 @@ export function escenaCampamento(c: pb.CampamentoMercenarios): d.EscenaCampament
   };
 }
 
+/** La planta de un pueblo o una aldea (motor 61366539, `urbanismo::planta_de_pueblo`): solo llega en la VISTA de quien está dentro, sea de su Facción
+ * o ajeno; si no, `undefined`. El centro de cada pieza en milésimas de ul (como todo `Punto`), sus lados en ul; calles y caminos en ul. */
+export function escenaPueblo(x: pb.Pueblo): d.EscenaPueblo | undefined {
+  if (x.planta.length === 0) return undefined;
+  return {
+    puebloId: x.id, tipo: x.tipoExtractor, nivelMadre: x.nivelMadre || undefined, unidadesPorCelda: x.trazado?.unidadesPorCelda || 3, radio: x.trazado?.radioUl ?? 0,
+    edificios: x.planta.map((e) => ({ edificioId: e.id, tipo: e.tipo, posicion: punto(e.posicion), ancho: e.ancho, alto: e.alto })),
+    calles: (x.trazado?.calles ?? []).map((r) => ({ x: r.x, y: r.y, ancho: r.ancho, alto: r.alto })),
+    caminos: (x.trazado?.caminos ?? []).map((r) => ({ x: r.x, y: r.y, ancho: r.ancho, alto: r.alto })),
+  };
+}
+
 /** El mostrador del campamento donde estás (motor c5c6111): el precio por unidad de cada bien para este héroe (`precios_mercado`, millonésimas de oro;
  * n unidades cuestan ⌈n·p⌉), lo que le queda hoy del cupo (`cupo_diario` menos `Heroe.cupo_campamento`, que vuelve a cero al cambiar el día de mundo,
  * como `CupoDiario::restante`; solo el residente compra con cupo) y, si reside, las tropas que recluta con su precio por soldado. */
@@ -704,6 +716,15 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
       return [...m.values()].map(campamentoMercenarios);
     })(),
     escenasCampamento: deAmbito('CAMPAMENTO:', 'campamentoMercenarios').map(escenaCampamento).filter((e): e is d.EscenaCampamento => Boolean(e)),
+    // la copia con planta: la de VISTA de quien está dentro (lleva otro sello que la de fuera); sin planta, el pueblo sigue con su anillo de huecos
+    escenasPueblo: (() => {
+      const m = new Map<string, d.EscenaPueblo>();
+      for (const x of [...deAmbito('FACCION:', 'pueblo'), ...deAmbito('ASENTAMIENTO:', 'pueblo'), ...deAmbito('VISTA:', 'pueblo')]) {
+        const e = escenaPueblo(x);
+        if (e) m.set(e.puebloId, e);
+      }
+      return [...m.values()];
+    })(),
     mercadoCampamento: mercadoCampamento(deAmbito('CAMPAMENTO:', 'campamentoMercenarios'), h, ahora),
     pueblos: (() => {
       const propios = [...deAmbito('FACCION:', 'pueblo'), ...deAmbito('ASENTAMIENTO:', 'pueblo')];

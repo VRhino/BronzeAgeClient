@@ -1108,6 +1108,23 @@ export interface EscenaCampamento {
   empalizada: { col: number; row: number; clase: 'muro' | 'puerta' }[];
 }
 
+/** La planta de un pueblo extractor o de una aldea (motor `urbanismo::planta_de_pueblo`; solo viaja estando dentro): coordenadas locales con el origen
+ * en su ancla (la cantera, la mina o la granja), `y` hacia abajo, todo en unidades locales. */
+export interface EscenaPueblo {
+  puebloId: string;
+  /** El extractor (cantera, mina, minaCobre, minaEstano, minaHierro) o `aldeaAgricola`. */
+  tipo: string;
+  /** El nivel de su plaza madre (el estilo de sus casas, hasta el 3); ausente si no viene. */
+  nivelMadre?: number;
+  unidadesPorCelda: number;
+  /** Radio del disco de la planta; 0 si no viene. */
+  radio: number;
+  /** `posicion` es el centro de la huella; `ancho` y `alto`, sus lados. La primera pieza es el ancla. */
+  edificios: { edificioId: string; tipo: string; posicion: Point; ancho: number; alto: number }[];
+  calles: RectanguloLocal[];
+  caminos: RectanguloLocal[];
+}
+
 /** Un evento de dominio del backend tal como lo sirve `GET .../eventos`. */
 export interface EventoDominio {
   codigo: string;

@@ -47,11 +47,12 @@ import { elegirPestanaHeroe, minutosHerido, pintarPanelHeroe } from './ui/panelH
 import { htmlBarraJugador, type PanelJugador } from './ui/barraJugador';
 import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
 import { RECURSO_NOMBRE } from './paletas';
-import type { Alijo, Asentamiento, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, EscenaCampamento, Faccion, ParamsCrearHeroe, Sigilo } from './tiposDominio';
+import type { Alijo, Asentamiento, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, EscenaCampamento, Faccion, ParamsCrearHeroe, PuebloDeMapa, Sigilo } from './tiposDominio';
 import { svgSigilo } from './sigilo/sigilo';
 import { alCargarSigilos } from './sigilo/lienzo';
 import { cablearCampamento, campamentoActual, htmlSeccionCampamento, seccionesDeCampamento, type SeccionCampamento } from './ui/pantallaCampamento';
 import { leyendaPlanoCampamento, nombreDePiezaCampamento, svgPlanoCampamento } from './ui/planoCampamento';
+import { nombreDePiezaPueblo, svgPlanoPueblo } from './ui/planoPueblo';
 import type { MapaGenerado } from './terreno';
 import { estadoCliente, medirRitmoDeMundo, textoEnTiempoReal, TIPS_FUNDACION } from './ui/estadoCliente';
 import { actualizarTip, parcelasAlFundar, resumenRecursosFundacion, sitiosDeAldeaAlFundar } from './ui/pestanaAsentamientos';
@@ -69,6 +70,7 @@ import { htmlInformeDeInspeccion } from './ui/interaccionAjena';
 import { cablearPanelObras, htmlPanelObras, minutosDeObra } from './ui/panelObras';
 import { cablearProduccionYRecetas, cablearVistaCiudad, edificioSeleccionado, elegirEdificio, htmlTooltipEdificio, repintarFicha } from './ui/vistaCiudad';
 import { campamentoEnVista } from './ciudad3d/campamento';
+import { puebloEnVista } from './ciudad3d/pueblo';
 import { ciudadEnVista } from './ciudad3d/estado';
 import { encuadreDeSvg, Minimapa } from './ciudad3d/minimapa';
 import { VistaCiudad3D, type MurallaElegida } from './ciudad3d/vista';
@@ -495,8 +497,9 @@ function pintarCampamento3D(p: ProyeccionJugador, campamento: CampamentoMercenar
   }
 }
 
-/** Pantalla de DENTRO DE UN PUEBLO o una aldea (`entrarEnPueblo`), con la forma de la de la plaza: el trazado al centro, el almacén debajo y las
- * pestañas a la derecha. «Salir al mundo» abre la ventana común. */
+/** Pantalla de DENTRO DE UN PUEBLO o una aldea (`entrarEnPueblo`), con la forma de la de la plaza: el pueblo en 3D al centro con su planta de
+ * minimapa (o, sin planta del motor o sin WebGL, el anillo de huecos de siempre), el almacén debajo y las pestañas a la derecha. «Salir al mundo»
+ * abre la ventana común. */
 function montarPueblo(): void {
   const proyeccion = estadoCliente.proyeccionUltima;
   const pueblo = proyeccion && puebloActual(proyeccion);
@@ -510,11 +513,17 @@ function montarPueblo(): void {
     </header>
     <div class="asent-cuerpo">
       <div class="asent-centro">
-        <div class="asent-mapa"><div class="asent-lienzo pueblo-lienzo"></div></div>
+        <div class="asent-mapa pueblo-mapa">
+          <div class="ciudad3d-escena" hidden></div>
+          <div class="asent-lienzo pueblo-lienzo"></div>
+          <div class="asent-lienzo asent-minimapa pueblo-mini" title="Minimapa: un clic lleva la vista ahí" hidden><div class="pueblo-plano"></div></div>
+          <p class="pueblo-aviso-batalla" hidden>Lo están atacando: si sigues dentro, defiendes.</p>
+        </div>
         <div class="asent-recursos pueblo-almacen"></div>
       </div>
       <aside class="asent-lado"><div class="pueblo-lado"></div></aside>
     </div>
+    <div class="asent-tooltip" hidden></div>
     ${HTML_VELO_SALIDA}
     <aside class="jugador-panel" hidden></aside>
     ${menuEsquinaHtml()}
@@ -529,7 +538,89 @@ function montarPueblo(): void {
     sondeando = true;
     void refrescarDatosJuego().catch(() => {}).finally(() => { sondeando = false; });
   }, 3000);
-  limpiarPantalla = () => clearInterval(sondeo);
+  limpiarPantalla = () => { clearInterval(sondeo); desmontarPueblo3D(); };
+}
+
+/** La vista 3D del pueblo donde estás (`ciudad3d/pueblo.ts`), con la planta en SVG de minimapa; la planta que se dibuja y si ya tiene su suelo. */
+let pueblo3d: { vista: VistaCiudad3D; minimapa: Minimapa; plano: string; suelo: boolean } | null = null;
+/** Ya se probó y no hay WebGL: el pueblo se queda con su anillo de huecos. */
+let pueblo3dSinWebgl = false;
+
+/** Monta la vista 3D en el centro del pueblo, si no lo está. Devuelve si hay vista 3D. */
+function montarPueblo3D(mapa: HTMLElement): boolean {
+  if (pueblo3d) return true;
+  const escena = mapa.querySelector<HTMLElement>('.ciudad3d-escena');
+  const plano = mapa.querySelector<HTMLElement>('.pueblo-plano');
+  const tooltip = app.querySelector<HTMLElement>('.asent-tooltip');
+  if (pueblo3dSinWebgl || !escena || !plano) return false;
+  const minimapa = new Minimapa(plano);
+  try {
+    const vista: VistaCiudad3D = new VistaCiudad3D(escena, {
+      alElegir: (id) => {
+        const pieza = id ? vista.ciudadActual()?.edificios.find((e) => e.id === id) : undefined;
+        vista.seleccionar(pieza ? { id: pieza.id, tipo: pieza.tipo } : null);
+      },
+      alPasar: (id, evento) => {
+        const pieza = id ? vista.ciudadActual()?.edificios.find((e) => e.id === id) : undefined;
+        if (!tooltip) return;
+        if (!pieza || !evento) { tooltip.hidden = true; return; }
+        tooltip.innerHTML = `<strong>${escaparHtml(nombreDePiezaPueblo(pieza.tipo))}</strong>`;
+        tooltip.hidden = false;
+        tooltip.style.left = `${Math.min(window.innerWidth - tooltip.offsetWidth - 8, evento.clientX + 14)}px`;
+        tooltip.style.top = `${Math.min(window.innerHeight - tooltip.offsetHeight - 8, evento.clientY + 14)}px`;
+      },
+      alMover: (huella) => minimapa.fijarHuella(huella),
+    });
+    plano.parentElement?.addEventListener('click', (evento) => vista.centrar(minimapa.puntoLocal(evento)));
+    pueblo3d = { vista, minimapa, plano: '', suelo: false };
+    return true;
+  } catch (error) {
+    console.warn('Sin WebGL para el pueblo en 3D; queda el trazado en 2D.', error);
+    minimapa.destruir();
+    pueblo3dSinWebgl = true;
+    return false;
+  }
+}
+
+function desmontarPueblo3D(): void {
+  pueblo3d?.vista.destruir();
+  pueblo3d?.minimapa.destruir();
+  pueblo3d = null;
+}
+
+/** El centro del pueblo: la vista 3D con su planta de minimapa si el motor la manda (y hay WebGL), si no el anillo de huecos. */
+function pintarCentroPueblo(p: ProyeccionJugador, pueblo: PuebloDeMapa): void {
+  const mapa = app.querySelector<HTMLElement>('.pueblo-mapa');
+  const lienzo = mapa?.querySelector<HTMLElement>('.pueblo-lienzo');
+  const escenaEl = mapa?.querySelector<HTMLElement>('.ciudad3d-escena');
+  const mini = mapa?.querySelector<HTMLElement>('.pueblo-mini');
+  const planoEl = mapa?.querySelector<HTMLElement>('.pueblo-plano');
+  const aviso = mapa?.querySelector<HTMLElement>('.pueblo-aviso-batalla');
+  if (!mapa || !lienzo || !escenaEl || !mini || !planoEl) return;
+  const escena = p.escenasPueblo.find((e) => e.puebloId === pueblo.id);
+  const plano = escena ? svgPlanoPueblo(escena) : '';
+  const en3d = Boolean(escena && plano) && montarPueblo3D(mapa);
+  mapa.classList.toggle('asent-mapa-3d', en3d);
+  escenaEl.hidden = !en3d;
+  mini.hidden = !en3d;
+  lienzo.hidden = en3d;
+  if (aviso) aviso.hidden = !(en3d && pueblo.batallaId);
+  if (!en3d || !escena || !pueblo3d) { pintar(lienzo, htmlTrazadoPueblo(p, pueblo, escaparHtml), undefined, 'pueblo-trazado'); return; }
+  const c3 = pueblo3d;
+  if (c3.plano !== plano) {
+    c3.plano = plano;
+    planoEl.innerHTML = plano;
+    c3.vista.fijar(puebloEnVista(escena, { instante: p.instante }));
+    const encuadre = encuadreDeSvg(planoEl.querySelector('svg'));
+    if (encuadre) c3.minimapa.fijarEncuadre(encuadre);
+  }
+  if (!c3.suelo) {
+    c3.suelo = true;
+    void sincronizarMapa(p.mapaId).then((m) => {
+      const suelo = colorDelSueloEn(m, pueblo.posicion);
+      if (suelo && pueblo3d === c3) c3.vista.fijarSuelo((suelo[0] << 16) | (suelo[1] << 8) | suelo[2]);
+    }).catch(() => {});
+  }
 }
 
 function pintarPueblo(p: ProyeccionJugador): void {
@@ -539,7 +630,7 @@ function pintarPueblo(p: ProyeccionJugador): void {
   const lado = app.querySelector<HTMLElement>('.pueblo-lado');
   if (!pueblo || !lienzo || !almacen || !lado) return;
   const repintar = (): void => { const q = estadoCliente.proyeccionUltima; if (q) pintarPueblo(q); };
-  pintar(lienzo, htmlTrazadoPueblo(p, pueblo, escaparHtml), undefined, 'pueblo-trazado');
+  pintarCentroPueblo(p, pueblo);
   pintar(almacen, htmlAlmacenPueblo(pueblo, escaparHtml), undefined, 'pueblo-almacen');
   pintar(lado, htmlPestanasPueblo(p, pueblo, escaparHtml), () => cablearInteriorPueblo(lado, p, pueblo, ejecutarYRefrescar, repintar), 'pueblo');
 }

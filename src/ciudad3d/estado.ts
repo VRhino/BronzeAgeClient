@@ -130,6 +130,8 @@ export interface OpcionesCiudad {
   instante: number;
   /** Lo que dura la obra en curso de un edificio, en minutos (el catálogo con las políticas de la plaza); `null` si no se sabe. */
   minutosDeObra?: (e: Edificio) => number | null;
+  /** El edificio del que parten las calles principales, si no es el centro urbano (el ancla de un pueblo). */
+  centroId?: string;
 }
 
 /** Las celdas de un rectángulo en ul: columnas y filas que toca. */
@@ -253,7 +255,8 @@ export function ciudadEnVista(a: FuenteDeCiudad, t: TrazadoAsentamiento | undefi
   }
 
   // el corazón de la plaza (en un campamento, su taberna): de él parten las calles principales
-  const gobierno = edificios.find((e) => e.tipo === 'centroUrbano') ?? edificios.find((e) => e.tipo === 'palacio') ?? edificios.find((e) => e.tipo === 'taberna');
+  const gobierno = (o.centroId !== undefined ? edificios.find((e) => e.id === o.centroId) : undefined)
+    ?? edificios.find((e) => e.tipo === 'centroUrbano') ?? edificios.find((e) => e.tipo === 'palacio') ?? edificios.find((e) => e.tipo === 'taberna');
   const red = redDeCalles(t.calles, t.caminos, T, {
     edificios,
     centro: gobierno ? { x: gobierno.x + gobierno.ancho / 2, y: gobierno.y + gobierno.alto / 2 } : undefined,

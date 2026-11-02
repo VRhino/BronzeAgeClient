@@ -9,7 +9,7 @@
 // estacas y cuerda; dañado, ruina de muros bajos, escombro y vigas quemadas.
 import { COLOR } from './config';
 import { hash3, type EdificioEnVista } from './estado';
-import { oscurecer, type Forma, type Piezas } from './piezas';
+import { mezclar, oscurecer, type Forma, type Piezas } from './piezas';
 
 /** El marco de una huella: `u` a lo largo de su lado largo y `v` a lo ancho, desde su centro. */
 class Marco {
@@ -883,6 +883,84 @@ function tienda(m: Marco): void {
   if (m.azar(9) < 0.5) tinajas(m, -L / 2 + 0.3, f * (S / 2 - 0.3), 2, COLOR.barro);
 }
 
+// ───────────────────────────── Los pueblos extractores ─────────────────────────────
+
+/** Una peña: un canto irregular medio hundido en el suelo (asoma un 70 % de su alto). */
+function pena(m: Marco, color: number, u: number, v: number, l: number, s: number, h: number, giro = 0): void {
+  m.forma('copa', color, u, v, l, s, h, -h * 0.3, giro);
+}
+
+/**
+ * La boca de una mina en su celda: un cerrillo de peñas al fondo (de la roca de caja de su metal, con matas y vetas del mineral), el frente
+ * cortado con la entrada apuntalada (el hueco oscuro, dos postes y el dintel, y su tejadillo desde el nivel 2) y la senda que sale de ella;
+ * delante, la escombrera, el mineral apartado en un montón y en cestos, el yunque de piedra donde se machaca y los puntales de repuesto.
+ */
+function bocamina(m: Marco, tipo: string, estilo: number): void {
+  const L = m.L - 0.4, S = m.S - 0.4, f = m.azar(1) < 0.5 ? 1 : -1, c = COLOR.mina[tipo] ?? COLOR.mina.minaCobre!;
+  const lado = m.azar(2) < 0.5 ? 1 : -1;
+  // el cerrillo: tres peñas que se montan, de roca teñida por su metal, con matas encima
+  const hv = -f * S * 0.22, roca = mezclar(COLOR.roca, c.escombrera, 0.3);
+  pena(m, roca, 0, hv, 1.8, 1.3, 1.15, (m.azar(5) - 0.5) * 0.6);
+  pena(m, mezclar(roca, COLOR.piedraOscura, 0.4), -lado * 0.68, hv - f * 0.12, 1.15, 1.0, 0.95, (m.azar(6) - 0.5) * 0.6);
+  pena(m, mezclar(roca, COLOR.talud, 0.35), lado * 0.74, hv + f * 0.02, 1.0, 0.9, 0.7, (m.azar(7) - 0.5) * 0.6);
+  m.forma('copa', COLOR.seto, -lado * 0.55, hv - f * 0.25, 0.5, 0.42, 0.26, 0.56);
+  m.forma('copa', COLOR.seto, lado * 0.15, hv - f * 0.35, 0.36, 0.3, 0.2, 0.7);
+  // el frente cortado a escuadra, con las vetas del mineral, y la entrada apuntalada
+  const fv = hv + f * 0.5;
+  m.caja(COLOR.piedraOscura, 0, fv, 1.1, 0.36, 0.78);
+  for (const [u, y] of [[-0.38, 0.5], [0.4, 0.28], [0.24, 0.66]] as const) m.caja(c.mineral, u, fv + f * 0.18, 0.22, 0.03, 0.08, y, 0.4);
+  m.caja(COLOR.negro, 0, fv + f * 0.18, 0.46, 0.04, 0.6);
+  for (const a of [-1, 1]) m.poste(COLOR.madera, a * 0.29, fv + f * 0.25, 0.7, 0.09);
+  m.caja(COLOR.madera, 0, fv + f * 0.25, 0.78, 0.13, 0.11, 0.66);
+  if (estilo >= 2) m.forma('aguas', estilo >= 3 ? COLOR.adobe : COLOR.paja, 0, fv + f * 0.32, 0.96, 0.4, 0.24, 0.77);
+  // la senda de la boca hasta el borde
+  const sv0 = fv + f * 0.25, sv1 = f * (S / 2);
+  m.losa(mezclar(c.escombrera, COLOR.tierra, 0.5), 0, (sv0 + sv1) / 2, 0.6, Math.abs(sv1 - sv0), 0.02);
+  // la escombrera a un lado de la senda, el mineral al otro
+  m.forma('cono', c.escombrera, lado * L * 0.3, f * S * 0.24, 1.0, 0.9, 0.5);
+  m.forma('cono', mezclar(c.escombrera, COLOR.roca, 0.5), lado * L * 0.4, f * S * 0.39, 0.55, 0.5, 0.28);
+  m.forma('cono', c.mineral, -lado * L * 0.26, f * S * 0.3, 0.5, 0.46, 0.28);
+  for (let i = 0; i < 2; i++) {
+    const u = -lado * (L * 0.26 - 0.4 - i * 0.26), v = f * (S * 0.3 + 0.3);
+    m.forma('cilindro', COLOR.cuero, u, v, 0.22, 0.22, 0.2);
+    m.forma('cono', c.mineral, u, v, 0.18, 0.18, 0.08, 0.2);
+  }
+  // el yunque de piedra con su percutor, y los puntales de repuesto
+  m.caja(COLOR.piedraOscura, -lado * L * 0.38, f * S * 0.12, 0.4, 0.32, 0.22, 0, m.azar(3));
+  m.forma('cupula', COLOR.piedraClara, -lado * L * 0.38, f * S * 0.12, 0.14, 0.12, 0.08, 0.22);
+  lena(m, lado * (L / 2 - 0.4), f * S * 0.06, 0.7, 2, Math.PI / 2 + 0.1);
+}
+
+/**
+ * La cantera en su celda: un crestón de peñas al fondo con el frente cortado en dos gradas de piedra recién sacada (más clara); delante, el suelo
+ * de polvo de piedra, los bloques ya sacados (uno sobre su rastra de madera), los cascotes y la palanca apoyada.
+ */
+function cantera(m: Marco, estilo: number): void {
+  const L = m.L - 0.4, S = m.S - 0.4, f = m.azar(1) < 0.5 ? 1 : -1;
+  const tono = (k: number): number => mezclar(COLOR.rocaClara, COLOR.roca, 0.15 + 0.35 * m.azar(10 + k));
+  // el crestón: peñas que se montan, y encima alguna mata
+  const hv = -f * S * 0.27;
+  pena(m, COLOR.roca, -0.6, hv, 1.3, 1.05, 1.05, (m.azar(5) - 0.5) * 0.6);
+  pena(m, mezclar(COLOR.roca, COLOR.piedraOscura, 0.35), 0.52, hv - f * 0.06, 1.35, 1.0, 1.15, (m.azar(6) - 0.5) * 0.6);
+  pena(m, mezclar(COLOR.roca, COLOR.talud, 0.3), 0, hv - f * 0.3, 1.3, 0.7, 0.85, (m.azar(7) - 0.5) * 0.6);
+  m.forma('copa', COLOR.seto, -0.75, hv - f * 0.2, 0.46, 0.38, 0.24, 0.62);
+  m.forma('copa', COLOR.seto, 0.7, hv - f * 0.25, 0.32, 0.28, 0.18, 0.7);
+  // el frente cortado: la grada alta metida en el crestón y la baja delante, de roca clara recién sacada
+  m.caja(tono(1), 0, hv + f * 0.22, 1.6, 0.62, 0.62, 0, m.entre(2, -0.05, 0.05));
+  m.caja(tono(2), 0.05, hv + f * 0.66, 1.15, 0.34, 0.3, 0, m.entre(3, -0.07, 0.07));
+  // el suelo de la cantera, de polvo de piedra
+  m.losa(mezclar(COLOR.rocaClara, COLOR.tierra, 0.45), 0, f * S * 0.24, L * 0.94, S * 0.48, 0.02);
+  // los bloques sacados, uno sobre la rastra
+  const lado = m.azar(4) < 0.5 ? 1 : -1, rv = f * (S / 2 - 0.34);
+  for (const a of [-1, 1]) m.viga(COLOR.madera, lado * L * 0.24 - 0.4, rv + a * 0.18, lado * L * 0.24 + 0.4, rv + a * 0.18, 0.02, 0.08, 0.08);
+  m.caja(COLOR.rocaClara, lado * L * 0.24, rv, 0.62, 0.36, 0.3, 0.1);
+  for (let k = 0; k < 3; k++) m.caja(tono(40 + k), -lado * (L * 0.1 + k * 0.36), f * (S * 0.24 + (k % 2) * 0.2), 0.36, 0.28, 0.24, 0, m.azar(50 + k) * 0.6);
+  // cascotes al pie de las gradas, y la palanca apoyada en la grada baja
+  for (let k = 0; k < 5; k++) m.forma('copa', tono(60 + k), (m.azar(60 + k) - 0.5) * L * 0.7, hv + f * (0.95 + m.azar(70 + k) * 0.2), 0.22, 0.18, 0.12);
+  m.forma('cilindro', COLOR.madera, 0.62, hv + f * 0.9, 0.06, 0.06, 1.0, 0, 0, -f * 0.5);
+  if (estilo >= 3) m.caja(COLOR.adobe, lado * (L / 2 - 0.3), f * (S / 2 - 0.25), 0.45, 0.4, 0.45);
+}
+
 // ───────────────────────────── Estados: obra, mejora, cola, ruina ─────────────────────────────
 
 /** Lo alto que llega un edificio de este tipo en este estilo (para el armazón de su obra). */
@@ -1012,6 +1090,11 @@ function terminado(m: Marco, tipo: string, estilo: number): void {
     case 'pozo': return pozo(m);
     case 'parque': return parque(m, estilo);
     case 'tienda': return tienda(m);
+    case 'mina':
+    case 'minaCobre':
+    case 'minaEstano':
+    case 'minaHierro': return bocamina(m, tipo, estilo);
+    case 'cantera': return cantera(m, estilo);
     default: {
       bloque(m, estilo, 0, 0, m.L - 0.6, m.S - 0.6, { frente: 1 });
     }

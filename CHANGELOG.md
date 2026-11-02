@@ -3,6 +3,20 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.101.0] — 2026-11-02 · Los pueblos y las aldeas en 3D · contrato 0.9.0 (`VRhino/BronzeAge@61366539`)
+
+Petición de Víctor (2026-11-02): la vista 3D también dentro de los pueblos extractores y las aldeas agrícolas. El motor manda ahora su
+planta a quien está dentro (`Pueblo.planta`, `trazado` y `nivel_madre`).
+
+- **Dentro de un pueblo o una aldea, el centro es la vista 3D** y la planta en SVG queda de minimapa abajo a la derecha (un clic lleva la
+  vista ahí). Cada pieza en su huella exacta; las casas, con el estilo de la plaza madre hasta el 3.
+- **Modelos nuevos**: la bocamina de cada metal (un cerrillo de peñas con la entrada apuntalada, la escombrera y el mineral de su color) y
+  la cantera (un crestón con dos gradas cortadas en piedra clara, los bloques sacados y su rastra).
+- Al pasar el ratón, el nombre de la pieza; si lo están atacando, una franja roja arriba.
+- Sin planta (un motor anterior) o sin WebGL, el anillo de huecos de siempre.
+- Contrato regenerado desde el motor 61366539 (encima del e4923d4d de 0.100.0: solo añade la planta del pueblo).
+- Banco: la cantera, una mina de cada metal y las aldeas de nivel 1 a 3; pruebas de las huellas y de que los modelos no salen de su parcela.
+
 ## [0.100.0] — 2026-11-02 · Nombre de caravana y carro en el campamento · contrato 0.8.0 (`VRhino/BronzeAge@e4923d4d`)
 
 Tanda del motor del 2026-11-02 (aviso en `motor/aviso-tanda-2026-11-02.md`). Contrato regenerado desde e4923d4d.

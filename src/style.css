@@ -3366,6 +3366,11 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 
 /* Dentro de un pueblo o una aldea (0.52.0): como la plaza. El trazado al centro, con sus huecos (vacíos los de niveles por llegar). */
 .pueblo-lienzo { position: relative; background: radial-gradient(circle at 50% 50%, rgba(120, 140, 70, 0.28), rgba(60, 70, 35, 0.2) 48%, rgba(30, 24, 16, 0.92) 72%); }
+/* El pueblo en 3D (desde que el motor manda su planta): la planta en SVG de minimapa, abajo a la derecha, y el aviso de batalla arriba. */
+.pueblo-mini { background: #93c26b; cursor: pointer; }
+.pueblo-mini svg { display: block; width: 100%; height: 100%; }
+.pueblo-plano { width: 100%; height: 100%; }
+.pueblo-aviso-batalla { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 3; margin: 0; padding: 6px 14px; background: linear-gradient(180deg, rgba(110, 28, 20, 0.95), rgba(60, 14, 10, 0.95)); border: 1px solid #d9573f; border-radius: 3px; box-shadow: 0 0 14px rgba(217, 87, 63, 0.4); color: #f4d6c8; font-size: 0.85rem; white-space: nowrap; }
 .pueblo-recinto { position: absolute; inset: 9%; border-radius: 50%; border: 2px dashed rgba(169, 121, 63, 0.45); }
 .pueblo-trazado { position: absolute; inset: 0; }
 .pueblo-trazado.en-batalla .pueblo-recinto { border-color: rgba(200, 70, 50, 0.7); }

@@ -103,6 +103,25 @@ lados, las calles y la empalizada celda a celda).
   barracón, la plaza de armas y las caballerizas, la Tropa). Al pasar por encima, su nombre. Un clic en el minimapa lleva la vista ahí.
 - **Sin WebGL**: la planta en SVG se queda en grande, como antes.
 
+## Pueblos extractores y aldeas
+
+Desde 0.101.0, dentro de un pueblo (cantera o mina) o de una aldea agrícola, el centro de la pantalla es la misma vista 3D, con la planta en
+SVG como minimapa (`pueblo.ts`, `ui/planoPueblo.ts`). La planta la manda el motor solo a quien está dentro, sea de su Facción o ajeno
+(`Pueblo.planta`, `trazado` y `nivel_madre`, motor 61366539; `EscenaPueblo` en el cliente): el ancla, las casas, el almacén, el corral del buey
+y, en la aldea, sus granjas y corrales, cada uno con su centro y sus lados, más las calles y los caminos.
+
+- **El estilo es el de la plaza madre, hasta el 3**: madera y paja en el nivel 1, piedra y paja en el 2, adobe con terrado en el 3 y
+  siguientes. Cada pieza va en su huella exacta.
+- **El ancla de una mina es su bocamina** (`bocamina` en `modelos.ts`): un cerrillo de peñas medio hundidas, el frente cortado con la entrada
+  apuntalada (dos postes, el dintel y, desde el estilo 2, su tejadillo) y la senda que sale de ella; delante, la escombrera, el mineral en un
+  montón y en cestos, el yunque de piedra y los puntales de repuesto. La roca, la escombrera y las vetas llevan el color de su metal: ocre y
+  oro (oro), gris y verde (cobre), oscuro y negro (estaño), pardo y rojizo (hierro).
+- **El ancla de una cantera** (`cantera`): un crestón de peñas con el frente cortado en dos gradas de piedra clara recién sacada; delante, el
+  suelo de polvo de piedra, los bloques sacados (uno sobre su rastra), los cascotes y la palanca. Desde el estilo 3, una caseta de adobe.
+- **Clic**: elige la pieza; al pasar por encima, su nombre. Un clic en el minimapa lleva la vista ahí. Si lo están atacando, una franja roja
+  arriba lo dice.
+- **Sin planta** (fuera de él, o un motor anterior) **o sin WebGL**: el anillo de huecos de siempre.
+
 ## Manejo
 
 - **Ratón**:
@@ -134,6 +153,8 @@ lados, las calles y la empalizada celda a celda).
   - la plaza vista como ajena, saqueada o subiendo de nivel.
 - **Campamentos**: tres campamentos de mercenarios del motor (`ciudades/campamento-*.bin`, el `pb.CampamentoMercenarios` que llega estando
   dentro, con su planta), con la planta en SVG de minimapa.
+- **Pueblos**: la cantera, una mina de cada metal y una aldea de cada nivel (`pueblos/*.json`, la salida de `urbanismo::planta_de_pueblo`
+  del motor), con el estilo del mando «Estilo» como nivel de la madre (2 si no se elige).
 - `window.banco.mirar({ x, y, distancia, giro, inclinacion })` mueve la cámara para las capturas.
 
 ## Rendimiento

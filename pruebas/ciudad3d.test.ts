@@ -10,10 +10,11 @@ import { FORMA_BASE, girarLados } from '../src/ciudad3d/calles';
 import { montarGuardacantones, teselasDe } from '../src/ciudad3d/calzada';
 import { ciudadEnVista, estiloDe, type CiudadEnVista } from '../src/ciudad3d/estado';
 import { montarEdificio } from '../src/ciudad3d/modelos';
+import { puebloEnVista } from '../src/ciudad3d/pueblo';
 import { Piezas, type Pieza } from '../src/ciudad3d/piezas';
 import { AsentamientoSchema, CampamentoMercenariosSchema } from '../src/contrato/gen/bronzeage/v1/entities_pb';
 import { escenaCampamento, plazaDeContrato } from '../src/motor/proyeccion';
-import type { Asentamiento, TrazadoAsentamiento } from '../src/tiposDominio';
+import type { Asentamiento, EscenaPueblo, TrazadoAsentamiento } from '../src/tiposDominio';
 
 const DIA = 24 * 3_600_000;
 const DIAS: Record<string, number> = { aldea: 3, pueblo: 8, ciudad: 16 };
@@ -192,6 +193,51 @@ describe('el estilo de cada casa', () => {
     expect(nuevas(500)).toBeLessThan(ids.length * 0.65);
     expect(estiloDe('ed-1', 'palacio', 3, ascenso, 500)).toBe(3);
     expect(estiloDe('ed-1', 'palacio', 3, ascenso, 1000)).toBe(4);
+  });
+});
+
+describe('los pueblos extractores y las aldeas', () => {
+  // las plantas que saca `urbanismo::planta_de_pueblo` del motor (posición en milésimas de ul, lados en ul), como las mandará VISTA
+  type Json = { id: string; tipoExtractor: string; planta: { id: string; tipo: string; posicion: { x: number; y: number }; ancho: number; alto: number }[]; trazado: { unidadesPorCelda: number; radioUl: number; calles: EscenaPueblo['calles']; caminos: EscenaPueblo['caminos'] } };
+  const escena = (nombre: string, nivelMadre?: number): EscenaPueblo => {
+    const j = JSON.parse(readFileSync(new URL(`./ciudad3d/pueblos/${nombre}.json`, import.meta.url), 'utf8')) as Json;
+    return {
+      puebloId: j.id, tipo: j.tipoExtractor, nivelMadre, unidadesPorCelda: j.trazado.unidadesPorCelda, radio: j.trazado.radioUl,
+      edificios: j.planta.map((p) => ({ edificioId: p.id, tipo: p.tipo, posicion: { x: p.posicion.x / 1000, y: p.posicion.y / 1000 }, ancho: p.ancho, alto: p.alto })),
+      calles: j.trazado.calles, caminos: j.trazado.caminos,
+    };
+  };
+  const PUEBLOS = ['cantera', 'mina', 'mina-cobre', 'mina-estano', 'mina-hierro', 'aldea-1', 'aldea-2', 'aldea-3'];
+
+  for (const nombre of PUEBLOS) {
+    test(`${nombre}: cada pieza en su huella exacta, el estilo de la plaza madre hasta el 3`, () => {
+      const e = escena(nombre, 5), c = puebloEnVista(e, { instante: 0 })!;
+      expect(c.nivel).toBe(3);
+      expect(puebloEnVista(escena(nombre), { instante: 0 })!.nivel).toBe(1);
+      expect(c.edificios.length).toBe(e.edificios.length);
+      for (const p of e.edificios) {
+        const v = c.edificios.find((x) => x.id === p.edificioId)!;
+        expect({ x: v.x + v.ancho / 2, y: v.y + v.alto / 2, ancho: v.ancho, alto: v.alto, tipo: v.tipo }).toEqual({ x: p.posicion.x, y: p.posicion.y, ancho: p.ancho, alto: p.alto, tipo: p.tipo });
+      }
+    });
+
+    test(`${nombre}: lo que llena las celdas libres no pisa piezas ni calles`, () => {
+      const c = puebloEnVista(escena(nombre, 2), { instante: 0 })!, T = c.celda;
+      const pisa = (x: number, y: number, r: { x: number; y: number; ancho: number; alto: number }) => x < r.x + r.ancho - 1e-6 && x + T > r.x + 1e-6 && y < r.y + r.alto - 1e-6 && y + T > r.y + 1e-6;
+      expect(c.libres.filter((l) => [...c.calles, ...c.caminos, ...c.edificios].some((r) => pisa(l.x, l.y, r))).slice(0, 3)).toEqual([]);
+    });
+  }
+
+  test('las bocaminas de cada metal y la cantera, en cualquier estilo y variante, no salen de su parcela más que un alero', () => {
+    let peor = { fuera: 0, que: '' };
+    for (const tipo of ['mina', 'minaCobre', 'minaEstano', 'minaHierro', 'cantera']) for (const estilo of [1, 2, 3]) for (let k = 0; k < 120; k++) {
+      const e = { id: `p-${k}`, tipo, x: 0, y: 0, ancho: 3, alto: 3, estado: 'activo' as const, avance: null, mejora: false, danado: false, nivel: 1, estilo, semilla: k * 7919 + 13 };
+      const p = new Piezas();
+      montarEdificio(p, e);
+      expect(p.lista.length).toBeGreaterThan(10);
+      for (const q of p.lista) { const fuera = salida(q, e); if (fuera > peor.fuera) peor = { fuera, que: `${tipo} estilo ${estilo} semilla ${e.semilla}: ${q.forma}` }; }
+    }
+    expect(peor.fuera, peor.que).toBeLessThanOrEqual(ALERO);
   });
 });
 
