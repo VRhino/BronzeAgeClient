@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.99.0] — 2026-11-02 · Clic en la muralla para abrir Defensa · sin cambios de contrato (`VRhino/BronzeAge@a17f8536`)
+
+- **Un clic en la muralla de la vista 3D abre la ventana Defensa**: un muro o una torre, en su subpestaña Muralla; la puerta, en Puerta.
+  Hasta ahora solo se abría desde el riel. En una plaza ajena no se abre (Defensa no está de visita).
+- Al pasar el ratón por la muralla, un tooltip con lo que es (Muralla, Puerta, Torre de la muralla) y su nivel, o «Sin levantar todavía».
+- La vista 3D elige la pieza más cercana que toca el rayo, sea de un edificio o de la muralla (`MurallaElegida`, `alElegirMuralla`,
+  `alPasarMuralla`); si no toca ninguna, la celda de muralla donde da en el suelo.
+
 ## [0.98.0] — 2026-11-02 · La plaza repartida por los bordes · sin cambios de contrato (`VRhino/BronzeAge@a17f8536`)
 
 Petición de Víctor (2026-11-02): la interfaz del asentamiento metía demasiado en muy poco espacio. Se reparte por los bordes de la

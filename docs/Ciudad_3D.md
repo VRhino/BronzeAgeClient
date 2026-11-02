@@ -112,7 +112,10 @@ lados, las calles y la empalizada celda a celda).
 - **Teclado**: WASD o las flechas desplazan, Q/E giran, R/F inclinan y + y − acercan.
 - **Táctil**: con dos dedos, pellizco.
 - **Clic en un edificio**: lo elige, igual que antes en el 2D (la ficha de la izquierda y el resalte dorado; los demás de su tipo, en tenue).
-  Al pasar por encima, el mismo tooltip de siempre.
+  Al pasar por encima, el mismo tooltip de siempre. El Barracón, la Galería de tiro y las Caballerizas abren además Reclutamiento, y la
+  Taberna y el Mercado, la suya (0.98.0).
+- **Clic en la muralla** (desde 0.99.0): un muro o una torre abren la ventana Defensa en Muralla, y la puerta, en Puerta (en una plaza ajena
+  no se abre, como desde el riel). Al pasar por encima, un tooltip con lo que es y su nivel, o «Sin levantar todavía».
 - **Elegir en la lista de edificios** (en la ventana Construcción, desde 0.98.0): la ventana se cierra y la cámara va a él.
 - **Minimapa** (el 2D): dibuja en dorado lo que abarca la cámara. Un clic en él lleva la vista ahí (en el minimapa, el clic ya no elige).
 - **Al entrar**: la cámara encuadra lo construido (el 90 % de los edificios más cercanos y la muralla), no el radio entero de la plaza.

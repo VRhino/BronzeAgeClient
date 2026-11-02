@@ -71,7 +71,7 @@ import { cablearProduccionYRecetas, cablearVistaCiudad, edificioSeleccionado, el
 import { campamentoEnVista } from './ciudad3d/campamento';
 import { ciudadEnVista } from './ciudad3d/estado';
 import { encuadreDeSvg, Minimapa } from './ciudad3d/minimapa';
-import { VistaCiudad3D } from './ciudad3d/vista';
+import { VistaCiudad3D, type MurallaElegida } from './ciudad3d/vista';
 import { colorDelSueloEn } from './mundo/pintarArtefacto';
 import { barraAvance, cuentaAtras, medallonNivel } from './ui/juegoVisual';
 import { iconoEdificio } from './ui/iconosEdificio';
@@ -2317,6 +2317,12 @@ function pintarAscensoHud(): void {
   if (barra) barra.style.width = `${(hecho * 100).toFixed(1)}%`;
 }
 
+/** El rótulo flotante de la muralla en la vista 3D: qué es, de qué nivel, y si aún no está levantada. */
+function htmlTooltipMuralla(m: MurallaElegida): string {
+  const nombre = m.clase === 'puerta' ? 'Puerta' : m.clase === 'torre' ? 'Torre de la muralla' : 'Muralla';
+  return `<strong>${nombre}</strong><span>${m.enPie ? `Nivel ${m.nivel}` : 'Sin levantar todavía'}</span>`;
+}
+
 /** La vista 3D de la plaza montada ahora (`src/ciudad3d/`), con el 2D de siempre de minimapa en su esquina. */
 let ciudad3d: { vista: VistaCiudad3D; minimapa: Minimapa } | null = null;
 
@@ -2344,6 +2350,21 @@ function montarCiudad3D(contenedor: HTMLElement): void {
         if (!tooltip) return;
         if (!p || !edificio || !evento) { tooltip.hidden = true; return; }
         tooltip.innerHTML = htmlTooltipEdificio(p, edificio, escaparHtml);
+        tooltip.hidden = false;
+        tooltip.style.left = `${Math.min(window.innerWidth - tooltip.offsetWidth - 8, evento.clientX + 14)}px`;
+        tooltip.style.top = `${Math.min(window.innerHeight - tooltip.offsetHeight - 8, evento.clientY + 14)}px`;
+      },
+      // la muralla, la puerta o una torre abren la ventana Defensa, en su subpestaña
+      alElegirMuralla: (m) => {
+        const p = estadoCliente.proyeccionUltima, a = p?.asentamientos[0];
+        if (!p || !a || !ventanaDisponible('defensa', p, a)) return;
+        subDeVentana.defensa = m.clase === 'puerta' ? 'puerta' : 'muralla';
+        abrirVentanaPlaza('defensa');
+      },
+      alPasarMuralla: (m, evento) => {
+        if (!tooltip) return;
+        if (!m || !evento) { tooltip.hidden = true; return; }
+        tooltip.innerHTML = htmlTooltipMuralla(m);
         tooltip.hidden = false;
         tooltip.style.left = `${Math.min(window.innerWidth - tooltip.offsetWidth - 8, evento.clientX + 14)}px`;
         tooltip.style.top = `${Math.min(window.innerHeight - tooltip.offsetHeight - 8, evento.clientY + 14)}px`;

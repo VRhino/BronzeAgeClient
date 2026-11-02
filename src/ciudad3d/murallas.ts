@@ -223,6 +223,8 @@ export function montarMurallas(p: Piezas, recintos: readonly RecintoEnVista[]): 
   for (const r of recintos) {
     const ts = tramos(r);
     for (const tr of ts) {
+      // cada celda lleva su id (`idDeCeldaDeMuro`) para el clic en la vista
+      p.de = idDeCeldaDeMuro(r.id, tr.k);
       if (!tr.c.enPie) { zanja(p, tr); continue; }
       const n = Math.max(1, Math.min(3, tr.c.nivel));
       if (n === 1) empalizada(p, tr, pasoDesde(ts, tr.k));
@@ -232,7 +234,13 @@ export function montarMurallas(p: Piezas, recintos: readonly RecintoEnVista[]): 
     // la mejora en obra: andamios en la primera celda que aún no es del nivel nuevo
     if (r.mejorandoA !== undefined) {
       const tr = ts.find((t) => t.c.enPie && t.c.nivel !== r.mejorandoA);
-      if (tr) andamioDeMuro(p, tr, ALTO_NIVEL[Math.min(3, r.mejorandoA)]!);
+      if (tr) { p.de = idDeCeldaDeMuro(r.id, tr.k); andamioDeMuro(p, tr, ALTO_NIVEL[Math.min(3, r.mejorandoA)]!); }
     }
   }
+  p.de = undefined;
+}
+
+/** El id de las piezas de una celda de muralla: su recinto y su sitio en el anillo. */
+export function idDeCeldaDeMuro(recintoId: string, k: number): string {
+  return `${recintoId}#${k}`;
 }

@@ -9,14 +9,25 @@ import { Calzada } from './calzada';
 import { CamaraDeCiudad } from './camara';
 import { CIUDAD3D, COLOR } from './config';
 import { instalarEntrada, type EntradaDeCiudad } from './entrada';
-import { edificioEn, type CiudadEnVista, type EdificioEnVista } from './estado';
+import { edificioEn, type CiudadEnVista, type ClaseCelda, type EdificioEnVista } from './estado';
 import { montarEdificio } from './modelos';
-import { montarMurallas } from './murallas';
+import { idDeCeldaDeMuro, montarMurallas } from './murallas';
 import { MallasDePiezas, Piezas } from './piezas';
 import { montarRelleno } from './relleno';
 import { Suelo } from './suelo';
 
 type Punto = { x: number; y: number };
+
+/** Una celda de muralla elegida o señalada: su recinto, su clase y cómo está. */
+export interface MurallaElegida {
+  recintoId: string;
+  clase: ClaseCelda;
+  nivel: number;
+  enPie: boolean;
+}
+
+/** Lo que hay bajo el ratón: un edificio o la muralla. */
+type Elegido = { edificio: string } | { muralla: MurallaElegida };
 
 export interface OpcionesCiudad3D {
   /** El color del terreno donde está la plaza (sRGB); sin él, un llano verde. */
@@ -25,6 +36,10 @@ export interface OpcionesCiudad3D {
   alElegir: (id: string | null) => void;
   /** El ratón pasa por encima de un edificio (o de nada), para el rótulo flotante. */
   alPasar?: (id: string | null, evento: PointerEvent | null) => void;
+  /** Se eligió la muralla (una celda de muro, puerta o torre) con un clic. Sin esto, la muralla no se elige ni se señala. */
+  alElegirMuralla?: (m: MurallaElegida) => void;
+  /** El ratón pasa por encima de la muralla (o deja de pasar: `null`), para el rótulo flotante. */
+  alPasarMuralla?: (m: MurallaElegida | null, evento: PointerEvent | null) => void;
   /** Lo que se ve cambió: las cuatro esquinas sobre el suelo, en ul (el minimapa lo dibuja). */
   alMover?: (huella: Punto[]) => void;
   /** El texto del rótulo de un edificio en obra (su cuenta atrás); `null`, sin rótulo. */
@@ -62,7 +77,7 @@ export class VistaCiudad3D {
   private seleccion: { id: string; tipo: string } | null = null;
   private base: number;
   private pasando: PointerEvent | null = null;
-  private pasandoId: string | null = null;
+  private pasandoClase: 'edificio' | 'muralla' | null = null;
   private fotograma = 0;
   private antes = performance.now();
   private pausada = false;
@@ -216,28 +231,62 @@ export class VistaCiudad3D {
 
   /** El edificio bajo un punto de la pantalla: el de la pieza que toca el rayo o, si no toca ninguna, el de la huella donde el rayo da en el suelo. */
   edificioBajo(e: { clientX: number; clientY: number }): string | null {
-    if (!this.ciudad) return null;
+    const x = this.elegidoBajo(e);
+    return x && 'edificio' in x ? x.edificio : null;
+  }
+
+  /**
+   * Lo que hay bajo un punto de la pantalla: la pieza más cercana que toca el rayo (de un edificio o, si se puede elegir, de la muralla) o, si no
+   * toca ninguna, lo que hay donde el rayo da en el suelo (la huella de un edificio o una celda de la muralla).
+   */
+  private elegidoBajo(e: { clientX: number; clientY: number }): Elegido | null {
+    const c = this.ciudad;
+    if (!c) return null;
     this.apuntar(e);
-    if (this.edificios) {
-      for (const h of this.rayo.intersectObjects(this.edificios.grupo.children, false)) {
-        const id = this.edificios.idDe(h.object, h.instanceId);
-        if (id) return id;
-      }
+    const conMuralla = Boolean(this.o.alElegirMuralla), murallas = conMuralla ? this.murallas : null;
+    const mallas = [...(this.edificios?.grupo.children ?? []), ...(murallas?.grupo.children ?? [])];
+    for (const h of this.rayo.intersectObjects(mallas, false)) {
+      const id = this.edificios?.idDe(h.object, h.instanceId);
+      if (id) return { edificio: id };
+      const m = this.murallaDeId(murallas?.idDe(h.object, h.instanceId));
+      if (m) return { muralla: m };
     }
     const p = new THREE.Vector3();
     if (!this.rayo.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), p)) return null;
-    return edificioEn(this.ciudad, { x: p.x, y: p.z })?.id ?? null;
+    const ed = edificioEn(c, { x: p.x, y: p.z });
+    if (ed) return { edificio: ed.id };
+    if (!conMuralla) return null;
+    const T = c.celda / 2;
+    for (const r of c.recintos) {
+      const k = r.celdas.findIndex((q) => Math.abs(q.x - p.x) <= T && Math.abs(q.y - p.z) <= T);
+      if (k >= 0) return { muralla: this.murallaDeId(idDeCeldaDeMuro(r.id, k))! };
+    }
+    return null;
+  }
+
+  /** La celda de muralla de un id de sus piezas (`idDeCeldaDeMuro`). */
+  private murallaDeId(id: string | undefined): MurallaElegida | null {
+    if (!id || !this.ciudad) return null;
+    const i = id.lastIndexOf('#'), r = this.ciudad.recintos.find((x) => x.id === id.slice(0, i)), q = r?.celdas[Number(id.slice(i + 1))];
+    return r && q ? { recintoId: r.id, clase: q.clase, nivel: q.nivel, enPie: q.enPie } : null;
   }
 
   private clic(e: PointerEvent): void {
-    this.o.alElegir(this.edificioBajo(e));
+    const x = this.elegidoBajo(e);
+    if (x && 'muralla' in x) { this.o.alElegir(null); this.o.alElegirMuralla?.(x.muralla); return; }
+    this.o.alElegir(x?.edificio ?? null);
   }
 
-  private avisarPaso(id: string | null, e: PointerEvent | null): void {
-    if (id === this.pasandoId && id === null) return;
-    this.pasandoId = id;
-    this.o.alPasar?.(id, e);
-    this.lienzo.style.cursor = id ? 'pointer' : '';
+  private avisarPaso(x: Elegido | null, e: PointerEvent | null): void {
+    const clase = !x ? null : 'edificio' in x ? 'edificio' : 'muralla';
+    if (clase === null && this.pasandoClase === null) return;
+    // primero se apaga lo que se dejó (el rótulo es el mismo), luego se avisa de lo de ahora (en cada fotograma, que el rótulo sigue al ratón)
+    if (this.pasandoClase === 'edificio' && clase !== 'edificio') this.o.alPasar?.(null, null);
+    if (this.pasandoClase === 'muralla' && clase !== 'muralla') this.o.alPasarMuralla?.(null, null);
+    this.pasandoClase = clase;
+    if (x && 'edificio' in x) this.o.alPasar?.(x.edificio, e);
+    else if (x) this.o.alPasarMuralla?.(x.muralla, e);
+    this.lienzo.style.cursor = x ? 'pointer' : '';
   }
 
   /** El marco del resalte alrededor de una huella. */
@@ -317,7 +366,7 @@ export class VistaCiudad3D {
     if (this.pasando) {
       const e = this.pasando;
       this.pasando = null;
-      this.avisarPaso(this.edificioBajo(e), e);
+      this.avisarPaso(this.elegidoBajo(e), e);
     }
     this.ponerResalte();
     this.ponerRotulos(w, h);
