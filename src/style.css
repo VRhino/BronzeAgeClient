@@ -4622,3 +4622,302 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .pueblo-tarjeta .anillo-cab, .obra-mapa .anillo-cab { flex-wrap: wrap; }
 .pueblo-tarjeta .anillo-titulo, .obra-mapa .anillo-titulo { flex: 1 1 8rem; }
 .obra-mapa .anillo-estado, .pueblo-tarjeta .pueblo-alerta { margin-left: auto; }
+
+/* =====================================================================================
+   PLAZA EN 3D A PANTALLA COMPLETA (`.plaza-3d`; petición de Víctor del 2026-11-02)
+   La escena 3D llena la pantalla y todo lo demás flota encima, como el HUD de un juego de estrategia: la barra del jugador transparente
+   (como en el mundo) con el botón «Asentamiento»; arriba a la izquierda el blasón de la plaza (escudo de la Facción dueña, nombre y nivel),
+   el minimapa, la ficha del edificio elegido y el rastreador de misiones; arriba a la derecha «Ejércitos» y «Salir al mundo»; abajo al
+   centro, el almacén. «Asentamiento» abre a pantalla completa la ventana con lo que antes iba en la columna derecha. Solo la plaza: el
+   campamento y el pueblo comparten las clases `asent-*` y no cambian.
+   ===================================================================================== */
+.plaza-3d { background: #0b0805; }
+
+/* La barra del jugador, transparente sobre la escena y con los botones en icono (igual que en el mundo). */
+.plaza-3d > .jugador-barra {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(180deg, rgba(8, 6, 4, 0.55), rgba(8, 6, 4, 0));
+  border-bottom: none;
+  box-shadow: none;
+  pointer-events: none;
+}
+.plaza-3d > .jugador-barra > * { pointer-events: auto; }
+.plaza-3d > .jugador-barra .jugador-quien { text-shadow: 0 1px 3px #000, 0 0 8px rgba(0, 0, 0, 0.8); }
+.plaza-3d > .jugador-barra .jugador-quien small { color: var(--pergamino); }
+.plaza-3d .jugador-botones { gap: 6px; align-items: center; }
+.plaza-3d .jugador-botones button {
+  position: relative;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  background: rgba(14, 10, 7, 0.86);
+  border: 1px solid rgba(169, 121, 63, 0.55);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+.plaza-3d .jugador-botones button:hover { background: rgba(26, 19, 12, 0.92); border-color: var(--oro); }
+.plaza-3d .jugador-botones button:hover .jugador-icono,
+.plaza-3d .jugador-botones button.activo .jugador-icono { color: var(--oro-claro); }
+.plaza-3d .jugador-botones button.activo { background: rgba(48, 34, 18, 0.9); border-color: var(--oro); }
+.plaza-3d .jugador-nombre { display: none; }
+.plaza-3d .jugador-botones .jugador-badge { position: absolute; top: -5px; right: -6px; margin: 0; min-width: 16px; line-height: 16px; text-align: center; padding: 0 4px; }
+/* «Asentamiento»: el botón extra, con su nombre y en oro, el primero de la derecha. */
+.plaza-3d .jugador-botones .jugador-boton-asent {
+  width: auto;
+  gap: 7px;
+  margin-right: 6px;
+  padding: 0 16px 0 11px;
+  border-radius: 19px;
+  border-color: var(--oro);
+  background: linear-gradient(180deg, rgba(118, 86, 42, 0.96), rgba(52, 37, 18, 0.96));
+  color: var(--oro-claro);
+  font-family: var(--fuente-titulo);
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.plaza-3d .jugador-botones .jugador-boton-asent .jugador-nombre { display: inline; }
+.plaza-3d .jugador-botones .jugador-boton-asent .jugador-icono { color: var(--oro-claro); }
+.plaza-3d .jugador-botones .jugador-boton-asent:hover { background: linear-gradient(180deg, rgba(150, 110, 52, 0.96), rgba(70, 50, 24, 0.96)); }
+.plaza-3d .jugador-botones .jugador-boton-asent.activo {
+  background: linear-gradient(180deg, rgba(170, 126, 60, 0.98), rgba(84, 60, 28, 0.98));
+  box-shadow: 0 0 0 1px #ffd24a, 0 0 14px rgba(255, 210, 74, 0.4);
+}
+
+/* La escena, a toda la pantalla (también bajo la barra). */
+.plaza-3d .asent-cuerpo,
+.plaza-3d .asent-centro,
+.plaza-3d .asent-mapa {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  flex: none;
+  overflow: hidden;
+}
+
+/* Arriba a la izquierda: blasón, minimapa, ficha del edificio y rastreador, en una columna que flota (los clics pasan a la escena). */
+.plaza-3d .asent-izq {
+  position: absolute;
+  top: calc(var(--jugador-alto) + 8px);
+  left: 16px;
+  z-index: 2;
+  width: clamp(240px, 28vmin, 300px);
+  max-height: calc(100% - var(--jugador-alto) - 84px);
+  padding: 0;
+  gap: 10px;
+  order: 0;
+  zoom: 1;
+  overflow-y: auto;
+  scrollbar-width: none;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  pointer-events: none;
+}
+.plaza-3d .asent-izq > * { pointer-events: auto; }
+.plaza-3d .asent-izq .asent-ficha { order: -1; }
+.plaza-3d .asent-izq .misiones-rastreador { margin-bottom: 0; }
+.plaza-3d .asent-izq .asent-minimapa {
+  order: -2;
+  position: relative;
+  width: 100%;
+  cursor: pointer;
+}
+
+/* El blasón: el escudo completo de la Facción dueña, el nombre de la ciudad, su Facción y el medallón del nivel. */
+.asent-blason {
+  order: -3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 8px 8px;
+  background: linear-gradient(180deg, rgba(38, 28, 17, 0.94), rgba(18, 13, 8, 0.94));
+  border: 1px solid var(--bronce);
+  border-radius: 3px;
+  box-shadow: var(--placa-sutil);
+}
+/* El medallón del nivel va prendido en la esquina del escudo, para dejarle al nombre todo el ancho. */
+.asent-blason { position: relative; padding-left: 10px; }
+.asent-blason-escudo { flex: none; display: flex; padding-right: 8px; }
+.asent-blason-escudo .sigilo { display: block; width: 58px; height: auto; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.6)); }
+.asent-blason-texto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.asent-blason-texto .asent-nombre { font-family: var(--fuente-titulo); font-size: 1.12rem; line-height: 1.15; overflow-wrap: break-word; }
+.asent-blason-texto small { font-size: 0.74rem; color: var(--pergamino); overflow-wrap: break-word; }
+.asent-blason-texto small.asent-blason-opera,
+.asent-ventana-nivel .asent-blason-opera { font-size: 0.7rem; color: var(--obra-ambar); }
+.asent-blason .medallon-nivel { position: absolute; left: 50px; bottom: 4px; width: 28px; height: 32px; }
+.asent-blason .medallon-nivel b { font-size: 0.85rem; }
+
+/* Arriba a la derecha, bajo la barra: «Ejércitos» y «Salir al mundo»; el panel de Ejércitos se abre debajo. */
+.plaza-3d .asent-barra {
+  position: absolute;
+  top: calc(var(--jugador-alto) + 8px);
+  right: 16px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  pointer-events: none;
+}
+.plaza-3d .asent-barra::after { display: none; }
+.plaza-3d .asent-barra > * { pointer-events: auto; }
+.plaza-3d .asent-barra-acciones { margin-left: 0; }
+.plaza-3d .asent-barra-acciones button { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.55); }
+.plaza-3d .asent-barra button[data-panel-asent] { background: rgba(20, 15, 10, 0.9); }
+.plaza-3d .asent-panel {
+  position: relative;
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100vh - var(--jugador-alto) - 150px);
+  overflow-y: auto;
+}
+
+/* Abajo al centro: el almacén, flotando. */
+.plaza-3d .asent-recursos {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2;
+  width: fit-content;
+  max-width: calc(100% - 32px);
+  margin: 0 auto;
+  box-shadow: var(--placa);
+}
+
+/* Sin WebGL: el 2D vuelve al centro, a pantalla entera, entre la barra y el almacén. */
+.plaza-3d.sin-3d .asent-mapa { padding: calc(var(--jugador-alto) + 16px) 16px 72px; }
+
+/* La ventana «Asentamiento»: a pantalla completa bajo la barra, con el aire de la de Facción (escudo, nombre, nivel y las pestañas de los
+   edificios en el lateral; el contenido a la derecha). Se cierra con ✕, Esc, el mismo botón o un clic fuera del marco. */
+.asent-ventana[hidden] { display: none; }
+.asent-ventana {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  padding: calc(var(--jugador-alto) + 12px) 16px 16px;
+  background: rgba(6, 4, 2, 0.5);
+  color-scheme: dark;
+}
+.asent-ventana-marco {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  gap: 18px;
+  padding: 18px;
+  background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg));
+  border: 1px solid var(--bronce);
+  border-radius: 3px;
+  box-shadow: var(--placa);
+}
+.asent-ventana-marco::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 6px;
+  height: 4px;
+  background: var(--denticulo);
+  opacity: 0.5;
+  pointer-events: none;
+}
+.asent-ventana-lateral {
+  flex: 0 0 25%;
+  min-width: 220px;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 12px;
+  overflow-y: auto;
+  border: 1px solid var(--bronce-osc);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.2);
+}
+.asent-ventana-blason {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(169, 121, 63, 0.3);
+  text-align: center;
+}
+.asent-ventana-escudo { display: flex; justify-content: center; width: 100%; padding: 6px 0 2px; }
+.asent-ventana-escudo .sigilo { display: block; width: min(150px, 62%); height: auto; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5)); }
+.asent-ventana-nombre { margin: 4px 0 0; font-family: var(--fuente-titulo); font-size: 1.4rem; color: var(--oro-claro); overflow-wrap: anywhere; }
+.asent-ventana-faccion { font-size: 0.85rem; color: var(--text-secondary); }
+.asent-ventana-nivel { display: flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: 4px 8px; margin-top: 4px; font-family: var(--fuente-titulo); font-size: 1rem; color: var(--oro); }
+/* Las pestañas de los edificios, en vertical y con su icono. */
+.asent-ventana-lateral .asent-tabs { flex-direction: column; flex-wrap: nowrap; gap: 6px; margin: 0; }
+.asent-ventana-lateral .asent-tabs-ancho .asent-tab {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  text-align: left;
+  font-family: var(--fuente-titulo);
+  font-size: 0.92rem;
+  letter-spacing: 0.04em;
+}
+.asent-ventana-lateral .asent-tab.activo { box-shadow: inset 3px 0 0 var(--oro), inset 0 0 12px rgba(216, 184, 120, 0.2); }
+.asent-ventana-lateral .asent-lado-nota { margin-top: 10px; }
+.asent-tab-icono { display: inline-flex; flex: none; }
+.asent-tab-icono svg { display: block; width: 26px; height: 26px; }
+.asent-ventana-principal { flex: 1; min-width: 0; overflow-y: auto; padding: 4px 44px 4px 4px; }
+.asent-ventana-principal .asent-edif-cuerpo { width: min(100%, 980px); margin: 0 auto; }
+.asent-ventana-cerrar {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 1;
+  width: 30px;
+  height: 30px;
+  background: rgba(20, 15, 10, 0.9);
+  border: 1px solid var(--bronce-osc);
+  border-radius: 3px;
+  color: var(--oro);
+  cursor: pointer;
+}
+.asent-ventana-cerrar:hover { border-color: var(--oro); color: var(--oro-claro); }
+
+/* Estrecho: la columna izquierda más estrecha, el botón «Asentamiento» en icono y la ventana en una sola columna. */
+@media (max-width: 900px) {
+  .plaza-3d .asent-izq { width: clamp(150px, 40vw, 240px); }
+  .plaza-3d .asent-blason { gap: 6px; padding: 6px; }
+  .plaza-3d .asent-blason-escudo .sigilo { width: 40px; }
+  .plaza-3d .asent-blason-texto .asent-nombre { font-size: 0.92rem; }
+  .plaza-3d .asent-blason .medallon-nivel { left: 32px; bottom: 2px; width: 22px; height: 25px; }
+  .plaza-3d .asent-blason .medallon-nivel b { font-size: 0.72rem; }
+  .plaza-3d .jugador-botones .jugador-boton-asent { width: 38px; margin-right: 0; padding: 0; border-radius: 50%; }
+  .plaza-3d .jugador-botones .jugador-boton-asent .jugador-nombre { display: none; }
+  .plaza-3d .asent-barra-acciones { flex-direction: column; align-items: flex-end; }
+  .asent-ventana { padding: calc(var(--jugador-alto) + 6px) 6px 6px; }
+  .asent-ventana-marco { flex-direction: column; gap: 12px; padding: 12px; overflow-y: auto; }
+  .asent-ventana-lateral { flex: none; min-width: 0; max-width: none; overflow: visible; }
+  .asent-ventana-escudo .sigilo { width: 84px; }
+  .asent-ventana-lateral .asent-tabs { flex-direction: row; flex-wrap: wrap; }
+  .asent-ventana-lateral .asent-tabs-ancho .asent-tab { flex: 1 1 40%; }
+  .asent-ventana-principal { overflow: visible; padding: 0; }
+}
+/* Móvil: no caben el nombre del héroe y once botones; el nombre ya lo dicen el blasón y el avatar, y los botones se desplazan de lado. */
+@media (max-width: 600px) {
+  .plaza-3d > .jugador-barra { gap: 8px; padding-left: 10px; }
+  .plaza-3d > .jugador-barra .jugador-quien { display: none; }
+  .plaza-3d .jugador-botones { min-width: 0; overflow-x: auto; scrollbar-width: none; padding: 6px 4px 2px; }
+  .plaza-3d .jugador-botones button { flex: none; }
+}

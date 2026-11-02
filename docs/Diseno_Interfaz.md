@@ -109,15 +109,25 @@ remata cabeceras y paneles con la moldura clásica. `opacity: .5` para que sea s
 ## 5. Estructura de pantalla
 
 - **Fondo**: siempre `position: fixed; inset: 0`, warm-dark con viñeta radial. El mapa a pantalla
-  completa (mundo) o centrado (asentamiento).
+  completa (mundo y plaza en 3D) o centrado (campamento y pueblo).
 - **Chrome flotante**: riel de iconos en un borde, menú de esquina (avatar) arriba-derecha, zoom
   abajo-derecha, paneles que se despliegan junto a su disparador.
-- **Vista de asentamiento**: barra superior en flujo (nombre + nivel + acciones) → cuerpo en fila
-  (mapa `flex: 1` a la izquierda, columna de edificios fija ~300 px a la derecha) → panel
-  Facción/Ejército flotante sobre el mapa. El mapa es la plaza en 3D (`.asent-mapa-3d`, `docs/Ciudad_3D.md`)
-  a todo el centro, con el 2D de minimapa (`.asent-minimapa`) en la esquina de abajo a la derecha.
+- **Vista de la plaza** (`.plaza-3d`, 0.92.0, petición de Víctor del 2026-11-02): la plaza en 3D (`docs/Ciudad_3D.md`) a
+  pantalla completa, también bajo la barra del jugador, que es transparente y de iconos como en el mundo. Encima, como el HUD
+  de un juego de estrategia:
+  - arriba a la izquierda, en columna: el blasón (`.asent-blason`: escudo completo de la Facción dueña con el medallón del
+    nivel prendido en su esquina, el nombre de la ciudad y la Facción), el minimapa 2D (`.asent-minimapa`), la ficha del
+    edificio elegido y el rastreador de misiones; los clics fuera de las cajas pasan a la escena;
+  - arriba a la derecha, bajo la barra: «Ejércitos» (su panel se abre debajo) y «Salir al mundo»;
+  - abajo al centro: el almacén (`.asent-recursos`) flotando;
+  - en la barra, el primero por la derecha: el botón «Asentamiento» (`.jugador-boton-asent`, en oro y con su nombre), que abre
+    la ventana «Asentamiento» (`.asent-ventana`) a pantalla completa bajo la barra, con el aire de la de Facción: en el lateral,
+    el escudo grande, el nombre, la Facción y el nivel, y debajo las pestañas de los edificios en vertical con su icono; a la
+    derecha, el contenido (lo que antes iba en la columna derecha). Se cierra con ✕, Esc, el mismo botón o un clic fuera.
+  - El campamento y el pueblo siguen con barra superior en flujo, columna izquierda, mapa centrado y columna derecha.
 - **Login / Facción**: tarjeta central (`.login-card`) sobre el fondo, como un menú de campaña.
-- Bajo ~820 px la columna lateral se oculta y el mapa ocupa todo.
+- Bajo ~820 px la columna lateral se oculta y el mapa ocupa todo. En la plaza en 3D, bajo 900 px, la columna de la
+  izquierda se estrecha, «Asentamiento» queda en icono y la ventana pasa a una sola columna (lateral arriba, pestañas en fila).
 
 ## 6. Reglas al añadir UI
 

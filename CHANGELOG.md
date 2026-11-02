@@ -3,6 +3,23 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.92.0] — 2026-11-02 · La plaza en 3D a pantalla completa · sin cambios de contrato (`VRhino/BronzeAge@a17f8536`)
+
+- **Toda la pantalla es la plaza en 3D**, también bajo la barra del jugador, que en la plaza pasa a transparente y de iconos, como en el
+  mundo. Lo demás flota encima:
+  - **arriba a la izquierda**, el **blasón** de la plaza: el escudo completo de la Facción dueña, con el medallón del nivel en su esquina,
+    el nombre de la ciudad y la Facción (y «rinde como N» si el mantenimiento la baja). Debajo, el **minimapa** de antes, la ficha del
+    edificio elegido y el rastreador de misiones;
+  - **arriba a la derecha**, bajo la barra, «Ejércitos» (su panel se abre debajo) y «Salir al mundo»;
+  - **abajo al centro**, el almacén, flotando.
+- **Botón «Asentamiento»** en la barra, el primero por la derecha, en oro y con su nombre. Abre a pantalla completa la **ventana
+  «Asentamiento»** con todo lo que iba en la columna derecha. Tiene el aire de la de Facción: en el lateral, el escudo grande, el nombre,
+  la Facción y el nivel, y las pestañas de los edificios en vertical con su icono; a la derecha, el contenido de cada pestaña, igual que
+  antes. Se cierra con ✕, Esc, el mismo botón o un clic fuera del marco; al elegir un edificio en su lista, se cierra y la cámara va a él.
+- Pantalla estrecha: la columna de la izquierda se estrecha, «Asentamiento» queda en icono y la ventana pasa a una sola columna; en el
+  móvil, la barra deja el nombre del héroe y sus botones se desplazan de lado. Sin WebGL, el 2D vuelve al centro a pantalla entera.
+- El campamento y el pueblo no cambian.
+
 ## [0.91.0] — 2026-11-02 · La plaza en 3D · sin cambios de contrato (`VRhino/BronzeAge@a17f8536`)
 
 - **La plaza en 3D** (`src/ciudad3d/`, `docs/Ciudad_3D.md`): la vista de la plaza (la tuya o la ajena desde dentro) pasa a una escena 3D con

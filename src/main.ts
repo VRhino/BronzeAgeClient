@@ -42,7 +42,7 @@ import {
 import { montarEleccionCampamento } from './ui/eleccionCampamento';
 import { pintarVentanaSalida, reiniciarVentanaSalida, type LugarDeSalida } from './ui/ventanaSalida';
 import { elegirPestanaHeroe, minutosHerido, pintarPanelHeroe } from './ui/panelHeroe';
-import { htmlBarraJugador, type PanelJugador } from './ui/barraJugador';
+import { htmlBarraJugador, icono as iconoBarra, type PanelJugador } from './ui/barraJugador';
 import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from './paletas';
 import type { Alijo, Asentamiento, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Faccion, ParamsCrearHeroe, Sigilo } from './tiposDominio';
@@ -70,7 +70,8 @@ import { ciudadEnVista } from './ciudad3d/estado';
 import { Minimapa } from './ciudad3d/minimapa';
 import { VistaCiudad3D } from './ciudad3d/vista';
 import { colorDelSueloEn } from './mundo/pintarArtefacto';
-import { cuentaAtras } from './ui/juegoVisual';
+import { cuentaAtras, medallonNivel } from './ui/juegoVisual';
+import { iconoEdificio } from './ui/iconosEdificio';
 import { cablearPlegables } from './ui/plegable';
 import { FICHAS_MAPA_EXTRA, SELECTORES_MAPA_EXTRA, SUBPESTANAS_CENTRO_EXTRA, SUBPESTANAS_MERCADO_EXTRA, type ContextoPlaza } from './ui/ganchos';
 import { montarPartidas } from './ui/pantallaPartidas';
@@ -1710,6 +1711,8 @@ function renderVentanaSalida(): void {
 
 type PanelAsent = 'ejercito';
 let panelAsentAbierto: PanelAsent | null = null;
+/** ¿Está abierta la ventana «Asentamiento» (todo lo de la plaza a pantalla completa, sobre la vista 3D)? */
+let ventanaAsentAbierta = false;
 
 /** ¿Resides en la plaza donde estás? (fundadores y quienes compraron casa: así lo cuenta la proyección). */
 function resideEnLaPlaza(p: ProyeccionJugador, a: Asentamiento): boolean {
@@ -1769,11 +1772,11 @@ type SeccionMercado = string; // 'ordenes' | 'caravanas' o el id de una subpesta
 let seccionMercado: SeccionMercado = 'ordenes';
 
 /** Una pestaña por edificio. Taberna y Mercado existen siempre pero se abren al tener el edificio activo (decir qué falta es parte de la interfaz). */
-const PESTANAS_EDIFICIO: { id: EdificioAsent; etiqueta: string; requiere?: { tipo: string; nombre: string } }[] = [
-  { id: 'centro', etiqueta: 'Centro urbano' },
-  { id: 'reclutamiento', etiqueta: 'Reclutamiento' },
-  { id: 'taberna', etiqueta: 'Taberna', requiere: { tipo: 'taberna', nombre: 'una Taberna' } },
-  { id: 'mercado', etiqueta: 'Mercado', requiere: { tipo: 'mercado', nombre: 'un Mercado' } },
+const PESTANAS_EDIFICIO: { id: EdificioAsent; etiqueta: string; icono: string; requiere?: { tipo: string; nombre: string } }[] = [
+  { id: 'centro', etiqueta: 'Centro urbano', icono: 'centroUrbano' },
+  { id: 'reclutamiento', etiqueta: 'Reclutamiento', icono: 'barracon' },
+  { id: 'taberna', etiqueta: 'Taberna', icono: 'taberna', requiere: { tipo: 'taberna', nombre: 'una Taberna' } },
+  { id: 'mercado', etiqueta: 'Mercado', icono: 'mercado', requiere: { tipo: 'mercado', nombre: 'un Mercado' } },
 ];
 
 function subpestanas(lista: [string, string][], actual: string): string {
@@ -1790,8 +1793,9 @@ function renderPanelEdificios(): void {
   const asentamiento = proyeccion?.asentamientos[0];
   if (!tabsEl || !cuerpo || !proyeccion || !asentamiento) return;
 
-  const nombreBarra = document.querySelector<HTMLElement>('.asent-nombre');
+  const nombreBarra = document.querySelector<HTMLElement>('.asent-barra .asent-nombre');
   if (nombreBarra) nombreBarra.textContent = asentamiento.nombre ?? asentamiento.id;
+  pintarBlasones(proyeccion, asentamiento);
   const edificios = asentamiento.edificios ?? [];
   const construido = (tipo: string): boolean => edificios.some((e) => e.tipo === tipo && e.estado === 'activo');
   // De visita en una plaza de otra Facción solo queda lo que se puede ver o usar desde fuera de ella (decisión de Víctor, 2026-10-29): Centro urbano
@@ -1802,9 +1806,10 @@ function renderPanelEdificios(): void {
   const abierta = (id: EdificioAsent): boolean => { const t = pestanas.find((x) => x.id === id); return Boolean(t) && (!t!.requiere || construido(t!.requiere.tipo)); };
   if (!abierta(edificioAsent)) edificioAsent = 'centro';
 
+  const icono = (t: (typeof pestanas)[number]): string => `<span class="asent-tab-icono" aria-hidden="true">${iconoEdificio(t.icono, 26)}</span>`;
   const tabs = pestanas.map((t) => abierta(t.id)
-    ? `<button class="asent-tab${t.id === edificioAsent ? ' activo' : ''}" type="button" data-edificio="${t.id}">${t.etiqueta}</button>`
-    : `<button class="asent-tab bloqueada" type="button" disabled title="Necesitas construir ${t.requiere!.nombre}">${t.etiqueta} 🔒</button>`).join('');
+    ? `<button class="asent-tab${t.id === edificioAsent ? ' activo' : ''}" type="button" data-edificio="${t.id}">${icono(t)}<span>${t.etiqueta}</span></button>`
+    : `<button class="asent-tab bloqueada" type="button" disabled title="Necesitas construir ${t.requiere!.nombre}">${icono(t)}<span>${t.etiqueta} 🔒</span></button>`).join('');
   const bloqueadas = pestanas.filter((t) => !abierta(t.id)).map((t) => `🔒 ${t.etiqueta}: necesitas construir ${t.requiere!.nombre}.`);
   const faltan = bloqueadas.length ? `<p class="asent-lado-nota">Pestañas bloqueadas ${ayuda('plaza:pestanas-bloqueadas', bloqueadas.join('<br>'))}</p>` : '';
   pintar(tabsEl, `<div class="asent-tabs asent-tabs-ancho">${tabs}</div>${faltan}`, () => {
@@ -1990,9 +1995,8 @@ function renderPanelAsent(): void {
   }
 }
 
-/** Pantalla ASENTAMIENTO (rediseño estilo estrategia): barra superior (nombre + nivel + acciones), el mapa
- * de la ciudad ocupando el espacio a la izquierda, y la columna de edificios a la derecha. Facción /
- * Ejército abren un panel flotante sobre el mapa. */
+/** Pantalla ASENTAMIENTO: la plaza en 3D a pantalla completa, con su HUD encima (blasón, minimapa, almacén, Ejércitos y Salir al mundo) y
+ * la ventana «Asentamiento» (pestañas de los edificios) que se abre desde la barra del jugador. */
 function montarAsentamiento(): void {
   const proyeccion = estadoCliente.proyeccionUltima;
   const asentamiento = proyeccion?.asentamientos[0];
@@ -2000,29 +2004,43 @@ function montarAsentamiento(): void {
   estadoCliente.modoVista = 'asentamiento';
   panelAsentAbierto = null;
   menuEsquinaAbierto = false;
-  app.innerHTML = `<div class="asent-screen">
-    ${htmlBarraJugador(proyeccion, escaparHtml)}
-    <header class="asent-barra">
-      <span class="asent-nombre">${escaparHtml(asentamiento.nombre ?? asentamiento.id)}</span>
-      <span class="asent-nivel">Nivel ${asentamiento.nivel}</span>
-      <div class="asent-barra-acciones">
-        <button type="button" data-panel-asent="ejercito">Ejércitos</button>
-        <button id="btn-salir-mundo" class="btn-primary" type="button">Salir al mundo</button>
-      </div>
-      <p id="asent-error" class="faction-error" role="alert"></p>
-    </header>
+  ventanaAsentAbierta = false;
+  // La plaza a pantalla completa (petición de Víctor, 2026-11-02): la escena 3D llena la pantalla; arriba a la izquierda, el blasón (escudo de la
+  // Facción dueña, nombre y nivel) y debajo el minimapa; abajo al centro, el almacén flotando; arriba a la derecha, «Asentamiento» en la barra del
+  // jugador, que abre a pantalla completa la ventana con todo lo que antes iba en la columna derecha, y «Ejércitos» y «Salir al mundo».
+  const botonAsent = `<button type="button" class="jugador-boton-asent" data-ventana-asent title="Asentamiento: edificios, mercado, reclutamiento y todo lo de la plaza" aria-label="Asentamiento" aria-expanded="false">${iconoBarra('asentamiento')}<span class="jugador-nombre">Asentamiento</span></button>`;
+  app.innerHTML = `<div class="asent-screen plaza-3d">
+    ${htmlBarraJugador(proyeccion, escaparHtml, botonAsent)}
     <div class="asent-cuerpo">
-      <aside class="asent-izq">
-        <aside class="asent-panel" hidden></aside>
-      </aside>
       <div class="asent-centro">
         <div class="asent-mapa asent-mapa-3d">
           <div class="ciudad3d-escena"></div>
-          <div class="asent-lienzo asent-minimapa" title="Minimapa: un clic lleva la vista ahí"><canvas id="mapa" width="900" height="900"></canvas></div>
         </div>
         <div class="asent-recursos" hidden></div>
       </div>
-      <aside class="asent-lado"><div class="asent-edificios"><div class="asent-edif-tabs"></div><div class="asent-edif-cuerpo"></div></div></aside>
+      <aside class="asent-izq">
+        <div class="asent-blason"></div>
+        <div class="asent-lienzo asent-minimapa" title="Minimapa: un clic lleva la vista ahí"><canvas id="mapa" width="900" height="900"></canvas></div>
+      </aside>
+      <header class="asent-barra">
+        <div class="asent-barra-acciones">
+          <button type="button" data-panel-asent="ejercito">Ejércitos</button>
+          <button id="btn-salir-mundo" class="btn-primary" type="button">Salir al mundo</button>
+        </div>
+        <aside class="asent-panel" hidden></aside>
+      </header>
+    </div>
+    <div class="asent-ventana" hidden>
+      <div class="asent-ventana-marco asent-edificios" role="dialog" aria-modal="true" aria-label="Asentamiento">
+        <aside class="asent-ventana-lateral">
+          <div class="asent-ventana-blason"></div>
+          <div class="asent-edif-tabs"></div>
+        </aside>
+        <div class="asent-ventana-principal">
+          <button class="asent-ventana-cerrar" type="button" data-ventana-cerrar title="Cerrar (Esc)" aria-label="Cerrar">✕</button>
+          <div class="asent-edif-cuerpo"></div>
+        </div>
+      </div>
     </div>
     <div class="asent-tooltip" hidden></div>
     ${HTML_VELO_SALIDA}
@@ -2039,6 +2057,10 @@ function montarAsentamiento(): void {
     });
   });
   contenedor.querySelector('#btn-salir-mundo')?.addEventListener('click', () => { panelAsentAbierto = null; menuEsquinaAbierto = false; sincronizarMenuEsquina(); renderPanelAsent(); abrirVentanaSalida(); });
+  contenedor.querySelector('[data-ventana-asent]')?.addEventListener('click', () => alternarVentanaAsent(!ventanaAsentAbierta));
+  contenedor.querySelector('[data-ventana-cerrar]')?.addEventListener('click', () => alternarVentanaAsent(false));
+  // Un clic en el fondo de la ventana (fuera del marco) también la cierra.
+  contenedor.querySelector('.asent-ventana')?.addEventListener('click', (ev) => { if (ev.target === ev.currentTarget) alternarVentanaAsent(false); });
   cablearMenuEsquina(contenedor);
   cablearBarraJugador(contenedor);
   cablearTooltipEdificios(contenedor);
@@ -2047,7 +2069,8 @@ function montarAsentamiento(): void {
     proyeccion: () => estadoCliente.proyeccionUltima ?? undefined, ejecutar: ejecutarYRefrescar, escapar: escaparHtml,
     redibujar: () => { if (estadoCliente.proyeccionUltima) void dibujarPantallaSegunModo(estadoCliente.proyeccionUltima); },
     repintarLista: renderPanelEdificios,
-    enfocar: (id) => ciudad3d?.vista.enfocar(id),
+    // elegir en la lista de la ventana «Asentamiento» la cierra, para ver cómo la cámara va al edificio
+    enfocar: (id) => { if (ventanaAsentAbierta) alternarVentanaAsent(false); ciudad3d?.vista.enfocar(id); },
   });
   // La ciudad tiene vida (almacén, producción, población) aunque el jugador no toque nada: mismo sondeo
   // suave que el mapa, hasta que exista el canal de tiempo real.
@@ -2062,6 +2085,46 @@ function montarAsentamiento(): void {
   renderPanelRecursos();
   renderPanelAsent();
   void dibujarPantallaSegunModo(proyeccion);
+}
+
+/** Abre o cierra la ventana «Asentamiento» (todo lo de la plaza a pantalla completa, sobre la vista 3D). */
+function alternarVentanaAsent(abrir: boolean): void {
+  ventanaAsentAbierta = abrir;
+  const ventana = document.querySelector<HTMLElement>('.asent-ventana');
+  const boton = document.querySelector<HTMLElement>('[data-ventana-asent]');
+  if (ventana) ventana.hidden = !abrir;
+  boton?.classList.toggle('activo', abrir);
+  boton?.setAttribute('aria-expanded', String(abrir));
+  if (abrir) { panelAsentAbierto = null; renderPanelAsent(); renderPanelEdificios(); }
+}
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape' && ventanaAsentAbierta && !document.querySelector('.dialogo-velo') && document.querySelector('.asent-ventana:not([hidden])')) alternarVentanaAsent(false);
+});
+
+/** La Facción dueña de la plaza (la tuya o una ajena que conoces), para su escudo. */
+function faccionDuena(p: ProyeccionJugador, a: Asentamiento): { nombre: string; sigilo?: Faccion['sigilo']; granRey: boolean } | null {
+  if (!a.faccionId) return null;
+  const propia = p.facciones.find((x) => x.id === a.faccionId);
+  const delDirectorio = p.directorioFacciones?.find((x) => x.id === a.faccionId);
+  const f = propia ?? delDirectorio;
+  return f ? { nombre: f.nombre, sigilo: f.sigilo, granRey: propia?.liga?.granReyId === a.faccionId } : { nombre: a.faccionId, granRey: false };
+}
+
+/** El blasón de la plaza: el escudo completo de la Facción dueña, el nombre de la ciudad y su nivel. Arriba a la izquierda de la vista 3D y,
+ * en grande, a la cabeza de la ventana «Asentamiento». Solo se repinta si cambió. */
+function pintarBlasones(p: ProyeccionJugador, a: Asentamiento): void {
+  const f = faccionDuena(p, a);
+  const nombre = escaparHtml(a.nombre ?? a.id);
+  const faccion = f ? escaparHtml(f.nombre) : 'Sin Facción';
+  const opera = a.nivelActual !== undefined && a.nivelActual !== a.nivel ? `<small class="asent-blason-opera" title="Por el mantenimiento, funciona como una plaza de nivel ${a.nivelActual}">rinde como ${a.nivelActual}</small>` : '';
+  const hud = document.querySelector<HTMLElement>('.asent-blason');
+  if (hud) pintar(hud, `<span class="asent-blason-escudo">${svgSigilo(f?.sigilo, 64, { granRey: f?.granRey })}</span>
+      <span class="asent-blason-texto"><strong class="asent-nombre">${nombre}</strong><small>${faccion}</small>${opera}</span>
+      ${medallonNivel(a.nivel, '', `Plaza de nivel ${a.nivel}`)}`, undefined, 'blason');
+  const grande = document.querySelector<HTMLElement>('.asent-ventana-blason');
+  if (grande) pintar(grande, `<span class="asent-ventana-escudo">${svgSigilo(f?.sigilo, 132, { granRey: f?.granRey })}</span>
+      <h2 class="asent-ventana-nombre">${nombre}</h2><span class="asent-ventana-faccion">${faccion}</span>
+      <span class="asent-ventana-nivel">${medallonNivel(a.nivel, '', `Plaza de nivel ${a.nivel}`)}<span>Nivel ${a.nivel}</span>${opera}</span>`, undefined, 'blason-grande');
 }
 
 /** La vista 3D de la plaza montada ahora (`src/ciudad3d/`), con el 2D de siempre de minimapa en su esquina. */
@@ -2097,8 +2160,13 @@ function montarCiudad3D(contenedor: HTMLElement): void {
     console.warn('Sin WebGL para la plaza en 3D; queda la vista 2D.', error);
     minimapa.destruir();
     escena.remove();
-    contenedor.querySelector('.asent-mapa')?.classList.remove('asent-mapa-3d');
-    lienzo.parentElement?.classList.remove('asent-minimapa');
+    const centro = contenedor.querySelector('.asent-mapa');
+    centro?.classList.remove('asent-mapa-3d');
+    const caja = lienzo.parentElement;
+    caja?.classList.remove('asent-minimapa');
+    // el minimapa vive arriba a la izquierda: sin 3D, el 2D vuelve al centro de la pantalla
+    if (caja && centro) centro.appendChild(caja);
+    contenedor.querySelector('.asent-screen')?.classList.add('sin-3d');
   }
 }
 

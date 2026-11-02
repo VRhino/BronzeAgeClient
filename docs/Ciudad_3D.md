@@ -1,7 +1,8 @@
 # Plaza 3D
 
 La vista de la plaza (la tuya, o la de otra Facción en la que estás dentro) pasa de la vista de trazado en 2D a una escena 3D con three.js. El 2D
-de siempre no se va: queda de minimapa en la esquina de abajo a la derecha. No hay modelos de fuera: todo se monta en código con unas pocas
+de siempre no se va: queda de minimapa arriba a la izquierda. Desde 0.92.0 la escena llena toda la pantalla y lo demás flota encima (ver
+`docs/Diseno_Interfaz.md` §5). No hay modelos de fuera: todo se monta en código con unas pocas
 formas, reutilizando del mundo 3D el cielo, la luz y la manera de pintar miles de piezas en pocas llamadas de dibujo. El código vive en
 `src/ciudad3d/`.
 
@@ -73,10 +74,10 @@ formas, reutilizando del mundo 3D el cielo, la luz y la manera de pintar miles d
 - **Táctil**: con dos dedos, pellizco.
 - **Clic en un edificio**: lo elige, igual que antes en el 2D (la ficha de la izquierda y el resalte dorado; los demás de su tipo, en tenue).
   Al pasar por encima, el mismo tooltip de siempre.
-- **Elegir en la lista de edificios**: la cámara va a él.
+- **Elegir en la lista de edificios** (en la ventana «Asentamiento»): la ventana se cierra y la cámara va a él.
 - **Minimapa** (el 2D): dibuja en dorado lo que abarca la cámara. Un clic en él lleva la vista ahí (en el minimapa, el clic ya no elige).
 - **Al entrar**: la cámara encuadra lo construido (el 90 % de los edificios más cercanos y la muralla), no el radio entero de la plaza.
-- **Sin WebGL**: queda el 2D de siempre a pantalla entera.
+- **Sin WebGL**: queda el 2D de siempre a pantalla entera, entre la barra y el almacén.
 
 ## Banco de pruebas
 

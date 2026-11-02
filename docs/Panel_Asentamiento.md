@@ -219,6 +219,12 @@ completa de plazas con sus cargos (hoy no lo hace — `Features_Pendientes.md` �
 
 La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, estilo city-builder.
 
+> **Desde 0.92.0 (2026-11-02) ya no es una columna**: en la plaza en 3D a pantalla completa, todo este panel vive en la ventana
+> «Asentamiento» (`.asent-ventana`), que se abre con el botón «Asentamiento» de la barra del jugador. Las pestañas de los edificios
+> (Centro urbano, Reclutamiento, Taberna, Mercado) van en vertical, con su icono, en el lateral de la ventana, bajo el escudo de la
+> Facción dueña, el nombre y el nivel; el contenido de cada una, a la derecha y sin cambios. El campamento y el pueblo conservan su
+> columna derecha.
+
 > **Centro urbano › Edificios** (0.84.0, 2026-11-02, `ui/panelObras.ts`; banco `pruebas/plaza/`): tres plegables con aire de juego de
 > estrategia, más iconos que texto. **Edificios**: rejilla «Construir» (icono y coste en chips, en rojo lo que falta en el almacén, candado
 > si no se puede) y una tarjeta por tipo (icono, ×N, nivel en rombos, insignias 🔨 obra / ⬆ mejora / ⏸ parado / ⚠ dañado, botón ⬆ de
