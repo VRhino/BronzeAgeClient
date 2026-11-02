@@ -24,9 +24,10 @@ type Cargo = 'gobernador' | 'maestroObras' | null;
 const nombreDe = (tipo: string): string => EDIFICIO_NOMBRE[tipo] ?? tipo;
 
 /** Edificios que un Gobernador / Maestro de Obras puede añadir a mano (el backend gatea nivel, únicos y
- * topes; aquí solo se ofrece el catálogo). Fuera: centroUrbano, puestoMercado y los extractores de `mapa`. */
+ * topes; aquí solo se ofrece el catálogo). Fuera: centroUrbano, puestoMercado, los extractores de `mapa` y la Granja (motor e4923d4d: la ciudad
+ * solo tiene la de la fundación, que se mejora; el trigo de más sale de las aldeas agrícolas). */
 const EDIFICIOS_MANUALES = [
-  'vivienda', 'almacen', 'granero', 'granja', 'lenera',
+  'vivienda', 'almacen', 'granero', 'lenera',
   'barracon', 'galeriaDeTiro', 'palacio', 'mercado', 'taberna',
   'fundicion', 'granFundicion', 'curtiduria', 'armeria', 'carpinteria', 'maravilla',
 ] as const;
@@ -107,13 +108,16 @@ const grupoDe = (tipo: string): string => GRUPOS_CONSTRUIR.find((g) => g.tipos.i
 /** La pestaña de «Construir» elegida ('todos' = sin filtro). Vive entre repintados. */
 let grupoConstruir = 'todos';
 
+/** La Granja es única en la ciudad (motor e4923d4d, `EDIFICIOS_UNICOS`): con la de la fundación en pie no se ofrece otra. */
+const hayGranja = (a: Asentamiento): boolean => (a.edificios ?? []).some((x) => x.tipo === 'granja');
+
 /** Construir: pestañas por tipo (todos, ciudad, recursos, talleres, militar, gobierno) con cuántos se pueden levantar ya, y una casilla por edificio
  * con su icono y su coste. Las que no se pueden, con candado y el motivo en el título (al pulsarlas, sale flotando). */
 function htmlBotonesConstruir(a: Asentamiento, cargo: Cargo, esc: Escapar): string {
   if (!cargo) return '';
   const cat = catalogo();
   const tipos = cat
-    ? Object.keys(cat).filter((t) => Object.keys(cat[t]!.costo ?? {}).length > 0 && !t.startsWith('mina') && t !== 'cantera' && t !== 'corral')
+    ? Object.keys(cat).filter((t) => Object.keys(cat[t]!.costo ?? {}).length > 0 && !t.startsWith('mina') && t !== 'cantera' && t !== 'corral' && !(t === 'granja' && hayGranja(a)))
     : [...EDIFICIOS_MANUALES];
   const info = tipos.map((t) => {
     const def = cat?.[t] ?? {};

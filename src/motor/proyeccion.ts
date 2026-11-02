@@ -226,7 +226,7 @@ function ejercito(e: pb.Ejercito, ahora: number): d.Ejercito {
 function caravana(c: pb.Caravana, ahora: number): d.Caravana {
   const { posicion, ruta } = evaluarPlan(c.plan, c.posicion, ahora);
   return {
-    id: c.id, origenAsentamientoId: c.origenAsentamientoId, destinoAsentamientoId: c.destinoAsentamientoId, posicionActual: posicion, ruta,
+    id: c.id, nombre: opcional(c.nombre), origenAsentamientoId: c.origenAsentamientoId, destinoAsentamientoId: c.destinoAsentamientoId, posicionActual: posicion, ruta,
     estado: ESTADO_CARAVANA[c.estado], tipo: TIPO_CARAVANA[c.tipo], origenCampamentoId: c.origenCampamentoId, faccionId: c.faccionId, titularId: c.titularId,
     escoltaIds: c.escoltaIds, carros: c.carros.map((x) => ({ tipoCarro: x.tipoCarro as 'basico' | 'reforzado', animal: x.animal as 'buey' | 'caballo' | 'camello' | undefined })),
     reservadaManual: c.reservadaManual, contenido: cantidades(c.contenido), caducaEn: instante(c.caducaEnMs), preparaHasta: instante(c.preparaHastaMs),

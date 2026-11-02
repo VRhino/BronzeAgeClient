@@ -12,6 +12,7 @@ import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { AcuerdoTrueque, Caravana, Ejercito, LineaTrueque } from '../tiposDominio';
 import { ayuda } from './ayuda';
 import type { Ejecutar } from './panelCarro';
+import { nombreDeCaravana } from './panelMercado';
 
 type Escapar = (valor: string) => string;
 type Punto = { x: number; y: number };
@@ -102,7 +103,7 @@ function htmlEnganchada(p: ProyeccionJugador, col: Ejercito, c: Caravana, e: Esc
   }).join('');
   const fundacion = c.titularId !== undefined;
   return `<div class="ejercito-fila">
-    <div><strong>${fundacion ? 'Caravana de Fundación' : 'Caravana'} ${e(c.id)}</strong><span>${ESTADO[c.estado ?? 'adjunta']} · lleva ${Math.floor(cargaTotal(c))}: ${contenido(c, e)}</span></div>
+    <div><strong>${fundacion ? `Caravana de Fundación ${e(c.id)}` : e(nombreDeCaravana(c))}</strong><span>${ESTADO[c.estado ?? 'adjunta']} · lleva ${Math.floor(cargaTotal(c))}: ${contenido(c, e)}</span></div>
     <button class="btn-secondary" type="button" data-cc="soltar" data-caravana="${e(c.id)}"${fundacion ? ' title="Suelta, vuelve a contar su caducidad."' : ''}>Soltar</button>
     <div class="cc-cargar">${cargar}</div>
     ${entregas ? `<div class="cc-entregas">${entregas}</div>` : ''}</div>`;
@@ -112,7 +113,7 @@ function htmlSuelta(p: ProyeccionJugador, col: Ejercito, c: Caravana, e: Escapar
   const motivo = motivoParaEnganchar(p, col, c);
   const donde = c.estado === 'aparcada' ? ' · aparcada en una plaza' : '';
   return `<div class="ejercito-fila">
-    <div><strong>${c.titularId !== undefined ? 'Caravana de Fundación' : 'Caravana'} ${e(c.id)}</strong><span>${ESTADO[c.estado ?? 'disponible']}${donde} · lleva ${Math.floor(cargaTotal(c))} · a ${Math.round(distancia(c.posicionActual, col.posicionActual))} de ti</span></div>
+    <div><strong>${c.titularId !== undefined ? `Caravana de Fundación ${e(c.id)}` : e(nombreDeCaravana(c))}</strong><span>${ESTADO[c.estado ?? 'disponible']}${donde} · lleva ${Math.floor(cargaTotal(c))} · a ${Math.round(distancia(c.posicionActual, col.posicionActual))} de ti</span></div>
     <button class="btn-primary" type="button" data-cc="enganchar" data-caravana="${e(c.id)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>Enganchar</button>
     ${motivo ? corto(motivo, e) : ''}</div>`;
 }

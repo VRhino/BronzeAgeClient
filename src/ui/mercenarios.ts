@@ -162,6 +162,7 @@ export function textoDeObjetivo(p: ProyeccionJugador, o?: ObjetivoMercenario): s
     }
     case 'caravanaId': {
       const x = p.caravanas.find((y) => y.id === id);
+      if (x?.nombre) return `${x.nombre}${x.destinoAsentamientoId ? ` (a ${nombreDePlaza(p, x.destinoAsentamientoId)})` : ''}`;
       return x ? `Caravana de ${nombreDePlaza(p, x.origenAsentamientoId)}${x.destinoAsentamientoId ? ` a ${nombreDePlaza(p, x.destinoAsentamientoId)}` : ''}` : `Caravana ${id}`;
     }
     case 'campamentoId': return `Bandidos (${id})`;

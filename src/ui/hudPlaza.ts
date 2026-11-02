@@ -113,7 +113,7 @@ export function htmlBlasonHud(b: BlasonHud, esc: Escapar): string {
   const opera = b.nivelActual !== undefined && b.nivelActual !== b.nivel
     ? `<small class="asent-blason-opera" title="Por el mantenimiento, funciona como una plaza de nivel ${b.nivelActual}">rinde como ${b.nivelActual}</small>` : '';
   const nombre = b.editando && b.renombrar
-    ? `<span class="asent-blason-renombrar"><input class="form-input" type="text" maxlength="40" data-campo="nombre-plaza" value="${esc(b.nombre)}" aria-label="Nombre de la ciudad" />
+    ? `<span class="asent-blason-renombrar"><input class="form-input" type="text" maxlength="32" data-campo="nombre-plaza" value="${esc(b.nombre)}" aria-label="Nombre de la ciudad" />
         <button type="button" class="asent-blason-ok" data-guardar-nombre title="Guardar el nombre (Intro)" aria-label="Guardar el nombre">✓</button><button type="button" data-cancelar-nombre title="Cancelar (Esc)" aria-label="Cancelar">✕</button></span>`
     : `<span class="asent-blason-nombre"><strong class="asent-nombre">${esc(b.nombre)}</strong>${b.renombrar ? '<button type="button" class="asent-blason-lapiz" data-editar-nombre title="Cambiar el nombre de la ciudad" aria-label="Cambiar el nombre">✎</button>' : ''}</span>`;
   const icono = (clase: string, dato: string, abierto: boolean, titulo: string, svg: string): string =>

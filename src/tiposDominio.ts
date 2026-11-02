@@ -311,6 +311,8 @@ export interface BatallaVisible {
 
 export interface Caravana {
   id: string;
+  /** El nombre que le puso un residente de su origen (`renombrar_caravana`, motor e4923d4d): solo en las propias; sin él, se muestra su id. */
+  nombre?: string;
   origenAsentamientoId: string;
   destinoAsentamientoId?: string;
   posicionActual: Point;

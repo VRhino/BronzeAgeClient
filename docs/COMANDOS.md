@@ -118,7 +118,7 @@ Los cinco siguientes no llevan `heroeId`: el actor es su propio héroe. Wrapper 
 - [x] `alternarAutoConstruccion` — `asentamientoId`, `pausada` · pestaña Resumen
 - [x] `solicitarAscenso` — `asentamientoId` · solo el Gobernador residente, sin `cargo` · pestaña Resumen, «Subir a nivel N», apagado mientras `ascensoDeAsentamiento.puede` sea falso (se listan los bloqueos, el coste, la obra y el déficit de mantenimiento). Rechazo de dominio: `ascenso.invalido`
 - [x] `calibrarReservaManual` — `asentamientoId`, `recurso`, `valor` (0–999) · Centro urbano › Tesorería (solo el Tesorero residente presente)
-- [x] `renombrarAsentamiento` — `asentamientoId`, `nombre` (vacío = volver a mostrar el id) · Centro urbano › Resumen › «Nombre de la ciudad» (solo residentes)
+- [x] `renombrarAsentamiento` — `asentamientoId`, `nombre` (vacío = volver a mostrar el id; hasta 32 caracteres) · lápiz ✎ del blasón de la plaza (solo residentes; 0.98.0)
 
 ### Murallas — sistema completo
 
@@ -155,6 +155,7 @@ Una caravana ya no nace lista: se crea un casco vacío, se le montan carros y an
 - [x] `comprarAnimalCaravana` — `caravanaId`, `carroIndice`, `tipoAnimal` (`buey` \| `caballo` \| `camello`) — el buey cuesta oro (economía del oro, 2026-09-08) · Mercado › Caravanas
 - [x] `moverCarroCaravana` — `desdeCaravanaId`, `haciaCaravanaId`, `carroIndice` · Mercado › Caravanas
 - [x] `reservarCaravana` — `caravanaId`, `reservada` (boolean) · Mercado › Caravanas
+- [x] `renombrarCaravana` — `caravanaId`, `nombre` (vacío = sin nombre; hasta 32 caracteres, `caravana.nombre_largo`; motor e4923d4d) · Mercado › Caravanas, lápiz ✎ junto al nombre (quien reside en su origen y está dentro). El nombre (`Caravana.nombre`, solo en las propias) sale también en «Lo que llevas» y en la escolta
 - [x] `asignarEscolta` — `caravanaId`, `heroeId`, `escuadronIds` · panel «Escolta» de la plaza: cede escuadras a una caravana comercial parada en su origen; cupo en puntos de Liderazgo (`caravanas[].escoltaLiderazgo`), `comercio.caravana_invalida` si no cabe (nuevo 2026-10-08, Doc 3.13.4)
 - [x] `quitarEscolta` — `caravanaId`, `heroeId`, `escuadronIds?` · mismo panel: retira las tuyas, vuelven al campamento
 - [x] `pasarAViveres` — `cantidad` · responde `{ movido }` · botón «＋ desde el carro» de la barra de víveres del mundo abierto: pasa trigo del carro a TUS víveres, solo lo que cabe (350 por héroe); solo el Líder de la columna (nuevo 2026-10-08, Doc 5.13)
@@ -243,8 +244,8 @@ Solo tienen efecto si el backend declara `SERVIDORES_BATALLA` (en Render, hoy no
 - [x] `pedirPrestamo` — `tropaIds` · pestaña Tropa del campamento (leva comunal prestada)
 - [x] `reponerPrestamo` — sin `params` · pestaña Tropa
 - [x] `abrirAlijo` — `alijoId` · ficha del alijo en el mapa
-- [x] `comprarEnCampamento` — `recurso`, `cantidad`; opcional: `campamentoId` · pestaña Mercado del campamento
-- [x] `aportarARefundacion` — `recurso`, `cantidad`, `lado` (`almacen` \| `carro`) · pestaña Fondo
+- [x] `comprarEnCampamento` — `recurso`, `cantidad`; opcional: `campamentoId`, `pagarCon` (`almacenPersonal` \| `carro`, motor e4923d4d) · pestaña Mercado del campamento: el residente elige «Pagar con» su almacén personal o el carro que lleva (el de su columna o, dentro y sin columna, el suyo); con el carro no se vende trigo y lo comprado va al carro
+- [x] `aportarARefundacion` — `recurso`, `cantidad`, `lado` (`almacen` \| `carro`) · pestaña Fondo (el lado `carro` vale también dentro del campamento, con el carro que llevas; motor e4923d4d)
 - [x] `retirarDeRefundacion` — `recurso`, `cantidad`, `lado` · pestaña Fondo
 - [x] `comprarCaravanaDeRefundacion` — sin `params` · pestaña Fondo
 - [x] `entrarEnCampamento` — `campamentoId`, `heroeId` · ficha del campamento (también con un ejército entero)

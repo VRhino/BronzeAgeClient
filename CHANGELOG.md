@@ -3,6 +3,20 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.100.0] — 2026-11-02 · Nombre de caravana y carro en el campamento · contrato 0.8.0 (`VRhino/BronzeAge@e4923d4d`)
+
+Tanda del motor del 2026-11-02 (aviso en `motor/aviso-tanda-2026-11-02.md`). Contrato regenerado desde e4923d4d.
+
+- **Las caravanas tienen nombre** (`renombrar_caravana`, `Caravana.nombre`): en Mercado › Caravanas, un lápiz ✎ junto al nombre (para quien
+  reside en su origen y está dentro). Intro o ✓ lo guarda; vacío la deja sin nombre; Esc o ✕ lo deja como estaba. Hasta 32 caracteres. El
+  nombre sale también en «Lo que llevas», en la escolta y al mover un carro de una caravana a otra.
+- **La Granja sale del menú de construir**: la ciudad solo tiene la de la fundación, que se sigue mejorando (el motor responde `obra.unico`).
+- **Mercado del campamento: «Pagar con»** (`pagar_con`): el residente elige su almacén personal o el carro que lleva aquí (el de su columna o,
+  dentro y sin columna, el suyo). Con el carro no se vende trigo y lo comprado va al carro. El visitante, como antes, con el carro.
+- **Fondo de refundación**: el lado carro vale también dentro del campamento, con el carro que llevas; ya no hace falta pasarlo antes al almacén.
+- El nombre de la plaza se corta en 32 caracteres, como el motor (antes el campo dejaba 40).
+- Sin cambios: el ascenso de prueba de 10 minutos y los diez campamentos de bandidos por plaza ya se leen del motor.
+
 ## [0.99.0] — 2026-11-02 · Clic en la muralla para abrir Defensa · sin cambios de contrato (`VRhino/BronzeAge@a17f8536`)
 
 - **Un clic en la muralla de la vista 3D abre la ventana Defensa**: un muro o una torre, en su subpestaña Muralla; la puerta, en Puerta.

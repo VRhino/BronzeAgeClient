@@ -14,6 +14,7 @@ import { iconoEdificio } from './iconosEdificio';
 import { iconoEnFila } from './iconosTropa';
 import { cablearEncargo, htmlEncargo } from './encargoCaravana';
 import { mostrar as mostrarAviso } from './avisos';
+import { olvidarEdicion } from './repintado';
 import { ICONO_CARRETA } from './juegoVisual';
 import { iconoRitmo, velocidadDePiezas } from './velocidadColumna';
 
@@ -33,6 +34,27 @@ const ESTADO_ICONO: Record<string, string> = { disponible: '⚓', preparando: '�
 const CARRO: Record<string, string> = { basico: 'Carro básico', reforzado: 'Carro reforzado' };
 const ANIMAL: Record<string, string> = { buey: 'Buey', caballo: 'Caballo', camello: 'Camello' };
 const ANIMAL_ICONO: Record<string, string> = { buey: '🐂', caballo: '🐎', camello: '🐪' };
+
+/** Cómo se llama una caravana: su nombre, si un residente de su origen se lo puso, o «Caravana car-N». */
+export function nombreDeCaravana(c: { id: string; nombre?: string }): string {
+  return c.nombre ?? `Caravana ${c.id}`;
+}
+
+/** Tope del nombre de una caravana: el mismo que el de una plaza (`NOMBRE_ASENTAMIENTO.largoMaximo`; `caravana.nombre_largo`). */
+const LARGO_NOMBRE_CARAVANA = 32;
+
+/** La caravana cuyo nombre se está cambiando: vive entre repintados (el sondeo de 3 s no lo cierra). */
+let caravanaRenombrando: string | null = null;
+
+/** El nombre de la tarjeta: con ✎ si puedes cambiarlo (resides en su origen y estás dentro) y, al pulsarlo, el campo con ✓ y ✕. */
+function nombreEnTarjeta(c: Caravana, renombrable: boolean, e: Escapar): string {
+  if (renombrable && caravanaRenombrando === c.id) {
+    return `<span class="caravana-renombrar"><input class="form-input" type="text" maxlength="${LARGO_NOMBRE_CARAVANA}" data-caravana-nombre="${e(c.id)}" value="${e(c.nombre ?? '')}" placeholder="Sin nombre (${e(c.id)})" aria-label="Nombre de la caravana" />
+      <button class="caravana-ok" type="button" data-caravana-guardar="${e(c.id)}" title="Guardar (Intro)" aria-label="Guardar">✓</button><button type="button" data-caravana-cancelar title="Cancelar (Esc)" aria-label="Cancelar">✕</button></span>`;
+  }
+  const lapiz = renombrable ? `<button class="caravana-lapiz" type="button" data-caravana-renombrar="${e(c.id)}" title="Ponerle nombre" aria-label="Ponerle nombre">✎</button>` : '';
+  return `<strong title="${e(c.id)}">${e(nombreDeCaravana(c))}${lapiz}</strong>`;
+}
 
 function resideAqui(p: ProyeccionJugador, a: Asentamiento): boolean {
   return [...(a.heroesFundadoresIds ?? []), ...(a.casasCompradas ?? [])].includes(p.heroeId);
@@ -230,9 +252,12 @@ function cuerpoAparcada(k: Caravana, a: Asentamiento, p: ProyeccionJugador, e: E
 function tarjeta(c: Caravana, p: ProyeccionJugador, a: Asentamiento, reside: boolean, flota: Caravana[], almacen: Record<string, number>, carrosLleno: boolean, d: DatosCaravana | null, e: Escapar): string {
   const estado = c.estado ?? 'disponible';
   const aparcadaAqui = estado === 'aparcada' && c.origenAsentamientoId !== a.id;
+  // Le pone nombre quien reside en su origen y está dentro, esté la caravana donde esté (`renombrar_caravana`).
+  const dentro = p.heroe.ubicacion.tipo === 'asentamiento' && p.heroe.ubicacion.asentamientoId === a.id;
+  const renombrable = reside && dentro && c.origenAsentamientoId === a.id;
   const destino = aparcadaAqui ? `de ${e(nombrePlaza(p, c.origenAsentamientoId))}` : c.destinoAsentamientoId ? `→ ${e(nombrePlaza(p, c.destinoAsentamientoId))}` : '';
   const etiqueta = aparcadaAqui ? 'aparcada aquí' : (ESTADO[estado] ?? e(estado));
-  const titulo = `<span class="caravana-icono">${ICONO_CARRETA}</span><span class="caravana-titulo"><strong>Caravana ${e(c.id)}</strong>${destino ? `<small>${destino}</small>` : ''}</span><span class="caravana-estado ${e(estado)}">${ESTADO_ICONO[estado] ?? ''} ${etiqueta}</span>`;
+  const titulo = `<span class="caravana-icono">${ICONO_CARRETA}</span><span class="caravana-titulo">${nombreEnTarjeta(c, renombrable, e)}${destino ? `<small>${destino}</small>` : ''}</span><span class="caravana-estado ${e(estado)}">${ESTADO_ICONO[estado] ?? ''} ${etiqueta}</span>`;
   if (aparcadaAqui) return `<div class="caravana-tarjeta ${e(estado)}"><div class="caravana-cab">${titulo}</div>${cuerpoAparcada(c, a, p, e)}</div>`;
 
   const carros = c.carros ?? [];
@@ -281,7 +306,7 @@ function tarjeta(c: Caravana, p: ProyeccionJugador, a: Asentamiento, reside: boo
         ? `<span class="carro-animal falta"><select class="form-input" data-animal-tipo="${e(c.id)}:${i}">${d ? opcionesAnimal() : '<option value="buey">Buey</option><option value="caballo">Caballo</option><option value="camello">Camello</option>'}</select><button class="btn-secondary btn-chico" type="button" data-animal="${e(c.id)}" data-carro="${i}"${atributosApagado(motivoAnimal, e)}>Comprar</button></span>`
         : '<span class="carro-animal falta">sin animal: no tira</span>';
     const mover = parada && reside && otras.length > 0
-      ? `<select class="form-input carro-mover" data-mover-a="${e(c.id)}:${i}" title="Pasar este carro a otra caravana parada"><option value="">⇄ Mover…</option>${otras.map((x) => `<option value="${e(x.id)}">a ${e(x.id)}</option>`).join('')}</select>`
+      ? `<select class="form-input carro-mover" data-mover-a="${e(c.id)}:${i}" title="Pasar este carro a otra caravana parada"><option value="">⇄ Mover…</option>${otras.map((x) => `<option value="${e(x.id)}">a ${e(nombreDeCaravana(x))}</option>`).join('')}</select>`
       : '';
     return `<div class="carro-row${r.animal ? ' tira' : ' sin-animal'}"><span class="carro-slot" title="${e(CARRO[r.tipoCarro] ?? r.tipoCarro)}${def ? ` · capacidad ${def.capacidadBase}` : ''}${r.animal ? ` · ${ANIMAL[r.animal] ?? r.animal}` : ' · sin animal'}"><span aria-hidden="true">${r.animal ? ANIMAL_ICONO[r.animal] ?? '🐾' : '∅'}</span><i>${r.tipoCarro === 'reforzado' ? 'R' : 'B'}</i></span>
       <span class="carro-tipo">${e(r.tipoCarro === 'reforzado' ? 'Reforzado' : r.tipoCarro === 'basico' ? 'Básico' : r.tipoCarro)}</span>${animal}${mover}</div>`;
@@ -437,6 +462,30 @@ export function cablearCaravanas(raiz: HTMLElement, p: ProyeccionJugador, a: Ase
     void lanzar(b, 'prepararCaravana', { caravanaId, heroeId: p.heroeId, destinoAsentamientoId: valor(`[data-viaje-destino="${caravanaId}"]`), carga });
   }));
   raiz.querySelectorAll<HTMLButtonElement>('[data-cancelar-caravana]').forEach((b) => b.addEventListener('click', () => void lanzar(b, 'cancelarCaravana', { caravanaId: b.dataset.cancelarCaravana! })));
+
+  // El nombre: ✎ abre el campo; Intro o ✓ lo guarda (vacío la deja sin nombre), Esc o ✕ lo deja como estaba.
+  raiz.querySelectorAll<HTMLButtonElement>('[data-caravana-renombrar]').forEach((b) => b.addEventListener('click', () => {
+    caravanaRenombrando = b.dataset.caravanaRenombrar!;
+    repintar();
+    const campo = raiz.querySelector<HTMLInputElement>(`[data-caravana-nombre="${CSS.escape(caravanaRenombrando)}"]`);
+    campo?.focus();
+    campo?.select();
+  }));
+  const cerrarNombre = (): void => { caravanaRenombrando = null; olvidarEdicion(raiz); repintar(); };
+  const guardarNombre = async (caravanaId: string, boton?: HTMLButtonElement): Promise<void> => {
+    const campo = raiz.querySelector<HTMLInputElement>(`[data-caravana-nombre="${CSS.escape(caravanaId)}"]`);
+    if (boton) boton.disabled = true;
+    const mensaje = await ejecutar('renombrarCaravana', { caravanaId, nombre: (campo?.value ?? '').trim() });
+    if (boton) boton.disabled = false;
+    if (mensaje) { mostrarAviso(mensaje, true); return; }
+    cerrarNombre();
+  };
+  raiz.querySelectorAll<HTMLButtonElement>('[data-caravana-guardar]').forEach((b) => b.addEventListener('click', () => void guardarNombre(b.dataset.caravanaGuardar!, b)));
+  raiz.querySelector('[data-caravana-cancelar]')?.addEventListener('click', cerrarNombre);
+  raiz.querySelectorAll<HTMLInputElement>('[data-caravana-nombre]').forEach((campo) => campo.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') { ev.preventDefault(); void guardarNombre(campo.dataset.caravanaNombre!); }
+    else if (ev.key === 'Escape') { ev.stopPropagation(); cerrarNombre(); }
+  }));
 
   cablearEscolta(raiz, p, ejecutar);
   cablearEncargo(raiz, p, ejecutar, repintar);
