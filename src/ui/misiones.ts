@@ -15,6 +15,7 @@ import { ayuda } from './ayuda';
 import { cablearPlegables, plegable } from './plegable';
 import type { Ejecutar } from './panelCarro';
 import type { SubpestanaPlaza } from './ganchos';
+import { mostrar as mostrarAviso } from './avisos';
 
 type Escapar = (valor: string) => string;
 export type DuenoMision = 'heroe' | 'plaza' | 'faccion';
@@ -177,6 +178,10 @@ export function actualizarSeguimiento(p: ProyeccionJugador, avisar: (texto: stri
 
 // ---------------------------------------------------------------- tarjetas y listas
 
+/**
+ * Una misión de la lista (la plaza y la Facción), con aire de juego (2026-11-02): sello de su estado (📜 en curso, 🏆 cumplida), sus objetivos en
+ * barras, la recompensa en etiquetas con icono como en el diario, «🎁 Reclamar» que brilla cuando está cumplida y ◆ para seguirla.
+ */
 function tarjeta(p: ProyeccionJugador, d: DuenoMision, m: Mision, e: Escapar): string {
   const t = textoDeMision(m.id);
   const k = claveDe(d, m.id);
@@ -184,18 +189,18 @@ function tarjeta(p: ProyeccionJugador, d: DuenoMision, m: Mision, e: Escapar): s
   const seguida = s?.seguidas.includes(k) ?? false;
   const nueva = s?.nuevas.includes(k) ?? false;
   const otro = quienReclama(p, d);
-  const reclamar = m.estado !== 'cumplida' ? '' : otro
-    ? `<small class="asent-lado-nota">${e(otro)}</small>`
-    : `<button class="btn-primary" type="button" data-mision-reclamar="${e(m.id)}" data-dueno="${d}">Reclamar ${e(recompensa(d, m))}</button>`;
+  const lleno = !seguida && (s?.seguidas.length ?? 0) >= MAX_SEGUIDAS;
   const seguir = m.estado === 'reclamada' ? ''
-    : `<button class="btn-secondary" type="button" data-mision-seguir="${e(k)}"${!seguida && (s?.seguidas.length ?? 0) >= MAX_SEGUIDAS ? ` disabled title="Ya sigues ${MAX_SEGUIDAS}: deja de seguir alguna"` : ''}>${seguida ? 'Dejar de seguir' : 'Seguir'}</button>`;
+    : `<button class="mision-seguir${seguida ? ' activa' : ''}" type="button" data-mision-seguir="${e(k)}"${lleno ? ` disabled title="Ya sigues ${MAX_SEGUIDAS}: deja de seguir alguna"` : ` title="${seguida ? 'Dejar de seguirla' : 'Seguirla en pantalla'}"`} aria-pressed="${seguida}">${seguida ? '◆ Siguiendo' : '◇ Seguir'}</button>`;
+  const reclamar = m.estado !== 'cumplida' ? '' : otro
+    ? `<small class="mision-quien">${e(otro)}</small>`
+    : `<button class="mision-reclamar" type="button" data-mision-reclamar="${e(m.id)}" data-dueno="${d}">🎁 Reclamar</button>`;
   return `<div class="mision mision-${m.estado}${nueva ? ' mision-sin-leer' : ''}" data-mision="${e(k)}">
-    <div class="mision-cab"><strong>${e(t.titulo)}</strong>${nueva ? '<span class="mision-nueva">nueva</span>' : ''}<span class="mision-premio">${m.estado === 'cumplida' ? '¡Cumplida! ' : ''}${e(recompensa(d, m))}</span></div>
+    <div class="mision-cab"><span class="mision-sello" aria-hidden="true">${m.estado === 'cumplida' ? '🏆' : '📜'}</span><strong>${e(t.titulo)}</strong>${nueva ? '<span class="mision-nueva">nueva</span>' : ''}${seguir}</div>
     ${t.texto ? `<p class="mision-texto">${e(t.texto)}</p>` : ''}
     ${t.explicacion ? `<details class="mision-explicacion"><summary>Más</summary><p>${e(t.explicacion)}</p></details>` : ''}
     ${m.estado === 'activa' ? barras(m, e) : ''}
-    ${reclamar || seguir ? `<div class="mision-acciones">${reclamar}${seguir}</div>` : ''}
-    <p class="faction-error" data-mision-error="${e(m.id)}" role="alert"></p>
+    <div class="mision-pie"><div class="diario-premios">${htmlRecompensas(d, m, e)}</div>${reclamar}</div>
   </div>`;
 }
 
@@ -205,9 +210,11 @@ export function htmlListaMisiones(p: ProyeccionJugador, d: DuenoMision, e: Escap
   if (!duenoId) return `<p class="mapa-lista-vacia">${d === 'plaza' ? 'Las misiones de una plaza solo se ven estando dentro de ella.' : 'Sin Facción no hay misiones de Facción.'}</p>`;
   const de = (estado: Mision['estado']): Mision[] => misiones.filter((m) => m.estado === estado);
   const hechas = de('reclamada');
-  const vivas = [...de('cumplida'), ...de('activa')];
-  return `${vivas.length ? vivas.map((m) => tarjeta(p, d, m, e)).join('') : '<p class="mapa-lista-vacia">Ninguna en marcha ahora.</p>'}
-    ${hechas.length ? `<details class="misiones-hechas"><summary>Hechas: ${hechas.length}</summary>${hechas.map((m) => `<div class="mision mision-reclamada"><div class="mision-cab"><strong>${e(textoDeMision(m.id).titulo)}</strong><span class="mision-premio">${e(recompensa(d, m))}</span></div></div>`).join('')}</details>` : ''}`;
+  const cumplidas = de('cumplida');
+  const vivas = [...cumplidas, ...de('activa')];
+  const cab = `<div class="obra-titulo"><span class="faction-kicker">${d === 'plaza' ? 'Misiones de la plaza' : d === 'faccion' ? 'Misiones de la Facción' : 'Tus misiones'}</span><span class="obra-chip" title="En marcha">📜 ${vivas.length - cumplidas.length}</span>${cumplidas.length ? `<span class="obra-chip activa" title="Cumplidas, por reclamar">🏆 ${cumplidas.length}</span>` : ''}${ayuda('plaza:misiones', `Se activan solas: cuando se cumple una, aparecen las que venían detrás. Sigue hasta ${MAX_SEGUIDAS} para verlas en pantalla. La recompensa no llega sola: pulsa Reclamar cuando esté cumplida.`)}</div>`;
+  return `${cab}${vivas.length ? `<div class="misiones-cartas">${vivas.map((m) => tarjeta(p, d, m, e)).join('')}</div>` : '<p class="mapa-lista-vacia">Ninguna en marcha ahora.</p>'}
+    ${hechas.length ? `<details class="misiones-hechas"><summary>✔ Hechas: ${hechas.length}</summary><div class="misiones-hechas-lista">${hechas.map((m) => `<span class="mision-hecha" title="${e(recompensa(d, m))}">✔ ${e(textoDeMision(m.id).titulo)}</span>`).join('')}</div></details>` : ''}`;
 }
 
 // ---------------------------------------------------------------- la ventana (como el diario de misiones de WoW)
@@ -274,8 +281,7 @@ function htmlDetalle(p: ProyeccionJugador, x: { d: DuenoMision; m: Mision } | un
     ${m.estado === 'activa' && m.condiciones.length ? `<h3 class="diario-seccion">Objetivos</h3>${barras(m, e)}` : ''}
     ${t.explicacion ? `<h3 class="diario-seccion">Detalles</h3><p class="diario-texto">${e(t.explicacion)}</p>` : ''}
     <h3 class="diario-seccion">Recompensas</h3><div class="diario-premios">${htmlRecompensas(d, m, e)}</div>
-    ${m.estado === 'cumplida' && otro ? `<p class="diario-nota">${e(otro)}</p>` : ''}
-    <p class="faction-error" data-mision-error="${e(m.id)}" role="alert"></p>`;
+    ${m.estado === 'cumplida' && otro ? `<p class="diario-nota">${e(otro)}</p>` : ''}`;
   const seguir = m.estado === 'reclamada' ? ''
     : `<button class="btn-secondary" type="button" data-mision-seguir="${e(k)}"${!seguida && (s?.seguidas.length ?? 0) >= MAX_SEGUIDAS ? ` disabled title="Ya sigues ${MAX_SEGUIDAS}: deja de seguir alguna"` : ''}>${seguida ? 'Dejar de seguir' : 'Seguir'}</button>`;
   const reclamar = m.estado === 'cumplida' && !otro ? `<button class="btn-primary" type="button" data-mision-reclamar="${e(m.id)}" data-dueno="${d}">Reclamar</button>` : '';
@@ -345,8 +351,7 @@ export function cablearMisiones(raiz: HTMLElement, p: ProyeccionJugador, ejecuta
     b.disabled = true;
     const mensaje = await ejecutar('reclamarRecompensa', { duenoId, misionId: b.dataset.misionReclamar });
     b.disabled = false;
-    const campo = raiz.querySelector<HTMLElement>(`[data-mision-error="${b.dataset.misionReclamar}"]`);
-    if (campo) campo.textContent = mensaje ?? '';
+    if (mensaje) mostrarAviso(mensaje, true);
   }));
 }
 

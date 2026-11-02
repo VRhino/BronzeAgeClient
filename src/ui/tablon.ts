@@ -10,6 +10,8 @@ import { nombreDeHeroe } from './nombres';
 import { cablearPlegables, plegable } from './plegable';
 import { premiosDeMision, textoDePremios, type Premio } from './recompensasMision';
 import type { SubpestanaPlaza } from './ganchos';
+import { mostrar as mostrarAviso } from './avisos';
+import { barraAvance } from './juegoVisual';
 
 type Escapar = (s: string) => string;
 type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
@@ -92,13 +94,13 @@ function tarjeta(p: ProyeccionJugador, d: DuenoTablon, m: MisionRecurrente, e: E
   let accion = '';
   let nota = '';
   if (estado === 'cumplida') {
-    if (x.tipo === 'individual' || reclamasGrupal(p, d)) accion = `<button class="btn-primary" type="button" data-tablon-reclamar="${e(x.id)}" title="${e(recompensa(x, d))}">Reclamar</button>`;
+    if (x.tipo === 'individual' || reclamasGrupal(p, d)) accion = `<button class="mision-reclamar" type="button" data-tablon-reclamar="${e(x.id)}" title="${e(recompensa(x, d))}">🎁 Reclamar</button>`;
     else nota = d.tipo === 'faccion' ? 'La reclama el Rey.' : 'La reclama el Gobernador (o un residente si no hay).';
   } else if (x.tipo === 'individual' && !mia && !vencida) {
     const tope = x.limiteSemanal > 0 && m.aceptadasSemana >= x.limiteSemanal;
     const sinCargo = x.cargo !== undefined && !misCargos(p, d).has(x.cargo);
     const motivo = tope ? 'Ya se aceptó todas las veces que permite esta semana.' : sinCargo ? `Solo la acepta el ${CARGO_NOMBRE[x.cargo!] ?? x.cargo}.` : '';
-    accion = `<button class="btn-secondary" type="button" data-tablon-aceptar="${e(x.id)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>Aceptar</button>`;
+    accion = `<button class="tablon-aceptar" type="button" data-tablon-aceptar="${e(x.id)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>✋ Aceptar</button>`;
     if (motivo) nota = motivo;
   }
   const avance = x.tipo === 'grupal' ? m.condiciones : mia?.condiciones ?? [];
@@ -107,15 +109,14 @@ function tarjeta(p: ProyeccionJugador, d: DuenoTablon, m: MisionRecurrente, e: E
     x.explicacion ? `<p>${e(x.explicacion)}</p>` : '',
     x.tipo === 'grupal' && aportes.length ? `<p>Aportan: ${aportes.map(([id, n]) => `${e(nombreDeHeroe(p, id))} (${n})`).join(', ')}</p>` : '',
   ].join('');
-  return `<div class="mision tablon-tarjeta${estado === 'cumplida' ? ' mision-cumplida' : estado === 'reclamada' || estado === 'caducada' ? ' mision-reclamada' : ''}">
-    <div class="tablon-tarjeta-cab"><strong>${e(x.titulo || x.id)}</strong>${estado ? `<span class="tablon-estado tablon-estado-${e(estado)}">${e(ESTADO_TEXTO[estado])}</span>` : ''}</div>
+  return `<div class="mision tablon-tarjeta${estado === 'cumplida' ? ' mision-cumplida' : estado === 'reclamada' || estado === 'caducada' ? ' mision-reclamada' : estado === 'en_curso' ? ' mision-activa' : ''}">
+    <div class="tablon-tarjeta-cab"><span class="mision-sello" aria-hidden="true" title="${x.tipo === 'grupal' ? 'Grupal' : 'Individual'}">${estado === 'cumplida' ? '🏆' : x.tipo === 'grupal' ? '👥' : '👤'}</span><strong>${e(x.titulo || x.id)}</strong>${estado ? `<span class="tablon-estado tablon-estado-${e(estado)}">${e(ESTADO_TEXTO[estado])}</span>` : ''}</div>
     <p class="mision-texto">${e(x.texto)}</p>
     <div class="tablon-etiquetas">${etiquetas.map((t) => `<span class="tablon-chip">${e(t)}</span>`).join('')}</div>
     ${estado === 'en_curso' ? barras(avance, e) : ''}
     ${mas ? `<details class="mision-explicacion"><summary>Más</summary>${mas}</details>` : ''}
     <div class="tablon-pie"><div class="tablon-premio">${etiquetasDeRecompensa(x, d, e)}</div>${accion}</div>
     ${nota ? `<small class="tablon-nota">${e(nota)}</small>` : ''}
-    <p class="faction-error" data-tablon-error="${e(x.id)}" role="alert"></p>
   </div>`;
 }
 
@@ -124,8 +125,11 @@ function columna(p: ProyeccionJugador, d: DuenoTablon, duracion: 'diaria' | 'sem
   const misiones = t.misiones.filter((m) => m.definicion.duracion === duracion)
     .sort((a, b) => Number(a.hasta <= p.instante) - Number(b.hasta <= p.instante));
   const renueva = duracion === 'diaria' ? t.renovacionDiaria : t.renovacionSemanal;
+  // El periodo es de un día o una semana de mundo: la barra es lo que ya ha pasado de él.
+  const periodo = (duracion === 'diaria' ? 1 : 7) * 86_400_000;
+  const porReclamar = misiones.filter((m) => (m.definicion.tipo === 'grupal' ? m.estado : m.aceptaciones.find((a) => a.heroeId === p.heroeId)?.estado) === 'cumplida').length;
   return `<div class="tablon-columna">
-    <div class="tablon-cab"><strong>${duracion === 'diaria' ? 'Diarias' : 'Semanales'}</strong><small>se renuevan en ${e(textoEnTiempoReal(renueva - p.instante))}</small></div>
+    <div class="tablon-cab"><span class="tablon-cab-icono" aria-hidden="true">${duracion === 'diaria' ? '☀️' : '📅'}</span><strong>${duracion === 'diaria' ? 'Diarias' : 'Semanales'}</strong>${porReclamar ? `<span class="obra-chip activa" title="Cumplidas, por reclamar">🏆 ${porReclamar}</span>` : ''}<small title="Se renuevan">⏳ ${e(textoEnTiempoReal(renueva - p.instante))}</small>${barraAvance(Math.max(0, Math.min(1, 1 - (renueva - p.instante) / periodo)))}</div>
     ${misiones.length ? misiones.map((m) => tarjeta(p, d, m, e)).join('') : '<p class="mapa-lista-vacia">Ninguna ahora.</p>'}
   </div>`;
 }
@@ -139,17 +143,17 @@ function elegir(p: ProyeccionJugador, d: DuenoTablon, e: Escapar): string {
   const lista = (duracion: 'diaria' | 'semanal') => {
     const marcadas = b[duracion];
     const del = t.catalogo.filter((x) => x.duracion === duracion);
-    return `<fieldset class="tablon-elegir"><legend>${duracion === 'diaria' ? 'Diarias' : 'Semanales'} (${marcadas.size}/${MAX_ELEGIDAS})</legend>
-      ${del.map((x) => {
+    return `<fieldset class="tablon-elegir"><legend>${duracion === 'diaria' ? '☀️ Diarias' : '📅 Semanales'} <span class="tablon-cuenta${marcadas.size >= MAX_ELEGIDAS ? ' llena' : ''}">${marcadas.size}/${MAX_ELEGIDAS}</span></legend>
+      <div class="tablon-opciones">${del.map((x) => {
         const on = marcadas.has(x.id);
-        return `<label title="${e(x.texto)}"><input type="checkbox" data-tablon-elegir="${duracion}" value="${e(x.id)}"${on ? ' checked' : ''}${!on && marcadas.size >= MAX_ELEGIDAS ? ' disabled' : ''}> ${e(x.titulo || x.id)} <small>· ${x.tipo}${x.cargo ? ` · ${e(CARGO_NOMBRE[x.cargo] ?? x.cargo)}` : ''} · ${e(recompensa(x, d))}</small></label>`;
-      }).join('') || '<p class="mapa-lista-vacia">El catálogo no tiene ninguna.</p>'}</fieldset>`;
+        return `<label class="tablon-opcion${on ? ' elegida' : ''}" title="${e(x.texto)}"><input type="checkbox" data-tablon-elegir="${duracion}" value="${e(x.id)}"${on ? ' checked' : ''}${!on && marcadas.size >= MAX_ELEGIDAS ? ' disabled' : ''}>
+          <span class="tablon-opcion-marca" aria-hidden="true">${on ? '✓' : ''}</span><span class="tablon-opcion-cuerpo"><b>${x.tipo === 'grupal' ? '👥' : '👤'} ${e(x.titulo || x.id)}</b><small>${x.cargo ? `${e(CARGO_NOMBRE[x.cargo] ?? x.cargo)} · ` : ''}${e(recompensa(x, d))}</small></span></label>`;
+      }).join('') || '<p class="mapa-lista-vacia">El catálogo no tiene ninguna.</p>'}</div></fieldset>`;
   };
   const cuerpo = `<p class="asent-lado-nota">Lo que elijas sale desde la próxima renovación semanal (en ${e(textoEnTiempoReal(t.renovacionSemanal - p.instante))}); hasta ${MAX_ELEGIDAS} de cada. ${t.conEleccion ? '' : 'Sin elección, salen las primeras del catálogo.'}</p>
     ${lista('diaria')}${lista('semanal')}
-    <div class="mision-acciones"><button class="btn-primary" type="button" data-tablon-guardar>Guardar la elección</button></div>
-    <p class="faction-error" data-tablon-error="elegir" role="alert"></p>`;
-  return plegable(`tablon:elegir:${d.id}`, '<span class="plegable-titulo">Elegir las de la semana que viene</span>', cuerpo);
+    <div class="mision-acciones tablon-guardar-pie"><button class="tablon-guardar" type="button" data-tablon-guardar>📌 Guardar la elección</button></div>`;
+  return plegable(`tablon:elegir:${d.id}`, '<span class="plegable-titulo">📌 Elegir las de la semana que viene</span>', cuerpo);
 }
 
 /** El tablón entero: las dos columnas y, para quien elige, la elección de la semana que viene. */
@@ -168,10 +172,7 @@ export function cablearTablon(raiz: HTMLElement, ejecutar: Ejecutar, repintar: (
   cablearPlegables(raiz);
   raiz.querySelectorAll<HTMLElement>('[data-tablon-dueno]').forEach((t) => {
     const duenoId = t.dataset.tablonDueno!;
-    const error = (id: string, texto: string | null) => {
-      const el = t.querySelector<HTMLElement>(`[data-tablon-error="${id}"]`);
-      if (el) el.textContent = texto ?? '';
-    };
+    const error = (_id: string, texto: string | null): void => { if (texto) mostrarAviso(texto, true); };
     const accion = (selector: string, orden: string) => t.querySelectorAll<HTMLButtonElement>(`[${selector}]`).forEach((b) => b.addEventListener('click', async () => {
       const misionId = b.getAttribute(selector)!;
       b.disabled = true;

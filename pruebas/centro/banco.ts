@@ -1,4 +1,4 @@
-// Banco del panel derecho de la plaza (`/pruebas/centro/`): la subida de nivel, el Resumen (con la Residencia al pie), los Cargos, Reclutamiento, Taberna, Mercado (Órdenes, Caravanas y Trueques), Muralla, Puerta, Tesorería y Fundación, con una plaza de mentira y
+// Banco del panel derecho de la plaza (`/pruebas/centro/`): la subida de nivel, el Resumen (con la Residencia al pie), los Cargos, Reclutamiento, Taberna, Mercado (Órdenes, Caravanas y Trueques), Muralla, Puerta, Tesorería, Fundación, Misiones, Tablón y Territorio, con una plaza de mentira y
 // sin servidor. Los datos de juego son los bloques de Docs/Mechanics del motor (`../plaza/datos.json`, como `GET /v1/datos`). Las órdenes no
 // salen: se anotan en `window.__banco.enviadas`.
 import datos from '../plaza/datos.json';
@@ -18,7 +18,9 @@ import { tarifasDeIntel } from '../../src/apiCliente';
 import { cablearCaravanas, cablearOrdenes, htmlCaravanas, htmlOrdenes } from '../../src/ui/panelMercado';
 import { SUBPESTANA_TRUEQUES } from '../../src/ui/panelTrueques';
 import { SUBPESTANAS_CENTRO_EXTRA } from '../../src/ui/ganchos';
-import { escena, type Escena } from './datos-escena';
+import { MAPA, escena, type Escena } from './datos-escena';
+import { actualizarSeguimiento } from '../../src/ui/misiones';
+import type { MapaGenerado } from '../../src/terreno/tipos';
 
 const e = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const banco = { enviadas: [] as [string, object][], listo: false };
@@ -30,6 +32,8 @@ const cuerpo = document.querySelector<HTMLElement>('.asent-edif-cuerpo')!;
 function ver(): void {
   const { p, a } = escena(esc);
   estadoCliente.proyeccionUltima = p;
+  estadoCliente.mapaCache = MAPA as unknown as { id: string; mapa: MapaGenerado };
+  actualizarSeguimiento(p, () => {}); // como tras cada proyección: sin él no se puede seguir ninguna
   const reside = [...(a.heroesFundadoresIds ?? []), ...(a.casasCompradas ?? [])].includes(p.heroeId);
   const cargo = a.cargos?.gobernadorId === p.heroeId ? 'gobernador' as const : null;
   const ctx = { proyeccion: p, asentamiento: a, cuerpo, ejecutar: async (t: string, x: object) => { banco.enviadas.push([t, x]); return null; }, refrescar: ver, cargo, resideAqui: reside, escapar: e };
@@ -51,7 +55,7 @@ function ver(): void {
   }
   const extra = SUBPESTANAS_CENTRO_EXTRA.find((x) => x.id === sub);
   if (extra) {
-    const tabs = `<div class="asent-tabs asent-subtabs">${['Resumen', 'Edificios', 'Cargos', 'Muralla', 'Puerta', 'Tesorería', 'Fundación'].map((n) => `<button class="asent-tab${n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') === sub ? ' activo' : ''}" type="button">${n}</button>`).join('')}</div>`;
+    const tabs = `<div class="asent-tabs asent-subtabs">${['Resumen', 'Edificios', 'Cargos'].map((n) => `<button class="asent-tab" type="button">${n}</button>`).join('')}<button class="asent-tab activo" type="button">${extra.etiqueta}</button></div>`;
     cuerpo.innerHTML = `${tabs}<div class="asent-lado-cuerpo">${extra.html(ctx)}</div>`;
     cablearPlegables(cuerpo);
     extra.cablear?.(ctx);

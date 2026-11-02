@@ -263,6 +263,15 @@ La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, es
 > vigor con la barra de lo que le queda y las políticas como cartas con sus efectos en chips verdes o rojos (las de otros pools del Gobernador,
 > plegadas). **Fundación**: la carreta con su coste en fichas, los requisitos como pilotos con su porqué y las caravanas en tarjetas con la barra de
 > lo que les queda antes de caducar. Todos los rechazos salen flotando.
+>
+> **Misiones, Tablón y Territorio** (0.90.0, 2026-11-02, `ui/misiones.ts`, `ui/tablon.ts`, `ui/pueblos.ts`; banco `pruebas/centro/`). **Misiones**:
+> cartas con sello (📜 en curso, 🏆 cumplida), objetivos en barras doradas, la recompensa en fichas como en el diario, «◇ Seguir» en la cabecera y
+> «🎁 Reclamar» que late en la cumplida; las hechas, en fichas plegadas. **Tablón**: cada columna con su cabecera (lo que falta para renovarse y la
+> barra del periodo), las misiones en las mismas cartas (👥 grupal, 👤 individual) y la elección de la semana que viene en casillas. **Territorio**:
+> la zona en fichas con una casilla por sitio (verde, libre), el cupo en casillas, cada pueblo en una tarjeta (emblema, escudo de nivel de la
+> aldea, almacén y rebaño en barras, carro de acarreo con su escolta, «⬆ Nivel N», «🛒 Reponer carro», «✕ Destruir»), cada obra con lo entregado
+> en fichas con barra, marcar en dos cartas (aldea y extractor, con los nodos libres como casillas) y las avanzadas en tarjetas. Todos los
+> rechazos salen flotando.
 
 1. **Resumen** ✅ — nivel/nivel operativo, población (pesants/artesanos/nobleza + total), medidores de
    mantenimiento y nutrición, aviso de ocupación, toggle auto-construcción (`alternarAutoConstruccion`).

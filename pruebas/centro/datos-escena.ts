@@ -1,5 +1,5 @@
 // Las escenas del banco de Centro urbano: una plaza de mentira en tres situaciones (Gobernador y Rey que reside, de visita sin cargo, y con la
-// subida de nivel en obra y bajo ocupación).
+// subida de nivel en obra y bajo ocupación). Lleva también las misiones y el tablón de la plaza, y su territorio (zona, pueblos, obras y avanzadas).
 import type { ProyeccionJugador } from '../../src/apiCliente';
 import type { Asentamiento, Edificio } from '../../src/tiposDominio';
 
@@ -13,6 +13,22 @@ const TEC = ['leva_comunal', 'escudos_ligeros', 'armamento_palacial', 'hostigami
 const esc = (id: string, tropaId: string, cantidad: number, costeLiderazgo = 14, contenedor: object = { tipo: 'campamento' }) => ({ id, nombre: tropaId, heroeId: 'heroe-1', tropaId, cantidad, nivel: 1, moral: 80, contenedor, enGuarnicion: false, costeLiderazgo });
 
 export type Escena = 'gobernador' | 'visita' | 'obra';
+
+const mision = (id: string, estado: string, condiciones: [string, number, number][], x: object = {}) =>
+  ({ id, estado, condiciones: condiciones.map(([contador, avance, umbral]) => ({ contador, avance, umbral })), recompensaExperiencia: 0, participacion: 30, recompensas: [], ...x });
+const definicion = (id: string, duracion: 'diaria' | 'semanal', tipo: 'individual' | 'grupal', titulo: string, texto: string, condiciones: [string, number][], x: object = {}) =>
+  ({ id, duracion, tipo, limiteSemanal: tipo === 'individual' ? 5 : 0, condiciones: condiciones.map(([contador, umbral]) => ({ contador, avance: 0, umbral })), experiencia: 0, participacion: 10, recompensas: [], titulo, texto, explicacion: '', ...x });
+const CATALOGO = [
+  definicion('d1', 'diaria', 'grupal', 'Leña para el invierno', 'Entre todos, llevad madera al almacén de la plaza.', [['madera', 500]], { recompensas: [{ tipo: 'recurso', clave: 'trigo', cantidad: 100 }] }),
+  definicion('d2', 'diaria', 'individual', 'Patrulla de caminos', 'Destruye un campamento de bandidos.', [['bandidos', 1]], { recompensas: [{ tipo: 'oro', cantidad: 20 }] }),
+  definicion('d3', 'diaria', 'individual', 'Mercado vivo', 'Cumple un trueque con otra plaza.', [['trueques', 1]], { cargo: 'maestroCaravanas', participacion: 15 }),
+  definicion('d4', 'diaria', 'individual', 'Manos a la obra', 'Entrega materiales a una obra de pueblo.', [['entregas', 2]]),
+  definicion('s1', 'semanal', 'grupal', 'Gran cosecha', 'Entre todos, llenad el granero.', [['trigo', 3000]], { participacion: 40, recompensas: [{ tipo: 'tropa', clave: 'lanceros_mimbre', cantidad: 10 }] }),
+  definicion('s2', 'semanal', 'individual', 'Escolta de caravanas', 'Llega a destino con tu columna cinco veces.', [['llegadas', 5]], { experiencia: 50, participacion: 20 }),
+  definicion('s3', 'semanal', 'individual', 'Fortificar', 'Termina un recinto de la muralla.', [['recintos', 1]], { cargo: 'maestroObras', participacion: 30 }),
+];
+const def = (id: string) => CATALOGO.find((x) => x.id === id)!;
+const cond = (id: string, avance: number) => def(id).condiciones.map((c) => ({ ...c, avance }));
 
 /** Un anillo rectangular de muralla (celda a celda, en el orden en que se levanta), con dos puertas y una torre cada cinco celdas. */
 function anillo(id: string, r: number, nivel: number, avance: number | 'todo', x: object = {}) {
@@ -30,7 +46,7 @@ function anillo(id: string, r: number, nivel: number, avance: number | 'todo', x
 export function escena(cual: Escena): { p: ProyeccionJugador; a: Asentamiento } {
   const edificios: Edificio[] = [
     ed('centroUrbano', { nivelInterno: 2 }), ...Array.from({ length: 24 }, () => ed('vivienda')), ed('almacen'), ed('granero'),
-    ed('granja', { nivelInterno: 2 }), ed('granja'), ed('lenera'), ed('curtiduria'), ed('fundicion'), ed('barracon', { nivelInterno: 2 }), ed('galeriaDeTiro', { nivelInterno: 2 }), ed('taberna'),
+    ed('granja', { nivelInterno: 2 }), ed('granja'), ed('lenera', { fuenteId: 'pc-1' }), ed('curtiduria'), ed('fundicion'), ed('barracon', { nivelInterno: 2 }), ed('galeriaDeTiro', { nivelInterno: 2 }), ed('taberna'),
     ed('armeria', { estado: 'en_construccion', completaEn: AHORA + 200 * MIN }), ed('palacio'), ed('mercado', { nivelInterno: 2 }),
   ];
   const a = {
@@ -54,6 +70,18 @@ export function escena(cual: Escena): { p: ProyeccionJugador; a: Asentamiento } 
     participacion: { 'heroe-1': 140, 'heroe-2': 85, 'heroe-3': 210, 'heroe-4': 12, 'heroe-5': 30 },
     capitalDeFaccionId: cual === 'gobernador' ? undefined : 'f-1',
     autoConstruccionPausada: cual === 'obra',
+    zonaReal: [{ x: -13, y: -12 }, { x: 13, y: -13 }, { x: 14, y: 12 }, { x: -12, y: 13 }],
+    tablon: {
+      misiones: [
+        { definicion: def('d1'), desde: AHORA - 600 * MIN, hasta: AHORA + 840 * MIN, aceptaciones: [], aceptadasSemana: 0, estado: 'en_curso', condiciones: cond('d1', 340), aportes: { 'heroe-1': 200, 'heroe-2': 140 } },
+        { definicion: def('d2'), desde: AHORA - 600 * MIN, hasta: AHORA + 840 * MIN, aceptaciones: [{ heroeId: 'heroe-1', estado: 'cumplida', condiciones: cond('d2', 1) }], aceptadasSemana: 3, condiciones: [], aportes: {} },
+        { definicion: def('d3'), desde: AHORA - 600 * MIN, hasta: AHORA + 840 * MIN, aceptaciones: [], aceptadasSemana: 0, condiciones: [], aportes: {} },
+        { definicion: def('s1'), desde: AHORA - 4 * 1440 * MIN, hasta: AHORA + 3 * 1440 * MIN, aceptaciones: [], aceptadasSemana: 0, estado: 'en_curso', condiciones: cond('s1', 1240), aportes: { 'heroe-1': 800, 'heroe-3': 440 } },
+        { definicion: def('s2'), desde: AHORA - 4 * 1440 * MIN, hasta: AHORA + 3 * 1440 * MIN, aceptaciones: [{ heroeId: 'heroe-1', estado: 'en_curso', condiciones: cond('s2', 2) }], aceptadasSemana: 2, condiciones: [], aportes: {} },
+      ],
+      diariasIds: ['d1', 'd2', 'd3'], semanalesIds: ['s1', 's2'], conEleccion: true, elegidasDiariasIds: ['d1', 'd2', 'd4'], elegidasSemanalesIds: ['s1', 's3'],
+      renovacionDiaria: AHORA + 840 * MIN, renovacionSemanal: AHORA + 3 * 1440 * MIN, catalogo: CATALOGO,
+    },
     ...(cual === 'obra' ? { ascenso: { nivelObjetivo: 3, iniciadoEn: AHORA - 3000 * MIN, completaEn: AHORA + 7080 * MIN }, ocupacionHasta: AHORA + 95 * MIN } : {}),
   } as unknown as Asentamiento;
   const yo = cual === 'visita' ? 'heroe-6' : 'heroe-1';
@@ -61,7 +89,26 @@ export function escena(cual: Escena): { p: ProyeccionJugador; a: Asentamiento } 
     instante: AHORA, heroeId: yo, faccionId: 'f-1', asentamientos: [a],
     facciones: [{ id: 'f-1', nombre: 'Casa del Toro', nivel: 2, reyId: 'heroe-1', ciudadanosIds: ['heroe-1', 'heroe-2', 'heroe-3', 'heroe-4', 'heroe-5', 'heroe-6'], miembros: [] }, { id: 'f-2', nombre: 'Reino de Hatti', nivel: 3 }, { id: 'f-3', nombre: 'Liga de Ugarit', nivel: 2 }],
     nombresDeCompaneros: { 'heroe-30': 'Atreo', 'heroe-31': 'Tiestes', 'heroe-1': 'Minos', 'heroe-2': 'Ariadna', 'heroe-3': 'Teseo', 'heroe-4': 'Dédalo', 'heroe-5': 'Ícaro', 'heroe-6': 'Fedra' },
-    pueblos: [{ id: 'pu-1', tipo: 'aldeaAgricola', propio: true, madreId: 'as-1', posicion: { x: 3, y: 3 } }],
+    pueblos: [
+      { id: 'pueblo-1', tipo: 'aldeaAgricola', propio: true, madreId: 'as-1', posicion: { x: 3, y: 3 }, almacen: { trigo: 180, livestock: 60 }, capacidad: 500, carroId: 'k-9', nivelAldea: 1, fertilidad: 0.62, rebano: { especie: 'vacuno', cabezas: 34 } },
+      { id: 'pueblo-2', tipo: 'cantera', nodoId: 'n-1', propio: true, madreId: 'as-1', posicion: { x: 4, y: -5 }, almacen: { piedra: 470 }, capacidad: 500, ...(cual === 'obra' ? { batallaId: 'b-1' } : {}) },
+    ],
+    obrasDeMapa: [
+      ...(cual === 'obra' ? [] : [{ id: 'obra-3', madreId: 'as-1', propia: true, tipo: 'pueblo', nodoId: 'n-2', posicion: { x: -7, y: 3 }, requerido: { madera: 230, piedra: 80, oro: 10 }, entregado: { madera: 120, piedra: 80 } }]),
+      ...(cual === 'obra' ? [{ id: 'obra-4', madreId: 'as-1', propia: true, tipo: 'mejoraAldea', destinoId: 'pueblo-1', posicion: { x: 3, y: 3 }, requerido: { madera: 300, piedra: 100 }, entregado: { madera: 300, piedra: 100 }, terminaEn: AHORA + 190 * MIN }] : []),
+      { id: 'obra-5', madreId: 'as-1', propia: true, tipo: 'avanzada', posicion: { x: 9, y: -8 }, requerido: { madera: 200, piedra: 100 }, entregado: { madera: 80 } },
+    ],
+    avanzadas: [{ id: 'av-1', madreId: 'as-1', etapa: 1, posicion: { x: -8, y: -6 }, enRuinas: false, propia: true }],
+    misiones: {
+      heroe: [], faccion: [], plazaId: 'as-1',
+      plaza: [
+        mision('A2', 'cumplida', [['mercado', 1, 1]], { recompensas: [{ tipo: 'recurso', clave: 'madera', cantidad: 200 }, { tipo: 'oro', cantidad: 50 }] }),
+        mision('A6', 'activa', [['artesanos', 118, 150]], { participacion: 40 }),
+        mision('A8', 'activa', [['avanzadas', 0, 1]], { participacion: 60, recompensas: [{ tipo: 'tropa', clave: 'arqueros', cantidad: 12 }] }),
+        mision('A9', 'activa', [['nivel', 2, 3]], { participacion: 100, recompensas: [{ tipo: 'recurso', clave: 'piedra', cantidad: 400 }] }),
+        mision('A1', 'reclamada', [['aldeas', 1, 1]]), mision('A3', 'reclamada', [['barracon', 1, 1]]), mision('A4', 'reclamada', [['nivel', 2, 2]]),
+      ],
+    },
     tecnologia: { propias: { adoptadas: TEC } }, tecnologiasAdoptadas: TEC, heroesVisibles: [],
     heroe: { id: yo, displayName: yo === 'heroe-1' ? 'Minos' : 'Fedra', ubicacion: { tipo: 'asentamiento', asentamientoId: 'as-1' }, escuadrones: [esc('s1', 'milicia_lanceros', 18), esc('s2', 'honderos', 20), esc('s3', 'arqueros', 6), esc('s4', 'lanceros_mimbre', 30, 22, { tipo: 'escolta', caravanaId: 'k-1' })] },
     ejercitos: [], campamentosMercenarios: [], asentamientosConocidos: [{ asentamientoId: 'as-5', nombre: 'Knossos', faccionId: 'f-1', nivel: 2 }],
@@ -80,6 +127,7 @@ export function escena(cual: Escena): { p: ProyeccionJugador; a: Asentamiento } 
       { id: 'k-2', tipo: 'comercial', origenAsentamientoId: 'as-1', destinoAsentamientoId: 'as-9', posicionActual: { x: 40, y: 30 }, estado: 'en_transito', carros: [{ tipoCarro: 'basico', animal: 'caballo' }], contenido: { madera: 300 }, escoltaIds: [], escoltaLiderazgo: { usado: 0, cupo: 200 } },
       { id: 'kf-1', tipo: 'construccion', origenAsentamientoId: 'as-1', faccionId: 'f-1', titularId: 'heroe-1', posicionActual: { x: 0, y: 0 }, estado: 'disponible', caducaEn: AHORA + 30 * 60 * MIN },
       { id: 'kf-2', tipo: 'construccion', origenAsentamientoId: 'as-1', faccionId: 'f-1', titularId: 'heroe-3', posicionActual: { x: 30, y: 10 }, estado: 'adjunta' },
+      { id: 'k-9', tipo: 'acarreo', origenAsentamientoId: 'as-1', posicionActual: { x: 2, y: 2 }, estado: cual === 'obra' ? 'disponible' : 'en_transito', carros: [{ tipoCarro: 'basico', animal: 'buey' }], contenido: cual === 'obra' ? {} : { trigo: 120, livestock: 40 }, escoltaIds: [], escoltaLiderazgo: { usado: 0, cupo: 100 } },
       { id: 'k-7', tipo: 'comercial', origenAsentamientoId: 'as-5', posicionActual: { x: 0, y: 0 }, estado: 'aparcada', carros: [{ tipoCarro: 'basico', animal: 'buey' }], contenido: { trigo: 120, cuero: 30 } },
     ],
     acuerdos: [
@@ -94,3 +142,16 @@ export function escena(cual: Escena): { p: ProyeccionJugador; a: Asentamiento } 
   } as unknown as ProyeccionJugador;
   return { p, a };
 }
+
+/** El mapa que el banco deja en `estadoCliente.mapaCache`: los nodos y las parcelas de bosque de la zona (sin capa de fertilidad). */
+export const MAPA = {
+  id: 'banco',
+  mapa: {
+    nodos: [
+      { id: 'n-1', tipo: 'piedra', posicion: { x: 4, y: -5 } }, { id: 'n-2', tipo: 'cobre', posicion: { x: -7, y: 3 } }, { id: 'n-3', tipo: 'estano', posicion: { x: 9, y: 8 } },
+      { id: 'n-4', tipo: 'piedra', posicion: { x: -3, y: -9 } }, { id: 'n-5', tipo: 'cobre', posicion: { x: 11, y: -2 } }, { id: 'n-6', tipo: 'ganado', posicion: { x: -10, y: 9 } },
+      { id: 'n-9', tipo: 'hierro', posicion: { x: 40, y: 40 } },
+    ],
+    parcelas: Array.from({ length: 9 }, (_, i) => ({ id: `pc-${i + 1}`, centro: { x: -10 + (i % 3) * 3, y: -10 + Math.floor(i / 3) * 3 } })),
+  },
+};

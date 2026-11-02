@@ -3014,7 +3014,6 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .mision-cab strong { flex: 1; color: var(--oro-claro); }
 .mision-nueva { padding: 0 6px; font-size: 0.7rem; border-radius: 9px; background: var(--terracota); color: #fff; }
 .mision.mision-sin-leer { border-left: 3px solid var(--terracota); background: rgba(178, 84, 52, 0.12); }
-.mision-premio { font-size: 0.8rem; color: var(--oro); white-space: nowrap; }
 .mision-texto { margin: 4px 0; font-size: 0.82rem; color: var(--text-secondary); }
 .mision-cond { margin-top: 4px; }
 .mision-cond small { font-size: 0.75rem; color: var(--text-secondary); }
@@ -3023,7 +3022,6 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .mision-barra span { display: block; height: 100%; background: var(--bronce); transition: width 0.4s; }
 .mision-acciones { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
 .mision-acciones button { padding: 3px 10px; font-size: 0.8rem; }
-.mision .faction-error:empty { display: none; }
 .misiones-hechas summary { cursor: pointer; font-size: 0.8rem; color: var(--text-secondary); }
 .misiones-hechas .mision { margin-top: 4px; }
 .mision-cuenta { padding: 0 5px; font-size: 0.7rem; border-radius: 9px; background: var(--oro); color: #201509; }
@@ -3084,10 +3082,6 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .mapa-comida > .mapa-forzada:disabled { cursor: default; opacity: 0.8; }
 
 /* --- Pueblos y aldea agrícola --- */
-.pueblo-fila { flex-wrap: wrap; }
-.pueblo-fila.obra strong { color: var(--oro); }
-.pueblo-marcar { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
-.pueblo-marcar > div { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border: 1px solid var(--bronce-osc); border-radius: 3px; }
 .mapa-eleccion { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 4; max-width: min(560px, calc(100% - 32px)); padding: 8px 14px; background: rgba(20, 16, 12, 0.92); border: 1px solid var(--oro); border-radius: 4px; color: var(--pergamino); font-size: 0.85rem; text-align: center; }
 .mapa-eleccion .faction-error:empty { display: none; }
 .mapa-interior:has(.mapa-eleccion) canvas { cursor: crosshair; }
@@ -3308,13 +3302,6 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .dialogo-peligro { background: var(--terracota) !important; border-color: var(--terracota) !important; }
 
 /* Territorio de la plaza: lo que hay en su zona de influencia. */
-.zona-tabla { width: 100%; border-collapse: collapse; margin: 4px 0 14px; font-size: 0.85rem; }
-.zona-tabla th { text-align: right; font-weight: normal; color: var(--text-muted); font-size: 0.75rem; padding: 2px 6px; }
-.zona-tabla td { padding: 3px 6px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); text-align: right; color: var(--text-secondary); }
-.zona-tabla td:first-child, .zona-tabla th:first-child { text-align: left; color: var(--pergamino); }
-.zona-tabla .zona-libre { color: #9fd49a; }
-.zona-tabla .zona-ocupada { color: #e8a08f; }
-.zona-tabla .zona-por { color: var(--text-muted); font-size: 0.75rem; }
 
 /* Barra de experiencia de la Facción, en el panel de la izquierda. */
 .faccion-xp { width: 100%; display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
@@ -4463,3 +4450,146 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 @media (max-width: 420px) {
   .puerta-grupos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* ===== Misiones, Tablón y Territorio de la plaza (ui/misiones.ts, ui/tablon.ts, ui/pueblos.ts), estilo juego (2026-11-02) ===== */
+
+/* Misiones: cartas con sello, objetivos en barras doradas y la recompensa en fichas; la cumplida brilla y su «🎁 Reclamar» late. */
+.misiones-cartas { display: flex; flex-direction: column; gap: 6px; }
+.mision { --tono: var(--obra-ambar); display: flex; flex-direction: column; gap: 5px; padding: 8px 10px; border: 1px solid rgba(107, 74, 41, 0.8); border-left: 3px solid var(--tono); border-radius: 3px; background: linear-gradient(180deg, rgba(36, 27, 17, 0.95), rgba(18, 14, 9, 0.95)); }
+.mision.mision-cumplida { --tono: #ffd24a; border-color: rgba(255, 210, 74, 0.6); border-left-color: #ffd24a; box-shadow: 0 0 12px rgba(255, 210, 74, 0.16); background: radial-gradient(ellipse at 0% 0%, rgba(255, 210, 74, 0.14), transparent 60%), linear-gradient(180deg, rgba(40, 30, 18, 0.95), rgba(18, 14, 9, 0.95)); }
+.mision.mision-reclamada { --tono: var(--obra-verde); opacity: 0.6; padding: 8px 10px; }
+.mision.mision-sin-leer { border-left-color: var(--terracota); }
+.mision-cab { display: flex; align-items: center; gap: 8px; }
+.mision-sello { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--tono); background: radial-gradient(circle at 35% 30%, rgba(90, 63, 34, 0.95), rgba(20, 15, 9, 0.95)); font-size: 0.9rem; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5); }
+.mision-cab strong { flex: 1; min-width: 0; font-family: var(--fuente-titulo); font-size: 0.92rem; line-height: 1.2; color: var(--oro-claro); }
+.mision-seguir { flex: none; padding: 2px 8px; border: 1px solid var(--bronce-osc); border-radius: 9px; background: rgba(0, 0, 0, 0.35); color: var(--text-secondary); font-size: 0.7rem; cursor: pointer; white-space: nowrap; }
+.mision-seguir.activa { border-color: var(--oro); background: rgba(110, 80, 40, 0.5); color: var(--oro-claro); }
+.mision-seguir:hover:not(:disabled) { border-color: var(--oro); }
+.mision-seguir:disabled { opacity: 0.45; cursor: help; }
+.mision .mision-texto, .mision .mision-explicacion { margin: 0; }
+.mision .mision-barra { height: 7px; border: 1px solid rgba(107, 74, 41, 0.8); border-radius: 4px; background: rgba(0, 0, 0, 0.55); }
+.mision .mision-barra span { background: linear-gradient(90deg, #b07a2a, #f0c062); box-shadow: 0 0 6px rgba(240, 192, 98, 0.5); }
+.mision-pie { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.mision-pie .diario-premios { gap: 4px; }
+.mision-pie .diario-premio { padding: 2px 7px; font-size: 0.74rem; }
+.mision-reclamar { margin-left: auto; padding: 5px 14px; border: 1px solid #ffd24a; border-radius: 3px; background: linear-gradient(180deg, #b8892e, #6b4a18); color: #fff3cf; font-size: 0.8rem; font-weight: 700; white-space: nowrap; cursor: pointer; box-shadow: 0 0 10px rgba(255, 210, 74, 0.45); animation: mision-late 1.6s ease-in-out infinite; }
+.mision-reclamar:disabled { opacity: 0.6; animation: none; cursor: wait; }
+@keyframes mision-late { 50% { box-shadow: 0 0 18px rgba(255, 210, 74, 0.8); } }
+@media (prefers-reduced-motion: reduce) { .mision-reclamar { animation: none; } }
+.mision-quien { margin-left: auto; font-size: 0.72rem; color: var(--text-muted); }
+.misiones-hechas { margin-top: 8px; }
+.misiones-hechas-lista { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.mision-hecha { padding: 1px 8px; border: 1px solid rgba(127, 207, 106, 0.4); border-radius: 9px; background: rgba(30, 50, 25, 0.35); color: #b5dba3; font-size: 0.72rem; white-space: nowrap; }
+
+/* Tablón: cada columna con su cabecera (☀️ o 📅, lo que queda para renovar y su barra) y las misiones como las de arriba; elegir, en casillas. */
+.tablon-cab { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 4px 8px; padding: 6px 8px; border: 1px solid var(--bronce-osc); border-radius: 3px; background: linear-gradient(180deg, rgba(60, 44, 24, 0.9), rgba(25, 19, 12, 0.95)); }
+.tablon-cab strong { font-family: var(--fuente-titulo); font-size: 0.95rem; letter-spacing: 0.04em; color: var(--oro-claro); }
+.tablon-cab-icono { font-size: 1.05rem; line-height: 1; }
+.tablon-cab .obra-chip { margin-left: 0; }
+.tablon-cab small { white-space: nowrap; }
+.tablon-cab .obra-barra { grid-column: 1 / -1; height: 4px; }
+.tablon-tarjeta-cab { align-items: center; gap: 8px; }
+.tablon-tarjeta-cab strong { flex: 1; min-width: 0; font-family: var(--fuente-titulo); font-size: 0.92rem; }
+.tablon-estado { border: 1px solid var(--tono); background: rgba(0, 0, 0, 0.4); color: var(--tono); font-weight: 700; }
+.tablon-estado-cumplida { background: #ffd24a; color: #201509; }
+.tablon-tarjeta.mision-activa { --tono: var(--obra-azul); }
+.tablon-aceptar, .tablon-guardar { padding: 5px 12px; border: 1px solid var(--oro); border-radius: 3px; background: linear-gradient(180deg, rgba(110, 80, 40, 0.95), rgba(50, 36, 18, 0.95)); color: var(--oro-claro); font-size: 0.78rem; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.tablon-aceptar:hover:not(:disabled), .tablon-guardar:hover:not(:disabled) { box-shadow: 0 0 10px rgba(232, 190, 100, 0.4); }
+.tablon-aceptar:disabled, .tablon-guardar:disabled { opacity: 0.45; cursor: help; }
+.tablon-pie .mision-reclamar { padding: 4px 12px; }
+.tablon-elegir { gap: 6px; margin: 8px 0; padding: 0; border: none; }
+.tablon-elegir legend { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; padding: 0; font-family: var(--fuente-titulo); font-size: 0.85rem; color: var(--oro-claro); }
+.tablon-cuenta { padding: 0 7px; border: 1px solid var(--bronce-osc); border-radius: 9px; font-family: inherit; font-size: 0.7rem; color: var(--text-secondary); }
+.tablon-cuenta.llena { border-color: var(--obra-ambar); color: #ffd590; }
+.tablon-opciones { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr)); gap: 5px; }
+.tablon-opcion { position: relative; display: flex; align-items: flex-start; gap: 6px; min-width: 0; padding: 6px 8px; border: 1px solid rgba(107, 74, 41, 0.8); border-radius: 3px; background: linear-gradient(180deg, rgba(50, 38, 22, 0.92), rgba(20, 16, 10, 0.95)); cursor: pointer; }
+.tablon-opcion input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.tablon-opcion-marca { display: grid; place-items: center; flex: none; width: 16px; height: 16px; margin-top: 1px; border: 1px solid var(--bronce); border-radius: 3px; background: rgba(0, 0, 0, 0.5); color: #201509; font-size: 0.7rem; font-weight: 700; }
+.tablon-opcion:hover { border-color: var(--oro); }
+.tablon-opcion:has(input:checked), .tablon-opcion.elegida { border-color: #ffd24a; background: linear-gradient(180deg, rgba(120, 90, 30, 0.55), rgba(30, 22, 10, 0.95)); box-shadow: 0 0 0 1px rgba(255, 210, 74, 0.6) inset; }
+.tablon-opcion:has(input:checked) .tablon-opcion-marca, .tablon-opcion.elegida .tablon-opcion-marca { border-color: #ffd24a; background: #ffd24a; }
+.tablon-opcion:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
+.tablon-opcion:has(input:focus-visible) { outline: 2px solid var(--oro); outline-offset: 2px; }
+.tablon-opcion-cuerpo { display: flex; flex-direction: column; min-width: 0; }
+.tablon-opcion-cuerpo b { font-size: 0.78rem; font-weight: 600; line-height: 1.2; color: var(--pergamino); }
+.tablon-opcion-cuerpo small { font-size: 0.68rem; color: var(--text-secondary); }
+.tablon-guardar-pie { justify-content: flex-end; }
+
+/* Territorio: la zona en fichas con casillas (verdes, los sitios libres), una tarjeta por pueblo, por obra y por avanzada, y marcar en dos cartas. */
+.zona-fichas { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 5px; margin-bottom: 4px; }
+.zona-ficha { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; padding: 6px 4px; border: 1px solid rgba(107, 74, 41, 0.8); border-radius: 3px; background: linear-gradient(180deg, rgba(50, 38, 22, 0.92), rgba(20, 16, 10, 0.95)); text-align: center; }
+.zona-ficha.agotada { opacity: 0.6; }
+.zona-icono { font-size: 1.3rem; line-height: 1; }
+.zona-nombre { font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary); }
+.zona-libres { display: flex; align-items: baseline; gap: 3px; }
+.zona-libres b { font-family: var(--fuente-titulo); font-size: 1.2rem; color: #9fd49a; }
+.zona-ficha.agotada .zona-libres b { color: var(--text-muted); }
+.zona-libres small { font-size: 0.64rem; color: var(--text-muted); }
+.zona-casillas { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; }
+.zona-casillas i { width: 7px; height: 7px; border: 1px solid rgba(0, 0, 0, 0.6); border-radius: 1px; background: #4a3a26; }
+.zona-casillas i.libre { background: var(--obra-verde); box-shadow: 0 0 4px rgba(127, 207, 106, 0.6); }
+.zona-ficha .obra-barra { width: 100%; height: 5px; }
+.zona-ficha .obra-barra i { background: var(--obra-verde); box-shadow: none; }
+.cupo-casillas { display: inline-flex; gap: 2px; margin-left: 4px; }
+.cupo-casillas i { width: 6px; height: 9px; border: 1px solid var(--bronce-osc); border-radius: 1px; background: rgba(0, 0, 0, 0.4); }
+.cupo-casillas i.usada { border-color: var(--oro); background: var(--oro); }
+.obra-chip.lleno .cupo-casillas i.usada { border-color: var(--obra-ambar); background: var(--obra-ambar); }
+.pueblo-cartas { display: flex; flex-direction: column; gap: 6px; }
+.pueblo-tarjeta, .obra-mapa { --tono: var(--obra-verde); display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border: 1px solid rgba(107, 74, 41, 0.8); border-left: 3px solid var(--tono); border-radius: 3px; background: linear-gradient(180deg, rgba(36, 27, 17, 0.95), rgba(18, 14, 9, 0.95)); }
+.pueblo-tarjeta.atacado { --tono: var(--obra-rojo); box-shadow: 0 0 10px rgba(226, 103, 90, 0.25); }
+.pueblo-tarjeta.ruinas { --tono: var(--text-muted); }
+.obra-mapa.pendiente { --tono: var(--obra-ambar); }
+.obra-mapa.levantando { --tono: var(--obra-azul); }
+.pueblo-emblema { display: grid; place-items: center; flex: none; width: 34px; height: 34px; border: 1px solid var(--tono); border-radius: 50%; background: radial-gradient(circle at 35% 30%, rgba(90, 63, 34, 0.95), rgba(20, 15, 9, 0.95)); font-size: 1.1rem; color: var(--oro-claro); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5); }
+.pueblo-emblema .icono-edificio { width: 22px; height: 22px; }
+.pueblo-alerta { padding: 1px 8px; border: 1px solid var(--obra-rojo); border-radius: 9px; background: rgba(80, 20, 15, 0.6); color: #ffb3a8; font-size: 0.7rem; font-weight: 700; white-space: nowrap; }
+.pueblo-alerta.ruinas { border-color: var(--text-muted); background: rgba(0, 0, 0, 0.4); color: var(--text-secondary); }
+.pueblo-medida { display: grid; grid-template-columns: 78px minmax(0, 1fr) auto; align-items: center; gap: 6px; font-size: 0.74rem; color: var(--text-secondary); }
+.pueblo-medida small { font-size: 0.7rem; color: var(--pergamino); white-space: nowrap; }
+.pueblo-medida.lleno .obra-barra i { background: var(--obra-ambar); }
+.pueblo-medida.lleno small { color: #ffd590; }
+.pueblo-medida.rebano .obra-barra i { background: linear-gradient(90deg, #6d8f3a, #a8d26a); box-shadow: none; }
+.pueblo-recursos, .pueblo-carro-carga { display: flex; flex-wrap: wrap; gap: 4px; }
+.pueblo-recurso { padding: 1px 6px; border: 1px solid rgba(107, 74, 41, 0.8); border-radius: 3px; background: rgba(0, 0, 0, 0.45); font-size: 0.74rem; color: var(--pergamino); white-space: nowrap; }
+.pueblo-carro { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 6px 8px; border: 1px dashed rgba(107, 74, 41, 0.8); border-radius: 3px; background: rgba(0, 0, 0, 0.3); }
+.pueblo-carro-icono { display: inline-flex; flex: none; color: var(--oro); }
+.pueblo-carro-icono svg { width: 32px; height: 22px; }
+.pueblo-carro.en_transito .pueblo-carro-icono, .pueblo-carro.retornando .pueblo-carro-icono { color: var(--obra-azul); }
+.pueblo-carro.sin { border-color: var(--obra-ambar); }
+.pueblo-carro.sin .pueblo-carro-icono { color: var(--text-muted); opacity: 0.6; }
+.pueblo-carro-texto { display: flex; flex: 1 1 140px; flex-direction: column; min-width: 0; }
+.pueblo-carro-texto b { font-size: 0.78rem; color: var(--pergamino); }
+.pueblo-carro.sin .pueblo-carro-texto b { color: #ffd590; }
+.pueblo-carro-texto small { font-size: 0.7rem; color: var(--text-secondary); }
+.pueblo-tarjeta .caravana-seccion { padding-top: 6px; }
+.pueblo-acciones .anillo-mejorar, .pueblo-boton { display: inline-flex; align-items: center; gap: 6px; }
+.pueblo-boton { padding: 5px 12px; border: 1px solid var(--bronce); border-radius: 3px; background: linear-gradient(180deg, rgba(60, 45, 26, 0.95), rgba(28, 21, 13, 0.95)); color: var(--pergamino); font-size: 0.78rem; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.pueblo-boton.principal { border-color: var(--oro); background: linear-gradient(180deg, rgba(110, 80, 40, 0.95), rgba(50, 36, 18, 0.95)); color: var(--oro-claro); }
+.pueblo-boton:hover:not(:disabled) { box-shadow: 0 0 10px rgba(232, 190, 100, 0.35); }
+.pueblo-boton:disabled { opacity: 0.45; cursor: not-allowed; }
+.pueblo-boton-coste { display: inline-flex; gap: 4px; font-weight: 400; }
+.pueblo-tarjeta .obra-coste, .pueblo-opcion .obra-coste, .avanzada-coste .obra-coste { font-size: 0.74rem; }
+.obra-mapa-nota { font-size: 0.7rem; color: var(--text-muted); }
+.pueblo-aviso { margin: 4px 0; padding: 6px 10px; border: 1px solid var(--obra-ambar); border-radius: 3px; background: rgba(80, 55, 15, 0.35); font-size: 0.8rem; color: #ffd590; }
+.pueblo-opciones { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: 6px; }
+.pueblo-opcion { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; padding: 10px 8px; border: 1px solid rgba(107, 74, 41, 0.8); border-radius: 3px; background: radial-gradient(ellipse at 50% 0%, rgba(224, 165, 58, 0.12), transparent 60%), linear-gradient(180deg, rgba(50, 38, 22, 0.92), rgba(20, 16, 10, 0.95)); text-align: center; }
+.pueblo-opcion-icono { font-size: 1.8rem; line-height: 1; }
+.pueblo-opcion > strong { display: inline-flex; align-items: center; gap: 4px; font-family: var(--fuente-titulo); font-size: 0.9rem; color: var(--oro-claro); }
+.pueblo-opcion > small { font-size: 0.7rem; color: var(--text-secondary); }
+.pueblo-opcion .fundacion-gate { font-size: 0.7rem; text-align: left; }
+.pueblo-opcion .pueblo-boton { margin-top: auto; }
+.pueblo-opcion.bloqueada .pueblo-opcion-icono { filter: grayscale(1); opacity: 0.6; }
+.pueblo-nodos { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
+.pueblo-nodo { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 62px; padding: 4px 6px; border: 1px solid rgba(107, 74, 41, 0.8); border-radius: 3px; background: rgba(0, 0, 0, 0.4); cursor: pointer; }
+.pueblo-nodo input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.pueblo-nodo > span { font-size: 1.05rem; line-height: 1; }
+.pueblo-nodo b { font-size: 0.72rem; font-weight: 600; color: var(--pergamino); }
+.pueblo-nodo small { font-size: 0.64rem; color: var(--text-muted); }
+.pueblo-nodo:hover { border-color: var(--oro); }
+.pueblo-nodo:has(input:checked) { border-color: #ffd24a; background: rgba(120, 90, 30, 0.4); box-shadow: 0 0 0 1px #ffd24a, 0 0 10px rgba(255, 210, 74, 0.3); }
+.pueblo-nodo:has(input:focus-visible) { outline: 2px solid var(--oro); outline-offset: 2px; }
+.avanzada-coste { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 6px; font-size: 0.76rem; color: var(--pergamino); }
+.avanzada-coste small { font-size: 0.7rem; color: var(--text-secondary); }
+.pueblo-tarjeta .anillo-cab, .obra-mapa .anillo-cab { flex-wrap: wrap; }
+.pueblo-tarjeta .anillo-titulo, .obra-mapa .anillo-titulo { flex: 1 1 8rem; }
+.obra-mapa .anillo-estado, .pueblo-tarjeta .pueblo-alerta { margin-left: auto; }
