@@ -114,6 +114,18 @@ function elegirTipo(tipo: string): void {
   const i = seleccion?.tipo === tipo ? lista.findIndex((x) => x.id === seleccion!.id) : -1;
   seleccion = { id: lista[(i + 1) % lista.length]!.id, tipo };
   alCambiar();
+  alElegirDeLista(seleccion.id);
+}
+
+/** Lo que hace la plaza cuando se elige un edificio desde la lista (la vista 3D lo enfoca). */
+let alElegirDeLista: (id: string) => void = () => undefined;
+
+/** Elige un edificio por su id (el clic en la vista 3D de la plaza), o ninguno con `null`. */
+export function elegirEdificio(id: string | null): void {
+  const a = estadoSolicitado?.()?.asentamientos[0];
+  const e = id && a ? (a.edificios ?? []).find((x) => x.id === id) : undefined;
+  seleccion = e ? { id: e.id, tipo: e.tipo } : null;
+  alCambiar();
 }
 let fichaEl: HTMLElement | null = null;
 let ejecutarFicha: Ejecutar | null = null;
@@ -142,7 +154,7 @@ export function repintarFicha(): void {
 /** Cablea, una vez al montar la plaza, el clic sobre el lienzo, la ficha flotante y el clic en las filas de la lista de edificios. */
 export function cablearVistaCiudad(
   contenedor: HTMLElement,
-  o: { proyeccion: () => ProyeccionJugador | undefined; ejecutar: Ejecutar; escapar: Escapar; redibujar: () => void; repintarLista: () => void }
+  o: { proyeccion: () => ProyeccionJugador | undefined; ejecutar: Ejecutar; escapar: Escapar; redibujar: () => void; repintarLista: () => void; enfocar?: (id: string) => void }
 ): void {
   const canvas = contenedor.querySelector<HTMLCanvasElement>('#mapa');
   const mapa = contenedor.querySelector<HTMLElement>('.asent-mapa');
@@ -156,8 +168,11 @@ export function cablearVistaCiudad(
   fichaEl.hidden = true;
   (contenedor.querySelector('.asent-izq') ?? mapa).appendChild(fichaEl);
   alCambiar = () => { o.redibujar(); o.repintarLista(); repintarFicha(); };
+  alElegirDeLista = o.enfocar ?? (() => undefined);
 
   canvas.addEventListener('click', (evento) => {
+    // de minimapa (bajo la vista 3D), el clic lleva la cámara y no elige
+    if (canvas.closest('.asent-minimapa')) return;
     const p = o.proyeccion();
     const a = p?.asentamientos[0];
     if (!p || !a) return;

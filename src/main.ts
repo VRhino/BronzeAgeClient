@@ -64,8 +64,13 @@ import { cablearPanelEjercito, ejercitosDeLaFaccion, htmlFichaEjercito, htmlPane
 import { invalidar, olvidarEdicion, pintar, vaciar } from './ui/repintado';
 import { ayuda } from './ui/ayuda';
 import { htmlInformeDeInspeccion } from './ui/interaccionAjena';
-import { cablearPanelObras, htmlPanelObras } from './ui/panelObras';
-import { cablearProduccionYRecetas, cablearVistaCiudad, edificioSeleccionado, htmlTooltipEdificio, repintarFicha } from './ui/vistaCiudad';
+import { cablearPanelObras, htmlPanelObras, minutosDeObra } from './ui/panelObras';
+import { cablearProduccionYRecetas, cablearVistaCiudad, edificioSeleccionado, elegirEdificio, htmlTooltipEdificio, repintarFicha } from './ui/vistaCiudad';
+import { ciudadEnVista } from './ciudad3d/estado';
+import { Minimapa } from './ciudad3d/minimapa';
+import { VistaCiudad3D } from './ciudad3d/vista';
+import { colorDelSueloEn } from './mundo/pintarArtefacto';
+import { cuentaAtras } from './ui/juegoVisual';
 import { cablearPlegables } from './ui/plegable';
 import { FICHAS_MAPA_EXTRA, SELECTORES_MAPA_EXTRA, SUBPESTANAS_CENTRO_EXTRA, SUBPESTANAS_MERCADO_EXTRA, type ContextoPlaza } from './ui/ganchos';
 import { montarPartidas } from './ui/pantallaPartidas';
@@ -2011,8 +2016,9 @@ function montarAsentamiento(): void {
         <aside class="asent-panel" hidden></aside>
       </aside>
       <div class="asent-centro">
-        <div class="asent-mapa">
-          <div class="asent-lienzo"><canvas id="mapa" width="900" height="900"></canvas></div>
+        <div class="asent-mapa asent-mapa-3d">
+          <div class="ciudad3d-escena"></div>
+          <div class="asent-lienzo asent-minimapa" title="Minimapa: un clic lleva la vista ahí"><canvas id="mapa" width="900" height="900"></canvas></div>
         </div>
         <div class="asent-recursos" hidden></div>
       </div>
@@ -2036,10 +2042,12 @@ function montarAsentamiento(): void {
   cablearMenuEsquina(contenedor);
   cablearBarraJugador(contenedor);
   cablearTooltipEdificios(contenedor);
+  montarCiudad3D(contenedor);
   cablearVistaCiudad(contenedor, {
     proyeccion: () => estadoCliente.proyeccionUltima ?? undefined, ejecutar: ejecutarYRefrescar, escapar: escaparHtml,
     redibujar: () => { if (estadoCliente.proyeccionUltima) void dibujarPantallaSegunModo(estadoCliente.proyeccionUltima); },
     repintarLista: renderPanelEdificios,
+    enfocar: (id) => ciudad3d?.vista.enfocar(id),
   });
   // La ciudad tiene vida (almacén, producción, población) aunque el jugador no toque nada: mismo sondeo
   // suave que el mapa, hasta que exista el canal de tiempo real.
@@ -2049,11 +2057,55 @@ function montarAsentamiento(): void {
     sondeando = true;
     void refrescarDatosJuego().catch(() => {}).finally(() => { sondeando = false; });
   }, 3000);
-  limpiarPantalla = () => clearInterval(sondeo);
+  limpiarPantalla = () => { clearInterval(sondeo); desmontarCiudad3D(); };
   renderPanelEdificios();
   renderPanelRecursos();
   renderPanelAsent();
   void dibujarPantallaSegunModo(proyeccion);
+}
+
+/** La vista 3D de la plaza montada ahora (`src/ciudad3d/`), con el 2D de siempre de minimapa en su esquina. */
+let ciudad3d: { vista: VistaCiudad3D; minimapa: Minimapa } | null = null;
+
+/** Monta la vista 3D sobre el centro de la plaza. Sin WebGL, se queda el 2D de siempre a pantalla entera. */
+function montarCiudad3D(contenedor: HTMLElement): void {
+  desmontarCiudad3D();
+  const escena = contenedor.querySelector<HTMLElement>('.ciudad3d-escena');
+  const lienzo = contenedor.querySelector<HTMLCanvasElement>('#mapa');
+  const tooltip = contenedor.querySelector<HTMLElement>('.asent-tooltip');
+  if (!escena || !lienzo) return;
+  const minimapa = new Minimapa(lienzo);
+  try {
+    const vista = new VistaCiudad3D(escena, {
+      alElegir: elegirEdificio,
+      alPasar: (id, evento) => {
+        const p = estadoCliente.proyeccionUltima;
+        const edificio = id ? p?.asentamientos[0]?.edificios.find((e) => e.id === id) : undefined;
+        if (!tooltip) return;
+        if (!p || !edificio || !evento) { tooltip.hidden = true; return; }
+        tooltip.innerHTML = htmlTooltipEdificio(p, edificio, escaparHtml);
+        tooltip.hidden = false;
+        tooltip.style.left = `${Math.min(window.innerWidth - tooltip.offsetWidth - 8, evento.clientX + 14)}px`;
+        tooltip.style.top = `${Math.min(window.innerHeight - tooltip.offsetHeight - 8, evento.clientY + 14)}px`;
+      },
+      alMover: (huella) => minimapa.fijarHuella(huella),
+      rotulo: (e) => (typeof e.completaEn === 'number' ? `${e.mejora ? 'Mejora' : e.danado ? 'Reparación' : 'Obra'} · ${cuentaAtras(e.completaEn)}` : null),
+    });
+    lienzo.addEventListener('click', (evento) => vista.centrar(minimapa.puntoLocal(evento)));
+    ciudad3d = { vista, minimapa };
+  } catch (error) {
+    console.warn('Sin WebGL para la plaza en 3D; queda la vista 2D.', error);
+    minimapa.destruir();
+    escena.remove();
+    contenedor.querySelector('.asent-mapa')?.classList.remove('asent-mapa-3d');
+    lienzo.parentElement?.classList.remove('asent-minimapa');
+  }
+}
+
+function desmontarCiudad3D(): void {
+  ciudad3d?.vista.destruir();
+  ciudad3d?.minimapa.destruir();
+  ciudad3d = null;
 }
 
 /** Tooltip al pasar el cursor sobre un edificio interno del mapa del asentamiento: nombre, nivel, estado.
@@ -2245,8 +2297,18 @@ async function dibujarPantallaSegunModo(proyeccion: ProyeccionJugador): Promise<
     ajustarLienzo(canvas, 1, 1);
     // El mapa da el color del suelo donde está la plaza; si aún no se ha bajado, se pinta llano.
     const mapa = asentamiento ? await sincronizarMapa(proyeccion.mapaId).catch(() => null) : null;
-    if (asentamiento) pintarAsentamiento(ctx, asentamiento, proyeccion.trazadoPorAsentamiento?.[asentamiento.id], edificioSeleccionado(), mapa);
-    else { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillText('No perteneces a ningún asentamiento aún.', 20, 40); }
+    const c3 = asentamiento && canvas.isConnected ? ciudad3d : null;
+    if (asentamiento) pintarAsentamiento(ctx, asentamiento, proyeccion.trazadoPorAsentamiento?.[asentamiento.id], edificioSeleccionado(), mapa, !!c3);
+    if (asentamiento && c3) {
+      // la vista 3D: el mismo trazado, el suelo del mapa, la selección; y el minimapa, a la escala del 2D recién pintado
+      const trazado = proyeccion.trazadoPorAsentamiento?.[asentamiento.id];
+      const suelo = mapa ? colorDelSueloEn(mapa, asentamiento.posicion) : null;
+      if (suelo) c3.vista.fijarSuelo((suelo[0] << 16) | (suelo[1] << 8) | suelo[2]);
+      c3.vista.fijar(ciudadEnVista(asentamiento, trazado, { instante: proyeccion.instante, minutosDeObra: (e) => minutosDeObra(asentamiento, e) }));
+      c3.vista.seleccionar(edificioSeleccionado());
+      c3.minimapa.fijarTrazado(trazado);
+    }
+    if (!asentamiento) { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillText('No perteneces a ningún asentamiento aún.', 20, 40); }
   }
   if (estadoCliente.modoFundacionActivo && estadoCliente.posicionFundacion && estadoCliente.mapaCache?.mapa) {
     pintarPrevisualizacionFundacion(ctx, estadoCliente.mapaCache.mapa, estadoCliente.posicionFundacion, escalaMundo, sitiosDeAldeaAlFundar(estadoCliente.posicionFundacion), parcelasAlFundar(estadoCliente.posicionFundacion));

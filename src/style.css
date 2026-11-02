@@ -1746,6 +1746,35 @@ pre#proyeccion {
   height: 100%;
 }
 
+/* La plaza en 3D (src/ciudad3d/): la escena llena el centro y el 2D de siempre queda de minimapa en la esquina de abajo a la derecha; un
+   clic en él lleva la vista ahí. Sin WebGL no se pone `asent-mapa-3d` y el 2D sigue a pantalla entera. */
+.asent-mapa-3d {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+}
+
+.asent-mapa-3d .ciudad3d-escena {
+  position: absolute;
+  inset: 0;
+}
+
+.asent-mapa-3d .asent-minimapa {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 2;
+  width: clamp(140px, 26cqmin, 260px);
+}
+
+.asent-minimapa .asent-minimapa-camara {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
 /* Columna derecha: lista de edificios (+ menú Facción/Ejército flotante encima del mapa). */
 .asent-lado {
   width: clamp(360px, 27vw, 560px);

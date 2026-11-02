@@ -1,0 +1,35 @@
+/* La vista 3D de la plaza (src/ciudad3d/vista.ts): el lienzo llena su contenedor; encima, la capa de rótulos de las obras, que no recoge el
+   ratón. */
+.ciudad3d-lienzo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+  touch-action: none;
+  cursor: grab;
+}
+
+.ciudad3d-lienzo:active {
+  cursor: grabbing;
+}
+
+.ciudad3d-rotulos {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.ciudad3d-rotulo {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  padding: 2px 7px;
+  border: 1px solid rgba(244, 234, 210, 0.2);
+  border-left: 3px solid #e2b13c;
+  border-radius: 4px;
+  background: rgba(10, 14, 23, 0.8);
+  color: #fff;
+  font: 600 11.5px/1.2 system-ui, sans-serif;
+  white-space: nowrap;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.6);
+}

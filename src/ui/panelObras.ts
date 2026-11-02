@@ -70,7 +70,7 @@ function factorDePoliticas(a: Asentamiento, campo: string): number {
 }
 
 /** Cuántos minutos dura la obra (o la mejora) de ese edificio, según el catálogo y las políticas de hoy; `null` sin catálogo. */
-function minutosDeObra(a: Asentamiento, e: Edificio): number | null {
+export function minutosDeObra(a: Asentamiento, e: Edificio): number | null {
   const def = catalogo()?.[e.tipo];
   if (!def) return null;
   const f = factorDePoliticas(a, 'factorTiempoConstruccion');

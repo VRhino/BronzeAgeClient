@@ -1,6 +1,6 @@
 {
   "name": "bronze-age-cliente-jugador",
-  "version": "0.90.0",
+  "version": "0.91.0",
   "description": "Cliente de jugador. Sin ninguna dependencia de código del motor: habla con él solo por red. Fase 7: pasa del REST del backend TypeScript al WebSocket del contrato 05 del motor en Rust (src/contrato/, generado con buf desde VRhino/BronzeAge; revisión en src/contrato/REVISION).",
   "type": "module",
   "scripts": {
@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.pruebas.json",
     "contrato": "node scripts/contrato.mjs",
     "test": "vitest run",
-    "mundo3d": "vite --open /pruebas/mundo3d/"
+    "mundo3d": "vite --open /pruebas/mundo3d/",
+    "ciudad3d": "vite --open /pruebas/ciudad3d/"
   },
   "devDependencies": {
     "@bufbuild/buf": "1.73.0",

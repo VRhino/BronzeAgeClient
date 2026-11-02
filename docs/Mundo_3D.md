@@ -7,7 +7,8 @@ escalas y la cámara se decidieron con la mesa de escalas 3D del motor (`Conside
 ## Decisiones del autor (2026-10-30)
 
 - **Cambio directo.** Sin interruptor 2D/3D: el 3D se hace en una rama y entra cuando pinta todo lo que pinta el 2D.
-- **El modo mapa se queda en 2D**, como mapa estratégico (el mundo entero, zoom libre y arrastre). La vista de la plaza tampoco cambia.
+- **El modo mapa se queda en 2D**, como mapa estratégico (el mundo entero, zoom libre y arrastre). La vista de la plaza también pasó a 3D
+  después (2026-11-02, `docs/Ciudad_3D.md`), con el 2D de minimapa.
 - **Solo sobremesa** en el prototipo.
 - **No cambian** el contrato, la proyección (`proyeccionAlInstante`), los paneles, ni el clic: lo que hay bajo él lo sigue eligiendo
   `objetoBajoElClic` en coordenadas del mundo y la orden sigue siendo `marcharA`. En 3D el clic toca el relieve con un rayo.

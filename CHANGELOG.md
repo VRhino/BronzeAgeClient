@@ -3,6 +3,28 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.91.0] — 2026-11-02 · La plaza en 3D · sin cambios de contrato (`VRhino/BronzeAge@a17f8536`)
+
+- **La plaza en 3D** (`src/ciudad3d/`, `docs/Ciudad_3D.md`): la vista de la plaza (la tuya o la ajena desde dentro) pasa a una escena 3D con
+  three.js, con el cielo y la luz del mundo 3D. El 2D de siempre queda de minimapa en la esquina, con lo que abarca la cámara en dorado; un
+  clic en él lleva la vista ahí. Sin WebGL, el 2D a pantalla entera, como antes.
+- **El trazado manda**: cada edificio se monta en código dentro de su huella, la muralla en sus celdas y las calles y caminos son los del
+  trazado. Una prueba comprueba que ninguna pieza asoma más de 60 cm fuera de su huella.
+- **El estilo va con el nivel de la plaza**:
+  - del 1 al 5: chozas y casas largas de paja; barro; adobe de techo plano con patio; enlucido de dos plantas; y el palacio de Cnosos, con
+    columnas y franjas rojas;
+  - la muralla, por su nivel: empalizada con foso, piedra y adobe con bastiones, y ciclópea con su puerta de los Leones;
+  - al subir de nivel, las casas cambian por partes; algunas se quedan un nivel atrás.
+- **Las celdas libres**: huertos, patios, rediles, hornos, leña, almiares y árboles, y bosquecillos en el campo de alrededor.
+- **Las obras**: armazón que crece con el avance, con su cuenta atrás. La cola, en estacas (solo en la propia). Andamios al mejorar, y ruina
+  si está dañada.
+- **El manejo**:
+  - arrastrar desplaza; con el botón derecho o Mayúsculas gira e inclina; la rueda acerca. También WASD, Q/E y R/F.
+  - el clic elige el edificio, con la misma ficha y el mismo tooltip de antes;
+  - elegir en la lista lleva la cámara a él.
+- **Banco** `npm run ciudad3d` (`pruebas/ciudad3d/`): una aldea, un pueblo y una ciudad reales del motor. Tiene mandos de estilo, muralla,
+  obras, plaza ajena, saqueo y subida de nivel.
+
 ## [0.90.0] — 2026-11-02 · Misiones, Tablón y Territorio con aire de juego · sin cambios de contrato (`VRhino/BronzeAge@168a3bea`)
 
 - **Misiones** (las de la plaza y, con las mismas cartas, las de la Facción): cabecera con 📜 en marcha y 🏆 por reclamar en chips. Cada misión, una carta con su sello (📜 en curso, 🏆 cumplida), sus objetivos en barras doradas y la recompensa en fichas con icono, como en el diario; la cumplida brilla y su «🎁 Reclamar» late. «◇ Seguir» / «◆ Siguiendo» pasa a la cabecera. Las hechas, en fichas verdes plegadas.

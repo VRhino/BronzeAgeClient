@@ -198,7 +198,12 @@ function trazado(a: pb.Asentamiento): d.TrazadoAsentamiento | undefined {
       planificado: r.celdas.slice(r.avance).map(celda),
     };
   });
-  return { calles: t.calles.map(rect), caminos: t.caminos.map(rect), huellas, murallas };
+  return { calles: t.calles.map(rect), caminos: t.caminos.map(rect), huellas, murallas, radio: t.radioUl || undefined, celda: T };
+}
+
+/** Una plaza del contrato como la ve el cliente: su interior y lo que se dibuja de su ciudad (el banco de la vista 3D, `pruebas/ciudad3d/`). */
+export function plazaDeContrato(a: pb.Asentamiento, ahora: number): { asentamiento: d.Asentamiento; trazado: d.TrazadoAsentamiento | undefined } {
+  return { asentamiento: asentamiento(a, ahora), trazado: trazado(a) };
 }
 
 function ejercito(e: pb.Ejercito, ahora: number): d.Ejercito {

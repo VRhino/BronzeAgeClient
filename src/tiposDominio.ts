@@ -664,6 +664,10 @@ export interface TrazadoAsentamiento {
   caminos: RectanguloLocal[];
   huellas: Record<string, RectanguloLocal>;
   murallas: TrazadoMuralla[];
+  /** Radio del disco urbano (`radio_ul`), en unidades locales. Ausente en un trazado sin él. */
+  radio?: number;
+  /** Lado de una celda del trazado (`unidades_por_celda`), en unidades locales: 3. */
+  celda?: number;
 }
 
 /** Producción por minuto de mundo de un tipo de edificio productor/transformador — la calcula el servidor

@@ -114,7 +114,8 @@ remata cabeceras y paneles con la moldura clásica. `opacity: .5` para que sea s
   abajo-derecha, paneles que se despliegan junto a su disparador.
 - **Vista de asentamiento**: barra superior en flujo (nombre + nivel + acciones) → cuerpo en fila
   (mapa `flex: 1` a la izquierda, columna de edificios fija ~300 px a la derecha) → panel
-  Facción/Ejército flotante sobre el mapa.
+  Facción/Ejército flotante sobre el mapa. El mapa es la plaza en 3D (`.asent-mapa-3d`, `docs/Ciudad_3D.md`)
+  a todo el centro, con el 2D de minimapa (`.asent-minimapa`) en la esquina de abajo a la derecha.
 - **Login / Facción**: tarjeta central (`.login-card`) sobre el fondo, como un menú de campaña.
 - Bajo ~820 px la columna lateral se oculta y el mapa ocupa todo.
 

@@ -1161,7 +1161,7 @@ function radioDeVista(trazado: TrazadoAsentamiento | undefined): number {
 
 /** Escala px/unidad-local y centro del canvas, para convertir entre coords locales del trazado y píxeles.
  * Lo comparten el dibujo (`pintarAsentamiento`) y el hit-test del tooltip (`edificioBajoCursor`): el borde del lienzo cae en `±radio` locales. */
-function proyeccionAsentamiento(width: number, trazado: TrazadoAsentamiento | undefined): { escala: number; centro: number } {
+export function proyeccionAsentamiento(width: number, trazado: TrazadoAsentamiento | undefined): { escala: number; centro: number } {
   return { escala: (width * 0.92) / (radioDeVista(trazado) * 2), centro: width / 2 };
 }
 
@@ -1352,7 +1352,9 @@ export function pintarAsentamiento(
   asentamiento: Asentamiento,
   trazado: TrazadoAsentamiento | undefined,
   seleccion?: SeleccionEdificio | null,
-  mapa?: MapaGenerado | null
+  mapa?: MapaGenerado | null,
+  /** De minimapa (bajo la vista 3D, `src/ciudad3d/`): sin los textos del pie. */
+  minimapa = false
 ): void {
   const width = ctx.canvas.width;
   const height = ctx.canvas.height;
@@ -1405,6 +1407,7 @@ export function pintarAsentamiento(
   dibujarMurallas(ctx, trazado.murallas, aPantalla, escala);
 
   // Texto
+  if (minimapa) return;
   ctx.fillStyle = '#1b1a17';
   ctx.font = 'bold 15px system-ui, sans-serif';
   ctx.textAlign = 'left';
