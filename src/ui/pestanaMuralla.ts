@@ -12,20 +12,20 @@ import { ayuda } from './ayuda';
 import { barraDeTiempo, textoEnTiempoReal } from './estadoCliente';
 
 /** Nivel de plaza que pide cada anillo (motor: `MURALLA.nivelDePlaza`, Murallas.md): empalizada 2, muro de piedra 3, adarve 4. */
-const NIVEL_DE_PLAZA_POR_ANILLO = [2, 3, 4];
+export const NIVEL_DE_PLAZA_POR_ANILLO = [2, 3, 4];
 export const NIVEL_MINIMO_MURALLA = NIVEL_DE_PLAZA_POR_ANILLO[0]!;
-const NIVEL_MAXIMO_MURALLA = 3;
+export const NIVEL_MAXIMO_MURALLA = 3;
 
 function puertasDe(recinto: Recinto): number {
   return recinto.celdas.filter((c) => c.clase === 'puerta').length;
 }
 
-function integridadDe(recinto: Recinto): number {
+export function integridadDe(recinto: Recinto): number {
   return recinto.celdas.length === 0 ? 0 : (recinto.avance + 1) / recinto.celdas.length;
 }
 
 /** Lo que tarda cada celda en ms de mundo (`MURALLA.minutosPorCelda[nivel]` × `factorTiempoMuralla` de las políticas activas); `null` sin datos. */
-function msPorCelda(a: Asentamiento, nivel: number): number | null {
+export function msPorCelda(a: Asentamiento, nivel: number): number | null {
   const minutos = bloqueDeDatos<{ minutosPorCelda?: Record<string, number> }>('MURALLA')?.minutosPorCelda?.[String(nivel)];
   if (minutos === undefined) return null;
   const politicas = catalogoDePoliticas()?.catalogo ?? [];

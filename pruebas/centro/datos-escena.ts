@@ -14,6 +14,19 @@ const esc = (id: string, tropaId: string, cantidad: number, costeLiderazgo = 14,
 
 export type Escena = 'gobernador' | 'visita' | 'obra';
 
+/** Un anillo rectangular de muralla (celda a celda, en el orden en que se levanta), con dos puertas y una torre cada cinco celdas. */
+function anillo(id: string, r: number, nivel: number, avance: number | 'todo', x: object = {}) {
+  const celdas: { col: number; row: number; clase: 'muro' | 'puerta' | 'torre' }[] = [];
+  const ancho = Math.round(r * 1.4);
+  for (let c = -ancho; c < ancho; c++) celdas.push({ col: c, row: -r, clase: 'muro' });
+  for (let f = -r; f < r; f++) celdas.push({ col: ancho, row: f, clase: 'muro' });
+  for (let c = ancho; c > -ancho; c--) celdas.push({ col: c, row: r, clase: 'muro' });
+  for (let f = r; f > -r; f--) celdas.push({ col: -ancho, row: f, clase: 'muro' });
+  celdas.forEach((k, i) => { if (i % 5 === 0) k.clase = 'torre'; });
+  for (const i of [ancho, ancho + 1, Math.floor(celdas.length * 0.62)]) celdas[i]!.clase = 'puerta';
+  return { id, nivel, celdas, avance: avance === 'todo' ? celdas.length - 1 : avance, ...x };
+}
+
 export function escena(cual: Escena): { p: ProyeccionJugador; a: Asentamiento } {
   const edificios: Edificio[] = [
     ed('centroUrbano', { nivelInterno: 2 }), ...Array.from({ length: 24 }, () => ed('vivienda')), ed('almacen'), ed('granero'),
@@ -25,8 +38,18 @@ export function escena(cual: Escena): { p: ProyeccionJugador; a: Asentamiento } 
     poblacion: { pesants: 342, artesanos: 118, nobleza: 4 },
     medidorMantenimiento: cual === 'obra' ? 38 : 82, nutricionPoblacion: cual === 'obra' ? 18 : 64,
     ultimaCaravanaCreadaEn: AHORA - 60 * MIN,
-    almacen: { cobre: alm(0, 300), estano: alm(0, 300), madera: alm(900, 2000), piedra: alm(620, 2000), oro: alm(260, 1000), lingoteBronce: alm(40, 300), trigo: alm(800, 1000), armaMadera: alm(30, 100), armaCobre: alm(12, 100), armaBronce: alm(4, 100), armaduraBasica: alm(20, 100), cuero: alm(25, 100) },
-    cargos: { gobernadorId: 'heroe-1', maestroObrasId: 'heroe-2', tesoreroId: null, maestroCaravanasId: 'heroe-4', generalId: 'heroe-3', sacerdoteId: null },
+    almacen: { cobre: alm(0, 300), lingoteCobre: alm(14, 300), estano: alm(0, 300), madera: alm(900, 2000), piedra: alm(620, 2000), oro: alm(260, 1000), lingoteBronce: alm(40, 300), trigo: alm(800, 1000), armaMadera: alm(30, 100), armaCobre: alm(12, 100), armaBronce: alm(4, 100), armaduraBasica: alm(20, 100), cuero: alm(25, 100) },
+    recintos: cual === 'obra'
+      ? [anillo('r-1', 5, 2, 'todo'), anillo('r-2', 9, 1, 'todo', { mejorandoA: 2, mejoradas: 21, siguienteCeldaEn: AHORA + 12 * MIN })]
+      : [anillo('r-1', 5, 2, 'todo'), anillo('r-2', 9, 1, 58, { siguienteCeldaEn: AHORA + 6 * MIN })],
+    puertaCerradaA: ['enemigos', 'aedas'], vetadosIds: ['heroe-30', 'heroe-31'], permiteReabastecerAliados: cual !== 'obra',
+    reservaManual: { madera: 300, piedra: 150, trigo: 900 },
+    politicasActivas: [
+      { id: 'pa-1', politicaId: 'edicto_cosecha', cargo: 'gobernador', activadaEn: AHORA - 40 * MIN, expiraEn: AHORA + 110 * MIN },
+      { id: 'pa-2', politicaId: 'via_rapida', cargo: 'maestroObras', activadaEn: AHORA - 120 * MIN, expiraEn: AHORA + 30 * MIN },
+      { id: 'pa-3', politicaId: 'presion_fiscal', cargo: 'tesorero', activadaEn: AHORA - 10 * MIN, expiraEn: AHORA + 140 * MIN },
+    ],
+    cargos: { gobernadorId: 'heroe-1', maestroObrasId: 'heroe-2', tesoreroId: cual === 'visita' ? null : 'heroe-1', maestroCaravanasId: 'heroe-4', generalId: 'heroe-3', sacerdoteId: null },
     heroesFundadoresIds: ['heroe-1', 'heroe-2'], casasCompradas: ['heroe-3', 'heroe-4'],
     participacion: { 'heroe-1': 140, 'heroe-2': 85, 'heroe-3': 210, 'heroe-4': 12, 'heroe-5': 30 },
     capitalDeFaccionId: cual === 'gobernador' ? undefined : 'f-1',
@@ -37,7 +60,7 @@ export function escena(cual: Escena): { p: ProyeccionJugador; a: Asentamiento } 
   const p = {
     instante: AHORA, heroeId: yo, faccionId: 'f-1', asentamientos: [a],
     facciones: [{ id: 'f-1', nombre: 'Casa del Toro', nivel: 2, reyId: 'heroe-1', ciudadanosIds: ['heroe-1', 'heroe-2', 'heroe-3', 'heroe-4', 'heroe-5', 'heroe-6'], miembros: [] }, { id: 'f-2', nombre: 'Reino de Hatti', nivel: 3 }, { id: 'f-3', nombre: 'Liga de Ugarit', nivel: 2 }],
-    nombresDeCompaneros: { 'heroe-1': 'Minos', 'heroe-2': 'Ariadna', 'heroe-3': 'Teseo', 'heroe-4': 'Dédalo', 'heroe-5': 'Ícaro', 'heroe-6': 'Fedra' },
+    nombresDeCompaneros: { 'heroe-30': 'Atreo', 'heroe-31': 'Tiestes', 'heroe-1': 'Minos', 'heroe-2': 'Ariadna', 'heroe-3': 'Teseo', 'heroe-4': 'Dédalo', 'heroe-5': 'Ícaro', 'heroe-6': 'Fedra' },
     pueblos: [{ id: 'pu-1', tipo: 'aldeaAgricola', propio: true, madreId: 'as-1', posicion: { x: 3, y: 3 } }],
     tecnologia: { propias: { adoptadas: TEC } }, tecnologiasAdoptadas: TEC, heroesVisibles: [],
     heroe: { id: yo, displayName: yo === 'heroe-1' ? 'Minos' : 'Fedra', ubicacion: { tipo: 'asentamiento', asentamientoId: 'as-1' }, escuadrones: [esc('s1', 'milicia_lanceros', 18), esc('s2', 'honderos', 20), esc('s3', 'arqueros', 6), esc('s4', 'lanceros_mimbre', 30, 22, { tipo: 'escolta', caravanaId: 'k-1' })] },
@@ -55,6 +78,8 @@ export function escena(cual: Escena): { p: ProyeccionJugador; a: Asentamiento } 
     caravanas: [
       { id: 'k-1', tipo: 'comercial', origenAsentamientoId: 'as-1', posicionActual: { x: 0, y: 0 }, estado: 'disponible', carros: [{ tipoCarro: 'basico', animal: 'buey' }, { tipoCarro: 'reforzado', animal: 'caballo' }, { tipoCarro: 'basico' }], escoltaIds: ['s4'], escoltaLiderazgo: { usado: 22, cupo: 200 } },
       { id: 'k-2', tipo: 'comercial', origenAsentamientoId: 'as-1', destinoAsentamientoId: 'as-9', posicionActual: { x: 40, y: 30 }, estado: 'en_transito', carros: [{ tipoCarro: 'basico', animal: 'caballo' }], contenido: { madera: 300 }, escoltaIds: [], escoltaLiderazgo: { usado: 0, cupo: 200 } },
+      { id: 'kf-1', tipo: 'construccion', origenAsentamientoId: 'as-1', faccionId: 'f-1', titularId: 'heroe-1', posicionActual: { x: 0, y: 0 }, estado: 'disponible', caducaEn: AHORA + 30 * 60 * MIN },
+      { id: 'kf-2', tipo: 'construccion', origenAsentamientoId: 'as-1', faccionId: 'f-1', titularId: 'heroe-3', posicionActual: { x: 30, y: 10 }, estado: 'adjunta' },
       { id: 'k-7', tipo: 'comercial', origenAsentamientoId: 'as-5', posicionActual: { x: 0, y: 0 }, estado: 'aparcada', carros: [{ tipoCarro: 'basico', animal: 'buey' }], contenido: { trigo: 120, cuero: 30 } },
     ],
     acuerdos: [

@@ -251,6 +251,18 @@ La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, es
 > interruptor; la aparcada aquí, con su carga en fichas. **Trueques**: cada pacto con las dos plazas frente a frente (escudo, lo que da cada una en
 > fichas con lo entregado), el estado como sello y «Aceptar» / «Rechazar»; para proponer, la plaza en tarjetas y una balanza Das / Recibes.
 > Todos los rechazos salen flotando.
+>
+> **Muralla, Puerta, Tesorería y Fundación** (0.89.0, 2026-11-02, `ui/panelMuralla.ts`, `ui/panelPuerta.ts`, `ui/panelAliados.ts`,
+> `ui/panelTesoreria.ts`, `ui/panelFundacionDePlaza.ts`; banco `pruebas/centro/`). **Muralla**: el plano de los anillos celda a celda (en pie del
+> color de su material, la que se levanta latiendo, lo que falta punteado, puertas y torres), una tarjeta por anillo (escudo de nivel, material,
+> puertas contadas como aberturas, torres, celdas, multiplicador de defensa `1 + (bono − 1) × integridad / puertas`, barra de obra o de mejora, la
+> celda en curso y el coste por celda con la tarifa acumulada o la diferencia al mejorar) y los tres anillos como casillas para trazar, con candado
+> si la plaza no llega; abandonar pide confirmación. **Puerta**: el portón con su estado, una casilla por grupo con candado que se marca en un
+> borrador y se manda con «Fijar la puerta», y los vetados en fichas con ✕; **aliados**, en un interruptor. **Tesorería**: la reserva en fichas
+> (lo que hay frente a lo que cabe y una raya roja donde empieza la reserva) y cada cargo con su emblema, sus slots en casillas, lo que tiene en
+> vigor con la barra de lo que le queda y las políticas como cartas con sus efectos en chips verdes o rojos (las de otros pools del Gobernador,
+> plegadas). **Fundación**: la carreta con su coste en fichas, los requisitos como pilotos con su porqué y las caravanas en tarjetas con la barra de
+> lo que les queda antes de caducar. Todos los rechazos salen flotando.
 
 1. **Resumen** ✅ — nivel/nivel operativo, población (pesants/artesanos/nobleza + total), medidores de
    mantenimiento y nutrición, aviso de ocupación, toggle auto-construcción (`alternarAutoConstruccion`).

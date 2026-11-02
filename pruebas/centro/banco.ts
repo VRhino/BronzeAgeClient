@@ -1,4 +1,4 @@
-// Banco del panel derecho de la plaza (`/pruebas/centro/`): la subida de nivel, el Resumen (con la Residencia al pie), los Cargos, Reclutamiento, Taberna y Mercado (Órdenes, Caravanas y Trueques), con una plaza de mentira y
+// Banco del panel derecho de la plaza (`/pruebas/centro/`): la subida de nivel, el Resumen (con la Residencia al pie), los Cargos, Reclutamiento, Taberna, Mercado (Órdenes, Caravanas y Trueques), Muralla, Puerta, Tesorería y Fundación, con una plaza de mentira y
 // sin servidor. Los datos de juego son los bloques de Docs/Mechanics del motor (`../plaza/datos.json`, como `GET /v1/datos`). Las órdenes no
 // salen: se anotan en `window.__banco.enviadas`.
 import datos from '../plaza/datos.json';
@@ -17,6 +17,7 @@ import { cablearPanelIntel, renderPanelIntel } from '../../src/ui/panelIntel';
 import { tarifasDeIntel } from '../../src/apiCliente';
 import { cablearCaravanas, cablearOrdenes, htmlCaravanas, htmlOrdenes } from '../../src/ui/panelMercado';
 import { SUBPESTANA_TRUEQUES } from '../../src/ui/panelTrueques';
+import { SUBPESTANAS_CENTRO_EXTRA } from '../../src/ui/ganchos';
 import { escena, type Escena } from './datos-escena';
 
 const e = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -46,6 +47,14 @@ function ver(): void {
     cuerpo.innerHTML = `${tabs}<div class="asent-lado-cuerpo">${contenido}</div>`;
     cablearPlegables(cuerpo);
     if (sub === 'ordenes') cablearOrdenes(cuerpo, a, ctx.ejecutar); else if (sub === 'caravanas') cablearCaravanas(cuerpo, p, a, ctx.ejecutar, ver); else SUBPESTANA_TRUEQUES.cablear?.(ctx);
+    return;
+  }
+  const extra = SUBPESTANAS_CENTRO_EXTRA.find((x) => x.id === sub);
+  if (extra) {
+    const tabs = `<div class="asent-tabs asent-subtabs">${['Resumen', 'Edificios', 'Cargos', 'Muralla', 'Puerta', 'Tesorería', 'Fundación'].map((n) => `<button class="asent-tab${n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') === sub ? ' activo' : ''}" type="button">${n}</button>`).join('')}</div>`;
+    cuerpo.innerHTML = `${tabs}<div class="asent-lado-cuerpo">${extra.html(ctx)}</div>`;
+    cablearPlegables(cuerpo);
+    extra.cablear?.(ctx);
     return;
   }
   const contenido = sub === 'resumen'
