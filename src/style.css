@@ -2659,7 +2659,9 @@ body {
 .campamento-plano { align-self: center; max-width: 100%; height: auto; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border-glass); border-radius: var(--radius-sm, 6px); }
 .campamento-leyenda { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 0.78rem; color: var(--text-secondary); }
 .campamento-leyenda i { display: inline-block; width: 10px; height: 10px; margin-right: 5px; border-radius: 2px; }
-.aviso-global { position: fixed; right: 16px; bottom: 16px; z-index: 50; max-width: 320px; padding: 12px 16px; background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: var(--radius-md); box-shadow: var(--shadow-main); }
+/* El aviso que se va solo: centrado, en la mitad de arriba de la pantalla, por debajo de las barras. */
+.aviso-global { position: fixed; left: 50%; top: 18vh; transform: translateX(-50%); z-index: 50; width: max-content; max-width: min(520px, calc(100vw - 32px)); padding: 12px 20px; text-align: center; background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: var(--radius-md); box-shadow: var(--shadow-main); pointer-events: none; animation: aviso-global-entra 0.25s ease-out; }
+@keyframes aviso-global-entra { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translateX(-50%); } }
 .aviso-global[hidden] { display: none; }
 
 /* =====================================================================================

@@ -34,8 +34,10 @@ export class CamaraDeJuego {
   zoom: Zoom = 'normal';
   /** Radio de visión de la columna (`VISION` del servidor): decide cuánto cabe en pantalla. */
   radioVision = 15;
-  /** Distancia de la cámara al héroe, la del último `colocar`. */
-  distancia = 30;
+  /** Distancia de la cámara al héroe, la del último `colocar` (se acerca a la del encuadre poco a poco al cambiar de zoom). */
+  distancia = 0;
+  /** Cuánto se levanta la cámara sobre su sitio para no meterse en una ladera; se suaviza para que no dé saltos al pasar sobre el relieve. */
+  private alzado = 0;
 
   /** Lo que cabe en pantalla ahora, en u. */
   get enPantalla(): number {
@@ -48,9 +50,11 @@ export class CamaraDeJuego {
 
   /** Coloca la cámara mirando a `objetivo` (coordenadas de la escena). `suelo(x, z)` da la altura del terreno en la escena: en la montaña la
    * cámara se levanta para no quedar dentro de una ladera. */
-  colocar(objetivo: THREE.Vector3, aspecto: number, suelo: (x: number, z: number) => number): void {
+  colocar(objetivo: THREE.Vector3, aspecto: number, suelo: (x: number, z: number) => number, dt = 0): void {
     const th = (Math.min(89.5, this.inclinacion) * Math.PI) / 180, tg = Math.tan((MUNDO3D.apertura * Math.PI) / 360);
-    const d = distanciaDeEncuadre(this.enPantalla / 2, th, tg, aspecto);
+    const encuadre = distanciaDeEncuadre(this.enPantalla / 2, th, tg, aspecto);
+    const S = MUNDO3D.camaraSuave;
+    const d = this.distancia > 0 && dt > 0 ? this.distancia + (encuadre - this.distancia) * (1 - Math.exp(-dt * S.zoom)) : encuadre;
     this.distancia = d;
     const c = this.camara;
     c.aspect = aspecto;
@@ -58,14 +62,16 @@ export class CamaraDeJuego {
     c.far = Math.max(600, d * 20);
     c.updateProjectionMatrix();
     c.position.set(objetivo.x + d * Math.cos(th) * Math.sin(this.giro), objetivo.y + d * Math.sin(th), objetivo.z + d * Math.cos(th) * Math.cos(this.giro));
-    const minimo = suelo(c.position.x, c.position.z) + 0.5;
-    if (c.position.y < minimo) c.position.y = minimo;
+    // Sube deprisa y baja despacio; nunca por debajo del suelo.
+    const suelto = c.position.y, minimo = suelo(c.position.x, c.position.z) + 0.5, falta = Math.max(0, minimo - suelto);
+    this.alzado = dt > 0 ? this.alzado + (falta - this.alzado) * (1 - Math.exp(-dt * (falta > this.alzado ? S.subir : S.bajar))) : falta;
+    c.position.y = Math.max(suelto + this.alzado, suelo(c.position.x, c.position.z) + 0.15);
     c.lookAt(objetivo);
     c.updateMatrixWorld();
   }
 
   /** Píxeles de pantalla por unidad del mapa a la distancia del héroe (para el radio de agarre de los clics). */
   pxPorUnidad(altoPx: number): number {
-    return altoPx / (2 * this.distancia * Math.tan((MUNDO3D.apertura * Math.PI) / 360));
+    return altoPx / (2 * (this.distancia || 30) * Math.tan((MUNDO3D.apertura * Math.PI) / 360));
   }
 }

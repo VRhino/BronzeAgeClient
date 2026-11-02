@@ -89,6 +89,9 @@ export class VistaMundo3D {
   /** Lo que queda por construir alrededor del héroe (teselas de suelo y paisaje, trozos de árboles). */
   private readonly faltan = { terreno: 0, paisaje: 0, arboles: 0 };
   private objetivo = new THREE.Vector3();
+  /** Adónde mira la cámara de verdad: persigue a `objetivo` con un muelle amortiguado, para que siga a la columna sin tirones aunque su
+   * posición llegue a saltos (la proyección del instante se rehace cada 33 ms, el relieve cambia de pendiente, el servidor corrige). */
+  private foco: THREE.Vector3 | null = null;
   private rayo = new THREE.Raycaster();
 
   constructor(private readonly contenedor: HTMLElement, private readonly o: OpcionesVista) {
@@ -246,7 +249,10 @@ export class VistaMundo3D {
     this.camara.radioVision = estado.radioVision;
     const w = this.lienzo.clientWidth || 1, h = this.lienzo.clientHeight || 1, { x, y } = estado.heroe;
     this.objetivo.set(x, this.alturaU(x, y), y);
-    this.camara.colocar(this.objetivo, w / h, (cx, cz) => this.alturaU(cx, cz));
+    // Un salto grande (otra columna, entrar al mundo) se corta; lo demás se sigue suave.
+    if (!this.foco || this.foco.distanceTo(this.objetivo) > MUNDO3D.camaraSuave.corte) this.foco = this.objetivo.clone();
+    else this.foco.lerp(this.objetivo, 1 - Math.exp(-dt * MUNDO3D.camaraSuave.seguir));
+    this.camara.colocar(this.foco, w / h, (cx, cz) => this.alturaU(cx, cz), dt);
     this.o.alCambiarEscala?.(this.camara.pxPorUnidad(h));
     // el suelo hasta donde llega la vista (con la cámara baja, hasta la bruma)
     const d = this.camara.distancia;

@@ -942,9 +942,9 @@ function fundacionEnVista(): FundacionEnVista | null {
 
 /** El último estado que se dio a la vista 3D: de qué proyección salió, con qué selección, vista previa y reglas, y cuándo. */
 let estado3d: { p: ProyeccionJugador; clave: string; en: number; estado: EstadoVista } | null = null;
-/** Cada cuánto, como mucho, se recalcula la proyección del instante mientras algo marcha (ms): rehacerla cuesta ~1 ms y a 0,5 u/s la columna
- * no avanza ni 0,02 u entre dos. */
-const CADA_PROYECCION_MS = 33;
+/** Cada cuánto, como mucho, se recalcula la proyección del instante mientras algo marcha (ms): en cada fotograma, para que la columna avance
+ * sin saltos (rehacerla cuesta ~1 ms). */
+const CADA_PROYECCION_MS = 15;
 
 /** El estado que pinta la vista 3D en cada fotograma. Mientras algo propio marcha (las columnas y caravanas avanzan por su plan sin que el
  * servidor mande nada), la proyección del instante, como mucho cada `CADA_PROYECCION_MS`; si no, la última que llegó. Si no cambió nada, el

@@ -9,6 +9,9 @@ export const MUNDO3D = {
   apertura: 35,
   /** Inclinación de la cámara sobre el horizonte, en grados: libre entre `min` y `max`. */
   inclinacion: { inicial: 30, min: 10, max: 90 },
+  /** Suavizado de la cámara (1/s: cuanto más, más pegada). `seguir`: el punto al que mira tras la columna; `zoom`: la distancia al cambiar
+   * de encuadre; `subir`/`bajar`: lo que se levanta sobre las laderas. `corte`: a partir de cuántas u de salto no se sigue, se corta. */
+  camaraSuave: { seguir: 9, zoom: 7, subir: 14, bajar: 3, corte: 60 },
   /** Copa de los árboles (diámetro). */
   copa: 0.5,
   /** Escala de las maquetas de plazas, pueblos, avanzadas y campamentos: ×1 = la del juego. */
@@ -23,7 +26,9 @@ export const MUNDO3D = {
   ladoTesela: 64,
   /** Umbrales de clase del generador, en metros (`ELEVACION` × 1.000): agua, costa, colina, montaña y cima. */
   umbrales: { agua: 375, costa: 420, colina: 545, montana: 600, cima: 685 },
-  niebla: NIEBLA,
+  /** La niebla de guerra del 3D: la del 2D, salvo lo nunca visto, que aquí deja ver el mapa a media luz, entre el recordado (158) y el opaco
+   * (255) (Víctor, 2026-11-02). */
+  niebla: { ...NIEBLA, alfaSinVer: 206 },
 } as const;
 
 /** Lo que cabe en pantalla, normal y alejado, según el radio de visión de la columna (`VISION` del servidor): el diámetro del círculo

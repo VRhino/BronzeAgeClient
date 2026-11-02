@@ -3,6 +3,13 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.80.0] — 2026-11-02 · Niebla al elegir campamento, avisos arriba y cámara 3D suave · sin cambios de contrato (`VRhino/BronzeAge@168a3bea`)
+
+- **Elegir campamento**: todo lo que queda fuera de la frontera (250 u) de algún campamento va bajo **niebla de guerra**, nubes oscuras que derivan despacio, en el mapa y en el minimapa; de lejos solo se ven los círculos de tierra de cada campamento. Los yacimientos y bandidos de fuera no se pintan, y fuera del mundo la niebla no se abre.
+- **Los avisos que se van solos** (`.aviso-global`) salen centrados en la mitad de arriba de la pantalla, con una entrada corta, en vez de abajo a la derecha.
+- **Mundo 3D, cámara**: sigue a la columna con un muelle amortiguado (y el cambio de zoom y lo que se levanta sobre las laderas, también suaves); un salto de más de 60 u se corta. La proyección del instante se rehace en cada fotograma mientras algo marcha (antes, cada 33 ms), para que la columna avance sin tirones.
+- **Mundo 3D, lo nunca visto**: deja ver el mapa a media luz (alfa 206, entre el recordado, 158, y el opaco), con su bosque; los nombres de los yacimientos siguen solo en lo explorado. El 2D no cambia.
+
 ## [0.79.0] — 2026-11-01 · Recompensas de misión flexibles · sync con `VRhino/BronzeAge@168a3bea`
 
 - **Contrato regenerado** (`RecompensaMision`; `Mision.participacion` y `recompensas`; `DefinicionMisionRecurrente.recompensas`; fuera `Mision.recompensa` y `DefinicionMisionRecurrente.oro`). Hace falta **partida nueva** (cambia la huella de las reglas).

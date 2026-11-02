@@ -60,6 +60,50 @@ function svgIcono(id: string, color: string, lado = 18): string {
 const u = (d: number): string => `${Math.round(d)} u`;
 const pct = (x: number): string => `${Math.round(x * 100)} %`;
 
+/**
+ * La textura de la niebla de guerra: nubes oscuras que se repiten sin costura (ruido de valor de 4 octavas sobre una rejilla que da la vuelta).
+ * Se hace una vez; el mapa la pinta en coordenadas del mundo para que las nubes se queden quietas con el suelo.
+ */
+let texturaNiebla: HTMLCanvasElement | null = null;
+const LADO_NIEBLA = 256;
+function texturaDeNiebla(): HTMLCanvasElement {
+  if (texturaNiebla) return texturaNiebla;
+  const c = document.createElement('canvas');
+  c.width = c.height = LADO_NIEBLA;
+  const ctx = c.getContext('2d')!;
+  const img = ctx.createImageData(LADO_NIEBLA, LADO_NIEBLA);
+  let semilla = 0x2f6e2b1;
+  const azar = (): number => { semilla = (semilla * 1664525 + 1013904223) >>> 0; return semilla / 4294967296; };
+  const octavas = [4, 8, 16, 32].map((celdas) => ({ celdas, v: Array.from({ length: celdas * celdas }, azar) }));
+  const suave = (t: number): number => t * t * t * (t * (t * 6 - 15) + 10);
+  for (let y = 0; y < LADO_NIEBLA; y++) {
+    for (let x = 0; x < LADO_NIEBLA; x++) {
+      let n = 0, peso = 0, a = 1;
+      for (const { celdas, v } of octavas) {
+        const fx = (x / LADO_NIEBLA) * celdas, fy = (y / LADO_NIEBLA) * celdas;
+        const x0 = Math.floor(fx), y0 = Math.floor(fy), tx = suave(fx - x0), ty = suave(fy - y0);
+        const g = (i: number, j: number): number => v[((j % celdas) * celdas) + (i % celdas)]!;
+        const arriba = g(x0, y0) + (g(x0 + 1, y0) - g(x0, y0)) * tx, abajo = g(x0, y0 + 1) + (g(x0 + 1, y0 + 1) - g(x0, y0 + 1)) * tx;
+        n += (arriba + (abajo - arriba) * ty) * a;
+        peso += a;
+        a *= 0.5;
+      }
+      n /= peso;
+      const k = (y * LADO_NIEBLA + x) * 4;
+      // Del azul de la noche al gris de la bruma.
+      img.data[k] = 12 + n * 38;
+      img.data[k + 1] = 15 + n * 40;
+      img.data[k + 2] = 22 + n * 44;
+      img.data[k + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return (texturaNiebla = c);
+}
+
+/** Unidades de mundo por píxel de la textura de niebla: una nube grande mide unas 300 u. */
+const MUNDO_POR_TEXEL = 4;
+
 /** Monta la pantalla en `raiz` (que ya trae el hueco `.elegir-screen`). Devuelve con qué limpiarla. */
 export function montarEleccionCampamento(raiz: HTMLElement, o: OpcionesEleccion): () => void {
   const e = o.escapar;
@@ -343,6 +387,54 @@ export function montarEleccionCampamento(raiz: HTMLElement, o: OpcionesEleccion)
     ctx.restore();
   }
 
+  /**
+   * La niebla de guerra: todo lo que queda fuera de la frontera de algún campamento se tapa con nubes, para guardar algo de misterio al empezar.
+   * Una capa del tamaño del lienzo, rellena de nubes en coordenadas del mundo que derivan despacio, a la que se le recorta (con borde suave)
+   * el círculo de frontera de cada campamento. La misma sirve para el minimapa.
+   */
+  const capaNiebla = document.createElement('canvas'), capaNieblaMini = document.createElement('canvas');
+  function pintarNiebla(capa: HTMLCanvasElement, destino: CanvasRenderingContext2D, w: number, h: number, aDestino: (p: Point) => Point, escala: number, ahora: number, dpr: number): void {
+    if (capa.width !== Math.round(w * dpr) || capa.height !== Math.round(h * dpr)) { capa.width = Math.round(w * dpr); capa.height = Math.round(h * dpr); }
+    const ctx = capa.getContext('2d')!;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.clearRect(0, 0, w, h);
+    const patron = ctx.createPattern(texturaDeNiebla(), 'repeat');
+    if (patron) {
+      const deriva = (ahora / 1000) * 3; // unidades de mundo por segundo
+      const o = aDestino({ x: deriva, y: deriva * 0.4 });
+      patron.setTransform(new DOMMatrix().translate(o.x, o.y).scale(escala * MUNDO_POR_TEXEL));
+      ctx.fillStyle = patron;
+    } else ctx.fillStyle = '#10141c';
+    ctx.fillRect(0, 0, w, h);
+    // Los huecos: claro hasta casi la frontera y un fundido corto hacia fuera.
+    // Fuera del mundo no se abre: la niebla sigue y no deja ver dónde acaba.
+    ctx.save();
+    if (mapa) { const a = aDestino({ x: 0, y: 0 }), b = aDestino({ x: mapa.config.ancho, y: mapa.config.alto }); ctx.beginPath(); ctx.rect(a.x, a.y, b.x - a.x, b.y - a.y); ctx.clip(); }
+    ctx.globalCompositeOperation = 'destination-out';
+    for (const f of fichas) {
+      const p = aDestino(posicionDe(f));
+      const r = RADIO_FRONTERA * escala;
+      const dentro = r * 0.9, fuera = r * 1.1;
+      if (p.x + fuera < 0 || p.y + fuera < 0 || p.x - fuera > w || p.y - fuera > h) continue;
+      const g = ctx.createRadialGradient(p.x, p.y, dentro, p.x, p.y, Math.max(fuera, dentro + 1));
+      g.addColorStop(0, 'rgba(0,0,0,1)');
+      g.addColorStop(0.5, 'rgba(0,0,0,0.75)');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(fuera, dentro + 1), 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+    ctx.globalCompositeOperation = 'source-over';
+    destino.save();
+    destino.setTransform(1, 0, 0, 1, 0, 0);
+    destino.drawImage(capa, 0, 0);
+    destino.restore();
+  }
+
+  /** ¿Cae `q` dentro de la frontera de algún campamento? Lo de fuera está bajo la niebla. */
+  const descubierto = (q: Point): boolean => fichas.some((f) => { const p = posicionDe(f); return Math.hypot(q.x - p.x, q.y - p.y) <= RADIO_FRONTERA * 1.02; });
+
   function dibujar(ahora: number): void {
     if (!vivo) return;
     marco = requestAnimationFrame(dibujar);
@@ -408,6 +500,7 @@ export function montarEleccionCampamento(raiz: HTMLElement, o: OpcionesEleccion)
     ctx.fillStyle = `rgba(8, 6, 4, ${(0.55 * Math.max(0, Math.min(1, (camara.escala - 0.35) / 0.6))).toFixed(3)})`; // de lejos, sin penumbra
     ctx.fill('evenodd');
     ctx.restore();
+    pintarNiebla(capaNiebla, ctx, w, h, aPantalla, camara.escala, ahora, dpr);
     for (const i of marcados) {
       const f = fichas[i]!;
       const p = aPantalla(posicionDe(f));
@@ -436,6 +529,7 @@ export function montarEleccionCampamento(raiz: HTMLElement, o: OpcionesEleccion)
       for (const n of mapa.nodos) {
         const p = aPantalla(n.posicion);
         if (p.x < -20 || p.y < -20 || p.x > w + 20 || p.y > h + 20) continue;
+        if (!descubierto(n.posicion)) continue;
         // La piedra está por todas partes: solo muy de cerca, y una por hueco, para que no tape los metales.
         if (n.tipo === 'piedra') {
           if (camara.escala < 3) continue;
@@ -451,6 +545,7 @@ export function montarEleccionCampamento(raiz: HTMLElement, o: OpcionesEleccion)
       for (const b of mapa.bandidos ?? []) {
         const p = aPantalla(b.posicion);
         if (p.x < -20 || p.y < -20 || p.x > w + 20 || p.y > h + 20) continue;
+        if (!descubierto(b.posicion)) continue;
         dibujarIconoMapa(ctx, 'bandidos', p.x, p.y, lado * 1.25, '#d9534f');
         if (camara.escala > 1.2) rotulo(ctx, `N${b.nivel}`, p.x, p.y + lado * 0.7, 10, '#f3b0a8');
       }
@@ -486,6 +581,7 @@ export function montarEleccionCampamento(raiz: HTMLElement, o: OpcionesEleccion)
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const k = w / mapa.config.ancho;
     ctx.drawImage(imagenDeLejos(mapa), 0, 0, w, h);
+    pintarNiebla(capaNieblaMini, ctx, w, h, (p) => ({ x: p.x * k, y: p.y * k }), k, performance.now(), dpr);
     const { w: lw, h: lh } = tamano();
     ctx.strokeStyle = '#f1dcae';
     ctx.lineWidth = 1.5;

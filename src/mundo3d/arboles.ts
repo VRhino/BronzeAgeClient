@@ -1,7 +1,7 @@
 // Los árboles, uno a uno donde el artefacto tiene bosque (su raster de densidad, cada 4 u), por trozos de 32 u alrededor del héroe: copas
 // instanciadas de 0,3 u (la de la mesa de escalas) con su tronco. Lejos van menos y más grandes, para que el bosque siga tapando el suelo con
-// muchas menos copas. Solo donde se ha explorado: lo que nunca se vio lo tapa la niebla, y un árbol de más ahí sería una silueta oscura
-// delante de lo que sí se ve. Ni en el agua, ni en los cauces, ni en las laderas muy empinadas, ni en los claros de plazas y pueblos.
+// muchas menos copas. También donde nunca se exploró: esa niebla deja ver el mapa a media luz (Víctor, 2026-11-02), y el bosque es parte de
+// él; su material va bajo la niebla como el suelo. Ni en el agua, ni en los cauces, ni en las laderas muy empinadas, ni en los claros de plazas y pueblos.
 import * as THREE from 'three';
 import type { MapaGenerado } from '../terreno';
 import { MUNDO3D } from './config';
@@ -78,8 +78,8 @@ export interface Entorno {
   /** Los caminos de la proyección: tampoco crecen árboles encima. */
   caminos?: Cauces;
   claros: readonly Claro[];
-  /** ¿Se exploró (x, y)? */
-  explorada: (x: number, y: number) => boolean;
+  /** ¿Pueden crecer árboles en (x, y) según la niebla? Sin él, en todas partes. */
+  explorada?: (x: number, y: number) => boolean;
 }
 
 /** Los árboles del trozo que empieza en (x0, y0), como [x, y, altura en u, azar] por árbol. `parte` es la fracción que se queda (las bandas
@@ -112,7 +112,7 @@ export function arbolesDelTrozo(e: Entorno, x0: number, y0: number, lado: number
         const x = i + hash(i, j, 11 + k), y = j + hash(i, j, 29 + k), { k: c, alt } = rejilla(x, y);
         if (agua[c] || agua[c + 1] || agua[c + n] || agua[c + n + 1]) continue;
         const pendiente = Math.hypot(h[c + 1]! - h[c]!, h[c + n]! - h[c]!) / (paso * MPU);
-        if (pendiente > PENDIENTE_MAX || !e.explorada(x, y) || enCauce(cauces, x, y)) continue;
+        if (pendiente > PENDIENTE_MAX || (e.explorada && !e.explorada(x, y)) || enCauce(cauces, x, y)) continue;
         if (claros.some((q) => (x - q.x) ** 2 + (y - q.y) ** 2 < q.r * q.r)) continue;
         out.push(x, y, alt / MPU, hash(i, j, 41 + k));
       }
@@ -143,10 +143,8 @@ export class Arboles {
   private claros: readonly Claro[] = [];
   private caminos: Cauces = { rios: [] };
   private claveClaros = '';
-  /** Celdas exploradas de cada trozo, con la versión de la niebla en que se contaron: un trozo solo se rehace si cambia lo suyo. */
-  private readonly exploradas = new Map<string, { version: number; cuantas: number }>();
 
-  constructor(private readonly fuente: FuenteDeAltura, private readonly mapa: MapaGenerado, private readonly niebla: NieblaDeGuerra) {
+  constructor(private readonly fuente: FuenteDeAltura, private readonly mapa: MapaGenerado, niebla: NieblaDeGuerra) {
     this.copas = niebla.aplicar(new THREE.MeshLambertMaterial({ color: 0xffffff }));
     this.troncos = niebla.aplicar(new THREE.MeshLambertMaterial({ color: 0x5b4632 }));
     this.cauces = caucesDe(mapa);
@@ -162,7 +160,7 @@ export class Arboles {
   }
 
   /** Pide los trozos a menos de `alcance` u de (cx, cy), los más cercanos primero, mientras quede tiempo (`hasta`, en `performance.now()`), y
-   * suelta los que quedan lejos. Un trozo se rehace al cambiar de banda, de claros o de lo explorado. Devuelve cuántos faltan. */
+   * suelta los que quedan lejos. Un trozo se rehace al cambiar de banda o de claros. Devuelve cuántos faltan. */
   actualizar(cx: number, cy: number, alcance: number, hasta: number): number {
     const quiero = new Map<string, { x0: number; y0: number; d: number; banda: number; clave: string }>();
     const maxX = Math.ceil(this.fuente.ancho / TROZO) - 1, maxY = Math.ceil(this.fuente.alto / TROZO) - 1;
@@ -172,11 +170,10 @@ export class Arboles {
         const d = Math.hypot(Math.max(x0 - cx, 0, cx - x0 - TROZO), Math.max(y0 - cy, 0, cy - y0 - TROZO));
         if (d > alcance) continue;
         const banda = BANDAS.findIndex((b) => d < b.hasta), k = `${tx},${ty}`;
-        quiero.set(k, { x0, y0, d, banda, clave: `${banda}|${this.claveClaros}|${this.exploradasEn(k, x0, y0)}` });
+        quiero.set(k, { x0, y0, d, banda, clave: `${banda}|${this.claveClaros}` });
       }
     }
     for (const clave of [...this.trozos.keys()]) if (!quiero.has(clave)) this.soltar(clave);
-    for (const clave of [...this.exploradas.keys()]) if (!quiero.has(clave)) this.exploradas.delete(clave);
     const pendientes = [...quiero.entries()].filter(([k, t]) => this.trozos.get(k)?.clave !== t.clave).sort((a, b) => a[1].d - b[1].d);
     let hechos = 0;
     for (const [k, t] of pendientes) {
@@ -187,20 +184,9 @@ export class Arboles {
     return pendientes.length - hechos;
   }
 
-  /** Cuántas celdas de la niebla del trozo están exploradas; se recuenta solo cuando cambia la niebla. */
-  private exploradasEn(clave: string, x0: number, y0: number): number {
-    const v = this.niebla.version, c = this.exploradas.get(clave);
-    if (c?.version === v) return c.cuantas;
-    const c5 = this.niebla.celda, m = c5 / 2;
-    let cuantas = 0;
-    for (let y = Math.floor(y0 / c5) * c5 + m; y - m < y0 + TROZO; y += c5) for (let x = Math.floor(x0 / c5) * c5 + m; x - m < x0 + TROZO; x += c5) if (this.niebla.exploradaEn(x, y)) cuantas++;
-    this.exploradas.set(clave, { version: v, cuantas });
-    return cuantas;
-  }
-
   private poner(clave: string, x0: number, y0: number, banda: number, claveTrozo: string): void {
-    const parte = BANDAS[banda]!.parte, crece = 1 / Math.sqrt(parte), niebla = this.niebla;
-    const lista = arbolesDelTrozo({ fuente: this.fuente, mapa: this.mapa, cauces: this.cauces, caminos: this.caminos, claros: this.claros, explorada: (x, y) => niebla.exploradaEn(x, y) }, x0, y0, TROZO, parte);
+    const parte = BANDAS[banda]!.parte, crece = 1 / Math.sqrt(parte);
+    const lista = arbolesDelTrozo({ fuente: this.fuente, mapa: this.mapa, cauces: this.cauces, caminos: this.caminos, claros: this.claros }, x0, y0, TROZO, parte);
     this.soltar(clave);
     const grupo = new THREE.Group(), n = lista.length / 4;
     if (n) {

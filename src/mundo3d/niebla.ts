@@ -1,6 +1,6 @@
 // La niebla de guerra en el sombreado. La rejilla de `proyeccion.exploracion` (celdas de 5 u) va a una textura (rojo: explorado, verde: se ve
-// ahora) y cada material de lo que en el 2D se pinta BAJO la niebla la mezcla con su color: sin ver, opaco; recordado, oscurecido; viéndolo,
-// tal cual (`NIEBLA` de `paletas.ts`). Lo propio y lo que se ve ahora no lleva este material: va encima, como en `render.ts`.
+// ahora) y cada material de lo que en el 2D se pinta BAJO la niebla la mezcla con su color: sin ver, casi tapado pero con el mapa a la vista;
+// recordado, oscurecido; viéndolo, tal cual (`MUNDO3D.niebla`). Lo propio y lo que se ve ahora no lleva este material: va encima, como en `render.ts`.
 import * as THREE from 'three';
 import type { NieblaProyectada } from '../tiposDominio';
 import { MUNDO3D } from './config';
