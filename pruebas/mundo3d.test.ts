@@ -4,12 +4,12 @@
 import { describe, expect, test } from 'vitest';
 import type { ProyeccionJugador } from '../src/apiCliente';
 import { arbolesDelTrozo, caucesDe, franjas, type Entorno } from '../src/mundo3d/arboles';
-import { distanciaDeEncuadre } from '../src/mundo3d/camara';
-import { encuadres } from '../src/mundo3d/config';
+import { CamaraDeJuego, distanciaDeEncuadre } from '../src/mundo3d/camara';
+import { ACERCADO, encuadres } from '../src/mundo3d/config';
 import { ANCHOS, dondeEstaLaSeleccion, estadoDesdeProyeccion, mundoDesdeProyeccion } from '../src/mundo3d/estado';
 import { bloquesDeTropa } from '../src/mundo3d/figuras';
 import { fuenteDesdeMapa, type FuenteDeAltura } from '../src/mundo3d/fuente';
-import { cinta, circulo, rutaPendiente, tramosEnCaja } from '../src/mundo3d/lineas';
+import { chaikin, cinta, circulo, rutaPendiente, simplificar, suavizarCamino, tramosEnCaja } from '../src/mundo3d/lineas';
 import { alargarHastaElAgua, suavizar, tramosEnTierra } from '../src/mundo3d/paisaje';
 import type { MapaGenerado } from '../src/terreno';
 import type { Ejercito } from '../src/tiposDominio';
@@ -32,6 +32,15 @@ describe('la cámara de juego', () => {
     expect(encuadres(15)).toEqual([15, 22]);
     expect(encuadres(30)).toEqual([30, 45]);
     expect(encuadres(60)).toEqual([60, 90]);
+  });
+
+  test('tres zooms, de uno en uno: de cerca (0,6 veces el normal), normal y alejado', () => {
+    const c = new CamaraDeJuego();
+    c.radioVision = 15;
+    expect([c.pasoDeZoom(-1), c.zoom, c.enPantalla]).toEqual([true, 'cerca', 15 * ACERCADO]);
+    expect(c.pasoDeZoom(-1)).toBe(false); // no hay más cerca
+    expect([c.pasoDeZoom(1), c.pasoDeZoom(1), c.zoom, c.enPantalla]).toEqual([true, true, 'alejado', 22]);
+    expect([c.pasoDeZoom(1), c.zoom]).toEqual([false, 'alejado']);
   });
 });
 
@@ -131,6 +140,22 @@ describe('lo ajeno, los nombres y lo seleccionado', () => {
     expect(e.caravanas.map((c) => [c.id, c.ruta.length])).toEqual([['car-3', 2], ['cav-1', 0]]);
   });
 
+  test('el carrito del héroe si lleva algo; los carros de caravana con su animal y la caravana suelta con su escolta delante', () => {
+    const conCarga = columna({ suministro: { trigo: 0, madera: 30 }, caravanasAdjuntasIds: ['ad-1'] });
+    const q = proyeccion([conCarga], {
+      caravanas: [
+        { id: 'ad-1', origenAsentamientoId: 'x', posicionActual: { x: 0, y: 0 }, tipo: 'comercial', estado: 'adjunta', carros: [{ tipoCarro: 'basico' }, { tipoCarro: 'basico', animal: 'camello' }] },
+        { id: 'su-1', origenAsentamientoId: 'x', posicionActual: { x: 5, y: 5 }, tipo: 'comercial', estado: 'en_transito', escoltaIds: ['e1', 'e2'], carros: [{ tipoCarro: 'basico', animal: 'caballo' }, { tipoCarro: 'reforzado' }] },
+        { id: 'su-2', origenAsentamientoId: 'x', posicionActual: { x: 6, y: 6 }, tipo: 'acarreo', estado: 'en_transito' },
+      ],
+      caravanasAvistadas: [{ id: 'cav-9', posicionActual: { x: 50, y: 50 }, faccionId: 'f-2', escoltada: true, recursos: [] }],
+    });
+    const v = estadoDesdeProyeccion(q, REGLAS, null);
+    expect(v.columnas[0]!.carros).toEqual({ carga: 1, fundacion: false, propio: true, animales: ['camello'] });
+    expect(estadoDesdeProyeccion(proyeccion([columna({ suministro: { trigo: 0 } })]), REGLAS, null).columnas[0]!.carros).toEqual({ carga: 0, fundacion: false });
+    expect(v.caravanas.map((c) => [c.id, c.escolta, c.animales])).toEqual([['su-1', 2, ['caballo', 'buey']], ['su-2', undefined, undefined], ['cav-9', 1, undefined]]);
+  });
+
   test('Miradas: abierta con los minutos que le quedan, caducada con los que faltan para volver a comprar', () => {
     expect(e.miradas.map((m) => [m.id, m.abierta, m.minutos])).toEqual([['m1', true, 2], ['m2', false, 1]]);
   });
@@ -170,6 +195,10 @@ describe('lo que hay en el mundo, sacado de la proyección', () => {
 
   test('la ciudad es el 10 % del radio de su zona: la del contorno si se ve, la recordada si no, y si no la inicial', () => {
     expect(m.plazas.map((x) => [x.id, +x.radioCiudad.toFixed(3), x.recordada])).toEqual([['a-1', 1.5, false], ['a-2', 0.8, true], ['a-3', 0.6, true]]);
+  });
+
+  test('cada camino con su escalón (su textura) y su trazado suavizado', () => {
+    expect(m.trazos.filter((x) => x.tipo === 'camino').map((x) => [x.escalon, x.puntos.length])).toEqual([[2, 2], [0, 2]]);
   });
 
   test('cada raya en su lado de la niebla: caminos y fronteras debajo, la zona propia y el anillo de los mercenarios encima', () => {
@@ -227,6 +256,28 @@ describe('las cintas pegadas al suelo', () => {
   test('recortar a una caja: los segmentos con algún extremo dentro, seguidos', () => {
     const l = [{ x: -10, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 20, y: 0 }, { x: 30, y: 0 }, { x: 3, y: 1 }];
     expect(tramosEnCaja(l, 0, -5, 5, 5)).toEqual([[l[0], l[1], l[2], l[3]], [l[4], l[5]]]);
+  });
+
+  test('con textura: u de lado a lado, v por lo andado desde donde empieza el recorte', () => {
+    const uv = cinta([{ x: 0, y: 0 }, { x: 4, y: 0 }], suelo, 1, { textura: { periodo: 2, desde: 6 } })!.getAttribute('uv')!;
+    expect([uv.getX(0), uv.getY(0), uv.getX(1), uv.getY(1)]).toEqual([0, 3, 1, 3]);
+    expect(uv.getY(16)).toBe(5); // a 4 u del principio: (6 + 4) / 2
+  });
+
+  test('un camino en escalera (nodo a nodo cada 4 u) sale casi recto, con los extremos en su sitio', () => {
+    const escalera = [{ x: 0, y: 0 }, { x: 4, y: 4 }, { x: 8, y: 4 }, { x: 12, y: 8 }, { x: 16, y: 8 }, { x: 20, y: 12 }, { x: 24, y: 12 }, { x: 28, y: 16 }, { x: 32, y: 16 }];
+    const s = suavizarCamino(escalera);
+    expect([s[0], s[s.length - 1]]).toEqual([escalera[0], escalera[escalera.length - 1]]);
+    // lejos de los extremos, a menos de un cuarto de u de la recta y = x / 2 + 1 que siguen los puntos medios
+    const medio = s.filter((q) => q.x > 6 && q.x < 26);
+    expect(medio.length).toBeGreaterThan(0);
+    for (const q of medio) expect(Math.abs(q.y - (q.x / 2 + 1))).toBeLessThan(0.25);
+  });
+
+  test('una esquina se redondea sin cortar más de lo que se pide; lo recto se queda en dos puntos', () => {
+    expect(simplificar([{ x: 0, y: 0 }, { x: 5, y: 0.1 }, { x: 10, y: 0 }], 0.3)).toEqual([{ x: 0, y: 0 }, { x: 10, y: 0 }]);
+    const esquina = chaikin([{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 20 }], 1, 1.5);
+    expect(esquina).toEqual([{ x: 0, y: 0 }, { x: 18.5, y: 0 }, { x: 20, y: 1.5 }, { x: 20, y: 20 }]);
   });
 
   test('suavizar un río no mueve sus extremos', () => {

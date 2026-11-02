@@ -13,8 +13,8 @@ import { cablearTesoreria, htmlTesoreria } from './panelTesoreria';
 import { SUBPESTANA_INFORMACION } from './vistaCiudad';
 import { SUBPESTANA_TRUEQUES } from './panelTrueques';
 import { SUBPESTANA_MISIONES } from './misiones';
-import { FICHA_AVANZADA, FICHA_OBRA, FICHA_PUEBLO, SUBPESTANA_PUEBLOS, seleccionarPuebloUObra } from './pueblos';
-import { FICHA_CARAVANA_AJENA, FICHA_COLUMNA_AJENA, seleccionarAjeno } from './interaccionAjena';
+import { FICHA_AVANZADA, FICHA_OBRA, FICHA_PUEBLO, SUBPESTANA_PUEBLOS, pueblosYObrasBajoElClic } from './pueblos';
+import { FICHA_CARAVANA_AJENA, FICHA_COLUMNA_AJENA, ajenosBajoElClic } from './interaccionAjena';
 
 type Escapar = (valor: string) => string;
 
@@ -112,16 +112,17 @@ export const FICHAS_MAPA_EXTRA: FichaMapaExtra[] = [
   FICHA_OBRA,
 ];
 
-/** Qué hay bajo un clic del mapa: se prueban antes que los selectores propios de `main.ts`; el primero que devuelva algo gana. `ir` = adónde marchar (opcional). */
+/** Qué hay bajo un clic del mapa: lo que devuelven estos selectores entra con lo de `main.ts` (`objetosBajoElClic`), que lo ordena; con dos
+ * o más, el jugador elige en una lista. `ir` = adónde marchar (opcional). */
 export interface ObjetoBajoElClic {
   tipo: string;
   id: string;
   ir?: { tipo: 'punto'; punto: { x: number; y: number } } | { tipo: 'asentamiento'; id: string };
 }
-export const SELECTORES_MAPA_EXTRA: ((p: ProyeccionJugador, punto: { x: number; y: number }) => ObjetoBajoElClic | null)[] = [
+export const SELECTORES_MAPA_EXTRA: ((p: ProyeccionJugador, punto: { x: number; y: number }) => ObjetoBajoElClic[])[] = [
   // --- hueco bloque C1
-  seleccionarAjeno,
+  ajenosBajoElClic,
 
   // --- hueco pueblos
-  seleccionarPuebloUObra,
+  pueblosYObrasBajoElClic,
 ];

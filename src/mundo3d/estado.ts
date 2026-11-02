@@ -8,10 +8,13 @@ import { svgSigilo } from '../sigilo/sigilo';
 import type { NieblaProyectada } from '../tiposDominio';
 import { MUNDO3D } from './config';
 import type { TropaDeColumna } from './figuras';
-import { circulo, sentidoDe } from './lineas';
+import { circulo, sentidoDe, suavizarCamino } from './lineas';
 import { partirFronteras, type ZonaDeFaccion } from '../mundo/fronteras';
 
 type Punto = { x: number; y: number };
+
+/** Lo que tira de un carro de caravana (`Caravana.carros[].animal`). */
+export type AnimalDeTiro = 'buey' | 'caballo' | 'camello';
 
 /** Lo que una columna arrastra detrás de la tropa. */
 export interface Carros {
@@ -19,6 +22,11 @@ export interface Carros {
   carga: number;
   /** Lleva la Caravana de Fundación (el último carro, con lona). */
   fundacion: boolean;
+  /** El carrito del héroe (Víctor, 2026-11-02): la columna lleva algo en su carro (`suministro`). Pequeño y sin animal, justo detrás de la
+   * tropa; solo se sabe de las de la Facción. */
+  propio?: true;
+  /** Lo que tira de cada carro de caravana, en orden (los de carga y al final el de fundación); sin él, un buey. */
+  animales?: AnimalDeTiro[];
 }
 
 export interface ColumnaEnVista {
@@ -42,7 +50,12 @@ export interface ColumnaEnVista {
 }
 
 /** Una caravana suelta en el mapa (las enganchadas van detrás de su columna): la propia con su ruta, la avistada sin ella. */
-export interface CaravanaEnVista { id: string; posicion: Punto; ruta: Punto[]; fundacion: boolean; color: string }
+export interface CaravanaEnVista { id: string; posicion: Punto; ruta: Punto[]; fundacion: boolean; color: string;
+  /** Las escuadras de su escolta, que marchan delante del carro: las cedidas de la propia (`escoltaIds`); de la avistada solo se sabe si va
+   * escoltada (`escoltada`), y se pinta una. */
+  escolta?: number;
+  /** Lo que tira de cada uno de sus carros (`carros[].animal`, solo en las comerciales propias): un carro por animal. Sin él, un carro con buey. */
+  animales?: AnimalDeTiro[] }
 /** Una Mirada de taberna (Doc 5.12.10): abierta, su círculo; caducada, un anillo discontinuo mientras la zona sigue vedada. */
 export interface MiradaEnVista { id: string; centro: Punto; radio: number; abierta: boolean; minutos: number }
 /** La vista previa de fundar alrededor de la columna: la zona con que nacería, dónde cabría una aldea y las parcelas de bosque. */
@@ -71,6 +84,8 @@ export interface ObraEnVista { id: string; posicion: Punto; arrancada: boolean; 
 export interface CampamentoEnVista { id: string; posicion: Punto; radioProteccion: number }
 /** Una raya sobre el terreno: camino, frontera o zona. `bajoNiebla` = la oscurece la niebla, como en el 2D; si no, va encima. */
 export interface TrazoEnVista { puntos: Punto[]; ancho: number; color: string; bajoNiebla: boolean; discontinuo?: boolean; tipo: 'camino' | 'frontera' | 'zona' | 'anillo'; recordada?: boolean;
+  /** De un camino: 0 sendero, 1 camino, 2 calzada (su textura). */
+  escalon?: 0 | 1 | 2;
   /** De un contorno: 1 o -1 según su sentido, para correr la raya hacia dentro y que, donde chocan dos zonas, se vean las dos. */
   haciaDentro?: 1 | -1;
   /** La línea entre dos provincias de la misma Facción: fina y medio transparente. */
@@ -118,14 +133,22 @@ export interface ReglasDeVista { vision: RadiosDeVision; radioZonaInicial: numbe
 /** La ciudad del juego, respecto al radio de su zona (`Economia_Construccion`). */
 const FRACCION_CIUDAD = 0.1;
 /** Anchura de las rayas, en u: caminos por escalón (sendero, camino, calzada), fronteras, la zona propia y el anillo de los mercenarios. Más
- * gruesas que en la realidad para que se lean desde la cámara de juego. */
-export const ANCHOS = { caminos: [0.2, 0.35, 0.55], frontera: 0.24, zona: 0.36, provincia: 0.08, anillo: 0.1 } as const;
+ * gruesas que en la realidad para que se lean desde la cámara de juego. De un camino es la cinta entera: lo que se ve es algo menos, que sus
+ * bordes se funden con el suelo (`caminos.ts`). */
+export const ANCHOS = { caminos: [0.4, 0.65, 0.9], frontera: 0.24, zona: 0.36, provincia: 0.08, anillo: 0.1 } as const;
 const COLOR_AJENO = '#9a927f', COLOR_CAMINO = '#8b5a2b', COLOR_ANILLO = '#2e5e8c';
 /** La tropa de quien aún no tiene Facción. */
 const COLOR_SIN_FACCION = '#c0392b';
 
-/** Héroes a caballo que se pintan, como mucho. */
-const MAX_JINETES = 4;
+/** Héroes a caballo que se pintan, como mucho; y carros de una caravana suelta y escuadras de su escolta. */
+const MAX_JINETES = 4, MAX_CARROS_CARAVANA = 3, MAX_ESCOLTA = 3;
+
+/** Lo que tira de los carros de una caravana: uno por carro (el que no lleva animal, un buey), como mucho `max`. */
+function animalesDe(c: { carros?: { animal?: AnimalDeTiro }[] } | undefined, max: number): AnimalDeTiro[] {
+  return (c?.carros ?? []).slice(0, max).map((x) => x.animal ?? 'buey');
+}
+/** Los animales solo si alguno no es un buey (sin ellos, todos lo son). */
+const conAnimales = (animales: AnimalDeTiro[]): { animales?: AnimalDeTiro[] } => (animales.some((a) => a !== 'buey') ? { animales } : {});
 
 /** Lo que la vista pinta y no sale de la proyección: lo seleccionado en el panel y la vista previa de fundar. */
 export interface ExtraDeVista {
@@ -159,7 +182,10 @@ export function estadoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVist
     const deFundacion = (c: { id: string; tipo?: string; estado?: string; titularId?: string }) =>
       c.tipo === 'construccion' && (lleva.has(c.id) || (c.estado === 'adjunta' && !!c.titularId && e.participantes.some((x) => x.heroeId === c.titularId)));
     const fundacion = !!e.caravanaFundacionId || (p.caravanas ?? []).some(deFundacion);
-    const carga = (p.caravanas ?? []).filter((c) => lleva.has(c.id) && c.tipo !== 'construccion').length;
+    // un carro por caravana enganchada (como mucho dos), con el animal de su primer carro que lo lleve
+    const deCarga = (p.caravanas ?? []).filter((c) => lleva.has(c.id) && c.tipo !== 'construccion').slice(0, 2);
+    const animales = [...deCarga.map((c) => c.carros?.find((x) => x.animal)?.animal ?? 'buey'), ...(fundacion ? ['buey' as const] : [])];
+    const lleno = Object.values(e.suministro ?? {}).some((n) => n > 0);
     columnas.push({
       id: e.id,
       mia: e === mia,
@@ -169,7 +195,7 @@ export function estadoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVist
       jinetes: Math.max(1, Math.min(MAX_JINETES, e.participantes.length)),
       tropa: tropaPropia(e),
       color: color(e.faccionId ?? p.faccionId),
-      carros: { carga: Math.min(2, carga), fundacion },
+      carros: { carga: deCarga.length, fundacion, ...(lleno ? { propio: true as const } : {}), ...conAnimales(animales) },
       formacion: !!e.formacion,
     });
   }
@@ -186,11 +212,17 @@ export function estadoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVist
   const adjuntas = new Set([...p.ejercitos, ...(p.ejercitosAvistados ?? [])].flatMap((e) => [...(e.caravanasAdjuntasIds ?? []), ...(e.caravanaFundacionId ? [e.caravanaFundacionId] : [])]));
   const caravanas: CaravanaEnVista[] = (p.caravanas ?? [])
     .filter((c) => !adjuntas.has(c.id) && c.estado !== 'adjunta' && !(c.tipo === 'construccion' && c.estado === 'disponible'))
-    .map((c) => ({
-      id: c.id, posicion: c.posicionActual, ruta: (c.ruta?.length ?? 0) >= 2 ? c.ruta! : [], fundacion: c.tipo === 'construccion',
-      color: color(p.asentamientos.find((a) => a.id === c.origenAsentamientoId)?.faccionId ?? p.faccionId),
-    }));
-  for (const c of (p.caravanasAvistadas ?? []).filter((x) => !adjuntas.has(x.id))) caravanas.push({ id: c.id, posicion: c.posicionActual, ruta: [], fundacion: false, color: c.faccionId ? color(c.faccionId) : COLOR_AJENO });
+    .map((c) => {
+      const fundacion = c.tipo === 'construccion', escolta = Math.min(MAX_ESCOLTA, c.escoltaIds?.length ?? 0);
+      const animales = fundacion ? [] : animalesDe(c, MAX_CARROS_CARAVANA);
+      return {
+        id: c.id, posicion: c.posicionActual, ruta: (c.ruta?.length ?? 0) >= 2 ? c.ruta! : [], fundacion,
+        color: color(p.asentamientos.find((a) => a.id === c.origenAsentamientoId)?.faccionId ?? p.faccionId),
+        ...(escolta ? { escolta } : {}), ...(animales.length ? { animales } : {}),
+      };
+    });
+  for (const c of (p.caravanasAvistadas ?? []).filter((x) => !adjuntas.has(x.id)))
+    caravanas.push({ id: c.id, posicion: c.posicionActual, ruta: [], fundacion: false, color: c.faccionId ? color(c.faccionId) : COLOR_AJENO, ...(c.escoltada ? { escolta: 1 } : {}) });
   const miradas = (p.miradasIntel ?? []).map((m) => {
     const abierta = m.expiraEn > p.instante;
     return { id: m.id, centro: m.centro, radio: m.radio, abierta, minutos: Math.max(0, Math.ceil(((abierta ? m.expiraEn : m.libreEn) - p.instante) / 60_000)) };
@@ -284,6 +316,15 @@ export function trazosDeFronteras(zonas: readonly (ZonaDeFaccion & { recordada: 
   return out;
 }
 
+/** El trazado suavizado de cada camino (`suavizarCamino`), guardado por su lista de puntos: la proyección del instante, que se rehace en cada
+ * fotograma mientras algo marcha, trae los mismos. */
+const CAMINOS_SUAVES = new WeakMap<readonly Punto[], Punto[]>();
+function caminoSuave(puntos: readonly Punto[]): Punto[] {
+  let s = CAMINOS_SUAVES.get(puntos);
+  if (!s) CAMINOS_SUAVES.set(puntos, (s = suavizarCamino(puntos)));
+  return s;
+}
+
 /** Plazas, pueblos, avanzadas, obras, campamentos y rayas de la proyección, con el lado de la niebla de cada capa como en `render.ts`. */
 export function mundoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVista): MundoEnVista {
   const color = (faccionId: string | null | undefined) => (faccionId ? faccionColor(faccionId, p.facciones) : COLOR_AJENO);
@@ -291,7 +332,11 @@ export function mundoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVista
   const plazas: PlazaEnVista[] = [];
   const trazos: TrazoEnVista[] = [];
   // bajo la niebla: caminos, fronteras de lo que se ve (su silueta real) y de lo que se recuerda (un círculo discontinuo con su radio)
-  for (const c of p.caminos ?? []) if (c.puntos.length >= 2) trazos.push({ puntos: c.puntos, ancho: ANCHOS.caminos[c.escalon ?? 1] ?? ANCHOS.caminos[1], color: COLOR_CAMINO, bajoNiebla: true, tipo: 'camino' });
+  for (const c of p.caminos ?? []) {
+    if (c.puntos.length < 2) continue;
+    const escalon = c.escalon === 0 || c.escalon === 2 ? c.escalon : 1;
+    trazos.push({ puntos: caminoSuave(c.puntos), ancho: ANCHOS.caminos[escalon], color: COLOR_CAMINO, bajoNiebla: true, tipo: 'camino', escalon });
+  }
   // Las zonas de una misma Facción, fusionadas (`mundo/fronteras.ts`): frontera por fuera y una línea tenue entre sus provincias. La frontera
   // exterior de lo tuyo la traza la zona fusionada, encima; de ti solo salen aquí las líneas entre provincias, también encima.
   const conZonaPropia = (p.zonasFusionadas ?? []).some((z) => z.faccionId === p.faccionId && z.contornos.length > 0);

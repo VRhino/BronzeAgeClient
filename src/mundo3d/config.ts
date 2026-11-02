@@ -33,6 +33,9 @@ export const MUNDO3D = {
   cielo: { cenit: 0x3d72b0, horizonte: 0xb7c6cf, bajoHorizonte: 0x8e9a98 },
 } as const;
 
+/** El zoom de cerca (Víctor, 2026-11-02): además del normal y el alejado, uno que enseña 0,6 veces lo del normal. */
+export const ACERCADO = 0.6;
+
 /** Lo que cabe en pantalla, normal y alejado, según el radio de visión de la columna (`VISION` del servidor): el diámetro del círculo
  * alrededor del héroe que cabe en la pantalla. Héroe solo (15 u): 15 y 22; con soldados (30 u): 30 y 45. Otro radio: el radio y 1,5 veces. */
 export function encuadres(radioVision: number): readonly [number, number] {

@@ -1,5 +1,5 @@
 // Ratón y teclado sobre la escena: arrastrar gira e inclina la cámara alrededor del héroe; un clic sin arrastre (menos de 5 px) es un clic en el
-// terreno; la rueda cambia entre el zoom normal y el alejado; las flechas o WASD giran e inclinan.
+// terreno; la rueda pasa de un zoom al siguiente (de cerca, normal y alejado); las flechas o WASD giran e inclinan.
 import type { CamaraDeJuego } from './camara';
 
 export interface Entrada {
@@ -29,10 +29,13 @@ export function instalarEntrada(lienzo: HTMLCanvasElement, camara: CamaraDeJuego
     if (p && Math.hypot(e.clientX - p.x, e.clientY - p.y) <= 5) alClicar(e);
   };
   const cancela = (): void => { arrastre = pulsado = null; };
+  // Un giro de rueda (o un gesto del trackpad, que manda muchos eventos seguidos) es un solo paso de zoom.
+  let ultimoPaso = -Infinity;
   const rueda = (e: WheelEvent): void => {
     e.preventDefault();
-    const quiero = e.deltaY > 0 ? 'alejado' : 'normal';
-    if (camara.zoom !== quiero) { camara.zoom = quiero; alZoom(); }
+    if (!e.deltaY || performance.now() - ultimoPaso < 280) return;
+    ultimoPaso = performance.now();
+    if (camara.pasoDeZoom(e.deltaY > 0 ? 1 : -1)) alZoom();
   };
   const tecla = (e: KeyboardEvent): void => {
     if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd'].includes(e.key)) return;

@@ -1,9 +1,9 @@
-// Las maquetas de una columna: sus héroes a caballo al frente, su tropa detrás, de tres en fondo, y sus carros al final (el de fundación, con
-// lona), todos pisando el rastro de la cabeza. Las mismas de la mesa de escalas 3D, a la escala `MUNDO3D.tropa`. Una caravana suelta es una
-// columna sin gente: su carro con el buey.
+// Las maquetas de una columna: sus héroes a caballo al frente, su tropa detrás, de tres en fondo, el carrito del héroe (sin animal) si lleva algo y
+// al final los carros de sus caravanas (más grandes y cada uno con su animal; el de fundación, con lona), todos pisando el rastro de la cabeza.
+// Las mismas de la mesa de escalas 3D, a la escala `MUNDO3D.tropa`. Una caravana suelta es una columna sin héroes: su escolta y sus carros.
 import * as THREE from 'three';
 import { MUNDO3D } from './config';
-import type { Carros } from './estado';
+import type { AnimalDeTiro, Carros } from './estado';
 
 type Punto = { x: number; y: number };
 
@@ -37,11 +37,29 @@ const PIEZAS = (() => {
     caja: caja(0.1, 0.05, 0.16, 0, 0.075, 0),
     lona: caja(0.1, 0.06, 0.13, 0, 0.13, -0.01),
     rueda: (() => { const g = new THREE.CylinderGeometry(0.032, 0.032, 0.012, 10); g.rotateZ(Math.PI / 2); return g; })(),
-    buey: caja(0.05, 0.05, 0.11, 0, 0.055, 0.17),
-    testuz: caja(0.035, 0.035, 0.04, 0, 0.075, 0.24),
+    vara: caja(0.008, 0.008, 0.08, 0, 0.05, 0.11),
+    buey: caja(0.05, 0.05, 0.11, 0, 0.055, 0.19),
+    testuz: caja(0.035, 0.035, 0.04, 0, 0.075, 0.26),
+    cuernos: caja(0.064, 0.008, 0.008, 0, 0.097, 0.262),
+    caballo: caja(0.04, 0.045, 0.12, 0, 0.075, 0.2),
+    patasCaballo: caja(0.034, 0.055, 0.1, 0, 0.027, 0.2),
+    cuelloCaballo: (() => { const g = new THREE.BoxGeometry(0.028, 0.06, 0.032); g.rotateX(-0.6); g.translate(0, 0.115, 0.265); return g; })(),
+    cabezaCaballo: caja(0.024, 0.024, 0.05, 0, 0.14, 0.295),
+    camello: caja(0.05, 0.05, 0.13, 0, 0.095, 0.2),
+    joroba: caja(0.036, 0.032, 0.05, 0, 0.134, 0.19),
+    patasCamello: caja(0.04, 0.07, 0.11, 0, 0.035, 0.2),
+    cuelloCamello: (() => { const g = new THREE.BoxGeometry(0.022, 0.075, 0.024); g.rotateX(-0.45); g.translate(0, 0.13, 0.28); return g; })(),
+    cabezaCamello: caja(0.024, 0.022, 0.042, 0, 0.165, 0.3),
+    // el carrito del héroe: dos ruedas, una caja corta con sus fardos y dos varas hacia delante
+    cajita: caja(0.07, 0.035, 0.085, 0, 0.05, 0),
+    fardos: caja(0.056, 0.026, 0.065, 0, 0.08, -0.004),
+    varas: [caja(0.006, 0.006, 0.09, -0.026, 0.045, 0.085), caja(0.006, 0.006, 0.09, 0.026, 0.045, 0.085)],
+    ruedita: (() => { const g = new THREE.CylinderGeometry(0.028, 0.028, 0.01, 10); g.rotateZ(Math.PI / 2); return g; })(),
     pelaje: m(0x6b4a2e),
     blanco: m(0xd8cfbd),
     buey_: m(0x8c7a64),
+    camello_: m(0xc2a070),
+    arpillera: m(0xb89a6a),
     bronce: m(0xc08a3e),
     piel: m(0xc89a78),
     madera: m(0x8a6440),
@@ -68,10 +86,18 @@ function soldado(color: number, abanderado: boolean): THREE.Group {
   return g;
 }
 
-/** Un carro con su buey; el de fundación, con la lona puesta. */
-function carro(fundacion: boolean): THREE.Group {
+/** Las piezas del animal que tira de un carro de caravana, delante de él (+z). */
+function animal(a: AnimalDeTiro): THREE.Mesh[] {
+  const p = PIEZAS, mesh = (g: THREE.BufferGeometry, m: THREE.Material) => new THREE.Mesh(g, m);
+  if (a === 'caballo') return [mesh(p.caballo, p.pelaje), mesh(p.patasCaballo, p.pelaje), mesh(p.cuelloCaballo, p.pelaje), mesh(p.cabezaCaballo, p.pelaje)];
+  if (a === 'camello') return [mesh(p.camello, p.camello_), mesh(p.joroba, p.camello_), mesh(p.patasCamello, p.camello_), mesh(p.cuelloCamello, p.camello_), mesh(p.cabezaCamello, p.camello_)];
+  return [mesh(p.buey, p.buey_), mesh(p.testuz, p.buey_), mesh(p.cuernos, p.blanco)];
+}
+
+/** Un carro de caravana con su animal; el de fundación, con la lona puesta. */
+function carro(fundacion: boolean, tiro: AnimalDeTiro): THREE.Group {
   const p = PIEZAS, g = new THREE.Group();
-  g.add(new THREE.Mesh(p.caja, p.madera), new THREE.Mesh(p.buey, p.buey_), new THREE.Mesh(p.testuz, p.buey_));
+  g.add(new THREE.Mesh(p.caja, p.madera), new THREE.Mesh(p.vara, p.madera), ...animal(tiro));
   for (const [x, z] of [[-0.058, -0.05], [0.058, -0.05], [-0.058, 0.05], [0.058, 0.05]] as const) {
     const r = new THREE.Mesh(p.rueda, p.madera);
     r.position.set(x, 0.032, z);
@@ -80,6 +106,24 @@ function carro(fundacion: boolean): THREE.Group {
   if (fundacion) g.add(new THREE.Mesh(p.lona, p.blanco));
   return g;
 }
+
+/** El carrito del héroe: pequeño, de dos ruedas y sin animal. */
+function carrito(): THREE.Group {
+  const p = PIEZAS, g = new THREE.Group();
+  g.add(new THREE.Mesh(p.cajita, p.madera), new THREE.Mesh(p.fardos, p.arpillera), ...p.varas.map((v) => new THREE.Mesh(v, p.madera)));
+  for (const x of [-0.042, 0.042]) {
+    const r = new THREE.Mesh(p.ruedita, p.madera);
+    r.position.set(x, 0.028, -0.01);
+    g.add(r);
+  }
+  return g;
+}
+
+/** Cuánto más grande va un carro de caravana que el resto de las figuras, para que no se confunda con el carrito del héroe. */
+export const ESCALA_CARRO_CARAVANA = 1.5;
+/** Lo que ocupa cada carro delante y detrás de su sitio, en unidades de figura (sin su escala): el de caravana con su animal, el carrito con
+ * sus varas. */
+const LARGO = { caravana: { frente: 0.325, cola: 0.085 }, carrito: { frente: 0.13, cola: 0.045 } } as const;
 
 /** Lo que se separa un bloque de tropa del siguiente además del paso entre filas (en unidades de figura). */
 const HUECO_ENTRE_BLOQUES = 0.08;
@@ -108,27 +152,34 @@ export class FigurasDeColumna {
   private readonly sitios: { atras: number; lado: number }[] = [];
 
   /** `jinetes`: héroes de la columna (al frente, a caballo); `tropa`: las escuadras detrás, por bloques (`bloquesDeTropa`; la primera figura
-   * lleva el estandarte); `carros`: lo que arrastra al final. */
+   * lleva el estandarte; en una caravana, su escolta); `carros`: lo que arrastra al final. */
   constructor(readonly jinetes: number, tropa: TropaDeColumna, color: number, readonly carros: Carros = { carga: 0, fundacion: false }) {
-    for (let k = 0; k < jinetes; k++) { this.figuras.push(heroe(color)); this.sitios.push({ atras: k * 0.15, lado: 0 }); }
+    const poner = (f: THREE.Group, atras: number, lado: number, escala = 1) => {
+      f.scale.setScalar(MUNDO3D.tropa * escala);
+      f.traverse((o) => { o.castShadow = true; });
+      this.figuras.push(f);
+      this.sitios.push({ atras, lado });
+      this.grupo.add(f);
+    };
+    for (let k = 0; k < jinetes; k++) poner(heroe(color), k * 0.15, 0);
     // entre filas de un bloque, el paso de siempre; entre un bloque y el siguiente, un poco más
     let ultima = jinetes * 0.15 - 0.15, fila = jinetes, soldados = 0;
     bloquesDeTropa(tropa).forEach((b, i) => {
       for (let f = 0; f < b.filas; f++, fila++) {
         ultima = fila * 0.15 + i * HUECO_ENTRE_BLOQUES;
-        for (let k = 0; k < b.ancho; k++) {
-          this.figuras.push(soldado(color, soldados++ === 0));
-          this.sitios.push({ atras: ultima, lado: k - (b.ancho - 1) / 2 });
-        }
+        for (let k = 0; k < b.ancho; k++) poner(soldado(color, soldados++ === 0), ultima, k - (b.ancho - 1) / 2);
       }
     });
-    const tras = ultima + 0.15 + (jinetes + soldados ? 0.12 : 0), n = carros.carga + (carros.fundacion ? 1 : 0);
-    for (let k = 0; k < n; k++) { this.figuras.push(carro(carros.fundacion && k === n - 1)); this.sitios.push({ atras: tras + k * 0.34, lado: 0 }); }
-    for (const f of this.figuras) {
-      f.scale.setScalar(MUNDO3D.tropa);
-      f.traverse((o) => { o.castShadow = true; });
-      this.grupo.add(f);
-    }
+    // los carros, uno tras otro detrás de la última fila (sin nadie delante, el primero va en la cabeza): el carrito y los de las caravanas
+    let detras = jinetes + soldados ? ultima + 0.1 : null;
+    const enganchar = (f: THREE.Group, largo: { frente: number; cola: number }, escala: number) => {
+      const atras = detras === null ? 0 : detras + largo.frente * escala;
+      detras = atras + largo.cola * escala + 0.04;
+      poner(f, atras, 0, escala);
+    };
+    if (carros.propio) enganchar(carrito(), LARGO.carrito, 1);
+    const n = carros.carga + (carros.fundacion ? 1 : 0);
+    for (let k = 0; k < n; k++) enganchar(carro(carros.fundacion && k === n - 1, carros.animales?.[k] ?? 'buey'), LARGO.caravana, ESCALA_CARRO_CARAVANA);
   }
 
   /** Pone la columna con la cabeza en `cabeza`; `alturaU(x, y)` da el suelo en unidades de escena. */

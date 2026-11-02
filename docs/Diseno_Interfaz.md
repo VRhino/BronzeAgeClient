@@ -112,6 +112,9 @@ remata cabeceras y paneles con la moldura clásica. `opacity: .5` para que sea s
   completa (mundo y plaza en 3D) o centrado (campamento y pueblo).
 - **Chrome flotante**: riel de iconos en un borde, menú de esquina (avatar) arriba-derecha, zoom
   abajo-derecha, paneles que se despliegan junto a su disparador.
+- **Avisos y elecciones, arriba al centro**: bajo la barra salen los avisos (`.aviso-global`) y, en el mundo y en el modo
+  mapa, la lista de qué hay bajo un clic cuando son dos o más cosas (`.eleccion-clic`, 0.93.0): una placa de bronce con una
+  fila por cosa (símbolo en un medallón, qué es y un detalle). Mientras está abierta, el aviso que hubiera espera debajo.
 - **Vista de la plaza** (`.plaza-3d`, 0.92.0, petición de Víctor del 2026-11-02): la plaza en 3D (`docs/Ciudad_3D.md`) a
   pantalla completa, también bajo la barra del jugador, que es transparente y de iconos como en el mundo. Encima, como el HUD
   de un juego de estrategia:

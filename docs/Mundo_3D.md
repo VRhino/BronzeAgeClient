@@ -10,8 +10,9 @@ escalas y la cámara se decidieron con la mesa de escalas 3D del motor (`Conside
 - **El modo mapa se queda en 2D**, como mapa estratégico (el mundo entero, zoom libre y arrastre). La vista de la plaza también pasó a 3D
   después (2026-11-02, `docs/Ciudad_3D.md`), con el 2D de minimapa.
 - **Solo sobremesa** en el prototipo.
-- **No cambian** el contrato, la proyección (`proyeccionAlInstante`), los paneles, ni el clic: lo que hay bajo él lo sigue eligiendo
-  `objetoBajoElClic` en coordenadas del mundo y la orden sigue siendo `marcharA`. En 3D el clic toca el relieve con un rayo.
+- **No cambian** el contrato, la proyección (`proyeccionAlInstante`), los paneles, ni el clic: lo que hay bajo él lo busca
+  `objetosBajoElClic` en coordenadas del mundo y la orden sigue siendo `marcharA`. En 3D el clic toca el relieve con un rayo. Con dos o más
+  cosas bajo el clic, primero se elige una en una lista (0.93.0, ver «Selección»).
 - **La altura se dibuja tal cual**, la del paquete de relieve. La exageración vive en el generador; así las pendientes que se ven son las que
   usa el servidor para decidir por dónde se anda.
 - **La niebla sigue siendo una regla.** Cada capa conserva su lado de la niebla, como en `render.ts`: lo que hoy va debajo (suelo, bosque,
@@ -27,8 +28,11 @@ escalas y la cámara se decidieron con la mesa de escalas 3D del motor (`Conside
 | Héroes y tropa | ×2 (soldado de 3,3 m de Unity, 1 u = 12 m) |
 | Apertura de la cámara | 35° |
 | Inclinación | libre, de 10° a 90°; arranca a 30° |
-| En pantalla, héroe solo (visión 15 u) | normal 15 u, alejada 22 u |
-| En pantalla, con soldados (visión 30 u) | normal 30 u, alejada 45 u |
+| En pantalla, héroe solo (visión 15 u) | de cerca 9 u, normal 15 u, alejada 22 u |
+| En pantalla, con soldados (visión 30 u) | de cerca 18 u, normal 30 u, alejada 45 u |
+| Zoom de cerca (`ACERCADO`) | 0,6 veces el normal |
+
+La rueda y los botones + y − pasan de un zoom al siguiente, de uno en uno (un gesto del trackpad, que manda muchos eventos, es un solo paso).
 
 «En pantalla» es el diámetro del círculo alrededor del héroe que cabe en la pantalla, con cualquier inclinación (desde arriba, el lado corto).
 La visión es la del servidor (`VISION` de `Movimiento_Ejercitos`). **Cambio respecto al 2D:** el modo mundo de hoy fija el zoom con la visión
@@ -50,10 +54,12 @@ del héroe solo (`radioDeVision`); el 3D tiene que seguir a la de la columna. El
 | Ríos, vados y nodos de recursos | `src/mundo3d/paisaje.ts` (hecho) | Ríos y nodos del artefacto |
 | Plazas, pueblos, avanzadas, obras, campamentos, bandidos, alijos, batallas | `src/mundo3d/maquetas.ts` (hecho) | Proyección |
 | Caminos, fronteras, zona propia, anillo de los mercenarios | `src/mundo3d/trazos.ts` (hecho) | Proyección |
+| Textura de los caminos (sendero, camino, calzada) | `src/mundo3d/caminos.ts` (hecho) | Escalón del camino |
 | Columnas (de la Facción y avistadas), sus carros y las caravanas | `src/mundo3d/figuras.ts` (hecho) | Proyección: ruta y posición en el instante |
 | Formaciones, Miradas, lo seleccionado, la vista previa de fundar | `src/mundo3d/marcas.ts` (hecho) | Proyección, `seleccionMapa` y el panel Fundar |
 | Ruta, destino, mira del héroe; cintas pegadas al relieve | `src/mundo3d/lineas.ts` (hecho) | Proyección |
-| Clic, arrastre, rueda y teclas | `src/mundo3d/entrada.ts` (hecho) | El clic acaba en `objetoBajoElClic` y `marcharA` |
+| Clic, arrastre, rueda y teclas | `src/mundo3d/entrada.ts` (hecho) | El clic acaba en `objetosBajoElClic` y `marcharA` |
+| La lista de qué hay bajo el clic | `src/ui/eleccionClic.ts` (hecho) | Proyección |
 | Nombres: plazas, nodos, Miradas, tierra ajena | `src/mundo3d/etiquetas.ts` (hecho) | Proyección y artefacto |
 
 ## Fases
@@ -95,7 +101,9 @@ y la tesela va con zstd. La semilla 42 ocupa 8,6 MB.
   el color de `NIEBLA` (`paletas.ts`) con sus tres alfas, igual que `render.ts`. La columna propia, la ruta y el destino van encima.
 - **Cámara.** `distanciaDeEncuadre` busca la distancia a la que el círculo de «en pantalla» cabe entero en la pantalla con la inclinación de
   ahora; desde arriba es el lado corto, como en el 2D. La cámara no baja del suelo.
-- **Clic.** Un rayo desde la cámara avanza hasta tocar el relieve; el punto pasa a `objetoBajoElClic` y a `marcharAObjetivo`, como antes.
+- **Clic.** Un rayo desde la cámara avanza hasta tocar el relieve. La vista da el centro de todo lo que tiene ese punto en su zona de clic (lo
+  que ocupa su maqueta, y como poco 26 px de pantalla); `main.ts` busca qué hay en cada centro (`objetosBajoElClic`) y lo junta. Nada: se
+  marcha allí; una cosa: se selecciona y se marcha hacia ella; dos o más: la lista para elegir.
 
 ## Cómo se pinta (fase 3)
 
@@ -119,29 +127,53 @@ suelo, luego el paisaje y los árboles. Lo que se aleja se suelta.
   Cada una lleva una bandera del color de su Facción. Una malla instanciada por material. Las plazas recordadas van bajo la niebla; lo
   demás, encima.
 - **Rayas** (`trazos.ts`). Cintas pegadas al relieve, recortadas a 240 u del héroe:
-  - bajo la niebla: los caminos (0,2 / 0,35 / 0,55 u: sendero, camino, calzada) y las fronteras (0,12 u), con la silueta real de lo que se
-    ve y un círculo discontinuo con el radio recordado de lo que no;
+  - bajo la niebla: los caminos y las fronteras (0,12 u), con la silueta real de lo que se ve y un círculo discontinuo con el radio
+    recordado de lo que no;
   - encima: la zona propia (0,18 u) y el anillo de protección de los campamentos de mercenarios (0,1 u).
 
   Son más anchas que en la realidad para que se lean desde la cámara. A diferencia del 2D, la zona propia va sin relleno.
+- **Caminos** (0.93.0, `caminos.ts`). El servidor manda cada tramo nodo a nodo de su red (cada 4 u, en ocho direcciones): una escalera. Se
+  pinta pasando por el punto medio de cada tramo (que sigue sobre la red), sin los vértices que no doblan (se apartan menos de 0,3 u) y con
+  las curvas redondeadas (tres vueltas de Chaikin, sin cortar más de 1,5 u por esquina). Los extremos, donde se juntan los caminos, no se
+  mueven. Los árboles se apartan de ese mismo trazado. Cada escalón lleva su textura, pintada una vez píxel a píxel, con los bordes que se
+  funden con el suelo:
+  - sendero (cinta de 0,4 u): una huella de tierra pisada, más clara en medio, que serpentea y tiene los bordes deshilachados;
+  - camino (0,65 u): tierra con dos rodadas, algo de hierba entre ellas y la orilla un poco más oscura;
+  - calzada (0,9 u): adoquines en hileras al tresbolillo, un bordillo de losas largas a cada lado y fuera un arcén de tierra.
+
+  La textura va de lado a lado una vez y se repite a lo largo con la misma escala en los dos sentidos; se cuenta lo andado desde el principio
+  del camino, así no se corre cuando el recorte alrededor del héroe empieza en otro vértice.
 - **Tu columna** lleva un aro en el suelo, la mira del 2D: entre los árboles se pierde.
 
 ## Cómo se pinta (fase 4)
 
 - **Columnas.** Todas las de tu Facción, con su ruta (la tuya entera, con su destino y la mira; las demás, un rastro discontinuo, como en el
-  2D) y lo que arrastran detrás de la tropa: un carro por caravana enganchada (hasta dos) y el de fundación con su lona. Las avistadas van sin
-  ruta y sin tropa, porque ni la una ni la otra viajan en la proyección: se pintan sus héroes y su carro de fundación. Túnicas y penachos van
-  del color de su Facción; quien aún no tiene Facción, en rojo. Una columna en formación lleva un anillo discontinuo de su color.
-- **Caravanas sueltas.** Su carro con el buey (con lona la de fundación). Las propias llevan su ruta, tenue; las avistadas, no. El 2D no
-  pintaba las avistadas aunque se podían seleccionar.
+  2D) y lo que arrastran detrás de la tropa:
+  - el **carrito del héroe** (0.93.0) si el carro de la columna lleva algo (`suministro`): pequeño, de dos ruedas, con sus fardos y sin
+    animal, justo detrás de la formación;
+  - un **carro de caravana** por caravana enganchada (hasta dos), con el animal de la caravana delante (buey, caballo o camello; sin él, un
+    buey), y al final el de fundación, con su lona y su buey. Los carros de caravana van a 1,5 veces el tamaño de las figuras para que no se
+    confundan con el carrito.
+
+  Las avistadas van sin ruta y sin tropa, porque ni la una ni la otra viajan en la proyección: se pintan sus héroes y sus carros de caravana
+  (de ellas no se sabe si llevan algo en el carro). Túnicas y penachos van del color de su Facción; quien aún no tiene Facción, en rojo. Una
+  columna en formación lleva un anillo discontinuo de su color.
+- **Caravanas sueltas.** Su **escolta** delante (0.93.0): las escuadras cedidas de la propia (`escoltaIds`, hasta tres), de dos filas de tres
+  como la tropa de una columna personal; de la avistada solo se sabe si va escoltada, y se pinta una. Detrás, sus carros: uno por carro de la
+  caravana con su animal (hasta tres; la que no dice sus carros, uno con buey), a 1,5 veces, y el de fundación con lona. Las propias llevan su
+  ruta, tenue; las avistadas, no. El 2D no pintaba las avistadas aunque se podían seleccionar.
 - **Bandidos, alijos y batallas** son maquetas, encima de la niebla:
   - bandidos: tiendas oscuras en corro, más cuanto más nivel, con su hoguera y su bandera roja;
   - alijo: fardos y un cofre con el oro;
   - batalla: dos espadas cruzadas sobre un aro, verde si combates en ella.
 - **Miradas.** Un círculo de su radio: abierta, azul; caducada (la zona sigue vedada), gris y discontinuo. Llevan su nombre con los minutos
   que quedan.
-- **Selección.** Lo que hay bajo el clic se elige como siempre (`objetoBajoElClic`). La vista pone un aro que late a su medida: la ciudad con
-  holgura, un campamento, una columna…
+- **Selección.** Lo que hay bajo el clic lo busca `objetosBajoElClic`, cada cosa con su radio de agarre. Si son **dos o más** (0.93.0),
+  antes de hacer nada sale una lista arriba al centro, donde salen los avisos: cada cosa con su símbolo, qué es y un detalle (de quién es, su
+  nivel, si va escoltada…), en este orden: batallas, ejércitos de tu Facción, formaciones, columnas y caravanas ajenas, pueblos, avanzadas,
+  obras, alijos, mercenarios, bandidos y plazas; dentro de cada clase, de la más cercana a la más lejana. Elegir una hace lo mismo que un clic
+  sobre ella sola (se selecciona y, si toca, la columna marcha hacia ella). Esc, un clic fuera o un clic en el mapa la cierran sin hacer
+  nada. Igual en el modo mapa. La vista pone un aro que late a su medida: la ciudad con holgura, un campamento, una columna…
 - **Fundar.** Con el panel ⚑ abierto, alrededor de la columna se ven:
   - la zona con que nacería la plaza (discontinua, dorada);
   - los sitios donde cabría una aldea: cuadros verdes, grises si quedan demasiado cerca de algo;
@@ -194,8 +226,10 @@ desarrollo. Una columna propia va en línea recta adonde haces clic, a 30 u/min,
 de mercenarios son los del artefacto, y junto al héroe hay maquetas de mentira:
 - una plaza propia de nivel 3 con su zona, dos pueblos, tres avanzadas (una en ruinas) y dos obras;
 - una plaza ajena que se ve y otra que se recuerda;
-- caminos entre ellas;
-- una columna ajena en formación, una caravana propia que va y viene y otra ajena;
+- caminos entre ellas, uno de cada escalón (el camino, en escalera como los manda el servidor), con el trazado suavizado del juego;
+- tu columna con su carrito y un carro tirado por un caballo;
+- una columna ajena en formación, una caravana propia que va y viene (dos escuadras de escolta y dos carros, de buey y de camello) y otra
+  ajena con una de escolta;
 - un campamento de bandidos, un alijo, una batalla y dos Miradas, con sus nombres.
 
 Un clic cerca de algo lo selecciona; en el suelo, la columna va allí. «Fundar aquí» enciende la vista previa de fundar alrededor del héroe.

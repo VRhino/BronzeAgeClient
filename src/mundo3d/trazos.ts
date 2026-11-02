@@ -3,9 +3,12 @@
 // Caminos y fronteras van bajo la niebla y lo propio encima, como en `render.ts`: de una frontera solo se ve el tramo que cae en lo explorado.
 // Se recortan a una caja alrededor del héroe y se rehacen cuando cambian o cuando el héroe se aleja de donde se hicieron.
 import * as THREE from 'three';
+import { periodoDeCamino, texturaDeCamino } from './caminos';
 import type { TrazoEnVista } from './estado';
-import { cinta, tramosEnCaja } from './lineas';
+import { cinta, recorridos, tramosEnCaja } from './lineas';
 import type { NieblaDeGuerra } from './niebla';
+
+type Punto = { x: number; y: number };
 
 /** Lo que sube cada clase de raya sobre el suelo y cuánto se adelanta en el z-buffer: lo de encima tapa a lo de debajo. */
 const CAPA = { camino: { dy: 0.04, f: -2 }, frontera: { dy: 0.06, f: -3 }, zona: { dy: 0.08, f: -4 }, anillo: { dy: 0.08, f: -4 } } as const;
@@ -25,12 +28,15 @@ export class Trazos {
   constructor(private readonly niebla: NieblaDeGuerra, private readonly alturaU: (x: number, y: number) => number) {}
 
   private material(t: TrazoEnVista): THREE.Material {
-    const clave = `${t.tipo}|${t.color}|${t.bajoNiebla}|${t.tenue ?? false}`;
+    const clave = `${t.tipo}|${t.color}|${t.bajoNiebla}|${t.tenue ?? false}|${t.escalon ?? ''}`;
     let m = this.materiales.get(clave);
     if (!m) {
       const f = CAPA[t.tipo].f, comunes = { color: t.color, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: f, polygonOffsetUnits: f };
-      // el camino es suelo (le da la luz); las rayas políticas, color plano para que se lean
-      m = t.tipo === 'camino' ? new THREE.MeshLambertMaterial(comunes) : new THREE.MeshBasicMaterial({ ...comunes, transparent: t.tipo === 'anillo' || !!t.tenue, opacity: t.tenue ? 0.45 : t.tipo === 'anillo' ? 0.7 : 1, depthWrite: !t.tenue });
+      // el camino es suelo (le da la luz), con la textura de su escalón y los bordes fundidos con el terreno; las rayas políticas, color plano
+      // para que se lean
+      m = t.tipo === 'camino'
+        ? new THREE.MeshLambertMaterial({ ...comunes, color: 0xffffff, map: texturaDeCamino(t.escalon ?? 1), transparent: true, depthWrite: false })
+        : new THREE.MeshBasicMaterial({ ...comunes, transparent: t.tipo === 'anillo' || !!t.tenue, opacity: t.tenue ? 0.45 : t.tipo === 'anillo' ? 0.7 : 1, depthWrite: !t.tenue });
       if (t.bajoNiebla) this.niebla.aplicar(m);
       this.materiales.set(clave, m);
     }
@@ -41,7 +47,7 @@ export class Trazos {
   actualizar(trazos: readonly TrazoEnVista[], cx: number, cy: number, radio: number): void {
     const clave = trazos.map((t) => {
       const a = t.puntos[0]!, b = t.puntos[t.puntos.length - 1]!;
-      return `${t.tipo}:${t.color}:${t.bajoNiebla}:${t.discontinuo ?? false}:${t.haciaDentro ?? 0}:${t.tenue ?? false}:${t.ancho}:${t.puntos.length}:${a.x},${a.y}:${b.x},${b.y}`;
+      return `${t.tipo}:${t.color}:${t.bajoNiebla}:${t.discontinuo ?? false}:${t.haciaDentro ?? 0}:${t.tenue ?? false}:${t.ancho}:${t.escalon ?? ''}:${t.puntos.length}:${a.x},${a.y}:${b.x},${b.y}`;
     }).join('|');
     if (clave === this.clave && Math.hypot(cx - this.centro.x, cy - this.centro.y) < radio / 4) return;
     if (clave !== this.clave) {
@@ -53,10 +59,14 @@ export class Trazos {
     this.vaciar();
     for (const t of trazos) {
       const capa = CAPA[t.tipo];
+      // de un camino, lo andado hasta cada vértice: la textura sigue en su sitio aunque el recorte empiece en otro vértice
+      let andado: Map<Punto, number> | null = null;
+      if (t.tipo === 'camino') { const s = recorridos(t.puntos); andado = new Map(t.puntos.map((q, k) => [q, s[k]!])); }
       for (const tramo of tramosEnCaja(t.puntos, cx - radio, cy - radio, cx + radio, cy + radio)) {
         // un contorno va corrido medio ancho hacia dentro: donde se tocan dos zonas, cada raya queda de su lado y se ven las dos
         const desplazar = t.haciaDentro ? t.haciaDentro * (t.ancho / 2 + 0.02) : 0;
-        const geo = cinta(tramo, this.alturaU, t.ancho, { dy: capa.dy, trazo: t.discontinuo ? (t.recordada ? RECORDADA : DISCONTINUA) : undefined, desplazar });
+        const textura = andado ? { periodo: periodoDeCamino(t.ancho), desde: andado.get(tramo[0]!) ?? 0 } : undefined;
+        const geo = cinta(tramo, this.alturaU, t.ancho, { dy: capa.dy, trazo: t.discontinuo ? (t.recordada ? RECORDADA : DISCONTINUA) : undefined, desplazar, textura });
         if (!geo) continue;
         const malla = new THREE.Mesh(geo, this.material(t));
         malla.receiveShadow = t.tipo === 'camino';
@@ -75,5 +85,6 @@ export class Trazos {
   destruir(): void {
     this.vaciar();
     for (const m of this.materiales.values()) m.dispose();
+    // las texturas de los caminos se quedan: son de todas las vistas y se hacen una vez
   }
 }

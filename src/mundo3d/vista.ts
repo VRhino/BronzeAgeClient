@@ -9,7 +9,7 @@ import './mundo3d.css';
 import { CamaraDeJuego, type Zoom } from './camara';
 import { MUNDO3D } from './config';
 import { instalarEntrada, type Entrada } from './entrada';
-import type { CaravanaEnVista, ColumnaEnVista, EstadoVista, EtiquetaEnVista } from './estado';
+import type { CaravanaEnVista, Carros, ColumnaEnVista, EstadoVista, EtiquetaEnVista } from './estado';
 import { Etiquetas } from './etiquetas';
 import { RejillaDeMovimiento, type Navegacion } from './rejilla';
 import { FigurasDeColumna, type TropaDeColumna } from './figuras';
@@ -34,7 +34,9 @@ export interface OpcionesVista {
   /** El estado de ahora (se pide en cada fotograma); `null` mientras no haya proyección. */
   estado: () => EstadoVista | null;
   /** Un clic en el terreno: el punto del mapa bajo el ratón. */
-  alClicar: (punto: Punto, evento?: PointerEvent) => void;
+  /** Un clic en el mundo: `punto`, donde cae (en el centro de lo que haya debajo, si hay algo); `centros`, los de todo lo que tiene debajo, del
+   * más cercano al más lejano (con dos o más, el juego deja elegir). */
+  alClicar: (punto: Punto, evento?: PointerEvent, centros?: Punto[]) => void;
   /** Píxeles por unidad a la distancia del héroe, para el radio de agarre de los clics (`ui/agarre.ts`). */
   alCambiarEscala?: (pxPorUnidad: number) => void;
   /** Sin niebla (`?sinNiebla` en desarrollo). */
@@ -145,6 +147,11 @@ export class VistaMundo3D {
     this.camara.zoom = z;
   }
 
+  /** Un paso de zoom (los botones + y −): −1 acerca, 1 aleja. */
+  pasoDeZoom(sentido: -1 | 1): void {
+    this.camara.pasoDeZoom(sentido);
+  }
+
   /** Enseña u oculta la rejilla de movimiento del servidor alrededor del héroe. */
   fijarRejilla(navegacion: Navegacion | null, visible: boolean): void {
     this.rejilla.fijar(navegacion, visible);
@@ -203,15 +210,18 @@ export class VistaMundo3D {
 
   private clic(evento: PointerEvent): void {
     const p = this.aMundo(evento);
-    if (p) this.o.alClicar(this.iman(p), evento);
+    if (!p) return;
+    const centros = this.iman(p);
+    this.o.alClicar(centros[0] ?? p, evento, centros);
   }
 
   /** Un clic cerca de algo que se puede seleccionar cae en su centro: su zona de clic es lo que ocupa su maqueta, y como poco
-   * `MIN_PX_CLIC` píxeles de pantalla (`main.ts` busca luego qué hay en ese punto con su propio radio, que en 3D es pequeño). La columna propia
-   * no atrae: un clic a su lado es una marcha. */
-  private iman(p: Punto): Punto {
+   * `MIN_PX_CLIC` píxeles de pantalla (`main.ts` busca luego qué hay en ese punto con su propio radio, que en 3D es pequeño). Devuelve los
+   * centros de todo lo que tiene el clic en su zona, del más cercano al más lejano (vacío: suelo). La columna propia no atrae: un clic a su lado
+   * es una marcha. */
+  private iman(p: Punto): Punto[] {
     const e = this.ultimo;
-    if (!e) return p;
+    if (!e) return [];
     const M = MUNDO3D.maqueta, minimo = MIN_PX_CLIC / Math.max(1, this.camara.pxPorUnidad(this.lienzo.clientHeight || 1));
     const m = e.mundo, candidatos: { posicion: Punto; radio: number }[] = [
       ...m.plazas.map((x) => ({ posicion: x.posicion, radio: x.radioCiudad * M + 0.5 })),
@@ -225,12 +235,11 @@ export class VistaMundo3D {
       ...e.columnas.filter((c) => !c.mia).map((c) => ({ posicion: c.posicion, radio: 0.8 })),
       ...e.caravanas.map((c) => ({ posicion: c.posicion, radio: 0.7 })),
     ];
-    let mejor: Punto | null = null, mejorD = Infinity;
-    for (const c of candidatos) {
-      const d = Math.hypot(c.posicion.x - p.x, c.posicion.y - p.y);
-      if (d <= Math.max(c.radio, minimo) && d < mejorD) { mejor = c.posicion; mejorD = d; }
-    }
-    return mejor ? { x: mejor.x, y: mejor.y } : p;
+    return candidatos
+      .map((c) => ({ c, d: Math.hypot(c.posicion.x - p.x, c.posicion.y - p.y) }))
+      .filter(({ c, d }) => d <= Math.max(c.radio, minimo))
+      .sort((a, b) => a.d - b.d)
+      .map(({ c }) => ({ x: c.posicion.x, y: c.posicion.y }));
   }
 
   private ajustar(): void {
@@ -297,9 +306,10 @@ export class VistaMundo3D {
   /** Las figuras de cada columna (de la Facción y avistadas) y de cada caravana suelta; se rehacen si cambia lo que llevan o su color. */
   private ponerColumnas(lista: readonly ColumnaEnVista[], caravanas: readonly CaravanaEnVista[]): void {
     const vivas = new Set<string>();
-    const poner = (id: string, jinetes: number, tropa: TropaDeColumna, color: string, carros: { carga: number; fundacion: boolean }, posicion: Punto) => {
+    const poner = (id: string, jinetes: number, tropa: TropaDeColumna, color: string, carros: Carros, posicion: Punto) => {
       vivas.add(id);
-      const hex = new THREE.Color(color).getHex(), clave = `${jinetes}:${tropa.ejercito ? 'E' : 'P'}${tropa.porHeroe.join(',')}:${hex}:${carros.carga}:${carros.fundacion}`;
+      const hex = new THREE.Color(color).getHex();
+      const clave = `${jinetes}:${tropa.ejercito ? 'E' : 'P'}${tropa.porHeroe.join(',')}:${hex}:${carros.carga}:${carros.fundacion}:${carros.propio ? 'p' : ''}:${carros.animales?.join(',') ?? ''}`;
       let f = this.columnas.get(id);
       if (!f || f.clave !== clave) {
         f?.figuras.destruir();
@@ -310,7 +320,12 @@ export class VistaMundo3D {
       f.figuras.mover(posicion, this.alturaU);
     };
     for (const c of lista) poner(c.id, c.jinetes, c.tropa, c.color, c.carros, c.posicion);
-    for (const c of caravanas) poner(`caravana:${c.id}`, 0, SIN_TROPA, c.color, { carga: c.fundacion ? 0 : 1, fundacion: c.fundacion }, c.posicion);
+    // una caravana suelta: su escolta delante y detrás sus carros, uno por animal (sin animales, uno con buey)
+    for (const c of caravanas) {
+      const tropa = c.escolta ? { porHeroe: [c.escolta], ejercito: false } : SIN_TROPA;
+      const carros: Carros = c.fundacion ? { carga: 0, fundacion: true } : { carga: Math.max(1, c.animales?.length ?? 0), fundacion: false, ...(c.animales ? { animales: c.animales } : {}) };
+      poner(`caravana:${c.id}`, 0, tropa, c.color, carros, c.posicion);
+    }
     for (const [id, f] of this.columnas) if (!vivas.has(id)) { f.figuras.destruir(); this.columnas.delete(id); }
   }
 

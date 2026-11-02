@@ -10,7 +10,7 @@ import { ArtefactoDeMundoSchema, PaqueteRelieveSchema } from '../../src/contrato
 import { mapaDesdeArtefacto } from '../../src/mundo/artefacto';
 import { Relieve } from '../../src/mundo/relieve';
 import { ANCHOS, mundoVacio, trazosDeFronteras, type CaravanaEnVista, type ColumnaEnVista, type EstadoVista, type EtiquetaEnVista, type FundacionEnVista, type MiradaEnVista, type MundoEnVista, type SeleccionEnVista } from '../../src/mundo3d/estado';
-import { circulo } from '../../src/mundo3d/lineas';
+import { circulo, suavizarCamino } from '../../src/mundo3d/lineas';
 import { fuenteDesdeMapa, fuenteDesdeRelieve } from '../../src/mundo3d/fuente';
 import { VistaMundo3D } from '../../src/mundo3d/vista';
 import type { NieblaProyectada } from '../../src/tiposDominio';
@@ -97,7 +97,7 @@ async function arrancar(): Promise<void> {
     }
     const mia: ColumnaEnVista = {
       id: 'mia', mia: true, propia: true, posicion: cabeza, ruta: ruta.length ? [cabeza, ...ruta] : [], jinetes: 1, tropa: { porHeroe: [soldados ? 1 : 0], ejercito: false },
-      color: '#c0392b', carros: { carga: soldados ? 1 : 0, fundacion: !!fundacion }, formacion: false,
+      color: '#c0392b', carros: { carga: soldados ? 1 : 0, fundacion: !!fundacion, propio: true, animales: ['caballo'] }, formacion: false,
     };
     return { heroe: cabeza, radioVision: radio, columnas: [mia, ...ajenas], caravanas, niebla, mundo, miradas, etiquetas, seleccion, fundacion };
   };
@@ -113,6 +113,7 @@ async function arrancar(): Promise<void> {
     },
   });
   const irA = (x: number, y: number) => { ruta = [{ x, y }]; };
+  $('cerca').addEventListener('click', () => vista.zoom('cerca'));
   $('normal').addEventListener('click', () => vista.zoom('normal'));
   $('alejado').addEventListener('click', () => vista.zoom('alejado'));
   $('soldados').addEventListener('change', (e) => { soldados = (e.target as HTMLInputElement).checked; nieblaEn = null; });
@@ -165,18 +166,27 @@ function mundoDePrueba(c: Punto, vacio: boolean): { mundo: MundoEnVista; ajenas:
     { faccionId: 'a', contorno: cuadro(-4, 4), recordada: false },
     { faccionId: 'b', contorno: cuadro(4, 12), recordada: false },
   ], (f) => colores[f] ?? OTRO, 'propia', true));
-  // caminos: calzada del héroe a la plaza, camino a la ajena y sendero a la aldea
-  const camino = (puntos: Punto[], escalon: 0 | 1 | 2) => m.trazos.push({ puntos, ancho: ANCHOS.caminos[escalon], color: '#8b5a2b', bajoNiebla: true, tipo: 'camino' });
+  // caminos: calzada del héroe a la plaza, camino a la ajena (en escalera, nodo a nodo como los manda el servidor) y sendero a la aldea, con el
+  // trazado suavizado como en el juego
+  const camino = (puntos: Punto[], escalon: 0 | 1 | 2) => m.trazos.push({ puntos: suavizarCamino(puntos), ancho: ANCHOS.caminos[escalon], color: '#8b5a2b', bajoNiebla: true, tipo: 'camino', escalon });
+  const escalera = (a: Punto, b: Punto): Punto[] => {
+    const out = [a];
+    for (let q = a; Math.hypot(b.x - q.x, b.y - q.y) > 4;) {
+      const dx = Math.sign(Math.round((b.x - q.x) / 4)), dy = Math.sign(Math.round((b.y - q.y) / 4));
+      out.push((q = { x: q.x + 4 * dx, y: q.y + 4 * dy }));
+    }
+    return [...out, b];
+  };
   camino([c, en(4, -1), plaza], 2);
-  camino([plaza, en(12, 10, plaza), ajena], 1);
+  camino(escalera(plaza, ajena), 1);
   camino([plaza, en(3, 4, plaza), en(6, 5, plaza)], 0);
   // lo ajeno: una columna en formación junto a la plaza ajena, bandidos, un alijo y una batalla; caravanas propia y ajena; dos Miradas
   ajenas.push({ id: 'ajena', mia: false, propia: false, posicion: en(-6, 4, ajena), ruta: [], jinetes: 2, tropa: { porHeroe: [0, 0], ejercito: false }, color: AJENO, carros: { carga: 0, fundacion: true }, formacion: true });
   m.bandidos.push({ id: 'bandidos', posicion: en(-4, 12), nivel: 2 });
   m.alijos.push({ id: 'alijo', posicion: en(3, 6) });
   m.batallas.push({ id: 'batalla', posicion: en(18, -10), propia: false });
-  caravanas.push({ id: 'caravana', posicion: plaza, ruta: [plaza, ajena], fundacion: false, color: PROPIO });
-  caravanas.push({ id: 'caravana-ajena', posicion: en(4, -3, ajena), ruta: [], fundacion: false, color: AJENO });
+  caravanas.push({ id: 'caravana', posicion: plaza, ruta: [plaza, ajena], fundacion: false, color: PROPIO, escolta: 2, animales: ['buey', 'camello'] });
+  caravanas.push({ id: 'caravana-ajena', posicion: en(4, -3, ajena), ruta: [], fundacion: false, color: AJENO, escolta: 1 });
   miradas.push({ id: 'abierta', centro: en(-14, -4), radio: 6, abierta: true, minutos: 37 }, { id: 'caducada', centro: en(22, 2), radio: 5, abierta: false, minutos: 12 });
   etiquetas.push(
     { id: 'plaza:propia', posicion: plaza, texto: 'Ilión', tipo: 'plaza', color: PROPIO },

@@ -1,7 +1,7 @@
 // La cámara de juego: gira libre alrededor del héroe, a la distancia a la que un círculo de «en pantalla» u de diámetro cabe justo en la
 // pantalla (con cualquier inclinación; desde arriba es el lado corto, como el modo mundo en 2D), y le sigue siempre.
 import * as THREE from 'three';
-import { encuadres, MUNDO3D } from './config';
+import { ACERCADO, encuadres, MUNDO3D } from './config';
 
 /** La distancia a la que un círculo de radio `r` alrededor del objetivo cabe justo en la pantalla, con la inclinación `th` (radianes), la
  * tangente de media apertura vertical `tg` y el aspecto `asp` (ancho / alto). Se mide sobre el plano del objetivo. */
@@ -23,7 +23,9 @@ export function distanciaDeEncuadre(r: number, th: number, tg: number, asp: numb
   return hi;
 }
 
-export type Zoom = 'normal' | 'alejado';
+/** Los zooms, del más cerca al más lejos: de cerca (0,6 veces el normal, `ACERCADO`), normal y alejado. */
+export type Zoom = 'cerca' | 'normal' | 'alejado';
+export const ZOOMS: readonly Zoom[] = ['cerca', 'normal', 'alejado'];
 
 export class CamaraDeJuego {
   readonly camara = new THREE.PerspectiveCamera(MUNDO3D.apertura, 1, 0.1, 2000);
@@ -41,7 +43,16 @@ export class CamaraDeJuego {
 
   /** Lo que cabe en pantalla ahora, en u. */
   get enPantalla(): number {
-    return encuadres(this.radioVision)[this.zoom === 'alejado' ? 1 : 0];
+    const [normal, alejado] = encuadres(this.radioVision);
+    return this.zoom === 'alejado' ? alejado : this.zoom === 'cerca' ? normal * ACERCADO : normal;
+  }
+
+  /** Un paso de zoom: −1 acerca, 1 aleja (sin pasar del de cerca ni del alejado). Devuelve si cambió. */
+  pasoDeZoom(sentido: -1 | 1): boolean {
+    const i = Math.max(0, Math.min(ZOOMS.length - 1, ZOOMS.indexOf(this.zoom) + sentido));
+    if (ZOOMS[i] === this.zoom) return false;
+    this.zoom = ZOOMS[i]!;
+    return true;
   }
 
   inclinar(grados: number): void {

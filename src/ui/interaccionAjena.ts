@@ -16,7 +16,7 @@ import { RECURSO_NOMBRE } from '../paletas';
 import type { CaravanaAvistada, EjercitoAvistado, InformeDeInspeccion } from '../tiposDominio';
 import { ayuda } from './ayuda';
 import { textoEnTiempoReal } from './estadoCliente';
-import { ejercitosDeLaFaccion, miColumna } from './ejercitos';
+import { miColumna } from './ejercitos';
 import type { FichaMapaExtra, ObjetoBajoElClic } from './ganchos';
 import { nombreDeHeroe } from './nombres';
 import { minutosHerido } from './panelHeroe';
@@ -34,16 +34,13 @@ const nombreTropa = (id: string): string => tropasReclutables()?.find((t) => t.i
 
 // --- Selector de clic ------------------------------------------------------------------------------------------------------------------------
 
-/** Qué columna o caravana ajena hay bajo el clic. No manda marchar (sin `ir`): un clic para mirar no debe mover tu columna. Cede ante lo que ya
- * tiene prioridad (batallas, tus ejércitos); las formaciones siguen por su propia ficha. */
-export function seleccionarAjeno(p: ProyeccionJugador, punto: Punto): ObjetoBajoElClic | null {
-  if ((p.batallas ?? []).some((b) => distancia(b.punto, punto) < agarre(20))) return null;
-  if (ejercitosDeLaFaccion(p).some((x) => !x.formacion && distancia(x.posicionActual, punto) < agarre(20))) return null;
-  const candidatos = [
+/** Las columnas y caravanas ajenas bajo el clic, de la más cercana a la más lejana. No mandan marchar (sin `ir`): un clic para mirar no debe
+ * mover tu columna. Las formaciones siguen por su propia ficha. Qué va antes que ellas (batallas, tus ejércitos) lo ordena `main.ts`. */
+export function ajenosBajoElClic(p: ProyeccionJugador, punto: Punto): ObjetoBajoElClic[] {
+  return [
     ...(p.ejercitosAvistados ?? []).filter((x) => !x.enFormacion).map((x) => ({ tipo: 'ejercitoAjeno', id: x.id, d: distancia(x.posicionActual, punto), radio: agarre(20) })),
     ...(p.caravanasAvistadas ?? []).map((c) => ({ tipo: 'caravanaAjena', id: c.id, d: distancia(c.posicionActual, punto), radio: agarre(15) })),
-  ].filter((c) => c.d < c.radio).sort((a, b) => a.d - b.d);
-  return candidatos[0] ? { tipo: candidatos[0].tipo, id: candidatos[0].id } : null;
+  ].filter((c) => c.d < c.radio).sort((a, b) => a.d - b.d).map((c) => ({ tipo: c.tipo, id: c.id }));
 }
 
 // --- Qué se puede hacer ----------------------------------------------------------------------------------------------------------------------

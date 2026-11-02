@@ -74,6 +74,7 @@ import { cuentaAtras, medallonNivel } from './ui/juegoVisual';
 import { iconoEdificio } from './ui/iconosEdificio';
 import { cablearPlegables } from './ui/plegable';
 import { FICHAS_MAPA_EXTRA, SELECTORES_MAPA_EXTRA, SUBPESTANAS_CENTRO_EXTRA, SUBPESTANAS_MERCADO_EXTRA, type ContextoPlaza } from './ui/ganchos';
+import { abrirEleccionClic, cerrarEleccionClic, eleccionClicAbierta, sinRepetir, type ObjetoDelClic } from './ui/eleccionClic';
 import { montarPartidas } from './ui/pantallaPartidas';
 import { cablearCaravanas, cablearOrdenes, htmlCaravanas, htmlOrdenes } from './ui/panelMercado';
 import { cablearReclutamiento, htmlReclutamiento } from './ui/reclutamiento';
@@ -522,33 +523,6 @@ function asentamientosDelMapa(proyeccion: ProyeccionJugador): AsentamientoEnMapa
   ];
 }
 
-/** El asentamiento más cercano al punto de mapa clicado dentro de un radio de agarre, o `null`. */
-function asentamientoCercaDe(punto: { x: number; y: number }, proyeccion: ProyeccionJugador): AsentamientoEnMapa | null {
-  const RADIO = agarre(45); // unidades de mundo — un pelo más que el glifo del asentamiento (`ui/agarre.ts`)
-  let mejor: AsentamientoEnMapa | null = null;
-  let mejorDist = RADIO * RADIO;
-  for (const asentamiento of asentamientosDelMapa(proyeccion)) {
-    const dx = asentamiento.posicion.x - punto.x;
-    const dy = asentamiento.posicion.y - punto.y;
-    const dist = dx * dx + dy * dy;
-    if (dist < mejorDist) { mejor = asentamiento; mejorDist = dist; }
-  }
-  return mejor;
-}
-
-/** El campamento de bandidos más cercano al punto clicado, dentro de un radio de agarre, o `null`. Los que viajan
- * son solo los que se ven ahora (no tienen memoria). */
-function campamentoCercaDe(punto: { x: number; y: number }, proyeccion: ProyeccionJugador): CampamentoBandido | null {
-  const distancia = (c: CampamentoBandido): number => Math.hypot(c.posicion.x - punto.x, c.posicion.y - punto.y);
-  return proyeccion.campamentosBandidos.filter((c) => distancia(c) < agarre(25)).sort((a, b) => distancia(a) - distancia(b))[0] ?? null;
-}
-
-/** El elemento de `lista` más cercano al punto clicado, dentro de un radio de agarre, o `null`. */
-function cercano<T extends { posicion: { x: number; y: number } }>(lista: readonly T[], punto: { x: number; y: number }, radio: number): T | null {
-  const distancia = (c: T): number => Math.hypot(c.posicion.x - punto.x, c.posicion.y - punto.y);
-  return lista.filter((c) => distancia(c) < radio).sort((a, b) => distancia(a) - distancia(b))[0] ?? null;
-}
-
 /** A qué distancia se ataca: `LOGISTICA.radioEncuentro` de los datos de juego del motor (1 u desde 2026-10-31), para avisar
  * antes de mandar la orden. El que decide es el motor. */
 const radioDeAtaque = (): number => radioDeEncuentro();
@@ -579,28 +553,41 @@ function avisoMapa(texto: string): void {
 
 type Objetivo = { tipo: 'punto'; punto: { x: number; y: number } } | { tipo: 'asentamiento'; id: string };
 
-/** Qué hay bajo un clic en `punto` (unidades de mundo): qué se selecciona y adónde se marcha. `null`: suelo vacío. Lo usan el modo mundo y el modo
- * mapa (en este, solo los elementos: un clic en el suelo no mueve a nadie). */
-function objetoBajoElClic(proy: ProyeccionJugador, punto: { x: number; y: number }): { seleccion: { tipo: string; id: string }; ir?: Objetivo } | null {
-  for (const selector of SELECTORES_MAPA_EXTRA) {
-    const bajo = selector(proy, punto);
-    if (bajo) return { seleccion: { tipo: bajo.tipo, id: bajo.id }, ir: bajo.ir };
-  }
-  const batalla = cercano((proy.batallas ?? []).map((b) => ({ ...b, posicion: b.punto })), punto, agarre(20));
-  if (batalla) return { seleccion: { tipo: 'batalla', id: batalla.battleId }, ir: { tipo: 'punto', punto: batalla.punto } };
-  const formacion = cercano(formacionesVisibles(proy).filter((e) => !('dentroDe' in e && e.dentroDe)).map((e) => ({ ...e, posicion: e.posicionActual })), punto, agarre(20));
-  if (formacion) return { seleccion: { tipo: 'formacion', id: formacion.id }, ir: { tipo: 'punto', punto: formacion.posicionActual } };
-  const delEjercito = cercano(ejercitosDeLaFaccion(proy).filter((x) => !x.formacion && !x.dentroDe).map((x) => ({ ...x, posicion: x.posicionActual })), punto, agarre(20));
-  if (delEjercito) return { seleccion: { tipo: 'ejercito', id: delEjercito.id }, ir: { tipo: 'punto', punto: delEjercito.posicionActual } };
-  const alijo = cercano(proy.alijos ?? [], punto, agarre(15));
-  if (alijo) return { seleccion: { tipo: 'alijo', id: alijo.id }, ir: { tipo: 'punto', punto: alijo.posicion } };
-  const mercenarios = cercano(proy.campamentosMercenarios ?? [], punto, agarre(30));
-  if (mercenarios) return { seleccion: { tipo: 'mercenarios', id: mercenarios.id }, ir: { tipo: 'punto', punto: mercenarios.posicion } };
-  const campamento = campamentoCercaDe(punto, proy);
-  if (campamento) return { seleccion: { tipo: 'campamento', id: campamento.id }, ir: { tipo: 'punto', punto: campamento.posicion } };
-  const asentamiento = asentamientoCercaDe(punto, proy);
-  if (asentamiento) return { seleccion: { tipo: 'asentamiento', id: asentamiento.id }, ir: { tipo: 'asentamiento', id: asentamiento.id } };
-  return null;
+/** Lo que hay bajo un clic: qué se selecciona y adónde se marcha. */
+type ObjetoBajoElClic = ObjetoDelClic<Objetivo>;
+
+/** En qué orden salen en la lista las cosas bajo un mismo clic, por tipo (lo de los selectores de `ui/ganchos.ts` que no esté aquí, tras la
+ * formación); dentro de un tipo, de la más cercana a la más lejana. */
+const ORDEN_DEL_CLIC = ['batalla', 'ejercito', 'formacion', 'ejercitoAjeno', 'caravanaAjena', 'puebloMapa', 'avanzadaMapa', 'obraMapa', 'alijo', 'mercenarios', 'campamento', 'asentamiento'];
+const rangoDelClic = (tipo: string): number => { const i = ORDEN_DEL_CLIC.indexOf(tipo); return i < 0 ? ORDEN_DEL_CLIC.indexOf('formacion') + 0.5 : i; };
+
+/** Todo lo que hay bajo un clic en `punto` (unidades de mundo), cada cosa con su radio de agarre, en el orden de `ORDEN_DEL_CLIC`. Vacío: suelo.
+ * Lo usan el modo mundo y el modo mapa (en este, solo los elementos: un clic en el suelo no mueve a nadie). */
+function objetosBajoElClic(proy: ProyeccionJugador, punto: { x: number; y: number }): ObjetoBajoElClic[] {
+  const cerca = <T extends { posicion: { x: number; y: number } }>(lista: readonly T[], radio: number): T[] =>
+    lista.map((c) => ({ c, d: Math.hypot(c.posicion.x - punto.x, c.posicion.y - punto.y) })).filter((x) => x.d < radio).sort((a, b) => a.d - b.d).map((x) => x.c);
+  const out: ObjetoBajoElClic[] = [];
+  for (const b of cerca((proy.batallas ?? []).map((b) => ({ ...b, posicion: b.punto })), agarre(20))) out.push({ seleccion: { tipo: 'batalla', id: b.battleId }, ir: { tipo: 'punto', punto: b.punto } });
+  for (const x of cerca(ejercitosDeLaFaccion(proy).filter((x) => !x.formacion && !x.dentroDe).map((x) => ({ ...x, posicion: x.posicionActual })), agarre(20))) out.push({ seleccion: { tipo: 'ejercito', id: x.id }, ir: { tipo: 'punto', punto: x.posicionActual } });
+  for (const f of cerca(formacionesVisibles(proy).filter((e) => !('dentroDe' in e && e.dentroDe)).map((e) => ({ ...e, posicion: e.posicionActual })), agarre(20))) out.push({ seleccion: { tipo: 'formacion', id: f.id }, ir: { tipo: 'punto', punto: f.posicionActual } });
+  for (const selector of SELECTORES_MAPA_EXTRA) for (const bajo of selector(proy, punto)) out.push({ seleccion: { tipo: bajo.tipo, id: bajo.id }, ...(bajo.ir ? { ir: bajo.ir } : {}) });
+  for (const a of cerca(proy.alijos ?? [], agarre(15))) out.push({ seleccion: { tipo: 'alijo', id: a.id }, ir: { tipo: 'punto', punto: a.posicion } });
+  for (const m of cerca(proy.campamentosMercenarios ?? [], agarre(30))) out.push({ seleccion: { tipo: 'mercenarios', id: m.id }, ir: { tipo: 'punto', punto: m.posicion } });
+  for (const c of cerca(proy.campamentosBandidos ?? [], agarre(25))) out.push({ seleccion: { tipo: 'campamento', id: c.id }, ir: { tipo: 'punto', punto: c.posicion } });
+  // un pelo más que el glifo del asentamiento (`ui/agarre.ts`)
+  for (const a of cerca(asentamientosDelMapa(proy), agarre(45))) out.push({ seleccion: { tipo: 'asentamiento', id: a.id }, ir: { tipo: 'asentamiento', id: a.id } });
+  return ordenarDelClic(out);
+}
+
+/** Sin repetidos y en el orden de `ORDEN_DEL_CLIC` (estable: dentro de un tipo se queda el orden en que llegaron). */
+const ordenarDelClic = (lista: readonly ObjetoBajoElClic[]): ObjetoBajoElClic[] => sinRepetir(lista).sort((a, b) => rangoDelClic(a.seleccion.tipo) - rangoDelClic(b.seleccion.tipo));
+
+/** Lo que hace un clic del mapa con lo que tiene debajo: nada, `enElSuelo`; una cosa, `elegir`; dos o más, la lista para elegir una (Víctor,
+ * 2026-11-02), arriba al centro donde salen los avisos. */
+function resolverClic(proy: ProyeccionJugador, objetos: readonly ObjetoBajoElClic[], elegir: (o: ObjetoBajoElClic) => void, enElSuelo: () => void): void {
+  if (objetos.length === 0) enElSuelo();
+  else if (objetos.length === 1) elegir(objetos[0]!);
+  else abrirEleccionClic(proy, objetos, elegir, escaparHtml);
 }
 
 async function marcharAObjetivo(objetivo: Objetivo): Promise<void> {
@@ -1329,12 +1316,14 @@ function alternarVistaMapa(abrir: boolean = !vistaMapaAbierta, centro?: { x: num
       if (!eleccion) {
         const p = estadoCliente.proyeccionUltima;
         if (!p || !enModoMundo) return;
-        const bajo = objetoBajoElClic(p, controlVistaMapa.aMundo(evento));
-        if (!bajo) return;
-        seleccionMapa = bajo.seleccion;
-        alternarVistaMapa(false);
-        renderSeleccionMapa();
-        if (bajo.ir) void marcharAObjetivo(bajo.ir);
+        // con la lista de qué hay bajo el clic abierta, otro clic en el mapa solo la cierra
+        if (eleccionClicAbierta()) { cerrarEleccionClic(); return; }
+        resolverClic(p, objetosBajoElClic(p, controlVistaMapa.aMundo(evento)), (bajo) => {
+          seleccionMapa = bajo.seleccion;
+          alternarVistaMapa(false);
+          renderSeleccionMapa();
+          if (bajo.ir) void marcharAObjetivo(bajo.ir);
+        }, () => {});
         return;
       }
       const q = controlVistaMapa.aMundo(evento);
@@ -1584,18 +1573,26 @@ function montarMapa(): void {
   </div>`;
   const contenedor = document.querySelector<HTMLElement>('.mapa-screen')!;
   const lienzo = document.querySelector<HTMLElement>('.mapa-lienzo')!;
-  // Un clic en el terreno (la vista 3D da el punto del mapa bajo el ratón): lo que hay debajo se selecciona y la columna marcha hacia ello.
-  const alClicar = (punto: { x: number; y: number }): void => {
+  // Un clic en el terreno (la vista 3D da el punto del mapa bajo el ratón y los centros de lo que tiene debajo): lo que hay se selecciona y la
+  // columna marcha hacia ello; si son varias cosas, primero se elige una en la lista; en el suelo, se marcha allí. Con la lista abierta, un
+  // clic en el mapa solo la cierra.
+  const alClicar = (punto: { x: number; y: number }, _evento?: PointerEvent, centros?: { x: number; y: number }[]): void => {
     const proy = estadoCliente.proyeccionUltima;
     if (!proy) return;
-    const bajo = objetoBajoElClic(proy, punto);
-    seleccionMapa = bajo?.seleccion ?? null;
-    renderSeleccionMapa();
-    if (!bajo) void marcharAObjetivo({ tipo: 'punto', punto });
-    else if (bajo.ir) void marcharAObjetivo(bajo.ir);
+    if (eleccionClicAbierta()) { cerrarEleccionClic(); return; }
+    const objetos = ordenarDelClic((centros?.length ? centros : [punto]).flatMap((c) => objetosBajoElClic(proy, c)));
+    resolverClic(proy, objetos, (bajo) => {
+      seleccionMapa = bajo.seleccion;
+      renderSeleccionMapa();
+      if (bajo.ir) void marcharAObjetivo(bajo.ir);
+    }, () => {
+      seleccionMapa = null;
+      renderSeleccionMapa();
+      void marcharAObjetivo({ tipo: 'punto', punto });
+    });
   };
   // MODO MUNDO, en 3D (docs/Mundo_3D.md): la cámara sigue al héroe y en pantalla cabe lo que dice su visión (15 o 22 u el héroe solo, 30 o 45
-  // con soldados); lo que no se ve lo tapa la niebla. Mirar más lejos es el modo mapa, en 2D (botón Mapa). La vista guardada solo aporta panel
+  // con soldados; de cerca, 0,6 veces lo normal); lo que no se ve lo tapa la niebla. Mirar más lejos es el modo mapa, en 2D (botón Mapa). La vista guardada solo aporta panel
   // y selección. Se monta cuando están el mapa y el relieve.
   let vista3d: VistaMundo3D | null = null, desmontado = false;
   enModoMundo = true;
@@ -1636,6 +1633,7 @@ function montarMapa(): void {
   };
   addEventListener('pagehide', guardarVista); // recarga o cierre de pestaña
   limpiarPantalla = () => {
+    cerrarEleccionClic();
     guardarVista(); // salir del mapa (plaza, campamento, otra partida, cerrar sesión)
     removeEventListener('pagehide', guardarVista);
     cancelAnimationFrame(fotograma);
@@ -1650,7 +1648,7 @@ function montarMapa(): void {
   };
 
   contenedor.querySelectorAll<HTMLButtonElement>('[data-zoom]').forEach((boton) => {
-    boton.addEventListener('click', () => vista3d?.zoom(boton.dataset.zoom === 'in' ? 'normal' : 'alejado'));
+    boton.addEventListener('click', () => vista3d?.pasoDeZoom(boton.dataset.zoom === 'in' ? -1 : 1));
   });
   contenedor.querySelectorAll<HTMLButtonElement>('.mapa-riel [data-panel]').forEach((boton) => {
     boton.addEventListener('click', () => abrirPanelRiel(boton.dataset.panel as PanelRiel));

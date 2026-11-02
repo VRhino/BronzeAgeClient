@@ -3,6 +3,22 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.93.0] — 2026-11-02 · El mundo 3D: zoom de cerca, caminos, carros y la lista bajo el clic · sin cambios de contrato (`VRhino/BronzeAge@a17f8536`)
+
+- **Zoom de cerca**: un tercer zoom a 0,6 veces el normal (9 u en pantalla el héroe solo, 18 con soldados), además del normal y el alejado.
+  La rueda y los botones + y − pasan de uno en uno.
+- **Caminos que parecen caminos**: el trazado que manda el servidor nodo a nodo (una escalera cada 4 u) se suaviza (puntos medios, sin los
+  vértices que no doblan y con las curvas redondeadas; los cruces no se mueven), y cada escalón lleva su textura con los bordes fundidos con
+  el suelo: el sendero, una huella de tierra pisada; el camino, tierra con dos rodadas; la calzada, adoquines con bordillo. Son más anchos
+  (0,4 / 0,65 / 0,9 u) y los árboles se apartan del trazado nuevo.
+- **Carros**: si tu columna lleva algo en el carro, un carrito pequeño sin animal va justo detrás de la formación. Los carros de caravana
+  (sueltas, enganchadas y el de fundación) van a 1,5 veces y siempre con su animal: el de la caravana (buey, caballo o camello) o un buey.
+  Una caravana suelta pinta un carro por cada uno de los suyos (hasta tres).
+- **Escolta**: una caravana suelta lleva delante su escolta, las escuadras cedidas (hasta tres); una ajena escoltada, una.
+- **Varias cosas bajo el clic**: en el mundo y en el modo mapa, si el clic cae sobre dos o más cosas, antes de hacer nada sale arriba al
+  centro, donde salen los avisos, una lista para elegir con cuál (símbolo, qué es y de quién). Elegir una hace lo de un clic sobre ella sola;
+  Esc, un clic fuera o un clic en el mapa la cierran.
+
 ## [0.92.0] — 2026-11-02 · La plaza en 3D a pantalla completa · sin cambios de contrato (`VRhino/BronzeAge@a17f8536`)
 
 - **Toda la pantalla es la plaza en 3D**, también bajo la barra del jugador, que en la plaza pasa a transparente y de iconos, como en el

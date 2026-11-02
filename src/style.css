@@ -4921,3 +4921,18 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
   .plaza-3d .jugador-botones { min-width: 0; overflow-x: auto; scrollbar-width: none; padding: 6px 4px 2px; }
   .plaza-3d .jugador-botones button { flex: none; }
 }
+
+/* =====================================================================================
+   QUÉ HAY BAJO EL CLIC (varias cosas en el mismo sitio): una lista para elegir, arriba al centro, donde salen los avisos (`.aviso-global`).
+   ===================================================================================== */
+.eleccion-clic { position: fixed; left: 50%; top: calc(var(--jugador-alto) + 12px); transform: translateX(-50%); z-index: 51; width: min(340px, calc(100vw - 32px)); max-height: calc(100vh - var(--jugador-alto) - 40px); overflow-y: auto; padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px; background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg)); border: 1px solid var(--bronce); border-radius: 2px; box-shadow: var(--placa-sutil); color: var(--pergamino); animation: aviso-global-entra 0.2s ease-out; }
+.eleccion-clic-cab { font-family: var(--fuente-titulo); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--oro); text-align: center; padding-bottom: 6px; border-bottom: 1px solid rgba(169, 121, 63, 0.35); }
+.eleccion-clic ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.eleccion-clic button { width: 100%; display: flex; align-items: center; gap: 10px; padding: 7px 10px; text-align: left; font: inherit; color: inherit; background: linear-gradient(180deg, rgba(30, 23, 15, 0.6), rgba(18, 14, 9, 0.6)); border: 1px solid rgba(107, 74, 41, 0.5); border-radius: 2px; cursor: pointer; }
+.eleccion-clic button:hover, .eleccion-clic button:focus-visible { border-color: var(--bronce); background: rgba(169, 121, 63, 0.16); outline: none; }
+.eleccion-clic-icono { flex: none; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--bronce-osc); background: var(--tinta); color: var(--oro); font-size: 0.9rem; line-height: 1; }
+.eleccion-clic-texto { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.eleccion-clic-texto strong { font-size: 0.86rem; font-weight: 600; }
+.eleccion-clic-texto small { font-size: 0.72rem; color: var(--text-secondary); overflow-wrap: anywhere; }
+/* mientras se elige, el aviso que hubiera en ese sitio espera debajo */
+body:has(.eleccion-clic) .aviso-global { visibility: hidden; }

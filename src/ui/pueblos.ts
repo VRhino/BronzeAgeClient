@@ -8,7 +8,7 @@
 // cifras salen de `GET /v1/datos` y el motor valida; su rechazo se enseña tal cual.
 //   plaza      la subpestaña «Territorio» del Centro urbano (lo que hay en su zona y sus pueblos) (`SUBPESTANA_PUEBLOS`): cupo, lista, marcar, mejorar, reponer carro, destruir;
 //              con aire de juego (2026-11-02): la zona en fichas con casillas, cada pueblo y cada obra en su tarjeta y el marcar en dos cartas
-//   mapa       los pueblos y las obras se pintan (`dibujarPueblosYObras`) y se seleccionan (`seleccionarPuebloUObra`, fichas `FICHA_PUEBLO`/`FICHA_OBRA`)
+//   mapa       los pueblos y las obras se pintan (`dibujarPueblosYObras`) y se seleccionan (`pueblosYObrasBajoElClic`, fichas `FICHA_PUEBLO`/`FICHA_OBRA`)
 //   ascenso    la subida de nivel de la plaza (el nivel 2 pide un pueblo activo, aldea o extractor) se pinta en `panelCentro.ts`
 //   dentro     se entra en un pueblo activo como de visita, con la columna entera (`entrarEnPueblo` / `salirDePueblo`); dentro se gestiona con esa
 //              columna (`htmlPestanasPueblo`): guarnición, carga, escolta del carro de acarreo y mejora de la aldea. La escolta también se cede desde la plaza.
@@ -466,22 +466,26 @@ export function dibujarPueblosYObras(ctx: CanvasRenderingContext2D, p: Proyeccio
   ctx.restore();
 }
 
-/** Qué pueblo, avanzada u obra hay bajo el clic. Con columna, el clic además la lleva hacia el pueblo, la avanzada o la obra propia sin terminar. */
-export function seleccionarPuebloUObra(p: ProyeccionJugador, punto: Point): ObjetoBajoElClic | null {
-  const candidatos = [
+/** Los pueblos, avanzadas y obras bajo el clic, del más cercano al más lejano. Con columna, el clic además la lleva hacia el pueblo, la avanzada o
+ * la obra propia sin terminar. */
+export function pueblosYObrasBajoElClic(p: ProyeccionJugador, punto: Point): ObjetoBajoElClic[] {
+  const conColumna = !!miColumna(p);
+  return [
     ...(p.obrasDeMapa ?? []).filter((o) => o.tipo !== 'mejoraAldea').map((o) => ({ tipo: 'obraMapa', id: o.id, d: distancia(o.posicion, punto), o })),
     ...(p.pueblos ?? []).map((x) => ({ tipo: 'puebloMapa', id: x.id, d: distancia(x.posicion, punto), o: undefined, posicion: x.posicion })),
     ...(p.avanzadas ?? []).map((x) => ({ tipo: 'avanzadaMapa', id: x.id, d: distancia(x.posicion, punto), o: undefined, posicion: x.posicion })),
-  ].filter((c) => c.d < agarre(12)).sort((a, b) => a.d - b.d);
-  const c = candidatos[0];
-  if (!c) return null;
-  // Con columna, el clic lleva hacia el pueblo o la avanzada (como a una plaza) y a una obra propia sin terminar (para entregar a su puerta).
-  const destino = c.o ? (c.o.propia && !c.o.terminaEn ? c.o.posicion : undefined) : c.posicion;
-  const ir = destino && miColumna(p) ? { tipo: 'punto' as const, punto: destino } : undefined;
-  return { tipo: c.tipo, id: c.id, ...(ir ? { ir } : {}) };
+  ].filter((c) => c.d < agarre(12)).sort((a, b) => a.d - b.d).map((c) => {
+    // Con columna, el clic lleva hacia el pueblo o la avanzada (como a una plaza) y a una obra propia sin terminar (para entregar a su puerta).
+    const destino = c.o ? (c.o.propia && !c.o.terminaEn ? c.o.posicion : undefined) : c.posicion;
+    const ir = destino && conColumna ? { tipo: 'punto' as const, punto: destino } : undefined;
+    return { tipo: c.tipo, id: c.id, ...(ir ? { ir } : {}) };
+  });
 }
 
 const ETAPA_AVANZADA: Record<number, string> = { 1: 'Atalaya', 2: 'Fuerte', 3: 'Ciudadela' };
+/** Lo que es una avanzada por su etapa, y una obra de mapa por su tipo (para la lista de qué hay bajo un clic). */
+export const nombreDeAvanzada = (etapa: number): string => ETAPA_AVANZADA[etapa] ?? 'Avanzada';
+export const nombreDeObra = (o: ObraDeMapa): string => NOMBRE_OBRA[o.tipo] ?? 'Obra';
 
 /** La ficha de una avanzada: qué es, de qué plaza y si está en ruinas o la atacan. */
 export const FICHA_AVANZADA: FichaMapaExtra = {

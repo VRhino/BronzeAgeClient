@@ -56,6 +56,9 @@ export interface OpcionesCinta {
   paso?: number;
   /** Corre la cinta de lado, en u: positivo hacia la izquierda del sentido de los puntos (el interior de un contorno antihorario). */
   desplazar?: number;
+  /** Con coordenadas de textura: `u` de 0 (izquierda) a 1 (derecha) de lado a lado y `v` = lo recorrido / `periodo` (lo que ocupa una vez la
+   * textura a lo largo, en u), contando desde `desde` u (lo andado antes del primer punto: así un tramo recortado no corre la textura). */
+  textura?: { periodo: number; desde?: number };
 }
 
 /** Una cinta de `ancho` u a lo largo de `puntos`, pegada al relieve: una muestra cada `paso` u con un vértice a cada lado. Las caras miran
@@ -76,8 +79,9 @@ export function cinta(puntos: readonly Punto[], alturaU: (x: number, y: number) 
   }
   const m = xs.length;
   if (m < 2) return null;
-  const pos = new Float32Array(m * 6), nor = new Float32Array(m * 6);
+  const pos = new Float32Array(m * 6), nor = new Float32Array(m * 6), uv = o.textura ? new Float32Array(m * 4) : null;
   for (let k = 0; k < m; k++) {
+    if (uv) { const v = ((o.textura!.desde ?? 0) + s[k]!) / o.textura!.periodo; uv.set([0, v, 1, v], 4 * k); }
     const a = Math.max(0, k - 1), b = Math.min(m - 1, k + 1), tx = xs[b]! - xs[a]!, ty = ys[b]! - ys[a]!, l = Math.hypot(tx, ty) || 1;
     const ux = -ty / l, uy = tx / l, nx = ux * medio, ny = uy * medio, x = xs[k]! + ux * (o.desplazar ?? 0), y = ys[k]! + uy * (o.desplazar ?? 0);
     const hc = alturaU(x, y), hi = alturaU(x + nx, y + ny), hd = alturaU(x - nx, y - ny);
@@ -100,6 +104,7 @@ export function cinta(puntos: readonly Punto[], alturaU: (x: number, y: number) 
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  if (uv) geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   geo.setIndex(indices);
   geo.computeBoundingSphere();
   return geo;
@@ -140,4 +145,57 @@ export function tramosEnCaja(puntos: readonly Punto[], x0: number, y0: number, x
   }
   if (actual.length) out.push(actual);
   return out;
+}
+
+/** Lo largo de una polilínea hasta cada vértice. */
+export function recorridos(puntos: readonly Punto[]): number[] {
+  const out = [0];
+  for (let k = 1; k < puntos.length; k++) out.push(out[k - 1]! + Math.hypot(puntos[k]!.x - puntos[k - 1]!.x, puntos[k]!.y - puntos[k - 1]!.y));
+  return out;
+}
+
+/** Ramer-Douglas-Peucker: quita los vértices que se apartan menos de `tolerancia` u de la recta entre los que se quedan. Los extremos, siempre. */
+export function simplificar(puntos: readonly Punto[], tolerancia: number): Punto[] {
+  if (puntos.length < 3) return [...puntos];
+  const queda = new Uint8Array(puntos.length);
+  queda[0] = queda[puntos.length - 1] = 1;
+  const pila: [number, number][] = [[0, puntos.length - 1]];
+  while (pila.length) {
+    const [i, j] = pila.pop()!;
+    const a = puntos[i]!, b = puntos[j]!, dx = b.x - a.x, dy = b.y - a.y, l = Math.hypot(dx, dy);
+    let peor = -1, max = tolerancia;
+    for (let k = i + 1; k < j; k++) {
+      const q = puntos[k]!, d = l ? Math.abs((q.x - a.x) * dy - (q.y - a.y) * dx) / l : Math.hypot(q.x - a.x, q.y - a.y);
+      if (d > max) { max = d; peor = k; }
+    }
+    if (peor >= 0) { queda[peor] = 1; pila.push([i, peor], [peor, j]); }
+  }
+  return puntos.filter((_, k) => queda[k]);
+}
+
+/** Chaikin: en cada vuelta, cada esquina se corta por un cuarto de sus dos tramos (como mucho `corteMax` u). Los extremos no se mueven. */
+export function chaikin(puntos: readonly Punto[], vueltas: number, corteMax: number): Punto[] {
+  let ps = [...puntos];
+  for (let v = 0; v < vueltas && ps.length >= 3; v++) {
+    const out: Punto[] = [ps[0]!];
+    for (let k = 0; k < ps.length - 1; k++) {
+      const a = ps[k]!, b = ps[k + 1]!, l = Math.hypot(b.x - a.x, b.y - a.y), t = l ? Math.min(0.25, corteMax / l) : 0;
+      if (k > 0) out.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+      if (k < ps.length - 2) out.push({ x: b.x - (b.x - a.x) * t, y: b.y - (b.y - a.y) * t });
+    }
+    out.push(ps[ps.length - 1]!);
+    ps = out;
+  }
+  return ps;
+}
+
+/** El trazado de un camino tal como se pinta. El servidor lo manda nodo a nodo de su red (cada 4 u, en ocho direcciones): una escalera. Se pasa
+ * por el punto medio de cada tramo (que sigue sobre la red), se quitan los vértices que no doblan y se redondean las curvas; los extremos, que
+ * es donde se juntan los caminos, no se mueven. */
+export function suavizarCamino(puntos: readonly Punto[]): Punto[] {
+  if (puntos.length < 3) return [...puntos];
+  const medios: Punto[] = [puntos[0]!];
+  for (let k = 1; k < puntos.length; k++) medios.push({ x: (puntos[k - 1]!.x + puntos[k]!.x) / 2, y: (puntos[k - 1]!.y + puntos[k]!.y) / 2 });
+  medios.push(puntos[puntos.length - 1]!);
+  return chaikin(simplificar(medios, 0.3), 3, 1.5);
 }
