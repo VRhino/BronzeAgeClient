@@ -3,6 +3,15 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.84.0] — 2026-11-02 · Panel de obras de la plaza con aire de juego de estrategia · sin cambios de contrato (`VRhino/BronzeAge@168a3bea`)
+
+- **Centro urbano › Edificios** rediseñado (`ui/panelObras.ts`, sacado de `main.ts`): más iconos, estados y barras que texto.
+  - **Construir**: casillas con el icono y el coste en chips debajo (en rojo lo que falta en el almacén; más de dos recursos, «+N»), candado si no se puede. Coste, tiempo y motivo en el título.
+  - **Edificios**: una tarjeta por tipo con el icono grande, ×N, el nivel en rombos (llenos hasta el nivel, vacíos hasta el máximo del catálogo), insignias 🔨 en obra, ⬆ mejorándose, ⏸ parado por almacén lleno (late) y ⚠ dañado, el botón ⬆ de mejorar (solo si queda nivel) y la barra de la mejora al pie. Las que aún no están en pie salen en fantasma.
+  - **Obras** (antes «Cola», ahora antes que Producción): lo que está en obra (construcción, reconstrucción o mejora) con su barra de avance y lo que falta; lo que espera, en casillas numeradas con ◀ ✕ ▶. La barra es una estimación: duración del catálogo (`tiempoConstruccionMinutos`, `obraMinutos` del nivel o `× MEJORA_EDIFICIO.multiplicadorPorNivel`) × `factorTiempoConstruccion` de las políticas activas (× `OCUPACION.fraccionCosteReconstruccion` si se reconstruye).
+  - **Producción**: el almacén en fichas (neto ▲▼ en color, lo que hay frente a lo que cabe, tira de lo que entra frente a lo que sale, «LLENO» o ⏳ si se acaba en menos de una hora), la mano de obra en un medidor, los extractores como edificio ➜ recurso y los talleres como insumos ➜ producto con un interruptor ▶ / ❚❚. En la cabecera de cada plegable, avisos en chips (▼ recursos a la baja, 📦 llenos, ⏸ parados; 🔨 en obra, ⌛ en espera).
+- Banco `pruebas/plaza/` (una plaza de mentira con los datos de juego del motor, con y sin cargo).
+
 ## [0.83.0] — 2026-11-02 · Rechazos de la plaza flotando arriba al centro · sin cambios de contrato (`VRhino/BronzeAge@168a3bea`)
 
 - **Los rechazos de la gestión de la plaza** (construir, mejorar, la cola, recetas, renombrar, mudarse, pedir ascenso y la ficha de un edificio) ya no se escriben al pie del panel, donde se perdían: salen como el aviso flotante de los combates (`.aviso-global`), arriba al centro, con el borde de peligro. Desaparecen `#asent-lado-error` y `[data-ficha-error]`.

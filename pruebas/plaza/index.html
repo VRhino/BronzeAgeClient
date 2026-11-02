@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Banco del panel de obras</title>
+    <style>
+      body { background: #0b0805; margin: 0; padding: 14px; }
+      #mandos { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; color: #e8e2d0; font: 13px system-ui; align-items: center; }
+      #mandos button { background: #1d2433; color: inherit; border: 1px solid #3a4558; border-radius: 4px; padding: 3px 8px; cursor: pointer; }
+      #lienzo.asent-lado { width: 440px; overflow: visible; }
+    </style>
+  </head>
+  <body>
+    <div id="mandos"><strong>Banco del panel de obras</strong>
+      <button type="button" data-ver="gobernador">Gobernador</button>
+      <button type="button" data-ver="visita">Sin cargo</button>
+    </div>
+    <aside id="lienzo" class="asent-lado"><div class="asent-edificios"><div class="asent-edif-cuerpo"></div></div></aside>
+    <script type="module" src="./banco.ts"></script>
+  </body>
+</html>

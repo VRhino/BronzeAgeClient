@@ -19,7 +19,6 @@ import {
   cerrarPresencia,
   fijarCanalesTiempoReal,
   loginConClave,
-  bloqueDeDatos,
   capacidadDeViveres,
   costoDeRefundacion,
   nivelesBandidos,
@@ -45,9 +44,8 @@ import { pintarVentanaSalida, reiniciarVentanaSalida, type LugarDeSalida } from 
 import { elegirPestanaHeroe, minutosHerido, pintarPanelHeroe } from './ui/panelHeroe';
 import { htmlBarraJugador, type PanelJugador } from './ui/barraJugador';
 import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
-import { EDIFICIO_COLOR, EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from './paletas';
-import { iconoEdificio } from './ui/iconosEdificio';
-import type { Alijo, Asentamiento, BloqueoAscenso, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Edificio, EvaluacionAscenso, Faccion, ParamsCrearHeroe, Sigilo } from './tiposDominio';
+import { RECURSO_ICONO, RECURSO_NOMBRE } from './paletas';
+import type { Alijo, Asentamiento, BloqueoAscenso, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, EvaluacionAscenso, Faccion, ParamsCrearHeroe, Sigilo } from './tiposDominio';
 import { svgSigilo } from './sigilo/sigilo';
 import { alCargarSigilos } from './sigilo/lienzo';
 import { cablearCampamento, campamentoActual, htmlSeccionCampamento, seccionesDeCampamento, type SeccionCampamento } from './ui/pantallaCampamento';
@@ -66,8 +64,9 @@ import { cablearPanelEjercito, ejercitosDeLaFaccion, htmlFichaEjercito, htmlPane
 import { invalidar, olvidarEdicion, pintar, vaciar } from './ui/repintado';
 import { ayuda } from './ui/ayuda';
 import { htmlInformeDeInspeccion } from './ui/interaccionAjena';
-import { cablearProduccionYRecetas, cablearVistaCiudad, edificioSeleccionado, htmlProduccionYRecetas, htmlTooltipEdificio, repintarFicha, tipoSeleccionado } from './ui/vistaCiudad';
-import { cablearPlegables, plegable } from './ui/plegable';
+import { htmlPanelObras } from './ui/panelObras';
+import { cablearProduccionYRecetas, cablearVistaCiudad, edificioSeleccionado, htmlTooltipEdificio, repintarFicha } from './ui/vistaCiudad';
+import { cablearPlegables } from './ui/plegable';
 import { FICHAS_MAPA_EXTRA, SELECTORES_MAPA_EXTRA, SUBPESTANAS_CENTRO_EXTRA, SUBPESTANAS_MERCADO_EXTRA, type ContextoPlaza } from './ui/ganchos';
 import { montarPartidas } from './ui/pantallaPartidas';
 import { cablearCaravanas, cablearOrdenes, htmlCaravanas, htmlOrdenes } from './ui/panelMercado';
@@ -1734,55 +1733,6 @@ async function mudarseAEstaPlaza(): Promise<void> {
 type SeccionAsent = string; // 'resumen' | 'edificios' | 'produccion' | 'cola' | 'cargos' o el id de una subpestaña de `SUBPESTANAS_CENTRO_EXTRA`
 let seccionAsent: SeccionAsent = 'edificios';
 
-/** Edificios que un Gobernador / Maestro de Obras puede añadir a mano (el backend gatea nivel, únicos y
- * topes; aquí solo se ofrece el catálogo). Fuera: centroUrbano, puestoMercado y los extractores de `mapa`. */
-const EDIFICIOS_MANUALES = [
-  'vivienda', 'almacen', 'granero', 'granja', 'lenera',
-  'barracon', 'galeriaDeTiro', 'palacio', 'mercado', 'taberna',
-  'fundicion', 'granFundicion', 'curtiduria', 'armeria', 'carpinteria', 'maravilla',
-] as const;
-
-interface DefEdificio { costo?: Record<string, number>; requisitoNivelAsentamientoConstruccion?: number; requiereTecnologia?: string; nivelFaccionMinimo?: number }
-
-/** Por qué no se puede añadir ahora un edificio a la cola, como el motor (`anadir_manual`), o `''` si se puede. Lo que el cliente no sabe (sitio,
- * topes de almacenes y viviendas, cola llena, recursos) lo dice el motor al pedirlo. */
-function motivoParaConstruir(a: Asentamiento, tipo: string, def: DefEdificio, cargo: 'gobernador' | 'maestroObras' | null): string {
-  const p = estadoCliente.proyeccionUltima;
-  if (!cargo) return 'Solo el Gobernador o el Maestro de Obras.';
-  const hay = (a.edificios ?? []).some((e) => e.tipo === tipo);
-  const unicos = bloqueDeDatos<string[]>('EDIFICIOS_UNICOS') ?? [];
-  if (unicos.includes(tipo) && hay) return 'Solo puede haber uno.';
-  const nivel = a.nivelActual ?? a.nivel;
-  const pide = def.requisitoNivelAsentamientoConstruccion ?? 0;
-  if (nivel < pide) return `Pide la plaza en nivel ${pide}.`;
-  if (def.requiereTecnologia && !(p?.tecnologiasAdoptadas ?? []).includes(def.requiereTecnologia)) return `Pide la tecnología ${def.requiereTecnologia.replace(/_/g, ' ')}.`;
-  if (tipo === 'granFundicion') {
-    const nivelFaccion = p?.facciones.find((f) => f.id === p.faccionId)?.nivel ?? 1;
-    if (def.nivelFaccionMinimo && nivelFaccion < def.nivelFaccionMinimo) return `Pide la Facción en nivel ${def.nivelFaccionMinimo}.`;
-    if (p?.tecnologia?.capitalId && p.tecnologia.capitalId !== a.id) return 'Solo en la capital.';
-  }
-  return '';
-}
-
-/** Los botones para añadir a la cola: uno por edificio, con su icono; encendidos los que se pueden construir ahora y apagados, con el motivo, los demás.
- * Fuera: los que nacen solos (sin coste), los de pueblo (minas y Cantera, desde el motor 5907aa6) y el Corral, que es de la aldea. */
-function htmlBotonesConstruir(a: Asentamiento, cargo: 'gobernador' | 'maestroObras' | null): string {
-  if (!cargo) return '';
-  const catalogo = bloqueDeDatos<Record<string, DefEdificio>>('EDIFICIO_CATALOGO');
-  const tipos = catalogo
-    ? Object.keys(catalogo).filter((t) => Object.keys(catalogo[t]!.costo ?? {}).length > 0 && !t.startsWith('mina') && t !== 'cantera' && t !== 'corral')
-    : [...EDIFICIOS_MANUALES];
-  const botones = tipos.map((t) => {
-    const def = catalogo?.[t] ?? {};
-    const motivo = catalogo ? motivoParaConstruir(a, t, def, cargo) : '';
-    const coste = Object.entries(def.costo ?? {}).map(([r, n]) => `${n} ${RECURSO_NOMBRE[r] ?? r}`).join(', ');
-    const titulo = `${EDIFICIO_NOMBRE[t] ?? t}${coste ? ` · ${coste}` : ''}${motivo ? ` · ${motivo}` : ''}`;
-    return `<button class="asent-construir${motivo ? ' apagado' : ''}" type="button" data-construir="${escaparHtml(t)}"${motivo ? ' aria-disabled="true"' : ''} title="${escaparHtml(titulo)}" aria-label="${escaparHtml(titulo)}">${iconoEdificio(t, 30)}</button>`;
-  });
-  return `<div class="asent-construir-cab"><span class="faction-kicker">Construir</span><small>Pasa el ratón para ver qué es y qué cuesta</small></div>
-    <div class="asent-construir-rejilla">${botones.join('')}</div>`;
-}
-
 /** El cargo de construcción que el héroe tiene en esta plaza, o `null`. */
 function cargoConstructor(asentamiento: Asentamiento, heroeId: string): 'gobernador' | 'maestroObras' | null {
   if (asentamiento.cargos?.gobernadorId === heroeId) return 'gobernador';
@@ -1910,9 +1860,7 @@ function renderPanelEdificios(): void {
         + (puedeMudarme ? '<button id="btn-mudarme" class="btn-secondary" type="button" title="Hacer de esta plaza tu base: tu campamento se muda contigo">Hacer de esta plaza mi base</button>' : '')
         + (residencia && (residencia.visible?.(ctxPlaza) ?? true) ? `<div class="asent-resumen-residencia">${residencia.html(ctxPlaza)}</div>` : '')
       : seccionAsent === 'edificios'
-        ? plegable(`edificios:${asentamiento.id}`, '<strong>Edificios</strong>', seccionEdificios(asentamiento, cargo), true)
-          + plegable(`produccion:${asentamiento.id}`, '<strong>Producción</strong>', htmlProduccionYRecetas(ctxPlaza))
-          + plegable(`cola:${asentamiento.id}`, `<strong>Cola</strong> <span class="asent-lado-nota">(${edificios.filter((e) => e.estado !== 'activo' || e.mejora).length})</span>`, seccionCola(edificios, cargo), true)
+        ? htmlPanelObras(ctxPlaza)
         : renderCargosAsentamiento(asentamiento, proyeccion);
     html = `${ascenso ? `<section class="asent-ascenso">${ascenso}</section>` : ''}${subpestanas(SECCIONES, seccionAsent)}<div class="asent-lado-cuerpo">${contenido}</div>
       ${!cargo && seccionAsent === 'edificios' ? '<p class="asent-lado-nota">Necesitas ser Gobernador o Maestro de Obras para gestionar la construcción.</p>' : ''}${pie}`;
@@ -2042,75 +1990,6 @@ function seccionAscenso(a: Asentamiento, evaluacion: EvaluacionAscenso | undefin
     ${soyGobernador
       ? `<button id="btn-solicitar-ascenso" class="btn-primary" type="button"${evaluacion.puede ? '' : ' disabled'}>Subir a nivel ${evaluacion.nivelObjetivo}</button>`
       : '<p class="asent-lado-nota">Solo el Gobernador puede pedir la subida.</p>'}`;
-}
-
-function seccionEdificios(a: Asentamiento, cargo: 'gobernador' | 'maestroObras' | null): string {
-  // La cantera ya no es un edificio de la plaza: la piedra sale de los pueblos extractores, que se fundan desde el nivel 1 (Víctor, 2026-10-31).
-  const deLaPlaza = (a.edificios ?? []).filter((e) => e.tipo !== 'cantera');
-  const internos = deLaPlaza.filter((e) => (e.ambito ?? 'asentamiento') !== 'mapa');
-  const enRegion = deLaPlaza.length - internos.length;
-
-  const grupos = new Map<string, Edificio[]>();
-  for (const e of internos) grupos.set(e.tipo, [...(grupos.get(e.tipo) ?? []), e]);
-
-  const filas = [...grupos.entries()]
-    .sort(([x, lx], [y, ly]) =>
-      (x === 'centroUrbano' ? -1 : 0) - (y === 'centroUrbano' ? -1 : 0) || ly.length - lx.length || x.localeCompare(y)
-    )
-    .map(([tipo, lista]) => {
-      const nivelMax = Math.max(...lista.map((e) => e.nivelInterno ?? 1));
-      const enObra = lista.filter((e) => e.estado !== 'activo').length;
-      const parados = lista.filter((e) => e.pausadoPorAlmacenLleno).length;
-      const mejorandose = lista.filter((e) => e.mejora).length;
-      const meta = [lista.length > 1 ? `×${lista.length}` : '', nivelMax > 1 ? `N${nivelMax}` : ''].filter(Boolean).join(' · ');
-      const nota = [enObra ? `${enObra} en obra` : '', mejorandose ? `${mejorandose} mejorándose` : '', parados ? `${parados} parado${parados > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ');
-      // La mejora ataca la instancia ACTIVA de menor nivel interno que no se esté mejorando ya (todas las de un tipo
-      // son intercambiables).
-      const objetivoMejora = lista
-        .filter((e) => e.estado === 'activo' && !e.mejora)
-        .sort((e1, e2) => (e1.nivelInterno ?? 1) - (e2.nivelInterno ?? 1))[0];
-      return `<div class="asent-edif-item asent-edif-con-icono${tipoSeleccionado() === tipo ? ' sel' : ''}" data-fila-tipo="${escaparHtml(tipo)}" style="--swatch:${EDIFICIO_COLOR[tipo] ?? '#888'}">
-        <span class="asent-edif-nombre">${iconoEdificio(tipo, 26)}${escaparHtml(EDIFICIO_NOMBRE[tipo] ?? tipo)}</span>
-        <span class="asent-edif-meta">${escaparHtml(meta)}</span>
-        ${cargo && objetivoMejora && tipo !== 'centroUrbano' ? `<button class="asent-edif-mejora" type="button" data-mejorar="${escaparHtml(objetivoMejora.id)}" title="Mejorar el de menor nivel">⬆</button>` : ''}
-        ${nota ? `<span class="asent-edif-nota">${escaparHtml(nota)}</span>` : ''}
-      </div>`;
-    })
-    .join('');
-  const anadir = htmlBotonesConstruir(a, cargo);
-  return `
-    <div class="asent-lado-cabecera"><span class="faction-kicker">Edificios</span><strong>${internos.length}</strong></div>
-    ${anadir}
-    <div class="asent-edif-lista">${filas || '<p class="mapa-lista-vacia">Sin edificios.</p>'}</div>
-    ${enRegion > 0 ? `<p class="asent-edif-region">+ ${enRegion} en la región (minas)</p>` : ''}`;
-}
-
-function seccionCola(edificios: Edificio[], cargo: 'gobernador' | 'maestroObras' | null): string {
-  const cola = edificios
-    .filter((e) => e.estado !== 'activo')
-    .sort((x, y) => (y.prioridad ?? 0) - (x.prioridad ?? 0));
-  // Las mejoras en curso no están en la cola pero ocupan una cuadrilla de obra: se enseñan encima, sin acciones.
-  const mejoras = edificios
-    .filter((e) => e.mejora)
-    .map((e) => `<div class="asent-cola-item" style="--swatch:${EDIFICIO_COLOR[e.tipo] ?? '#888'}">
-      <span class="asent-cola-pos">⬆</span>
-      <span class="asent-edif-nombre asent-edif-icono">${iconoEdificio(e.tipo, 22)}${escaparHtml(EDIFICIO_NOMBRE[e.tipo] ?? e.tipo)}</span>
-      <span class="asent-edif-nota">mejora a N${e.mejora!.nivelObjetivo} · ${cuentaAtras(e.mejora!.completaEn)}</span>
-    </div>`)
-    .join('');
-  if (cola.length === 0 && !mejoras) return '<p class="mapa-lista-vacia">Sin obras en curso ni en cola.</p>';
-  return `<div class="asent-cola-lista">${mejoras}${cola
-    .map((e, i) => `<div class="asent-cola-item" style="--swatch:${EDIFICIO_COLOR[e.tipo] ?? '#888'}">
-      <span class="asent-cola-pos">${i + 1}</span>
-      <span class="asent-edif-nombre asent-edif-icono">${iconoEdificio(e.tipo, 22)}${escaparHtml(EDIFICIO_NOMBRE[e.tipo] ?? e.tipo)}</span>
-      <span class="asent-edif-nota">${e.estado === 'en_construccion' ? `obra · ${cuentaAtras(e.completaEn)}` : 'en cola'}</span>
-      ${cargo ? `<span class="asent-cola-acciones">
-        <button type="button" data-cola-mover="arriba" data-edificio="${escaparHtml(e.id)}" title="Subir">▲</button>
-        <button type="button" data-cola-mover="abajo" data-edificio="${escaparHtml(e.id)}" title="Bajar">▼</button>
-        ${e.estado === 'en_cola' ? `<button type="button" data-cola-quitar="${escaparHtml(e.id)}" title="Quitar">✕</button>` : ''}
-      </span>` : ''}
-    </div>`)
-    .join('')}</div>`;
 }
 
 function cablearAccionesAsentLado(cont: HTMLElement, a: Asentamiento, cargo: 'gobernador' | 'maestroObras' | null): void {

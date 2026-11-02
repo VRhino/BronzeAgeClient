@@ -13,8 +13,9 @@ import type { ContextoPlaza, SubpestanaPlaza } from './ganchos';
 import type { Ejecutar } from './panelCarro';
 import { renderPestanaInformacion } from './pestanaInformacion';
 import { pintar } from './repintado';
-import { cablearPlegables, plegable } from './plegable';
+import { cablearPlegables } from './plegable';
 import { mostrar as mostrarAviso } from './avisos';
+import { iconoEdificio } from './iconosEdificio';
 
 type Escapar = (valor: string) => string;
 type Cargo = 'gobernador' | 'maestroObras' | null;
@@ -201,25 +202,30 @@ function recetasDe(a: Asentamiento, alCargar: () => void): RecetaAgregada[] {
   return [...porRecurso.values()].sort((x, y) => (RECURSO_NOMBRE[x.produce] ?? x.produce).localeCompare(RECURSO_NOMBRE[y.produce] ?? y.produce));
 }
 
-/** Las recetas de los talleres, cada una plegable: en el resumen el producto y su estado; dentro, talleres, ritmo, insumos y el botón. */
+/** Las recetas de los talleres, una fila por producto: la cadena insumos ➜ producto, los talleres que la hacen y el interruptor ▶ / ⏸. */
 function htmlRecetas(c: ContextoPlaza): string {
   const e = c.escapar;
   const pausadas = new Set(c.asentamiento.recetasPausadas ?? []);
   const adoptadas = adoptadasDe(c.proyeccion);
   const filas = recetasDe(c.asentamiento, c.refrescar).map((r) => {
     const parada = pausadas.has(r.produce);
-    const falta = adoptadas && r.tecnologia && !adoptadas.includes(r.tecnologia) ? `requiere la tecnología «${e(r.tecnologia)}»` : '';
-    const talleres = [...r.talleres].map(([t, n]) => `${e(nombreDe(t))}${n > 1 ? ` ×${n}` : ''}`).join(', ');
-    const resumen = `<span class="plegable-titulo">${RECURSO_ICONO[r.produce] ?? '📦'} ${e(RECURSO_NOMBRE[r.produce] ?? r.produce)}</span><span class="plegable-meta${parada || falta ? ' falta' : ''}">${parada ? 'parada' : falta ? 'bloqueada' : 'en marcha'}</span>`;
-    const cuerpo = `<p class="asent-lado-nota">Talleres: ${talleres || 'ninguno activo'}${r.porMinuto ? ` · hasta ${fmt(r.porMinuto)}/min con la mano de obra completa` : ''}</p>
-      ${Object.keys(r.insumos).length ? `<p class="asent-lado-nota">Insumos por unidad: ${costeTexto(r.insumos, e)}</p>` : ''}
-      ${falta ? `<p class="asent-lado-nota">${falta}</p>` : ''}
-      ${c.cargo ? `<button class="btn-secondary" type="button" data-receta="${e(r.produce)}" data-pausar="${parada ? '0' : '1'}">${parada ? 'Reanudar' : 'Parar'}</button>` : ''}`;
-    return plegable(`receta:${r.produce}`, resumen, cuerpo);
+    const falta = adoptadas && r.tecnologia && !adoptadas.includes(r.tecnologia) ? r.tecnologia : '';
+    const nombre = RECURSO_NOMBRE[r.produce] ?? r.produce;
+    const insumos = Object.entries(r.insumos).map(([x, n]) => `<span class="prod-insumo" title="${e(`${fmt(n)} ${RECURSO_NOMBRE[x] ?? x} por unidad`)}">${RECURSO_ICONO[x] ?? '📦'}<small>${fmt(n)}</small></span>`).join('');
+    const talleres = [...r.talleres].map(([t, n]) => `<span class="prod-taller" title="${e(nombreDe(t))}">${iconoEdificio(t, 16)}${n > 1 ? `<small>×${n}</small>` : ''}</span>`).join('');
+    const estado = falta ? 'bloqueada' : parada ? 'parada' : 'marcha';
+    const titulo = `${nombre}: ${falta ? `bloqueada, requiere la tecnología «${falta}»` : parada ? 'parada' : 'en marcha'}${r.porMinuto ? ` · hasta ${fmt(r.porMinuto)}/min con la mano de obra completa` : ''}${Object.keys(r.insumos).length ? ` · por unidad: ${Object.entries(r.insumos).map(([x, n]) => `${fmt(n)} ${RECURSO_NOMBRE[x] ?? x}`).join(', ')}` : ''}`;
+    const interruptor = c.cargo
+      ? `<button class="prod-interruptor${parada ? '' : ' encendido'}" type="button" data-receta="${e(r.produce)}" data-pausar="${parada ? '0' : '1'}" title="${parada ? 'Reanudar' : 'Parar'} en todos los talleres" aria-label="${parada ? 'Reanudar' : 'Parar'} ${e(nombre)}">${parada ? '▶' : '<span class="prod-pausa">❚❚</span>'}</button>`
+      : `<span class="prod-estado" aria-hidden="true">${falta ? '🔒' : parada ? '⏸' : '▶'}</span>`;
+    return `<div class="prod-receta ${estado}" title="${e(titulo)}">
+      <span class="prod-cadena">${insumos || '<span class="prod-insumo vacio">·</span>'}<span class="prod-flecha">➜</span><span class="prod-producto">${RECURSO_ICONO[r.produce] ?? '📦'}</span></span>
+      <span class="prod-receta-cuerpo"><strong>${e(nombre)}</strong><span class="prod-receta-pie">${talleres}${r.porMinuto ? `<small>${fmt(r.porMinuto)}/min</small>` : ''}${falta ? '<small class="falta">🔒 tecnología</small>' : ''}</span></span>
+      ${interruptor}
+    </div>`;
   }).join('');
-  return `<div class="asent-lado-cabecera"><span class="faction-kicker">Recetas ${ayuda('plaza:recetas', 'Parar una receta la detiene en todos los talleres de la plaza.')}</span></div>
-    <div class="plegables">${filas || '<p class="mapa-lista-vacia">Ningún taller activo con recetas.</p>'}</div>
-    ${c.cargo ? '' : '<p class="asent-lado-nota">Solo el Gobernador o el Maestro de Obras pueden parar o reanudar recetas.</p>'}`;
+  return `<div class="obra-titulo"><span class="faction-kicker">Talleres</span>${ayuda('plaza:recetas', 'Cada fila: lo que gasta por unidad ➜ lo que fabrica, con los talleres que la hacen y su ritmo con la mano de obra completa. ⏸ la para en todos los talleres de la plaza; ▶ la reanuda. Con candado: falta la tecnología. Solo el Gobernador o el Maestro de Obras las paran o reanudan.')}</div>
+    <div class="prod-recetas">${filas || '<p class="mapa-lista-vacia">Ningún taller activo con recetas.</p>'}</div>`;
 }
 
 function cablearRecetas(c: ContextoPlaza): void {
@@ -248,15 +254,12 @@ function produccionBase(tipo: string, nivel: number, alCargar: () => void): { re
   return null;
 }
 
-/** La producción de la plaza: un plegable por tipo de extractor o granja activo, con el neto real del recurso (la tendencia del almacén). El motor no
- * publica lo que rinde cada edificio, así que dentro va la base del catálogo y la mano de obra, que es lo que la reduce. */
-function htmlExtraccion(c: ContextoPlaza): string {
-  const e = c.escapar;
-  const a = c.asentamiento;
+/** Los extractores y granjas activos, por tipo: el total de su base del catálogo y su mano de obra (lo que reduce su rendimiento). */
+function extractoresDe(a: Asentamiento, alCargar: () => void): Map<string, { recurso: string; base: number; trabajadores: number; edificios: Edificio[] }> {
   const porTipo = new Map<string, { recurso: string; base: number; trabajadores: number; edificios: Edificio[] }>();
   for (const ed of a.edificios ?? []) {
     if (ed.estado !== 'activo') continue;
-    const p = produccionBase(ed.tipo, ed.nivelInterno ?? 1, c.refrescar);
+    const p = produccionBase(ed.tipo, ed.nivelInterno ?? 1, alCargar);
     if (!p) continue;
     const g = porTipo.get(ed.tipo) ?? { recurso: p.recurso, base: 0, trabajadores: 0, edificios: [] };
     g.base += p.base;
@@ -264,50 +267,94 @@ function htmlExtraccion(c: ContextoPlaza): string {
     g.edificios.push(ed);
     porTipo.set(ed.tipo, g);
   }
+  return porTipo;
+}
+
+type Existencia = { cantidad: number; capacidad: number; porMinuto?: number; producido?: number; consumido?: number };
+
+/** Los recursos que se mueven o que hay, en el orden de la paleta (los básicos primero). */
+function recursosDelAlmacen(a: Asentamiento): [string, Existencia][] {
+  const orden = Object.keys(RECURSO_ICONO);
+  const pos = (r: string): number => { const i = orden.indexOf(r); return i < 0 ? orden.length : i; };
+  return Object.entries(a.almacen ?? {})
+    .filter(([, x]) => x.cantidad >= 1 || (x.porMinuto ?? 0) !== 0 || (x.producido ?? 0) !== 0 || (x.consumido ?? 0) !== 0)
+    .sort(([r1], [r2]) => pos(r1) - pos(r2) || r1.localeCompare(r2));
+}
+
+/** Una ficha del almacén: icono, neto por minuto con flecha y color, lo que hay frente a lo que cabe, lo que entra frente a lo que sale y cuándo
+ * se llena o se acaba. */
+function fichaRecurso(r: string, x: Existencia, e: Escapar): string {
+  const n = x.porMinuto ?? 0, p = x.producido ?? 0, c = x.consumido ?? 0;
+  const lleno = x.capacidad > 0 && x.cantidad >= x.capacidad;
+  const fraccion = x.capacidad > 0 ? Math.min(1, x.cantidad / x.capacidad) : 0;
+  const nombre = RECURSO_NOMBRE[r] ?? r;
+  const minutos = n > 0 && x.capacidad > 0 && !lleno ? (x.capacidad - x.cantidad) / n : n < 0 && x.cantidad > 0 ? x.cantidad / -n : null;
+  const cuando = minutos === null ? '' : `${n > 0 ? 'Lleno' : 'Se acaba'} en ${textoEnTiempoReal(minutos * 60_000)}`;
+  const titulo = `${nombre}: ${Math.floor(x.cantidad)} de ${Math.floor(x.capacidad)}${p || c ? ` · por minuto +${fmt(p)} producido, −${fmt(c)} consumido` : ''} · neto ${n > 0 ? '+' : ''}${fmt(n)}/min${lleno ? ' · almacén lleno: lo que se produce de más se pierde' : cuando ? ` · ${cuando.toLowerCase()}` : ''}`;
+  const flujo = p + c > 0 ? `<span class="prod-flujo" aria-hidden="true"><i class="entra" style="width:${((p / (p + c)) * 100).toFixed(1)}%"></i><i class="sale"></i></span>` : '<span class="prod-flujo quieto" aria-hidden="true"></span>';
+  const aviso = lleno ? '<span class="prod-ficha-aviso lleno">LLENO</span>' : minutos !== null && n < 0 && minutos < 60 ? `<span class="prod-ficha-aviso baja">⏳${e(textoEnTiempoReal(minutos * 60_000).replace(/ (min|h|s|d)$/, (_, u: string) => (u === 'min' ? 'm' : u)))}</span>` : '';
+  return `<div class="prod-ficha${lleno ? ' lleno' : ''}${n < 0 ? ' baja' : n > 0 ? ' sube' : ''}" title="${e(titulo)}">
+    <span class="prod-ficha-icono">${RECURSO_ICONO[r] ?? '📦'}</span>
+    <span class="prod-ficha-neto ${signo(n)}">${n > 0 ? '▲' : n < 0 ? '▼' : '■'}&nbsp;${n > 0 ? '+' : ''}${fmt(n)}</span>
+    <span class="prod-ficha-cifra">${Math.floor(x.cantidad)}${aviso || `<small>/${Math.floor(x.capacidad)}</small>`}</span>
+    <span class="prod-stock" aria-hidden="true"><i style="width:${(fraccion * 100).toFixed(1)}%"></i></span>
+    ${flujo}
+  </div>`;
+}
+
+/** La producción de la plaza: la mano de obra en un medidor, el almacén en fichas y los extractores como cadena edificio ➜ recurso. El motor no
+ * publica lo que rinde cada edificio: en el extractor va la base del catálogo y el neto real va en la ficha de su recurso. */
+function htmlExtraccion(c: ContextoPlaza): string {
+  const e = c.escapar;
+  const a = c.asentamiento;
+  const porTipo = extractoresDe(a, c.refrescar);
   const necesarios = [...porTipo.values()].reduce((s, g) => s + g.trabajadores, 0);
   const pesants = Math.floor(a.poblacion?.pesants ?? 0);
   const ratio = necesarios <= 0 ? 1 : Math.min(1, pesants / necesarios);
-  const neto = (r: string): string => {
-    const x = a.almacen?.[r];
-    if (x?.porMinuto === undefined) return '—';
-    // Con el almacén lleno lo que se produce de más se pierde y el neto sale 0: se dice, para que no parezca que no produce.
-    const lleno = x.capacidad > 0 && x.cantidad >= x.capacidad ? ' (almacén lleno)' : '';
-    return `${desglose(x)}${lleno}`;
-  };
-  const filas = [...porTipo.entries()].sort(([x], [y]) => nombreDe(x).localeCompare(nombreDe(y))).map(([tipo, g]) => {
+  const obra = `<div class="prod-obra${ratio < 1 ? ' falta' : ''}" title="${e(`Mano de obra: ${pesants} pesants para ${necesarios} puestos de extractores y granjas${ratio < 1 ? ` (${Math.round(ratio * 100)} %: rinden menos)` : ''}.`)}">
+      <span class="prod-obra-icono" aria-hidden="true">👷</span>
+      <span class="prod-obra-barra"><i style="width:${(ratio * 100).toFixed(1)}%"></i></span>
+      <strong>${pesants}<small>/${necesarios}</small></strong>
+      <small>${ratio < 1 ? `${Math.round(ratio * 100)} %` : '✔'}</small>
+    </div>`;
+  const recursos = recursosDelAlmacen(a);
+  const fichas = recursos.length ? `<div class="prod-fichas">${recursos.map(([r, x]) => fichaRecurso(r, x, e)).join('')}</div>` : '<p class="mapa-lista-vacia">El almacén está vacío.</p>';
+  const extractores = [...porTipo.entries()].sort(([x], [y]) => nombreDe(x).localeCompare(nombreDe(y))).map(([tipo, g]) => {
     const parados = g.edificios.filter((x) => x.pausadoPorAlmacenLleno).length;
     const danados = g.edificios.filter((x) => x.danado).length;
-    const resumen = `<span class="plegable-titulo">${e(nombreDe(tipo))}${g.edificios.length > 1 ? ` ×${g.edificios.length}` : ''}</span><span class="plegable-meta${parados ? ' falta' : ''}">${RECURSO_ICONO[g.recurso] ?? '📦'} ${e(RECURSO_NOMBRE[g.recurso] ?? g.recurso)} · ${neto(g.recurso)}</span>`;
-    const cuerpo = `<ul class="plegable-lista">${g.edificios.map((x) => `<li>Nivel ${x.nivelInterno ?? 1}${x.pausadoPorAlmacenLleno ? ' · <strong>parado: almacén lleno</strong>' : ''}${x.danado ? ' · dañado' : ''}</li>`).join('')}</ul>
-      <p class="asent-lado-nota">Base del catálogo: ${fmt(g.base)} en total con la mano de obra completa (${g.trabajadores} trabajadores).${tipo === 'granja' ? ' La fertilidad de la zona la multiplica.' : tipo === 'lenera' ? ' La densidad del bosque la multiplica.' : ''}</p>
-      ${parados || danados ? `<p class="asent-lado-nota">${parados ? `${parados} parado(s) por almacén lleno. ` : ''}${danados ? `${danados} dañado(s).` : ''}</p>` : ''}`;
-    return plegable(`produccion:${tipo}`, resumen, cuerpo);
+    const multiplica = tipo === 'granja' ? ' La fertilidad de la zona la multiplica.' : tipo === 'lenera' ? ' La densidad del bosque la multiplica.' : '';
+    const titulo = `${nombreDe(tipo)}${g.edificios.length > 1 ? ` ×${g.edificios.length}` : ''} ➜ ${RECURSO_NOMBRE[g.recurso] ?? g.recurso}: hasta ${fmt(g.base)}/min con la mano de obra completa (${g.trabajadores} trabajadores).${multiplica}${parados ? ` ${parados} parado(s): almacén lleno.` : ''}${danados ? ` ${danados} dañado(s).` : ''}`;
+    return `<div class="prod-extractor${parados ? ' parado' : ''}" title="${e(titulo)}">
+      <span class="prod-cadena"><span class="prod-taller">${iconoEdificio(tipo, 24)}${g.edificios.length > 1 ? `<small>×${g.edificios.length}</small>` : ''}</span><span class="prod-flecha">➜</span><span class="prod-producto">${RECURSO_ICONO[g.recurso] ?? '📦'}</span></span>
+      <small class="prod-extractor-ritmo">≤ ${fmt(g.base)}/min</small>
+      ${parados ? `<span class="obra-insignia parado">⏸${parados > 1 ? parados : ''}</span>` : ''}${danados ? `<span class="obra-insignia danado">⚠${danados > 1 ? danados : ''}</span>` : ''}
+    </div>`;
   }).join('');
-  const recursos = Object.entries(a.almacen ?? {}).filter(([, x]) => (x.porMinuto ?? 0) !== 0 || (x.producido ?? 0) !== 0 || (x.consumido ?? 0) !== 0).sort(([, x], [, y]) => (y.porMinuto ?? 0) - (x.porMinuto ?? 0));
-  const balance = recursos.length
-    ? `<ul class="plegable-lista">${recursos.map(([r, x]) => `<li>${RECURSO_ICONO[r] ?? '📦'} ${e(RECURSO_NOMBRE[r] ?? r)}: <strong>${desglose(x)}</strong></li>`).join('')}</ul>`
-    : '<p class="asent-lado-nota">Ningún recurso sube ni baja ahora mismo.</p>';
-  return `<div class="asent-lado-cabecera"><span class="faction-kicker">Producción ${ayuda('plaza:produccion', 'Por recurso, en el último minuto: lo producido (edificios, pueblos, recaudación), lo consumido (comida de la población y la guarnición, insumos de los talleres, mantenimiento) y el neto. Órdenes, comercio, botín y caravanas no cuentan. El servidor no da lo que rinde cada edificio por separado.')}</span></div>
-    <p class="asent-lado-nota">Mano de obra: ${pesants} pesants para ${necesarios} puestos${ratio < 1 ? ` (${Math.round(ratio * 100)} %: rinden menos)` : ''}.</p>
-    <div class="plegables">${filas || '<p class="mapa-lista-vacia">Sin extractores ni granjas activos.</p>'}
-      ${plegable('produccion:balance', '<span class="plegable-titulo">Balance del almacén</span><span class="plegable-meta">por minuto</span>', balance)}</div>`;
+  return `<div class="obra-titulo"><span class="faction-kicker">Almacén</span><small>por minuto</small>${ayuda('plaza:produccion', 'Cada ficha: el neto del último minuto (▲ sube, ▼ baja), lo que hay frente a lo que cabe y, en la tira de abajo, lo que entra (verde) frente a lo que sale (rojo). Entra lo de edificios, pueblos y recaudación; sale la comida de la población y la guarnición, los insumos de los talleres y el mantenimiento. Órdenes, comercio, botín y caravanas no cuentan. LLENO: lo que se produce de más se pierde. Pasa el ratón para las cifras.')}</div>
+    ${fichas}
+    <div class="obra-titulo"><span class="faction-kicker">Extracción</span>${obra}</div>
+    <div class="prod-extractores">${extractores || '<p class="mapa-lista-vacia">Sin extractores ni granjas activos.</p>'}</div>`;
 }
 
 /** Clase de color de una cifra: verde si suma, rojo si resta, gris si es cero. */
 const signo = (n: number): string => (n > 0 ? 'cifra-pos' : n < 0 ? 'cifra-neg' : 'cifra-cero');
 
-/** «+P producido · −C consumido · neto N/min» de un recurso del almacén (solo el neto si el servidor no manda el desglose). */
-function desglose(x: { porMinuto?: number; producido?: number; consumido?: number }): string {
-  const n = x.porMinuto ?? 0;
-  const neto = `<span class="${signo(n)}">${n > 0 ? '+' : ''}${fmt(n)}/min</span>`;
-  const p = x.producido ?? 0;
-  const c = x.consumido ?? 0;
-  return p || c ? `<span class="${signo(p)}">+${fmt(p)}</span> producido · <span class="${signo(-c)}">−${fmt(c)}</span> consumido · neto ${neto}` : `neto ${neto}`;
-}
-
-/** Subpestaña «Producción»: extractores y granjas y, debajo, las recetas de los talleres; todo en partes plegables. */
+/** Producción: el almacén, la extracción y los talleres. */
 export function htmlProduccionYRecetas(c: ContextoPlaza): string {
   return `${htmlExtraccion(c)}${htmlRecetas(c)}`;
+}
+
+/** El resumen de la producción para la cabecera del plegable: avisos en iconos (almacén lleno, recursos a la baja, extractores parados). */
+export function resumenProduccion(c: ContextoPlaza): string {
+  const recursos = recursosDelAlmacen(c.asentamiento);
+  const llenos = recursos.filter(([, x]) => x.capacidad > 0 && x.cantidad >= x.capacidad).length;
+  const bajan = recursos.filter(([, x]) => (x.porMinuto ?? 0) < 0).length;
+  const parados = (c.asentamiento.edificios ?? []).filter((x) => x.estado === 'activo' && x.pausadoPorAlmacenLleno).length;
+  return [
+    bajan ? `<span class="obra-chip baja" title="${bajan} recurso(s) a la baja">▼ ${bajan}</span>` : '',
+    llenos ? `<span class="obra-chip lleno" title="${llenos} recurso(s) con el almacén lleno">📦 ${llenos}</span>` : '',
+    parados ? `<span class="obra-chip parado" title="${parados} edificio(s) parados por almacén lleno">⏸ ${parados}</span>` : '',
+  ].join('');
 }
 
 export function cablearProduccionYRecetas(c: ContextoPlaza): void {

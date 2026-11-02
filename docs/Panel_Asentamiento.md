@@ -219,6 +219,14 @@ completa de plazas con sus cargos (hoy no lo hace — `Features_Pendientes.md` �
 
 La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, estilo city-builder.
 
+> **Centro urbano › Edificios** (0.84.0, 2026-11-02, `ui/panelObras.ts`; banco `pruebas/plaza/`): tres plegables con aire de juego de
+> estrategia, más iconos que texto. **Edificios**: rejilla «Construir» (icono y coste en chips, en rojo lo que falta en el almacén, candado
+> si no se puede) y una tarjeta por tipo (icono, ×N, nivel en rombos, insignias 🔨 obra / ⬆ mejora / ⏸ parado / ⚠ dañado, botón ⬆ de
+> mejorar y barra de la mejora). **Obras**: lo que está en obra con barra de avance estimada (duración del catálogo × políticas) y lo que
+> espera en casillas numeradas con ◀ ✕ ▶. **Producción**: el almacén en fichas (neto ▲▼ con color, lleno/cabe, entra frente a sale, «LLENO»
+> o cuándo se acaba), la mano de obra en un medidor, los extractores como edificio ➜ recurso y los talleres como insumos ➜ producto con el
+> interruptor ▶ / ❚❚. Las cifras van en los títulos (al pasar el ratón).
+
 1. **Resumen** ✅ — nivel/nivel operativo, población (pesants/artesanos/nobleza + total), medidores de
    mantenimiento y nutrición, aviso de ocupación, toggle auto-construcción (`alternarAutoConstruccion`).
    *Falta*: progreso al siguiente nivel (`progresoNivelAsentamiento`, no viaja).
