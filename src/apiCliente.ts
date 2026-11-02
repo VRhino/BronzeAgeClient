@@ -493,14 +493,15 @@ export function costeDeLiderazgo(tropaId: string): number {
   return escalon !== undefined ? costes?.[String(escalon)] ?? 0 : 0;
 }
 
-/** La proyección recalculada en este instante, sin red y sin esperar a un cambio: las columnas avanzan por su plan (`Plan`) y el servidor no
- * manda nada mientras marchan, así que el mapa la pide en cada fotograma para que se muevan seguido. `null` sin sesión o sin héroe. */
-/** El instante de mundo de ahora (ms del contrato), contando lo que corrió desde el último mensaje; `null` sin sesión. Para lo que avanza
- * solo entre mensajes, como la barra de una obra. */
+/** El instante de mundo de ahora, en la misma escala que `ProyeccionJugador.instante` y los plazos de la proyección (ms del contrato +
+ * `EPOCA_CONTRATO`), contando lo que corrió desde el último mensaje; `null` sin sesión. Para lo que avanza solo entre mensajes, como la barra
+ * de una obra. (Hasta la 0.96.0 faltaba la época y la barra de la subida de nivel salía vacía y con años por delante.) */
 export function instanteDeMundo(): number | null {
-  return sesion?.bienvenida ? sesion.ahoraMundo() : null;
+  return sesion?.bienvenida ? sesion.ahoraMundo() + EPOCA_CONTRATO : null;
 }
 
+/** La proyección recalculada en este instante, sin red y sin esperar a un cambio: las columnas avanzan por su plan (`Plan`) y el servidor no
+ * manda nada mientras marchan, así que el mapa la pide en cada fotograma para que se muevan seguido. `null` sin sesión o sin héroe. */
 export function proyeccionAlInstante(): ProyeccionJugador | null {
   if (!sesion?.bienvenida || sesion.estado === 'cerrada') return null;
   const p = proyeccionActual(sesion);

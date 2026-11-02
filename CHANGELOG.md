@@ -3,6 +3,12 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.96.1] — 2026-11-02 · Arreglo: la barra de la subida de nivel · sin cambios de contrato (`VRhino/BronzeAge@a17f8536`)
+
+- **La placa «Subiendo a nivel N» de la plaza contaba mal**: salía al 0 % y con años por delante. El reloj que la mueve cada segundo
+  (`instanteDeMundo` en `apiCliente.ts`) daba el instante de mundo sin la época del contrato (`EPOCA_CONTRATO`), y los plazos de la proyección
+  la llevan. Ahora va en la misma escala: con una obra de 8 h empezada hace 2, marca 25 % y «faltan 6 h».
+
 ## [0.96.0] — 2026-11-02 · Cerrar sesión saca al héroe del mundo en el acto · sync con `VRhino/BronzeAge@a17f8536`
 
 - **Contrato regenerado** (orden nueva `cerrar_sesion`, campo 180). Sin rechazos nuevos ni cambios de foto.
