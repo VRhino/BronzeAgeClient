@@ -30,6 +30,11 @@ const NOMBRE: Record<string, string> = {
   pozo: 'Pozo',
   parque: 'Parque',
 };
+/** El nombre de una pieza del campamento, para el jugador (en la vista 3D las viviendas son tiendas). */
+export function nombreDePiezaCampamento(tipo: string): string {
+  return tipo === 'tienda' ? 'Tienda' : NOMBRE[tipo] ?? tipo;
+}
+
 /** Los que llevan su nombre escrito encima (los demás son relleno del trazado). */
 const ROTULADOS = new Set(['taberna', 'mercado', 'barracon', 'galeriaDeTiro', 'caballerizas', 'plazaDeArmas']);
 export const COLOR_SUELO_CAMPAMENTO = '#93c26b';

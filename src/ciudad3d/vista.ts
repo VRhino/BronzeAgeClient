@@ -110,6 +110,11 @@ export class VistaCiudad3D {
     this.fotograma = requestAnimationFrame((t) => this.bucle(t));
   }
 
+  /** Lo que se dibuja ahora. */
+  ciudadActual(): CiudadEnVista | null {
+    return this.ciudad;
+  }
+
   /** La ciudad que se dibuja. Solo se rehace lo que cambió (los edificios, la muralla, el relleno, el suelo). */
   fijar(c: CiudadEnVista | null): void {
     this.ciudad = c;

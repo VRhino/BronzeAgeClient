@@ -5,13 +5,14 @@ import { readFileSync } from 'node:fs';
 import { fromBinary } from '@bufbuild/protobuf';
 import * as THREE from 'three';
 import { describe, expect, test } from 'vitest';
+import { anillosDe, campamentoEnVista } from '../src/ciudad3d/campamento';
 import { FORMA_BASE, girarLados } from '../src/ciudad3d/calles';
 import { montarGuardacantones, teselasDe } from '../src/ciudad3d/calzada';
 import { ciudadEnVista, estiloDe, type CiudadEnVista } from '../src/ciudad3d/estado';
 import { montarEdificio } from '../src/ciudad3d/modelos';
 import { Piezas, type Pieza } from '../src/ciudad3d/piezas';
-import { AsentamientoSchema } from '../src/contrato/gen/bronzeage/v1/entities_pb';
-import { plazaDeContrato } from '../src/motor/proyeccion';
+import { AsentamientoSchema, CampamentoMercenariosSchema } from '../src/contrato/gen/bronzeage/v1/entities_pb';
+import { escenaCampamento, plazaDeContrato } from '../src/motor/proyeccion';
 import type { Asentamiento, TrazadoAsentamiento } from '../src/tiposDominio';
 
 const DIA = 24 * 3_600_000;
@@ -73,6 +74,68 @@ describe('la plaza que se dibuja', () => {
       const v = c.recintos.find((x) => x.id === r.id)!;
       expect(v.celdas.filter((k) => k.enPie).length).toBe(Math.min(r.avance, r.celdas.length));
     }
+  });
+});
+
+describe('el campamento de mercenarios', () => {
+  const campamento = (n: number) => escenaCampamento(fromBinary(CampamentoMercenariosSchema, readFileSync(new URL(`./ciudad3d/ciudades/campamento-${n}.bin`, import.meta.url))))!;
+
+  for (const n of [0, 1, 2]) {
+    test(`campamento ${n}: cada pieza en su huella exacta (centro y lados del motor), las viviendas como tiendas, de nivel 1`, () => {
+      const e = campamento(n), c = campamentoEnVista(e, { instante: 0 })!, T = e.unidadesPorCelda;
+      expect(c.nivel).toBe(1);
+      expect(c.edificios.length).toBe(e.edificios.length);
+      for (const p of e.edificios) {
+        const v = c.edificios.find((x) => x.id === p.edificioId)!;
+        expect({ x: v.x + v.ancho / 2, y: v.y + v.alto / 2, ancho: v.ancho, alto: v.alto }).toEqual({ x: p.posicion.x, y: p.posicion.y, ancho: p.ancho * T, alto: p.alto * T });
+        expect(v.tipo).toBe(p.tipo === 'vivienda' ? 'tienda' : p.tipo);
+        expect(v.estilo).toBe(1);
+      }
+    });
+
+    test(`campamento ${n}: la empalizada es un anillo cerrado, celda a celda, con todas sus celdas y la puerta`, () => {
+      const e = campamento(n), c = campamentoEnVista(e, { instante: 0 })!;
+      expect(c.recintos.length).toBe(1);
+      const r = c.recintos[0]!;
+      expect(r.cerrado).toBe(true);
+      expect(r.celdas.length).toBe(e.empalizada.length);
+      expect(r.celdas.every((k) => k.enPie && k.nivel === 1)).toBe(true);
+      expect(r.celdas.filter((k) => k.clase === 'puerta').length).toBe(e.empalizada.filter((k) => k.clase === 'puerta').length);
+      // de vecina en vecina: cada celda toca a la siguiente
+      for (let i = 0; i < r.celdas.length; i++) {
+        const a = r.celdas[i]!, b = r.celdas[(i + 1) % r.celdas.length]!;
+        expect(Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y))).toBeLessThanOrEqual(c.celda + 1e-6);
+      }
+    });
+
+    test(`campamento ${n}: lo de dentro de la empalizada no pisa piezas, calles ni empalizada; ni huertos ni rediles dentro`, () => {
+      const c = campamentoEnVista(campamento(n), { instante: 0 })!, T = c.celda;
+      const pisa = (x: number, y: number, r: { x: number; y: number; ancho: number; alto: number }) => x < r.x + r.ancho - 1e-6 && x + T > r.x + 1e-6 && y < r.y + r.alto - 1e-6 && y + T > r.y + 1e-6;
+      const rects = [...c.calles, ...c.caminos, ...c.edificios], muro = c.recintos.flatMap((r) => r.celdas);
+      const malas = c.libres.filter((l) => rects.some((r) => pisa(l.x, l.y, r)) || muro.some((k) => Math.abs(l.x + T / 2 - k.x) < T / 2 && Math.abs(l.y + T / 2 - k.y) < T / 2));
+      expect(malas.slice(0, 3)).toEqual([]);
+      expect(c.libres.filter((l) => !l.campo && (l.tipo === 'huerto' || l.tipo === 'patio')).length).toBe(0);
+    });
+  }
+
+  test('las tiendas, en cualquier variante, no salen de su celda más que un alero', () => {
+    let peor = { fuera: 0, que: '' };
+    for (let k = 0; k < 300; k++) {
+      const e = { id: `t-${k}`, tipo: 'tienda', x: 0, y: 0, ancho: 3, alto: 3, estado: 'activo' as const, avance: null, mejora: false, danado: false, nivel: 1, estilo: 1, semilla: k * 7919 };
+      const p = new Piezas();
+      montarEdificio(p, e);
+      for (const q of p.lista) { const fuera = salida(q, e); if (fuera > peor.fuera) peor = { fuera, que: `semilla ${e.semilla}: ${q.forma}` }; }
+    }
+    expect(peor.fuera, peor.que).toBeLessThanOrEqual(ALERO);
+  });
+
+  test('los anillos: de vecina en vecina, y otro anillo si no se tocan', () => {
+    const cuadrado = [[0, 0], [1, 0], [2, 0], [2, 1], [2, 2], [1, 2], [0, 2], [0, 1]].map(([col, row]) => ({ col: col!, row: row! }));
+    const desordenado = [...cuadrado].reverse().sort((a, b) => a.col - b.col);
+    const [uno, ...otros] = anillosDe(desordenado);
+    expect(otros).toEqual([]);
+    expect(uno!.map((k) => `${k.col},${k.row}`)).toEqual(['0,0', '1,0', '2,0', '2,1', '2,2', '1,2', '0,2', '0,1']);
+    expect(anillosDe([...cuadrado, { col: 10, row: 10 }, { col: 11, row: 10 }]).length).toBe(2);
   });
 });
 

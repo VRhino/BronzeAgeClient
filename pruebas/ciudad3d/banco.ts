@@ -1,18 +1,22 @@
 // Banco de pruebas de la plaza 3D (`npm run ciudad3d`): la vista 3D de la plaza con ciudades reales del motor, sin servidor ni cuenta. Las
 // ciudades (`ciudades/*.bin`) son la proyección del interior (`pb.Asentamiento`) de plazas que el motor dejó crecer días con recursos de sobra:
 // una aldea de nivel 1, un pueblo de nivel 3 con su empalizada y una ciudad de nivel 5 con su muralla de piedra mejorándose a ciclópea.
+// Y tres campamentos de mercenarios (`ciudades/campamento-*.bin`, el `pb.CampamentoMercenarios` que el motor manda estando dentro, con su planta),
+// con la planta en SVG de minimapa, como en su pantalla.
 // Los mandos cambian lo que se dibuja sin tocar el trazado: el estilo (nivel de la plaza), el nivel de la muralla, el avance de las obras,
 // la plaza vista como ajena (sin la cola), saqueada (edificios dañados) o subiendo de nivel (las casas cambian por partes).
 // `window.banco` deja mover la cámara desde fuera (capturas): `banco.mirar({ x, y, distancia, giro, inclinacion })`.
 import { fromBinary } from '@bufbuild/protobuf';
-import { AsentamientoSchema } from '../../src/contrato/gen/bronzeage/v1/entities_pb';
-import { ciudadEnVista, hash3, hashTexto } from '../../src/ciudad3d/estado';
-import { Minimapa } from '../../src/ciudad3d/minimapa';
+import { AsentamientoSchema, CampamentoMercenariosSchema } from '../../src/contrato/gen/bronzeage/v1/entities_pb';
+import { campamentoEnVista } from '../../src/ciudad3d/campamento';
+import { ciudadEnVista, hash3, hashTexto, type CiudadEnVista } from '../../src/ciudad3d/estado';
+import { encuadreDeSvg, Minimapa } from '../../src/ciudad3d/minimapa';
 import { VistaCiudad3D } from '../../src/ciudad3d/vista';
-import { plazaDeContrato } from '../../src/motor/proyeccion';
+import { escenaCampamento, plazaDeContrato } from '../../src/motor/proyeccion';
 import { EDIFICIO_NOMBRE } from '../../src/paletas';
 import { pintarAsentamiento } from '../../src/render';
-import type { Asentamiento, TrazadoAsentamiento } from '../../src/tiposDominio';
+import type { Asentamiento, EscenaCampamento, TrazadoAsentamiento } from '../../src/tiposDominio';
+import { svgPlanoCampamento } from '../../src/ui/planoCampamento';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 /** Las horas que vivió cada ciudad en el motor: su instante de mundo al volcarla. */
@@ -39,21 +43,34 @@ async function cargar(nombre: string): Promise<{ asentamiento: Asentamiento; tra
   return p;
 }
 
+const camps = new Map<string, EscenaCampamento>();
+async function cargarCampamento(nombre: string): Promise<EscenaCampamento> {
+  const hecho = camps.get(nombre);
+  if (hecho) return hecho;
+  const e = escenaCampamento(fromBinary(CampamentoMercenariosSchema, await leerBinario(new URL(`./ciudades/${nombre}.bin`, import.meta.url).href)))!;
+  camps.set(nombre, e);
+  return e;
+}
+
 let seleccion: { id: string; tipo: string } | null = null;
+let campActual: CiudadEnVista | null = null;
 const vista = new VistaCiudad3D($('escena'), {
   alElegir: (id) => {
-    const e = actual?.asentamiento.edificios.find((x) => x.id === id);
+    const e = actual?.asentamiento.edificios.find((x) => x.id === id) ?? campActual?.edificios.find((x) => x.id === id);
     seleccion = e ? { id: e.id, tipo: e.tipo } : null;
     vista.seleccionar(seleccion);
-    $('ficha').textContent = e ? `${EDIFICIO_NOMBRE[e.tipo] ?? e.tipo} · ${e.id} · ${e.estado}${e.danado ? ' · dañado' : ''}${e.mejora ? ' · mejorando' : ''}` : 'Clic en un edificio.';
-    repintarMini();
+    $('ficha').textContent = e ? `${EDIFICIO_NOMBRE[e.tipo] ?? e.tipo} · ${e.id} · ${e.estado}${'danado' in e && e.danado ? ' · dañado' : ''}${e.mejora ? ' · mejorando' : ''}` : 'Clic en un edificio.';
+    if (actual) repintarMini();
   },
-  alMover: (h) => minimapa.fijarHuella(h),
+  alMover: (h) => { minimapa.fijarHuella(h); miniCamp.fijarHuella(h); },
   rotulo: (e) => `${e.mejora ? 'Mejora' : 'Obra'} ${Math.round((e.avance ?? 0) * 100)} %`,
 });
 const lienzo2d = $<HTMLCanvasElement>('mapa');
 const minimapa = new Minimapa(lienzo2d);
 lienzo2d.addEventListener('click', (e) => vista.centrar(minimapa.puntoLocal(e)));
+const plano = document.getElementById('plano') as unknown as SVGSVGElement;
+const miniCamp = new Minimapa(plano);
+$('mini-camp').addEventListener('click', (e) => vista.centrar(miniCamp.puntoLocal(e)));
 
 let actual: { asentamiento: Asentamiento; trazado: TrazadoAsentamiento | undefined } | null = null;
 
@@ -63,8 +80,32 @@ function repintarMini(): void {
   minimapa.fijarTrazado(actual.trazado);
 }
 
+/** Un campamento: siempre de nivel 1, sin obras ni mandos que tocar. */
+async function rehacerCampamento(nombre: string): Promise<void> {
+  const e = await cargarCampamento(nombre);
+  actual = null;
+  $('mini').hidden = true;
+  $('mini-camp').hidden = false;
+  // la planta en SVG, como en su pantalla: se cambia el SVG entero y la capa de la cámara toma su encuadre
+  const svg = new DOMParser().parseFromString(svgPlanoCampamento(e), 'image/svg+xml').documentElement;
+  for (const a of ['viewBox', 'preserveAspectRatio']) plano.setAttribute(a, svg.getAttribute(a) ?? '');
+  plano.innerHTML = svg.innerHTML;
+  const encuadre = encuadreDeSvg(plano);
+  if (encuadre) miniCamp.fijarEncuadre(encuadre);
+  const c = campamentoEnVista(e, { instante: 0 });
+  campActual = c;
+  vista.fijar(c);
+  vista.seleccionar(seleccion);
+  const cuentas = vista.cuentas();
+  $('lectura').textContent = `${nombre}: ${c?.edificios.length ?? 0} piezas, empalizada de ${c?.recintos[0]?.celdas.length ?? 0} celdas (${c?.recintos.length ?? 0} anillo${c?.recintos.length === 1 ? '' : 's'}, ${c?.recintos[0]?.cerrado ? 'cerrado' : 'abierto'}), ${c?.libres.length ?? 0} celdas libres\npiezas: ${cuentas.edificios} edificios · ${cuentas.murallas} muralla · ${cuentas.relleno} relleno`;
+}
+
 async function rehacer(): Promise<void> {
   const nombre = $<HTMLSelectElement>('ciudad').value;
+  if (nombre.startsWith('campamento')) return rehacerCampamento(nombre);
+  campActual = null;
+  $('mini').hidden = false;
+  $('mini-camp').hidden = true;
   const base = await cargar(nombre);
   const instante = DIAS[nombre]! * 24 * HORA;
   const nivel = $<HTMLSelectElement>('nivel').value, muralla = $<HTMLSelectElement>('muralla').value;

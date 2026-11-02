@@ -788,6 +788,101 @@ export function arbol(m: { forma: (f: Forma, color: number, u: number, v: number
   }
 }
 
+// ───────────────────────────── El campamento de mercenarios ─────────────────────────────
+
+/**
+ * Una tienda a dos aguas de `l` (a lo largo de la cumbrera) por `s` y alto `h`, con su centro en (u, v): la lona o las pieles hasta el suelo,
+ * la entrada oscura en un testero con la puerta recogida a un lado, los dos postes de la cumbrera asomando y las estacas a lo largo de los
+ * faldones. `deLado`: la cumbrera va a lo ancho de la huella; `entrada`: a qué testero (±1) da la puerta.
+ */
+function tiendaAguas(m: Marco, u: number, v: number, l: number, s: number, h: number, color: number, deLado: boolean, entrada: number): void {
+  const P = (a: number, b: number): [number, number] => (deLado ? [u + b, v + a] : [u + a, v + b]);
+  const giro = deLado ? Math.PI / 2 : 0;
+  m.forma('aguas', color, u, v, l, s, h, 0, giro);
+  // la entrada: un triángulo oscuro en el testero, y el faldón de la puerta recogido a un lado
+  const [ex, ev] = P(entrada * (l / 2 + 0.015), 0);
+  m.forma('aguas', COLOR.hueco, ex, ev, 0.03, s * 0.42, h * 0.6, 0, giro);
+  const [fx, fv] = P(entrada * (l / 2 + 0.05), s * 0.2);
+  m.forma('aguas', oscurecer(color, 0.85), fx, fv, 0.05, s * 0.2, h * 0.5, 0, giro);
+  for (const a of [-1, 1]) {
+    const [x, w] = P(a * (l / 2 + 0.03), 0);
+    m.poste(COLOR.madera, x, w, h + 0.22, 0.06);
+  }
+  // las estacas de los faldones
+  const n = Math.max(2, Math.round(l / 0.7));
+  for (let i = 0; i < n; i++) for (const b of [-1, 1]) {
+    const [x, w] = P(-l / 2 + (l * (i + 0.5)) / n, b * (s / 2 + 0.12));
+    m.poste(COLOR.estaca, x, w, 0.14, 0.04);
+  }
+}
+
+/** Una tienda redonda de pieles sobre varas (las puntas asoman por arriba), con la entrada hacia `frente` (±1 en v). */
+function tiendaRedonda(m: Marco, u: number, v: number, r: number, h: number, color: number, frente: number): void {
+  m.forma('cono', color, u, v, 2 * r, 2 * r, h);
+  m.forma('cono', COLOR.madera, u, v, 0.3, 0.3, h * 0.28 + 0.32, h * 0.74);
+  m.forma('aguas', COLOR.hueco, u, v + frente * r * 0.88, 0.05, 0.42, h * 0.34, 0, Math.PI / 2);
+  // un cerco de piedras al pie, que sujeta las pieles
+  for (let k = 0; k < 10; k++) {
+    const a = (k / 10) * Math.PI * 2;
+    if (Math.abs(Math.sin(a) - frente) < 0.35) continue;
+    m.caja(COLOR.piedra, u + Math.cos(a) * (r + 0.04), v + Math.sin(a) * (r + 0.04), 0.16, 0.12, 0.09, 0, a);
+  }
+}
+
+/** La lumbre del campamento: un cerco de piedras, las brasas, la llama y unos troncos para sentarse. */
+function fogata(m: Marco, u: number, v: number, troncos: number): void {
+  for (let k = 0; k < 8; k++) {
+    const a = (k / 8) * Math.PI * 2;
+    m.caja(COLOR.piedraOscura, u + Math.cos(a) * 0.27, v + Math.sin(a) * 0.27, 0.13, 0.1, 0.08, 0, a);
+  }
+  m.forma('cilindro', COLOR.carbon, u, v, 0.36, 0.36, 0.04);
+  m.forma('cono', COLOR.fuego, u, v, 0.22, 0.22, 0.32, 0.04);
+  // los troncos, tumbados alrededor (el cilindro tumbado va de su base hacia (−sen a, cos a)); solo los que caben en la huella
+  const cabe = (x: number, y: number): boolean => Math.abs(x) <= m.L / 2 - 0.12 && Math.abs(y) <= m.S / 2 - 0.12;
+  for (let k = 0, puestos = 0; k < 6 && puestos < troncos; k++) {
+    const a = m.entre(60 + k, 0, Math.PI * 2), cx = u + Math.cos(a) * 0.68, cy = v + Math.sin(a) * 0.68, dx = -Math.sin(a) * 0.3, dy = Math.cos(a) * 0.3;
+    if (!cabe(cx - dx, cy - dy) || !cabe(cx + dx, cy + dy)) continue;
+    m.forma('cilindro', COLOR.tronco, cx - dx, cy - dy, 0.16, 0.16, 0.6, 0.08, a, Math.PI / 2);
+    puestos++;
+  }
+}
+
+/** Un armero de campaña: dos horquillas, la vara de través y las lanzas apoyadas; y un escudo redondo al pie. */
+function armero(m: Marco, u: number, v: number, l: number): void {
+  for (const a of [-1, 1]) m.poste(COLOR.madera, u + (a * l) / 2, v, 0.75, 0.06);
+  m.viga(COLOR.madera, u - l / 2, v, u + l / 2, v, 0.7, 0.05);
+  const n = Math.max(3, Math.round(l / 0.16));
+  for (let i = 0; i < n; i++) m.forma('cilindro', COLOR.maderaOscura, u - l / 2 + 0.08 + ((l - 0.16) * i) / (n - 1), v + 0.12, 0.035, 0.035, 1.35, 0, 0, -0.16);
+  m.forma('cilindro', m.azar(70) < 0.5 ? COLOR.cuero : COLOR.bronce, u + l / 2 + 0.25, v + 0.05, 0.5, 0.5, 0.05, 0.27, 0, Math.PI / 2 - 0.2);
+}
+
+/** El sitio de una tienda del campamento (una celda): una tienda grande, dos pequeñas o una redonda de pieles, su lumbre, su armero y sus fardos. */
+function tienda(m: Marco): void {
+  const L = m.L - 0.4, S = m.S - 0.4, f = m.azar(1) < 0.5 ? 1 : -1, k = m.azar(2);
+  const color = (j: number): number => { const x = m.azar(j); return x < 0.45 ? COLOR.lona : x < 0.7 ? COLOR.lonaVieja : x < 0.88 ? COLOR.piel : COLOR.pielOscura; };
+  if (k < 0.45) {
+    // una tienda grande atrás y la lumbre delante
+    const s = S * 0.52, l = L * 0.78;
+    tiendaAguas(m, -L * 0.06, -f * (S / 2 - s / 2 - 0.05), l, s, 0.86, color(3), false, m.azar(4) < 0.5 ? 1 : -1);
+    fogata(m, L * 0.22, f * (S / 2 - 0.42), 1 + Math.floor(m.azar(5) * 2));
+    if (m.azar(6) < 0.55) armero(m, -L * 0.22, f * (S / 2 - 0.3), 0.9);
+  } else if (k < 0.78) {
+    // dos tiendas pequeñas, una al lado de otra, con la lumbre delante
+    const l = L * 0.42, s = S * 0.36;
+    for (const a of [-1, 1]) tiendaAguas(m, a * (L / 2 - s / 2 - 0.02), -0.15 * f, l, s, 0.62, color(10 + a), true, f);
+    fogata(m, 0, f * (S / 2 - 0.5), 1);
+    if (m.azar(7) < 0.5) m.caja(COLOR.cuero, 0, -f * (S / 2 - 0.25), 0.5, 0.32, 0.22, 0, m.azar(8));
+  } else {
+    // una tienda redonda de pieles
+    const r = Math.min(L, S) * 0.3;
+    tiendaRedonda(m, -L * 0.12, -f * S * 0.12, r, 1.35, m.azar(3) < 0.6 ? COLOR.piel : COLOR.pielOscura, f);
+    fogata(m, L * 0.24, f * (S / 2 - 0.4), 1);
+    if (m.azar(6) < 0.5) armero(m, L * 0.25, -f * (S / 2 - 0.35), 0.7);
+  }
+  // fardos y tinajas de la mesnada
+  if (m.azar(9) < 0.5) tinajas(m, -L / 2 + 0.3, f * (S / 2 - 0.3), 2, COLOR.barro);
+}
+
 // ───────────────────────────── Estados: obra, mejora, cola, ruina ─────────────────────────────
 
 /** Lo alto que llega un edificio de este tipo en este estilo (para el armazón de su obra). */
@@ -916,6 +1011,7 @@ function terminado(m: Marco, tipo: string, estilo: number): void {
     case 'patioDeGremios': return patioDeGremios(m, estilo);
     case 'pozo': return pozo(m);
     case 'parque': return parque(m, estilo);
+    case 'tienda': return tienda(m);
     default: {
       bloque(m, estilo, 0, 0, m.L - 0.6, m.S - 0.6, { frente: 1 });
     }

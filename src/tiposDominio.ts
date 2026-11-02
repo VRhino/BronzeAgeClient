@@ -1098,6 +1098,10 @@ export interface EscenaCampamento {
   edificios: { edificioId: string; tipo: string; posicion: Point; ancho: number; alto: number }[];
   /** Calles en celdas: esquina superior izquierda y tamaño. */
   calles: { col: number; row: number; ancho: number; alto: number }[];
+  /** Caminos de fuera, en celdas como las calles. */
+  caminos: { col: number; row: number; ancho: number; alto: number }[];
+  /** Radio del disco del trazado (`radio_ul`), en unidades locales; 0 si no viene. */
+  radio: number;
   /** La empalizada decorativa; `puerta` es por donde se entra y se sale. */
   empalizada: { col: number; row: number; clase: 'muro' | 'puerta' }[];
 }

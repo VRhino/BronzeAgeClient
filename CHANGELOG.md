@@ -3,6 +3,18 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.97.0] — 2026-11-02 · El campamento de mercenarios en 3D · sin cambios de contrato (`VRhino/BronzeAge@a17f8536`)
+
+- **La pantalla del campamento lleva la vista 3D en el centro** (`src/ciudad3d/campamento.ts`), con la planta en SVG de minimapa en la
+  esquina. Un clic en él lleva la vista ahí. Se dibuja como una plaza de nivel 1, con cada pieza en la huella exacta que manda el motor.
+- **Las viviendas del campamento son tiendas**: una grande de lona o pieles, dos pequeñas o una redonda de pieles, cada una con su lumbre y, a
+  veces, un armero con lanzas y escudo.
+- **La empalizada**, celda a celda en el orden de su anillo, con una sola puerta ancha. Dentro, el suelo despejado y pisado, con leña y heno.
+- **Clic en una pieza**: abre la pestaña de lo que se hace en ella (Taberna, Mercado o Tropa). Al pasar por encima, su nombre.
+- La planta del campamento trae también los caminos y el radio del trazado (`EscenaCampamento.caminos`, `radio`).
+- En la plaza, dos celdas de puerta seguidas en una empalizada son ahora una sola puerta ancha.
+- **Banco** (`npm run ciudad3d`): tres campamentos reales del motor.
+
 ## [0.96.1] — 2026-11-02 · Arreglo: la barra de la subida de nivel · sin cambios de contrato (`VRhino/BronzeAge@a17f8536`)
 
 - **La placa «Subiendo a nivel N» de la plaza contaba mal**: salía al 0 % y con años por delante. El reloj que la mueve cada segundo

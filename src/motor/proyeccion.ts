@@ -416,7 +416,7 @@ function campamentoMercenarios(c: pb.CampamentoMercenarios): d.CampamentoMercena
 
 /** La planta de un campamento (paridad P7 del motor, `layoutCampamento`), en la forma que dibuja `ui/planoCampamento.ts`: celdas de 3 unidades locales,
  * las piezas con su centro en unidades y su huella en celdas, y la empalizada celda a celda (el motor la manda fusionada en rectángulos). */
-function escenaCampamento(c: pb.CampamentoMercenarios): d.EscenaCampamento | undefined {
+export function escenaCampamento(c: pb.CampamentoMercenarios): d.EscenaCampamento | undefined {
   if (c.planta.length === 0) return undefined;
   const T = c.trazado?.unidadesPorCelda || 3;
   const celdas = (rects: pb.RectLocal[], clase: 'muro' | 'puerta') =>
@@ -431,6 +431,8 @@ function escenaCampamento(c: pb.CampamentoMercenarios): d.EscenaCampamento | und
     campamentoId: c.id, origen: c.origen, layoutVersion: c.trazado?.layoutVersion ?? 0, unidadesPorCelda: T,
     edificios: c.planta.map((e) => ({ edificioId: e.id, tipo: e.tipo, posicion: punto(e.posicion), ancho: e.ancho / T, alto: e.alto / T })),
     calles: (c.trazado?.calles ?? []).map((r) => ({ col: r.x / T, row: r.y / T, ancho: r.ancho / T, alto: r.alto / T })),
+    caminos: (c.trazado?.caminos ?? []).map((r) => ({ col: r.x / T, row: r.y / T, ancho: r.ancho / T, alto: r.alto / T })),
+    radio: c.trazado?.radioUl ?? 0,
     empalizada: [...celdas(c.empalizada, 'muro'), ...celdas(c.empalizadaPuerta, 'puerta')],
   };
 }

@@ -129,7 +129,8 @@ remata cabeceras y paneles con la moldura clásica. `opacity: .5` para que sea s
     la ventana «Asentamiento» (`.asent-ventana`) a pantalla completa bajo la barra, con el aire de la de Facción: en el lateral,
     el escudo grande, el nombre, la Facción y el nivel, y debajo las pestañas de los edificios en vertical con su icono; a la
     derecha, el contenido (lo que antes iba en la columna derecha). Se cierra con ✕, Esc, el mismo botón o un clic fuera.
-  - El campamento y el pueblo siguen con barra superior en flujo, columna izquierda, mapa centrado y columna derecha.
+  - El campamento y el pueblo siguen con barra superior en flujo, columna izquierda, mapa centrado y columna derecha. En el
+    campamento (0.97.0) el centro es su vista 3D, con la planta en SVG de minimapa abajo a la derecha (`.camp-lienzo`).
 - **Login / Facción**: tarjeta central (`.login-card`) sobre el fondo, como un menú de campaña.
 - Bajo ~820 px la columna lateral se oculta y el mapa ocupa todo. En la plaza en 3D, bajo 900 px, la columna de la
   izquierda se estrecha, «Asentamiento» queda en icono y la ventana pasa a una sola columna (lateral arriba, pestañas en fila).

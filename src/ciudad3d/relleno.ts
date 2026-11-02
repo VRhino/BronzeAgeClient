@@ -60,6 +60,9 @@ function celda(p: Piezas, r: Relleno, T: number, estilo: number): void {
     case 'patio':
       if (az(1) < 0.35) arbol(m, cx + (az(2) - 0.5), cz + (az(3) - 0.5), az(4) * 0.6, estilo);
       break;
+    case 'vacio':
+      // tierra pisada y nada más (dentro de un campamento)
+      break;
     default:
       if (az(1) < 0.25) arbol(m, cx + (az(2) - 0.5) * 1.5, cz + (az(3) - 0.5) * 1.5, az(4), estilo);
   }

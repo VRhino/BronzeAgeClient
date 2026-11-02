@@ -2736,6 +2736,8 @@ kbd {
 /* Campamento: la planta ocupa el centro como el trazado de una plaza, con su leyenda debajo. */
 .camp-lienzo { background: #93c26b; }
 .camp-lienzo svg { display: block; width: 100%; height: 100%; }
+.camp-plano { width: 100%; height: 100%; }
+.asent-mapa-3d .camp-lienzo { cursor: pointer; }
 .camp-leyenda-caja:empty { display: none; }
 .camp-leyenda-caja {
   padding: 8px 12px;

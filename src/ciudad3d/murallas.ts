@@ -15,6 +15,11 @@ interface Tramo {
   c: CeldaDeMuro;
   /** Los extremos de sus medios tramos (hacia la celda anterior y la siguiente). */
   hacia: V[];
+  /** Por cada medio tramo, si va hacia otra celda de puerta (el paso sigue: ni estacas ni muro). */
+  aPuerta: boolean[];
+  /** Las celdas de antes y de después en el anillo. */
+  ant?: CeldaDeMuro;
+  sig?: CeldaDeMuro;
   t: V;
   n: V;
   k: number;
@@ -25,8 +30,8 @@ function tramos(r: RecintoEnVista): Tramo[] {
   return r.celdas.map((c, i) => {
     const ant = i > 0 ? r.celdas[i - 1] : r.cerrado ? r.celdas[N - 1] : undefined;
     const sig = i < N - 1 ? r.celdas[i + 1] : r.cerrado ? r.celdas[0] : undefined;
-    const hacia: V[] = [];
-    for (const o of [ant, sig]) if (o) hacia.push({ x: (c.x + o.x) / 2, y: (c.y + o.y) / 2 });
+    const hacia: V[] = [], aPuerta: boolean[] = [];
+    for (const o of [ant, sig]) if (o) { hacia.push({ x: (c.x + o.x) / 2, y: (c.y + o.y) / 2 }); aPuerta.push(c.clase === 'puerta' && o.clase === 'puerta'); }
     const a = ant ?? c, b = sig ?? c;
     let tx = b.x - a.x, ty = b.y - a.y;
     const l = Math.hypot(tx, ty) || 1;
@@ -36,7 +41,7 @@ function tramos(r: RecintoEnVista): Tramo[] {
     // hacia fuera: la perpendicular que se aleja del centro de la plaza
     let nx = ty, ny = -tx;
     if (nx * c.x + ny * c.y < 0) { nx = -nx; ny = -ny; }
-    return { c, hacia, t: { x: tx, y: ty }, n: { x: nx, y: ny }, k: i };
+    return { c, hacia, aPuerta, ant, sig, t: { x: tx, y: ty }, n: { x: nx, y: ny }, k: i };
   });
 }
 
@@ -61,7 +66,19 @@ const giroDe = (v: V): number => Math.atan2(v.y, v.x);
 
 // ───────────────────────────── Nivel 1: empalizada ─────────────────────────────
 
-function empalizada(p: Piezas, tr: Tramo): void {
+/** Las celdas de puerta seguidas que empiezan en la `i` (si antes no hay otra de puerta): el paso que comparten, que lleva una sola puerta. */
+function pasoDesde(ts: readonly Tramo[], i: number): Tramo[] | null {
+  const tr = ts[i]!;
+  if (tr.c.clase !== 'puerta' || tr.ant?.clase === 'puerta') return null;
+  const paso = [tr];
+  for (let j = i; paso[paso.length - 1]!.sig?.clase === 'puerta' && paso.length < ts.length; ) {
+    j = (j + 1) % ts.length;
+    paso.push(ts[j]!);
+  }
+  return paso;
+}
+
+function empalizada(p: Piezas, tr: Tramo, paso: Tramo[] | null): void {
   const { c } = tr, puerta = c.clase === 'puerta';
   // el talud y el foso
   p.caja(COLOR.talud, c.x, c.y, 1.5, 1.5, 0.42, giroDe(tr.t));
@@ -75,18 +92,23 @@ function empalizada(p: Piezas, tr: Tramo): void {
     p.poste(mezclar(COLOR.madera, COLOR.maderaOscura, hash3(Math.round(q.x * 10), Math.round(q.y * 10), 5)), q.x, q.y, 1.55 + 0.35 * hash3(Math.round(q.x * 10), Math.round(q.y * 10), k), 0.17, 0.38);
   };
   if (!puerta) est({ x: c.x + tr.n.x * 0.3, y: c.y + tr.n.y * 0.3 }, 1);
-  for (const h of tr.hacia) puntos(tr, h, 0.22, 0.3).forEach((q, k) => est(q, k + 2));
+  tr.hacia.forEach((h, j) => { if (!tr.aPuerta[j]) puntos(tr, h, 0.22, 0.3).forEach((q, k) => est(q, k + 2)); });
   if (c.clase === 'torre') torreDeMadera(p, c.x - tr.n.x * 0.1, c.y - tr.n.y * 0.1, 1.2, 3.0, giroDe(tr.t));
-  if (puerta) {
-    const g = giroDe(tr.t);
+  if (paso) {
+    // una sola puerta para todo el paso (dos celdas de puerta seguidas son una puerta ancha): un poste a cada lado, las hojas, el dintel
+    // de lado a lado y su tejadillo
+    const a = paso[0]!.c, b = paso[paso.length - 1]!.c, l = Math.hypot(b.x - a.x, b.y - a.y);
+    const t = l > 0.01 ? { x: (b.x - a.x) / l, y: (b.y - a.y) / l } : tr.t, n = tr.n, g = giroDe(t), ancho = l + 1.6;
+    const mx = (a.x + b.x) / 2 + n.x * 0.3, mz = (a.y + b.y) / 2 + n.y * 0.3;
+    const hoja = ancho / 2 - 0.1;
     for (const s of [-1, 1]) {
-      const x = c.x + tr.t.x * s * 0.8 + tr.n.x * 0.3, z = c.y + tr.t.y * s * 0.8 + tr.n.y * 0.3;
+      const x = mx + (t.x * s * ancho) / 2, z = mz + (t.y * s * ancho) / 2;
       p.poste(COLOR.maderaOscura, x, z, 2.6, 0.26, 0.3);
-      // las hojas abiertas hacia dentro
-      p.caja(COLOR.madera, x - tr.n.x * 0.35, z - tr.n.y * 0.35, 0.08, 0.7, 1.6, g, 0.42);
+      // las hojas, colgadas de su poste y abiertas hacia dentro
+      p.caja(COLOR.madera, x - (n.x * hoja) / 2, z - (n.y * hoja) / 2, 0.08, hoja, 1.6, g, 0.42);
     }
-    p.caja(COLOR.maderaOscura, c.x + tr.n.x * 0.3, c.y + tr.n.y * 0.3, 1.9, 0.3, 0.22, g, 2.6);
-    p.forma('aguas', COLOR.paja, c.x + tr.n.x * 0.3, c.y + tr.n.y * 0.3, 2.1, 0.8, 0.5, g, 2.82);
+    p.caja(COLOR.maderaOscura, mx, mz, ancho + 0.1, 0.3, 0.22, g, 2.6);
+    p.forma('aguas', COLOR.paja, mx, mz, ancho + 0.3, 0.8, 0.5, g, 2.82);
   }
 }
 
@@ -203,7 +225,7 @@ export function montarMurallas(p: Piezas, recintos: readonly RecintoEnVista[]): 
     for (const tr of ts) {
       if (!tr.c.enPie) { zanja(p, tr); continue; }
       const n = Math.max(1, Math.min(3, tr.c.nivel));
-      if (n === 1) empalizada(p, tr);
+      if (n === 1) empalizada(p, tr, pasoDesde(ts, tr.k));
       else if (n === 2) piedraYAdobe(p, tr);
       else ciclopea(p, tr);
     }

@@ -34,6 +34,7 @@ export const COLOR = {
   hoja: 0x5f7a3c, olivo: 0x7d8a58, cipres: 0x3b5634, roble: 0x56783a, tronco: 0x5a4430, seto: 0x6a7f45, heno: 0xc9a85a,
   cultivo: 0x7d9443, trigo: 0xc4a24d, rastrojo: 0xa38a58,
   fuego: 0xc8501c, carbon: 0x2f2a26, bronce: 0xa8783a, cuero: 0x8a5a36,
+  lona: 0xd6cbb0, lonaVieja: 0xb9a888, piel: 0x987350, pielOscura: 0x6f5238,
   estaca: 0xd8c08a, cuerda: 0xe8d8a8, ruina: 0x6f655a, quemado: 0x3f3730,
   seleccion: 0xffd24a,
 };

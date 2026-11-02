@@ -81,6 +81,28 @@ formas, reutilizando del mundo 3D el cielo, la luz y la manera de pintar miles d
   Las teselas iguales se pintan una vez (unas 140 distintas en una ciudad de 480 celdas de calle) en un atlas, y todas las calles van en una
   sola malla.
 
+## Campamentos de mercenarios
+
+Desde 0.97.0, la pantalla del campamento donde estás lleva la misma vista 3D en el centro, con la planta en SVG de siempre como minimapa
+(`campamento.ts`). Solo es cliente: el motor ya manda la planta entera estando dentro (`EscenaCampamento`: las piezas con su centro y sus
+lados, las calles y la empalizada celda a celda).
+
+- **Se dibuja como una plaza de nivel 1**: casas de madera y paja, calles de tierra con rodadas, empalizada de estacas sobre talud con su foso.
+  Cada pieza va en su huella exacta: el centro y los lados del motor.
+- **Las viviendas son tiendas** (`tienda` en `modelos.ts`), una por celda y de tres maneras, siempre las mismas para la misma pieza:
+  - una tienda grande de lona o de pieles a dos aguas, con la entrada en un testero, los postes de la cumbrera y las estacas de los faldones;
+  - dos tiendas pequeñas, una al lado de la otra;
+  - una tienda redonda de pieles sobre varas.
+
+  Cada una lleva su lumbre (cerco de piedras, brasas y troncos para sentarse) y, a veces, un armero con lanzas y un escudo, o unas tinajas.
+- **La empalizada**: el motor manda sus celdas sueltas; se ordenan de vecina en vecina para hacer el anillo. Dos celdas de puerta seguidas son
+  una sola puerta ancha, con un poste a cada lado y el dintel de lado a lado. Esto vale también para las empalizadas de las plazas.
+- **El suelo de dentro** está despejado y pisado: leña, heno, algún horno y algún árbol que se dejó; ni huertos, ni patios, ni rediles. Fuera,
+  el campo de siempre.
+- **Clic**: elige la pieza y abre la pestaña de lo que se hace en ella (la taberna, la Taberna; el mercado y los puestos, el Mercado; el
+  barracón, la plaza de armas y las caballerizas, la Tropa). Al pasar por encima, su nombre. Un clic en el minimapa lleva la vista ahí.
+- **Sin WebGL**: la planta en SVG se queda en grande, como antes.
+
 ## Manejo
 
 - **Ratón**:
@@ -107,6 +129,8 @@ formas, reutilizando del mundo 3D el cielo, la luz y la manera de pintar miles d
   - el estilo y el nivel de la muralla;
   - el avance de las obras;
   - la plaza vista como ajena, saqueada o subiendo de nivel.
+- **Campamentos**: tres campamentos de mercenarios del motor (`ciudades/campamento-*.bin`, el `pb.CampamentoMercenarios` que llega estando
+  dentro, con su planta), con la planta en SVG de minimapa.
 - `window.banco.mirar({ x, y, distancia, giro, inclinacion })` mueve la cámara para las capturas.
 
 ## Rendimiento

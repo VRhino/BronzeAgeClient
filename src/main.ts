@@ -47,11 +47,11 @@ import { elegirPestanaHeroe, minutosHerido, pintarPanelHeroe } from './ui/panelH
 import { htmlBarraJugador, icono as iconoBarra, type PanelJugador } from './ui/barraJugador';
 import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from './paletas';
-import type { Alijo, Asentamiento, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Faccion, ParamsCrearHeroe, Sigilo } from './tiposDominio';
+import type { Alijo, Asentamiento, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, EscenaCampamento, Faccion, ParamsCrearHeroe, Sigilo } from './tiposDominio';
 import { svgSigilo } from './sigilo/sigilo';
 import { alCargarSigilos } from './sigilo/lienzo';
 import { cablearCampamento, campamentoActual, htmlSeccionCampamento, seccionesDeCampamento, type SeccionCampamento } from './ui/pantallaCampamento';
-import { leyendaPlanoCampamento, svgPlanoCampamento } from './ui/planoCampamento';
+import { leyendaPlanoCampamento, nombreDePiezaCampamento, svgPlanoCampamento } from './ui/planoCampamento';
 import type { MapaGenerado } from './terreno';
 import { estadoCliente, medirRitmoDeMundo, textoEnTiempoReal, TIPS_FUNDACION } from './ui/estadoCliente';
 import { actualizarTip, parcelasAlFundar, resumenRecursosFundacion, sitiosDeAldeaAlFundar } from './ui/pestanaAsentamientos';
@@ -68,8 +68,9 @@ import { ayuda } from './ui/ayuda';
 import { htmlInformeDeInspeccion } from './ui/interaccionAjena';
 import { cablearPanelObras, htmlPanelObras, minutosDeObra } from './ui/panelObras';
 import { cablearProduccionYRecetas, cablearVistaCiudad, edificioSeleccionado, elegirEdificio, htmlTooltipEdificio, repintarFicha } from './ui/vistaCiudad';
+import { campamentoEnVista } from './ciudad3d/campamento';
 import { ciudadEnVista } from './ciudad3d/estado';
-import { Minimapa } from './ciudad3d/minimapa';
+import { encuadreDeSvg, Minimapa } from './ciudad3d/minimapa';
 import { VistaCiudad3D } from './ciudad3d/vista';
 import { colorDelSueloEn } from './mundo/pintarArtefacto';
 import { barraAvance, cuentaAtras, medallonNivel } from './ui/juegoVisual';
@@ -392,9 +393,13 @@ function montarCampamento(): void {
     </header>
     <div class="asent-cuerpo">
       <aside class="asent-izq"><div class="camp-leyenda-caja"></div></aside>
-      <div class="asent-mapa"><div class="asent-lienzo camp-lienzo"></div></div>
+      <div class="asent-mapa asent-mapa-3d">
+        <div class="ciudad3d-escena"></div>
+        <div class="asent-lienzo asent-minimapa camp-lienzo" title="Minimapa: un clic lleva la vista ahí"><div class="camp-plano"></div></div>
+      </div>
       <aside class="asent-lado"><div class="camp-lado"></div></aside>
     </div>
+    <div class="asent-tooltip" hidden></div>
     ${HTML_VELO_SALIDA}
     <aside class="jugador-panel" hidden></aside>
     ${menuEsquinaHtml()}
@@ -410,7 +415,82 @@ function montarCampamento(): void {
     sondeando = true;
     void refrescarDatosJuego().catch(() => {}).finally(() => { sondeando = false; });
   }, 3000);
-  limpiarPantalla = () => clearInterval(sondeo);
+  montarCampamento3D(contenedor);
+  limpiarPantalla = () => { clearInterval(sondeo); desmontarCampamento3D(); };
+}
+
+/** La vista 3D del campamento donde estás (`ciudad3d/campamento.ts`), con la planta en SVG de minimapa; y la planta que se dibuja ahora. */
+let campamento3d: { vista: VistaCiudad3D; minimapa: Minimapa; plano: string; suelo: boolean } | null = null;
+
+/** La pestaña del campamento que lleva a lo que se hace en cada pieza. */
+const SECCION_DE_PIEZA: Record<string, SeccionCampamento> = {
+  taberna: 'taberna', mercado: 'mercado', puestoMercado: 'mercado', barracon: 'tropa', plazaDeArmas: 'tropa', caballerizas: 'tropa', galeriaDeTiro: 'tropa',
+};
+
+/** Monta la vista 3D en el centro del campamento. Sin WebGL, la planta en SVG se queda en grande, como antes. */
+function montarCampamento3D(contenedor: HTMLElement): void {
+  desmontarCampamento3D();
+  const escena = contenedor.querySelector<HTMLElement>('.ciudad3d-escena');
+  const plano = contenedor.querySelector<HTMLElement>('.camp-plano');
+  const tooltip = contenedor.querySelector<HTMLElement>('.asent-tooltip');
+  if (!escena || !plano) return;
+  const minimapa = new Minimapa(plano);
+  try {
+    const vista: VistaCiudad3D = new VistaCiudad3D(escena, {
+      alElegir: (id) => {
+        const pieza = id ? vista.ciudadActual()?.edificios.find((e) => e.id === id) : undefined;
+        vista.seleccionar(pieza ? { id: pieza.id, tipo: pieza.tipo } : null);
+        // elegir una pieza abre la pestaña de lo que se hace en ella
+        const seccion = pieza && SECCION_DE_PIEZA[pieza.tipo];
+        const p = estadoCliente.proyeccionUltima, c = p && campamentoActual(p);
+        if (seccion && p && c && seccionesDeCampamento(p).some((x) => x.id === seccion) && seccion !== seccionCamp) { seccionCamp = seccion; pintarCampamento(p, c); }
+      },
+      alPasar: (id, evento) => {
+        const pieza = id ? vista.ciudadActual()?.edificios.find((e) => e.id === id) : undefined;
+        if (!tooltip) return;
+        if (!pieza || !evento) { tooltip.hidden = true; return; }
+        tooltip.innerHTML = `<strong>${escaparHtml(nombreDePiezaCampamento(pieza.tipo))}</strong>`;
+        tooltip.hidden = false;
+        tooltip.style.left = `${Math.min(window.innerWidth - tooltip.offsetWidth - 8, evento.clientX + 14)}px`;
+        tooltip.style.top = `${Math.min(window.innerHeight - tooltip.offsetHeight - 8, evento.clientY + 14)}px`;
+      },
+      alMover: (huella) => minimapa.fijarHuella(huella),
+    });
+    plano.parentElement?.addEventListener('click', (evento) => vista.centrar(minimapa.puntoLocal(evento)));
+    campamento3d = { vista, minimapa, plano: '', suelo: false };
+  } catch (error) {
+    console.warn('Sin WebGL para el campamento en 3D; queda la planta en 2D.', error);
+    minimapa.destruir();
+    escena.remove();
+    const centro = contenedor.querySelector('.asent-mapa');
+    centro?.classList.remove('asent-mapa-3d');
+    plano.parentElement?.classList.remove('asent-minimapa');
+  }
+}
+
+function desmontarCampamento3D(): void {
+  campamento3d?.vista.destruir();
+  campamento3d?.minimapa.destruir();
+  campamento3d = null;
+}
+
+/** Pone en la vista 3D la planta del campamento (solo si cambió) y el color del terreno donde está. */
+function pintarCampamento3D(p: ProyeccionJugador, campamento: CampamentoMercenarios, escena: EscenaCampamento, plano: string): void {
+  const c3 = campamento3d;
+  if (!c3) return;
+  if (c3.plano !== plano) {
+    c3.plano = plano;
+    c3.vista.fijar(campamentoEnVista(escena, { instante: p.instante }));
+    const encuadre = encuadreDeSvg(document.querySelector<SVGSVGElement>('.camp-plano svg'));
+    if (encuadre) c3.minimapa.fijarEncuadre(encuadre);
+  }
+  if (!c3.suelo) {
+    c3.suelo = true;
+    void sincronizarMapa(p.mapaId).then((mapa) => {
+      const suelo = colorDelSueloEn(mapa, campamento.posicion);
+      if (suelo && campamento3d === c3) c3.vista.fijarSuelo((suelo[0] << 16) | (suelo[1] << 8) | suelo[2]);
+    }).catch(() => {});
+  }
 }
 
 /** Pantalla de DENTRO DE UN PUEBLO o una aldea (`entrarEnPueblo`), con la forma de la de la plaza: el trazado al centro, el almacén debajo y las
@@ -464,7 +544,7 @@ function pintarPueblo(p: ProyeccionJugador): void {
 
 /** Vuelca la proyección en la pantalla Campamento (en cada refresco). No toca el DOM de lo que no cambió, para no llevarse lo que se escribe. */
 function pintarCampamento(p: ProyeccionJugador, campamento: CampamentoMercenarios): void {
-  const lienzo = app.querySelector<HTMLElement>('.camp-lienzo');
+  const lienzo = app.querySelector<HTMLElement>('.camp-plano');
   const leyenda = app.querySelector<HTMLElement>('.camp-leyenda-caja');
   const lado = app.querySelector<HTMLElement>('.camp-lado');
   if (!lienzo || !lado) return;
@@ -474,6 +554,7 @@ function pintarCampamento(p: ProyeccionJugador, campamento: CampamentoMercenario
   const escena = p.escenasCampamento.find((e) => e.campamentoId === campamento.id);
   const plano = escena ? svgPlanoCampamento(escena) : '';
   if (plano && lienzo.dataset.pintado !== plano) { lienzo.innerHTML = plano; lienzo.dataset.pintado = plano; if (leyenda && escena) leyenda.innerHTML = leyendaPlanoCampamento(escena); }
+  if (escena && plano) pintarCampamento3D(p, campamento, escena, plano);
   const residencia = app.querySelector<HTMLElement>('#camp-residencia');
   if (residencia) residencia.textContent = campamento.residentesIds.includes(p.heroeId) ? 'Tu residencia' : 'De paso';
 

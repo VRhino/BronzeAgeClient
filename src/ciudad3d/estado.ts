@@ -122,6 +122,9 @@ export function estiloDe(id: string, tipo: string, nivel: number, ascenso: Asent
   return Math.max(1, Math.min(5, n));
 }
 
+/** Lo que hace falta de una plaza para dibujarla (un campamento se dibuja igual: `campamento.ts`). */
+export type FuenteDeCiudad = Pick<Asentamiento, 'id' | 'nivel' | 'ascenso' | 'edificios' | 'recintos'>;
+
 export interface OpcionesCiudad {
   /** Instante de mundo de ahora (ms). */
   instante: number;
@@ -135,7 +138,7 @@ function celdasDe(r: RectanguloLocal, T: number): { c0: number; c1: number; f0: 
 }
 
 /** La ciudad que se dibuja, o `null` sin trazado. */
-export function ciudadEnVista(a: Asentamiento, t: TrazadoAsentamiento | undefined, o: OpcionesCiudad): CiudadEnVista | null {
+export function ciudadEnVista(a: FuenteDeCiudad, t: TrazadoAsentamiento | undefined, o: OpcionesCiudad): CiudadEnVista | null {
   if (!t) return null;
   const T = t.celda ?? 3;
   const edificios: EdificioEnVista[] = [];
@@ -227,7 +230,9 @@ export function ciudadEnVista(a: Asentamiento, t: TrazadoAsentamiento | undefine
         // en la ciudad: lo que hay junto a cada cosa
         const vecinos = [ocupada.get(clave(c + 1, f)), ocupada.get(clave(c - 1, f)), ocupada.get(clave(c, f + 1)), ocupada.get(clave(c, f - 1))];
         const junto = (que: string): boolean => vecinos.includes(que);
-        if (junto('vivienda')) tipo = u < 0.38 ? 'huerto' : u < 0.62 ? 'patio' : u < 0.8 ? 'arboles' : u < 0.88 ? 'horno' : u < 0.94 ? 'lena' : 'vacio';
+        // junto a las tiendas de un campamento: leña, la reata de los caballos, heno y algún árbol; nada de huertos
+        if (junto('tienda')) tipo = u < 0.26 ? 'lena' : u < 0.42 ? 'arboles' : u < 0.52 ? 'almiar' : u < 0.6 ? 'redil' : 'vacio';
+        else if (junto('vivienda')) tipo = u < 0.38 ? 'huerto' : u < 0.62 ? 'patio' : u < 0.8 ? 'arboles' : u < 0.88 ? 'horno' : u < 0.94 ? 'lena' : 'vacio';
         else if (junto('granja') || junto('granero') || junto('caballerizas') || junto('corral')) tipo = u < 0.3 ? 'almiar' : u < 0.55 ? 'redil' : u < 0.8 ? 'huerto' : 'arboles';
         else if (junto('lenera') || junto('carpinteria') || junto('tallerCarpinteria')) tipo = u < 0.5 ? 'lena' : 'arboles';
         else if (d === 1) tipo = u < 0.36 ? 'arboles' : u < 0.52 ? 'huerto' : u < 0.62 ? 'redil' : u < 0.67 ? 'horno' : u < 0.74 ? 'almiar' : 'vacio';
@@ -247,7 +252,8 @@ export function ciudadEnVista(a: Asentamiento, t: TrazadoAsentamiento | undefine
     }
   }
 
-  const gobierno = edificios.find((e) => e.tipo === 'centroUrbano') ?? edificios.find((e) => e.tipo === 'palacio');
+  // el corazón de la plaza (en un campamento, su taberna): de él parten las calles principales
+  const gobierno = edificios.find((e) => e.tipo === 'centroUrbano') ?? edificios.find((e) => e.tipo === 'palacio') ?? edificios.find((e) => e.tipo === 'taberna');
   const red = redDeCalles(t.calles, t.caminos, T, {
     edificios,
     centro: gobierno ? { x: gobierno.x + gobierno.ancho / 2, y: gobierno.y + gobierno.alto / 2 } : undefined,
