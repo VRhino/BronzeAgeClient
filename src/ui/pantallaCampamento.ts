@@ -318,7 +318,7 @@ export function htmlSeccionCampamento(seccion: SeccionCampamento, p: ProyeccionJ
     case 'resumen': return resumen(p, c, e);
     case 'tropa': return tropa(p, c, e);
     case 'mercado': return mercado(p, c, e);
-    case 'mercenarios': return htmlTablonMercenarios(p, c.tablon, e);
+    case 'mercenarios': return htmlTablonMercenarios(p, c.tablon, e, c);
     case 'fondo': return fondo(p, c, e);
     case 'taberna': return '<div id="camp-taberna"></div>';
   }

@@ -3,6 +3,22 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.122.0] — 2026-11-03 · Pagar a un mercenario desde dentro del campamento, con el almacén personal o el carro · contrato 2b2c2a58
+
+Petición de Víctor (2026-11-03): poder pagar un contrato de mercenario desde dentro del campamento con el almacén personal o el carro. El motor
+lo hace desde 2b2c2a58 (contrato 0.10.0): `OrdenContratarMercenario.pagar_con` y `OrdenProrrogarContrato.pagar_con`.
+
+- **Contrato regenerado** desde el motor 2b2c2a58 (`src/contrato/REVISION`): solo cambia `orders_pb.ts` (los dos `pagarCon`).
+- **El tablón de mercenarios elige con qué se paga**, como el mercado del campamento (`fuentesDePago` en `ui/columnaQuePaga.ts`): quien reside
+  en el campamento paga con su almacén personal o con el carro que lleva (el de su columna, a la puerta, o, dentro sin columna, el que trajo al
+  entrar); de visita, con el carro de su columna. Si hay dos, la píldora de arriba del tablón es un selector «Pagar con» con el oro de cada uno;
+  sin elegir, va lo que el motor usa por defecto. Las tarifas que no alcanzan y el motivo del botón miran el oro de lo elegido. Se acaba el
+  «sin columna» dentro de tu residencia.
+- **La firma manda `pagarCon`** con lo elegido. La prórroga (Facción › Mercenarios) va sin él: el motor cobra del carro de la columna o, dentro
+  del campamento donde resides, del almacén personal; su ayuda lo dice.
+- Pruebas: `pruebas/mercenariosPago.test.ts` (con qué se paga dentro, a la puerta y de visita) y `pruebas/ordenes.test.ts` (`pagarCon` en la
+  orden). El banco de mercenarios lleva `?residente=1`.
+- Docs: `COMANDOS.md`.
 ## [0.121.1] — 2026-11-03 · El humo, en bocanadas suaves · sin cambio de contrato
 
 - Las bocanadas de humo del mundo 3D (0.120.0) parecían piedras grises: ahora son bolas más redondas, más claras y con el borde desvaído.

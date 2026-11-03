@@ -253,6 +253,8 @@ Solo tienen efecto si el backend declara `SERVIDORES_BATALLA` (en Render, hoy no
 - [x] `guardarEnAlmacenPersonal` / `sacarDelAlmacenPersonal` — `recurso`, `cantidad` · panel del Carro
 - [x] `ordenarEscuadras` — `escuadronIds` (orden de combate) · panel de la columna del mapa
 - [x] `pasarAViveres` — ver Caravanas
+- [x] `contratarMercenario` — `mercenarioId`, `trabajo`, `objetivo` y `plazoDias` (o, el permanente, `residenciaAsentamientoId`); opcional: `pagarCon` (`almacenPersonal` \| `carro`, motor 2b2c2a58) · tablón de mercenarios del campamento: quien reside allí elige «Pagar con» su almacén personal o el carro que lleva (el de su columna o, dentro y sin columna, el que trajo); de visita, el carro de su columna
+- [x] `prorrogarContrato` — `mercenarioId`, `plazoDias` · Facción › Mercenarios; sin `pagarCon`, el motor cobra del carro de la columna o, dentro del campamento donde resides y sin columna, del almacén personal
 
 ### Residencia, capital y Facción
 

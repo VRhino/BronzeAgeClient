@@ -93,6 +93,14 @@ describe('traducirOrden: mercenarios', () => {
     });
   });
 
+  it('pagar la firma con el almacén personal, y la orden sin pagar_con si no se dice (motor 2b2c2a58)', () => {
+    expect(traducirOrden('contratarMercenario', { mercenarioId: 'heroe-31', trabajo: 'defender', objetivo: { asentamientoId: 'as-4' }, plazoDias: 3, pagarCon: 'almacenPersonal' })).toMatchObject({
+      value: { pagarCon: 'almacenPersonal' },
+    });
+    const sin = traducirOrden('contratarMercenario', { mercenarioId: 'heroe-31', trabajo: 'defender', objetivo: { asentamientoId: 'as-4' }, plazoDias: 3, pagarCon: undefined });
+    expect((sin.value as { pagarCon?: string }).pagarCon).toBeUndefined();
+  });
+
   it('ordenar a varios ir a un punto', () => {
     expect(traducirOrden('ordenarMercenario', { mercenarioIds: ['heroe-21', 'heroe-23'], tipo: 'ir_a', objetivo: { punto: { x: 392, y: 318.5 } } })).toMatchObject({
       case: 'ordenarMercenario', value: { mercenarioIds: ['heroe-21', 'heroe-23'], tipo: 'ir_a', objetivo: { tipo: { case: 'punto', value: { x: 392_000n, y: 318_500n } } } },

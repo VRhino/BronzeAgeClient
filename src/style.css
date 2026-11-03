@@ -3529,6 +3529,9 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .merc-tablon-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .merc-bolsa { font-weight: 700; color: var(--oro-claro); background: rgba(0, 0, 0, 0.35); border: 1px solid var(--bronce-osc); border-radius: 999px; padding: 2px 10px; font-size: 0.85rem; }
 .merc-bolsa-sin { color: inherit; opacity: 0.75; font-weight: 600; }
+/* Con qué se paga, si se puede elegir (almacén personal o carro): la misma píldora con su selector dentro. */
+.merc-pagar { display: inline-flex; align-items: center; gap: 6px; padding: 2px 4px 2px 10px; }
+.merc-pagar select.form-input { width: auto; padding: 1px 6px; font-size: 0.85rem; font-weight: 600; color: var(--oro-claro); }
 .merc-orden-tablon { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-secondary); margin: 4px 0 8px; }
 .merc-chip { background: rgba(0, 0, 0, 0.3); color: var(--text-secondary); border: 1px solid var(--bronce-osc); border-radius: 999px; padding: 2px 10px; font-size: 0.78rem; cursor: pointer; }
 .merc-chip.activo, .merc-chip:hover:not(:disabled) { color: var(--tinta); background: var(--oro); border-color: var(--oro); }

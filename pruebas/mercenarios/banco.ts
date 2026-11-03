@@ -97,8 +97,14 @@ let ver = new URLSearchParams(location.search).get('ver') ?? 'tablon';
 
 function pintar(): void {
   const proy = p();
+  // ?residente=1: Víctor reside en el campamento y está dentro sin columna; paga con su almacén personal o con el carro que trajo (motor 2b2c2a58)
+  if (new URLSearchParams(location.search).get('residente')) {
+    Object.assign(proy.heroe, { almacenPersonal: { oro: 500 }, carro: { oro: 40 } });
+    proy.campamentosMercenarios[0]!.residentesIds = ['heroe-1'];
+    proy.ejercitos = proy.ejercitos.filter((x) => x.id !== 'ej-1');
+  }
   if (ver === 'tablon') {
-    lienzo.innerHTML = `<div class="banco-marco banco-campamento"><div class="asent-lado-cuerpo">${htmlTablonMercenarios(proy, tablon as never, e)}</div><p id="camp-error" class="faction-error"></p></div>`;
+    lienzo.innerHTML = `<div class="banco-marco banco-campamento"><div class="asent-lado-cuerpo">${htmlTablonMercenarios(proy, tablon as never, e, proy.campamentosMercenarios[0])}</div><p id="camp-error" class="faction-error"></p></div>`;
     cablearTablonMercenarios(lienzo, ejecutar, (m) => { lienzo.querySelector('#camp-error')!.textContent = m; }, pintar);
   } else if (ver === 'faccion') {
     lienzo.innerHTML = `<div class="banco-marco" style="width:1000px">${htmlMercenariosFaccion(proy, e)}</div>`;
