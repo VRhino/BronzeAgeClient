@@ -142,9 +142,52 @@ export function bloquesDeTropa(t: TropaDeColumna): { filas: number; ancho: numbe
   return t.porHeroe.map(recorta).filter((n) => n > 0).map((n) => ({ filas: n, ancho: 4 }));
 }
 
-export class FigurasDeColumna {
+/** Las figuras de todas las columnas, en una malla instanciada por pieza y material: con decenas de columnas a la vista, cada pieza de cada
+ * figura como malla suelta eran miles de llamadas de dibujo (el doble con la sombra). Se rellena en cada fotograma. */
+export class Tropel {
   readonly grupo = new THREE.Group();
-  private readonly figuras: THREE.Group[] = [];
+  private readonly piezas = new Map<string, { geo: THREE.BufferGeometry; mat: THREE.Material; n: number; datos: Float32Array; malla: THREE.InstancedMesh | null }>();
+  private readonly m = new THREE.Matrix4();
+
+  pintar(columnas: Iterable<FigurasDeColumna>): void {
+    for (const p of this.piezas.values()) p.n = 0;
+    for (const c of columnas) for (const f of c.figuras) {
+      f.updateMatrix();
+      for (const o of f.children as THREE.Mesh[]) {
+        const mat = o.material as THREE.Material, clave = `${o.geometry.id}|${mat.id}`;
+        let p = this.piezas.get(clave);
+        if (!p) this.piezas.set(clave, (p = { geo: o.geometry, mat, n: 0, datos: new Float32Array(16 * 64), malla: null }));
+        if (16 * (p.n + 1) > p.datos.length) { const d = new Float32Array(p.datos.length * 2); d.set(p.datos); p.datos = d; }
+        this.m.multiplyMatrices(f.matrix, o.matrix).toArray(p.datos, 16 * p.n++);
+      }
+    }
+    for (const p of this.piezas.values()) {
+      const cabe = p.datos.length / 16;
+      if (p.malla && p.malla.instanceMatrix.count < cabe) { p.malla.removeFromParent(); p.malla.dispose(); p.malla = null; }
+      if (!p.malla && p.n) {
+        p.malla = new THREE.InstancedMesh(p.geo, p.mat, cabe);
+        p.malla.castShadow = true;
+        p.malla.frustumCulled = false; // se mueven en cada fotograma: no vale la esfera de un momento
+        this.grupo.add(p.malla);
+      }
+      if (!p.malla) continue;
+      p.malla.count = p.n;
+      (p.malla.instanceMatrix.array as Float32Array).set(p.datos.subarray(0, 16 * p.n));
+      p.malla.instanceMatrix.clearUpdateRanges();
+      p.malla.instanceMatrix.addUpdateRange(0, 16 * p.n);
+      p.malla.instanceMatrix.needsUpdate = true;
+    }
+  }
+
+  destruir(): void {
+    for (const p of this.piezas.values()) p.malla?.dispose();
+    this.grupo.removeFromParent();
+  }
+}
+
+export class FigurasDeColumna {
+  /** Cada figura, con sus piezas como hijas: no van a la escena, las pinta `Tropel`. */
+  readonly figuras: THREE.Group[] = [];
   /** Por dónde ha pasado la cabeza, del más viejo al más nuevo. */
   private rastro: Punto[] = [];
 
@@ -156,10 +199,9 @@ export class FigurasDeColumna {
   constructor(readonly jinetes: number, tropa: TropaDeColumna, color: number, readonly carros: Carros = { carga: 0, fundacion: false }) {
     const poner = (f: THREE.Group, atras: number, lado: number, escala = 1) => {
       f.scale.setScalar(MUNDO3D.tropa * escala);
-      f.traverse((o) => { o.castShadow = true; });
+      for (const o of f.children) o.updateMatrix();
       this.figuras.push(f);
       this.sitios.push({ atras, lado });
-      this.grupo.add(f);
     };
     for (let k = 0; k < jinetes; k++) poner(heroe(color), k * 0.15, 0);
     // entre filas de un bloque, el paso de siempre; entre un bloque y el siguiente, un poco más
@@ -207,9 +249,5 @@ export class FigurasDeColumna {
       f.position.set(px, alturaU(px, py), py);
       f.rotation.y = -rumbo + Math.PI / 2;
     });
-  }
-
-  destruir(): void {
-    this.grupo.removeFromParent();
   }
 }

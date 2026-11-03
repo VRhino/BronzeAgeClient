@@ -12,7 +12,7 @@ import { instalarEntrada, type Entrada } from './entrada';
 import type { CaravanaEnVista, Carros, ColumnaEnVista, EstadoVista, EtiquetaEnVista, MundoEnVista } from './estado';
 import { Etiquetas } from './etiquetas';
 import { RejillaDeMovimiento, type Navegacion } from './rejilla';
-import { FigurasDeColumna, type TropaDeColumna } from './figuras';
+import { FigurasDeColumna, Tropel, type TropaDeColumna } from './figuras';
 import type { FuenteDeAltura } from './fuente';
 import { Agua, alturaVisible } from './agua';
 import { Arboles } from './arboles';
@@ -83,6 +83,7 @@ export class VistaMundo3D {
   private readonly rejilla: RejillaDeMovimiento;
   private readonly entrada: Entrada;
   private readonly columnas = new Map<string, { figuras: FigurasDeColumna; clave: string }>();
+  private readonly tropel = new Tropel();
   private readonly lineas = new THREE.Group();
   private readonly matRuta = new THREE.LineBasicMaterial({ color: 0xf1e6c8, transparent: true, opacity: 0.85 });
   /** La ruta de la columna del jugador: punteada y más marcada que el rastro de las demás (Víctor, 2026-10-31); el aro del destino sigue entero. */
@@ -157,7 +158,7 @@ export class VistaMundo3D {
     this.marcas = new MarcasEnSuelo(this.alturaU);
     this.etiquetas = new Etiquetas(contenedor, (punto) => this.o.alClicar(punto));
     this.rejilla = new RejillaDeMovimiento(this.alturaU);
-    this.escena.add(this.terreno.grupo, this.paisaje.grupo, this.arboles.grupo, this.matas.grupo, this.vida.grupo, this.maquetas.grupo, this.trazos.grupo, this.marcas.grupo, this.lineas, this.rejilla.grupo);
+    this.escena.add(this.terreno.grupo, this.paisaje.grupo, this.arboles.grupo, this.matas.grupo, this.vida.grupo, this.maquetas.grupo, this.trazos.grupo, this.marcas.grupo, this.lineas, this.rejilla.grupo, this.tropel.grupo);
     this.entrada = instalarEntrada(this.lienzo, this.camara, (e) => this.clic(e), () => {}); // el zoom se lee de la cámara en cada fotograma
     this.observador = new ResizeObserver(() => this.ajustar());
     this.observador.observe(contenedor);
@@ -355,10 +356,8 @@ export class VistaMundo3D {
       const clave = `${jinetes}:${tropa.ejercito ? 'E' : 'P'}${tropa.porHeroe.join(',')}:${hex}:${carros.carga}:${carros.fundacion}:${carros.propio ? 'p' : ''}:${carros.animales?.join(',') ?? ''}`;
       let f = this.columnas.get(id);
       if (!f || f.clave !== clave) {
-        f?.figuras.destruir();
         f = { figuras: new FigurasDeColumna(jinetes, tropa, hex, carros), clave };
         this.columnas.set(id, f);
-        this.escena.add(f.figuras.grupo);
       }
       f.figuras.mover(posicion, this.alturaU);
     };
@@ -369,7 +368,8 @@ export class VistaMundo3D {
       const carros: Carros = c.fundacion ? { carga: 0, fundacion: true } : { carga: Math.max(1, c.animales?.length ?? 0), fundacion: false, ...(c.animales ? { animales: c.animales } : {}) };
       poner(`caravana:${c.id}`, 0, tropa, c.color, carros, c.posicion);
     }
-    for (const [id, f] of this.columnas) if (!vivas.has(id)) { f.figuras.destruir(); this.columnas.delete(id); }
+    for (const id of this.columnas.keys()) if (!vivas.has(id)) this.columnas.delete(id);
+    this.tropel.pintar(Array.from(this.columnas.values(), (c) => c.figuras));
   }
 
   /** Bajo la columna del jugador, un aro en el suelo (la mira del 2D: entre los árboles se pierde), su ruta y el aro de su destino; las demás
@@ -465,7 +465,7 @@ export class VistaMundo3D {
     cancelAnimationFrame(this.fotograma);
     this.observador.disconnect();
     this.entrada.destruir();
-    for (const f of this.columnas.values()) f.figuras.destruir();
+    this.tropel.destruir();
     for (const r of this.rutas.values()) r.destruir();
     this.mira?.geometry.dispose();
     this.destino?.geometry.dispose();

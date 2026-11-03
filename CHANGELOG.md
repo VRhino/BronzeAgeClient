@@ -3,6 +3,17 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.125.1] — 2026-11-03 · Las columnas del mundo 3D, en mallas instanciadas · sin cambio de contrato
+
+Petición de Víctor (2026-11-03): mejorar el rendimiento de la vista 3D del mundo. Medido en la partida real, en camp-1, con unas 50 columnas
+de bots a la vista (RTX 4080 SUPER):
+
+- **Una llamada de dibujo por pieza, no por figura.** Cada soldado, jinete o carro eran de 4 a 10 mallas sueltas, todas con sombra: con 50
+  columnas, unas 1.000 piezas y unas 2.100 llamadas de dibujo por fotograma. Ahora todas las figuras van en una malla instanciada por pieza y
+  material (`Tropel`, `mundo3d/figuras.ts`), que se rellena en cada fotograma. Se ven igual.
+- **Antes → después**, zoom normal y carga 320: llamadas de dibujo 2.100 → 224; mandar el dibujo (CPU) 13 → 3 ms; tarjeta 10 → 3,2 ms
+  (mediana); de 37-60 FPS con tirones de 45-85 ms a un fotograma que cuesta unos 3,5 ms. Detalle en `docs/Mundo_3D.md`, «Rendimiento (0.125.1)».
+
 ## [0.125.0] — 2026-11-03 · El blasón avisa de la subida y la barra del Almacén va sola · sin cambio de contrato
 
 Peticiones de Víctor (2026-11-03):

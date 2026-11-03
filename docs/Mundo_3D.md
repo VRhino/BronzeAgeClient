@@ -388,6 +388,29 @@ Peticiones de Víctor del 2026-11-03:
   el tramo se parte en cada plaza, pueblo o campamento que cruza y cada trozo se suaviza aparte.
 - **Rayas más finas**: la frontera ajena pasa de 0,24 a 0,12 u, la de tu zona de 0,36 a 0,18 u y la línea entre provincias de 0,08 a 0,06 u.
 
+## Rendimiento (0.125.1)
+
+Medido en la partida real (`localhost:5174`, cuenta de prueba en camp-1, unas 50 columnas de bots a la vista), en un equipo con RTX 4080
+SUPER, 1649×1266 px, densidad 1. «Antes» con fotogramas de verdad (`requestAnimationFrame`); «después», con la ventana oculta, moviendo los
+fotogramas a mano (`bucle`): mismos ms de CPU, de tarjeta (`EXT_disjoint_timer_query_webgl2`) y llamadas, pero sin FPS.
+
+| | Llamadas | Triángulos | Mandar el dibujo (CPU) | Tarjeta (mediana) | FPS / tirones |
+|---|---|---|---|---|---|
+| Antes, normal, 320 | 2.097 | 0,77 M | 13,9 ms | 11,2 ms | 45 FPS, p99 60 ms |
+| Antes, alejado, 480 | 2.110 | 0,84 M | 13,1 ms | 11,3 ms | 45 FPS, p99 59 ms |
+| Antes, marchando, normal, 320 | 1.760 | 0,78 M | 14,3 ms | 9,5 ms | 37 FPS, p99 71 ms |
+| Después, normal, 320 | 224 | 0,80 M | 3,2 ms | 3,2 ms | fotograma de 3,5 ms (mediana) |
+| Después, alejado, 480 | 269 | 0,91 M | 2,7 ms | 3,8 ms | 4,1 ms |
+| Después, marchando, alejado, 480 | 270 | 0,90 M | 3,3 ms | 3,7 ms | 4,7 ms |
+
+- **El cuello eran las llamadas de dibujo** de las figuras de las columnas: unas 1.000 piezas (mallas sueltas de 4 a 10 por figura), cada una
+  dos veces (escena y sombra). No la tarjeta: bajar la resolución a la cuarta parte no cambiaba nada. Ahora van en `Tropel`: una malla
+  instanciada por pieza y material para todas las columnas, rellenada en cada fotograma (≈1 ms de CPU con 50 columnas, dentro de
+  `columnasYMarcas`).
+- **Lo que queda:** tirones sueltos de 15-25 ms (p99) que caen en cualquier fase (estado, cámara, suelo, dibujo), con saltos de 15-18 MB en el
+  montón: recogida de basura. La vista reserva unos 0,7 MB por fotograma, la mayor parte dentro de `renderer.render` y del estado con los bots
+  marchando. La tarjeta tiene picos de 15-20 ms (p95) con la escena quieta, que apuntan a otra cosa usando la misma tarjeta.
+
 ## Banco de pruebas
 
 `npm run mundo3d` abre `pruebas/mundo3d/` con el artefacto y el relieve que haya en `generador/salida/mundo/` del motor (el checkout hermano
