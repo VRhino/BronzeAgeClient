@@ -3,6 +3,19 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.125.0] — 2026-11-03 · El blasón avisa de la subida y la barra del Almacén va sola · sin cambio de contrato
+
+Peticiones de Víctor (2026-11-03):
+
+- **La subida, a la vista.** Cuando la plaza cumple todo lo del nivel siguiente, el medallón del nivel en el blasón parpadea con un halo dorado
+  y lleva un «!» ámbar que late (antes, un brillo suave y una flecha verde que no se notaban). Solo lo ve quien puede pedir la subida, el
+  Gobernador; los demás de la Facción ven el medallón quieto.
+- **La barra del Almacén va sola** mientras el jugador no elija: enseña lo que tiene la plaza (más de 0), hasta 8, en el orden en que llegó. Un
+  recurso nuevo entra al final si hay sitio (comprar cobre lo pone el quinto), uno que se acaba sale, y con 8 a la vista el noveno espera a que
+  salga otro. En cuanto el jugador pone o quita uno en la ventana del Almacén, manda su elección (la misma en todas sus plazas) y la barra deja
+  de cambiar sola; «Que vaya sola» la devuelve al modo automático. La elección se guarda en otra clave
+  (`bronzeage:barra-almacen-elegida`), así que todos empiezan en automático. Prueba en `pruebas/barraAlmacen.test.ts`.
+
 ## [0.124.0] — 2026-11-03 · El territorio sobre el relieve, solo caminos de tierra y el camino por la plaza · sin cambio de contrato
 
 Peticiones de Víctor (2026-11-03), en el mundo 3D:

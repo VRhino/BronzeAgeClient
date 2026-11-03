@@ -2306,7 +2306,7 @@ function contenidoDeVentana(v: VentanaPlaza, c: ContextoPlaza, ajena: boolean): 
         titulo: 'Almacén', icono: iconoEdificio('almacen', 28), subs: [], sub: '', ancho: 'completa',
         html: `<div class="cols-completa"><div class="col-completa">${htmlEleccionBarra(a, escaparHtml)}${htmlExtraccion(c)}</div><div class="col-completa">${htmlRecetas(c)}</div></div>`,
         cablear: () => {
-          cablearEleccionBarra(cuerpo, () => { renderPieDePlaza(); renderPanelEdificios(); }, (m) => mostrarAviso(m, true));
+          cablearEleccionBarra(cuerpo, a, () => { renderPieDePlaza(); renderPanelEdificios(); }, (m) => mostrarAviso(m, true));
           cablearProduccionYRecetas(c);
         },
       };
@@ -2539,7 +2539,8 @@ function pintarBlasones(p: ProyeccionJugador, a: Asentamiento): void {
       residencia: propia ? (reside ? 'dentro' : 'fuera') : null,
       capital: corona,
       abierto: popBlason,
-      ascenso: propia ? (ascensoPosible(p, a, renderPanelEdificios) ? 'listo' : 'abrir') : null,
+      // titila con su «!» solo para quien puede pedir la subida, el Gobernador; los demás de la Facción ven el medallón quieto
+      ascenso: propia ? (a.cargos?.gobernadorId === p.heroeId && ascensoPosible(p, a, renderPanelEdificios) ? 'listo' : 'abrir') : null,
     };
     pintar(hud, htmlBlasonHud(b, escaparHtml), () => cablearBlasonHud(hud, {
       editar: () => {

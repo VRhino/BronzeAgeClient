@@ -56,30 +56,61 @@ export function vigilarPieArriba(pantalla: HTMLElement | null): void {
   medir();
 }
 
-/** Los de partida, mientras el jugador no elija: lo básico de cualquier plaza. */
-const BARRA_ALMACEN_DEFECTO = ['trigo', 'madera', 'piedra', 'cobre', 'estano', 'oro', 'lingoteBronce', 'livestock'];
-const CLAVE_BARRA = 'bronzeage:barra-almacen';
+// Dos modos (Víctor, 2026-11-03): mientras el jugador no elija, la barra va sola y enseña lo que la plaza tiene (más de 0), hasta 8, en el orden en
+// que fue llegando: un recurso nuevo entra al final si queda sitio y uno que se acaba sale; con 8 a la vista, el noveno no entra hasta que salga
+// otro. En cuanto el jugador pone o quita uno en la ventana del Almacén, manda su elección (la misma para todas las plazas) y la barra deja de
+// cambiar sola; «Que vaya sola» la devuelve al modo automático.
+const CLAVE_BARRA = 'bronzeage:barra-almacen-elegida';
 
-/** Los recursos que el jugador eligió para la barra (de este navegador; el motor no guarda nada de esto), en su orden. */
-export function recursosDeLaBarra(): string[] {
+/** La elección del jugador (de este navegador; el motor no guarda nada de esto), en su orden; `null` si no ha elegido: la barra va sola. */
+function eleccionGuardada(): string[] | null {
+  if (memoria !== undefined) return memoria;
   try {
     const guardado = JSON.parse(localStorage.getItem(CLAVE_BARRA) ?? 'null') as unknown;
     if (Array.isArray(guardado)) return guardado.filter((r): r is string => typeof r === 'string' && r in RECURSO_NOMBRE).slice(0, MAX_BARRA_ALMACEN);
-  } catch { /* sin almacenamiento: los de partida */ }
-  return [...BARRA_ALMACEN_DEFECTO];
+  } catch { /* sin almacenamiento: va sola */ }
+  return null;
 }
 
-function guardarBarra(lista: string[]): void {
-  try { localStorage.setItem(CLAVE_BARRA, JSON.stringify(lista)); } catch { /* sin almacenamiento: dura hasta recargar */ }
+function guardarBarra(lista: string[] | null): void {
+  try {
+    if (lista) localStorage.setItem(CLAVE_BARRA, JSON.stringify(lista));
+    else localStorage.removeItem(CLAVE_BARRA);
+  } catch { /* sin almacenamiento: dura hasta recargar */ }
   memoria = lista;
 }
-/** Si el navegador no deja guardar, la elección vive aquí hasta recargar. */
-let memoria: string[] | null = null;
-const elegidos = (): string[] => memoria ?? recursosDeLaBarra();
+/** Lo elegido, también si el navegador no deja guardar (dura hasta recargar); `undefined`: aún no se ha mirado. */
+let memoria: string[] | null | undefined;
 
-/** Pone o quita un recurso de la barra. `false` si ya hay `MAX_BARRA_ALMACEN` y se quería poner otro. */
-export function alternarRecursoDeLaBarra(recurso: string): boolean {
-  const lista = elegidos();
+/** Lo que la barra automática enseña en cada plaza, en el orden en que llegó (en memoria: al recargar se rehace en el orden de siempre). */
+const automatica = new Map<string, string[]>();
+
+/** La barra automática de una plaza: quita lo que se acabó y añade lo nuevo que tenga (en el orden de los iconos) mientras quepa. */
+function barraAutomatica(a: Asentamiento): string[] {
+  const hay = (r: string): boolean => (a.almacen?.[r]?.cantidad ?? 0) >= 1;
+  const antes = (automatica.get(a.id) ?? []).filter(hay);
+  const orden = Object.keys(RECURSO_ICONO);
+  const nuevos = Object.keys(a.almacen ?? {}).filter((r) => hay(r) && !antes.includes(r) && r in RECURSO_NOMBRE)
+    .sort((x, y) => (orden.indexOf(x) + 1 || 99) - (orden.indexOf(y) + 1 || 99) || x.localeCompare(y));
+  const lista = [...antes, ...nuevos].slice(0, MAX_BARRA_ALMACEN);
+  automatica.set(a.id, lista);
+  return lista;
+}
+
+/** Los recursos de la barra de esta plaza: los que eligió el jugador o, si no eligió, los de la barra automática. */
+export function recursosDeLaBarra(a: Asentamiento): string[] {
+  return eleccionGuardada() ?? barraAutomatica(a);
+}
+
+/** ¿La barra va sola (el jugador no ha elegido)? */
+export function barraAutomaticaActiva(): boolean {
+  return eleccionGuardada() === null;
+}
+
+/** Pone o quita un recurso de la barra; la primera vez parte de lo que se ve ahora, y desde ahí manda el jugador. `false` si ya hay
+ * `MAX_BARRA_ALMACEN` y se quería poner otro. */
+export function alternarRecursoDeLaBarra(a: Asentamiento, recurso: string): boolean {
+  const lista = recursosDeLaBarra(a);
   if (lista.includes(recurso)) { guardarBarra(lista.filter((r) => r !== recurso)); return true; }
   if (lista.length >= MAX_BARRA_ALMACEN) return false;
   guardarBarra([...lista, recurso]);
@@ -105,25 +136,27 @@ export function htmlPoblacionPie(a: Asentamiento, esc: Escapar, alCargar?: () =>
   return grupo('poblacion', 'Población', `${total}<span class="asent-pie-raya" aria-hidden="true"></span>${clases.join('')}`);
 }
 
-/** Almacén: los recursos que eligió el jugador (hasta `MAX_BARRA_ALMACEN`, en su orden, también a 0) contra su capacidad; casi lleno, en rojo.
+/** Almacén: los recursos de la barra (`recursosDeLaBarra`: los elegidos, también a 0, o los que tiene la plaza) contra su capacidad; casi lleno, en rojo.
  * Un clic en la placa abre la ventana del Almacén (`data-abrir-almacen`), donde se eligen y está la producción. */
 export function htmlAlmacenPie(a: Asentamiento, esc: Escapar): string {
   if (!a.almacen) return '';
   const almacen = a.almacen;
-  const piezas = elegidos().map((recurso) => {
+  const lista = recursosDeLaBarra(a);
+  const piezas = lista.map((recurso) => {
     const { cantidad, capacidad } = almacen[recurso] ?? { cantidad: 0, capacidad: 0 };
     const llenado = capacidad > 0 ? (cantidad / capacidad) * 100 : 0;
     return pieza(RECURSO_ICONO[recurso] ?? '📦', miles(cantidad), llenado, RECURSO_NOMBRE[recurso] ?? recurso,
       [`${miles(cantidad)}${capacidad > 0 ? ` de ${miles(capacidad)}` : ''}`, 'Clic: el almacén entero y qué se ve aquí'], llenado >= 90 ? 'lleno' : '', esc);
-  }).join('') || '<span class="asent-pie-vacio">Elige qué ver</span>';
+  }).join('') || `<span class="asent-pie-vacio">${barraAutomaticaActiva() ? 'Almacén vacío' : 'Elige qué ver'}</span>`;
   // cuántos van, para repartirlos en una fila o en dos iguales (`--n`, `--n2`) cuando la barra va arriba
-  const n = Math.max(1, elegidos().length);
+  const n = Math.max(1, lista.length);
   return grupo('almacen', 'Almacén', piezas, ` data-abrir-almacen role="button" tabindex="0" title="Abrir el Almacén" style="--n:${n};--n2:${Math.ceil(n / 2)}"`);
 }
 
 /** En la ventana del Almacén: todos los recursos de la plaza, para elegir cuáles van en la barra de arriba. */
 export function htmlEleccionBarra(a: Asentamiento, esc: Escapar): string {
-  const lista = elegidos();
+  const lista = recursosDeLaBarra(a);
+  const sola = barraAutomaticaActiva();
   const orden = Object.keys(RECURSO_ICONO);
   const hay = Object.entries(a.almacen ?? {}).filter(([, x]) => x.cantidad >= 1 || x.capacidad > 0).map(([r]) => r);
   const recursos = [...new Set([...hay, ...lista])].sort((x, y) => (orden.indexOf(x) + 1 || 99) - (orden.indexOf(y) + 1 || 99) || x.localeCompare(y));
@@ -135,17 +168,22 @@ export function htmlEleccionBarra(a: Asentamiento, esc: Escapar): string {
     return `<button type="button" class="barra-eleccion${dentro ? ' elegido' : ''}${!dentro && lleno ? ' sin-sitio' : ''}" data-barra-recurso="${esc(r)}" aria-pressed="${dentro}" title="${esc(titulo)}">`
       + `<span aria-hidden="true">${RECURSO_ICONO[r] ?? '📦'}</span><span class="barra-eleccion-nombre">${esc(RECURSO_NOMBRE[r] ?? r)}</span><small>${miles(cantidad)}</small></button>`;
   };
-  return `<div class="obra-titulo"><span class="faction-kicker">En la barra de arriba</span><span class="obra-chip${lleno ? ' activa' : ''}">${lista.length}/${MAX_BARRA_ALMACEN}</span></div>
-    <p class="asent-lado-nota">Elige hasta ${MAX_BARRA_ALMACEN} recursos para tenerlos siempre a la vista. Se guarda en este navegador.</p>
+  const nota = sola
+    ? `Ahora va sola: enseña lo que tiene la plaza, hasta ${MAX_BARRA_ALMACEN}, y lo nuevo entra si queda sitio. Si pones o quitas uno, manda tu elección.`
+    : `La has elegido tú (hasta ${MAX_BARRA_ALMACEN}, la misma en todas tus plazas). Se guarda en este navegador.`;
+  return `<div class="obra-titulo"><span class="faction-kicker">En la barra de arriba</span><span class="obra-chip${lleno ? ' activa' : ''}">${lista.length}/${MAX_BARRA_ALMACEN}</span>`
+    + `${sola ? '<span class="obra-chip">Automática</span>' : '<button type="button" class="btn-secondary barra-sola" data-barra-sola>Que vaya sola</button>'}</div>
+    <p class="asent-lado-nota">${nota}</p>
     <div class="barra-elecciones">${recursos.map(chip).join('')}</div>`;
 }
 
-/** Cablea la elección: cada clic pone o quita y repinta (`alCambiar`); con la barra llena, `avisar`. */
-export function cablearEleccionBarra(raiz: HTMLElement, alCambiar: () => void, avisar: (mensaje: string) => void): void {
+/** Cablea la elección: cada clic pone o quita y repinta (`alCambiar`); con la barra llena, `avisar`. «Que vaya sola» borra la elección. */
+export function cablearEleccionBarra(raiz: HTMLElement, a: Asentamiento, alCambiar: () => void, avisar: (mensaje: string) => void): void {
   raiz.querySelectorAll<HTMLButtonElement>('[data-barra-recurso]').forEach((b) => b.addEventListener('click', () => {
-    if (alternarRecursoDeLaBarra(b.dataset.barraRecurso!)) alCambiar();
+    if (alternarRecursoDeLaBarra(a, b.dataset.barraRecurso!)) alCambiar();
     else avisar(`La barra ya lleva ${MAX_BARRA_ALMACEN} recursos: quita uno antes de poner otro.`);
   }));
+  raiz.querySelector('[data-barra-sola]')?.addEventListener('click', () => { guardarBarra(null); alCambiar(); });
 }
 
 /** Estado: mantenimiento y nutrición de 0 a 100, en verde, ámbar o rojo, con su palabra y qué los mueve en el letrero. */

@@ -54,7 +54,7 @@ document.getElementById('app')!.innerHTML = `<div class="asent-screen plaza-3d${
   <div class="asent-cuerpo">
     <div class="asent-centro"><div class="asent-mapa asent-mapa-3d"><div class="ciudad3d-escena"></div></div></div>
     <aside class="asent-izq">
-      <div class="asent-blason">${htmlBlasonHud({ nombre: a.nombre ?? 'Pesinunte', faccion: 'Casa de Micenas', escudo: svgSigilo(undefined, 64), nivel: a.nivel, renombrar: true, editando: false, residencia: 'dentro', capital: 'si', abierto: null, ascenso: 'abrir' }, e)}</div>
+      <div class="asent-blason">${htmlBlasonHud({ nombre: a.nombre ?? 'Pesinunte', faccion: 'Casa de Micenas', escudo: svgSigilo(undefined, 64), nivel: a.nivel, renombrar: true, editando: false, residencia: 'dentro', capital: 'si', abierto: null, ascenso: new URLSearchParams(location.search).get('ascenso') === 'listo' ? 'listo' : 'abrir' }, e)}</div>
       <div class="asent-obras-hud">${htmlObrasHud(a, e, true)}</div>
     </aside>
     <aside class="asent-der">${new URLSearchParams(location.search).get('ficha') ? '' : '<div class="misiones-rastreador" style="padding:10px;border:1px solid var(--bronce);background:rgba(18,13,8,.9);color:var(--pergamino)">Misiones 3/3</div>'}</aside>
@@ -88,7 +88,7 @@ function pintarAlmacen(): void {
   if (ventana !== 'almacen' || !cuerpo) return;
   const c = { proyeccion: p, asentamiento: a, cuerpo, ejecutar: async () => null, refrescar: pintarAlmacen, cargo: 'gobernador', resideAqui: true, escapar: e } as unknown as ContextoPlaza;
   cuerpo.innerHTML = `<div class="cols-completa"><div class="col-completa">${htmlEleccionBarra(a, e)}${htmlExtraccion(c)}</div><div class="col-completa">${htmlRecetas(c)}</div></div>`;
-  cablearEleccionBarra(cuerpo, pintarAlmacen, (m) => alert(m));
+  cablearEleccionBarra(cuerpo, a, pintarAlmacen, (m) => alert(m));
   cablearProduccionYRecetas(c);
 }
 pintarAlmacen();

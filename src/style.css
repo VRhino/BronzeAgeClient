@@ -4843,9 +4843,13 @@ button.asent-blason-medallon:hover .medallon-nivel, button.asent-blason-medallon
 .asent-blason .medallon-nivel { width: 28px; height: 32px; }
 .asent-blason .medallon-nivel b { font-size: 0.85rem; }
 /* ya se puede pedir la subida: el medallón late en oro */
-.asent-blason-medallon.listo .medallon-nivel { animation: medallon-listo 1.8s ease-in-out infinite; }
-.asent-blason-medallon.listo::after { content: "⬆"; position: absolute; right: -9px; top: -7px; width: 15px; height: 15px; display: grid; place-items: center; border-radius: 50%; background: var(--obra-verde); color: #0f1a0b; font-size: 0.6rem; font-weight: 700; box-shadow: 0 0 6px rgba(127, 207, 106, 0.8); }
-@keyframes medallon-listo { 50% { filter: drop-shadow(0 0 8px rgba(255, 210, 74, 0.95)); } }
+/* La subida está lista (0.125.0, Víctor 2026-11-03: «que titile con un símbolo de atención»): el medallón parpadea con un halo dorado y lleva
+ * un «!» ámbar que late con él. */
+.asent-blason-medallon.listo .medallon-nivel { animation: medallon-listo 1.1s ease-in-out infinite; }
+.asent-blason-medallon.listo::after { content: "!"; position: absolute; right: -10px; top: -9px; width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%; border: 1px solid #fff2c4; background: #ffb020; color: #2a1606; font-size: 0.78rem; font-weight: 800; line-height: 1; box-shadow: 0 0 8px rgba(255, 176, 32, 0.95); animation: medallon-atencion 1.1s ease-in-out infinite; }
+@keyframes medallon-listo { 50% { opacity: 0.55; filter: drop-shadow(0 0 10px rgba(255, 210, 74, 1)) brightness(1.35); } }
+@keyframes medallon-atencion { 50% { transform: scale(1.25); box-shadow: 0 0 14px rgba(255, 176, 32, 1); } }
+@media (prefers-reduced-motion: reduce) { .asent-blason-medallon.listo .medallon-nivel, .asent-blason-medallon.listo::after { animation: none; } }
 /* el nombre con su lápiz, y el campo para cambiarlo */
 .asent-blason-nombre { display: flex; align-items: baseline; gap: 4px; min-width: 0; }
 .asent-blason-lapiz { flex: none; padding: 0 4px; font-size: 0.8rem; line-height: 1.3; color: var(--oro); background: none; border: 1px solid transparent; border-radius: 2px; cursor: pointer; opacity: 0.6; }
@@ -5300,3 +5304,6 @@ body:has(.eleccion-clic) .aviso-global { visibility: hidden; }
 .faccion-tecnologia .tec-fila { padding: 8px 12px; border: 1px solid rgba(166, 124, 70, 0.35); border-radius: 3px; background: rgba(28, 21, 13, 0.6); }
 .faccion-tecnologia .tec-fila > .btn-primary, .faccion-tecnologia .tec-fila > .btn-secondary { width: auto; flex: 0 0 auto; padding: 6px 18px; min-height: 0; }
 .faccion-tecnologia .tec-fila > .form-input { width: auto; flex: 0 1 260px; }
+
+/* «Que vaya sola»: devuelve la barra del Almacén al modo automático (0.125.0). */
+.barra-sola { width: auto; min-height: 0; padding: 3px 10px; font-size: 0.76rem; margin-left: auto; }

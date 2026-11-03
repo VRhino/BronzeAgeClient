@@ -240,6 +240,10 @@ La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, es
 > Almacén y Estado va a su lado, a su tamaño y centrada hasta los botones del jugador. «Ejércitos» desaparece: unirse a un ejército es un icono
 > del riel que solo sale cuando se puede. «Salir al mundo» va abajo a la izquierda.
 >
+> **Desde 0.125.0** la placa del Almacén va sola mientras el jugador no elija (lo que tiene la plaza, hasta 8, sin echar a nadie); al elegir en
+> la ventana del Almacén manda su elección, y «Que vaya sola» la devuelve. Con la subida lista, el medallón del blasón parpadea con un «!»
+> (solo para el Gobernador).
+>
 > **La barra de Población, Almacén y Estado, arriba al centro desde 0.112.0** (2026-11-03): en el hueco entre el blasón y el panel de
 > misiones, en una fila (el Almacén estira y, si no cabe, pasa sus recursos a dos filas); abajo solo queda el riel.
 >
