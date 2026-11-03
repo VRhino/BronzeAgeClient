@@ -432,6 +432,13 @@ fotogramas por caso. «Antes» es la 0.125.1.
 - **Lo que queda:** unos 25-35 fotogramas largos de cada 600, casi todos dentro de `renderer.render` (15-23 ms): esperas al controlador o
   a la tarjeta, no a la recogida de basura, que ya apenas sale en el perfil de CPU. En el FPS no se notan (59-60 quieto).
 
+## Lo que anda, en todos los fotogramas (0.128.1)
+
+Mientras algo marcha, `estadoDeLaVista3D` (`main.ts`) rehace el estado de la vista en cada fotograma, con lo que anda recolocado por su plan
+(`moverAlInstante`). Hasta la 0.128.0 lo hacía como mucho cada 15 ms (`CADA_PROYECCION_MS`), que en pantallas de 120 o 144 Hz dejaba lo ajeno
+quieto un fotograma de cada dos. Queda por medir en camp-1 cuánto JS añade por fotograma (antes, el estado costaba 0,13-0,32 ms con unos 2 de
+cada 3 fotogramas rehechos).
+
 ## Banco de pruebas
 
 `npm run mundo3d` abre `pruebas/mundo3d/` con el artefacto y el relieve que haya en `generador/salida/mundo/` del motor (el checkout hermano

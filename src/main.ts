@@ -1228,27 +1228,23 @@ function fundacionEnVista(): FundacionEnVista | null {
   return fundacion3d.valor;
 }
 
-/** El último estado que se dio a la vista 3D: de qué proyección salió, con qué selección, vista previa y reglas, y cuándo. */
-let estado3d: { p: ProyeccionJugador; clave: string; en: number; estado: EstadoVista } | null = null;
-/** Cada cuánto, como mucho, se recalcula la proyección del instante mientras algo marcha (ms): en cada fotograma, para que la columna avance
- * sin saltos (rehacerla cuesta ~1 ms). */
-const CADA_PROYECCION_MS = 15;
-
+/** El último estado que se dio a la vista 3D: de qué proyección salió y con qué selección, vista previa y reglas. */
+let estado3d: { p: ProyeccionJugador; clave: string; estado: EstadoVista } | null = null;
 /** El estado que pinta la vista 3D en cada fotograma. Mientras algo marcha, propio o ajeno (`algoSeMueve`: las columnas y caravanas avanzan
- * por su plan sin que el servidor mande nada), la proyección del instante, como mucho cada `CADA_PROYECCION_MS`; si no, la última que llegó. Si no cambió nada, el
- * mismo estado de antes. */
+ * por su plan sin que el servidor mande nada), la proyección del instante, en cada fotograma: recolocar lo que anda es barato
+ * (`moverAlInstante`), y con un límite de 15 ms, en una pantalla de 120 o 144 Hz se movía un fotograma sí y otro no. Si no, la última que
+ * llegó; si no cambió nada, el mismo estado de antes. */
 function estadoDeLaVista3D(): EstadoVista | null {
   const base = estadoCliente.proyeccionUltima;
   if (!base) return null;
-  const ahora = performance.now();
   const marcha = algoSeMueve(base);
   const fundacion = fundacionEnVista();
   const reglas = { vision: radiosDeVision, radioZonaInicial: radioZonaInicial(), radioProteccion: radioDeProteccionMercenarios() };
   const clave = `${claveSeleccion()}|${fundacion3d.clave}|${reglas.vision.solo},${reglas.vision.ejercito},${reglas.radioZonaInicial},${reglas.radioProteccion}`;
-  const vale = estado3d && estado3d.clave === clave && (marcha ? ahora - estado3d.en < CADA_PROYECCION_MS : estado3d.p === base);
+  const vale = estado3d && estado3d.clave === clave && !marcha && estado3d.p === base;
   if (vale) return estado3d!.estado;
   const p = (marcha ? proyeccionAlInstante(base) : null) ?? base;
-  estado3d = { p: marcha ? p : base, clave, en: ahora, estado: estadoDesdeProyeccion(p, reglas, posicionDelHeroe(p), { seleccion: seleccionMapa, fundacion }) };
+  estado3d = { p: marcha ? p : base, clave, estado: estadoDesdeProyeccion(p, reglas, posicionDelHeroe(p), { seleccion: seleccionMapa, fundacion }) };
   return estado3d.estado;
 }
 

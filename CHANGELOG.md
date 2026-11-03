@@ -3,6 +3,15 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.128.1] — 2026-11-03 · Lo que anda en el mundo 3D, en todos los fotogramas · sin cambio de contrato
+
+Petición de Víctor (2026-11-03), sin probar aún en la partida (se prueba al día siguiente):
+
+- **Sin el límite de 15 ms.** Mientras algo marcha, la vista 3D recolocaba las columnas y caravanas como mucho cada 15 ms, de cuando rehacer
+  la proyección entera costaba ~1 ms. A 60 Hz no se notaba (16,7 ms entre fotogramas), pero en una pantalla de 120 o 144 Hz lo ajeno se movía
+  un fotograma sí y otro no. Desde la 0.126.1 recolocar lo que anda es barato (`moverAlInstante`), así que ahora se hace en cada fotograma
+  (`estadoDeLaVista3D`, `main.ts`).
+
 ## [0.128.0] — 2026-11-03 · El Albergue de caravanas · contrato del motor b5e27ace (0.11.0), sin cambio
 
 Pedido de Víctor (2026-11-03), pasado por el hilo del motor: el edificio nuevo que da cupo de caravanas y carros (motor b5e27ace,
