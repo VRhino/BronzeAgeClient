@@ -3,7 +3,7 @@
 // árboles y la altura del raster del artefacto.
 import { describe, expect, test } from 'vitest';
 import type { ProyeccionJugador } from '../src/apiCliente';
-import { arbolesDelTrozo, caucesDe, franjas, type Entorno } from '../src/mundo3d/arboles';
+import { arbolesDelTrozo, caucesDe, franjas, POR_ARBOL, type Entorno } from '../src/mundo3d/arboles';
 import { CamaraDeJuego, distanciaDeEncuadre } from '../src/mundo3d/camara';
 import { ACERCADO, encuadres } from '../src/mundo3d/config';
 import { ANCHOS, dondeEstaLaSeleccion, estadoDesdeProyeccion, mundoDesdeProyeccion } from '../src/mundo3d/estado';
@@ -293,7 +293,7 @@ describe('los árboles', () => {
   const entorno = (cambios: Partial<Entorno> = {}): Entorno => ({ fuente: llano, mapa: bosque, cauces: caucesDe(bosque), claros: [], explorada: () => true, ...cambios });
 
   test('en bosque cerrado, las copas de 0,5 u casi se tocan: 0,55 / 0,5² árboles por u²', () => {
-    const n = arbolesDelTrozo(entorno(), 0, 0, 16, 1).length / 4;
+    const n = arbolesDelTrozo(entorno(), 0, 0, 16, 1).length / POR_ARBOL;
     expect(n / 256).toBeGreaterThan(2.0);
     expect(n / 256).toBeLessThan(2.4);
   });
@@ -303,23 +303,23 @@ describe('los árboles', () => {
     expect(mitad.length / todos.length).toBeGreaterThan(0.4);
     expect(mitad.length / todos.length).toBeLessThan(0.6);
     const claves = new Set<string>();
-    for (let k = 0; k < todos.length; k += 4) claves.add(`${todos[k]},${todos[k + 1]}`);
-    for (let k = 0; k < mitad.length; k += 4) expect(claves.has(`${mitad[k]},${mitad[k + 1]}`)).toBe(true);
+    for (let k = 0; k < todos.length; k += POR_ARBOL) claves.add(`${todos[k]},${todos[k + 1]}`);
+    for (let k = 0; k < mitad.length; k += POR_ARBOL) expect(claves.has(`${mitad[k]},${mitad[k + 1]}`)).toBe(true);
   });
 
   test('ni en lo que no se exploró, ni en un claro, ni en el cauce de un río', () => {
     expect(arbolesDelTrozo(entorno({ explorada: () => false }), 0, 0, 16, 1).length).toBe(0);
     const conClaro = arbolesDelTrozo(entorno({ claros: [{ x: 8, y: 8, r: 3 }] }), 0, 0, 16, 1);
-    for (let k = 0; k < conClaro.length; k += 4) expect(Math.hypot(conClaro[k]! - 8, conClaro[k + 1]! - 8)).toBeGreaterThanOrEqual(3);
+    for (let k = 0; k < conClaro.length; k += POR_ARBOL) expect(Math.hypot(conClaro[k]! - 8, conClaro[k + 1]! - 8)).toBeGreaterThanOrEqual(3);
     const conRio = { ...bosque, rios: [{ id: 'r', puntos: [{ x: 0, y: 8 }, { x: 16, y: 8 }], terminaEnLago: false, navegable: false }] } as MapaGenerado;
     const junto = arbolesDelTrozo(entorno({ mapa: conRio, cauces: caucesDe(conRio) }), 0, 0, 16, 1);
-    for (let k = 0; k < junto.length; k += 4) expect(Math.abs(junto[k + 1]! - 8)).toBeGreaterThanOrEqual(0.95);
+    for (let k = 0; k < junto.length; k += POR_ARBOL) expect(Math.abs(junto[k + 1]! - 8)).toBeGreaterThanOrEqual(0.95);
   });
 
   test('ni sobre un camino', () => {
     const caminos = franjas([{ puntos: [{ x: 8, y: 0 }, { x: 8, y: 16 }], medio: 0.35 }]);
     const t = arbolesDelTrozo(entorno({ caminos }), 0, 0, 16, 1);
-    for (let k = 0; k < t.length; k += 4) expect(Math.abs(t[k]! - 8)).toBeGreaterThanOrEqual(0.55);
+    for (let k = 0; k < t.length; k += POR_ARBOL) expect(Math.abs(t[k]! - 8)).toBeGreaterThanOrEqual(0.55);
   });
 
   test('ni en el agua ni en una ladera muy empinada', () => {

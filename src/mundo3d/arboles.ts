@@ -1,12 +1,16 @@
-// Los árboles, uno a uno donde el artefacto tiene bosque (su raster de densidad, cada 4 u), por trozos de 32 u alrededor del héroe: copas
-// instanciadas de 0,3 u (la de la mesa de escalas) con su tronco. Lejos van menos y más grandes, para que el bosque siga tapando el suelo con
+// Los árboles, uno a uno donde el artefacto tiene bosque (su raster de densidad, cada 4 u), por trozos de 32 u alrededor del héroe, cada uno de
+// su especie (`especies.ts`: encina, olivo, pino, ciprés, abeto, palmera o álamo, según la altura, el agua cercana y la mancha de bosque), en
+// una malla instanciada por especie y trozo. Lejos van menos y más grandes, para que el bosque siga tapando el suelo con
 // muchas menos copas. También donde nunca se exploró: esa niebla deja ver el mapa a media luz (Víctor, 2026-11-02), y el bosque es parte de
 // él; su material va bajo la niebla como el suelo. Ni en el agua, ni en los cauces, ni en las laderas muy empinadas, ni en los claros de plazas y pueblos.
 import * as THREE from 'three';
 import type { MapaGenerado } from '../terreno';
+import { distanciaATierra } from './agua';
 import { MUNDO3D } from './config';
+import { colorDeCopa, especieDe, geometrias, materialDeArboles } from './especies';
 import { bosqueEn, type FuenteDeAltura } from './fuente';
 import type { NieblaDeGuerra } from './niebla';
+import { azar as hash } from './ruido';
 
 type Punto = { x: number; y: number };
 /** Un círculo sin árboles. */
@@ -20,12 +24,8 @@ const PENDIENTE_MAX = 1.1;
 /** Bandas de distancia al héroe (u) y la parte de los árboles que queda en cada una; las copas crecen para tapar lo mismo. */
 const BANDAS = [{ hasta: 48, parte: 1 }, { hasta: 80, parte: 0.5 }, { hasta: 128, parte: 0.25 }, { hasta: Infinity, parte: 0.125 }] as const;
 
-/** Un número fijo entre 0 y 1 por (i, j, k). */
-function hash(i: number, j: number, k: number): number {
-  let h = Math.imul(i | 0, 374761393) ^ Math.imul(j | 0, 668265263) ^ Math.imul(k | 0, 2147483647);
-  h = Math.imul(h ^ (h >>> 13), 1274126177);
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
-}
+/** Lo que ocupa cada árbol en la lista de `arbolesDelTrozo`: x, y, altura (u), azar y especie (índice en `ESPECIES`). */
+export const POR_ARBOL = 5;
 
 /** Franjas sin árboles a lo largo de líneas (ríos y caminos): sus tramos como [ax, ay, bx, by, medio ancho], con la caja de cada línea para
  * descartar las lejanas. */
@@ -49,7 +49,7 @@ export function franjas(lineas: readonly { puntos: readonly Punto[]; medio: numb
 export const caucesDe = (mapa: MapaGenerado): Cauces => franjas(mapa.rios.map((r) => ({ puntos: r.puntos, medio: (r.navegable ? 3 : 1.5) / 2 })));
 
 /** Los tramos de río que pasan a menos de `m` u de la caja. */
-function caucesCerca(c: Cauces, x0: number, y0: number, x1: number, y1: number, m: number): number[] {
+export function caucesCerca(c: Cauces, x0: number, y0: number, x1: number, y1: number, m: number): number[] {
   const out: number[] = [];
   for (const r of c.rios) {
     if (r.x1 + m < x0 || r.x0 - m > x1 || r.y1 + m < y0 || r.y0 - m > y1) continue;
@@ -62,13 +62,45 @@ function caucesCerca(c: Cauces, x0: number, y0: number, x1: number, y1: number, 
   return out;
 }
 
-function enCauce(t: readonly number[], x: number, y: number): boolean {
+export function enCauce(t: readonly number[], x: number, y: number, margen = 0.2): boolean {
+  return aCauce(t, x, y) < margen;
+}
+
+/** Lo que queda (u) de (x, y) al borde del cauce más cercano de la lista (negativo dentro; Infinity sin cauces). */
+export function aCauce(t: readonly number[], x: number, y: number): number {
+  let d = Infinity;
   for (let k = 0; k < t.length; k += 5) {
     const ax = t[k]!, ay = t[k + 1]!, dx = t[k + 2]! - ax, dy = t[k + 3]! - ay, l = dx * dx + dy * dy;
     const s = l ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l)) : 0;
-    if (Math.hypot(x - ax - s * dx, y - ay - s * dy) < t[k + 4]! + 0.2) return true;
+    d = Math.min(d, Math.hypot(x - ax - s * dx, y - ay - s * dy) - t[k + 4]!);
   }
-  return false;
+  return d;
+}
+
+/** Las alturas y el agua de un trozo cada `paso` u, con `margen` muestras de más alrededor, y lo que queda de cada muestra al agua (u) del
+ * mar o de un lago (Infinity si no hay en la ventana). La comparten árboles y matas. */
+export interface Muestras { n: number; paso: number; margen: number; x0: number; y0: number; h: Float32Array; agua: Uint8Array; aAgua: Float32Array }
+
+export function muestrasDelTrozo(fuente: FuenteDeAltura, x0: number, y0: number, lado: number, paso: number, margen: number): Muestras {
+  const n = Math.round(lado / paso) + 1 + 2 * margen, h = new Float32Array(n * n), agua = new Uint8Array(n * n), tierra = new Uint8Array(n * n);
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+    const x = x0 + (i - margen) * paso, y = y0 + (j - margen) * paso, k = j * n + i;
+    h[k] = fuente.alturaEn(x, y);
+    agua[k] = fuente.aguaEn(x, y) ? 1 : 0;
+    tierra[k] = 1 - agua[k]!;
+  }
+  // la distancia de cada muestra de tierra al agua: la de la tierra al agua, cambiando los papeles
+  const aAgua = distanciaATierra(tierra, n, n);
+  for (let k = 0; k < aAgua.length; k++) aAgua[k] = aAgua[k]! * paso;
+  return { n, paso, margen, x0, y0, h, agua, aAgua };
+}
+
+/** La muestra de (x, y) (la de abajo a la izquierda de su celda) y la altura interpolada (m). */
+export function enMuestras(m: Muestras, x: number, y: number): { k: number; alt: number } {
+  const { n, paso, margen, h } = m;
+  const fi = Math.min(n - 1.001, Math.max(0, (x - m.x0) / paso + margen)), fj = Math.min(n - 1.001, Math.max(0, (y - m.y0) / paso + margen));
+  const i = Math.floor(fi), j = Math.floor(fj), a = fi - i, b = fj - j, k = j * n + i;
+  return { k, alt: (h[k]! * (1 - a) + h[k + 1]! * a) * (1 - b) + (h[k + n]! * (1 - a) + h[k + n + 1]! * a) * b };
 }
 
 export interface Entorno {
@@ -82,22 +114,13 @@ export interface Entorno {
   explorada?: (x: number, y: number) => boolean;
 }
 
-/** Los árboles del trozo que empieza en (x0, y0), como [x, y, altura en u, azar] por árbol. `parte` es la fracción que se queda (las bandas
- * lejanas): siempre los mismos, así al acercarse solo se añaden. */
+/** Los árboles del trozo que empieza en (x0, y0), `POR_ARBOL` números por árbol: x, y, altura en u, azar y especie. `parte` es la fracción
+ * que se queda (las bandas lejanas): siempre los mismos, así al acercarse solo se añaden. */
 export function arbolesDelTrozo(e: Entorno, x0: number, y0: number, lado: number, parte: number, copa = MUNDO3D.copa): Float32Array {
   const { fuente, mapa } = e, MPU = MUNDO3D.metrosPorUnidad;
-  // alturas y agua cada 0,5 u (con un anillo de más para las pendientes del borde): de aquí sale todo lo del trozo
-  const paso = 0.5, n = Math.round(lado / paso) + 3, h = new Float32Array(n * n), agua = new Uint8Array(n * n);
-  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
-    const x = x0 + (i - 1) * paso, y = y0 + (j - 1) * paso;
-    h[j * n + i] = fuente.alturaEn(x, y);
-    agua[j * n + i] = fuente.aguaEn(x, y) ? 1 : 0;
-  }
-  const rejilla = (x: number, y: number) => {
-    const fi = Math.min(n - 1.001, Math.max(0, (x - x0) / paso + 1)), fj = Math.min(n - 1.001, Math.max(0, (y - y0) / paso + 1));
-    const i = Math.floor(fi), j = Math.floor(fj), a = fi - i, b = fj - j, k = j * n + i;
-    return { k, alt: (h[k]! * (1 - a) + h[k + 1]! * a) * (1 - b) + (h[k + n]! * (1 - a) + h[k + n + 1]! * a) * b };
-  };
+  // alturas y agua cada 0,5 u, con 3 u de más alrededor (las pendientes del borde y el agua cercana): de aquí sale todo lo del trozo
+  const muestras = muestrasDelTrozo(fuente, x0, y0, lado, 0.5, 6), { n, paso, h, agua, aAgua } = muestras;
+  const rios = caucesCerca(e.cauces, x0, y0, x0 + lado, y0 + lado, 4);
   const cauces = caucesCerca(e.cauces, x0, y0, x0 + lado, y0 + lado, 2);
   if (e.caminos) cauces.push(...caucesCerca(e.caminos, x0, y0, x0 + lado, y0 + lado, 2));
   const claros = e.claros.filter((c) => c.x + c.r > x0 && c.x - c.r < x0 + lado && c.y + c.r > y0 && c.y - c.r < y0 + lado);
@@ -109,35 +132,27 @@ export function arbolesDelTrozo(e: Entorno, x0: number, y0: number, lado: number
       const l = porU2 * d, cuantos = Math.floor(l) + (hash(i, j, 7) < l % 1 ? 1 : 0);
       for (let k = 0; k < cuantos; k++) {
         if (hash(i, j, 53 + k) >= parte) continue;
-        const x = i + hash(i, j, 11 + k), y = j + hash(i, j, 29 + k), { k: c, alt } = rejilla(x, y);
+        const x = i + hash(i, j, 11 + k), y = j + hash(i, j, 29 + k), { k: c, alt } = enMuestras(muestras, x, y);
         if (agua[c] || agua[c + 1] || agua[c + n] || agua[c + n + 1]) continue;
         const pendiente = Math.hypot(h[c + 1]! - h[c]!, h[c + n]! - h[c]!) / (paso * MPU);
         if (pendiente > PENDIENTE_MAX || (e.explorada && !e.explorada(x, y)) || enCauce(cauces, x, y)) continue;
         if (claros.some((q) => (x - q.x) ** 2 + (y - q.y) ** 2 < q.r * q.r)) continue;
-        out.push(x, y, alt / MPU, hash(i, j, 41 + k));
+        const dAgua = Math.min(aAgua[c]!, aCauce(rios, x, y));
+        out.push(x, y, alt / MPU, hash(i, j, 41 + k), especieDe(x, y, alt, dAgua, hash(i, j, 67 + k)));
       }
     }
   }
   return new Float32Array(out);
 }
 
-/** La copa (icosaedro con normales de esfera, que se ve redonda) y el tronco, de altura 1, compartidos. */
-const GEO = (() => {
-  const copa = new THREE.IcosahedronGeometry(0.5, 0), p = copa.attributes.position!, n: number[] = [];
-  for (let k = 0; k < p.count; k++) { const v = new THREE.Vector3().fromBufferAttribute(p, k).normalize(); n.push(v.x, v.y, v.z); }
-  copa.setAttribute('normal', new THREE.Float32BufferAttribute(n, 3));
-  copa.translate(0, 0.62, 0);
-  const tronco = new THREE.CylinderGeometry(0.06, 0.08, 1, 5, 1, true);
-  tronco.translate(0, 0.25, 0);
-  return { copa, tronco };
-})();
+/** Las geometrías de cada especie, compartidas por todos los trozos. */
+const GEO = geometrias();
 
 interface Trozo { grupo: THREE.Group; clave: string }
 
 export class Arboles {
   readonly grupo = new THREE.Group();
-  private readonly copas: THREE.MeshLambertMaterial;
-  private readonly troncos: THREE.MeshLambertMaterial;
+  private readonly material: THREE.MeshLambertMaterial;
   private readonly trozos = new Map<string, Trozo>();
   private readonly cauces: Cauces;
   private claros: readonly Claro[] = [];
@@ -145,8 +160,7 @@ export class Arboles {
   private claveClaros = '';
 
   constructor(private readonly fuente: FuenteDeAltura, private readonly mapa: MapaGenerado, niebla: NieblaDeGuerra) {
-    this.copas = niebla.aplicar(new THREE.MeshLambertMaterial({ color: 0xffffff }));
-    this.troncos = niebla.aplicar(new THREE.MeshLambertMaterial({ color: 0x5b4632 }));
+    this.material = materialDeArboles((sh) => niebla.parchear(sh));
     this.cauces = caucesDe(mapa);
   }
 
@@ -188,27 +202,30 @@ export class Arboles {
     const parte = BANDAS[banda]!.parte, crece = 1 / Math.sqrt(parte);
     const lista = arbolesDelTrozo({ fuente: this.fuente, mapa: this.mapa, cauces: this.cauces, caminos: this.caminos, claros: this.claros }, x0, y0, TROZO, parte);
     this.soltar(clave);
-    const grupo = new THREE.Group(), n = lista.length / 4;
-    if (n) {
-      const copas = new THREE.InstancedMesh(GEO.copa, this.copas, n), m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
-      const s = new THREE.Vector3(), p = new THREE.Vector3(), color = new THREE.Color();
-      // de cerca, con tronco y sombra
-      const troncos = banda === 0 ? new THREE.InstancedMesh(GEO.tronco, this.troncos, n) : null;
-      for (let k = 0; k < n; k++) {
-        const x = lista[4 * k]!, y = lista[4 * k + 1]!, h = lista[4 * k + 2]!, r = lista[4 * k + 3]!, esc = MUNDO3D.copa * crece * (0.75 + 0.5 * r);
-        e.set(0, r * 6.28, 0);
-        q.setFromEuler(e);
-        s.set(esc, esc * (1 + 0.35 * r), esc);
-        p.set(x, h - 0.03, y);
-        m.compose(p, q, s);
-        copas.setMatrixAt(k, m);
-        troncos?.setMatrixAt(k, m);
-        copas.setColorAt(k, color.setRGB(0.25 + 0.12 * r, 0.38 + 0.1 * r, 0.18 + 0.05 * r)); // los de la mesa, en el espacio lineal
-      }
-      copas.computeBoundingSphere();
-      copas.castShadow = banda === 0;
-      grupo.add(copas);
-      if (troncos) { troncos.computeBoundingSphere(); troncos.castShadow = true; grupo.add(troncos); }
+    const grupo = new THREE.Group(), n = lista.length / POR_ARBOL;
+    // de cerca, una malla por especie, con lóbulos, tronco y sombra; de lejos, la silueta, con las copas redondas en una sola malla
+    const cerca = banda === 0, geos = cerca ? GEO.cerca : GEO.lejos, grupoDe = (e: number) => (cerca ? e : GEO.grupoLejos[e]!);
+    const cuantos = new Array<number>(geos.length).fill(0);
+    for (let k = 0; k < n; k++) cuantos[grupoDe(lista[POR_ARBOL * k + 4]!)]!++;
+    const mallas = cuantos.map((c, g) => (c ? new THREE.InstancedMesh(geos[g]!, this.material, c) : null)), puestos = cuantos.map(() => 0);
+    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), eu = new THREE.Euler(), s = new THREE.Vector3(), p = new THREE.Vector3(), color = new THREE.Color();
+    for (let k = 0; k < n; k++) {
+      const o = POR_ARBOL * k, x = lista[o]!, y = lista[o + 1]!, h = lista[o + 2]!, r = lista[o + 3]!, e = lista[o + 4]!, g = grupoDe(e), malla = mallas[g]!;
+      const esc = MUNDO3D.copa * crece * (0.75 + 0.5 * r), r2 = hash(Math.round(x * 64), Math.round(y * 64), 5), alto = 0.9 + 0.3 * r2;
+      const [fx, fy, fz, alza] = cerca ? [1, 1, 1, 0] : GEO.forma[e]!;
+      eu.set(0, r * 6.28, 0);
+      q.setFromEuler(eu);
+      s.set(esc * fx, esc * fy * alto, esc * fz);
+      p.set(x, h - 0.03 + esc * alto * alza, y);
+      m.compose(p, q, s);
+      malla.setMatrixAt(puestos[g]!, m);
+      malla.setColorAt(puestos[g]!++, colorDeCopa(e, r, r2, color));
+    }
+    for (const malla of mallas) {
+      if (!malla) continue;
+      malla.computeBoundingSphere();
+      malla.castShadow = banda === 0;
+      grupo.add(malla);
     }
     this.grupo.add(grupo);
     this.trozos.set(clave, { grupo, clave: claveTrozo });
@@ -225,13 +242,12 @@ export class Arboles {
   /** Cuántos árboles hay puestos (para el banco de pruebas). */
   get cuantos(): number {
     let n = 0;
-    for (const t of this.trozos.values()) n += (t.grupo.children[0] as THREE.InstancedMesh | undefined)?.count ?? 0;
+    for (const t of this.trozos.values()) for (const m of t.grupo.children) n += (m as THREE.InstancedMesh).count;
     return n;
   }
 
   destruir(): void {
     for (const clave of [...this.trozos.keys()]) this.soltar(clave);
-    this.copas.dispose();
-    this.troncos.dispose();
+    this.material.dispose();
   }
 }

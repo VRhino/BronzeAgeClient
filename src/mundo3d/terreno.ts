@@ -1,12 +1,14 @@
 // El suelo, por teselas de 64 u alrededor del héroe: se construyen las que caen a la vista, las más cercanas primero, y se sueltan las que se
 // quedan lejos. Cerca van a 0,5 u (las muestras del paquete de relieve), más lejos a 1 y a 2 u; un faldón en el borde de cada tesela tapa las
-// grietas entre niveles. Color por clase de terreno (los umbrales del generador), roca en las laderas y sotobosque donde hay bosque. Donde hay
-// agua (mar o lago) el fondo baja desde la orilla y encima va su lámina (`agua.ts`).
+// grietas entre niveles. Color por clase de terreno (los umbrales del generador), verde donde el suelo es fértil (el raster de fertilidad del
+// artefacto) y por manchas, roca en las laderas y sotobosque donde hay bosque. Donde hay agua (mar o lago) el fondo baja desde la orilla y
+// encima va su lámina (`agua.ts`).
 import * as THREE from 'three';
 import type { MapaGenerado } from '../terreno';
 import { AGUA, colorDelFondo, distanciaATierra, laminaDeAgua, mascaraSuave, nivelDelAgua, sueloJuntoAlAgua } from './agua';
 import { MUNDO3D } from './config';
-import { bosqueEn, type FuenteDeAltura } from './fuente';
+import { bosqueEn, fertilidadEn, type FuenteDeAltura } from './fuente';
+import { manchas } from './ruido';
 import type { NieblaDeGuerra } from './niebla';
 
 const { metrosPorUnidad: MPU, ladoTesela: LADO, umbrales: U } = MUNDO3D;
@@ -26,6 +28,8 @@ const PAL = {
   cima: lineal(0.76, 0.74, 0.7),
   roca: lineal(0.47, 0.43, 0.39),
   sotobosque: lineal(0.36, 0.44, 0.25),
+  pasto: lineal(0.5, 0.58, 0.31),
+  pastoRico: lineal(0.39, 0.5, 0.24),
 };
 /** Un número fijo entre 0 y 1 por punto de la rejilla, para variar un poco el color y que el suelo no se vea liso. */
 const ruido = (x: number, y: number): number => {
@@ -36,14 +40,19 @@ const ruido = (x: number, y: number): number => {
 const suave = (a: number, b: number, x: number): number => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const mezcla = (a: readonly number[], b: readonly number[], t: number): [number, number, number] => [a[0]! + (b[0]! - a[0]!) * t, a[1]! + (b[1]! - a[1]!) * t, a[2]! + (b[2]! - a[2]!) * t];
 
-/** El color de un punto del suelo: clase por altura (en metros), roca por pendiente (m/m) y sotobosque por densidad de bosque. */
-function colorDelSuelo(h: number, pendiente: number, bosque: number): [number, number, number] {
+/** El color de un punto (x, y) del suelo: clase por altura (en metros); pasto según la fertilidad `f` (0..1), por manchas de unas 12 u, más
+ * ralo junto al mar y nada en la montaña; roca por pendiente (m/m) y sotobosque por densidad de bosque. */
+export function colorDelSuelo(h: number, pendiente: number, bosque: number, f = 0, x = 0, y = 0): [number, number, number] {
   let c =
     h < U.costa ? mezcla(PAL.costa, PAL.llano, suave(U.agua, U.costa, h))
     : h < U.colina ? mezcla(PAL.llano, PAL.colina, suave(U.colina - 40, U.colina, h))
     : h < U.montana ? mezcla(PAL.colina, PAL.montana, suave(U.montana - 20, U.montana, h))
     : h < U.cima ? mezcla(PAL.montana, PAL.cima, suave(U.cima - 15, U.cima + 10, h))
     : PAL.cima;
+  const mancha = manchas(x, y, 12, 5), verdor = suave(0.15, 0.75, f + (mancha - 0.5) * 0.3) * suave(U.agua + 8, U.agua + 30, h) * (1 - suave(U.montana - 25, U.montana + 15, h));
+  c = mezcla(c, mezcla(PAL.pasto, PAL.pastoRico, suave(0.55, 0.95, f)), 0.8 * verdor);
+  const luz = 0.95 + 0.1 * manchas(x, y, 5, 9);
+  c = [c[0] * luz, c[1] * luz, c[2] * luz];
   c = mezcla(c, PAL.roca, suave(0.45, 0.9, pendiente));
   return mezcla(c, PAL.sotobosque, 0.55 * suave(0.15, 0.6, bosque));
 }
@@ -94,7 +103,7 @@ function mallaDeTesela(fuente: FuenteDeAltura, mapa: MapaGenerado, tx: number, t
       pos.set([x, alt / MPU, y], 3 * k);
       nor.set([-dx / l, 1 / l, -dz / l], 3 * k);
       const cubre = nivel[c]! - alt / MPU;
-      const base = cubre >= 0 ? colorDelFondo(cubre) : colorDelSuelo(alt, Math.hypot(dx, dz), bosqueEn(mapa, x, y)), v = 0.93 + 0.12 * ruido(x, y);
+      const base = cubre >= 0 ? colorDelFondo(cubre) : colorDelSuelo(alt, Math.hypot(dx, dz), bosqueEn(mapa, x, y), fertilidadEn(mapa, x, y), x, y), v = 0.95 + 0.08 * ruido(x, y);
       col.set([base[0] * v, base[1] * v, base[2] * v], 3 * k);
     }
   }
@@ -143,13 +152,42 @@ function mallaDeTesela(fuente: FuenteDeAltura, mapa: MapaGenerado, tx: number, t
   return { suelo: malla, agua };
 }
 
+/** Ruido de valor en GLSL (0..1), para el grano del suelo. Las coordenadas se pliegan para no perder precisión lejos del origen. */
+const GRANO = `
+float azarSuelo(vec2 p) { p = mod(p, 289.0); return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float grano(vec2 p) {
+  vec2 i = floor(p), f = fract(p), u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(azarSuelo(i), azarSuelo(i + vec2(1.0, 0.0)), u.x), mix(azarSuelo(i + vec2(0.0, 1.0)), azarSuelo(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+`;
+
+/** El material del suelo: el color de cada vértice con un grano fino encima (manchas de 0,1 a 1 u más claras u oscuras, y a trozos más
+ * amarillas o más verdes), que de cerca quita lo liso y de lejos se apaga. Va bajo la niebla de guerra. */
+function materialDelSuelo(niebla: NieblaDeGuerra): THREE.MeshLambertMaterial {
+  const m = new THREE.MeshLambertMaterial({ vertexColors: true });
+  m.onBeforeCompile = (sh) => {
+    sh.vertexShader = 'varying vec2 vSueloXZ;\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
+      vSueloXZ = (modelMatrix * vec4(transformed, 1.0)).xz;`);
+    sh.fragmentShader = 'varying vec2 vSueloXZ;\n' + GRANO + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+      {
+        float lejos = smoothstep(20.0, 70.0, length(vViewPosition));
+        float g = grano(vSueloXZ * 2.3) * 0.55 + grano(vSueloXZ * 8.0 + 31.0) * 0.45, t = grano(vSueloXZ * 0.8 + 17.0) - 0.5;
+        vec3 c = diffuseColor.rgb * (0.86 + 0.28 * g) * vec3(1.0 + t * 0.1, 1.0, 1.0 - t * 0.14);
+        diffuseColor.rgb = mix(c, diffuseColor.rgb, lejos * 0.75);
+      }`);
+    niebla.parchear(sh);
+  };
+  m.customProgramCacheKey = () => 'suelo-grano';
+  return m;
+}
+
 export class Terreno {
   readonly grupo = new THREE.Group();
   private readonly material: THREE.MeshLambertMaterial;
   private readonly teselas = new Map<string, { malla: THREE.Mesh; agua: THREE.Mesh | null; paso: number }>();
 
   constructor(private readonly fuente: FuenteDeAltura, private readonly mapa: MapaGenerado, niebla: NieblaDeGuerra, private readonly materialAgua: THREE.Material) {
-    this.material = niebla.aplicar(new THREE.MeshLambertMaterial({ vertexColors: true }));
+    this.material = materialDelSuelo(niebla);
   }
 
   /** Cuánto detalle (×1 con la distancia de carga de serie): con una distancia de carga más corta, el detalle fino llega menos lejos. */

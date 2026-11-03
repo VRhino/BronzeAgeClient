@@ -3,6 +3,21 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.118.0] — 2026-11-03 · Suelo con vegetación y siete especies de árbol en el mundo 3D · sin cambio de contrato
+
+Petición de Víctor (2026-11-03): «mejorar el piso, con vegetación y diferentes tipos de árboles».
+
+- **Suelo**: verde de pasto donde el suelo es fértil (la fertilidad del artefacto), pajizo donde no, por manchas; un grano fino que de cerca
+  quita lo liso.
+- **Siete especies de árbol**: encina, olivo, pino piñonero, ciprés, abeto, palmera y álamo, según la altura y el agua cercana (álamos y
+  palmeras en las riberas, pinos en la costa, abetos en la montaña). Los bosques van por manchas de una especie con otras sueltas.
+- **Vegetación baja** cerca del héroe (hasta 48 u): hierba por matojos, flores por manchas en los prados, matas de monte bajo, juncos en la
+  orilla y piedras en las laderas. La hierba, las flores y los juncos se mecen con el viento.
+- Coste en el banco: 1,30 M triángulos frente a 0,95 M y 622 mallas frente a 438; el JS de cada fotograma no cambia. De lejos, las copas
+  redondas de cuatro especies van en una sola malla.
+- Código: `mundo3d/especies.ts`, `matas.ts` y `ruido.ts` (nuevos); `arboles.ts` (una malla por especie, agua cercana), `terreno.ts` (color
+  por fertilidad y grano), `fuente.ts` (`fertilidadEn`). Pruebas en `pruebas/vegetacion.test.ts`. Documentado en `docs/Mundo_3D.md`.
+
 ## [0.117.0] — 2026-11-03 · Los puestos del mercado como tiendas y las puertas de muralla entre dos torres · sin cambio de contrato
 
 Peticiones de Víctor (2026-11-03): que los puestos de mercado de más allá del nivel 1 sean tiendas (los de varias celdas, varias tiendas con

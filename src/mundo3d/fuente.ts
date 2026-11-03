@@ -1,7 +1,7 @@
 // De dónde sale la altura del suelo: el paquete de relieve (cada 0,5 u) o, si el servidor no lo tiene, el raster `altura` del artefacto (cada
 // 4 u, que se ve más liso). Alturas en metros, la escala del raster (65535 = 1.000 m).
 import type { Relieve } from '../mundo/relieve';
-import type { MapaGenerado } from '../terreno';
+import type { MapaGenerado, RasterU8 } from '../terreno';
 
 export interface FuenteDeAltura {
   /** Tamaño del mapa, en u. */
@@ -54,7 +54,16 @@ export function fuenteDesdeMapa(m: MapaGenerado): FuenteDeAltura | null {
 
 /** La densidad de bosque (0..1) en (x, y), del raster del artefacto (cada 4 u), interpolada. 0 si el mapa no la trae. */
 export function bosqueEn(m: MapaGenerado, x: number, y: number): number {
-  const r = m.rasters?.densidadBosque;
+  return rasterEn(m.rasters?.densidadBosque, x, y);
+}
+
+/** La fertilidad del suelo (0..1) en (x, y), interpolada en el raster del artefacto (la que mira la aldea agrícola). Sin raster, 0,3. */
+export function fertilidadEn(m: MapaGenerado, x: number, y: number): number {
+  return m.rasters?.fertilidad ? rasterEn(m.rasters.fertilidad, x, y) : 0.3;
+}
+
+/** Un raster de 0..255 del artefacto en (x, y), interpolado entre los centros de sus celdas, en 0..1. Sin raster, 0. */
+export function rasterEn(r: RasterU8 | undefined, x: number, y: number): number {
   if (!r) return 0;
   const fi = Math.min(Math.max(x / r.celda - 0.5, 0), r.columnas - 1), fj = Math.min(Math.max(y / r.celda - 0.5, 0), r.filas - 1);
   const i = Math.min(r.columnas - 2, Math.floor(fi)), j = Math.min(r.filas - 2, Math.floor(fj)), a = fi - i, b = fj - j, k = j * r.columnas + i, d = r.datos;

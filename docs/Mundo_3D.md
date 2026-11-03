@@ -51,7 +51,10 @@ del héroe solo (`radioDeVision`); el 3D tiene que seguir a la de la columna. El
 | Terreno por teselas de 64 u alrededor del héroe | `src/mundo3d/terreno.ts` (hecho) | Relieve; color por clase, roca en laderas, sotobosque, fondo bajo el agua |
 | Agua: lámina del mar y los lagos, sombreado de olas, espuma y reflejo, el de los ríos | `src/mundo3d/agua.ts` (hecho) | Relieve (bit de agua) |
 | Niebla en el sombreado | `src/mundo3d/niebla.ts` (hecho) | `proyeccion.exploracion` |
-| Árboles instanciados por trozos | `src/mundo3d/arboles.ts` (hecho) | Densidad de bosque del artefacto (4 u), lo explorado |
+| Árboles instanciados por trozos | `src/mundo3d/arboles.ts` (hecho) | Densidad de bosque del artefacto (4 u) |
+| Especies de árbol: cuál crece dónde, geometrías y material | `src/mundo3d/especies.ts` (hecho) | Altura, agua cercana |
+| Hierba, flores, matas, juncos y piedras cerca del héroe | `src/mundo3d/matas.ts` (hecho) | Fertilidad y bosque del artefacto, pendiente, agua |
+| Ruido fijo (azar por punto y manchas suaves) | `src/mundo3d/ruido.ts` (hecho) | — |
 | Ríos, vados y nodos de recursos | `src/mundo3d/paisaje.ts` (hecho) | Ríos y nodos del artefacto |
 | Plazas, pueblos, avanzadas, obras, campamentos, bandidos, alijos, batallas | `src/mundo3d/maquetas.ts` (hecho) | Proyección |
 | Caminos, fronteras, zona propia, anillo de los mercenarios | `src/mundo3d/trazos.ts` (hecho) | Proyección |
@@ -98,7 +101,8 @@ y la tesela va con zstd. La semilla 42 ocupa 8,6 MB.
   320 u de serie: ver «Distancia de carga»); las más cercanas primero, dos por fotograma. Paso de 0,5 u a menos de 80 u, 1 u a menos de 160 y
   2 u más allá (con menos carga, en proporción); un faldón de 3 u en el borde tapa las grietas entre niveles. Color por la
   clase de terreno según la altura (los umbrales del generador: agua 375 m, costa 420, colina 545, montaña 600, cima 685), roca en las laderas
-  y sotobosque donde el artefacto tiene bosque. Bajo el agua, el fondo: de arena junto a la orilla a oscuro donde cubre mucho; el agua es una
+  y sotobosque donde el artefacto tiene bosque; verde de pasto donde el suelo es fértil y un grano fino en el sombreado (ver «Suelo, vegetación
+  y especies de árbol»). Bajo el agua, el fondo: de arena junto a la orilla a oscuro donde cubre mucho; el agua es una
   lámina aparte (ver «El agua»).
 - **Niebla.** La rejilla de `proyeccion.exploracion` es una textura (rojo: explorado; verde: se ve ahora) que el sombreado del suelo mezcla con
   el color de `NIEBLA` (`paletas.ts`) con sus tres alfas, igual que `render.ts`. La columna propia, la ruta y el destino van encima.
@@ -111,15 +115,18 @@ y la tesela va con zstd. La semilla 42 ocupa 8,6 MB.
 ## Cómo se pinta (fase 3)
 
 Todo lo que va sobre el suelo se construye alrededor del héroe, lo más cercano primero, con **8 ms por fotograma** para construir: primero el
-suelo, luego el paisaje y los árboles. Lo que se aleja se suelta.
+suelo, luego el paisaje, los árboles y la vegetación baja. Lo que se aleja se suelta.
 
 - **Árboles** (`arboles.ts`). Uno a uno donde el raster de densidad del artefacto (4 u, interpolado) pasa de 0,2: 0,55 / 0,3² árboles por u²
-  con el bosque al máximo (la cifra de la mesa: las copas de 0,3 u casi se tocan). Por trozos de 32 u hasta 200 u del héroe, en una malla
-  instanciada por trozo. Por bandas de distancia quedan todos (< 48 u), la mitad (< 80), la cuarta parte (< 128) y la octava; las copas crecen
-  lo justo para tapar lo mismo y los que quedan son siempre los mismos, así al acercarse solo aparecen más. Tronco y sombra solo de cerca.
-  No hay árboles **en lo que nunca se exploró** (la niebla lo tapa, y un árbol ahí sería una silueta delante de lo que sí se ve), ni en el
-  agua, los cauces o los caminos, ni en laderas de más de 1,1 m/m, ni en los claros de las maquetas. Un trozo se rehace solo si cambian sus
-  celdas exploradas, su banda, los claros o los caminos.
+  con el bosque al máximo (la cifra de la mesa: las copas casi se tocan). Por trozos de 32 u hasta 200 u del héroe. Cada árbol es de una
+  especie (ver «Suelo, vegetación y especies de árbol»): de cerca, una malla instanciada por especie y trozo, con lóbulos, tronco y sombra; de
+  lejos, la silueta, con las copas redondas en una sola malla. Por bandas de distancia quedan todos (< 48 u), la mitad (< 80), la cuarta
+  parte (< 128) y la octava; las copas crecen lo justo para tapar lo mismo y los que quedan son siempre los mismos, así al acercarse solo
+  aparecen más. También crecen en lo que nunca se exploró, que la niebla deja ver a media luz (Víctor, 2026-11-02), pero no en el agua, los
+  cauces o los caminos, ni en laderas de más de 1,1 m/m, ni en los claros de las maquetas. Un trozo se rehace solo si cambian su banda, los
+  claros o los caminos.
+- **Vegetación baja** (`matas.ts`). Hierba, flores, matas, juncos y piedras por trozos de 24 u hasta 48 u del héroe (ver «Suelo, vegetación
+  y especies de árbol»).
 - **Paisaje** (`paisaje.ts`). Por teselas de 64 u hasta 240 u. Los ríos, suavizados, son una cinta de agua de 1,5 u (3 si es navegable)
   plana a la altura del punto más bajo de su corte, con el agua de los ríos (ver «El agua») y 1,2 u de tierra mojada a cada lado que se
   desvanece hacia fuera. Los vados son un paso de grava de orilla a orilla. Los nodos son rocas: grises las de
@@ -302,6 +309,44 @@ de agua se pintaba de azul a la altura del relieve y los ríos eran una cinta az
 
 Medido en el banco junto al mar (1163, 1690; carga 320, encuadre normal): 0,81 M triángulos frente a 0,71 M sin la lámina, el mismo tiempo de
 construcción y el mismo coste de JS por fotograma.
+
+## Suelo, vegetación y especies de árbol (0.118.0)
+
+Pedido de Víctor del 2026-11-03: «mejorar el piso, con vegetación y diferentes tipos de árboles». Solo se ve: el juego no distingue una
+especie de otra ni cuenta la hierba.
+
+- **Suelo** (`terreno.ts`). Sobre el color de la clase, verde de pasto según la fertilidad del artefacto (la de la aldea agrícola): pajizo
+  donde no hay, verde desde 0,15 y verde hondo desde 0,55. Va por manchas de unas 12 u (la fertilidad baila ±0,15), más ralo junto al mar y
+  nada en la montaña. Encima, un grano fino en el sombreado (manchas de 0,1 a 1 u más claras u oscuras, y a trozos más amarillas o verdes)
+  que de cerca quita lo liso y de lejos se apaga.
+- **Especies de árbol** (`especies.ts`), las del Mediterráneo oriental y el Creciente Fértil en la Edad del Bronce:
+
+  | Especie | Cómo es | Dónde |
+  |---|---|---|
+  | Encina | Copa redonda | Llanos (la que más) |
+  | Olivo | Bajo y ancho, verde plata | Llanos, colinas y costa |
+  | Pino piñonero | Tronco alto, copa en sombrilla | Costa (el que más) y colinas |
+  | Ciprés | Alto y estrecho, casi negro | Suelto en todas partes |
+  | Abeto | Conos apilados | Montaña (el que más) |
+  | Palmera | Estípite curvo y palmas | Ribera baja y costa |
+  | Álamo | Alto, de verde claro | Riberas |
+
+  La zona sale de la altura (costa hasta 420 m, llano hasta 545, colina hasta 600, montaña desde ahí; los cortes bailan ±15 m por manchas)
+  y del agua: a menos de 2,5 u de un lago, el mar o un río, y por debajo de la colina, es ribera. Los bosques van por manchas de unas 22 u de
+  borde irregular: en cada una manda una especie de la zona (el ciprés nunca), que es la de siete de cada diez árboles; el resto, cualquiera
+  de la zona según su peso. Cada árbol varía su color y su alto.
+- **Vegetación baja** (`matas.ts`). Cada 0,5 u hay una candidata, movida al azar en su celda, que es como mucho una cosa:
+  - hierba en matojos, más espesa y verde cuanto más fértil (pajiza en lo pobre), menos bajo los árboles y en las laderas;
+  - flores por manchas en los prados fértiles (amapolas, amarillas, blancas o malvas; cada mancha de un color);
+  - matas de monte bajo donde el suelo es pobre y en el borde de los bosques;
+  - juncos a menos de 1,2 u del agua en lo bajo;
+  - piedras sueltas, más cuanto más empinado y en la montaña.
+
+  Quedan todas a menos de 20 u, la mitad hasta 34 y la cuarta parte hasta 48 (un poco más grandes). La hierba, las flores y los juncos se
+  mecen con el viento en el sombreado. Ni en el agua, los cauces, los caminos ni los claros de las maquetas.
+
+Medido en el banco (héroe solo, encuadre normal, a 30°, carga 320): 1,30 M triángulos (0,42 M de árboles y 0,24 M de matas) frente a 0,95 M
+antes; 622 mallas frente a 438; el JS del fotograma, igual (0,5 a 0,65 ms).
 
 ## Banco de pruebas
 

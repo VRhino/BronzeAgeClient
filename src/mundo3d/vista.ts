@@ -16,6 +16,7 @@ import { FigurasDeColumna, type TropaDeColumna } from './figuras';
 import type { FuenteDeAltura } from './fuente';
 import { Agua, alturaVisible } from './agua';
 import { Arboles } from './arboles';
+import { Matas } from './matas';
 import { aro, cinta, circulo, rutaPendiente, RutaEnSuelo } from './lineas';
 import { Maquetas } from './maquetas';
 import { MarcasEnSuelo } from './marcas';
@@ -51,7 +52,7 @@ const MIN_PX_CLIC = 26;
 const SIN_TROPA: TropaDeColumna = { porHeroe: [], ejercito: false };
 /** Hasta dónde llegan, como mucho, los árboles y lo que va sobre el suelo (u) con la distancia de carga de serie; con otra, en proporción. Más
  * allá la bruma ya casi lo tapa todo. */
-const ALCANCE = { arboles: 200, paisaje: 240, trazos: 240 };
+const ALCANCE = { arboles: 200, paisaje: 240, trazos: 240, matas: 48 };
 /** Cada cuánto (fracción de la distancia de carga) se rehace la lista de lo que cae dentro: así no se rehacen las maquetas a cada paso. */
 const PASO_CERCANO = 1 / 8;
 
@@ -70,6 +71,7 @@ export class VistaMundo3D {
   private readonly terreno: Terreno;
   private readonly paisaje: Paisaje;
   private readonly arboles: Arboles;
+  private readonly matas: Matas;
   private readonly maquetas: Maquetas;
   private readonly trazos: Trazos;
   private readonly marcas: MarcasEnSuelo;
@@ -109,7 +111,7 @@ export class VistaMundo3D {
   /** Lo que tarda cada parte del fotograma (ms, media móvil), para la pasada de rendimiento: `rendimiento()`. */
   private readonly tiempos: Record<string, number> = {};
   /** Lo que queda por construir alrededor del héroe (teselas de suelo y paisaje, trozos de árboles). */
-  private readonly faltan = { terreno: 0, paisaje: 0, arboles: 0 };
+  private readonly faltan = { terreno: 0, paisaje: 0, arboles: 0, matas: 0 };
   private objetivo = new THREE.Vector3();
   /** Adónde mira la cámara de verdad: persigue a `objetivo` con un muelle amortiguado, para que siga a la columna sin tirones aunque su
    * posición llegue a saltos (la proyección del instante se rehace cada 33 ms, el relieve cambia de pendiente, el servidor corrige). */
@@ -143,12 +145,13 @@ export class VistaMundo3D {
     this.terreno = new Terreno(o.fuente, o.mapa, this.niebla, this.agua.mar);
     this.paisaje = new Paisaje(o.fuente, o.mapa, this.niebla, this.alturaU, this.agua.rio);
     this.arboles = new Arboles(o.fuente, o.mapa, this.niebla);
+    this.matas = new Matas(o.fuente, o.mapa, this.niebla);
     this.maquetas = new Maquetas(this.niebla, this.alturaU);
     this.trazos = new Trazos(this.niebla, this.alturaU);
     this.marcas = new MarcasEnSuelo(this.alturaU);
     this.etiquetas = new Etiquetas(contenedor, (punto) => this.o.alClicar(punto));
     this.rejilla = new RejillaDeMovimiento(this.alturaU);
-    this.escena.add(this.terreno.grupo, this.paisaje.grupo, this.arboles.grupo, this.maquetas.grupo, this.trazos.grupo, this.marcas.grupo, this.lineas, this.rejilla.grupo);
+    this.escena.add(this.terreno.grupo, this.paisaje.grupo, this.arboles.grupo, this.matas.grupo, this.maquetas.grupo, this.trazos.grupo, this.marcas.grupo, this.lineas, this.rejilla.grupo);
     this.entrada = instalarEntrada(this.lienzo, this.camara, (e) => this.clic(e), () => {}); // el zoom se lee de la cámara en cada fotograma
     this.observador = new ResizeObserver(() => this.ajustar());
     this.observador.observe(contenedor);
@@ -180,10 +183,10 @@ export class VistaMundo3D {
   }
 
   /** Cuánto hay puesto (para el banco de pruebas): árboles y piezas de las maquetas. */
-  cuentas(): { arboles: number; maquetas: number; trazos: number; faltan: { terreno: number; paisaje: number; arboles: number } } {
+  cuentas(): { arboles: number; matas: number; maquetas: number; trazos: number; faltan: { terreno: number; paisaje: number; arboles: number; matas: number } } {
     let maquetas = 0;
     for (const m of this.maquetas.grupo.children) maquetas += (m as THREE.InstancedMesh).count;
-    return { arboles: this.arboles.cuantos, maquetas, trazos: this.trazos.grupo.children.length, faltan: { ...this.faltan } };
+    return { arboles: this.arboles.cuantos, matas: this.matas.cuantas, maquetas, trazos: this.trazos.grupo.children.length, faltan: { ...this.faltan } };
   }
 
   /** Lo que tarda cada parte del fotograma en el hilo principal (ms, media de los últimos ~30). `render` es lo que tarda en mandar la escena a
@@ -300,11 +303,15 @@ export class VistaMundo3D {
     this.maquetas.actualizar(cerca);
     this.trazos.actualizar(estado.mundo.trazos, x, y, hastaTrazos);
     t = this.medir('maquetasYTrazos', t);
-    this.arboles.fijarDespejes(this.maquetas.claros, this.trazos.caminos, `${this.maquetas.claveClaros}|${this.trazos.claveCaminos}`);
+    const despejes = `${this.maquetas.claveClaros}|${this.trazos.claveCaminos}`;
+    this.arboles.fijarDespejes(this.maquetas.claros, this.trazos.caminos, despejes);
+    this.matas.fijarDespejes(this.maquetas.claros, this.trazos.caminos, despejes);
     this.faltan.paisaje = this.paisaje.actualizar(x, y, Math.min(alcance, ALCANCE.paisaje * k), hasta);
     t = this.medir('paisaje', t);
     this.faltan.arboles = this.arboles.actualizar(x, y, Math.min(alcance, ALCANCE.arboles * k), hasta);
     t = this.medir('arboles', t);
+    this.faltan.matas = this.matas.actualizar(x, y, Math.min(alcance, ALCANCE.matas * Math.min(1, k)), hasta);
+    t = this.medir('matas', t);
     const dentro = (p: Punto) => Math.hypot(p.x - x, p.y - y) <= carga;
     const columnas = estado.columnas.filter((c) => c.mia || dentro(c.posicion)), caravanas = estado.caravanas.filter((c) => dentro(c.posicion));
     this.ponerColumnas(columnas, caravanas);
@@ -322,6 +329,7 @@ export class VistaMundo3D {
     if (sc.right !== r) { sc.left = -r; sc.right = r; sc.top = r; sc.bottom = -r; sc.near = 1; sc.far = 600; sc.updateProjectionMatrix(); }
     this.cielo.actualizar(this.camara.camara, ahora);
     this.agua.actualizar(ahora / 1000);
+    this.matas.mover(ahora / 1000);
     this.renderer.render(this.escena, this.camara.camara);
     this.medir('render', t);
     this.medir('total', inicio);
@@ -461,6 +469,7 @@ export class VistaMundo3D {
     this.terreno.destruir();
     this.paisaje.destruir();
     this.arboles.destruir();
+    this.matas.destruir();
     this.maquetas.destruir();
     this.trazos.destruir();
     this.niebla.destruir();
