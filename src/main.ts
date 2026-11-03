@@ -45,7 +45,9 @@ import { montarEleccionCampamento } from './ui/eleccionCampamento';
 import { pintarVentanaSalida, reiniciarVentanaSalida, type LugarDeSalida } from './ui/ventanaSalida';
 import { elegirPestanaHeroe, minutosHerido, pintarPanelHeroe } from './ui/panelHeroe';
 import { htmlBarraJugador, type PanelJugador } from './ui/barraJugador';
-import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno } from './render';
+import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno, type CapasTematicas } from './render';
+import { capasDelMapa, type CapasDelMapa } from './mundo/capasDelMapa';
+import { cablearCapas, htmlCapas } from './ui/capasMapa';
 import { RECURSO_NOMBRE } from './paletas';
 import type { Alijo, Asentamiento, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, EscenaCampamento, Faccion, ParamsCrearHeroe, PuebloDeMapa, Sigilo } from './tiposDominio';
 import { svgSigilo } from './sigilo/sigilo';
@@ -55,7 +57,7 @@ import { nombreDePiezaCampamento, svgPlanoCampamento } from './ui/planoCampament
 import { nombreDePiezaPueblo, svgPlanoPueblo } from './ui/planoPueblo';
 import type { MapaGenerado } from './terreno';
 import { estadoCliente, medirRitmoDeMundo, textoEnTiempoReal, TIPS_FUNDACION } from './ui/estadoCliente';
-import { actualizarTip, parcelasAlFundar, resumenRecursosFundacion, sitiosDeAldeaAlFundar } from './ui/pestanaAsentamientos';
+import { actualizarTip, clasificadorDeParcelas, parcelasAlFundar, resumenRecursosFundacion, sitiosDeAldeaAlFundar } from './ui/pestanaAsentamientos';
 import { renderPanelInteraccion } from './ui/panelInteraccion';
 import { renderPanelMapa } from './ui/panelMapa';
 import { elegirFaccion, htmlLateralFaccion, htmlListaFacciones, PESTANAS_FACCION, renderPestanaFaccion, type PestanaFaccion } from './ui/pestanaFaccion';
@@ -107,7 +109,7 @@ import { explicarError } from './ui/erroresServidor';
 import { motivosParaCrearFaccion } from './ui/validarFaccion';
 import { nombreDeHeroe } from './ui/nombres';
 import { htmlEstados } from './ui/estados';
-import { cablearInteriorPueblo, htmlCuerpoPueblo, htmlTrazadoPueblo, nombreDePueblo, pestanasDePueblo, puebloActual, selectorDePunto, type PestanaPueblo } from './ui/pueblos';
+import { cablearInteriorPueblo, htmlCuerpoPueblo, htmlTrazadoPueblo, nombreDePueblo, pestanasDePueblo, puebloActual, reglasDeAldea, selectorDePunto, type PestanaPueblo } from './ui/pueblos';
 import { pintarSitiosDeAldea, type SitiosDeAldea } from './mundo/fertilidad';
 import { htmlMiembrosFaccion, htmlResidentesPlaza } from './ui/participacion';
 import { ascensoPosible, cablearCargosPlaza, htmlAscensoPlaza, htmlAutoConstruccion, htmlCargosPlaza } from './ui/panelCentro';
@@ -1601,11 +1603,13 @@ function alternarVistaMapa(abrir: boolean = !vistaMapaAbierta, centro?: { x: num
   if (abrir) {
     pantalla.insertAdjacentHTML('beforeend', `<div class="mapa-screen mapa-interior">
       <div class="mapa-lienzo"><canvas id="mapa-interior"></canvas></div>
+      ${htmlCapas('mapa', reglasDeAldea().fertilidadMinima)}
       <div class="mapa-zoom"><button type="button" data-zoom="in" aria-label="Acercar">+</button><button type="button" data-zoom="out" aria-label="Alejar">−</button></div>
       <button class="btn-secondary mapa-interior-cerrar" type="button">Volver</button>
       ${eleccionEnMapa ? `<div class="mapa-eleccion" role="status"><span>${escaparHtml(eleccionEnMapa.texto)}</span><p class="faction-error" data-eleccion-error role="alert"></p></div>` : ''}
     </div>`);
     const interior = pantalla.querySelector<HTMLElement>('.mapa-interior')!;
+    cablearCapas(interior, aplicarCapas);
     // Eligiendo un punto, el clic lo manda; si el motor lo rechaza se dice por qué y se puede probar otro sitio.
     const alClicar = (evento: PointerEvent): void => {
       const eleccion = eleccionEnMapa;
@@ -1648,6 +1652,33 @@ function alternarVistaMapa(abrir: boolean = !vistaMapaAbierta, centro?: { x: num
   renderPanelJugador();
 }
 
+/** Las capas puestas o quitadas (botón de capas, en el modo mundo o en el mapa): las casillas de las dos pantallas dicen lo mismo, la vista 3D
+ * pone o quita los nombres de los nodos y el modo mapa se repinta. */
+function aplicarCapas(c: Readonly<CapasDelMapa>): void {
+  document.querySelectorAll<HTMLInputElement>('.mapa-capas [data-capa]').forEach((casilla) => {
+    const capa = casilla.dataset.capa as keyof CapasDelMapa;
+    casilla.checked = c[capa];
+    const leyenda = casilla.closest('.mapa-capas-lista')?.querySelector<HTMLElement>(`[data-leyenda="${capa}"]`);
+    if (leyenda) leyenda.hidden = !c[capa];
+  });
+  vista3dActiva?.fijarNombresDeNodos(c.nombresDeNodos);
+  if (vistaMapaAbierta) void pintarVistaMapa();
+}
+
+/** Qué se sabe de cada parcela de bosque, para la capa del modo mapa: se rehace cuando llega otra proyección (no con la del instante). */
+let parcelasConocidas: { de: ProyeccionJugador; estadoDe: NonNullable<CapasTematicas['parcelas']>['estadoDe'] } | null = null;
+
+/** Lo que el modo mapa pinta según las capas puestas. */
+function capasTematicas(): CapasTematicas {
+  const c = capasDelMapa(), base = estadoCliente.proyeccionUltima;
+  if (c.parcelas && base && parcelasConocidas?.de !== base) parcelasConocidas = { de: base, estadoDe: clasificadorDeParcelas(base) };
+  return {
+    sinNombres: !c.nombresDeNodos,
+    ...(c.fertilidad ? { fertilidad: { minimaAldea: reglasDeAldea().fertilidadMinima } } : {}),
+    ...(c.parcelas && parcelasConocidas ? { parcelas: { estadoDe: parcelasConocidas.estadoDe } } : {}),
+  };
+}
+
 /** Da al lienzo del mapa la proporción del mundo (el del motor no es cuadrado); cambiar el alto borra el lienzo, así que solo si hace falta. */
 function ajustarLienzo(canvas: HTMLCanvasElement, ancho: number, alto: number): void {
   const h = Math.round((canvas.width * alto) / ancho);
@@ -1680,7 +1711,7 @@ async function pintarVistaMapaYa(centrar: boolean | { x: number; y: number }): P
   controlVistaMapa?.fijarMundo(mapa.config.ancho, mapa.config.alto);
   if (!controlVistaMapa) return;
   const escala = controlVistaMapa.transformar(ctx);
-  pintarTerreno(ctx, mapa, p, escala);
+  pintarTerreno(ctx, mapa, p, escala, true, capasTematicas());
   pintarMiradas(ctx, p.miradasIntel ?? [], p.instante, escala);
   // Eligiendo el sitio de una aldea: la zona de la plaza, que es donde cabe.
   const zona = eleccionEnMapa?.zona;
@@ -1867,10 +1898,12 @@ function montarMapa(): void {
     <aside class="mapa-seleccion" hidden></aside>
     <p class="mapa-aviso" role="status" hidden></p>
     <div class="mapa-comida" role="status" hidden></div>
+    ${htmlCapas('mundo')}
     <div class="mapa-zoom"><button type="button" data-zoom="in" aria-label="Acercar">+</button><button type="button" data-zoom="out" aria-label="Alejar">−</button></div>
     ${menuEsquinaHtml()}
   </div>`;
   const contenedor = document.querySelector<HTMLElement>('.mapa-screen')!;
+  cablearCapas(contenedor, aplicarCapas);
   const lienzo = document.querySelector<HTMLElement>('.mapa-lienzo')!;
   // Un clic en el terreno (la vista 3D da el punto del mapa bajo el ratón y los centros de lo que tiene debajo): lo que hay se selecciona y la
   // columna marcha hacia ello; si son varias cosas, primero se elige una en la lista; en el suelo, se marcha allí. Con la lista abierta, un
@@ -1895,7 +1928,7 @@ function montarMapa(): void {
   // y selección. Se monta cuando están el mapa y el relieve.
   let vista3d: VistaMundo3D | null = null, desmontado = false;
   enModoMundo = true;
-  listoDeLaVista = montarVista3D(lienzo, alClicar).then((v) => { if (desmontado) v?.destruir(); else { vista3d = vista3dActiva = v; aplicarRejilla(); } });
+  listoDeLaVista = montarVista3D(lienzo, alClicar).then((v) => { if (desmontado) v?.destruir(); else { vista3d = vista3dActiva = v; aplicarRejilla(); v?.fijarNombresDeNodos(capasDelMapa().nombresDeNodos); } });
   // El mundo solo avanza por tick y este cliente aún no tiene tiempo real (`WS .../tiempo-real`): sin esto el
   // mapa sería una foto y la columna nunca parecería moverse. Sondeo suave mientras la pantalla Mapa esté
   // montada; se corta al cambiar de pantalla (`limpiarPantalla`).

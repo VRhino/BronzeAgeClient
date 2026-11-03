@@ -29,15 +29,28 @@ export function parcelasAlFundar(posicion: { x: number; y: number }): ParcelaAlF
   const p = estadoCliente.proyeccionUltima;
   if (!mapa || !p) return [];
   const radio = radioZonaInicial();
-  const ocupadas = fuentesOcupadas(p);
-  const zonas: ((q: { x: number; y: number }) => boolean)[] = [
-    ...p.asentamientos.filter((a) => (a.zonaReal?.length ?? 0) > 2).map((a) => (q: { x: number; y: number }) => dentro(q, a.zonaReal!)),
-    ...(p.asentamientosAvistados ?? []).filter((a) => a.zona.length > 2).map((a) => (q: { x: number; y: number }) => dentro(q, a.zona)),
-    ...(p.asentamientosConocidos ?? []).filter((a) => a.radioPotencial).map((a) => (q: { x: number; y: number }) => Math.hypot(q.x - a.posicion.x, q.y - a.posicion.y) <= a.radioPotencial!),
-  ];
+  const estado = clasificadorDeParcelas(p, true);
   return (mapa.parcelas ?? [])
     .filter((x) => Math.hypot(x.centro.x - posicion.x, x.centro.y - posicion.y) <= radio)
-    .map((x) => ({ centro: x.centro, estado: ocupadas.has(x.id) ? 'ocupada' : zonas.some((z) => z(x.centro)) ? 'ajena' : 'libre' }));
+    .map((x) => ({ centro: x.centro, estado: estado(x) }));
+}
+
+/** Qué se sabe de cada parcela de bosque con la proyección `p`: `ocupada` si tiene una Leñera conocida, `ajena` si cae en la zona de otra
+ * plaza conocida y si no `libre`. Para fundar (`fundando`) cuentan como ajenas las de cualquier zona, también las de tu Facción, que la plaza
+ * nueva no puede tomar; en la capa del modo mapa una de la zona de tu Facción sin Leñera es libre: cabe una vuestra. Se guarda por parcela. */
+export function clasificadorDeParcelas(p: ProyeccionJugador, fundando = false): (x: { id: string; centro: { x: number; y: number } }) => EstadoParcela {
+  const ocupadas = fuentesOcupadas(p);
+  const zonas: ((q: { x: number; y: number }) => boolean)[] = [
+    ...p.asentamientos.filter((a) => (a.zonaReal?.length ?? 0) > 2 && (fundando || a.faccionId !== p.faccionId)).map((a) => (q: { x: number; y: number }) => dentro(q, a.zonaReal!)),
+    ...(p.asentamientosAvistados ?? []).filter((a) => a.zona.length > 2 && (fundando || a.faccionId !== p.faccionId)).map((a) => (q: { x: number; y: number }) => dentro(q, a.zona)),
+    ...(p.asentamientosConocidos ?? []).filter((a) => a.radioPotencial && (fundando || a.faccionId !== p.faccionId)).map((a) => (q: { x: number; y: number }) => Math.hypot(q.x - a.posicion.x, q.y - a.posicion.y) <= a.radioPotencial!),
+  ];
+  const memo = new Map<string, EstadoParcela>();
+  return (x) => {
+    let e = memo.get(x.id);
+    if (!e) memo.set(x.id, (e = ocupadas.has(x.id) ? 'ocupada' : zonas.some((z) => z(x.centro)) ? 'ajena' : 'libre'));
+    return e;
+  };
 }
 
 /** Cuántas Leñeras aprovecharía la plaza nueva: las parcelas libres del círculo. */

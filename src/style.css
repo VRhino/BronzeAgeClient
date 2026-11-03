@@ -5160,3 +5160,29 @@ body:has(.eleccion-clic) .aviso-global { visibility: hidden; }
   .carga-consejo { height: 34vh; padding-bottom: 60px; }
   .carga-consejo::before { background: radial-gradient(ellipse 90% 100% at 50% 70%, rgba(14, 10, 6, 0.94) 0%, rgba(14, 10, 6, 0.86) 40%, rgba(14, 10, 6, 0.5) 70%, rgba(14, 10, 6, 0.14) 90%, rgba(14, 10, 6, 0) 100%); }
 }
+
+/* Botón de capas del mapa (0.109.0), encima del zoom: nombres de los nodos; en el modo mapa también fertilidad y parcelas de bosque. */
+.mapa-capas { position: absolute; right: 16px; bottom: 108px; z-index: 3; }
+.mapa-capas-boton {
+  width: 40px; height: 40px; display: grid; place-items: center; cursor: pointer; border-radius: 3px;
+  background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg)); border: 1px solid var(--bronce); color: var(--pergamino);
+  box-shadow: var(--placa-sutil); transition: var(--transition);
+}
+.mapa-capas-boton:hover, .mapa-capas-boton.activo { color: var(--oro-claro); border-color: var(--oro); }
+.mapa-capas-lista {
+  position: absolute; right: 48px; bottom: 0; width: 248px; max-height: calc(100vh - 220px); overflow-y: auto;
+  display: flex; flex-direction: column; gap: 6px; padding: 10px 12px;
+  background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg)); border: 1px solid var(--bronce); border-radius: 3px;
+  box-shadow: var(--placa-sutil); color: var(--pergamino); font-size: 0.82rem;
+}
+.mapa-capas-lista[hidden] { display: none; }
+.mapa-capas-fila { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 3px 0; }
+.mapa-capas-fila input { accent-color: var(--oro); width: 15px; height: 15px; margin: 0; }
+.mapa-capas-leyenda { display: flex; flex-direction: column; gap: 4px; padding: 0 0 4px 23px; }
+.mapa-capas-leyenda[hidden] { display: none; }
+.mapa-capas-rampa { position: relative; display: block; height: 9px; border-radius: 2px; border: 1px solid var(--bronce-osc); }
+.mapa-capas-rampa i { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--pergamino); }
+.mapa-capas-extremos { display: flex; justify-content: space-between; gap: 6px; font-size: 0.7rem; color: var(--text-secondary); }
+.mapa-capas-muestra { display: flex; align-items: center; gap: 7px; font-size: 0.74rem; }
+.mapa-capas-muestra i { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid var(--c); background: color-mix(in srgb, var(--c) 45%, transparent); }
+.mapa-capas-nota { margin: 0; font-size: 0.7rem; color: var(--text-secondary); }

@@ -16,6 +16,7 @@ import { pintarSitiosDeAldea, type SitiosDeAldea } from './mundo/fertilidad';
 import { colorDelSueloEn, esDeCerca, hayArtefacto, pintarArbolesDelArtefacto, pintarSueloDelArtefacto, vistaDelLienzo } from './mundo/pintarArtefacto';
 import { dibujarPueblosYObras } from './ui/pueblos';
 import { partirFronteras, type ZonaDeFaccion } from './mundo/fronteras';
+import { exploradoDe, pixelesDeFertilidad, RADIO_PARCELA, type Explorado } from './mundo/capasDelMapa';
 
 /** px de pantalla por unidad con la que los glifos de las columnas salen a su tamaño de diseño (≈ la escala de visión en un portátil).
  * El héroe no tiene tamaño en el mundo, así que su glifo y su ruta se escalan con el zoom (`factorDeGlifo`) entre un mínimo y un máximo:
@@ -461,12 +462,90 @@ function rioALaVista(rio: { puntos: Point[] }, v: { x0: number; y0: number; x1: 
   return c.x1 + m >= v.x0 && c.x0 - m <= v.x1 && c.y1 + m >= v.y0 && c.y0 - m <= v.y1;
 }
 
+/** Las capas que el jugador pone y quita en el modo mapa (`mundo/capasDelMapa.ts`). Las temáticas van encima de la niebla y solo sobre lo
+ * explorado alguna vez. */
+export interface CapasTematicas {
+  /** Sin los nombres de los nodos (de cerca). */
+  sinNombres?: boolean;
+  /** La fertilidad del suelo, con el corte de la aldea agrícola. */
+  fertilidad?: { minimaAldea: number };
+  /** Las parcelas de bosque, con lo que se sabe de cada una. */
+  parcelas?: { estadoDe: (parcela: { id: string; centro: Point }) => 'libre' | 'ocupada' | 'ajena' };
+}
+
+/** La última capa de fertilidad compuesta: cambia con lo explorado, no con la cámara. */
+let ultimaFertilidad: { mapa: MapaGenerado; celdas: string; minima: number; capa: HTMLCanvasElement } | null = null;
+
+function pintarFertilidad(ctx: CanvasRenderingContext2D, mapa: MapaGenerado, niebla: NieblaProyectada | undefined, explorado: Explorado, minima: number, escalaCanvas: number): void {
+  const f = mapa.rasters?.fertilidad;
+  if (!f) return;
+  const celdas = niebla?.celdas ?? '*';
+  let u = ultimaFertilidad;
+  if (!u || u.mapa !== mapa || u.celdas !== celdas || u.minima !== minima) {
+    const capa = document.createElement('canvas');
+    capa.width = f.columnas;
+    capa.height = f.filas;
+    const cctx = capa.getContext('2d')!;
+    const img = cctx.createImageData(f.columnas, f.filas);
+    img.data.set(pixelesDeFertilidad(f, mapa.rasters?.terreno, explorado, minima));
+    cctx.putImageData(img, 0, 0);
+    u = ultimaFertilidad = { mapa, celdas, minima, capa };
+  }
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(u.capa, 0, 0, f.columnas * f.celda * escalaCanvas, f.filas * f.celda * escalaCanvas);
+  ctx.restore();
+}
+
+const COLOR_PARCELA = { libre: [96, 200, 84], ocupada: [222, 170, 82], ajena: [196, 92, 74] } as const;
+
+/** Las parcelas de bosque exploradas a la vista: su círculo de 4 u, más lleno cuanto más denso (la madera que daría su Leñera); verdes las
+ * libres, ámbar las que ya tienen tu Leñera, rojas las de la zona de otra plaza. Una pasada por estado y grado de densidad. */
+function pintarParcelas(
+  ctx: CanvasRenderingContext2D,
+  mapa: MapaGenerado,
+  explorado: Explorado,
+  estadoDe: NonNullable<CapasTematicas['parcelas']>['estadoDe'],
+  aLaVista: (p: Point, margen?: number) => boolean,
+  escalaCanvas: number,
+): void {
+  const r = Math.max(1.6, RADIO_PARCELA * escalaCanvas);
+  const grupos = new Map<string, Point[]>();
+  for (const q of mapa.parcelas ?? []) {
+    if (!aLaVista(q.centro, RADIO_PARCELA) || !explorado(q.centro.x, q.centro.y)) continue;
+    const clave = `${estadoDe(q)}|${Math.min(3, Math.floor(q.densidad * 4))}`;
+    let g = grupos.get(clave);
+    if (!g) grupos.set(clave, (g = []));
+    g.push(q.centro);
+  }
+  ctx.save();
+  for (const [clave, puntos] of grupos) {
+    const [estado, grado] = clave.split('|') as [keyof typeof COLOR_PARCELA, string];
+    const [cr, cg, cb] = COLOR_PARCELA[estado];
+    ctx.beginPath();
+    for (const p of puntos) {
+      ctx.moveTo(p.x * escalaCanvas + r, p.y * escalaCanvas);
+      ctx.arc(p.x * escalaCanvas, p.y * escalaCanvas, r, 0, Math.PI * 2);
+    }
+    ctx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${0.1 + 0.1 * Number(grado)})`;
+    ctx.fill();
+    if (r >= 3) {
+      ctx.strokeStyle = `rgba(${cr}, ${cg}, ${cb}, 0.8)`;
+      ctx.lineWidth = r >= 10 ? 1.5 : 1;
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
 export function pintarTerreno(
   ctx: CanvasRenderingContext2D, 
   mapa: MapaGenerado, 
   proyeccion: ProyeccionJugador,
   escalaCanvas: number,
-  permitirGeneral = true
+  permitirGeneral = true,
+  capas: CapasTematicas = {}
 ): void {
   // La cámara del mapa (`ui/pantallaMapa.ts`) ya dejó en `ctx` su transformación: aquí se pinta en unidades × `escalaCanvas` y la vista
   // dice qué parte del mundo cae en el lienzo y a qué escala (de lejos o de cerca). Lo que cae fuera no se recorre. Lo que el jugador no
@@ -598,6 +677,7 @@ export function pintarTerreno(
       ctx.fillStyle = color;
       ctx.fill();
     } else if (dibujarIconoMapa(ctx, ICONO_DE_NODO[nodo.tipo] ?? '', x, y, Math.max(14, 16 * k), color)) {
+      if (capas.sinNombres) continue;
       ctx.font = '11px system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
@@ -635,6 +715,7 @@ export function pintarTerreno(
       ctx.strokeStyle = '#1b1a17';
       ctx.lineWidth = 1;
       ctx.stroke();
+      if (capas.sinNombres) continue;
       ctx.font = '11px system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
@@ -754,6 +835,14 @@ export function pintarTerreno(
   // `?sinNiebla` en `npm run dev` la quita, para mirar el terreno entero mientras se desarrolla.
   const sinNiebla = import.meta.env.DEV && new URLSearchParams(location.search).has('sinNiebla');
   if (proyeccion.exploracion && !sinNiebla) pintarNiebla(ctx, proyeccion.exploracion, escalaCanvas);
+
+  // 8b. LAS CAPAS QUE SE PONEN Y QUITAN (modo mapa): fertilidad y parcelas de bosque. Encima de la niebla para que se lean igual en lo que se
+  // ve que en lo que se recuerda, pero solo sobre lo explorado alguna vez: son geografía, y de lo no explorado no se sabe ni eso.
+  if (capas.fertilidad || capas.parcelas) {
+    const explorado = sinNiebla ? () => true : exploradoDe(proyeccion.exploracion);
+    if (capas.fertilidad) pintarFertilidad(ctx, mapa, proyeccion.exploracion, explorado, capas.fertilidad.minimaAldea, escalaCanvas);
+    if (capas.parcelas) pintarParcelas(ctx, mapa, explorado, capas.parcelas.estadoDe, aLaVista, escalaCanvas);
+  }
 
   // 9. ZONAS DE INFLUENCIA FUSIONADAS (solo la propia)
   for (const zona of proyeccion.zonasFusionadas || []) {

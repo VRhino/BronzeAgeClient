@@ -60,7 +60,7 @@ del héroe solo (`radioDeVision`); el 3D tiene que seguir a la de la columna. El
 | Ruta, destino, mira del héroe; cintas pegadas al relieve | `src/mundo3d/lineas.ts` (hecho) | Proyección |
 | Clic, arrastre, rueda y teclas | `src/mundo3d/entrada.ts` (hecho) | El clic acaba en `objetosBajoElClic` y `marcharA` |
 | La lista de qué hay bajo el clic | `src/ui/eleccionClic.ts` (hecho) | Proyección |
-| Nombres: plazas, nodos, Miradas, tierra ajena | `src/mundo3d/etiquetas.ts` (hecho) | Proyección y artefacto |
+| Nombres: plazas, nodos, Miradas, tierra ajena (los de los nodos se quitan con el botón de capas) | `src/mundo3d/etiquetas.ts` (hecho) | Proyección y artefacto |
 
 ## Fases
 
@@ -238,6 +238,25 @@ casi 1 u.
 - **Los refrescos por cambios del servidor no se retrasan sin fin**: uno a los 250 ms del primer cambio, y los que lleguen mientras tanto entran
   en él (antes cada cambio volvía a esperar 250 ms).
 - El almacén guarda los últimos 500 hechos, no todos.
+
+## Capas que se ponen y quitan (0.109.0)
+
+Pedido de Víctor del 2026-11-03. Encima del zoom hay un botón de capas (`ui/capasMapa.ts`) que abre una lista de casillas; lo marcado se
+recuerda en este navegador (`bronzeage.capas`, `mundo/capasDelMapa.ts`) y vale para las dos pantallas.
+
+- **Nombres de los nodos** (modo mundo y modo mapa; puestos de serie). Quitados, en el 3D no se ponen los nombres de los nodos cercanos, salvo
+  los de la zona de la vista previa de fundar, que son parte de ella. En el modo mapa se quitan los que salen de cerca bajo cada icono.
+- **Fertilidad del suelo** (solo modo mapa). El raster `fertilidad` del artefacto (celdas de 4 u) en una capa de color: de óxido a ocre por
+  debajo de la fertilidad mínima de la aldea agrícola (`reglasDeAldea`, 0,3 sin datos) y, desde ella, de paja a verde hondo. El salto de color
+  en el corte es a propósito: se ve dónde cabe una aldea. La leyenda lleva la rampa con el corte marcado. El agua va sin color.
+- **Parcelas de bosque** (solo modo mapa). Cada parcela del artefacto como su círculo de 4 u, más lleno cuanto más densa (la madera que daría
+  su Leñera): verde si está libre, ámbar si tiene una Leñera conocida, rojo si cae en la zona de una plaza de otra Facción (`clasificadorDeParcelas`,
+  el mismo criterio que la vista previa de fundar, salvo que ahí también las de tu Facción son ajenas, porque la plaza nueva no las puede tomar).
+
+Las dos capas temáticas van **encima** de la niebla, para que se lean igual en lo que se ve que en lo que se recuerda, pero solo sobre las
+celdas exploradas alguna vez: son geografía, y de lo no explorado no se sabe ni eso. La capa de fertilidad se compone una vez por cambio de lo
+explorado, no por fotograma; las parcelas van en una pasada por estado y grado de densidad. Medido con las dos puestas, el pintado del modo
+mapa tarda lo mismo que sin ellas.
 
 ## Banco de pruebas
 

@@ -3,6 +3,21 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.109.0] — 2026-11-03 · Botón de capas: quitar los nombres de los nodos, fertilidad y parcelas de bosque en el modo mapa · sin cambio de contrato
+
+Petición de Víctor (2026-11-03): que los nombres de los nodos se puedan quitar en el mapa de mundo, y que el modo mapa tenga una capa de
+fertilidad y otra de parcelas de bosque que se pongan y quiten, solo sobre lo que ya se vio alguna vez.
+
+- **Botón de capas** encima del zoom, en el modo mundo y en el modo mapa: abre una lista de casillas. Lo marcado se recuerda en este navegador
+  y vale en las dos pantallas.
+- **Nombres de los nodos** (puestos de serie). Quitados, el mundo 3D no pone los de los nodos cercanos (la vista previa de fundar sigue
+  nombrando los de su zona) y el modo mapa no los escribe bajo los iconos.
+- **Fertilidad del suelo** (modo mapa): de óxido a ocre donde no llega a la fertilidad que pide la aldea agrícola, y de paja a verde hondo
+  desde ella; el salto de color marca dónde cabe una aldea. Leyenda con la rampa y el corte.
+- **Parcelas de bosque** (modo mapa): cada parcela con su círculo de 4 u, más llena cuanto más densa; verde libre, ámbar con Leñera, rojo en
+  la zona de otra Facción.
+- Las dos capas van encima de la niebla pero solo sobre las celdas exploradas alguna vez; lo no explorado sigue tapado.
+
 ## [0.108.0] — 2026-11-03 · El campamento y el pueblo a pantalla completa, y pagar mercenarios con el carro de la columna · sin cambio de contrato
 
 Peticiones de Víctor (2026-11-03): el campamento de mercenarios, los pueblos y las aldeas con la vista 3D a pantalla completa como la plaza, y

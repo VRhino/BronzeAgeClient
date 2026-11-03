@@ -81,6 +81,8 @@ export class VistaMundo3D {
   private readonly matRutaCaravana = new THREE.LineDashedMaterial({ color: 0xf1e6c8, transparent: true, opacity: 0.35, dashSize: 0.6, gapSize: 0.4 });
   /** Los nombres de los nodos cercanos ya explorados, y dónde y con qué niebla se calcularon. */
   private nodos: { clave: string; lista: EtiquetaEnVista[] } = { clave: '', lista: [] };
+  /** Sin los nombres de los nodos (botón de capas): solo quedan los de la vista previa de fundar. */
+  private sinNombresDeNodos = false;
   private readonly matMira = new THREE.MeshBasicMaterial({ color: 0xf1e6c8, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -5 });
   private readonly observador: ResizeObserver;
   /** La ruta de cada columna y caravana con su material (`id|material`), la mira bajo tu columna y el aro de tu destino, con lo que los hizo. */
@@ -378,16 +380,22 @@ export class VistaMundo3D {
     }
   }
 
+  /** Pone o quita los nombres de los nodos (botón de capas). Quitados, la vista previa de fundar sigue nombrando los de su zona. */
+  fijarNombresDeNodos(si: boolean): void {
+    this.sinNombresDeNodos = !si;
+  }
+
   /** Los nombres de los nodos de recursos que caben en pantalla y ya se exploraron; con la vista previa de fundar, los de dentro de su zona
    * (resaltados). Se recalculan cuando el héroe se mueve, cambia la niebla o la vista previa. */
   private etiquetasDeNodos(x: number, y: number, estado: EstadoVista): EtiquetaEnVista[] {
-    const fun = estado.fundacion, radio = this.camara.enPantalla * 0.75;
-    const clave = `${Math.round(x)},${Math.round(y)}:${radio}:${this.niebla.version}:${fun ? `${fun.centro.x.toFixed(1)},${fun.centro.y.toFixed(1)},${fun.radio}` : ''}`;
+    const fun = estado.fundacion, radio = this.camara.enPantalla * 0.75, sin = this.sinNombresDeNodos;
+    if (sin && !fun) return [];
+    const clave = `${Math.round(x)},${Math.round(y)}:${radio}:${this.niebla.version}:${sin}:${fun ? `${fun.centro.x.toFixed(1)},${fun.centro.y.toFixed(1)},${fun.radio}` : ''}`;
     if (clave === this.nodos.clave) return this.nodos.lista;
     const lista: EtiquetaEnVista[] = [];
     for (const n of this.o.mapa.nodos) {
       const enFundar = !!fun && Math.hypot(n.posicion.x - fun.centro.x, n.posicion.y - fun.centro.y) <= fun.radio;
-      if (!enFundar && (Math.hypot(n.posicion.x - x, n.posicion.y - y) > radio || !this.niebla.exploradaEn(n.posicion.x, n.posicion.y))) continue;
+      if (!enFundar && (sin || Math.hypot(n.posicion.x - x, n.posicion.y - y) > radio || !this.niebla.exploradaEn(n.posicion.x, n.posicion.y))) continue;
       lista.push({ id: `nodo:${n.id}`, posicion: n.posicion, texto: RECURSO_NOMBRE[n.tipo] ?? n.tipo, tipo: 'nodo', color: enFundar ? '#f1d38b' : undefined });
     }
     this.nodos = { clave, lista };
