@@ -51,7 +51,7 @@ import type { Alijo, Asentamiento, CampamentoBandido, CampamentoMercenarios, Cam
 import { svgSigilo } from './sigilo/sigilo';
 import { alCargarSigilos } from './sigilo/lienzo';
 import { cablearCampamento, campamentoActual, htmlSeccionCampamento, seccionesDeCampamento, type SeccionCampamento } from './ui/pantallaCampamento';
-import { leyendaPlanoCampamento, nombreDePiezaCampamento, svgPlanoCampamento } from './ui/planoCampamento';
+import { nombreDePiezaCampamento, svgPlanoCampamento } from './ui/planoCampamento';
 import { nombreDePiezaPueblo, svgPlanoPueblo } from './ui/planoPueblo';
 import type { MapaGenerado } from './terreno';
 import { estadoCliente, medirRitmoDeMundo, textoEnTiempoReal, TIPS_FUNDACION } from './ui/estadoCliente';
@@ -107,11 +107,13 @@ import { explicarError } from './ui/erroresServidor';
 import { motivosParaCrearFaccion } from './ui/validarFaccion';
 import { nombreDeHeroe } from './ui/nombres';
 import { htmlEstados } from './ui/estados';
-import { cablearInteriorPueblo, htmlAlmacenPueblo, htmlPestanasPueblo, htmlTrazadoPueblo, nombreDePueblo, puebloActual, selectorDePunto } from './ui/pueblos';
+import { cablearInteriorPueblo, htmlCuerpoPueblo, htmlTrazadoPueblo, nombreDePueblo, pestanasDePueblo, puebloActual, selectorDePunto, type PestanaPueblo } from './ui/pueblos';
 import { pintarSitiosDeAldea, type SitiosDeAldea } from './mundo/fertilidad';
 import { htmlMiembrosFaccion, htmlResidentesPlaza } from './ui/participacion';
 import { ascensoPosible, cablearCargosPlaza, htmlAscensoPlaza, htmlAutoConstruccion, htmlCargosPlaza } from './ui/panelCentro';
 import { cablearBlasonHud, cablearEleccionBarra, htmlBlasonHud, htmlEleccionBarra, htmlObrasHud, htmlOcupacion, htmlPieDePlaza, ICONO_RIEL, type BlasonHud } from './ui/hudPlaza';
+import { htmlBlasonInterior, htmlPlacaDeRecursos, htmlRielInterior, htmlTituloDeParte, iconoDePueblo, ICONO_CAMPAMENTO } from './ui/hudInterior';
+import { columnaQuePaga } from './ui/columnaQuePaga';
 import { cablearResidencia, htmlCapital, htmlResidencia } from './ui/panelResidencia';
 import { cablearTablon, htmlTablon } from './ui/tablon';
 import { cablearMercenariosFaccion, htmlMercenariosFaccion, mercenariosQuePidenAtencion } from './ui/mercenarios';
@@ -378,31 +380,49 @@ function montarHeroe(): void {
   });
 }
 
-/** Subpestaña abierta de la pantalla Campamento (como las del panel del asentamiento). */
-let seccionCamp: SeccionCampamento = 'resumen';
+/** La ventana abierta del campamento (una de sus partes, las pestañas de antes), o ninguna: al entrar se ve el campamento entero. */
+let ventanaCamp: SeccionCampamento | null = null;
+/** Las partes que se abren a pantalla completa (Víctor, 2026-11-03: «mercado, tropa, mercenarios y taberna como pantalla completa»). */
+const PARTES_ANCHAS = new Set<string>(['tropa', 'mercado', 'mercenarios', 'taberna']);
 
-/** Pantalla CAMPAMENTO: dentro de un campamento de mercenarios (Doc 1.9b), donde se nace. Como la del asentamiento: la planta a la izquierda y,
- * a la derecha, subpestañas. Lo del jugador (héroe, escuadras, Facción: crear o pedir ingreso) está en la barra superior. */
+/**
+ * Pantalla CAMPAMENTO: dentro de un campamento de mercenarios (Doc 1.9b), donde se nace. A pantalla completa como la plaza (Víctor, 2026-11-03),
+ * con su mismo esqueleto (`.plaza-3d`): el campamento en 3D detrás de todo; arriba a la izquierda, el blasón del campamento; arriba a la derecha,
+ * «Salir al mundo»; al borde derecho, el rastreador de misiones; abajo, tu almacén y tu carro y, debajo, el riel con una ventana por parte (Resumen,
+ * Tropa, Mercado, Mercenarios, Fondo y Taberna; Tropa, Mercado, Mercenarios y Taberna a pantalla completa); y el minimapa en la esquina. Un clic en
+ * una pieza (la taberna, el mercado, el barracón…) abre su parte.
+ */
 function montarCampamento(): void {
   const proyeccion = estadoCliente.proyeccionUltima;
   const campamento = proyeccion && campamentoActual(proyeccion);
   if (!proyeccion || !campamento) { montar('cargando'); return; }
   menuEsquinaAbierto = false;
-  seccionCamp = 'resumen';
-  app.innerHTML = `<div class="asent-screen camp-screen">
+  ventanaCamp = null;
+  // lo de la plaza no se queda abierto por debajo (su Esc y su riel miran estas variables)
+  ventanaPlaza = null;
+  popBlason = null;
+  app.innerHTML = `<div class="asent-screen camp-screen plaza-3d">
     ${htmlBarraJugador(proyeccion, escaparHtml)}
-    <header class="asent-barra">
-      <span class="asent-nombre">Campamento ${escaparHtml(campamento.id)}</span>
-      <span class="asent-nivel" id="camp-residencia"></span>
-      <div class="asent-barra-acciones"><button id="btn-salir-mundo" class="btn-primary" type="button">Salir al mundo</button></div>
-    </header>
     <div class="asent-cuerpo">
-      <aside class="asent-izq"><div class="camp-leyenda-caja"></div></aside>
-      <div class="asent-mapa asent-mapa-3d">
-        <div class="ciudad3d-escena"></div>
-        <div class="asent-lienzo asent-minimapa camp-lienzo" title="Minimapa: un clic lleva la vista ahí"><div class="camp-plano"></div></div>
+      <div class="asent-centro">
+        <div class="asent-mapa asent-mapa-3d">
+          <div class="ciudad3d-escena"></div>
+        </div>
       </div>
-      <aside class="asent-lado"><div class="camp-lado"></div></aside>
+      <aside class="asent-izq">
+        <div class="asent-blason"></div>
+      </aside>
+      <aside class="asent-der"></aside>
+      <div class="asent-pie" hidden></div>
+      <nav class="asent-riel" aria-label="Partes del campamento"></nav>
+      <div class="asent-lienzo asent-minimapa camp-lienzo" title="Minimapa: un clic lleva la vista ahí"><div class="camp-plano"></div></div>
+      <header class="asent-barra">
+        <div class="asent-barra-acciones"><button id="btn-salir-mundo" class="btn-primary" type="button">Salir al mundo</button></div>
+      </header>
+      <section class="asent-ventana" role="dialog" aria-label="Campamento" hidden>
+        <header class="asent-ventana-cab"><div class="asent-ventana-titulo"></div><button class="asent-ventana-cerrar" type="button" data-ventana-cerrar title="Cerrar (Esc)" aria-label="Cerrar">✕</button></header>
+        <div class="asent-edif-cuerpo camp-lado"></div>
+      </section>
     </div>
     <div class="asent-tooltip" hidden></div>
     ${HTML_VELO_SALIDA}
@@ -413,6 +433,7 @@ function montarCampamento(): void {
   cablearMenuEsquina(contenedor);
   cablearBarraJugador(contenedor);
   contenedor.querySelector('#btn-salir-mundo')?.addEventListener('click', abrirVentanaSalida);
+  contenedor.querySelector('[data-ventana-cerrar]')?.addEventListener('click', () => abrirParteCampamento(null));
   // Sin tiempo real de datos, el campamento (mercado, fondo, avisos) se pone al día con el mismo sondeo suave que el asentamiento.
   let sondeando = false;
   const sondeo = setInterval(() => {
@@ -422,6 +443,13 @@ function montarCampamento(): void {
   }, 3000);
   montarCampamento3D(contenedor);
   limpiarPantalla = () => { clearInterval(sondeo); desmontarCampamento3D(); };
+}
+
+/** Abre una parte del campamento en su ventana (o ninguna) y repinta. */
+function abrirParteCampamento(parte: SeccionCampamento | null): void {
+  ventanaCamp = parte;
+  const p = estadoCliente.proyeccionUltima, c = p && campamentoActual(p);
+  if (p && c) pintarCampamento(p, c);
 }
 
 /** La vista 3D del campamento donde estás (`ciudad3d/campamento.ts`), con la planta en SVG de minimapa; y la planta que se dibuja ahora. */
@@ -445,10 +473,10 @@ function montarCampamento3D(contenedor: HTMLElement): void {
       alElegir: (id) => {
         const pieza = id ? vista.ciudadActual()?.edificios.find((e) => e.id === id) : undefined;
         vista.seleccionar(pieza ? { id: pieza.id, tipo: pieza.tipo } : null);
-        // elegir una pieza abre la pestaña de lo que se hace en ella
+        // elegir una pieza abre la ventana de lo que se hace en ella
         const seccion = pieza && SECCION_DE_PIEZA[pieza.tipo];
         const p = estadoCliente.proyeccionUltima, c = p && campamentoActual(p);
-        if (seccion && p && c && seccionesDeCampamento(p).some((x) => x.id === seccion) && seccion !== seccionCamp) { seccionCamp = seccion; pintarCampamento(p, c); }
+        if (seccion && p && c && seccionesDeCampamento(p).some((x) => x.id === seccion) && seccion !== ventanaCamp) abrirParteCampamento(seccion);
       },
       alPasar: (id, evento) => {
         const pieza = id ? vista.ciudadActual()?.edificios.find((e) => e.id === id) : undefined;
@@ -467,9 +495,13 @@ function montarCampamento3D(contenedor: HTMLElement): void {
     console.warn('Sin WebGL para el campamento en 3D; queda la planta en 2D.', error);
     minimapa.destruir();
     escena.remove();
+    // la planta deja de ser minimapa y vuelve en grande al centro
     const centro = contenedor.querySelector('.asent-mapa');
     centro?.classList.remove('asent-mapa-3d');
-    plano.parentElement?.classList.remove('asent-minimapa');
+    contenedor.classList.add('sin-3d');
+    const lienzo = plano.parentElement;
+    lienzo?.classList.remove('asent-minimapa');
+    if (centro && lienzo) centro.append(lienzo);
   }
 }
 
@@ -498,31 +530,47 @@ function pintarCampamento3D(p: ProyeccionJugador, campamento: CampamentoMercenar
   }
 }
 
-/** Pantalla de DENTRO DE UN PUEBLO o una aldea (`entrarEnPueblo`), con la forma de la de la plaza: el pueblo en 3D al centro con su planta de
- * minimapa (o, sin planta del motor o sin WebGL, el anillo de huecos de siempre), el almacén debajo y las pestañas a la derecha. «Salir al mundo»
- * abre la ventana común. */
+/** La ventana abierta del pueblo (una de sus partes), o ninguna. */
+let ventanaPueblo: PestanaPueblo | null = null;
+
+/**
+ * Pantalla de DENTRO DE UN PUEBLO o una aldea (`entrarEnPueblo`), a pantalla completa como la plaza (Víctor, 2026-11-03) y con su esqueleto
+ * (`.plaza-3d`): el pueblo en 3D detrás de todo (o, sin planta del motor o sin WebGL, el anillo de huecos de siempre en el centro); arriba a la
+ * izquierda, el blasón con lo que es y de quién; abajo, su almacén y, debajo, el riel con una ventana por parte (Resumen, Guarnición, Acarreo y
+ * Carga); en la esquina, el minimapa. «Salir al mundo» abre la ventana común.
+ */
 function montarPueblo(): void {
   const proyeccion = estadoCliente.proyeccionUltima;
   const pueblo = proyeccion && puebloActual(proyeccion);
   if (!proyeccion || !pueblo) { montar('cargando'); return; }
   menuEsquinaAbierto = false;
-  app.innerHTML = `<div class="asent-screen pueblo-screen">
+  ventanaPueblo = null;
+  ventanaPlaza = null;
+  popBlason = null;
+  app.innerHTML = `<div class="asent-screen pueblo-screen plaza-3d">
     ${htmlBarraJugador(proyeccion, escaparHtml)}
-    <header class="asent-barra">
-      <span class="asent-nombre">${escaparHtml(nombreDePueblo(pueblo))}</span><span class="asent-nivel">De visita</span>
-      <div class="asent-barra-acciones"><button id="btn-salir-mundo" class="btn-primary" type="button">Salir al mundo</button></div>
-    </header>
     <div class="asent-cuerpo">
       <div class="asent-centro">
         <div class="asent-mapa pueblo-mapa">
           <div class="ciudad3d-escena" hidden></div>
           <div class="asent-lienzo pueblo-lienzo"></div>
-          <div class="asent-lienzo asent-minimapa pueblo-mini" title="Minimapa: un clic lleva la vista ahí" hidden><div class="pueblo-plano"></div></div>
-          <p class="pueblo-aviso-batalla" hidden>Lo están atacando: si sigues dentro, defiendes.</p>
         </div>
-        <div class="asent-recursos pueblo-almacen"></div>
       </div>
-      <aside class="asent-lado"><div class="pueblo-lado"></div></aside>
+      <aside class="asent-izq">
+        <div class="asent-blason"></div>
+      </aside>
+      <aside class="asent-der"></aside>
+      <p class="pueblo-aviso-batalla" hidden>Lo están atacando: si sigues dentro, defiendes.</p>
+      <div class="asent-pie pueblo-almacen" hidden></div>
+      <nav class="asent-riel" aria-label="Partes del pueblo"></nav>
+      <div class="asent-lienzo asent-minimapa pueblo-mini" title="Minimapa: un clic lleva la vista ahí" hidden><div class="pueblo-plano"></div></div>
+      <header class="asent-barra">
+        <div class="asent-barra-acciones"><button id="btn-salir-mundo" class="btn-primary" type="button">Salir al mundo</button></div>
+      </header>
+      <section class="asent-ventana" role="dialog" aria-label="Pueblo" hidden>
+        <header class="asent-ventana-cab"><div class="asent-ventana-titulo"></div><button class="asent-ventana-cerrar" type="button" data-ventana-cerrar title="Cerrar (Esc)" aria-label="Cerrar">✕</button></header>
+        <div class="asent-edif-cuerpo pueblo-lado"></div>
+      </section>
     </div>
     <div class="asent-tooltip" hidden></div>
     ${HTML_VELO_SALIDA}
@@ -533,6 +581,7 @@ function montarPueblo(): void {
   cablearMenuEsquina(contenedor);
   cablearBarraJugador(contenedor);
   contenedor.querySelector('#btn-salir-mundo')?.addEventListener('click', abrirVentanaSalida);
+  contenedor.querySelector('[data-ventana-cerrar]')?.addEventListener('click', () => abrirPartePueblo(null));
   let sondeando = false;
   const sondeo = setInterval(() => {
     if (sondeando || !document.querySelector('.pueblo-screen') || !hayQueSondear()) return;
@@ -541,6 +590,20 @@ function montarPueblo(): void {
   }, 3000);
   limpiarPantalla = () => { clearInterval(sondeo); desmontarPueblo3D(); };
 }
+
+/** Abre una parte del pueblo en su ventana (o ninguna) y repinta. */
+function abrirPartePueblo(parte: PestanaPueblo | null): void {
+  ventanaPueblo = parte;
+  const p = estadoCliente.proyeccionUltima;
+  if (p) pintarPueblo(p);
+}
+
+// Esc cierra la ventana abierta del campamento o del pueblo (la de la plaza tiene su propio Esc).
+document.addEventListener('keydown', (ev) => {
+  if (ev.key !== 'Escape' || ventanaSalidaAbierta || document.querySelector('.dialogo-velo, .eleccion-clic')) return;
+  if (ventanaCamp && document.querySelector('.camp-screen')) abrirParteCampamento(null);
+  else if (ventanaPueblo && document.querySelector('.pueblo-screen')) abrirPartePueblo(null);
+});
 
 /** La vista 3D del pueblo donde estás (`ciudad3d/pueblo.ts`), con la planta en SVG de minimapa; la planta que se dibuja y si ya tiene su suelo. */
 let pueblo3d: { vista: VistaCiudad3D; minimapa: Minimapa; plano: string; suelo: boolean } | null = null;
@@ -551,7 +614,7 @@ let pueblo3dSinWebgl = false;
 function montarPueblo3D(mapa: HTMLElement): boolean {
   if (pueblo3d) return true;
   const escena = mapa.querySelector<HTMLElement>('.ciudad3d-escena');
-  const plano = mapa.querySelector<HTMLElement>('.pueblo-plano');
+  const plano = app.querySelector<HTMLElement>('.pueblo-plano');
   const tooltip = app.querySelector<HTMLElement>('.asent-tooltip');
   if (pueblo3dSinWebgl || !escena || !plano) return false;
   const minimapa = new Minimapa(plano);
@@ -594,14 +657,15 @@ function pintarCentroPueblo(p: ProyeccionJugador, pueblo: PuebloDeMapa): void {
   const mapa = app.querySelector<HTMLElement>('.pueblo-mapa');
   const lienzo = mapa?.querySelector<HTMLElement>('.pueblo-lienzo');
   const escenaEl = mapa?.querySelector<HTMLElement>('.ciudad3d-escena');
-  const mini = mapa?.querySelector<HTMLElement>('.pueblo-mini');
-  const planoEl = mapa?.querySelector<HTMLElement>('.pueblo-plano');
-  const aviso = mapa?.querySelector<HTMLElement>('.pueblo-aviso-batalla');
+  const mini = app.querySelector<HTMLElement>('.pueblo-mini');
+  const planoEl = mini?.querySelector<HTMLElement>('.pueblo-plano');
+  const aviso = app.querySelector<HTMLElement>('.pueblo-aviso-batalla');
   if (!mapa || !lienzo || !escenaEl || !mini || !planoEl) return;
   const escena = p.escenasPueblo.find((e) => e.puebloId === pueblo.id);
   const plano = escena ? svgPlanoPueblo(escena) : '';
   const en3d = Boolean(escena && plano) && montarPueblo3D(mapa);
   mapa.classList.toggle('asent-mapa-3d', en3d);
+  app.querySelector('.pueblo-screen')?.classList.toggle('sin-3d', !en3d);
   escenaEl.hidden = !en3d;
   mini.hidden = !en3d;
   lienzo.hidden = en3d;
@@ -626,49 +690,98 @@ function pintarCentroPueblo(p: ProyeccionJugador, pueblo: PuebloDeMapa): void {
 
 function pintarPueblo(p: ProyeccionJugador): void {
   const pueblo = puebloActual(p);
-  const lienzo = app.querySelector<HTMLElement>('.pueblo-lienzo');
   const almacen = app.querySelector<HTMLElement>('.pueblo-almacen');
   const lado = app.querySelector<HTMLElement>('.pueblo-lado');
-  if (!pueblo || !lienzo || !almacen || !lado) return;
+  const ventana = app.querySelector<HTMLElement>('.pueblo-screen .asent-ventana');
+  const titulo = ventana?.querySelector<HTMLElement>('.asent-ventana-titulo');
+  const blason = app.querySelector<HTMLElement>('.pueblo-screen .asent-blason');
+  const riel = app.querySelector<HTMLElement>('.pueblo-screen .asent-riel');
+  if (!pueblo || !almacen || !lado || !ventana || !titulo || !blason || !riel) return;
   const repintar = (): void => { const q = estadoCliente.proyeccionUltima; if (q) pintarPueblo(q); };
   pintarCentroPueblo(p, pueblo);
-  pintar(almacen, htmlAlmacenPueblo(pueblo, escaparHtml), undefined, 'pueblo-almacen');
-  pintar(lado, htmlPestanasPueblo(p, pueblo, escaparHtml), () => cablearInteriorPueblo(lado, p, pueblo, ejecutarYRefrescar, repintar), 'pueblo');
+  const madre = p.asentamientos.find((a) => a.id === pueblo.madreId)?.nombre ?? p.asentamientosAvistados.find((a) => a.id === pueblo.madreId)?.nombre
+    ?? p.asentamientosConocidos.find((a) => a.asentamientoId === pueblo.madreId)?.nombre;
+  pintar(blason, htmlBlasonInterior({
+    icono: iconoDePueblo(pueblo.tipo), nombre: nombreDePueblo(pueblo),
+    lineas: [...(madre ? [`De ${madre}`] : []), pueblo.propio ? 'De tu Facción' : 'De visita'],
+  }, escaparHtml), undefined, 'blason-pueblo');
+  const htmlAlmacen = htmlPlacaDeRecursos('almacen', 'Almacén', pueblo.almacen, escaparHtml, pueblo.capacidad || undefined);
+  almacen.hidden = false;
+  pintar(almacen, htmlAlmacen, undefined, 'pueblo-almacen');
+  const partes = pestanasDePueblo(p, pueblo);
+  if (ventanaPueblo && !partes.some(([id]) => id === ventanaPueblo)) ventanaPueblo = null;
+  pintar(riel, htmlRielInterior(partes.map(([id, t]) => ({ id, titulo: t })), ventanaPueblo, escaparHtml),
+    () => riel.querySelectorAll<HTMLButtonElement>('[data-parte]').forEach((b) => b.addEventListener('click', () => {
+      const parte = b.dataset.parte as PestanaPueblo;
+      abrirPartePueblo(ventanaPueblo === parte ? null : parte);
+    })), 'riel-pueblo');
+  const abierta = ventanaPueblo;
+  if (!abierta) { ventana.hidden = true; vaciar(lado); return; }
+  ventana.hidden = false;
+  ventana.dataset.ancho = 'normal';
+  pintar(titulo, htmlTituloDeParte(abierta, partes.find(([id]) => id === abierta)?.[1] ?? abierta, escaparHtml), undefined, 'titulo-pueblo');
+  pintar(lado, htmlCuerpoPueblo(p, pueblo, abierta, escaparHtml), () => cablearInteriorPueblo(lado, p, pueblo, ejecutarYRefrescar, repintar), `pueblo-${abierta}`);
 }
 
 /** Vuelca la proyección en la pantalla Campamento (en cada refresco). No toca el DOM de lo que no cambió, para no llevarse lo que se escribe. */
 function pintarCampamento(p: ProyeccionJugador, campamento: CampamentoMercenarios): void {
   const lienzo = app.querySelector<HTMLElement>('.camp-plano');
-  const leyenda = app.querySelector<HTMLElement>('.camp-leyenda-caja');
+  const ventana = app.querySelector<HTMLElement>('.camp-screen .asent-ventana');
   const lado = app.querySelector<HTMLElement>('.camp-lado');
-  if (!lienzo || !lado) return;
+  const titulo = ventana?.querySelector<HTMLElement>('.asent-ventana-titulo');
+  const blason = app.querySelector<HTMLElement>('.camp-screen .asent-blason');
+  const riel = app.querySelector<HTMLElement>('.camp-screen .asent-riel');
+  const pie = app.querySelector<HTMLElement>('.camp-screen .asent-pie');
+  if (!lienzo || !ventana || !lado || !titulo || !blason || !riel || !pie) return;
   // La planta de ESTE campamento: el héroe puede tener el ámbito de más de uno (donde reside y donde está), y antes se tomaba el primero que
   // saliera, que según el orden de llegada era este o el otro: la planta aparecía y desaparecía. Si en un refresco aún no está, se deja la que
   // hay en vez de vaciar el lienzo.
   const escena = p.escenasCampamento.find((e) => e.campamentoId === campamento.id);
   const plano = escena ? svgPlanoCampamento(escena) : '';
-  if (plano && lienzo.dataset.pintado !== plano) { lienzo.innerHTML = plano; lienzo.dataset.pintado = plano; if (leyenda && escena) leyenda.innerHTML = leyendaPlanoCampamento(escena); }
+  if (plano && lienzo.dataset.pintado !== plano) { lienzo.innerHTML = plano; lienzo.dataset.pintado = plano; }
   if (escena && plano) pintarCampamento3D(p, campamento, escena, plano);
-  const residencia = app.querySelector<HTMLElement>('#camp-residencia');
-  if (residencia) residencia.textContent = campamento.residentesIds.includes(p.heroeId) ? 'Tu residencia' : 'De paso';
 
+  // el blasón: qué campamento es y qué es para ti
+  const resides = campamento.residentesIds.includes(p.heroeId);
+  const residentes = campamento.residentesIds.length;
+  pintar(blason, htmlBlasonInterior({
+    icono: ICONO_CAMPAMENTO, nombre: 'Campamento de mercenarios',
+    lineas: [resides ? 'Tu residencia' : 'De paso', `${residentes} ${residentes === 1 ? 'residente' : 'residentes'}`],
+  }, escaparHtml), undefined, 'blason-camp');
+
+  // el pie: tu almacén personal (si resides aquí) y el carro que llevas (el de tu columna o el tuyo dentro de tu residencia)
+  const columna = columnaQuePaga(p);
+  const carro = columna ? (columna.suministro ?? {}) : resides ? (p.heroe.carro ?? {}) : null;
+  const algo = (r: Record<string, number> | null | undefined): r is Record<string, number> => !!r && Object.values(r).some((n) => n >= 1);
+  const htmlPie = [
+    resides && algo(p.heroe.almacenPersonal) ? htmlPlacaDeRecursos('almacen', 'Tu almacén', p.heroe.almacenPersonal, escaparHtml, p.heroe.capacidadAlmacenPersonal) : '',
+    algo(carro) ? htmlPlacaDeRecursos('carro', columna ? 'Carro de tu columna' : 'Tu carro', carro, escaparHtml) : '',
+  ].join('');
+  pie.hidden = !htmlPie;
+  pintar(pie, htmlPie, undefined, 'pie-camp');
+
+  // el riel y la ventana abierta
   costoDeRefundacion(() => { invalidar(lado); if (estadoCliente.proyeccionUltima) pintarCampamento(estadoCliente.proyeccionUltima, campamento); });
   const secciones = seccionesDeCampamento(p);
-  if (!secciones.some((x) => x.id === seccionCamp)) seccionCamp = 'resumen';
-  const html = `<div class="asent-tabs asent-tabs-ancho">${secciones.map((x) => `<button class="asent-tab${x.id === seccionCamp ? ' activo' : ''}" type="button" data-seccion="${x.id}">${x.etiqueta}</button>`).join('')}</div>
-    <div class="asent-lado-cuerpo">${htmlSeccionCampamento(seccionCamp, p, campamento, escaparHtml)}</div>
-    <p id="camp-error" class="faction-error" role="alert"></p>`;
-  // Solo se repinta si cambió el HTML, y lo que el jugador tenía marcado o escrito vuelve a su sitio (`ui/repintado.ts`); cada pestaña es un ámbito.
+  if (ventanaCamp && !secciones.some((x) => x.id === ventanaCamp)) ventanaCamp = null;
+  pintar(riel, htmlRielInterior(secciones.map((x) => ({ id: x.id, titulo: x.etiqueta })), ventanaCamp, escaparHtml),
+    () => riel.querySelectorAll<HTMLButtonElement>('[data-parte]').forEach((b) => b.addEventListener('click', () => {
+      const parte = b.dataset.parte as SeccionCampamento;
+      abrirParteCampamento(ventanaCamp === parte ? null : parte);
+    })), 'riel-camp');
+  const abierta = ventanaCamp;
+  if (!abierta) { ventana.hidden = true; vaciar(lado); return; }
+  ventana.hidden = false;
+  ventana.dataset.ancho = PARTES_ANCHAS.has(abierta) ? 'completa' : 'normal';
+  pintar(titulo, htmlTituloDeParte(abierta, secciones.find((x) => x.id === abierta)?.etiqueta ?? abierta, escaparHtml), undefined, 'titulo-camp');
+  const html = `${htmlSeccionCampamento(abierta, p, campamento, escaparHtml)}<p id="camp-error" class="faction-error" role="alert"></p>`;
+  // Solo se repinta si cambió el HTML, y lo que el jugador tenía marcado o escrito vuelve a su sitio (`ui/repintado.ts`); cada parte es un ámbito.
   pintar(lado, html, () => {
-    lado.querySelectorAll<HTMLButtonElement>('.asent-tab').forEach((boton) => boton.addEventListener('click', () => {
-      seccionCamp = boton.dataset.seccion as SeccionCampamento;
-      if (estadoCliente.proyeccionUltima) pintarCampamento(estadoCliente.proyeccionUltima, campamento);
-    }));
     cablearCampamento(lado, p, campamento, ejecutarYRefrescar, {
       ejecutarConDatos: ejecutarConDatosYRefrescar,
       repintar: () => { olvidarEdicion(lado); if (estadoCliente.proyeccionUltima) pintarCampamento(estadoCliente.proyeccionUltima, campamento); },
     });
-  }, seccionCamp);
+  }, abierta);
   const taberna = lado.querySelector<HTMLElement>('#camp-taberna');
   if (taberna) pintarIntel(taberna, p, () => pintarCampamento(p, campamento));
 }

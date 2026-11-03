@@ -749,17 +749,27 @@ function htmlResumenPueblo(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar): s
     ${ciudadano ? '' : '<p class="asent-lado-nota">Solo los ciudadanos de la Facción de su plaza madre lo gestionan.</p>'}`;
 }
 
-/** Las pestañas de la derecha con la abierta. «Carga» solo para el ciudadano de la Facción de la madre que entró con columna. */
-export function htmlPestanasPueblo(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar): string {
+/** Las partes del pueblo por dentro, en orden. «Carga» solo para el ciudadano de la Facción de la madre que entró con columna. */
+export function pestanasDePueblo(p: ProyeccionJugador, x: PuebloDeMapa): [PestanaPueblo, string][] {
+  return [['resumen', 'Resumen'], ['guarnicion', 'Guarnición'], ['acarreo', 'Acarreo y escolta'], ...(x.propio && miColumna(p) ? [['carga', 'Carga'] as [PestanaPueblo, string]] : [])];
+}
+
+/** Lo que va dentro de una parte del pueblo (la ventana de su riel), con su línea de error al pie. */
+export function htmlCuerpoPueblo(p: ProyeccionJugador, x: PuebloDeMapa, pestana: PestanaPueblo, e: Escapar): string {
   const ciudadano = x.propio;
-  const pestanas: [PestanaPueblo, string][] = [['resumen', 'Resumen'], ['guarnicion', 'Guarnición'], ['acarreo', 'Acarreo y escolta'], ...(ciudadano && miColumna(p) ? [['carga', 'Carga'] as [PestanaPueblo, string]] : [])];
-  if (!pestanas.some(([id]) => id === pestanaPueblo)) pestanaPueblo = 'resumen';
-  const cuerpo = pestanaPueblo === 'guarnicion' ? htmlGuarnicion(p, x, ciudadano, e)
-    : pestanaPueblo === 'acarreo' ? `<strong class="heroe-sub">Carro de acarreo</strong>${htmlCarroDeAcarreo(p, x, e)}${ciudadano ? htmlEscoltaDentro(p, x, e) : ''}`
-    : pestanaPueblo === 'carga' ? htmlCargaDelPueblo(p, x, e)
+  const cuerpo = pestana === 'guarnicion' ? htmlGuarnicion(p, x, ciudadano, e)
+    : pestana === 'acarreo' ? `<strong class="heroe-sub">Carro de acarreo</strong>${htmlCarroDeAcarreo(p, x, e)}${ciudadano ? htmlEscoltaDentro(p, x, e) : ''}`
+    : pestana === 'carga' ? htmlCargaDelPueblo(p, x, e)
     : htmlResumenPueblo(p, x, e);
+  return `${cuerpo}<p class="faction-error" data-pueblo-dentro-error role="alert"></p>`;
+}
+
+/** Las pestañas con la abierta (la forma de antes de la pantalla completa, con las partes en pestañas en vez de en el riel). */
+export function htmlPestanasPueblo(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar): string {
+  const pestanas = pestanasDePueblo(p, x);
+  if (!pestanas.some(([id]) => id === pestanaPueblo)) pestanaPueblo = 'resumen';
   return `<div class="asent-tabs asent-tabs-ancho">${pestanas.map(([id, etiqueta]) => `<button class="asent-tab${id === pestanaPueblo ? ' activo' : ''}" type="button" data-pueblo-pestana="${id}">${etiqueta}</button>`).join('')}</div>
-    <div class="asent-lado-cuerpo">${cuerpo}<p class="faction-error" data-pueblo-dentro-error role="alert"></p></div>`;
+    <div class="asent-lado-cuerpo">${htmlCuerpoPueblo(p, x, pestanaPueblo, e)}</div>`;
 }
 
 export function cablearInteriorPueblo(raiz: HTMLElement, p: ProyeccionJugador, x: PuebloDeMapa, ejecutar: Ejecutar, alCargar: () => void): void {

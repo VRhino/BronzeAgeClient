@@ -26,7 +26,7 @@ const reducida = (f: FichaMercenario): FichaMercenario => ({ ...f, historial: un
 let soloGobernador = false;
 const p = (): ProyeccionJugador => ({
   gameId: 'banco', instante: AHORA, version: 1, heroeId: 'heroe-1', faccionId: 'fac-1', mapaId: 'm',
-  heroe: { id: 'heroe-1', displayName: 'Víctor', ubicacion: { tipo: 'mercenarios', campamentoId: 'camp-2' }, carro: { oro: 260 }, escuadrones: [] },
+  heroe: { id: 'heroe-1', displayName: 'Víctor', ubicacion: { tipo: 'mercenarios', campamentoId: 'camp-2' }, escuadrones: [] },
   facciones: [
     {
       id: 'fac-1', nombre: 'Casa de Micenas', reyId: soloGobernador ? 'heroe-9' : 'heroe-1', embajadorId: null, nivel: 3, ciudadanosIds: ['heroe-1', 'heroe-9', 'heroe-21', 'heroe-22', 'heroe-23'],
@@ -60,6 +60,8 @@ const p = (): ProyeccionJugador => ({
   avanzadas: [{ id: 'av-1', madreId: 'as-4', etapa: 2, posicion: { x: 500, y: 330 }, enRuinas: false, propia: true }],
   caravanas: [{ id: 'car-5', origenAsentamientoId: 'as-1', destinoAsentamientoId: 'as-4', posicionActual: { x: 440, y: 322 }, faccionId: 'fac-1', tipo: 'comercial' }],
   ejercitos: [
+    // La columna con la que Víctor entró de visita: el oro de las tarifas va en su carro (`suministro`), no en `heroe.carro`.
+    { id: 'ej-1', faccionId: 'fac-1', tipo: 'ejercito', liderId: 'heroe-1', estado: 'estacionado', posicionActual: { x: 392, y: 318 }, participantes: [{ heroeId: 'heroe-1', unidoEn: 0 }], suministro: { oro: 260 } },
     { id: 'ej-2', faccionId: 'fac-1', tipo: 'ejercito', liderId: 'heroe-9', estado: 'marchando', posicionActual: { x: 452, y: 333 }, participantes: [{ heroeId: 'heroe-9', unidoEn: 0 }, { heroeId: 'heroe-22', unidoEn: 0 }] },
   ],
   convocatorias: [],

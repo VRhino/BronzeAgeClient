@@ -8,6 +8,7 @@
 import { bloqueDeDatos, type ProyeccionJugador } from '../apiCliente';
 import type { ContratoMercenario, EventoDominio, FichaMercenario, ObjetivoMercenario, OfertaMercenario, Point } from '../tiposDominio';
 import { ayuda } from './ayuda';
+import { columnaQuePaga } from './columnaQuePaga';
 import { confirmar } from './dialogo';
 import { textoEnTiempoReal } from './estadoCliente';
 import { iconoMini } from './iconosTropa';
@@ -310,11 +311,13 @@ const botonCentrar = (pos: Point | undefined, titulo: string): string =>
 
 // ── el tablón del campamento ──
 
+const SIN_COLUMNA = 'Se paga con el oro del carro de tu columna, y dentro de tu residencia no vas en ninguna: sal con tu columna a la puerta para contratar.';
+
 /** Lo que el jugador eligió en cada oferta (trabajo y plazo): vive entre repintados. */
 const eleccion = new Map<string, { trabajo: string; plazo: number }>();
 let ordenTablon: 'renombre' | 'precio' = 'renombre';
 
-function htmlOferta(p: ProyeccionJugador, o: OfertaMercenario, yo: Puestos, carro: number, e: Escapar): string {
+function htmlOferta(p: ProyeccionJugador, o: OfertaMercenario, yo: Puestos, carro: number, conColumna: boolean, e: Escapar): string {
   const id = e(o.heroeId);
   const el = eleccion.get(o.heroeId) ?? { trabajo: 'defender', plazo: 3 };
   const herido = o.heridoHasta !== undefined && o.heridoHasta > p.instante;
@@ -351,7 +354,8 @@ function htmlOferta(p: ProyeccionJugador, o: OfertaMercenario, yo: Puestos, carr
   const motivo = p.faccionId === null ? 'Necesitas una Facción para contratar.'
     : herido ? 'Está herido: espera a que sane.'
       : !firma ? 'Ninguno de tus cargos puede firmar este trabajo sobre algo que tengas a la vista.'
-        : elegido !== undefined && elegido > carro ? `Te faltan ${oro(elegido - carro)} de oro en el carro.` : '';
+        : !conColumna ? SIN_COLUMNA
+          : elegido !== undefined && elegido > carro ? `Te faltan ${oro(elegido - carro)} de oro en el carro.` : '';
   return `<article class="merc-oferta${herido ? ' herido' : ''}" data-merc-oferta="${id}" data-faccion="${e(p.faccionId ?? '')}">
     <header class="merc-oferta-cab">
       ${o.ficha ? insigniaDeRango(o.ficha.rango, 36) : ''}
@@ -374,16 +378,19 @@ function htmlOferta(p: ProyeccionJugador, o: OfertaMercenario, yo: Puestos, carr
 
 /** La subpestaña «Mercenarios» del campamento: su tablón, con contratar. */
 export function htmlTablonMercenarios(p: ProyeccionJugador, tablon: OfertaMercenario[] | undefined, e: Escapar): string {
-  const info = ayuda('camp:mercenarios', 'Héroes bot que se ofrecen a sueldo. Firma el Rey, el Embajador o el cargo local que alcance (el de más rango), aquí en persona y con el oro de la tarifa en el carro. El oro no se devuelve nunca. Mientras dura, el mercenario es ciudadano de tu Facción con marca, y sin orden solo se defiende: se le manda desde Facción › Mercenarios.');
-  const carro = p.heroe.carro?.oro ?? 0;
+  const info = ayuda('camp:mercenarios', 'Héroes bot que se ofrecen a sueldo. Firma el Rey, el Embajador o el cargo local que alcance (el de más rango), aquí en persona (dentro o con tu columna a la puerta) y con el oro de la tarifa en el carro de tu columna. Dentro de tu residencia no vas en columna: para contratar, sal con ella a la puerta. El oro no se devuelve nunca. Mientras dura, el mercenario es ciudadano de tu Facción con marca, y sin orden solo se defiende: se le manda desde Facción › Mercenarios.');
+  const columna = columnaQuePaga(p);
+  const carro = columna?.suministro?.['oro'] ?? 0;
   const yo = misPuestos(p);
   const renombre = (o: OfertaMercenario) => o.ficha?.renombre ?? 0;
   const precio = (o: OfertaMercenario) => o.tarifas.find((t) => t.plazoDias === 1)?.oro ?? Infinity;
   const lista = [...(tablon ?? [])].sort((a, b) => (ordenTablon === 'renombre' ? renombre(b) - renombre(a) : precio(a) - precio(b)));
   const chip = (v: typeof ordenTablon, t: string) => `<button type="button" class="merc-chip${ordenTablon === v ? ' activo' : ''}" data-merc-ordenar-tablon="${v}">${t}</button>`;
-  return `<div class="merc-tablon-cab"><strong class="heroe-sub">Tablón de mercenarios${info}</strong><span class="merc-bolsa" title="El oro de tu carro: con él se paga">🪙 ${oro(carro)} en el carro</span></div>
+  return `<div class="merc-tablon-cab"><strong class="heroe-sub">Tablón de mercenarios${info}</strong>${columna
+    ? `<span class="merc-bolsa" title="El oro del carro de tu columna: con él se paga">🪙 ${oro(carro)} en el carro</span>`
+    : `<span class="merc-bolsa merc-bolsa-sin" title="${e(SIN_COLUMNA)}">🪙 sin columna</span>`}</div>
     ${lista.length > 1 ? `<div class="merc-orden-tablon">Ordenar por ${chip('renombre', 'renombre')}${chip('precio', 'precio')}</div>` : ''}
-    ${lista.length ? `<div class="merc-ofertas">${lista.map((o) => htmlOferta(p, o, yo, carro, e)).join('')}</div>` : '<p class="mapa-lista-vacia">Nadie se ofrece ahora en este campamento.</p>'}`;
+    ${lista.length ? `<div class="merc-ofertas">${lista.map((o) => htmlOferta(p, o, yo, carro, columna !== null, e)).join('')}</div>` : '<p class="mapa-lista-vacia">Nadie se ofrece ahora en este campamento.</p>'}`;
 }
 
 export function cablearTablonMercenarios(raiz: HTMLElement, ejecutar: Ejecutar, error: (m: string) => void, repintar: () => void): void {

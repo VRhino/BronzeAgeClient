@@ -3,6 +3,23 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.108.0] — 2026-11-03 · El campamento y el pueblo a pantalla completa, y pagar mercenarios con el carro de la columna · sin cambio de contrato
+
+Peticiones de Víctor (2026-11-03): el campamento de mercenarios, los pueblos y las aldeas con la vista 3D a pantalla completa como la plaza, y
+mercado, tropa, mercenarios y taberna a pantalla completa; y un fallo: al pagar a un mercenario no se veía el oro del carro.
+
+- **Campamento, pueblo y aldea con el esqueleto de la plaza** (`.plaza-3d`): la escena 3D llena la pantalla; arriba a la izquierda, un blasón
+  con el icono del sitio (`ui/hudInterior.ts`); al borde derecho, el rastreador de misiones; abajo, el pie y el riel (como la plaza desde 0.104.0);
+  el minimapa en la esquina. Las pestañas de antes son ventanas del riel, con el mismo contenido: en el campamento Resumen, Tropa, Mercado,
+  Mercenarios, Fondo y Taberna (Tropa, Mercado, Mercenarios y Taberna a pantalla completa); en el pueblo Resumen, Guarnición, Acarreo y Carga.
+  Un clic en una pieza del campamento abre su parte; Esc o ✕ cierra la ventana. Ninguna abierta al entrar.
+- **El pie del campamento**: tu almacén personal (si resides allí) y el carro que llevas, cada uno solo si lleva algo. El del pueblo, su almacén.
+- **Pagar a un mercenario**: el tablón leía el carro propio del héroe (`heroe.carro`), pero el motor cobra la tarifa del carro de la columna en la
+  que vas (`columna_que_lleva`). Ahora el tablón cuenta el oro de esa columna (`ui/columnaQuePaga.ts`), dentro de visita o a la puerta. Dentro de
+  tu residencia no vas en columna y el motor no deja contratar: el tablón lo dice («sin columna») y el botón explica que hay que salir a la puerta
+  con la columna. Pruebas en `pruebas/mercenariosPago.test.ts`; el banco de mercenarios lleva el oro en la columna.
+- `ui/pueblos.ts` separa las partes del pueblo (`pestanasDePueblo`) de lo que va dentro (`htmlCuerpoPueblo`).
+- Docs: `Diseno_Interfaz.md`.
 ## [0.107.0] — 2026-11-03 · La barra del Almacén con 8 recursos elegidos y su ventana con la producción · sin cambio de contrato
 
 Petición de Víctor (2026-11-03): que la barra de abajo enseñe como mucho 8 recursos, elegidos por el jugador en un panel de Almacén que se

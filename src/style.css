@@ -3527,6 +3527,7 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 /* ── Mercenarios por contrato (0.77.0): tablón del campamento, pestaña de la Facción y ficha ── */
 .merc-tablon-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .merc-bolsa { font-weight: 700; color: var(--oro-claro); background: rgba(0, 0, 0, 0.35); border: 1px solid var(--bronce-osc); border-radius: 999px; padding: 2px 10px; font-size: 0.85rem; }
+.merc-bolsa-sin { color: inherit; opacity: 0.75; font-weight: 600; }
 .merc-orden-tablon { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-secondary); margin: 4px 0 8px; }
 .merc-chip { background: rgba(0, 0, 0, 0.3); color: var(--text-secondary); border: 1px solid var(--bronce-osc); border-radius: 999px; padding: 2px 10px; font-size: 0.78rem; cursor: pointer; }
 .merc-chip.activo, .merc-chip:hover:not(:disabled) { color: var(--tinta); background: var(--oro); border-color: var(--oro); }
@@ -4694,8 +4695,8 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
    interfaz de asentamiento», 0.97.0): arriba a la izquierda el blasón, la subida en curso y las obras en marcha; al
    borde derecho el rastreador de misiones y la ficha del edificio elegido; arriba a la derecha «Ejércitos» y «Salir al mundo»; arriba al
    centro la franja de la ocupación; abajo, Población, Almacén y Estado y, debajo, el riel de las ventanas (0.104.0); abajo a la derecha, pegado a los bordes, el minimapa. Cada ventana
-   del riel se abre a media pantalla junto a la columna izquierda, sin tapar la ciudad entera. Solo la plaza: el campamento y el pueblo comparten las clases
-   `asent-*` y no cambian.
+   del riel se abre a media pantalla junto a la columna izquierda, sin tapar la ciudad entera. Desde 0.108.0 el campamento y el pueblo usan este
+   mismo esqueleto (bloque «Campamento y pueblo a pantalla completa»).
    ===================================================================================== */
 .plaza-3d {
   --col-izq: clamp(240px, 28vmin, 300px);
@@ -5084,6 +5085,23 @@ body:has(.asent-ocupacion:not([hidden])) .eleccion-clic { top: calc(var(--jugado
   .plaza-3d > .jugador-barra .jugador-quien { display: none; }
   .plaza-3d .jugador-botones { min-width: 0; overflow-x: auto; scrollbar-width: none; padding: 6px 4px 2px; }
   .plaza-3d .jugador-botones button { flex: none; }
+}
+
+/* =====================================================================================
+   CAMPAMENTO Y PUEBLO A PANTALLA COMPLETA (`.camp-screen.plaza-3d`, `.pueblo-screen.plaza-3d`; Víctor, 2026-11-03)
+   El mismo esqueleto que la plaza: la escena detrás de todo, el blasón y el riel arriba a la izquierda, la ventana de la parte abierta junto al
+   riel, el pie abajo y el minimapa en la esquina. Aquí solo lo que cambia: el icono del blasón en vez del escudo y el aviso de batalla.
+   ===================================================================================== */
+.blason-interior-icono { color: var(--oro); --relleno: rgba(216, 184, 120, 0.22); }
+.blason-interior-icono .icono-edificio { display: block; width: 46px; height: 46px; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.6)); }
+.camp-screen .asent-blason, .pueblo-screen .asent-blason { padding-left: 8px; }
+.plaza-3d .pueblo-aviso-batalla { top: calc(var(--jugador-alto) + 6px); }
+.camp-screen .asent-pie-titulo, .pueblo-screen .asent-pie-titulo { white-space: nowrap; }
+.camp-screen .asent-pie-grupo, .pueblo-screen .asent-pie-grupo { min-width: 8.5rem; }
+.plaza-3d.sin-3d .asent-mapa { display: grid; place-items: center; }
+.plaza-3d.sin-3d .pueblo-mini, .plaza-3d.sin-3d .camp-lienzo:not(.asent-minimapa) { position: relative; }
+@media (max-width: 900px) {
+  .blason-interior-icono .icono-edificio { width: 34px; height: 34px; }
 }
 
 /* =====================================================================================

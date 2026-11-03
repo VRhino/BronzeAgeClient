@@ -139,10 +139,17 @@ remata cabeceras y paneles con la moldura clásica. `opacity: .5` para que sea s
     tiene y ✕ (o Esc) para cerrar; Reclutamiento y Mercado son más anchas y «Subir de nivel», estrecha. Un clic en el Barracón,
     la Galería de tiro o las Caballerizas abre Reclutamiento; en la Taberna o el Mercado, la suya. El «?» de la barra del
     jugador abre Información. Las Misiones y el Tablón de la plaza van en el botón «Misiones» de la barra, en dos pestañas;
-  - el campamento y el pueblo siguen con barra superior en flujo, columna izquierda, mapa centrado y columna derecha. En el
-    campamento (0.97.0) el centro es su vista 3D, con la planta en SVG de minimapa abajo a la derecha (`.camp-lienzo`); en el
-    pueblo y la aldea (0.101.0), igual (`.pueblo-mini`), con la franja roja de batalla arriba (`.pueblo-aviso-batalla`); sin
-    planta del motor o sin WebGL, el anillo de huecos de siempre (`.pueblo-lienzo`).
+  - el campamento y el pueblo (0.108.0, petición de Víctor del 2026-11-03) tienen el mismo esqueleto (`.camp-screen.plaza-3d`,
+    `.pueblo-screen.plaza-3d`; piezas en `ui/hudInterior.ts`): su vista 3D a pantalla completa; arriba a la izquierda un blasón
+    con el icono del sitio en vez del escudo (el campamento: «Tu residencia» o «De paso» y sus residentes; el pueblo: su plaza
+    madre y si es de tu Facción); al borde derecho, el rastreador de misiones; abajo, el pie y, debajo, el riel con una ventana
+    por parte, que son las pestañas de antes. En el campamento: Resumen, Tropa, Mercado, Mercenarios, Fondo (si tu Facción no
+    tiene plaza) y Taberna; Tropa, Mercado, Mercenarios y Taberna se abren a pantalla completa. Su pie lleva tu almacén
+    personal (si resides allí) y el carro que llevas (el de tu columna o, dentro de tu residencia, el tuyo), cada uno solo si
+    lleva algo. Un clic en una pieza (taberna, mercado, barracón…) abre su parte. En el pueblo: Resumen, Guarnición, Acarreo y
+    Carga; su pie es el almacén del pueblo; la franja roja de batalla va arriba al centro (`.pueblo-aviso-batalla`). Esc o ✕
+    cierra la ventana. El minimapa es la planta en SVG (`.camp-lienzo`, `.pueblo-mini`); sin planta del motor o sin WebGL, la
+    planta del campamento o el anillo de huecos del pueblo (`.pueblo-lienzo`) vuelven en grande al centro (`.sin-3d`).
 - **Login / Facción**: tarjeta central (`.login-card`) sobre el fondo, como un menú de campaña.
 - **Pantalla de carga** (`.pantalla-carga`, 0.102.0, petición de Víctor del 2026-11-02): al pasar del mundo a una plaza, un
   campamento o un pueblo, al volver y al entrar en la partida. Una imagen a pantalla completa (de la mesa de escalas 3D o de la
