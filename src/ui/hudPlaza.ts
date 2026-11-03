@@ -1,7 +1,7 @@
-// El HUD de la plaza en 3D tras «rehacer la interfaz de asentamiento» (Víctor, 2026-11-02). Abajo, una barra en tres placas separadas:
+// El HUD de la plaza en 3D tras «rehacer la interfaz de asentamiento» (Víctor, 2026-11-02). Arriba al centro (desde 0.111.0; antes abajo), una barra en tres placas separadas:
 // Población (total y clases, que antes iban en el Resumen), Almacén (hasta 8 recursos elegidos; un clic abre su ventana) y Estado (mantenimiento y nutrición, los medidores del
 // Resumen). Arriba a la izquierda, el blasón: el lápiz para cambiar el nombre, la casa (resides aquí o no), la corona (capital) y el medallón
-// del nivel, que abre la subida. Debajo del blasón, las obras en marcha. Debajo de la barra de abajo, el riel de iconos de las ventanas de la
+// del nivel, que abre la subida. Debajo del blasón, las obras en marcha. Abajo, el riel de iconos de las ventanas de la
 // plaza (0.104.0). Arriba al centro, la franja de la ocupación militar. Aquí está el HTML y su cableado; quien lo pinta y ejecuta los comandos es `main.ts`.
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { Asentamiento } from '../tiposDominio';
@@ -12,7 +12,7 @@ import { poblacionDePlaza } from './panelCentro';
 
 type Escapar = (valor: string) => string;
 
-// ---------------------------------------------------------------- la barra de abajo
+// ---------------------------------------------------------------- la barra de Población, Almacén y Estado (arriba al centro)
 
 /** Una pieza de la barra: icono, cifra y barrita de llenado; al pasar, un letrero con el nombre y el detalle (una línea por elemento). */
 function pieza(icono: string, cifra: string, llenado: number, nombre: string, detalle: string[], clase: string, esc: Escapar): string {
@@ -30,6 +30,16 @@ function grupo(clase: string, titulo: string, piezas: string, extra = ''): strin
 
 /** Cuántos recursos caben en la placa del Almacén (Víctor, 2026-11-03). */
 export const MAX_BARRA_ALMACEN = 8;
+
+/** La barra de Población, Almacén y Estado va arriba al centro (Víctor, 2026-11-03) y su alto cambia (en pantallas medianas pasa a dos filas):
+ * se mide y se deja en `--pie-arriba` (en la raíz, porque los avisos flotantes cuelgan del body) para que las ventanas, la franja de ocupación y el aviso de batalla se pongan debajo. */
+export function vigilarPieArriba(pantalla: HTMLElement | null): void {
+  const pie = pantalla?.querySelector<HTMLElement>('.asent-pie');
+  if (!pantalla || !pie || typeof ResizeObserver === 'undefined') return;
+  const medir = (): void => document.documentElement.style.setProperty('--pie-arriba', `${pie.hidden ? 0 : Math.ceil(pie.getBoundingClientRect().height)}px`);
+  new ResizeObserver(medir).observe(pie);
+  medir();
+}
 /** Los de partida, mientras el jugador no elija: lo básico de cualquier plaza. */
 const BARRA_ALMACEN_DEFECTO = ['trigo', 'madera', 'piedra', 'cobre', 'estano', 'oro', 'lingoteBronce', 'livestock'];
 const CLAVE_BARRA = 'bronzeage:barra-almacen';
@@ -90,10 +100,12 @@ export function htmlAlmacenPie(a: Asentamiento, esc: Escapar): string {
     return pieza(RECURSO_ICONO[recurso] ?? '📦', miles(cantidad), llenado, RECURSO_NOMBRE[recurso] ?? recurso,
       [`${miles(cantidad)}${capacidad > 0 ? ` de ${miles(capacidad)}` : ''}`, 'Clic: el almacén entero y qué se ve aquí'], llenado >= 90 ? 'lleno' : '', esc);
   }).join('') || '<span class="asent-pie-vacio">Elige qué ver</span>';
-  return grupo('almacen', 'Almacén', piezas, ' data-abrir-almacen role="button" tabindex="0" title="Abrir el Almacén"');
+  // cuántos van, para repartirlos en una fila o en dos iguales (`--n`, `--n2`) cuando la barra va arriba
+  const n = Math.max(1, elegidos().length);
+  return grupo('almacen', 'Almacén', piezas, ` data-abrir-almacen role="button" tabindex="0" title="Abrir el Almacén" style="--n:${n};--n2:${Math.ceil(n / 2)}"`);
 }
 
-/** En la ventana del Almacén: todos los recursos de la plaza, para elegir cuáles van en la barra de abajo. */
+/** En la ventana del Almacén: todos los recursos de la plaza, para elegir cuáles van en la barra de arriba. */
 export function htmlEleccionBarra(a: Asentamiento, esc: Escapar): string {
   const lista = elegidos();
   const orden = Object.keys(RECURSO_ICONO);
@@ -107,7 +119,7 @@ export function htmlEleccionBarra(a: Asentamiento, esc: Escapar): string {
     return `<button type="button" class="barra-eleccion${dentro ? ' elegido' : ''}${!dentro && lleno ? ' sin-sitio' : ''}" data-barra-recurso="${esc(r)}" aria-pressed="${dentro}" title="${esc(titulo)}">`
       + `<span aria-hidden="true">${RECURSO_ICONO[r] ?? '📦'}</span><span class="barra-eleccion-nombre">${esc(RECURSO_NOMBRE[r] ?? r)}</span><small>${miles(cantidad)}</small></button>`;
   };
-  return `<div class="obra-titulo"><span class="faction-kicker">En la barra de abajo</span><span class="obra-chip${lleno ? ' activa' : ''}">${lista.length}/${MAX_BARRA_ALMACEN}</span></div>
+  return `<div class="obra-titulo"><span class="faction-kicker">En la barra de arriba</span><span class="obra-chip${lleno ? ' activa' : ''}">${lista.length}/${MAX_BARRA_ALMACEN}</span></div>
     <p class="asent-lado-nota">Elige hasta ${MAX_BARRA_ALMACEN} recursos para tenerlos siempre a la vista. Se guarda en este navegador.</p>
     <div class="barra-elecciones">${recursos.map(chip).join('')}</div>`;
 }

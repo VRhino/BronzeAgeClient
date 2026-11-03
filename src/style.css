@@ -4702,8 +4702,11 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
   --col-izq: clamp(240px, 28vmin, 300px);
   --minimapa: clamp(170px, 25vmin, 260px);
   --riel-alto: 50px;
-  /* La barra de abajo con el riel debajo (0.104.0): lo que ocupan las dos, para que la columna izquierda y las ventanas no se metan. */
-  --pie-alto: calc(66px + var(--riel-alto) + 10px);
+  /* Abajo solo queda el riel (desde 0.111.0 la barra de Población, Almacén y Estado va arriba al centro): lo que ocupa, para que la columna
+     izquierda y las ventanas no se metan. Lo que ocupa la barra de arriba lo mide `vigilarPieArriba` (ui/hudPlaza.ts) en `--pie-arriba`. */
+  --pie-alto: calc(var(--riel-alto) + 16px);
+  /* el ancho de la columna derecha (misiones y ficha): la barra de arriba llega hasta ella */
+  --der-ancho: clamp(230px, 22vw, 320px);
   background: #0b0805;
 }
 
@@ -4792,7 +4795,7 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
   right: 16px;
   bottom: calc(var(--minimapa) + 12px);
   z-index: 2;
-  width: clamp(230px, 22vw, 320px);
+  width: var(--der-ancho);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -4885,18 +4888,19 @@ button.asent-blason-medallon:hover .medallon-nivel, button.asent-blason-medallon
   overflow-y: auto;
 }
 
-/* Abajo: Población, Almacén y Estado, tres placas separadas con su letrero encima, centradas en lo que deja el minimapa. */
+/* Arriba al centro (Víctor, 2026-11-03; antes, abajo encima del riel): Población, Almacén y Estado, tres placas separadas con su letrero encima,
+   en el hueco entre la columna del blasón y la de las misiones. Si no caben en una fila, pasan a dos. */
 .asent-pie[hidden] { display: none; }
 .plaza-3d .asent-pie {
   position: absolute;
-  left: 16px;
-  right: calc(var(--minimapa) + 16px);
-  bottom: calc(var(--riel-alto) + 20px);
+  top: calc(var(--jugador-alto) + 16px);
+  left: calc(16px + var(--col-izq) + 12px);
+  right: calc(16px + var(--der-ancho) + 12px);
   z-index: 2;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 16px 10px;
   pointer-events: none;
 }
@@ -4949,11 +4953,13 @@ button.asent-blason-medallon:hover .medallon-nivel, button.asent-blason-medallon
 
 /* Arriba al centro, mientras dura: la ocupación militar. */
 .asent-ocupacion[hidden] { display: none; }
-.asent-ocupacion { position: absolute; top: calc(var(--jugador-alto) + 6px); left: 50%; transform: translateX(-50%); z-index: 3; display: flex; align-items: center; gap: 8px; padding: 6px 14px; background: linear-gradient(180deg, rgba(110, 28, 20, 0.95), rgba(60, 14, 10, 0.95)); border: 1px solid #d9573f; border-radius: 3px; box-shadow: 0 0 14px rgba(217, 87, 63, 0.4), var(--placa-sutil); color: #f4d6c8; font-size: 0.85rem; white-space: nowrap; }
+.asent-ocupacion { position: absolute; top: calc(var(--jugador-alto) + var(--pie-arriba, 0px) + 26px); left: 50%; transform: translateX(-50%); z-index: 3; display: flex; align-items: center; gap: 8px; padding: 6px 14px; background: linear-gradient(180deg, rgba(110, 28, 20, 0.95), rgba(60, 14, 10, 0.95)); border: 1px solid #d9573f; border-radius: 3px; box-shadow: 0 0 14px rgba(217, 87, 63, 0.4), var(--placa-sutil); color: #f4d6c8; font-size: 0.85rem; white-space: nowrap; }
 .asent-ocupacion strong { font-family: var(--fuente-titulo); letter-spacing: 0.05em; color: #ffe2d6; }
 .asent-ocupacion span:last-child { font-size: 0.78rem; color: #f0b39f; }
+body:has(.plaza-3d .asent-pie:not([hidden])) .aviso-global,
+body:has(.plaza-3d .asent-pie:not([hidden])) .eleccion-clic { top: calc(var(--jugador-alto) + var(--pie-arriba, 0px) + 26px); }
 body:has(.asent-ocupacion:not([hidden])) .aviso-global,
-body:has(.asent-ocupacion:not([hidden])) .eleccion-clic { top: calc(var(--jugador-alto) + 52px); }
+body:has(.asent-ocupacion:not([hidden])) .eleccion-clic { top: calc(var(--jugador-alto) + var(--pie-arriba, 0px) + 72px); }
 
 /* El riel: una columna de iconos, uno por ventana; al pasar, su nombre a la derecha. */
 /* El riel: una fila de iconos, uno por ventana, debajo de la barra de Población, Almacén y Estado y centrado con ella (0.104.0; antes era una
@@ -5009,7 +5015,7 @@ body:has(.asent-ocupacion:not([hidden])) .eleccion-clic { top: calc(var(--jugado
 .obras-hud-mas { font-size: 0.68rem; color: var(--text-secondary); }
 
 /* Sin WebGL: el 2D vuelve al centro, a pantalla entera, entre la barra y el almacén. */
-.plaza-3d.sin-3d .asent-mapa { padding: calc(var(--jugador-alto) + 16px) 16px calc(var(--pie-alto) + 12px); }
+.plaza-3d.sin-3d .asent-mapa { padding: calc(var(--jugador-alto) + var(--pie-arriba, 0px) + 28px) 16px calc(var(--pie-alto) + 12px); }
 
 /* Las ventanas de la plaza: a media pantalla, junto a la columna izquierda y entre la barra de arriba y la de abajo, sin tapar el resto de la
    ciudad (se sigue viendo y se puede tocar). Una sola abierta; se cierra con ✕, Esc o su icono del riel. Mercado y Reclutamiento van más
@@ -5017,11 +5023,11 @@ body:has(.asent-ocupacion:not([hidden])) .eleccion-clic { top: calc(var(--jugado
 .asent-ventana[hidden] { display: none; }
 .asent-ventana {
   position: absolute;
-  top: calc(var(--jugador-alto) + 8px);
+  top: calc(var(--jugador-alto) + var(--pie-arriba, 0px) + 26px);
   left: calc(16px + var(--col-izq) + 12px);
   z-index: 4;
   width: min(600px, calc(100% - var(--col-izq) - 60px));
-  max-height: calc(100% - var(--jugador-alto) - var(--pie-alto) - 30px);
+  max-height: calc(100% - var(--jugador-alto) - var(--pie-arriba, 0px) - var(--pie-alto) - 48px);
   display: flex;
   flex-direction: column;
   background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg));
@@ -5033,8 +5039,8 @@ body:has(.asent-ocupacion:not([hidden])) .eleccion-clic { top: calc(var(--jugado
 }
 .asent-ventana[data-ancho="ancha"] { width: min(920px, calc(100% - var(--col-izq) - 60px)); }
 .asent-ventana[data-ancho="estrecha"] { width: min(460px, calc(100% - var(--col-izq) - 60px)); }
-/* A pantalla completa (0.106.0: Mercado y Taberna): de la barra de arriba al riel, que se queda a la vista para cambiar de ventana. Tapa el blasón,
-   la barra de Población, Almacén y Estado y el minimapa mientras está abierta. El contenido se reparte en columnas (`asent-completa-*`). */
+/* A pantalla completa (0.106.0: Mercado y Taberna): de la barra de Población, Almacén y Estado (que se queda a la vista, arriba) al riel, que
+   también se queda para cambiar de ventana. Tapa el blasón y el minimapa mientras está abierta. El contenido se reparte en columnas (`asent-completa-*`). */
 .asent-ventana[data-ancho="completa"] { left: 16px; right: 16px; width: auto; bottom: calc(var(--riel-alto) + 22px); max-height: none; z-index: 5; }
 /* Las columnas de pantalla completa: sin efecto (`display: contents`) salvo en una ventana completa de 1000 px o más, donde el contenido va en
    dos columnas que se desplazan juntas y las caravanas en rejilla. */
@@ -5060,12 +5066,30 @@ body:has(.asent-ocupacion:not([hidden])) .eleccion-clic { top: calc(var(--jugado
 .asent-ventana .asent-subtabs { margin-top: 0; }
 
 /* Pantallas medianas (1280 × 720): la barra de abajo más apretada para que quepa en una fila, y el riel más bajo. */
+/* Arriba, la barra va apretada siempre (cabe en una fila desde ~1600 px de ancho con 8 recursos), y algo más en pantallas medianas. */
+.plaza-3d .asent-pie { gap: 16px 6px; }
+.plaza-3d .asent-pie-grupo { padding: 10px 5px 5px; }
+.plaza-3d .asent-pie-piezas { gap: 3px; }
+.plaza-3d .asent-pie .asent-recurso { gap: 3px; padding: 3px 5px 7px; font-size: 0.76rem; }
+.plaza-3d .asent-pie .asent-recurso-icono { font-size: 0.85rem; }
+/* Las tres placas llenan el hueco entre el blasón y las misiones (Víctor, 2026-11-03), en una sola fila: Población y Estado a su tamaño, el
+   Almacén estira lo que sobra y, si no le cabe, pasa sus recursos a dos filas. */
+.plaza-3d .asent-pie { flex-wrap: nowrap; justify-content: stretch; align-items: stretch; gap: 8px; }
+.plaza-3d .asent-pie-grupo { flex: none; display: flex; flex-direction: column; justify-content: center; }
+.plaza-3d .asent-pie-grupo .asent-pie-piezas { flex-wrap: nowrap; }
+.plaza-3d .asent-pie-almacen { flex: 1 1 0; min-width: 0; container-type: inline-size; }
+.plaza-3d .asent-pie-almacen .asent-pie-piezas { display: grid; grid-template-columns: repeat(var(--n, 8), minmax(0, 1fr)); }
+.plaza-3d .asent-pie-almacen .asent-recurso { justify-content: center; min-width: 0; }
+@container (max-width: 540px) {
+  .plaza-3d .asent-pie-almacen .asent-pie-piezas { grid-template-columns: repeat(var(--n2, 4), minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .plaza-3d .asent-pie { flex-wrap: wrap; }
+  .plaza-3d .asent-pie-almacen { flex-basis: 100%; order: 1; }
+}
 @media (max-width: 1440px) {
-  .plaza-3d .asent-pie { gap: 16px 6px; }
-  .asent-pie-grupo { padding: 10px 5px 5px; }
-  .asent-pie-piezas { gap: 3px; }
-  .asent-pie .asent-recurso { gap: 3px; padding: 3px 5px 7px; font-size: 0.76rem; }
-  .asent-pie .asent-recurso-icono { font-size: 0.85rem; }
+  .plaza-3d .asent-pie .asent-recurso { padding: 2px 4px 6px; font-size: 0.72rem; }
+  .plaza-3d .asent-pie-raya { margin: 2px 1px; }
 }
 @media (max-height: 820px) {
   .plaza-3d { --riel-alto: 44px; }
@@ -5085,7 +5109,11 @@ body:has(.asent-ocupacion:not([hidden])) .eleccion-clic { top: calc(var(--jugado
   .plaza-3d .asent-blason .medallon-nivel { width: 22px; height: 25px; }
   .plaza-3d .asent-blason .medallon-nivel b { font-size: 0.72rem; }
   .plaza-3d .asent-barra-acciones { flex-direction: column; align-items: flex-end; }
-  .asent-der { width: clamp(180px, 38vw, 260px); top: calc(var(--jugador-alto) + 96px); }
+  .asent-der { width: clamp(180px, 38vw, 260px); top: calc(var(--jugador-alto) + var(--pie-arriba, 0px) + 110px); }
+  /* la barra de arriba, a todo lo ancho bajo la del jugador; el blasón y «Salir al mundo», debajo */
+  .plaza-3d .asent-pie { left: 8px; right: 8px; }
+  .plaza-3d .asent-izq, .plaza-3d .asent-barra { top: calc(var(--jugador-alto) + var(--pie-arriba, 0px) + 26px); }
+  .plaza-3d .asent-izq { max-height: calc(100% - var(--jugador-alto) - var(--pie-arriba, 0px) - var(--pie-alto) - 40px); }
   .asent-ventana, .asent-ventana[data-ancho] { left: 6px; right: 6px; width: auto; top: calc(var(--jugador-alto) + 6px); max-height: calc(100% - var(--jugador-alto) - 12px); z-index: 6; }
   .asent-riel-boton { width: 40px; height: 40px; }
   .asent-riel-boton .icono-edificio { width: 24px; height: 24px; }
@@ -5106,7 +5134,7 @@ body:has(.asent-ocupacion:not([hidden])) .eleccion-clic { top: calc(var(--jugado
 .blason-interior-icono { color: var(--oro); --relleno: rgba(216, 184, 120, 0.22); }
 .blason-interior-icono .icono-edificio { display: block; width: 46px; height: 46px; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.6)); }
 .camp-screen .asent-blason, .pueblo-screen .asent-blason { padding-left: 8px; }
-.plaza-3d .pueblo-aviso-batalla { top: calc(var(--jugador-alto) + 6px); }
+.plaza-3d .pueblo-aviso-batalla { top: calc(var(--jugador-alto) + var(--pie-arriba, 0px) + 26px); }
 .camp-screen .asent-pie-titulo, .pueblo-screen .asent-pie-titulo { white-space: nowrap; }
 .camp-screen .asent-pie-grupo, .pueblo-screen .asent-pie-grupo { min-width: 8.5rem; }
 .plaza-3d.sin-3d .asent-mapa { display: grid; place-items: center; }

@@ -3,6 +3,17 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.112.0] — 2026-11-03 · La barra de Población, Almacén y Estado, arriba al centro · sin cambio de contrato
+
+Petición de Víctor (2026-11-03): la barra de Población, Almacén y Estado sube arriba y ocupa el hueco entre el blasón y el panel de misiones.
+
+- **Arriba al centro** (`.plaza-3d .asent-pie`): de la columna del blasón a la de las misiones (`--der-ancho`), en una sola fila: Población y Estado a
+  su tamaño y el Almacén estira lo que sobra; si sus recursos no caben en una fila (pantallas medianas), van en dos iguales (`--n`, `--n2`, consulta
+  de contenedor). En móvil va a todo lo ancho bajo la barra del jugador y el blasón y «Salir al mundo» bajan.
+- **Lo demás se pone debajo**: su alto se mide (`vigilarPieArriba`, ui/hudPlaza.ts, en `--pie-arriba`) y las ventanas, la franja de ocupación, el
+  aviso de batalla del pueblo y los avisos flotantes empiezan bajo ella. Abajo solo queda el riel (o el cajón de Construcción). Vale también para el
+  campamento y el pueblo, que usan el mismo esqueleto.
+
 ## [0.111.0] — 2026-11-03 · Distancia de carga del mundo, ajustable · sin cambio de contrato
 
 Petición de Víctor (2026-11-03): que el mundo no se cargue entero, sino hasta una distancia que sea un valor de configuración.

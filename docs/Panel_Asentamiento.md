@@ -236,6 +236,9 @@ La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, es
 > o cuándo se acaba), la mano de obra en un medidor, los extractores como edificio ➜ recurso y los talleres como insumos ➜ producto con el
 > interruptor ▶ / ❚❚. Las cifras van en los títulos (al pasar el ratón).
 >
+> **La barra de Población, Almacén y Estado, arriba al centro desde 0.112.0** (2026-11-03): en el hueco entre el blasón y el panel de
+> misiones, en una fila (el Almacén estira y, si no cabe, pasa sus recursos a dos filas); abajo solo queda el riel.
+>
 > **Construcción desde 0.110.0** (2026-11-03, Víctor: «solo mostrar lo que se puede hacer»). Ya no es una ventana: el botón del riel (solo con
 > cargo de Gobernador o Maestro de Obras, que es a quien el motor deja tocar la cola y la auto-construcción) cambia el riel por un cajón abajo
 > con «← Volver», la auto-construcción y la rejilla «Construir» por tipos, sin lo que el cliente sabe que no se puede (sin candados; lo que

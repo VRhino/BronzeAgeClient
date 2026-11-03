@@ -133,7 +133,7 @@ export function ascensoPosible(p: ProyeccionJugador, a: Asentamiento, alCargar?:
 /** Una clase de la población: cuántos hay, cuántos caben (viviendas o palacio; `null` sin el catálogo) y lo que pide el nivel siguiente. */
 export interface ClaseDePoblacion { icono: string; nombre: string; tiene: number; sitio: number | null; meta?: number }
 
-/** La población de la plaza para la barra de abajo: el total con el techo del nivel y las clases con su sitio. */
+/** La población de la plaza para la barra de arriba: el total con el techo del nivel y las clases con su sitio. */
 export interface PoblacionDePlaza { total: number; techo?: number; nivelMeta: number; clases: ClaseDePoblacion[] }
 
 /**

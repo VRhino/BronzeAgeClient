@@ -113,7 +113,7 @@ import { cablearInteriorPueblo, htmlCuerpoPueblo, htmlTrazadoPueblo, nombreDePue
 import { pintarSitiosDeAldea, type SitiosDeAldea } from './mundo/fertilidad';
 import { htmlMiembrosFaccion, htmlResidentesPlaza } from './ui/participacion';
 import { ascensoPosible, cablearCargosPlaza, htmlAscensoPlaza, htmlAutoConstruccion, htmlCargosPlaza } from './ui/panelCentro';
-import { cablearBlasonHud, cablearEleccionBarra, htmlBlasonHud, htmlEleccionBarra, htmlObrasHud, htmlOcupacion, htmlPieDePlaza, ICONO_RIEL, type BlasonHud } from './ui/hudPlaza';
+import { cablearBlasonHud, cablearEleccionBarra, htmlBlasonHud, htmlEleccionBarra, htmlObrasHud, htmlOcupacion, htmlPieDePlaza, ICONO_RIEL, vigilarPieArriba, type BlasonHud } from './ui/hudPlaza';
 import { htmlBlasonInterior, htmlPlacaDeRecursos, htmlRielInterior, htmlTituloDeParte, iconoDePueblo, ICONO_CAMPAMENTO } from './ui/hudInterior';
 import { columnaQuePaga } from './ui/columnaQuePaga';
 import { cablearResidencia, htmlCapital, htmlResidencia } from './ui/panelResidencia';
@@ -431,6 +431,7 @@ function montarCampamento(): void {
     <aside class="jugador-panel" hidden></aside>
     ${menuEsquinaHtml()}
   </div>`;
+  vigilarPieArriba(app.querySelector<HTMLElement>('.plaza-3d'));
   const contenedor = app.querySelector<HTMLElement>('.asent-screen')!;
   cablearMenuEsquina(contenedor);
   cablearBarraJugador(contenedor);
@@ -579,6 +580,7 @@ function montarPueblo(): void {
     <aside class="jugador-panel" hidden></aside>
     ${menuEsquinaHtml()}
   </div>`;
+  vigilarPieArriba(app.querySelector<HTMLElement>('.plaza-3d'));
   const contenedor = app.querySelector<HTMLElement>('.asent-screen')!;
   cablearMenuEsquina(contenedor);
   cablearBarraJugador(contenedor);
@@ -2136,7 +2138,7 @@ function ventanaDisponible(v: VentanaPlaza, p: ProyeccionJugador, a: Asentamient
   const ajena = esPlazaAjena(p, a);
   if (v === 'informacion') return true;
   if (v === 'ascenso') return !ajena;
-  // la ventana del Almacén: se abre con un clic en su placa de la barra de abajo
+  // la ventana del Almacén: se abre con un clic en su placa de la barra de arriba
   if (v === 'almacen') return !ajena && Boolean(a.almacen);
   // construir es cosa del Gobernador o del Maestro de Obras (el motor: `AlternarAutoConstruccion` y la cola, `Cargo(GOBERNADOR_O_MAESTRO)`)
   if (v === 'construccion') return !ajena && Boolean(cargoConstructor(a, p.heroeId));
@@ -2267,7 +2269,7 @@ function contenidoDeVentana(v: VentanaPlaza, c: ContextoPlaza, ajena: boolean): 
     case 'defensa': return deExtras(['muralla', 'puerta']);
     case 'territorio': return deExtras(ajena ? ['pueblos'] : ['pueblos', 'fundacion'], { pueblos: 'Pueblos y aldeas' });
     case 'almacen':
-      // a pantalla completa: qué va en la barra de abajo, el almacén con su neto por minuto y la extracción a la izquierda; los talleres a la derecha
+      // a pantalla completa: qué va en la barra de arriba, el almacén con su neto por minuto y la extracción a la izquierda; los talleres a la derecha
       return {
         titulo: 'Almacén', icono: iconoEdificio('almacen', 28), subs: [], sub: '', ancho: 'completa',
         html: `<div class="cols-completa"><div class="col-completa">${htmlEleccionBarra(a, escaparHtml)}${htmlExtraccion(c)}</div><div class="col-completa">${htmlRecetas(c)}</div></div>`,
@@ -2344,7 +2346,7 @@ function cablearAccionesAsentLado(cont: HTMLElement, a: Asentamiento, cargo: 'go
   });
 }
 
-/** La barra de abajo de la plaza: Población, Almacén y Estado, cada placa solo si llega lo suyo (`ui/hudPlaza.ts`). */
+/** La barra de arriba de la plaza (antes, abajo): Población, Almacén y Estado, cada placa solo si llega lo suyo (`ui/hudPlaza.ts`). */
 function renderPieDePlaza(): void {
   const pie = document.querySelector<HTMLElement>('.asent-pie');
   if (!pie) return;
@@ -2434,6 +2436,7 @@ function montarAsentamiento(): void {
     <aside class="jugador-panel" hidden></aside>
     ${menuEsquinaHtml()}
   </div>`;
+  vigilarPieArriba(app.querySelector<HTMLElement>('.plaza-3d'));
   const contenedor = document.querySelector<HTMLElement>('.asent-screen')!;
   contenedor.querySelectorAll<HTMLButtonElement>('[data-panel-asent]').forEach((boton) => {
     boton.addEventListener('click', () => {

@@ -16,7 +16,7 @@ import { plazaDeContrato } from '../../src/motor/proyeccion';
 import { pintarAsentamiento } from '../../src/render';
 import { svgSigilo } from '../../src/sigilo/sigilo';
 import { htmlBarraJugador } from '../../src/ui/barraJugador';
-import { cablearEleccionBarra, htmlBlasonHud, htmlEleccionBarra, htmlObrasHud, htmlPieDePlaza, ICONO_RIEL } from '../../src/ui/hudPlaza';
+import { cablearEleccionBarra, htmlBlasonHud, htmlEleccionBarra, htmlObrasHud, htmlPieDePlaza, ICONO_RIEL, vigilarPieArriba } from '../../src/ui/hudPlaza';
 import { cablearProduccionYRecetas, cablearVistaCiudad, elegirEdificio, htmlExtraccion, htmlRecetas, repintarFicha } from '../../src/ui/vistaCiudad';
 import { cablearPanelObras, htmlConstruir } from '../../src/ui/panelObras';
 import { htmlAutoConstruccion } from '../../src/ui/panelCentro';
@@ -65,6 +65,7 @@ document.getElementById('app')!.innerHTML = `<div class="asent-screen plaza-3d${
     ${ventana ? `<section class="asent-ventana" data-ancho="${ventana === 'mercado' || ventana === 'taberna' || ventana === 'almacen' ? 'completa' : ventana === 'reclutamiento' ? 'ancha' : ''}"><header class="asent-ventana-cab"><div class="asent-ventana-titulo"><h2>${ventana}</h2></div><button class="asent-ventana-cerrar">✕</button></header><div class="asent-edif-cuerpo">${ventana === 'almacen' ? '' : '<p>Contenido de la ventana.</p>'.repeat(40)}</div></section>` : ''}
   </div>
 </div>`;
+vigilarPieArriba(document.querySelector<HTMLElement>('.plaza-3d'));
 const escena = document.querySelector<HTMLElement>('.ciudad3d-escena')!;
 const lienzo = document.getElementById('mapa') as HTMLCanvasElement;
 const minimapa = new Minimapa(lienzo);
