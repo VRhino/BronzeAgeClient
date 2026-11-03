@@ -219,7 +219,7 @@ function recetasDe(a: Asentamiento, alCargar: () => void): RecetaAgregada[] {
 }
 
 /** Las recetas de los talleres, una fila por producto: la cadena insumos ➜ producto, los talleres que la hacen y el interruptor ▶ / ⏸. */
-function htmlRecetas(c: ContextoPlaza): string {
+export function htmlRecetas(c: ContextoPlaza): string {
   const e = c.escapar;
   const pausadas = new Set(c.asentamiento.recetasPausadas ?? []);
   const adoptadas = adoptadasDe(c.proyeccion);
@@ -320,7 +320,7 @@ function fichaRecurso(r: string, x: Existencia, e: Escapar): string {
 
 /** La producción de la plaza: la mano de obra en un medidor, el almacén en fichas y los extractores como cadena edificio ➜ recurso. El motor no
  * publica lo que rinde cada edificio: en el extractor va la base del catálogo y el neto real va en la ficha de su recurso. */
-function htmlExtraccion(c: ContextoPlaza): string {
+export function htmlExtraccion(c: ContextoPlaza): string {
   const e = c.escapar;
   const a = c.asentamiento;
   const porTipo = extractoresDe(a, c.refrescar);

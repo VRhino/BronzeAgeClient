@@ -1,6 +1,10 @@
 // Banco del HUD de la plaza en 3D (`/pruebas/hud/`, `?ventana=mercado` para abrir una ventana, `?3d=1` con la escena 3D): la ciudad de nivel 5 del banco 3D con el mismo
 // esqueleto que monta `montarAsentamiento` en main.ts (blasón, obras, barra de abajo, riel, minimapa, columna derecha), sin servidor. Sirve para
 // mirar la disposición a distintos tamaños de pantalla; los botones no hacen nada.
+import datos from '../plaza/datos.json';
+const fetchReal = window.fetch.bind(window);
+window.fetch = ((url: RequestInfo | URL, init?: RequestInit) =>
+  String(url).endsWith('/v1/datos') ? Promise.resolve(new Response(JSON.stringify(datos), { status: 200, headers: { 'Content-Type': 'application/json' } })) : fetchReal(url, init)) as typeof fetch;
 import '../../src/style.css';
 import { fromBinary } from '@bufbuild/protobuf';
 import { AsentamientoSchema } from '../../src/contrato/gen/bronzeage/v1/entities_pb';
@@ -11,7 +15,9 @@ import { plazaDeContrato } from '../../src/motor/proyeccion';
 import { pintarAsentamiento } from '../../src/render';
 import { svgSigilo } from '../../src/sigilo/sigilo';
 import { htmlBarraJugador } from '../../src/ui/barraJugador';
-import { htmlBlasonHud, htmlObrasHud, htmlPieDePlaza, ICONO_RIEL } from '../../src/ui/hudPlaza';
+import { cablearEleccionBarra, htmlBlasonHud, htmlEleccionBarra, htmlObrasHud, htmlPieDePlaza, ICONO_RIEL } from '../../src/ui/hudPlaza';
+import { cablearProduccionYRecetas, htmlExtraccion, htmlRecetas } from '../../src/ui/vistaCiudad';
+import type { ContextoPlaza } from '../../src/ui/ganchos';
 import { iconoEdificio } from '../../src/ui/iconosEdificio';
 import type { ProyeccionJugador } from '../../src/apiCliente';
 
@@ -43,7 +49,7 @@ document.getElementById('app')!.innerHTML = `<div class="asent-screen plaza-3d">
     <nav class="asent-riel">${riel}</nav>
     <div class="asent-lienzo asent-minimapa"><canvas id="mapa" width="900" height="900"></canvas></div>
     <header class="asent-barra"><div class="asent-barra-acciones"><button type="button">Ejércitos</button><button class="btn-primary" type="button">Salir al mundo</button></div></header>
-    ${ventana ? `<section class="asent-ventana" data-ancho="${ventana === 'mercado' || ventana === 'taberna' ? 'completa' : ventana === 'reclutamiento' ? 'ancha' : ''}"><header class="asent-ventana-cab"><div class="asent-ventana-titulo"><h2>${ventana}</h2></div><button class="asent-ventana-cerrar">✕</button></header><div class="asent-edif-cuerpo">${'<p>Contenido de la ventana.</p>'.repeat(40)}</div></section>` : ''}
+    ${ventana ? `<section class="asent-ventana" data-ancho="${ventana === 'mercado' || ventana === 'taberna' || ventana === 'almacen' ? 'completa' : ventana === 'reclutamiento' ? 'ancha' : ''}"><header class="asent-ventana-cab"><div class="asent-ventana-titulo"><h2>${ventana}</h2></div><button class="asent-ventana-cerrar">✕</button></header><div class="asent-edif-cuerpo">${ventana === 'almacen' ? '' : '<p>Contenido de la ventana.</p>'.repeat(40)}</div></section>` : ''}
   </div>
 </div>`;
 const escena = document.querySelector<HTMLElement>('.ciudad3d-escena')!;
@@ -60,4 +66,16 @@ if (qs.get('3d')) {
 }
 pintarAsentamiento(lienzo.getContext('2d')!, a, trazado, null, null, true);
 minimapa.fijarTrazado(trazado);
+// `?ventana=almacen`: la ventana del Almacén de verdad (elección de la barra, almacén, extracción y talleres), con la barra repintándose.
+function pintarAlmacen(): void {
+  const cuerpo = document.querySelector<HTMLElement>('.asent-edif-cuerpo');
+  const pie = document.querySelector<HTMLElement>('.asent-pie')!;
+  pie.innerHTML = htmlPieDePlaza(a, e);
+  if (ventana !== 'almacen' || !cuerpo) return;
+  const c = { proyeccion: p, asentamiento: a, cuerpo, ejecutar: async () => null, refrescar: pintarAlmacen, cargo: 'gobernador', resideAqui: true, escapar: e } as unknown as ContextoPlaza;
+  cuerpo.innerHTML = `<div class="cols-completa"><div class="col-completa">${htmlEleccionBarra(a, e)}${htmlExtraccion(c)}</div><div class="col-completa">${htmlRecetas(c)}</div></div>`;
+  cablearEleccionBarra(cuerpo, pintarAlmacen, (m) => alert(m));
+  cablearProduccionYRecetas(c);
+}
+pintarAlmacen();
 (window as unknown as { __banco: unknown }).__banco = { listo: true };

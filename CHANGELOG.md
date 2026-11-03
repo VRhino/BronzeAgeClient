@@ -3,6 +3,20 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.107.0] — 2026-11-03 · La barra del Almacén con 8 recursos elegidos y su ventana con la producción · sin cambio de contrato
+
+Petición de Víctor (2026-11-03): que la barra de abajo enseñe como mucho 8 recursos, elegidos por el jugador en un panel de Almacén que se
+abre con un clic en esa barra, a pantalla completa, y que se lleve la producción.
+
+- **La placa Almacén de la barra de abajo lleva como mucho 8 recursos**, los que elijas y en tu orden, también si están a 0. De partida:
+  trigo, madera, piedra, cobre, estaño, oro, lingote de bronce y ganado. Ahora cabe en una fila también a 1280 px.
+- **Un clic en la placa (o Intro con el foco en ella) abre la ventana Almacén**, a pantalla completa como Mercado y Taberna. A la izquierda,
+  «En la barra de abajo», con todos los recursos de la plaza para poner o quitar, con un contador «5/8» (con 8, avisa de que hay que
+  quitar uno antes), el almacén con su neto por minuto y la extracción. A la derecha, los talleres.
+- **La producción sale de Construcción**: el plegable Producción ya no está allí, solo en el Almacén.
+- La elección se guarda en el navegador (`localStorage`), igual para todas tus plazas. El motor no guarda nada de esto.
+- El banco `pruebas/hud/?ventana=almacen` abre la ventana de verdad.
+
 ## [0.106.0] — 2026-11-03 · Mercado y Taberna de la plaza a pantalla completa · sin cambio de contrato
 
 Petición de Víctor (2026-11-03, tercer punto del frente de interfaces): mercado, tropa, mercenarios y taberna a pantalla completa. Aquí van los

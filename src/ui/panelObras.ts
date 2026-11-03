@@ -1,5 +1,5 @@
-// PANEL DE OBRAS de la plaza (columna derecha, Centro urbano › Edificios): construir, los edificios y la cola de obras, con la producción en medio
-// (`htmlProduccionYRecetas`, ui/vistaCiudad.ts). Rediseñado el 2026-11-02 a petición de Víctor para que se lea como un juego de estrategia: menos
+// PANEL DE OBRAS de la plaza (ventana Construcción): construir, los edificios y la cola de obras. La producción, que iba en medio, está en la
+// ventana del Almacén desde 0.107.0 (`htmlProduccionYRecetas`, ui/vistaCiudad.ts). Rediseñado el 2026-11-02 a petición de Víctor para que se lea como un juego de estrategia: menos
 // texto y más iconos, estados y barras. Aquí no se decide ninguna regla: el motor valida y su rechazo sale flotando.
 //   Construir   rejilla de iconos con su coste debajo (en rojo lo que falta en el almacén) y candado si no se puede
 //   Edificios   una tarjeta por tipo: icono, cuántos, nivel en marcas, insignias de obra / mejora / parado y el botón de mejorar
@@ -16,7 +16,7 @@ import type { ContextoPlaza } from './ganchos';
 import { iconoEdificio } from './iconosEdificio';
 import { ahora, barraAvance, chipsDeCoste, cuentaAtras, duracion, marcasNivel } from './juegoVisual';
 import { plegable } from './plegable';
-import { htmlProduccionYRecetas, resumenProduccion, tipoSeleccionado } from './vistaCiudad';
+import { tipoSeleccionado } from './vistaCiudad';
 
 type Escapar = (valor: string) => string;
 type Cargo = 'gobernador' | 'maestroObras' | null;
@@ -241,7 +241,8 @@ export function seccionCola(a: Asentamiento, cargo: Cargo, esc: Escapar): string
     ${esperan.length ? `<div class="obra-titulo"><span class="faction-kicker">En espera</span><small>${esperan.length}</small>${ayuda('plaza:cola', 'Arrancan por orden cuando hay cuadrilla y con qué pagar. ◀ ▶ las adelantan o retrasan; ✕ las quita (solo las que aún no empezaron). La barra de las obras en marcha es una estimación con el tiempo del catálogo.')}</div><div class="obra-cola">${casillas}</div>` : ''}`;
 }
 
-/** Centro urbano › Edificios: construir y edificios, producción y cola, cada parte plegable con su resumen en iconos. */
+/** Centro urbano › Edificios: construir y edificios y la cola, cada parte plegable con su resumen en iconos. La producción va en la ventana del
+ * Almacén (0.107.0). */
 export function htmlPanelObras(c: ContextoPlaza): string {
   const a = c.asentamiento;
   const edificios = a.edificios ?? [];
@@ -251,6 +252,5 @@ export function htmlPanelObras(c: ContextoPlaza): string {
   const chip = (texto: string, clase = ''): string => `<span class="obra-chip${clase ? ` ${clase}` : ''}">${texto}</span>`;
   const resumenCola = [enObra ? chip(`🔨 ${enObra}`, 'activa') : '', enCola ? chip(`⌛ ${enCola}`) : ''].join('') || chip('vacía');
   return plegable(`edificios:${a.id}`, `<strong>Edificios</strong>${chip(String(internos.filter((e) => e.estado === 'activo').length))}`, seccionEdificios(a, c.cargo, c.escapar), true)
-    + plegable(`cola:${a.id}`, `<strong>Obras</strong>${resumenCola}`, seccionCola(a, c.cargo, c.escapar), true)
-    + plegable(`produccion:${a.id}`, `<strong>Producción</strong>${resumenProduccion(c)}`, htmlProduccionYRecetas(c), true);
+    + plegable(`cola:${a.id}`, `<strong>Obras</strong>${resumenCola}`, seccionCola(a, c.cargo, c.escapar), true);
 }

@@ -68,7 +68,7 @@ import { invalidar, olvidarEdicion, pintar, vaciar } from './ui/repintado';
 import { ayuda } from './ui/ayuda';
 import { htmlInformeDeInspeccion } from './ui/interaccionAjena';
 import { cablearPanelObras, htmlPanelObras, minutosDeObra } from './ui/panelObras';
-import { cablearProduccionYRecetas, cablearVistaCiudad, edificioSeleccionado, elegirEdificio, htmlTooltipEdificio, repintarFicha } from './ui/vistaCiudad';
+import { cablearProduccionYRecetas, cablearVistaCiudad, edificioSeleccionado, elegirEdificio, htmlExtraccion, htmlRecetas, htmlTooltipEdificio, repintarFicha } from './ui/vistaCiudad';
 import { campamentoEnVista } from './ciudad3d/campamento';
 import { puebloEnVista } from './ciudad3d/pueblo';
 import { ciudadEnVista } from './ciudad3d/estado';
@@ -111,7 +111,7 @@ import { cablearInteriorPueblo, htmlAlmacenPueblo, htmlPestanasPueblo, htmlTraza
 import { pintarSitiosDeAldea, type SitiosDeAldea } from './mundo/fertilidad';
 import { htmlMiembrosFaccion, htmlResidentesPlaza } from './ui/participacion';
 import { ascensoPosible, cablearCargosPlaza, htmlAscensoPlaza, htmlAutoConstruccion, htmlCargosPlaza } from './ui/panelCentro';
-import { cablearBlasonHud, htmlBlasonHud, htmlObrasHud, htmlOcupacion, htmlPieDePlaza, ICONO_RIEL, type BlasonHud } from './ui/hudPlaza';
+import { cablearBlasonHud, cablearEleccionBarra, htmlBlasonHud, htmlEleccionBarra, htmlObrasHud, htmlOcupacion, htmlPieDePlaza, ICONO_RIEL, type BlasonHud } from './ui/hudPlaza';
 import { cablearResidencia, htmlCapital, htmlResidencia } from './ui/panelResidencia';
 import { cablearTablon, htmlTablon } from './ui/tablon';
 import { cablearMercenariosFaccion, htmlMercenariosFaccion, mercenariosQuePidenAtencion } from './ui/mercenarios';
@@ -1895,7 +1895,7 @@ type PanelAsent = 'ejercito';
 let panelAsentAbierto: PanelAsent | null = null;
 /** Las ventanas de la plaza (Víctor, 2026-11-02, «rehacer la interfaz de asentamiento»): cada una con su icono en el riel de la izquierda, salvo la
  * subida de nivel (el medallón del blasón) e Información (el «?» de la barra). Solo hay una abierta, a media pantalla, junto al riel. */
-type VentanaPlaza = 'construccion' | 'gobierno' | 'defensa' | 'territorio' | 'reclutamiento' | 'taberna' | 'mercado' | 'ascenso' | 'informacion';
+type VentanaPlaza = 'construccion' | 'gobierno' | 'defensa' | 'territorio' | 'reclutamiento' | 'taberna' | 'mercado' | 'ascenso' | 'informacion' | 'almacen';
 let ventanaPlaza: VentanaPlaza | null = null;
 /** La subpestaña elegida en cada ventana que tiene varias. */
 const subDeVentana: Partial<Record<VentanaPlaza, string>> = {};
@@ -1987,6 +1987,8 @@ function ventanaDisponible(v: VentanaPlaza, p: ProyeccionJugador, a: Asentamient
   const ajena = esPlazaAjena(p, a);
   if (v === 'informacion') return true;
   if (v === 'ascenso') return !ajena;
+  // la ventana del Almacén: se abre con un clic en su placa de la barra de abajo
+  if (v === 'almacen') return !ajena && Boolean(a.almacen);
   const def = RIEL.find((x) => x.id === v);
   if (!def || (ajena && !def.deVisita)) return false;
   return !def.requiere || a.edificios.some((e) => e.tipo === def.requiere!.tipo && e.estado === 'activo');
@@ -2101,6 +2103,16 @@ function contenidoDeVentana(v: VentanaPlaza, c: ContextoPlaza, ajena: boolean): 
     }
     case 'defensa': return deExtras(['muralla', 'puerta']);
     case 'territorio': return deExtras(ajena ? ['pueblos'] : ['pueblos', 'fundacion'], { pueblos: 'Pueblos y aldeas' });
+    case 'almacen':
+      // a pantalla completa: qué va en la barra de abajo, el almacén con su neto por minuto y la extracción a la izquierda; los talleres a la derecha
+      return {
+        titulo: 'Almacén', icono: iconoEdificio('almacen', 28), subs: [], sub: '', ancho: 'completa',
+        html: `<div class="cols-completa"><div class="col-completa">${htmlEleccionBarra(a, escaparHtml)}${htmlExtraccion(c)}</div><div class="col-completa">${htmlRecetas(c)}</div></div>`,
+        cablear: () => {
+          cablearEleccionBarra(cuerpo, () => { renderPieDePlaza(); renderPanelEdificios(); }, (m) => mostrarAviso(m, true));
+          cablearProduccionYRecetas(c);
+        },
+      };
     case 'reclutamiento':
       return { ...base, ancho: 'ancha', html: htmlReclutamiento(p, a, escaparHtml, renderPanelEdificios), cablear: () => cablearReclutamiento(cuerpo, p, a, ejecutarYRefrescar, renderPanelEdificios) };
     case 'taberna':
@@ -2176,7 +2188,11 @@ function renderPieDePlaza(): void {
   const a = estadoCliente.proyeccionUltima?.asentamientos[0];
   const html = a ? htmlPieDePlaza(a, escaparHtml, renderPieDePlaza) : '';
   pie.hidden = !html;
-  pintar(pie, html, undefined, 'pie');
+  pintar(pie, html, () => {
+    const almacen = pie.querySelector<HTMLElement>('[data-abrir-almacen]');
+    almacen?.addEventListener('click', () => alternarVentanaPlaza('almacen'));
+    almacen?.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); alternarVentanaPlaza('almacen'); } });
+  }, 'pie');
 }
 
 /** Pinta el panel flotante de la barra (Ejércitos) según `panelAsentAbierto`. */
