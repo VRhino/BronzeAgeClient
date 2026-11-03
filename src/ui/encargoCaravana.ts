@@ -124,13 +124,15 @@ function htmlFormulario(c: Caravana, p: ProyeccionJugador, a: Asentamiento, capa
 }
 
 /** La sección «Encargo» de la tarjeta de una caravana de la flota de `a` (su origen). */
-export function htmlEncargo(c: Caravana, p: ProyeccionJugador, a: Asentamiento, reside: boolean, capacidad: number, conAnimal: boolean, e: Escapar): string {
+/** `siempreAbierto`: sin encargo, el formulario directamente (la vista de flota, en «Encargo»), sin el botón «Dar encargo». */
+export function htmlEncargo(c: Caravana, p: ProyeccionJugador, a: Asentamiento, reside: boolean, capacidad: number, conAnimal: boolean, e: Escapar, siempreAbierto = false): string {
   if (c.tipo !== 'comercial' || c.origenAsentamientoId !== a.id) return '';
   const k = c.encargo;
   const motivo = motivoSinEncargo(p, a, reside);
   const abierto = abiertos.has(c.id) && !motivo;
   if (!k) {
     if (c.estado !== 'disponible' || !conAnimal) return '';
+    if (siempreAbierto && !motivo) return `<div class="caravana-seccion">${htmlFormulario(c, p, a, capacidad, e)}</div>`;
     return `<div class="caravana-seccion">
       <div class="caravana-seccion-cab"><strong class="heroe-sub">Encargo</strong><button class="btn-secondary btn-chico" type="button" data-enc-abrir="${e(c.id)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>${abierto ? '▾ Cerrar' : '＋ Dar encargo'}</button></div>
       ${abierto ? htmlFormulario(c, p, a, capacidad, e) : '<p class="asent-lado-nota">Sin encargo. Con uno va y viene sola: una ruta entre dos plazas tuyas, o un envío de una ida y vuelta.</p>'}

@@ -3,6 +3,24 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.126.0] — 2026-11-03 · La vista de caravanas, rehecha: lista y ficha · sin cambio de contrato
+
+Petición de Víctor (2026-11-03), en Mercado → Caravanas:
+
+- **Lista y ficha.** A la izquierda (un cuarto del ancho) la lista de la flota con lo mínimo: dónde está o adónde va, el candado si está reservada,
+  los carros que tiran y la barra de carga. Un clic la abre a la derecha (tres cuartos). La lista se queda a la vista al bajar por la ficha.
+- **Solo se maneja la que está en la plaza.** De las que andan fuera se ve dónde están («En aldea agrícola», «En pueblo Cantera», «Hacia Cnosos»,
+  «Volviendo a…», «Con un ejército») y nada de dentro. Las aparcadas aquí por un ejército siguen con su carga y «Enviar al origen».
+- **Carros en huecos**, como la tropa de «Salir al mundo»: tipo, animal y lo que carga. «+» abre debajo la elección del carro y su animal (con
+  su coste; lo que no llega, en rojo) y «Agregar» compra los dos a la vez (`agregarCarroCaravana` y `comprarAnimalCaravana` del carro nuevo); hecho,
+  el panel se cierra. Un clic en un carro sin animal deja comprárselo, y en uno con animal, pasarlo a otra caravana parada.
+- **Escolta en huecos**: las escuadras tuyas (con ✕ para retirarlas), las de otros residentes, «+» para ceder una y la barra del Liderazgo de
+  escolta con lo que han puesto los demás.
+- **Viaje o Encargo**: dos pestañas, y solo se ve la elegida. Con encargo en marcha, solo el encargo; sin cargo para dar encargos, solo el viaje.
+- **Fuera lo que no se puede usar**: el carro reforzado no sale sin Carpintería, ni el «+» con la flota al tope de carros, ni los controles a
+  quien no reside en la plaza.
+- Banco: `pruebas/hud/?ventana=caravanas`, con una flota de mentira (en la plaza, de camino, en una aldea y un casco vacío).
+
 ## [0.125.1] — 2026-11-03 · Las columnas del mundo 3D, en mallas instanciadas · sin cambio de contrato
 
 Petición de Víctor (2026-11-03): mejorar el rendimiento de la vista 3D del mundo. Medido en la partida real, en camp-1, con unas 50 columnas

@@ -19,6 +19,7 @@ import { htmlBarraJugador } from '../../src/ui/barraJugador';
 import { cablearEleccionBarra, htmlBlasonHud, htmlEleccionBarra, htmlObrasHud, htmlPieDePlaza, ICONO_RIEL, vigilarPieArriba } from '../../src/ui/hudPlaza';
 import { cablearProduccionYRecetas, cablearVistaCiudad, elegirEdificio, htmlExtraccion, htmlRecetas, repintarFicha } from '../../src/ui/vistaCiudad';
 import { cablearPanelObras, htmlConstruir } from '../../src/ui/panelObras';
+import { cablearCaravanas, htmlCaravanas } from '../../src/ui/panelMercado';
 import { htmlAutoConstruccion } from '../../src/ui/panelCentro';
 import { bloqueDeDatos, nivelesDeEdificio } from '../../src/apiCliente';
 import type { Edificio } from '../../src/tiposDominio';
@@ -62,7 +63,7 @@ document.getElementById('app')!.innerHTML = `<div class="asent-screen plaza-3d${
     <nav class="asent-riel${construir ? ' asent-riel-cajon' : ''}">${construir ? '' : riel}</nav>
     <div class="asent-lienzo asent-minimapa"><canvas id="mapa" width="900" height="900"></canvas></div>
     <header class="asent-barra"><div class="asent-barra-acciones"><button class="btn-primary" type="button">Salir al mundo</button></div></header>
-    ${ventana ? `<section class="asent-ventana" data-ancho="${ventana === 'mercado' || ventana === 'taberna' || ventana === 'almacen' ? 'completa' : ventana === 'reclutamiento' ? 'ancha' : ''}"><header class="asent-ventana-cab"><div class="asent-ventana-titulo"><h2>${ventana}</h2></div><button class="asent-ventana-cerrar">✕</button></header><div class="asent-edif-cuerpo">${ventana === 'almacen' ? '' : '<p>Contenido de la ventana.</p>'.repeat(40)}</div></section>` : ''}
+    ${ventana ? `<section class="asent-ventana" data-ancho="${ventana === 'mercado' || ventana === 'taberna' || ventana === 'almacen' || ventana === 'caravanas' ? 'completa' : ventana === 'reclutamiento' ? 'ancha' : ''}"><header class="asent-ventana-cab"><div class="asent-ventana-titulo"><h2>${ventana}</h2></div><button class="asent-ventana-cerrar">✕</button></header><div class="asent-edif-cuerpo">${ventana === 'almacen' || ventana === 'caravanas' ? '' : '<p>Contenido de la ventana.</p>'.repeat(40)}</div></section>` : ''}
   </div>
 </div>`;
 vigilarPieArriba(document.querySelector<HTMLElement>('.plaza-3d'));
@@ -92,6 +93,45 @@ function pintarAlmacen(): void {
   cablearProduccionYRecetas(c);
 }
 pintarAlmacen();
+// `?ventana=caravanas`: la vista de flota de verdad (`htmlCaravanas`) con una flota de mentira: una en la plaza, una de camino, una en una aldea.
+function pintarCaravanas(): void {
+  const cuerpo = document.querySelector<HTMLElement>('.asent-edif-cuerpo');
+  if (ventana !== 'caravanas' || !cuerpo) return;
+  cuerpo.innerHTML = `<div class="asent-lado-cuerpo">${htmlCaravanas(p, a, e, pintarCaravanas)}</div>`;
+  cablearCaravanas(cuerpo, p, a, async () => null, pintarCaravanas);
+}
+if (ventana === 'caravanas') {
+  const q = p as unknown as Record<string, unknown>;
+  a.heroesFundadoresIds = ['h'];
+  for (const x of a.edificios) if (x.tipo === 'mercado') x.nivelInterno = 3;
+  if (!a.edificios.some((x) => x.tipo === 'mercado')) a.edificios.push({ id: 'm1', tipo: 'mercado', estado: 'activo', nivelInterno: 3 } as Edificio);
+  const aldea = { x: a.posicion.x + 30, y: a.posicion.y + 12 };
+  q.pueblos = [{ id: 'pu1', madreId: a.id, propio: true, tipo: 'aldeaAgricola', posicion: aldea, almacen: {}, capacidad: 500 }];
+  q.asentamientosAvistados = [{ id: 'as-9', nombre: 'Cnosos', faccionId: 'f1', posicion: { x: a.posicion.x + 200, y: a.posicion.y }, nivel: 3 }];
+  q.asentamientosConocidos = [];
+  q.faccionId = 'f1';
+  a.faccionId = 'f1';
+  q.instante = Date.now();
+  const yo = { ubicacion: { tipo: 'asentamiento', asentamientoId: a.id }, displayName: 'Víctor', liderazgoBase: 300 };
+  const escuadra = (id: string, nombre: string, tropaId: string, coste: number, contenedor: object) => ({ id, nombre, tropaId, cantidad: 40, nivel: 1, costeLiderazgo: coste, contenedor, enGuarnicion: false });
+  q.heroe = { ...yo, escuadrones: [
+    escuadra('s1', 'Lanceros de Tebas', 'hoplitas_ciudadanos', 40, { tipo: 'escolta', caravanaId: 'car-1' }),
+    escuadra('s2', 'Arqueros', 'arqueros', 60, { tipo: 'campamento' }),
+    escuadra('s3', 'Honderos', 'honderos', 30, { tipo: 'campamento' }),
+  ], loadouts: [] };
+  q.caravanas = [
+    { id: 'car-1', nombre: 'Ánfora', tipo: 'comercial', origenAsentamientoId: a.id, posicionActual: a.posicion, estado: 'disponible', reservadaManual: true,
+      carros: [{ tipoCarro: 'basico', animal: 'buey' }, { tipoCarro: 'basico', animal: 'caballo' }, { tipoCarro: 'reforzado' }], escoltaIds: ['s1', 'x-otro'], escoltaLiderazgo: { usado: 75, cupo: 200 }, contenido: {} },
+    { id: 'car-2', nombre: 'Sal del Egeo', tipo: 'comercial', origenAsentamientoId: a.id, posicionActual: { x: a.posicion.x + 90, y: a.posicion.y }, estado: 'en_transito', destinoAsentamientoId: 'as-9',
+      carros: [{ tipoCarro: 'basico', animal: 'buey' }, { tipoCarro: 'basico', animal: 'buey' }], contenido: { trigo: 600, madera: 200 },
+      encargo: { modo: 'ruta', destinoAsentamientoId: 'as-9', vueltas: 3, paradaActual: 'destino', fase: '', cancelado: false } },
+    { id: 'car-3', nombre: 'Grano del valle', tipo: 'comercial', origenAsentamientoId: a.id, posicionActual: aldea, estado: 'aparcada', carros: [{ tipoCarro: 'basico', animal: 'camello' }], contenido: { trigo: 180 } },
+    { id: 'car-4', tipo: 'comercial', origenAsentamientoId: a.id, posicionActual: a.posicion, estado: 'disponible', carros: [], contenido: {} },
+  ];
+  if (qs.get('caravana')) (document.querySelector('.asent-ventana') as HTMLElement).dataset.elegir = qs.get('caravana')!;
+  pintarCaravanas();
+  bloqueDeDatos('EDIFICIO_CATALOGO', pintarCaravanas);
+}
 // `?construir=1`: el cajón, repintado cuando llega el catálogo y al cambiar de pestaña
 function pintarCajon(): void {
   const nav = document.querySelector<HTMLElement>('.asent-riel')!;

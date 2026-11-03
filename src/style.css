@@ -5307,3 +5307,52 @@ body:has(.eleccion-clic) .aviso-global { visibility: hidden; }
 
 /* «Que vaya sola»: devuelve la barra del Almacén al modo automático (0.125.0). */
 .barra-sola { width: auto; min-height: 0; padding: 3px 10px; font-size: 0.76rem; margin-left: auto; }
+
+/* La vista de flota (0.126.0, Víctor 2026-11-03): a la izquierda, un cuarto, la lista de caravanas con lo mínimo; a la derecha, tres cuartos, la
+ * elegida. En una ventana estrecha, una debajo de la otra. */
+.flota-marco { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(0, 3fr); gap: 14px; align-items: start; }
+.flota-lista { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.flota-fila { --tono: var(--oro); display: grid; gap: 4px; padding: 8px 10px; text-align: left; border: 1px solid rgba(107, 74, 41, 0.8); border-left: 3px solid var(--tono); border-radius: 3px; background: linear-gradient(180deg, rgba(36, 27, 17, 0.95), rgba(18, 14, 9, 0.95)); color: var(--pergamino); cursor: pointer; }
+.flota-fila.preparando, .flota-fila.esperando, .flota-fila.aparcada { --tono: var(--obra-ambar); }
+.flota-fila.en_transito, .flota-fila.retornando { --tono: var(--obra-azul); }
+.flota-fila.adjunta { --tono: #b58cff; }
+.flota-fila:hover { border-color: var(--oro); }
+.flota-fila.activo { border-color: var(--oro); box-shadow: 0 0 0 1px var(--oro), 0 0 12px rgba(232, 190, 100, 0.3); background: linear-gradient(180deg, rgba(70, 52, 30, 0.95), rgba(28, 21, 13, 0.95)); }
+.flota-fila-cab { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.flota-fila-cab strong { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.86rem; }
+.flota-fila-cab .caravana-icono { flex: none; display: flex; }
+.flota-reservada { font-style: normal; font-size: 0.8rem; }
+.flota-fila-donde { font-size: 0.74rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.flota-fila-datos { display: flex; align-items: center; gap: 10px; font-size: 0.74rem; color: var(--text-secondary); }
+.flota-fila-carga { flex: 1; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.flota-fila-carga .escolta-barra { flex: 1; margin: 0; }
+.flota-detalle { margin: 0; min-width: 0; }
+.carro-huecos { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+.carro-hueco { text-align: left; font: inherit; }
+button.carro-hueco { cursor: pointer; }
+button.carro-hueco:hover, .carro-hueco.activo { border-color: var(--oro); box-shadow: 0 0 0 1px var(--oro); }
+.carro-hueco.sin-animal { border-color: rgba(226, 103, 90, 0.6); }
+.carro-hueco-icono { position: relative; width: 34px; height: 34px; display: grid; place-items: center; font-size: 1.4rem; border: 1px solid rgba(169, 121, 63, 0.5); border-radius: 50%; background: rgba(0, 0, 0, 0.25); }
+.carro-hueco-icono i { position: absolute; right: -4px; bottom: -3px; font-style: normal; font-size: 0.6rem; font-weight: 700; padding: 0 3px; border-radius: 3px; background: var(--bronce); color: #1a1209; }
+.carro-acciones, .carro-nuevo-pie { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; font-size: 0.8rem; color: var(--text-secondary); }
+.carro-acciones .form-input { width: auto; min-width: 180px; }
+.carro-nuevo { margin-top: 8px; padding: 10px; border: 1px solid var(--bronce-osc); border-radius: 3px; background: rgba(0, 0, 0, 0.25); display: grid; gap: 8px; }
+.carro-nuevo-grupo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.carro-nuevo-grupo > small { width: 52px; color: var(--text-muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.carro-opcion { display: flex; align-items: center; gap: 6px; padding: 4px 10px 4px 6px; border: 1px solid var(--bronce); border-radius: 3px; background: rgba(40, 30, 18, 0.9); color: var(--oro-claro); cursor: pointer; }
+.carro-opcion input { position: absolute; opacity: 0; pointer-events: none; }
+.carro-opcion:has(input:checked) { border-color: var(--oro); box-shadow: 0 0 0 1px var(--oro); background: rgba(90, 66, 34, 0.95); }
+.carro-opcion > span:last-child { display: flex; flex-direction: column; }
+.carro-opcion strong { font-size: 0.8rem; color: var(--pergamino); }
+.carro-opcion small { font-size: 0.7rem; color: var(--text-secondary); }
+.carro-opcion.caro .carro-opcion-coste { color: #e2675a; }
+.carro-opcion-icono { width: 24px; text-align: center; font-size: 1.1rem; font-weight: 700; }
+.carro-nuevo-pie { margin-top: 0; justify-content: flex-end; }
+.salida-hueco.ajena { border-style: dotted; }
+.escolta-ajena-icono { width: 34px; height: 34px; display: grid; place-items: center; font-size: 1.2rem; color: var(--text-muted); }
+.caravana-modos { margin: 4px 0 0; max-width: 420px; }
+@container (max-width: 760px) {
+  .flota-marco { grid-template-columns: 1fr; }
+}
+.flota-lista { position: sticky; top: 0; }
+.carro-nuevo-pie .btn-primary { width: auto; padding: 6px 22px; }
