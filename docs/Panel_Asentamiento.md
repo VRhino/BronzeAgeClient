@@ -236,6 +236,14 @@ La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, es
 > o cuándo se acaba), la mano de obra en un medidor, los extractores como edificio ➜ recurso y los talleres como insumos ➜ producto con el
 > interruptor ▶ / ❚❚. Las cifras van en los títulos (al pasar el ratón).
 >
+> **Construcción desde 0.110.0** (2026-11-03, Víctor: «solo mostrar lo que se puede hacer»). Ya no es una ventana: el botón del riel (solo con
+> cargo de Gobernador o Maestro de Obras, que es a quien el motor deja tocar la cola y la auto-construcción) cambia el riel por un cajón abajo
+> con «← Volver», la auto-construcción y la rejilla «Construir» por tipos, sin lo que el cliente sabe que no se puede (sin candados; lo que
+> no se puede pagar sale con el coste en rojo). Las obras en marcha (barra de avance y tiempo) y la cola (◀ ✕ ▶ al pasar, solo con cargo) van
+> en el panel bajo el blasón (`htmlObrasHud`). La lista de Edificios desaparece: mejorar va en la ficha del edificio (coste en chips, tiempo
+> de obra y, durante la obra o la mejora, su barra y lo que queda). La Producción está en la ventana del Almacén (0.107.0). En el riel solo
+> salen las ventanas que se pueden abrir (Taberna y Mercado, con el edificio activo).
+>
 > **Centro urbano › subida de nivel, Resumen y Cargos** (0.86.0, 2026-11-02, `ui/panelCentro.ts`; banco `pruebas/centro/`). **Subida**: tarjeta
 > con el escudo de ahora ➜ el del nivel siguiente (apagado, o dorado si se puede), un piloto por requisito (verde, rojo, gris = lo comprueba el
 > servidor), el tiempo de obra y el botón ⬆; los requisitos, con barras (pesants, artesanos, pueblos), los edificios pedidos en iconos

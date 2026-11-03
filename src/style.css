@@ -4977,8 +4977,6 @@ body:has(.asent-ocupacion:not([hidden])) .eleccion-clic { top: calc(var(--jugado
 .asent-riel-boton .icono-edificio { display: block; }
 .asent-riel-boton:hover, .asent-riel-boton:focus-visible { border-color: var(--oro); color: var(--oro-claro); --relleno: rgba(216, 184, 120, 0.35); outline: none; }
 .asent-riel-boton.activo { border-color: var(--oro); color: var(--oro-claro); --relleno: rgba(216, 184, 120, 0.4); background: linear-gradient(180deg, rgba(118, 86, 42, 0.96), rgba(52, 37, 18, 0.96)); box-shadow: inset 0 -3px 0 var(--oro), 0 0 12px rgba(255, 210, 74, 0.3); }
-.asent-riel-boton.bloqueada { color: var(--text-muted); border-color: var(--bronce-osc); --relleno: rgba(120, 100, 70, 0.15); }
-.asent-riel-boton.bloqueada::before { content: "🔒"; position: absolute; right: 2px; bottom: 1px; font-size: 0.6rem; }
 .asent-riel-boton::after { content: attr(data-etiqueta); position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); padding: 4px 10px; white-space: nowrap; font-family: var(--fuente-titulo); font-size: 0.78rem; letter-spacing: 0.05em; color: var(--oro-claro); background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg)); border: 1px solid var(--bronce); border-radius: 2px; box-shadow: var(--placa-sutil); opacity: 0; pointer-events: none; transition: opacity 0.12s; z-index: 5; }
 .asent-riel-boton:hover::after, .asent-riel-boton:focus-visible::after { opacity: 1; }
 .asent-riel-insignia { position: absolute; top: -5px; right: -6px; min-width: 16px; padding: 0 4px; line-height: 16px; text-align: center; font-size: 0.66rem; font-style: normal; color: #1b1308; background: var(--obra-ambar); border-radius: 8px; }
@@ -4986,15 +4984,28 @@ body:has(.asent-ocupacion:not([hidden])) .eleccion-clic { top: calc(var(--jugado
 
 /* Bajo el riel: las obras en marcha (las 3 que antes acaban) y cuántas esperan; un clic abre Construcción. */
 .asent-obras-hud { order: -1; }
-.obras-hud { width: 100%; display: flex; flex-direction: column; gap: 4px; padding: 7px 9px 8px; text-align: left; font: inherit; color: var(--pergamino); background: linear-gradient(180deg, rgba(38, 28, 17, 0.92), rgba(18, 13, 8, 0.92)); border: 1px solid var(--bronce); border-radius: 3px; box-shadow: var(--placa-sutil); cursor: pointer; }
-.obras-hud:hover { border-color: var(--oro); }
+.obras-hud { width: 100%; display: flex; flex-direction: column; gap: 5px; padding: 7px 9px 8px; text-align: left; font: inherit; color: var(--pergamino); background: linear-gradient(180deg, rgba(38, 28, 17, 0.92), rgba(18, 13, 8, 0.92)); border: 1px solid var(--bronce); border-radius: 3px; box-shadow: var(--placa-sutil); }
 .obras-hud-cab { font-family: var(--fuente-titulo); font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--oro); }
+.obras-hud-cab-cola { margin-top: 3px; color: var(--text-secondary); }
 .obras-hud-fila { display: flex; align-items: center; gap: 8px; }
 .obras-hud-icono { flex: none; display: flex; color: var(--obra-ambar); }
-.obras-hud-texto { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.obras-hud-texto strong { font-size: 0.8rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.obras-hud-texto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.obras-hud-linea { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.obras-hud-texto strong { flex: 1; min-width: 0; font-size: 0.8rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .obras-hud-texto small { font-size: 0.68rem; color: var(--text-secondary); }
+.obras-hud-texto .obra-barra { margin-top: 2px; }
 .obras-hud-falta { flex: none; font-size: 0.74rem; font-weight: 600; color: var(--obra-ambar); font-variant-numeric: tabular-nums; }
+/* La cola: casillas numeradas; con cargo, ◀ ✕ ▶ al pasar por encima. */
+.obras-hud-cola { display: flex; flex-wrap: wrap; gap: 4px; }
+.obras-hud-casilla { position: relative; width: 36px; height: 36px; display: grid; place-items: center; border: 1px dashed rgba(169, 121, 63, 0.6); border-radius: 3px; background: rgba(10, 8, 5, 0.55); color: rgba(241, 220, 174, 0.8); --relleno: rgba(205, 160, 90, 0.18); }
+.obras-hud-casilla.danado { border-color: rgba(226, 103, 90, 0.6); }
+.obras-hud-n { position: absolute; top: -5px; left: -5px; min-width: 14px; padding: 0 3px; line-height: 14px; text-align: center; font-size: 0.6rem; font-weight: 700; color: #1b1308; background: var(--oro); border-radius: 7px; }
+.obras-hud-ctl { position: absolute; left: 50%; bottom: -12px; transform: translateX(-50%); display: none; gap: 1px; z-index: 2; }
+.obras-hud-casilla:hover .obras-hud-ctl, .obras-hud-casilla:focus-within .obras-hud-ctl { display: flex; }
+.obras-hud-ctl button { padding: 0 3px; border: 1px solid var(--bronce-osc); border-radius: 2px; background: rgba(0, 0, 0, 0.85); color: var(--oro); font-size: 0.6rem; line-height: 1.5; cursor: pointer; }
+.obras-hud-ctl button:hover:not(:disabled) { border-color: var(--oro); color: var(--oro-claro); }
+.obras-hud-ctl button[data-cola-quitar]:hover { border-color: var(--obra-rojo); color: var(--obra-rojo); }
+.obras-hud-ctl button:disabled { opacity: 0.3; cursor: default; }
 .obras-hud-mas { font-size: 0.68rem; color: var(--text-secondary); }
 
 /* Sin WebGL: el 2D vuelve al centro, a pantalla entera, entre la barra y el almacén. */
@@ -5061,7 +5072,7 @@ body:has(.asent-ocupacion:not([hidden])) .eleccion-clic { top: calc(var(--jugado
   .asent-riel { gap: 4px; }
   .asent-riel-boton { width: 40px; height: 40px; }
   .asent-riel-boton .icono-edificio { width: 24px; height: 24px; }
-  .obras-hud-fila:nth-of-type(n + 4) { display: none; }
+  .obras-hud-fila:nth-of-type(n + 3) { display: none; }
 }
 
 /* Estrecho: la columna izquierda más estrecha, el minimapa más pequeño y la ventana a todo lo ancho, encima de todo. */
@@ -5186,3 +5197,44 @@ body:has(.eleccion-clic) .aviso-global { visibility: hidden; }
 .mapa-capas-muestra { display: flex; align-items: center; gap: 7px; font-size: 0.74rem; }
 .mapa-capas-muestra i { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid var(--c); background: color-mix(in srgb, var(--c) 45%, transparent); }
 .mapa-capas-nota { margin: 0; font-size: 0.7rem; color: var(--text-secondary); }
+
+/* =====================================================================================
+   Construcción como cajón del riel (0.109.0, Víctor 2026-11-03): al pulsar Construcción el riel se esconde y en su sitio sale el cajón, con
+   «Volver», la auto-construcción (solo con cargo) y la rejilla de lo que se puede poner en la cola. La barra de abajo sube con él (--riel-alto).
+   ===================================================================================== */
+.plaza-3d.construyendo { --riel-alto: 212px; }
+.plaza-3d .asent-riel.asent-riel-cajon {
+  width: min(880px, calc(100% - var(--minimapa) - 32px));
+  height: calc(var(--riel-alto) - 4px);
+  padding: 0;
+  box-sizing: border-box;
+  border-color: var(--bronce);
+  background: linear-gradient(180deg, rgba(38, 28, 17, 0.95), rgba(14, 10, 6, 0.96));
+}
+.cajon-construir { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cajon-construir-cab { display: flex; align-items: center; gap: 12px; padding: 6px 10px; border-bottom: 1px solid var(--bronce-osc); }
+.cajon-construir-cab h2 { display: flex; align-items: center; gap: 6px; margin: 0; font-family: var(--fuente-titulo); font-size: 0.95rem; letter-spacing: 0.06em; color: var(--oro-claro); }
+.cajon-construir-cab h2 svg, .cajon-construir-cab h2 .icono-edificio { width: 22px; height: 22px; }
+.cajon-construir-cab .interruptor { margin: 0 0 0 auto; }
+.cajon-volver { padding: 4px 10px; font: inherit; font-size: 0.8rem; color: var(--oro); background: rgba(18, 13, 8, 0.9); border: 1px solid var(--bronce); border-radius: 3px; cursor: pointer; }
+.cajon-volver:hover, .cajon-volver:focus-visible { color: var(--oro-claro); border-color: var(--oro); outline: none; }
+.cajon-construir-cuerpo { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 10px 6px; }
+.cajon-construir-cuerpo .obra-grupos { position: sticky; top: 0; z-index: 1; background: rgba(26, 19, 12, 0.98); }
+.cajon-construir-cuerpo .obra-grupo { flex: 0 1 92px; }
+.cajon-construir-cuerpo .obra-construir-rejilla { margin-bottom: 0; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); }
+@media (max-height: 820px) { .plaza-3d.construyendo { --riel-alto: 184px; } }
+@media (max-width: 600px) {
+  .plaza-3d.construyendo { --riel-alto: 230px; }
+  .plaza-3d .asent-riel.asent-riel-cajon { width: calc(100% - 16px); left: 8px; transform: none; max-width: none; }
+  .cajon-construir-cab { flex-wrap: wrap; gap: 6px 10px; }
+}
+
+/* La ficha del edificio: la obra en marcha con su barra y el bloque de mejorar con su coste (0.109.0). */
+.ficha-obra { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; border: 1px solid rgba(224, 165, 58, 0.5); border-radius: 3px; background: rgba(40, 28, 12, 0.6); }
+.ficha-obra-linea { display: flex; align-items: baseline; gap: 8px; font-size: 0.82rem; }
+.ficha-obra-linea b { margin-left: auto; color: var(--obra-ambar); font-weight: 700; white-space: nowrap; }
+.ficha-mejora { display: flex; flex-direction: column; gap: 6px; padding-top: 6px; border-top: 1px solid var(--bronce-osc); }
+.ficha-mejora-coste { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 6px; }
+.ficha-mejora-tiempo { margin-left: auto; color: var(--pergamino); }
+.ficha-mejora .btn-primary { align-self: flex-start; }
+.ficha-mejora.caro .btn-primary { opacity: 0.8; }

@@ -1,5 +1,5 @@
-// Banco del panel de obras de la plaza (`/pruebas/plaza/`): Centro urbano › Edificios (construir, edificios, producción y cola) con una plaza de
-// mentira, sin servidor. Los datos de juego son los bloques de Docs/Mechanics del motor (`datos.json`, como `GET /v1/datos`). Las órdenes no salen:
+// Banco de «Construir» de la plaza (`/pruebas/plaza/`): las pestañas y la rejilla del cajón de Construcción (0.109.0) con una plaza de
+// mentira, sin servidor; sin cargo no sale nada. Los datos de juego son los bloques de Docs/Mechanics del motor (`datos.json`, como `GET /v1/datos`). Las órdenes no salen:
 // se anotan en `window.__banco.enviadas`.
 import datos from './datos.json';
 const fetchReal = window.fetch.bind(window);
@@ -10,7 +10,7 @@ import type { ProyeccionJugador } from '../../src/apiCliente';
 import { bloqueDeDatos } from '../../src/apiCliente';
 import { estadoCliente } from '../../src/ui/estadoCliente';
 import { plegable, cablearPlegables } from '../../src/ui/plegable';
-import { cablearPanelObras, htmlPanelObras } from '../../src/ui/panelObras';
+import { cablearPanelObras, htmlConstruir } from '../../src/ui/panelObras';
 import { htmlProduccionYRecetas } from '../../src/ui/vistaCiudad';
 import type { Asentamiento, Edificio } from '../../src/tiposDominio';
 
@@ -56,8 +56,7 @@ estadoCliente.proyeccionUltima = p;
 const cuerpo = document.querySelector<HTMLElement>('.asent-edif-cuerpo')!;
 function ver(v: string): void {
   const cargo = v === 'gobernador' ? 'gobernador' as const : null;
-  const ctx = { proyeccion: p, asentamiento: plaza, cuerpo, ejecutar: async (t: string, x: object) => { banco.enviadas.push([t, x]); return null; }, refrescar: () => ver(v), cargo, resideAqui: true, escapar: e };
-  cuerpo.innerHTML = `<div class="asent-lado-cuerpo">${htmlPanelObras(ctx as never)}</div>`;
+  cuerpo.innerHTML = `<div class="asent-lado-cuerpo">${htmlConstruir(plaza, cargo, e) || '<p>(sin cargo no sale nada)</p>'}</div>`;
   cablearPlegables(cuerpo);
   cablearPanelObras(cuerpo, () => ver(v));
 }

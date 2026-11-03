@@ -16,6 +16,8 @@ import { pintar } from './repintado';
 import { cablearPlegables } from './plegable';
 import { mostrar as mostrarAviso } from './avisos';
 import { iconoEdificio } from './iconosEdificio';
+import { barraAvance, chipsDeCoste, cuentaAtras, duracion } from './juegoVisual';
+import { avanceDeObra } from './panelObras';
 
 type Escapar = (valor: string) => string;
 type Cargo = 'gobernador' | 'maestroObras' | null;
@@ -72,8 +74,8 @@ function htmlFicha(p: ProyeccionJugador, a: Asentamiento, edificio: Edificio, e:
   const nivel = edificio.nivelInterno ?? 1;
   const cargo = cargoDe(a, p.heroeId);
   const niveles = nivelesDeEdificio(edificio.tipo);
-  const estado = edificio.estado === 'activo' ? 'Activo' : edificio.estado === 'en_construccion' ? `En construcción · ${textoEnTiempoReal(Math.max(0, (edificio.completaEn ?? 0) - p.instante))}` : 'En cola';
-  const notas = [edificio.danado ? 'dañado (reconstrucción)' : null, edificio.pausadoPorAlmacenLleno ? 'parado — almacén lleno' : null, edificio.mejora ? `mejorándose a N${edificio.mejora.nivelObjetivo} · ${textoEnTiempoReal(Math.max(0, edificio.mejora.completaEn - p.instante))}` : null].filter(Boolean);
+  const estado = edificio.estado === 'activo' ? 'Activo' : edificio.estado === 'en_construccion' ? 'En construcción' : 'En cola';
+  const notas = [edificio.danado ? 'dañado (reconstrucción)' : null, edificio.pausadoPorAlmacenLleno ? 'parado — almacén lleno' : null].filter(Boolean);
   const prod = produccionDe(p, edificio)
     .map((x) => `<li>${RECURSO_ICONO[x.recurso] ?? '📦'} ${e(RECURSO_NOMBRE[x.recurso] ?? x.recurso)} · ${x.activos > 1 ? '≈ ' : ''}${fmt(x.porMinuto)}/min</li>`)
     .join('');
@@ -81,23 +83,42 @@ function htmlFicha(p: ProyeccionJugador, a: Asentamiento, edificio: Edificio, e:
     .map((r) => `<li>${e(RECURSO_NOMBRE[r.produce] ?? r.produce)}: ${costeTexto(r.consumePorUnidad, e) || 'sin insumos'} por unidad</li>`)
     .join('');
 
-  // Mejorar: la misma orden que la lista (`mejorarEdificioAhora`); el coste sale del catálogo, los requisitos los valida el servidor.
+  // La obra en marcha (construcción o mejora): su barra de avance y lo que le queda (Víctor, 2026-11-03).
+  const fin = edificio.mejora?.completaEn ?? (edificio.estado === 'en_construccion' ? edificio.completaEn : undefined);
+  const obra = typeof fin === 'number'
+    ? `<div class="ficha-obra"><span class="ficha-obra-linea"><strong>${edificio.mejora ? `Mejorándose a N${edificio.mejora.nivelObjetivo}` : 'En construcción'}</strong><b>quedan ${cuentaAtras(fin)}</b></span>${barraAvance(avanceDeObra(a, edificio))}</div>`
+    : '';
+
+  // Mejorar va en la ficha (antes, en la lista de Construcción): la misma orden, `mejorarEdificioAhora`, con su coste del catálogo en fichas (en
+  // rojo lo que falta). Solo con cargo, y solo si el cliente no sabe ya que no se puede (nivel de plaza, edificio o tecnología que pide): «si no lo
+  // puedo hacer, para qué lo muestro» (Víctor, 2026-11-03). Lo demás lo valida el servidor y su rechazo sale flotando.
   let acciones = '';
-  if (edificio.tipo !== 'centroUrbano' && edificio.estado === 'activo' && !edificio.mejora && cargo) {
+  if (cargo && edificio.tipo !== 'centroUrbano' && edificio.estado === 'activo' && !edificio.mejora) {
     const siguiente = niveles?.[String(nivel + 1)];
-    acciones = siguiente
-      ? `<button class="btn-primary" type="button" data-ficha-mejorar="${e(edificio.id)}">Mejorar a N${nivel + 1}</button>
-         <p class="asent-lado-nota">Coste: ${costeTexto(siguiente.costoMejora ?? {}, e) || 'sin coste'}${siguiente.requisitoNivelAsentamiento ? ` · plaza nivel ${siguiente.requisitoNivelAsentamiento}` : ''}${siguiente.requiereEdificio ? ` · ${e(nombreDe(siguiente.requiereEdificio))} N${siguiente.requiereEdificioNivel ?? 1}` : ''}${siguiente.obraMinutos ? ` · obra de ${siguiente.obraMinutos} min` : ''}.</p>`
-      : niveles ? '<p class="asent-lado-nota">Está en su nivel máximo.</p>' : '';
-  } else if (edificio.estado === 'en_cola' && cargo) {
+    const plazaNivel = a.nivelActual ?? a.nivel;
+    const adoptadas = adoptadasDe(p);
+    const pideEdificio = siguiente?.requiereEdificio;
+    const sePuede = siguiente
+      && plazaNivel >= (siguiente.requisitoNivelAsentamiento ?? 0)
+      && (!pideEdificio || (a.edificios ?? []).some((x) => x.tipo === pideEdificio && x.estado === 'activo' && (x.nivelInterno ?? 1) >= (siguiente.requiereEdificioNivel ?? 1)))
+      && (!siguiente.requiereTecnologia || !adoptadas || adoptadas.includes(siguiente.requiereTecnologia));
+    if (siguiente && sePuede) {
+      const coste = siguiente.costoMejora ?? {};
+      const caro = Object.entries(coste).some(([r, n]) => (a.almacen?.[r]?.cantidad ?? 0) < n);
+      acciones = `<div class="ficha-mejora${caro ? ' caro' : ''}">
+          <span class="faction-kicker">Mejorar a N${nivel + 1}</span>
+          <div class="ficha-mejora-coste">${Object.keys(coste).length ? chipsDeCoste(a, coste, e) : '<small>sin coste</small>'}${siguiente.obraMinutos ? `<small class="ficha-mejora-tiempo">⏳ ${duracion(siguiente.obraMinutos)}</small>` : ''}</div>
+          <button class="btn-primary" type="button" data-ficha-mejorar="${e(edificio.id)}"${caro ? ` title="${e('No hay bastante en el almacén todavía')}"` : ''}>⬆ Mejorar a N${nivel + 1}</button>
+        </div>`;
+    }
+  } else if (cargo && edificio.estado === 'en_cola') {
     acciones = `<button class="btn-secondary" type="button" data-ficha-quitar="${e(edificio.id)}">Quitar de la cola</button>`;
-  } else if (!cargo) {
-    acciones = '<p class="asent-lado-nota">Mejorar o quitar de la cola es cosa del Gobernador o del Maestro de Obras.</p>';
   }
 
   return `<div class="asent-lado-cabecera"><span class="faction-kicker">${e(nombreDe(edificio.tipo))}</span><button type="button" class="asent-ficha-cerrar" data-ficha-cerrar title="Cerrar">✕</button></div>
     <div class="asent-ficha-grid"><div><span>Nivel</span><strong>${nivel}</strong></div><div><span>Estado</span><strong>${e(estado)}</strong></div></div>
     ${notas.length ? `<p class="asent-lado-nota">${e(notas.join(' · '))}</p>` : ''}
+    ${obra}
     ${prod ? `<span class="faction-kicker">Producción</span><ul class="asent-ficha-lista">${prod}</ul>` : ''}
     ${recetas ? `<span class="faction-kicker">Recetas de este nivel ${ayuda('plaza:ficha-recetas', 'Consumo por edificio: no lo publica el servidor.')}</span><ul class="asent-ficha-lista">${recetas}</ul>` : ''}
     ${acciones}`;

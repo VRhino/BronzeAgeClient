@@ -69,7 +69,7 @@ import { cablearPanelEjercito, ejercitosDeLaFaccion, htmlFichaEjercito, htmlPane
 import { invalidar, olvidarEdicion, pintar, vaciar } from './ui/repintado';
 import { ayuda } from './ui/ayuda';
 import { htmlInformeDeInspeccion } from './ui/interaccionAjena';
-import { cablearPanelObras, htmlPanelObras, minutosDeObra } from './ui/panelObras';
+import { cablearPanelObras, htmlConstruir, minutosDeObra } from './ui/panelObras';
 import { cablearProduccionYRecetas, cablearVistaCiudad, edificioSeleccionado, elegirEdificio, htmlExtraccion, htmlRecetas, htmlTooltipEdificio, repintarFicha } from './ui/vistaCiudad';
 import { campamentoEnVista } from './ciudad3d/campamento';
 import { puebloEnVista } from './ciudad3d/pueblo';
@@ -2100,8 +2100,9 @@ async function ejecutarAccionAsent(tipo: string, params: Record<string, unknown>
 }
 
 /** Las ventanas del riel. De visita en una plaza ajena solo quedan Territorio y Mercado (decisión de Víctor del 2026-10-29: lo que se ve o se usa
- * desde fuera; el motor solo deja reclutar y comprar intel en las plazas de tu Facción). Taberna y Mercado están siempre, con su candado hasta tener
- * el edificio activo (decir qué falta es parte de la interfaz). */
+ * desde fuera; el motor solo deja reclutar y comprar intel en las plazas de tu Facción). Solo sale lo que se puede abrir (Víctor, 2026-11-03: «si no
+ * lo puedo hacer, para qué lo muestro»): Taberna y Mercado, con el edificio activo; Construcción, con cargo de Gobernador o Maestro de Obras, y no
+ * abre ventana sino el cajón que ocupa el sitio del riel (`htmlCajonConstruir`). */
 const RIEL: { id: VentanaPlaza; titulo: string; icono: string; requiere?: { tipo: string; nombre: string }; deVisita?: true }[] = [
   { id: 'construccion', titulo: 'Construcción', icono: ICONO_RIEL.construccion },
   { id: 'gobierno', titulo: 'Gobierno', icono: ICONO_RIEL.gobierno },
@@ -2135,6 +2136,8 @@ function ventanaDisponible(v: VentanaPlaza, p: ProyeccionJugador, a: Asentamient
   if (v === 'ascenso') return !ajena;
   // la ventana del Almacén: se abre con un clic en su placa de la barra de abajo
   if (v === 'almacen') return !ajena && Boolean(a.almacen);
+  // construir es cosa del Gobernador o del Maestro de Obras (el motor: `AlternarAutoConstruccion` y la cola, `Cargo(GOBERNADOR_O_MAESTRO)`)
+  if (v === 'construccion') return !ajena && Boolean(cargoConstructor(a, p.heroeId));
   const def = RIEL.find((x) => x.id === v);
   if (!def || (ajena && !def.deVisita)) return false;
   return !def.requiere || a.edificios.some((e) => e.tipo === def.requiere!.tipo && e.estado === 'activo');
@@ -2161,32 +2164,48 @@ function renderPanelEdificios(): void {
   pintarBlasones(p, a);
   const ocupacion = document.querySelector<HTMLElement>('.asent-ocupacion');
   if (ocupacion) { const html = htmlOcupacion(a); ocupacion.hidden = !html; pintar(ocupacion, html, undefined, 'ocupacion'); }
+  const cargo = cargoConstructor(a, p.heroeId);
   const obras = document.querySelector<HTMLElement>('.asent-obras-hud');
   if (obras) {
-    const html = ajena ? '' : htmlObrasHud(a, escaparHtml);
+    // las obras en marcha con su barra y la cola; quien tiene cargo la ordena desde aquí
+    const html = ajena ? '' : htmlObrasHud(a, escaparHtml, Boolean(cargo));
     obras.hidden = !html;
-    pintar(obras, html, () => obras.querySelector('[data-ventana-plaza]')?.addEventListener('click', () => abrirVentanaPlaza('construccion')), 'obras');
+    pintar(obras, html, () => cablearAccionesAsentLado(obras, a, cargo), 'obras');
   }
   repintarFicha();
   if (ventanaPlaza && !ventanaDisponible(ventanaPlaza, p, a)) ventanaPlaza = null;
-  const enMarcha = a.edificios.filter((e) => e.mejora || e.estado === 'en_construccion').length;
-  const botones = RIEL.filter((v) => !ajena || v.deVisita).map((v) => {
-    const libre = ventanaDisponible(v.id, p, a);
-    const nombre = libre ? v.titulo : `${v.titulo} 🔒`;
-    const ayudaBoton = libre ? v.titulo : `${v.titulo}: necesitas construir ${v.requiere?.nombre ?? 'su edificio'}`;
-    const insignia = v.id === 'construccion' && enMarcha ? `<b class="asent-riel-insignia">${enMarcha}</b>` : '';
-    return `<button type="button" class="asent-riel-boton${v.id === ventanaPlaza ? ' activo' : ''}${libre ? '' : ' bloqueada'}" data-ventana-plaza="${v.id}" data-etiqueta="${escaparHtml(nombre)}" aria-label="${escaparHtml(ayudaBoton)}" aria-pressed="${v.id === ventanaPlaza}">${v.icono}${insignia}</button>`;
-  }).join('');
-  pintar(riel, botones, () => riel.querySelectorAll<HTMLButtonElement>('[data-ventana-plaza]').forEach((b) => b.addEventListener('click', () => {
-    const v = b.dataset.ventanaPlaza as VentanaPlaza;
-    if (b.classList.contains('bloqueada')) {
-      const def = RIEL.find((x) => x.id === v);
-      mostrarAviso(`Para abrir ${def?.titulo ?? v} necesitas construir ${def?.requiere?.nombre ?? 'su edificio'}.`, true);
-      return;
-    }
-    alternarVentanaPlaza(v);
-  })), 'riel');
+  // Construcción no abre ventana: su cajón ocupa el sitio del riel, con «Volver» para recuperarlo (Víctor, 2026-11-03)
+  const construyendo = ventanaPlaza === 'construccion';
+  riel.closest('.plaza-3d')?.classList.toggle('construyendo', construyendo);
+  riel.classList.toggle('asent-riel-cajon', construyendo);
+  if (construyendo) {
+    pintar(riel, htmlCajonConstruir(a, cargo), () => {
+      riel.querySelector('[data-riel-volver]')?.addEventListener('click', () => abrirVentanaPlaza(null));
+      cablearAccionesAsentLado(riel, a, cargo);
+      cablearPanelObras(riel, renderPanelEdificios);
+    }, 'riel:construir');
+  } else {
+    const enMarcha = a.edificios.filter((e) => e.mejora || e.estado === 'en_construccion').length;
+    const botones = RIEL.filter((v) => ventanaDisponible(v.id, p, a)).map((v) => {
+      const insignia = v.id === 'construccion' && enMarcha ? `<b class="asent-riel-insignia">${enMarcha}</b>` : '';
+      return `<button type="button" class="asent-riel-boton${v.id === ventanaPlaza ? ' activo' : ''}" data-ventana-plaza="${v.id}" data-etiqueta="${escaparHtml(v.titulo)}" aria-label="${escaparHtml(v.titulo)}" aria-pressed="${v.id === ventanaPlaza}">${v.icono}${insignia}</button>`;
+    }).join('');
+    pintar(riel, botones, () => riel.querySelectorAll<HTMLButtonElement>('[data-ventana-plaza]').forEach((b) => b.addEventListener('click', () => alternarVentanaPlaza(b.dataset.ventanaPlaza as VentanaPlaza))), 'riel');
+  }
   pintarVentanaPlaza(p, a, ajena);
+}
+
+/** El cajón de Construcción, en el sitio del riel: «Volver», la auto-construcción y lo que se puede poner en la cola, por tipos. Solo con cargo
+ * (sin él, el botón ni sale). */
+function htmlCajonConstruir(a: Asentamiento, cargo: 'gobernador' | 'maestroObras' | null): string {
+  return `<div class="cajon-construir">
+      <div class="cajon-construir-cab">
+        <button type="button" class="cajon-volver" data-riel-volver aria-label="Volver al riel">← Volver</button>
+        <h2>${ICONO_RIEL.construccion}<span>Construcción</span></h2>
+        ${cargo ? htmlAutoConstruccion(a) : ''}
+      </div>
+      <div class="cajon-construir-cuerpo">${htmlConstruir(a, cargo, escaparHtml)}</div>
+    </div>`;
 }
 
 /** Una ventana de la plaza: su título e icono, sus subpestañas (si tiene varias), lo que pinta y lo que cablea, y si va ancha o estrecha. */
@@ -2199,7 +2218,7 @@ function pintarVentanaPlaza(p: ProyeccionJugador, a: Asentamiento, ajena: boolea
   const cuerpo = ventana?.querySelector<HTMLElement>('.asent-edif-cuerpo');
   document.querySelector('[data-ventana-info]')?.classList.toggle('activo', ventanaPlaza === 'informacion');
   if (!ventana || !titulo || !cuerpo) return;
-  if (!ventanaPlaza) { ventana.hidden = true; vaciar(cuerpo); return; }
+  if (!ventanaPlaza || ventanaPlaza === 'construccion') { ventana.hidden = true; vaciar(cuerpo); return; }
   const v = ventanaPlaza;
   const x = contenidoDeVentana(v, contextoPlaza(p, a, cuerpo), ajena);
   ventana.hidden = false;
@@ -2229,12 +2248,8 @@ function contenidoDeVentana(v: VentanaPlaza, c: ContextoPlaza, ajena: boolean): 
   };
   switch (v) {
     case 'construccion':
-      // Edificios, Producción y Cola, cada una plegable; arriba, la auto-construcción (que estaba en el Resumen)
-      return {
-        ...base,
-        html: `${htmlAutoConstruccion(a)}${htmlPanelObras(c)}${c.cargo ? '' : '<p class="asent-lado-nota">Necesitas ser Gobernador o Maestro de Obras para gestionar la construcción.</p>'}`,
-        cablear: () => { cablearAccionesAsentLado(cuerpo, a, c.cargo); cablearPlegables(cuerpo); cablearProduccionYRecetas(c); cablearPanelObras(cuerpo, renderPanelEdificios); },
-      };
+      // no se pinta como ventana: es el cajón del riel (`htmlCajonConstruir`)
+      return { ...base, html: '', cablear: () => undefined };
     case 'gobierno': {
       // Cargos (con los residentes debajo), Tesorería y lo que se añada sin sitio
       const otras = [extra('tesoreria'), ...SUBPESTANAS_CENTRO_EXTRA.filter((s) => !EXTRAS_CON_SITIO.has(s.id) && (s.visible?.(c) ?? true))].filter((s): s is SubpestanaPlaza => Boolean(s));

@@ -3,6 +3,26 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.110.0] — 2026-11-03 · Construcción en un cajón bajo la barra, mejorar en la ficha y solo lo que se puede hacer · sin cambio de contrato
+
+Peticiones de Víctor (2026-11-03, 12:55), con la premisa «si no lo puedo hacer, para qué lo muestro»:
+
+- **Construcción sale del riel como cajón** (`htmlCajonConstruir`, main.ts): al pulsarla, el riel se esconde y en su sitio sale el cajón con
+  «← Volver», la auto-construcción y la rejilla de construir por tipos; la barra de Población, Almacén y Estado sube con él (`.plaza-3d.construyendo`,
+  `--riel-alto`). Ya no hay ventana de Construcción.
+- **Solo quien puede tocarla ve la construcción**: el botón de Construcción, el cajón y la auto-construcción salen solo al Gobernador o al
+  Maestro de Obras de la plaza (el motor autoriza `AlternarAutoConstruccion` y la cola con `Cargo(GOBERNADOR_O_MAESTRO)`; el Rey sin uno de
+  esos cargos no puede).
+- **Obras bajo el blasón con su barra**: el panel de obras en marcha (`htmlObrasHud`) lleva la barra de avance estimada y el tiempo que queda de
+  cada obra, y la cola en casillas numeradas; con cargo, al pasar por una casilla salen ◀ ✕ ▶. Ya no abre Construcción.
+- **Mejorar, en la ficha del edificio** (`ui/vistaCiudad.ts`): con cargo, «Mejorar a N+1» con el coste en chips (en rojo lo que falta) y el tiempo
+  de obra; si la plaza, el edificio que pide o la tecnología no llegan, no sale. Durante la obra o la mejora, su barra y lo que queda. Sin cargo,
+  la ficha ya no dice «es cosa del Gobernador»: solo informa. La lista de Edificios de Construcción desaparece.
+- **Solo lo que se puede hacer**: en el riel ya no salen Taberna ni Mercado con candado (salen al tener el edificio activo), y en construir no
+  salen los edificios que el cliente sabe que no se pueden pedir (único ya levantado, nivel de plaza, tecnología, nivel de Facción, capital).
+  Lo que no se puede pagar todavía sí sale, con el coste en rojo.
+- Bancos: `pruebas/hud/?construir=1` (el cajón) y `?ficha=mejora|activo|obra` (la ficha); `pruebas/plaza/` enseña la rejilla de construir.
+
 ## [0.109.0] — 2026-11-03 · Botón de capas: quitar los nombres de los nodos, fertilidad y parcelas de bosque en el modo mapa · sin cambio de contrato
 
 Petición de Víctor (2026-11-03): que los nombres de los nodos se puedan quitar en el mapa de mundo, y que el modo mapa tenga una capa de

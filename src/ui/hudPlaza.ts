@@ -6,7 +6,8 @@
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { Asentamiento } from '../tiposDominio';
 import { iconoEdificio } from './iconosEdificio';
-import { ahora, cuentaAtras, medallonNivel, miles, tonoDe, type Tono } from './juegoVisual';
+import { ahora, barraAvance, cuentaAtras, medallonNivel, miles, tonoDe, type Tono } from './juegoVisual';
+import { avanceDeObra } from './panelObras';
 import { poblacionDePlaza } from './panelCentro';
 
 type Escapar = (valor: string) => string;
@@ -217,18 +218,27 @@ export function htmlOcupacion(a: Asentamiento): string {
     ? `<span aria-hidden="true">⚔️</span><strong>Bajo ocupación militar</strong><span>faltan ${cuentaAtras(a.ocupacionHasta)}</span>` : '';
 }
 
-/** Las obras en marcha (las 3 que antes acaban, con su cuenta atrás) y cuántas esperan en la cola; un clic abre Construcción. Vacío sin obras. */
-export function htmlObrasHud(a: Asentamiento, esc: Escapar): string {
+/** El panel de obras bajo el blasón (0.109.0: sustituye a «Obras» de Construcción). Arriba lo que está en obra, cada una con su barra de avance y
+ * lo que le falta (las 4 que antes acaban; el resto, en un «N más»); debajo, la cola en casillas numeradas por orden de arranque. Quien puede
+ * tocarla (Gobernador o Maestro de Obras, `puedeTocar`) ve ◀ ✕ ▶ en cada casilla; los demás, solo la cola. Vacío sin obras. */
+export function htmlObrasHud(a: Asentamiento, esc: Escapar, puedeTocar = false): string {
   const enMarcha = a.edificios.flatMap((e) => {
     const fin = e.mejora?.completaEn ?? (e.estado === 'en_construccion' ? e.completaEn : undefined);
     return typeof fin === 'number' ? [{ e, fin, que: e.mejora ? `Mejora a nivel ${e.mejora.nivelObjetivo}` : e.danado ? 'Reparación' : 'Obra nueva' }] : [];
   }).sort((x, y) => x.fin - y.fin);
-  const enCola = a.edificios.filter((e) => e.estado === 'en_cola').length;
-  if (!enMarcha.length && !enCola) return '';
-  const filas = enMarcha.slice(0, 3).map(({ e, fin, que }) => `<span class="obras-hud-fila"><span class="obras-hud-icono">${iconoEdificio(e.tipo, 22)}</span>`
-    + `<span class="obras-hud-texto"><strong>${esc(EDIFICIO_NOMBRE[e.tipo] ?? e.tipo)}</strong><small>${que}</small></span><b class="obras-hud-falta">${cuentaAtras(fin)}</b></span>`).join('');
-  const mas = [enMarcha.length > 3 ? `${enMarcha.length - 3} más en marcha` : '', enCola ? `${enCola} en cola` : ''].filter(Boolean).join(' · ');
-  return `<button type="button" class="obras-hud" data-ventana-plaza="construccion" title="Abrir Construcción"><span class="obras-hud-cab">Obras${enMarcha.length ? ` · ${enMarcha.length} en marcha` : ''}</span>${filas}${mas ? `<small class="obras-hud-mas">${mas}</small>` : ''}</button>`;
+  const esperan = a.edificios.filter((e) => e.estado === 'en_cola').sort((x, y) => (y.prioridad ?? 0) - (x.prioridad ?? 0));
+  if (!enMarcha.length && !esperan.length) return '';
+  const filas = enMarcha.slice(0, 4).map(({ e, fin, que }) => `<div class="obras-hud-fila"><span class="obras-hud-icono">${iconoEdificio(e.tipo, 22)}</span>`
+    + `<span class="obras-hud-texto"><span class="obras-hud-linea"><strong>${esc(EDIFICIO_NOMBRE[e.tipo] ?? e.tipo)}</strong><b class="obras-hud-falta">${cuentaAtras(fin)}</b></span>`
+    + `<small>${que}</small>${barraAvance(avanceDeObra(a, e))}</span></div>`).join('');
+  const mas = enMarcha.length > 4 ? `<small class="obras-hud-mas">${enMarcha.length - 4} más en marcha</small>` : '';
+  const casillas = esperan.map((e, i) => `<div class="obras-hud-casilla${e.danado ? ' danado' : ''}" title="${esc(`${i + 1}. ${EDIFICIO_NOMBRE[e.tipo] ?? e.tipo}${e.danado ? ' · reconstrucción' : ''}`)}">`
+    + `<span class="obras-hud-n">${i + 1}</span>${iconoEdificio(e.tipo, 22)}`
+    + (puedeTocar ? `<span class="obras-hud-ctl"><button type="button" data-cola-mover="arriba" data-edificio="${esc(e.id)}" title="Antes" aria-label="Antes"${i === 0 ? ' disabled' : ''}>◀</button><button type="button" data-cola-quitar="${esc(e.id)}" title="Quitar de la cola" aria-label="Quitar">✕</button><button type="button" data-cola-mover="abajo" data-edificio="${esc(e.id)}" title="Después" aria-label="Después"${i === esperan.length - 1 ? ' disabled' : ''}>▶</button></span>` : '')
+    + '</div>').join('');
+  return `<div class="obras-hud"><span class="obras-hud-cab">Obras${enMarcha.length ? ` · ${enMarcha.length} en marcha` : ''}</span>${filas}${mas}`
+    + (esperan.length ? `<span class="obras-hud-cab obras-hud-cab-cola">En cola · ${esperan.length}</span><div class="obras-hud-cola">${casillas}</div>` : '')
+    + '</div>';
 }
 
 const T = 'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"';
