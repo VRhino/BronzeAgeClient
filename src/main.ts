@@ -1247,7 +1247,7 @@ function estadoDeLaVista3D(): EstadoVista | null {
   const clave = `${claveSeleccion()}|${fundacion3d.clave}|${reglas.vision.solo},${reglas.vision.ejercito},${reglas.radioZonaInicial},${reglas.radioProteccion}`;
   const vale = estado3d && estado3d.clave === clave && (marcha ? ahora - estado3d.en < CADA_PROYECCION_MS : estado3d.p === base);
   if (vale) return estado3d!.estado;
-  const p = (marcha ? proyeccionAlInstante() : null) ?? base;
+  const p = (marcha ? proyeccionAlInstante(base) : null) ?? base;
   estado3d = { p: marcha ? p : base, clave, en: ahora, estado: estadoDesdeProyeccion(p, reglas, posicionDelHeroe(p), { seleccion: seleccionMapa, fundacion }) };
   return estado3d.estado;
 }
@@ -1953,7 +1953,7 @@ function montarMapa(): void {
     // la vista 3D pinta sola, en su bucle; mientras el modo mapa la tapa, descansa
     vista3d?.pausar(vistaMapaAbierta);
     if (!vistaMapaAbierta || estadoCliente.modoVista !== 'mundo') return;
-    const p = proyeccionAlInstante();
+    const p = estadoCliente.proyeccionUltima;
     if (!p) return;
     if (!algoSeMueve(p)) return;
     // El modo mapa ya se repinta al mover la cámara y con cada sondeo: aquí solo mientras algo marcha, y a ~4 fps (a esa escala no se nota más).

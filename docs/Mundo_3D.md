@@ -411,6 +411,27 @@ fotogramas a mano (`bucle`): mismos ms de CPU, de tarjeta (`EXT_disjoint_timer_q
   montón: recogida de basura. La vista reserva unos 0,7 MB por fotograma, la mayor parte dentro de `renderer.render` y del estado con los bots
   marchando. La tarjeta tiene picos de 15-20 ms (p95) con la escena quieta, que apuntan a otra cosa usando la misma tarjeta.
 
+## Rendimiento (0.126.1)
+
+Los tirones sueltos de la 0.125.1, buscados con un perfil de reservas de memoria. Medido en la partida real (cuenta de prueba en camp-1, unas
+52 columnas a la vista, RTX 4080 SUPER) en un Chrome sin ventana con la tarjeta, por el protocolo de depuración (`HeapProfiler`, `Profiler`), 600
+fotogramas por caso. «Antes» es la 0.125.1.
+
+| | Memoria reservada | Estado | JS por fotograma (media) | JS p99 | Fotogramas > 10 ms de JS | FPS |
+|---|---|---|---|---|---|---|
+| Antes, quieto (4 casos) | 145 MB/s | 0,7-1,4 ms | 5,8-7,6 ms | 24-26 ms | 46-66 | 59,3-59,5 |
+| Antes, marchando (2 casos) | | 0,9-1,5 ms | 8,9-9,0 ms | 30-31 ms | 87-135 | 55,5-56,3 |
+| Después, quieto | 17 MB/s | 0,13-0,32 ms | 4,3-5,1 ms | 22-23 ms | 25-35 | 59,3-60,1 |
+| Después, marchando | | 0,15-0,23 ms | 5,0-5,4 ms | 24-30 ms | 67-69 | 57,8-58 |
+
+- **De dónde salía la basura:** el 55 % era rehacer la proyección entera del juego cada 15 ms mientras algo marcha (con 50 bots, siempre),
+  solo para mover las columnas. Ahora `moverAlInstante` (`motor/proyeccion.ts`) parte de la última proyección y solo recoloca, con su plan, lo
+  que anda. Lo demás: la clave de la niebla (sus dos cadenas de lo explorado, juntas en cada fotograma), las listas de trozos de árboles,
+  matas, suelo y paisaje (ahora solo se rehacen si falta algo, el héroe se movió ¼ u o cambió lo que las decide: `hayQueMirar` en
+  `vista.ts`), y las claves de texto y copias de `Tropel`.
+- **Lo que queda:** unos 25-35 fotogramas largos de cada 600, casi todos dentro de `renderer.render` (15-23 ms): esperas al controlador o
+  a la tarjeta, no a la recogida de basura, que ya apenas sale en el perfil de CPU. En el FPS no se notan (59-60 quieto).
+
 ## Banco de pruebas
 
 `npm run mundo3d` abre `pruebas/mundo3d/` con el artefacto y el relieve que haya en `generador/salida/mundo/` del motor (el checkout hermano

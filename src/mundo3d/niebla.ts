@@ -39,7 +39,8 @@ export class NieblaDeGuerra {
     uAlfas: { value: new THREE.Vector3(MUNDO3D.niebla.alfaSinVer / 255, MUNDO3D.niebla.alfaRecordado / 255, MUNDO3D.niebla.alfaVisible / 255) },
     uTiempoNubes: { value: 0 },
   };
-  private ultima = '';
+  /** La última que se puso: si llega la misma (se compara sin juntar sus cadenas, que son largas y es en cada fotograma), no se rehace. */
+  private ultima: { columnas: number; filas: number; celdas: string; visibles: string } | null = null;
   private ultimasCeldas = '';
   private explorado: Uint8Array | null = null;
   private rejilla = { columnas: 0, filas: 0, celda: 5 };
@@ -65,10 +66,10 @@ export class NieblaDeGuerra {
     if (activa !== (this.uniformes.uActiva.value === 1)) this.version++;
     this.uniformes.uActiva.value = activa ? 1 : 0;
     if (!activa) return;
-    const clave = `${n.columnas}x${n.filas}:${n.celdas}|${n.visibles}`;
-    if (clave === this.ultima) return;
+    const u = this.ultima;
+    if (u && u.columnas === n.columnas && u.filas === n.filas && u.celdas === n.celdas && u.visibles === n.visibles) return;
     if (n.celdas !== this.ultimasCeldas) { this.ultimasCeldas = n.celdas; this.version++; }
-    this.ultima = clave;
+    this.ultima = { columnas: n.columnas, filas: n.filas, celdas: n.celdas, visibles: n.visibles };
     const total = n.columnas * n.filas, explorado = bits(n.celdas, total), visible = bits(n.visibles, total), datos = new Uint8Array(total * 4);
     this.explorado = explorado;
     this.rejilla = { columnas: n.columnas, filas: n.filas, celda: n.tamanoCelda };

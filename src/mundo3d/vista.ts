@@ -84,6 +84,7 @@ export class VistaMundo3D {
   private readonly entrada: Entrada;
   private readonly columnas = new Map<string, { figuras: FigurasDeColumna; clave: string }>();
   private readonly tropel = new Tropel();
+  private readonly figurasPuestas: FigurasDeColumna[] = [];
   private readonly lineas = new THREE.Group();
   private readonly matRuta = new THREE.LineBasicMaterial({ color: 0xf1e6c8, transparent: true, opacity: 0.85 });
   /** La ruta de la columna del jugador: punteada y más marcada que el rastro de las demás (Víctor, 2026-10-31); el aro del destino sigue entero. */
@@ -117,6 +118,8 @@ export class VistaMundo3D {
   private readonly tiempos: Record<string, number> = {};
   /** Lo que queda por construir alrededor del héroe (teselas de suelo y paisaje, trozos de árboles). */
   private readonly faltan = { terreno: 0, paisaje: 0, arboles: 0, matas: 0 };
+  /** Dónde y con qué se miró por última vez cada parte (`hayQueMirar`). */
+  private readonly mirado: Partial<Record<keyof VistaMundo3D['faltan'], { x: number; y: number; clave: string }>> = {};
   private objetivo = new THREE.Vector3();
   /** Adónde mira la cámara de verdad: persigue a `objetivo` con un muelle amortiguado, para que siga a la columna sin tirones aunque su
    * posición llegue a saltos (la proyección del instante se rehace cada 33 ms, el relieve cambia de pendiente, el servidor corrige). */
@@ -305,7 +308,7 @@ export class VistaMundo3D {
     const hastaTrazos = Math.min(alcance, ALCANCE.trazos * k);
     t = this.medir('camara', t);
     this.terreno.escalaDetalle = Math.min(1, k);
-    this.faltan.terreno = this.terreno.actualizar(x, y, alcance, hasta);
+    if (this.hayQueMirar('terreno', x, y, `${alcance}|${k}`)) this.faltan.terreno = this.terreno.actualizar(x, y, alcance, hasta);
     t = this.medir('terreno', t);
     const cerca = this.mundoCercano(estado.mundo, x, y);
     this.maquetas.actualizar(cerca);
@@ -314,11 +317,11 @@ export class VistaMundo3D {
     const despejes = `${this.maquetas.claveClaros}|${this.trazos.claveCaminos}`;
     this.arboles.fijarDespejes(this.maquetas.claros, this.trazos.caminos, despejes);
     this.matas.fijarDespejes(this.maquetas.claros, this.trazos.caminos, despejes);
-    this.faltan.paisaje = this.paisaje.actualizar(x, y, Math.min(alcance, ALCANCE.paisaje * k), hasta);
+    if (this.hayQueMirar('paisaje', x, y, `${alcance}|${k}`)) this.faltan.paisaje = this.paisaje.actualizar(x, y, Math.min(alcance, ALCANCE.paisaje * k), hasta);
     t = this.medir('paisaje', t);
-    this.faltan.arboles = this.arboles.actualizar(x, y, Math.min(alcance, ALCANCE.arboles * k), hasta);
+    if (this.hayQueMirar('arboles', x, y, `${alcance}|${k}|${despejes}`)) this.faltan.arboles = this.arboles.actualizar(x, y, Math.min(alcance, ALCANCE.arboles * k), hasta);
     t = this.medir('arboles', t);
-    this.faltan.matas = this.matas.actualizar(x, y, Math.min(alcance, ALCANCE.matas * Math.min(1, k)), hasta);
+    if (this.hayQueMirar('matas', x, y, `${alcance}|${k}|${despejes}`)) this.faltan.matas = this.matas.actualizar(x, y, Math.min(alcance, ALCANCE.matas * Math.min(1, k)), hasta);
     t = this.medir('matas', t);
     this.vida.actualizar(cerca, x, y, ahora / 1000);
     t = this.medir('vida', t);
@@ -347,6 +350,16 @@ export class VistaMundo3D {
     this.medir('total', inicio);
   }
 
+  /** ¿Hay que mirar qué trozos de `parte` faltan o sobran? Hacer la lista reserva memoria (cientos de trozos con su clave) y era en cada
+   * fotograma: no hace falta si no falta nada, el héroe no se ha movido ni un cuarto de unidad y no cambió nada más de lo que la decide
+   * (`clave`: el alcance, la distancia de carga, los claros y caminos). */
+  private hayQueMirar(parte: keyof typeof this.faltan, x: number, y: number, clave: string): boolean {
+    const u = this.mirado[parte];
+    if (u && !this.faltan[parte] && Math.abs(x - u.x) < 0.25 && Math.abs(y - u.y) < 0.25 && u.clave === clave) return false;
+    this.mirado[parte] = { x, y, clave };
+    return true;
+  }
+
   /** Las figuras de cada columna (de la Facción y avistadas) y de cada caravana suelta; se rehacen si cambia lo que llevan o su color. */
   private ponerColumnas(lista: readonly ColumnaEnVista[], caravanas: readonly CaravanaEnVista[]): void {
     const vivas = new Set<string>();
@@ -369,7 +382,9 @@ export class VistaMundo3D {
       poner(`caravana:${c.id}`, 0, tropa, c.color, carros, c.posicion);
     }
     for (const id of this.columnas.keys()) if (!vivas.has(id)) this.columnas.delete(id);
-    this.tropel.pintar(Array.from(this.columnas.values(), (c) => c.figuras));
+    this.figurasPuestas.length = 0;
+    for (const c of this.columnas.values()) this.figurasPuestas.push(c.figuras);
+    this.tropel.pintar(this.figurasPuestas);
   }
 
   /** Bajo la columna del jugador, un aro en el suelo (la mira del 2D: entre los árboles se pierde), su ruta y el aro de su destino; las demás

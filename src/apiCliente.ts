@@ -8,7 +8,7 @@ import type { EventoDominio as EventoPb } from './contrato/gen/bronzeage/v1/even
 import { cargarMundo } from './mundo/artefacto';
 import type { GrafoNavegacion } from './contrato/gen/bronzeage/v1/world_pb';
 import { cargarRelieve, type Relieve } from './mundo/relieve';
-import { EPOCA_CONTRATO, instante, proyectar } from './motor/proyeccion';
+import { EPOCA_CONTRATO, instante, moverAlInstante, proyectar } from './motor/proyeccion';
 import { textoEnTiempoReal } from './ui/estadoCliente';
 import { ComandoDesconocido, traducirOrden } from './motor/ordenes';
 
@@ -503,9 +503,11 @@ export function instanteDeMundo(): number | null {
 }
 
 /** La proyección recalculada en este instante, sin red y sin esperar a un cambio: las columnas avanzan por su plan (`Plan`) y el servidor no
- * manda nada mientras marchan, así que el mapa la pide en cada fotograma para que se muevan seguido. `null` sin sesión o sin héroe. */
-export function proyeccionAlInstante(): ProyeccionJugador | null {
+ * manda nada mientras marchan, así que el mapa la pide en cada fotograma para que se muevan seguido. Con `base` (la última proyección), solo
+ * se recolocan las columnas y caravanas que andan (`moverAlInstante`): es lo que hace falta en cada fotograma. `null` sin sesión o sin héroe. */
+export function proyeccionAlInstante(base?: ProyeccionJugador | null): ProyeccionJugador | null {
   if (!sesion?.bienvenida || sesion.estado === 'cerrada') return null;
+  if (base) return moverAlInstante(base, sesion.almacen, sesion.ahoraMundo());
   const p = proyeccionActual(sesion);
   return p.sinHeroe ? null : p;
 }

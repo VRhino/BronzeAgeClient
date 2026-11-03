@@ -3,6 +3,22 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.126.1] — 2026-11-03 · El mundo 3D, sin reservar memoria en cada fotograma · sin cambio de contrato
+
+Petición de Víctor (2026-11-03): quitar los tirones sueltos de la vista 3D del mundo. Medido en la partida real, en camp-1 con unas 52 columnas
+a la vista, con un perfil de reservas de memoria (Chrome sin ventana con la tarjeta, por el protocolo de depuración):
+
+- **La proyección del instante, sin rehacerla entera.** Mientras algo marcha, la vista pedía en cada fotograma (cada 15 ms) la proyección
+  completa del juego solo para mover las columnas: unos 75 MB/s de basura. Ahora (`moverAlInstante`, `motor/proyeccion.ts`) se parte de la
+  última proyección y solo se recolocan las columnas y caravanas que andan, propias y ajenas. Las ajenas siguen moviéndose en cada fotograma
+  con tu columna parada (lo de la 0.105.0). El modo mapa mira si algo anda en la última proyección, sin rehacerla.
+- **La niebla** comparaba lo explorado juntando sus dos cadenas enormes en cada fotograma (6 MB/s); ahora las compara tal cual.
+- **Los trozos de árboles, matas, suelo y paisaje** rehacían su lista (cientos de claves) en cada fotograma; ahora solo si falta algo, el
+  héroe se movió un cuarto de unidad o cambió el alcance, la carga o los claros.
+- **Las figuras de las columnas:** sin claves de texto por pieza, sin copias de matrices, y una columna quieta no se recoloca.
+- **Antes → después:** memoria reservada en reposo 145 → 17 MB/s; estado por fotograma 0,7-1,5 → 0,13-0,32 ms; JS por fotograma (media)
+  5,8-9 → 4,3-5,4 ms; fotogramas con más de 10 ms de JS, de 46-135 a 25-69 de cada 600. Detalle en `docs/Mundo_3D.md`, «Rendimiento (0.126.1)».
+
 ## [0.126.0] — 2026-11-03 · La vista de caravanas, rehecha: lista y ficha · sin cambio de contrato
 
 Petición de Víctor (2026-11-03), en Mercado → Caravanas:

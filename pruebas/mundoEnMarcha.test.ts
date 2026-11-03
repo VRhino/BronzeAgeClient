@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { caravanaEnElMapa } from '../src/mundo/caravanas';
 import { algoSeMueve } from '../src/mundo3d/estado';
 import { RutaEnSuelo } from '../src/mundo3d/lineas';
+import { moverAlInstante } from '../src/motor/proyeccion';
+import type { Almacen } from '../src/contrato/almacen';
 import type { ProyeccionJugador } from '../src/apiCliente';
 
 // Lo que se mueve en el mundo 3D (Víctor, 2026-11-03): que las columnas ajenas anden en cada fotograma, que las rutas no se vuelvan a muestrear
@@ -22,6 +24,28 @@ describe('algoSeMueve', () => {
     expect(algoSeMueve(proyeccion({ ejercitosAvistados: [{ id: 'e', enMarcha: true }] as never }))).toBe(true);
     expect(algoSeMueve(proyeccion({ caravanasAvistadas: [{ id: 'c', enMarcha: true }] as never }))).toBe(true);
     expect(algoSeMueve(proyeccion({ ejercitosAvistados: [{ id: 'e' }], caravanasAvistadas: [{ id: 'c' }] } as never))).toBe(false);
+  });
+});
+
+describe('moverAlInstante', () => {
+  // un plan de (0,0) a (10,0) entre los instantes 0 y 10.000 (ms del contrato, milésimas de u)
+  const plan = { vertices: [{ enMs: 0n, p: { x: 0n, y: 0n } }, { enMs: 10_000n, p: { x: 10_000n, y: 0n } }] };
+  const almacen = (ids: string[]) => ({ ambitos: new Map([['VISTA:1', { entidades: new Map(ids.map((id) => [id, { case: 'ejercito', value: { id, plan } }])) }]]) }) as unknown as Almacen;
+  it('recoloca lo que anda, propio y ajeno, y deja lo demás como estaba', () => {
+    const quieta = { id: 'q', posicionActual: { x: 3, y: 3 } };
+    const p = proyeccion({
+      ejercitos: [{ id: 'mia', posicionActual: { x: 0, y: 0 }, ruta: [{ x: 0, y: 0 }, { x: 10, y: 0 }], estado: 'marchando' }] as never,
+      ejercitosAvistados: [{ id: 'aj', posicionActual: { x: 0, y: 0 }, enMarcha: true }, quieta] as never,
+    });
+    const m = moverAlInstante(p, almacen(['mia', 'aj', 'q']), 5_000);
+    expect(m.ejercitos[0]!.posicionActual).toEqual({ x: 5, y: 0 });
+    expect(m.ejercitos[0]!.ruta).toEqual([{ x: 5, y: 0 }, { x: 10, y: 0 }]);
+    expect(m.ejercitosAvistados[0]).toMatchObject({ posicionActual: { x: 5, y: 0 }, enMarcha: true });
+    expect(m.ejercitosAvistados[1]).toBe(quieta);
+    // al llegar se para
+    const fin = moverAlInstante(p, almacen(['mia', 'aj']), 20_000);
+    expect(fin.ejercitos[0]).toMatchObject({ posicionActual: { x: 10, y: 0 }, ruta: [], estado: 'estacionado' });
+    expect(fin.ejercitosAvistados[0]!.enMarcha).toBeUndefined();
   });
 });
 

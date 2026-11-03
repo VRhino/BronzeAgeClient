@@ -64,6 +64,37 @@ function enPlan(plan: pb.Ejercito['plan'], posicion: Punto | undefined, ahora: n
   return ruta.length ? { posicionActual, enMarcha: true } : { posicionActual };
 }
 
+/** La proyección `p` con lo único que cambia con el reloj en el mapa rehecho en `ahora` (ms del contrato): dónde va cada columna y caravana que
+ * anda y lo que le queda de ruta. Lo demás se queda como estaba: rehacer la proyección entera en cada fotograma de la vista 3D reservaba unos
+ * 70 MB/s con 50 columnas en marcha, y la recogida de basura daba tirones. Lo que no andaba en `p` no echa a andar sin que cambie el almacén, y
+ * entonces llega otra `p`. */
+export function moverAlInstante(p: ProyeccionJugador, a: Almacen, ahora: number): ProyeccionJugador {
+  const planes = new Map<string, { plan?: pb.Ejercito['plan']; posicion?: Punto }>();
+  for (const amb of a.ambitos.values()) for (const e of amb.entidades.values()) if (e.case === 'ejercito' || e.case === 'caravana') planes.set(e.value.id, e.value);
+  const propia = <T extends { id: string; posicionActual: d.Point; ruta?: d.Point[] }>(x: T): T => {
+    const raw = planes.get(x.id);
+    if (!raw || (x.ruta?.length ?? 0) < 2) return x;
+    const { posicion, ruta } = evaluarPlan(raw.plan, raw.posicion, ahora);
+    return { ...x, posicionActual: posicion, ruta };
+  };
+  const ajena = <T extends { id: string; posicionActual: d.Point; enMarcha?: true }>(x: T): T => {
+    const raw = planes.get(x.id);
+    if (!raw || !x.enMarcha) return x;
+    const { enMarcha: _, ...resto } = x;
+    return { ...resto, ...enPlan(raw.plan, raw.posicion, ahora) } as T;
+  };
+  return {
+    ...p,
+    ejercitos: p.ejercitos.map((e) => {
+      const x = propia(e);
+      return x === e ? e : { ...x, estado: (x.ruta?.length ?? 0) > 0 ? 'marchando' : 'estacionado' };
+    }),
+    caravanas: p.caravanas.map(propia),
+    ejercitosAvistados: p.ejercitosAvistados.map(ajena),
+    caravanasAvistadas: p.caravanasAvistadas?.map(ajena),
+  };
+}
+
 function hex(b: Uint8Array): string {
   let s = '';
   for (let i = 0; i < b.length; i++) s += (b[i]! < 16 ? '0' : '') + b[i]!.toString(16);

@@ -146,41 +146,50 @@ export function bloquesDeTropa(t: TropaDeColumna): { filas: number; ancho: numbe
  * figura como malla suelta eran miles de llamadas de dibujo (el doble con la sombra). Se rellena en cada fotograma. */
 export class Tropel {
   readonly grupo = new THREE.Group();
-  private readonly piezas = new Map<string, { geo: THREE.BufferGeometry; mat: THREE.Material; n: number; datos: Float32Array; malla: THREE.InstancedMesh | null }>();
+  /** Por geometría y material (sin claves de texto: se mira en cada pieza de cada fotograma). */
+  private readonly piezas = new Map<THREE.BufferGeometry, Map<THREE.Material, { n: number; malla: THREE.InstancedMesh | null }>>();
   private readonly m = new THREE.Matrix4();
 
-  pintar(columnas: Iterable<FigurasDeColumna>): void {
-    for (const p of this.piezas.values()) p.n = 0;
-    for (const c of columnas) for (const f of c.figuras) {
-      f.updateMatrix();
-      for (const o of f.children as THREE.Mesh[]) {
-        const mat = o.material as THREE.Material, clave = `${o.geometry.id}|${mat.id}`;
-        let p = this.piezas.get(clave);
-        if (!p) this.piezas.set(clave, (p = { geo: o.geometry, mat, n: 0, datos: new Float32Array(16 * 64), malla: null }));
-        if (16 * (p.n + 1) > p.datos.length) { const d = new Float32Array(p.datos.length * 2); d.set(p.datos); p.datos = d; }
-        this.m.multiplyMatrices(f.matrix, o.matrix).toArray(p.datos, 16 * p.n++);
-      }
-    }
-    for (const p of this.piezas.values()) {
-      const cabe = p.datos.length / 16;
-      if (p.malla && p.malla.instanceMatrix.count < cabe) { p.malla.removeFromParent(); p.malla.dispose(); p.malla = null; }
+  pintar(columnas: readonly FigurasDeColumna[]): void {
+    for (const porMat of this.piezas.values()) for (const p of porMat.values()) p.n = 0;
+    // primero se cuentan, para que cada malla tenga sitio; luego se escriben las matrices directamente en ella
+    for (const c of columnas) for (const f of c.figuras) for (const o of f.children as THREE.Mesh[]) this.pieza(o).n++;
+    for (const [geo, porMat] of this.piezas) for (const [mat, p] of porMat) {
+      if (p.malla && p.malla.instanceMatrix.count < p.n) { p.malla.removeFromParent(); p.malla.dispose(); p.malla = null; }
       if (!p.malla && p.n) {
-        p.malla = new THREE.InstancedMesh(p.geo, p.mat, cabe);
+        p.malla = new THREE.InstancedMesh(geo, mat, Math.max(64, p.n * 2));
         p.malla.castShadow = true;
         p.malla.frustumCulled = false; // se mueven en cada fotograma: no vale la esfera de un momento
         this.grupo.add(p.malla);
       }
-      if (!p.malla) continue;
-      p.malla.count = p.n;
-      (p.malla.instanceMatrix.array as Float32Array).set(p.datos.subarray(0, 16 * p.n));
-      p.malla.instanceMatrix.clearUpdateRanges();
-      p.malla.instanceMatrix.addUpdateRange(0, 16 * p.n);
-      p.malla.instanceMatrix.needsUpdate = true;
+      if (p.malla) p.malla.count = 0;
+    }
+    for (const c of columnas) for (const f of c.figuras) {
+      f.updateMatrix();
+      for (const o of f.children as THREE.Mesh[]) {
+        const malla = this.pieza(o).malla!;
+        this.m.multiplyMatrices(f.matrix, o.matrix).toArray(malla.instanceMatrix.array, 16 * malla.count++);
+      }
+    }
+    for (const porMat of this.piezas.values()) for (const { malla } of porMat.values()) {
+      if (!malla) continue;
+      malla.instanceMatrix.clearUpdateRanges();
+      malla.instanceMatrix.addUpdateRange(0, 16 * malla.count);
+      malla.instanceMatrix.needsUpdate = true;
     }
   }
 
+  private pieza(o: THREE.Mesh): { n: number; malla: THREE.InstancedMesh | null } {
+    let porMat = this.piezas.get(o.geometry);
+    if (!porMat) this.piezas.set(o.geometry, (porMat = new Map()));
+    const mat = o.material as THREE.Material;
+    let p = porMat.get(mat);
+    if (!p) porMat.set(mat, (p = { n: 0, malla: null }));
+    return p;
+  }
+
   destruir(): void {
-    for (const p of this.piezas.values()) p.malla?.dispose();
+    for (const porMat of this.piezas.values()) for (const p of porMat.values()) p.malla?.dispose();
     this.grupo.removeFromParent();
   }
 }
@@ -190,6 +199,8 @@ export class FigurasDeColumna {
   readonly figuras: THREE.Group[] = [];
   /** Por dónde ha pasado la cabeza, del más viejo al más nuevo. */
   private rastro: Punto[] = [];
+  /** Dónde estaba la cabeza la última vez que se colocó. */
+  private puesta: Punto | null = null;
 
   /** Cuánto va cada figura detrás de la cabeza y a qué lado (−1, 0, 1), en unidades de figura (×`MUNDO3D.tropa`). */
   private readonly sitios: { atras: number; lado: number }[] = [];
@@ -226,6 +237,9 @@ export class FigurasDeColumna {
 
   /** Pone la columna con la cabeza en `cabeza`; `alturaU(x, y)` da el suelo en unidades de escena. */
   mover(cabeza: Punto, alturaU: (x: number, y: number) => number): void {
+    // quieta, todo sigue donde estaba (con decenas de columnas, la mayoría lo están)
+    if (this.puesta && cabeza.x === this.puesta.x && cabeza.y === this.puesta.y) return;
+    this.puesta = { x: cabeza.x, y: cabeza.y };
     const ultimo = this.rastro[this.rastro.length - 1];
     if (!ultimo || Math.hypot(cabeza.x - ultimo.x, cabeza.y - ultimo.y) > 6) {
       // primera vez o un salto: la columna se forma detrás, hacia el sur
@@ -235,12 +249,13 @@ export class FigurasDeColumna {
       if (this.rastro.length > 400) this.rastro.shift();
     }
     const M = MUNDO3D.tropa;
-    this.figuras.forEach((f, k) => {
+    for (let k = 0; k < this.figuras.length; k++) {
+      const f = this.figuras[k]!;
       // los héroes uno tras otro; la tropa, de tres en fondo; los carros, al final
       const { lado } = this.sitios[k]!;
       let atras = this.sitios[k]!.atras * M, i = this.rastro.length - 1, x = cabeza.x, y = cabeza.y, rumbo = 0;
       while (i > 0) {
-        const a = this.rastro[i - 1]!, b = this.rastro[i]!, l = Math.hypot(b.x - a.x, b.y - a.y);
+        const a = this.rastro[i - 1]!, b = this.rastro[i]!, dx = b.x - a.x, dy = b.y - a.y, l = Math.sqrt(dx * dx + dy * dy);
         rumbo = Math.atan2(b.y - a.y, b.x - a.x);
         if (l >= atras) { const t = l ? atras / l : 0; x = b.x + (a.x - b.x) * t; y = b.y + (a.y - b.y) * t; break; }
         atras -= l; x = a.x; y = a.y; i--;
@@ -248,6 +263,6 @@ export class FigurasDeColumna {
       const px = x - Math.sin(rumbo) * lado * 0.1 * M, py = y + Math.cos(rumbo) * lado * 0.1 * M;
       f.position.set(px, alturaU(px, py), py);
       f.rotation.y = -rumbo + Math.PI / 2;
-    });
+    }
   }
 }
