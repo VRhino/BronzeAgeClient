@@ -23,7 +23,7 @@ const nombreDe = (tipo: string): string => EDIFICIO_NOMBRE[tipo] ?? tipo;
  * solo tiene la de la fundación, que se mejora; el trigo de más sale de las aldeas agrícolas). */
 const EDIFICIOS_MANUALES = [
   'vivienda', 'almacen', 'granero', 'lenera',
-  'barracon', 'galeriaDeTiro', 'palacio', 'mercado', 'taberna',
+  'barracon', 'galeriaDeTiro', 'palacio', 'mercado', 'albergueCaravanas', 'taberna',
   'fundicion', 'granFundicion', 'curtiduria', 'armeria', 'carpinteria', 'maravilla',
 ] as const;
 
@@ -33,7 +33,7 @@ interface DefEdificio {
   requiereTecnologia?: string;
   nivelFaccionMinimo?: number;
   tiempoConstruccionMinutos?: number;
-  niveles?: Record<string, { obraMinutos?: number }>;
+  niveles?: Record<string, { obraMinutos?: number; requiereEdificio?: string; requiereEdificioNivel?: number }>;
 }
 
 /** Por qué no se puede añadir ahora un edificio a la cola, como el motor (`anadir_manual`), o `''` si se puede. Lo que el cliente no sabe (sitio,
@@ -48,6 +48,11 @@ function motivoParaConstruir(a: Asentamiento, tipo: string, def: DefEdificio, ca
   const pide = def.requisitoNivelAsentamientoConstruccion ?? 0;
   if (nivel < pide) return `Pide la plaza en nivel ${pide}.`;
   if (def.requiereTecnologia && !(p?.tecnologiasAdoptadas ?? []).includes(def.requiereTecnologia)) return `Pide la tecnología ${def.requiereTecnologia.replace(/_/g, ' ')}.`;
+  // el edificio que pide su nivel 1, activo y con su nivel (el Albergue de caravanas, un Mercado: motor b5e27ace, `obra.falta_edificio`)
+  const n1 = def.niveles?.['1'], pideNivel = n1?.requiereEdificioNivel ?? 1;
+  if (n1?.requiereEdificio && !(a.edificios ?? []).some((e) => e.tipo === n1.requiereEdificio && e.estado === 'activo' && (e.nivelInterno ?? 1) >= pideNivel)) {
+    return `Pide un ${nombreDe(n1.requiereEdificio)} activo${pideNivel > 1 ? ` de nivel ${pideNivel}` : ''}.`;
+  }
   if (tipo === 'granFundicion') {
     const nivelFaccion = p?.facciones.find((f) => f.id === p.faccionId)?.nivel ?? 1;
     if (def.nivelFaccionMinimo && nivelFaccion < def.nivelFaccionMinimo) return `Pide la Facción en nivel ${def.nivelFaccionMinimo}.`;
@@ -95,7 +100,7 @@ const GRUPOS_CONSTRUIR: { id: string; nombre: string; icono: string; tipos: stri
   { id: 'recursos', nombre: 'Recursos', icono: 'granja', tipos: ['granja', 'lenera'] },
   { id: 'talleres', nombre: 'Talleres', icono: 'fundicion', tipos: ['fundicion', 'granFundicion', 'curtiduria', 'armeria', 'carpinteria', 'patioDeGremios'] },
   { id: 'militar', nombre: 'Militar', icono: 'barracon', tipos: ['barracon', 'galeriaDeTiro', 'caballerizas', 'plazaDeArmas'] },
-  { id: 'gobierno', nombre: 'Gobierno', icono: 'palacio', tipos: ['salaConsejo', 'palacio', 'taberna', 'mercado', 'maravilla'] },
+  { id: 'gobierno', nombre: 'Gobierno', icono: 'palacio', tipos: ['salaConsejo', 'palacio', 'taberna', 'mercado', 'albergueCaravanas', 'maravilla'] },
 ];
 const grupoDe = (tipo: string): string => GRUPOS_CONSTRUIR.find((g) => g.tipos.includes(tipo))?.id ?? 'otros';
 

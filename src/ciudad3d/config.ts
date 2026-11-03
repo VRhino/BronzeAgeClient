@@ -35,6 +35,8 @@ export const COLOR = {
   cultivo: 0x7d9443, trigo: 0xc4a24d, rastrojo: 0xa38a58,
   fuego: 0xc8501c, carbon: 0x2f2a26, bronce: 0xa8783a, cuero: 0x8a5a36,
   lona: 0xd6cbb0, lonaVieja: 0xb9a888, piel: 0x987350, pielOscura: 0x6f5238,
+  /** Las bestias de tiro del Albergue de caravanas: bueyes y asnos. */
+  buey: 0x8c7a64, asno: 0x8b857b, cuerno: 0xd8cfbd,
   /** Lo que sale de cada mina: la escombrera (la roca de caja) y el mineral apartado. Oro en cuarzo, malaquita, casiterita y hematites. */
   mina: {
     mina: { escombrera: 0xb3a47e, mineral: 0xd6b544 },

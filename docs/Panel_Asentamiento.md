@@ -255,6 +255,12 @@ La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, es
 > de obra y, durante la obra o la mejora, su barra y lo que queda). La Producción está en la ventana del Almacén (0.107.0). En el riel solo
 > salen las ventanas que se pueden abrir (Taberna y Mercado, con el edificio activo).
 >
+> **Albergue de caravanas** (0.128.0, motor b5e27ace). Sale en «Construir», en Gobierno junto al Mercado, solo con un Mercado activo (lo
+> que pide su nivel 1, `requiereEdificio`; el rechazo del motor, `obra.falta_edificio`, tiene su texto). Su ficha dice lo que suma a la flota a
+> su nivel (3 caravanas y 5 carros en el 1, 6 y 10 en el 2, 12 y 22 en el 3) y que sin Mercado activo no suma nada; mejorarlo pide el
+> Mercado del mismo nivel. La flota del Mercado (Caravanas) cuenta su cupo y el de la «Ampliación de Flota» (`cupoDeFlota`) y lo dice en la
+> cabecera («Mercado nivel N · Albergue nivel K»). Un clic en él, en la vista 3D, abre el Mercado en Caravanas.
+>
 > **Centro urbano › subida de nivel, Resumen y Cargos** (0.86.0, 2026-11-02, `ui/panelCentro.ts`; banco `pruebas/centro/`). **Subida**: tarjeta
 > con el escudo de ahora ➜ el del nivel siguiente (apagado, o dorado si se puede), un piloto por requisito (verde, rojo, gris = lo comprueba el
 > servidor), el tiempo de obra y el botón ⬆; los requisitos, con barras (pesants, artesanos, pueblos), los edificios pedidos en iconos

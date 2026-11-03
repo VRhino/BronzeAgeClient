@@ -763,6 +763,202 @@ function tiendaDeMercado(m: Marco, estilo: number, u: number, l: number, S: numb
   else for (let i = 0; i < 2; i++) m.forma('cilindro', COLOR.zarzo, uPortal - portal * 0.9 - i * 0.26, fachada + f * dv * 0.6, 0.24, 0.24, 0.22);
 }
 
+// ───────────────────────────── El Albergue de caravanas ─────────────────────────────
+
+/** Un giro `a` (de +u hacia +v) alrededor de (u, v): pasa un punto de un marco propio (`du` a lo largo, `dv` a lo ancho) al de la huella. */
+function girado(u: number, v: number, a: number): (du: number, dv: number) => [number, number] {
+  const c = Math.cos(a), s = Math.sin(a);
+  return (du, dv) => [u + du * c - dv * s, v + du * s + dv * c];
+}
+
+/**
+ * Un carro de caravana parado, de dos ruedas macizas (o, con `cuatro`, uno largo de cuatro): caja de tablas, ejes, ruedas y la lanza con su yugo
+ * hacia delante, apoyada en un taco. (u, v) es el centro de la caja, y su delante (la lanza) mira hacia `a`. `carga`: 0 vacío, 1 fardos,
+ * 2 tinajas, 3 la lona puesta. Ocupa de −0,35 (−0,5 el de cuatro) a +0,91 (+1,06) a lo largo y ±0,3 a lo ancho.
+ */
+function carroParado(m: Marco, u: number, v: number, a: number, carga: number, cuatro = false): void {
+  const en = girado(u, v, a), largo = cuatro ? 1.0 : 0.7, ancho = 0.44, r = 0.19, y = r + 0.04;
+  const caja = (color: number, du: number, dv: number, l: number, s: number, h: number, yy: number): void => { const [x, z] = en(du, dv); m.caja(color, x, z, l, s, h, yy, a); };
+  caja(COLOR.madera, 0, 0, largo, ancho, 0.05, y);
+  for (const k of [-1, 1]) {
+    caja(COLOR.maderaOscura, 0, k * (ancho / 2 - 0.025), largo, 0.05, 0.15, y + 0.05);
+    caja(COLOR.maderaOscura, k * (largo / 2 - 0.025), 0, 0.05, ancho - 0.1, 0.15, y + 0.05);
+  }
+  // los ejes y las ruedas, discos macizos con el eje a lo ancho (el cilindro tumbado crece desde su base hacia +dv)
+  for (const du of cuatro ? [-largo * 0.3, largo * 0.3] : [-0.04]) {
+    caja(COLOR.maderaOscura, du, 0, 0.06, ancho + 0.16, 0.06, r - 0.03);
+    for (const k of [-1, 1]) {
+      const [x, z] = en(du, k > 0 ? ancho / 2 + 0.02 : -(ancho / 2 + 0.08));
+      m.forma('cilindro', COLOR.madera, x, z, 2 * r, 2 * r, 0.06, r, a, Math.PI / 2);
+    }
+  }
+  // la lanza, el yugo y el taco en que se apoya
+  const [u0, v0] = en(largo / 2, 0), [u1, v1] = en(largo / 2 + 0.52, 0);
+  m.viga(COLOR.madera, u0, v0, u1, v1, y, 0.06);
+  caja(COLOR.maderaOscura, largo / 2 + 0.52, 0, 0.07, 0.6, 0.06, y + 0.04);
+  caja(COLOR.tronco, largo / 2 + 0.42, 0, 0.12, 0.12, y, 0);
+  if (carga === 1) {
+    caja(COLOR.lonaVieja, -largo * 0.2, 0, largo * 0.36, ancho * 0.76, 0.2, y + 0.05);
+    caja(COLOR.heno, largo * 0.2, 0, largo * 0.34, ancho * 0.7, 0.18, y + 0.05);
+    caja(COLOR.lona, -largo * 0.05, 0, largo * 0.3, ancho * 0.6, 0.14, y + 0.25);
+  } else if (carga === 2) {
+    const n = cuatro ? 3 : 2;
+    for (let i = 0; i < n; i++) {
+      const [x, z] = en(-largo / 2 + (largo * (i + 0.5)) / n, 0), color = i % 2 ? COLOR.ocre : COLOR.barro;
+      m.forma('cilindro', color, x, z, 0.2, 0.2, 0.26, y + 0.05);
+      m.forma('cupula', color, x, z, 0.2, 0.2, 0.07, y + 0.31);
+    }
+  } else if (carga === 3) {
+    const [x, z] = en(0, 0);
+    m.forma('aguas', COLOR.lona, x, z, largo + 0.04, ancho + 0.06, 0.3, y + 0.18, a);
+  }
+}
+
+/** Una bestia de tiro de pie, con la cabeza hacia `a`: un buey con sus cuernos, o un asno, más chico y gris, de orejas largas. */
+function bestia(m: Marco, u: number, v: number, a: number, asno: boolean): void {
+  const en = girado(u, v, a), k = asno ? 0.72 : 1, color = asno ? COLOR.asno : COLOR.buey;
+  const caja = (c: number, du: number, dv: number, l: number, s: number, h: number, y: number): void => { const [x, z] = en(du, dv); m.caja(c, x, z, l, s, h, y, a); };
+  caja(color, 0, 0, 0.56 * k, 0.24 * k, 0.24 * k, 0.26 * k);
+  for (const du of [-0.2, 0.2]) for (const dv of [-0.075, 0.075]) { const [x, z] = en(du * k, dv * k); m.poste(oscurecer(color, 0.8), x, z, 0.27 * k, 0.06 * k); }
+  caja(color, 0.34 * k, 0, 0.16 * k, 0.13 * k, 0.15 * k, 0.3 * k);
+  if (asno) for (const dv of [-0.035, 0.035]) caja(color, 0.31 * k, dv * k, 0.03, 0.03, 0.12 * k, 0.45 * k);
+  else caja(COLOR.cuerno, 0.31, 0, 0.04, 0.28, 0.04, 0.43);
+}
+
+/** Un abrevadero de `l` de largo, girado `a` (0: a lo largo de u): de tablas o, con `piedra`, una pila de piedra. */
+function abrevadero(m: Marco, u: number, v: number, l: number, a: number, piedra: boolean): void {
+  m.caja(piedra ? COLOR.piedra : COLOR.madera, u, v, l, 0.34, 0.28, 0, a);
+  m.forma('losa', COLOR.agua, u, v, l - 0.12, 0.22, 0.02, 0.27, a);
+}
+
+/**
+ * Un cobertizo largo contra la tapia del lado `lado` (±1 en u; la tapia, en u = lado·`uMuro`), de `ds` de fondo y de `v0` a `v1`: el muro del
+ * fondo hasta el techo, postes (columnas en los estilos altos) hacia el patio, y su techo de paja a dos aguas o plano.
+ */
+function cobertizoLateral(m: Marco, estilo: number, lado: number, uMuro: number, ds: number, v0: number, v1: number, h: number): void {
+  const uc = lado * (uMuro - ds / 2), ls = Math.abs(v1 - v0), vc = (v0 + v1) / 2, ua = lado * (uMuro - ds + 0.08);
+  m.caja(estilo === 1 ? COLOR.zarzo : estilo === 2 ? COLOR.barro : fabrica(m, estilo), lado * (uMuro - 0.06), vc, 0.12, ls, h);
+  const np = Math.max(2, Math.round(ls / 1.1) + 1), vp = (i: number): number => vc - ls / 2 + 0.08 + ((ls - 0.16) * i) / (np - 1);
+  for (let i = 0; i < np; i++) {
+    if (estilo >= 4) columna(m, ua, vp(i), h, 0, estilo === 5);
+    else m.poste(COLOR.madera, ua, vp(i), h, 0.11);
+  }
+  if (estilo <= 2) {
+    m.forma('aguas', COLOR.paja, uc, vc, ls + 0.2, ds + 0.3, ds * 0.42, h * 0.95, Math.PI / 2);
+    return;
+  }
+  m.caja(estilo >= 4 ? COLOR.enlucido : fabrica(m, estilo), uc, vc, ds + 0.08, ls + 0.08, 0.14, h);
+  if (estilo === 5) m.caja(COLOR.rojo, uc, vc, ds + 0.1, ls + 0.1, 0.07, h + 0.02);
+  // en el adobe, las cabezas de las vigas asoman sobre los postes
+  if (estilo === 3) for (let i = 0; i < np; i++) m.caja(COLOR.maderaOscura, ua - lado * 0.1, vp(i), 0.14, 0.08, 0.08, h - 0.1);
+}
+
+/**
+ * El portón del albergue en el lado de la calle (v = `vp`), con `puerta` de paso libre: postes y dintel en la valla; con tejadillo de paja en
+ * el barro; pilares de adobe con su dintel en el 3; y en el 4 y el 5 un zaguán cubierto sobre dos pilares hondos. Las hojas, abiertas hacia el
+ * patio (−`f`).
+ */
+function portonDelAlbergue(m: Marco, estilo: number, puerta: number, altoTapia: number, vp: number, f: number): void {
+  const alto = altoTapia + (estilo === 1 ? 0.65 : 0.55);
+  if (estilo <= 2) {
+    for (const k of [-1, 1]) m.poste(COLOR.madera, k * (puerta / 2 + 0.08), vp, alto, estilo === 1 ? 0.14 : 0.18);
+    m.viga(COLOR.maderaOscura, -puerta / 2 - 0.25, vp, puerta / 2 + 0.25, vp, alto - 0.04, 0.16, 0.14);
+    if (estilo === 2) m.forma('aguas', COLOR.paja, 0, vp - f * 0.05, puerta + 0.8, 0.6, 0.3, alto + 0.08);
+  } else if (estilo === 3) {
+    for (const k of [-1, 1]) m.caja(fabrica(m, 3), k * (puerta / 2 + 0.17), vp, 0.34, 0.34, alto);
+    m.viga(COLOR.maderaOscura, -puerta / 2 - 0.34, vp, puerta / 2 + 0.34, vp, alto - 0.14, 0.24, 0.14);
+    for (let i = 0; i < 4; i++) m.caja(COLOR.maderaOscura, -puerta / 2 + (puerta * (i + 0.5)) / 4, vp, 0.08, 0.36, 0.08, alto - 0.16);
+  } else {
+    const hondo = 0.95, vz = vp - f * (hondo / 2 - 0.18);
+    for (const k of [-1, 1]) {
+      m.caja(estilo === 5 ? COLOR.piedraClara : COLOR.piedra, k * (puerta / 2 + 0.2), vz, 0.44, hondo + 0.04, 0.3);
+      m.caja(COLOR.enlucido, k * (puerta / 2 + 0.2), vz, 0.4, hondo, alto);
+    }
+    m.caja(COLOR.enlucido, 0, vz, puerta + 0.9, hondo + 0.1, 0.18, alto);
+    if (estilo === 5) m.caja(COLOR.rojo, 0, vz, puerta + 0.92, hondo + 0.12, 0.08, alto + 0.04);
+  }
+  if (estilo >= 2) for (const k of [-1, 1]) m.caja(COLOR.madera, k * (puerta / 2 - 0.05), vp - f * (puerta / 4 + 0.02), 0.06, puerta / 2 - 0.02, alto - (estilo >= 4 ? 0.2 : 0.3));
+}
+
+/**
+ * El Albergue de caravanas (motor b5e27ace: 2 × 3 celdas junto al Mercado; suma caravanas y carros a la flota). Un patio cerrado, como los
+ * caravasares y los barrios de mercaderes de Kanesh: el portón da a la calle (`frente`), la casa de los arrieros al fondo, el cobertizo de los
+ * carros y la cuadra de las bestias contra las tapias de los lados, y en el patio carros, fardos y el abrevadero. El estilo pone los materiales
+ * (valla de zarzo y paja; tapia de barro; adobe; enlucido sobre zócalo de piedra; piedra con franja roja y columnas) y el nivel del albergue lo
+ * que hay dentro: en el 1, la casa arrimada a un lado y un cobertizo al otro; en el 2, cobertizo y cuadra a los dos lados y más carros; en el 3,
+ * la casa de dos plantas con su pórtico, el pozo en medio, y más carros y bestias, uno de ellos largo, de cuatro ruedas.
+ */
+function albergueCaravanas(m: Marco, estilo: number): void {
+  const n = Math.max(1, Math.min(3, Math.round(m.e.nivel) || 1));
+  const f = m.e.frente ?? (m.azar(1) < 0.5 ? 1 : -1), V = (w: number): number => f * w;
+  const L = m.L - 0.4, S = m.S - 0.4, ancho = L / 2, fondo = S / 2, lado = m.azar(3) < 0.5 ? -1 : 1;
+  m.losa(estilo >= 4 ? COLOR.losa : estilo === 3 ? COLOR.adobeClaro : COLOR.tierra, 0, 0, L, S, 0.03);
+
+  // la tapia (o la valla) y el portón, en medio del lado de la calle
+  const puerta = Math.min(1.7, L * 0.2), altoTapia = [0.6, 0.75, 0.95, 1.05, 1.15][estilo - 1] ?? 0.95, g = estilo === 1 ? 0 : 0.09;
+  const tramos: [number, number, number, number][] = [
+    [-ancho - g, -fondo, ancho + g, -fondo], [-ancho, -fondo, -ancho, fondo], [ancho, -fondo, ancho, fondo],
+    [-ancho - g, fondo, -puerta / 2, fondo], [puerta / 2, fondo, ancho + g, fondo],
+  ];
+  for (const [u0, w0, u1, w1] of tramos) {
+    if (estilo === 1) { valla(m, u0, V(w0), u1, V(w1), altoTapia); continue; }
+    if (estilo >= 4) tapia(m, u0, V(w0), u1, V(w1), estilo === 5 ? COLOR.piedraClara : COLOR.piedra, 0.3, 0.26);
+    tapia(m, u0, V(w0), u1, V(w1), estilo === 2 ? COLOR.barro : fabrica(m, estilo), altoTapia, 0.18);
+    if (estilo === 5) m.viga(COLOR.rojo, u0, V(w0), u1, V(w1), altoTapia - 0.22, 0.2, 0.1);
+  }
+  portonDelAlbergue(m, estilo, puerta, altoTapia, V(fondo), f);
+
+  // la casa de los arrieros, al fondo, con su puerta al patio; en el nivel 3, de dos plantas y con pórtico
+  const ds = Math.min(1.6, L * 0.19), d = Math.min(1.7, S * 0.3), wCasa = -fondo + 0.12 + d / 2;
+  const lc = n === 1 ? L * 0.5 : L - 2 * ds - 0.5, uc = n === 1 ? lado * (ancho - 0.12 - lc / 2) : 0;
+  bloque(m, estilo, uc, V(wCasa), lc, d, { frente: f, plantas: n === 3 ? 2 : 1 });
+  let wPatio = wCasa + d / 2 + (estilo <= 2 ? 0.25 : 0.05);
+  if (n === 3) {
+    const hondo = 0.75, wp = wPatio + hondo / 2;
+    if (estilo >= 4) {
+      const nc = Math.max(3, Math.round(lc / 1.0) + 1);
+      for (let i = 0; i < nc; i++) columna(m, uc - lc / 2 + 0.12 + ((lc - 0.24) * i) / (nc - 1), V(wp + hondo / 2 - 0.12), 1.15, 0, estilo === 5);
+      m.caja(COLOR.enlucido, uc, V(wp), lc + 0.06, hondo + 0.06, 0.14, 1.15);
+      if (estilo === 5) m.caja(COLOR.rojo, uc, V(wp), lc + 0.08, hondo + 0.08, 0.06, 1.19);
+    } else pergola(m, uc, V(wp), lc, hondo, 0, estilo <= 2 ? 0.85 : 1.0, estilo === 3);
+    wPatio += hondo;
+  }
+  // lo que se descarga: tinajas y fardos delante de la casa (bajo el pórtico en el 3), a la derecha de su puerta
+  const wCarga = n === 3 ? wPatio - 0.75 / 2 - 0.05 : wPatio + 0.22, uCarga = uc - lc * 0.22 + 0.45;
+  tinajas(m, uCarga, V(wCarga), 2 + n, n % 2 ? COLOR.barro : COLOR.ocre);
+  m.caja(COLOR.lonaVieja, uCarga + (2 + n) * 0.28 + 0.15, V(wCarga), 0.42, 0.3, 0.22);
+  m.caja(COLOR.heno, uCarga + (2 + n) * 0.28 + 0.6, V(wCarga), 0.4, 0.3, 0.2);
+  m.caja(COLOR.lona, uCarga + (2 + n) * 0.28 + 0.36, V(wCarga), 0.38, 0.28, 0.18, 0.21);
+
+  // el cobertizo de los carros contra una tapia de lado y, desde el nivel 2, la cuadra contra la otra
+  const h = estilo <= 2 ? 1.0 : 1.15, lC = n === 1 ? -lado : lado, v0 = V(-fondo + 0.1), v1 = V(fondo - 0.1);
+  cobertizoLateral(m, estilo, lC, ancho, ds, v0, v1, h);
+  const carros = [3, 4, 5][n - 1]!, paso = Math.min(0.85, (S - 0.5) / carros);
+  for (let i = 0; i < carros; i++) carroParado(m, lC * (ancho - 0.5), V((i - (carros - 1) / 2) * paso), lC > 0 ? Math.PI : 0, Math.floor(m.azar(20 + i) * 4));
+  if (n >= 2) {
+    const lb = -lC, bestias = n === 2 ? 4 : 6, pasoB = Math.min(0.62, (S - 1.2) / bestias);
+    cobertizoLateral(m, estilo, lb, ancho, ds, v0, v1, h);
+    // el pesebre con su heno a lo largo de la tapia, y las bestias atadas a él
+    m.caja(COLOR.madera, lb * (ancho - 0.3), 0, 0.3, S - 1.0, 0.32);
+    m.losa(COLOR.heno, lb * (ancho - 0.3), 0, 0.22, S - 1.1, 0.06, 0.3);
+    for (let i = 0; i < bestias; i++) bestia(m, lb * (ancho - 0.9), V((i - (bestias - 1) / 2) * pasoB), lb > 0 ? 0 : Math.PI, m.azar(30 + i) < 0.45);
+    abrevadero(m, lb * (ancho - ds - 0.4), V((wPatio + fondo) / 2 - 0.2), 1.2, Math.PI / 2, estilo >= 3);
+    // en la esquina del patio de la calle, un carro recién llegado; en el 3, otro largo de cuatro ruedas con la lona puesta
+    const borde = ancho - ds - 0.1;
+    carroParado(m, lb * (borde - 0.4), V(fondo - 0.55), lb > 0 ? Math.PI : 0, 1 + Math.floor(m.azar(40) * 2));
+    if (n === 3) {
+      carroParado(m, lC * (borde - 0.55), V(fondo - 0.55), lC > 0 ? Math.PI : 0, 3, true);
+      pozo(m, 0, V((wPatio + fondo - 0.9) / 2));
+    }
+  } else {
+    // en el nivel 1, el abrevadero al fondo entre el cobertizo y la casa, con dos asnos, y un carro con la lona puesta en la esquina de la calle
+    const ua = -lado * (ancho - ds - 0.95);
+    abrevadero(m, ua, V(-fondo + 0.35), 1.1, 0, false);
+    for (const k of [-1, 1]) bestia(m, ua + k * 0.32, V(-fondo + 0.86), -f * Math.PI / 2, true);
+    carroParado(m, lado * (ancho - 0.45), V(fondo - 0.55), lado > 0 ? Math.PI : 0, 3);
+  }
+}
+
 function plaza(m: Marco, estilo: number): void {
   const L = m.L - 0.2, S = m.S - 0.2;
   if (estilo <= 2) {
@@ -806,12 +1002,12 @@ function patioDeGremios(m: Marco, estilo: number): void {
   horno(m, 0, 0, 0.4);
 }
 
-function pozo(m: Marco): void {
-  m.forma('cilindro', COLOR.piedra, 0, 0, 1.2, 1.2, 0.5);
-  m.losa(COLOR.agua, 0, 0, 0.85, 0.85, 0.02, 0.44);
-  for (const a of [-1, 1]) m.poste(COLOR.madera, a * 0.55, 0, 1.25, 0.08);
-  m.viga(COLOR.madera, -0.6, 0, 0.6, 0, 1.2, 0.07);
-  m.forma('cilindro', COLOR.barro, 0, 0, 0.18, 0.18, 0.2, 0.75);
+function pozo(m: Marco, u = 0, v = 0): void {
+  m.forma('cilindro', COLOR.piedra, u, v, 1.2, 1.2, 0.5);
+  m.losa(COLOR.agua, u, v, 0.85, 0.85, 0.02, 0.44);
+  for (const a of [-1, 1]) m.poste(COLOR.madera, u + a * 0.55, v, 1.25, 0.08);
+  m.viga(COLOR.madera, u - 0.6, v, u + 0.6, v, 1.2, 0.07);
+  m.forma('cilindro', COLOR.barro, u, v, 0.18, 0.18, 0.2, 0.75);
 }
 
 function parque(m: Marco, estilo: number): void {
@@ -1137,6 +1333,7 @@ function terminado(m: Marco, tipo: string, estilo: number): void {
     case 'taberna': return taberna(m, estilo);
     case 'mercado': return mercado(m, estilo);
     case 'puestoMercado': return puestoMercado(m, estilo);
+    case 'albergueCaravanas': return albergueCaravanas(m, estilo);
     case 'plaza': return plaza(m, estilo);
     case 'plazaDeArmas': return plazaDeArmas(m, estilo);
     case 'patioDeGremios': return patioDeGremios(m, estilo);

@@ -100,6 +100,7 @@ const MENSAJES: Record<string, string> = {
   'recinto.invalido': 'La muralla no admite esa acción.',
   'ascenso.invalido': 'La plaza aún no puede subir de nivel.',
   'ascenso.falta_aldea': 'Para subir a nivel 2 la plaza necesita un pueblo activo: una aldea agrícola o un extractor.',
+  'obra.falta_edificio': 'Falta el edificio que pide: el Albergue de caravanas se levanta junto a un Mercado activo.',
   'obra.solo_en_aldea': 'El Corral ya no se construye en la ciudad: va en la aldea agrícola.',
   // Aldea agrícola (motor 7086ebc)
   'pueblo.fertilidad_insuficiente': 'Tierra poco fértil para una aldea (hace falta al menos 0,3).',

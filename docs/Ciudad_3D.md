@@ -49,6 +49,17 @@ formas, reutilizando del mundo 3D el cielo, la luz y la manera de pintar miles d
     delante. Un puesto de varias celdas es una tienda por celda, cada una con su puerta, o (a suertes, fijo por puesto) una tienda grande con el
     portal en medio, dos mostradores y un pórtico corrido (de columnas en el 4 y el 5). La tienda abre al lado largo que da a una calle o un
     camino (`EdificioEnVista.frente`, de las celdas vecinas del trazado); si hay calle a los dos lados o a ninguno, lo echa a suertes.
+  - **Albergue de caravanas** (desde 0.128.0; motor b5e27ace, 2 × 3 celdas junto al Mercado): un patio cerrado, como un caravasar o el
+    barrio de mercaderes de Kanesh, con el portón en medio del lado largo que da a la calle (`frente`) y las hojas abiertas hacia dentro.
+    - El estilo pone los materiales: valla de zarzo, postes y dintel, y cobertizos de paja en el 1; tapia de barro y tejadillo de paja sobre
+      el portón en el 2; adobe con pilares, dintel y cabezas de viga en el 3; enlucido sobre zócalo de piedra con un zaguán cubierto en el 4;
+      lo mismo con franja roja y columnas rojas en el 5.
+    - El nivel del albergue pone lo de dentro. En el 1, la casa de los arrieros arrimada al fondo de un lado, un cobertizo con tres carros
+      en el otro, el abrevadero con dos asnos y un carro con la lona puesta. En el 2, la casa más larga, el cobertizo de los carros (cuatro)
+      a un lado y la cuadra al otro, con su pesebre y cuatro bestias (bueyes y asnos), el abrevadero y un carro en el patio. En el 3, la
+      casa de dos plantas con su pórtico (pérgola hasta el 3, columnas en el 4 y el 5), cinco carros en el cobertizo, seis bestias, el pozo
+      en medio y un carro largo de cuatro ruedas.
+    - Carros de dos ruedas macizas con su lanza, yugo y taco; vacíos, con fardos, con tinajas o con la lona puesta, por su semilla.
 - **Estados**:
   - en obra, el armazón: postes, muros que suben con el avance, vigas y el montón de material;
   - en cola (solo la propia), estacas y cuerdas;
@@ -170,7 +181,12 @@ y, en la aldea, sus granjas y corrales, cada uno con su centro y sus lados, más
   dentro, con su planta), con la planta en SVG de minimapa.
 - **Pueblos**: la cantera, una mina de cada metal y una aldea de cada nivel (`pueblos/*.json`, la salida de `urbanismo::planta_de_pueblo`
   del motor), con el estilo del mando «Estilo» como nivel de la madre (2 si no se elige).
-- `window.banco.mirar({ x, y, distancia, giro, inclinacion })` mueve la cámara para las capturas.
+- **Albergue de caravanas** (desde 0.128.0): el muestrario «Albergue de caravanas: estilos × niveles» del mando «Plaza» pone los quince,
+  estilo del 1 al 5 de izquierda a derecha y nivel del 1 al 3 de arriba abajo, cada uno con su calle delante; y el mando «Albergue» pone
+  uno del nivel elegido en la aldea, el pueblo o la ciudad (las del motor no lo tienen): en el hueco libre de 2 × 3 celdas con calle a un
+  lado largo más cerca del Mercado, dentro de la muralla si cabe.
+- `window.banco.mirar({ x, y, distancia, giro, inclinacion })` mueve la cámara para las capturas, y `window.banco.huella(id)` dice dónde
+  está un edificio.
 
 ## Rendimiento
 

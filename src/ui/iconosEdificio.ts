@@ -34,6 +34,7 @@ const DIBUJOS: Record<string, string> = {
   taberna: `<path ${R} d="M9 10h11v15a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2Z"/><path ${T} d="M20 13h3a3 3 0 0 1 0 6h-3M9 10c0-3 11-3 11 0M13 15v8M17 15v8"/>`,
   palacio: `<path ${R} d="M4 27V14h24v13Z"/><path ${T} d="M4 14l4-6 4 6M12 14l4-8 4 8M20 14l4-6 4 6M13 27v-6h6v6M8 18v3M24 18v3"/>`,
   mercado: `<path ${R} d="M4 13h24l-3-6H7Z"/><path ${T} d="M6 13v14M26 13v14M4 27h24M10 18h12v5H10z"/>`,
+  albergueCaravanas: `<path ${T} d="M3 13L16 5l13 8M5 12v15M27 12v15M3 27h26"/><path ${R} d="M8 17h12v4H8z"/><circle ${R} cx="12" cy="23" r="3.2"/><path ${T} d="M20 19h6M9.4 23h5.2"/>`,
   puestoMercado: `<path ${R} d="M6 13h20l-2-5H8Z"/><path ${T} d="M8 13v12M24 13v12M8 19h16"/>`,
   maravilla: `<path ${R} d="M4 27L16 4l12 23Z"/><path ${T} d="M9 18h14M12 12h8M2 27h28"/>`,
   muralla: `<path ${R} d="M3 27V12h4v3h4v-3h4v3h4v-3h4v3h4v-3h2v15Z"/><path ${T} d="M3 20h26M10 15v12M22 15v12"/>`,

@@ -297,6 +297,49 @@ describe('las tiendas del mercado', () => {
   });
 });
 
+describe('el Albergue de caravanas', () => {
+  // su huella del motor: 2 × 3 celdas de 3 ul, tumbada (9 × 6) o de pie (6 × 9)
+  const albergue = (ancho: number, alto: number, estilo: number, nivel: number, frente: 1 | -1 | undefined, semilla: number, estado: 'activo' | 'en_construccion' | 'en_cola' = 'activo') =>
+    ({ id: `alb-${semilla}`, tipo: 'albergueCaravanas', x: 30, y: -12, ancho, alto, estado, avance: estado === 'en_construccion' ? 0.5 : null, mejora: false, danado: false, nivel, estilo, semilla, frente });
+  const ruedas = (p: Piezas) => p.lista.filter((q) => q.forma === 'cilindro' && q.inclina !== undefined && Math.abs(q.ancho - 0.38) < 1e-9).length;
+  const bestias = (p: Piezas) => p.lista.filter((q) => q.forma === 'caja' && (q.color === COLOR.buey || q.color === COLOR.asno) && q.alto > 0.15).length;
+
+  test('en cualquier estilo, nivel, lado de la calle y estado, no sale de su huella más que un alero', () => {
+    let peor = { fuera: 0, que: '' };
+    for (const [w, h] of [[9, 6], [6, 9]] as const) for (const estilo of [1, 2, 3, 4, 5]) for (const nivel of [1, 2, 3]) for (const frente of [1, -1, undefined] as const)
+      for (const estado of ['activo', 'en_construccion', 'en_cola'] as const) for (let k = 0; k < 12; k++) {
+        const e = albergue(w, h, estilo, nivel, frente, k * 7919 + 11, estado);
+        const p = new Piezas();
+        montarEdificio(p, { ...e, mejora: estado === 'activo' && k % 3 === 0 });
+        for (const q of p.lista) { const fuera = salida(q, e); if (fuera > peor.fuera) peor = { fuera, que: `${w}×${h} estilo ${estilo} nivel ${nivel} frente ${frente} ${estado} semilla ${e.semilla}: ${q.forma}` }; }
+      }
+    expect(peor.fuera, peor.que).toBeLessThanOrEqual(ALERO);
+  });
+
+  test('cuanto más nivel, más carros y más bestias', () => {
+    for (const estilo of [1, 3, 5]) for (let k = 0; k < 6; k++) {
+      const cuenta = [1, 2, 3].map((nivel) => { const p = new Piezas(); montarEdificio(p, albergue(9, 6, estilo, nivel, 1, k * 104_729 + 3)); return { ruedas: ruedas(p), bestias: bestias(p) }; });
+      // nivel 1: tres carros en el cobertizo y uno en el patio; nivel 2: cuatro y uno; nivel 3: cinco, uno y el largo de cuatro ruedas
+      expect(cuenta.map((c) => c.ruedas)).toEqual([8, 10, 16]);
+      expect(cuenta.map((c) => c.bestias)).toEqual([2, 4, 6]);
+    }
+  });
+
+  test('el portón da a la calle: hueco en la tapia del frente, tapia en la del fondo', () => {
+    for (const [w, h] of [[9, 6], [6, 9]] as const) for (const estilo of [1, 2, 3, 4, 5]) for (const frente of [1, -1] as const) for (let k = 0; k < 4; k++) {
+      const e = albergue(w, h, estilo, 1 + (k % 3), frente, k * 31 + 7), p = new Piezas();
+      montarEdificio(p, e);
+      // el punto medio del lado largo del frente (tumbado, +v es hacia abajo; de pie, hacia la izquierda) y el del fondo, a 0,3 ul del borde
+      const cx = e.x + w / 2, cy = e.y + h / 2, d = Math.min(w, h) / 2 - 0.2;
+      const delante = w >= h ? { x: cx, y: cy + frente * d } : { x: cx - frente * d, y: cy };
+      const detras = w >= h ? { x: cx, y: cy - frente * d } : { x: cx + frente * d, y: cy };
+      const tapan = (pt: { x: number; y: number }) => p.lista.filter((q) => q.forma !== 'losa' && contiene(q, pt.x, 0.25, pt.y)).length;
+      expect(tapan(delante), `${w}×${h} estilo ${estilo} frente ${frente}`).toBe(0);
+      expect(tapan(detras), `${w}×${h} estilo ${estilo} frente ${frente}`).toBeGreaterThan(0);
+    }
+  });
+});
+
 describe('las puertas de muralla', () => {
   // la muralla del pueblo y la de la ciudad (anillos cerrados con su puerta), levantadas enteras en cada nivel
   const recintos = (nombre: string, nivel: number) => plaza(nombre).c.recintos.map((r) => ({ ...r, mejorandoA: undefined, celdas: r.celdas.map((k) => ({ ...k, enPie: true, nivel })) }));
@@ -350,4 +393,11 @@ function salida(q: Pieza, e: { x: number; y: number; ancho: number; alto: number
     peor = Math.max(peor, e.x - P.x, P.x - (e.x + e.ancho), e.y - P.z, P.z - (e.y + e.alto));
   }
   return peor;
+}
+
+/** Si el punto (x, y, z) de la escena cae dentro de la caja que envuelve la pieza (girada, inclinada y escalada como en la malla). */
+function contiene(q: Pieza, x: number, y: number, z: number): boolean {
+  M.compose(V.set(q.x, q.y, q.z), Q.setFromEuler(E.set(q.inclina ?? 0, -q.giro, 0)), S.set(q.ancho, q.alto, q.fondo)).invert();
+  P.set(x, y, z).applyMatrix4(M);
+  return Math.abs(P.x) <= 0.5 && P.y >= 0 && P.y <= 1 && Math.abs(P.z) <= 0.5;
 }

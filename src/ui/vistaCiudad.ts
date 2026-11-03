@@ -115,9 +115,17 @@ function htmlFicha(p: ProyeccionJugador, a: Asentamiento, edificio: Edificio, e:
     acciones = `<button class="btn-secondary" type="button" data-ficha-quitar="${e(edificio.id)}">Quitar de la cola</button>`;
   }
 
+  // lo que el Albergue de caravanas suma a la flota del Mercado a su nivel (motor b5e27ace); sin Mercado activo no suma nada
+  const cupo = edificio.tipo === 'albergueCaravanas' ? niveles?.[String(nivel)] : undefined;
+  const conMercado = (a.edificios ?? []).some((x) => x.tipo === 'mercado' && x.estado === 'activo');
+  const flota = cupo && (cupo.cupoCaravanas || cupo.cupoCarros)
+    ? `<p class="asent-lado-nota">${conMercado ? 'Suma' : 'Sin un Mercado activo no suma nada; con él, suma'} a la flota ${cupo.cupoCaravanas ?? 0} caravanas y ${cupo.cupoCarros ?? 0} carros.</p>`
+    : '';
+
   return `<div class="asent-lado-cabecera"><span class="faction-kicker">${e(nombreDe(edificio.tipo))}</span><button type="button" class="asent-ficha-cerrar" data-ficha-cerrar title="Cerrar">✕</button></div>
     <div class="asent-ficha-grid"><div><span>Nivel</span><strong>${nivel}</strong></div><div><span>Estado</span><strong>${e(estado)}</strong></div></div>
     ${notas.length ? `<p class="asent-lado-nota">${e(notas.join(' · '))}</p>` : ''}
+    ${flota}
     ${obra}
     ${prod ? `<span class="faction-kicker">Producción</span><ul class="asent-ficha-lista">${prod}</ul>` : ''}
     ${recetas ? `<span class="faction-kicker">Recetas de este nivel ${ayuda('plaza:ficha-recetas', 'Consumo por edificio: no lo publica el servidor.')}</span><ul class="asent-ficha-lista">${recetas}</ul>` : ''}

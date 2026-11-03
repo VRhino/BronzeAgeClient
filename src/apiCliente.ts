@@ -695,10 +695,17 @@ export interface RecetaDeEdificio { produce: string; produccionBase: number; con
 /** Un nivel interno de un edificio del catálogo: qué fabrica y qué pide para llegar a él. */
 export interface NivelDeEdificio { recetas: RecetaDeEdificio[]; costoMejora?: Record<string, number>; requisitoNivelAsentamiento?: number; requiereEdificio?: string; requiereEdificioNivel?: number; requiereTecnologia?: string; obraMinutos?: number; cupoCaravanas?: number; cupoCarros?: number }
 
-/** Los topes de flota del Mercado a su nivel interno (`cupoCaravanas` y `cupoCarros`, Doc 3.13.2); `null` mientras no llegue el balance o si ese nivel no existe. */
-export function cupoDeFlota(nivelMercado: number, alCargar?: () => void): { caravanas?: number; carros?: number } | null {
+/**
+ * Los topes de flota de una plaza (Doc 3.13.2): `cupoCaravanas` y `cupoCarros` del Mercado a su nivel interno, más los del Albergue de caravanas
+ * activo a su nivel (`nivelAlbergue`, 0 sin él; motor b5e27ace) y `extraCaravanas` (la «Ampliación de Flota»). `null` mientras no llegue el
+ * balance o si ese nivel del Mercado no existe: sin Mercado activo, el Albergue no da nada.
+ */
+export function cupoDeFlota(nivelMercado: number, nivelAlbergue = 0, extraCaravanas = 0, alCargar?: () => void): { caravanas?: number; carros?: number } | null {
   const n = nivelesDeEdificio('mercado', alCargar)?.[String(nivelMercado)];
-  return n ? { caravanas: n.cupoCaravanas, carros: n.cupoCarros } : null;
+  if (!n) return null;
+  const al = nivelAlbergue > 0 ? nivelesDeEdificio('albergueCaravanas', alCargar)?.[String(nivelAlbergue)] : undefined;
+  const suma = (base: number | undefined, mas: number): number | undefined => (base === undefined ? undefined : Math.max(0, base + mas));
+  return { caravanas: suma(n.cupoCaravanas, (al?.cupoCaravanas ?? 0) + extraCaravanas), carros: suma(n.cupoCarros, al?.cupoCarros ?? 0) };
 }
 
 /** Días de mundo que hay que esperar tras mudarte antes de volver a hacerlo (`CIUDADANIA.cooldownCambioResidenciaDias`); `undefined` mientras no llegue el balance. */

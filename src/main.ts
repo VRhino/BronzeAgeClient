@@ -2150,7 +2150,9 @@ const RIEL: { id: VentanaPlaza; titulo: string; icono: string; requiere?: { tipo
 ];
 
 /** Un clic en uno de estos edificios (en pie) en la vista 3D abre su ventana, además de su ficha. */
-const VENTANA_DE_EDIFICIO: Record<string, VentanaPlaza> = { barracon: 'reclutamiento', galeriaDeTiro: 'reclutamiento', caballerizas: 'reclutamiento', taberna: 'taberna', mercado: 'mercado' };
+const VENTANA_DE_EDIFICIO: Record<string, VentanaPlaza> = { barracon: 'reclutamiento', galeriaDeTiro: 'reclutamiento', caballerizas: 'reclutamiento', taberna: 'taberna', mercado: 'mercado', albergueCaravanas: 'mercado' };
+/** La subpestaña de esa ventana que abre el clic, si no es la primera: el Albergue de caravanas lleva a las Caravanas del Mercado. */
+const SUB_DE_EDIFICIO: Record<string, string> = { albergueCaravanas: 'caravanas' };
 
 /** Las subpestañas extra de Centro urbano que ya tienen ventana; las que se añadan sin sitio salen en Gobierno. Misiones y Tablón van en el botón
  * Misiones de la barra; la Residencia, en la casa del blasón; Información, en el «?». */
@@ -2625,6 +2627,7 @@ function montarCiudad3D(contenedor: HTMLElement): void {
         const p = estadoCliente.proyeccionUltima, a = p?.asentamientos[0];
         const e = id && a ? a.edificios.find((x) => x.id === id) : undefined;
         const v = e?.estado === 'activo' ? VENTANA_DE_EDIFICIO[e.tipo] : undefined;
+        if (v && e && SUB_DE_EDIFICIO[e.tipo] && p && a && ventanaDisponible(v, p, a)) { subDeVentana[v] = SUB_DE_EDIFICIO[e.tipo]; if (ventanaPlaza === v) renderPanelEdificios(); }
         if (v && p && a && ventanaPlaza !== v && ventanaDisponible(v, p, a)) abrirVentanaPlaza(v);
       },
       alPasar: (id, evento) => {

@@ -11,13 +11,13 @@ import { fromBinary } from '@bufbuild/protobuf';
 import { AsentamientoSchema, CampamentoMercenariosSchema } from '../../src/contrato/gen/bronzeage/v1/entities_pb';
 import { campamentoEnVista } from '../../src/ciudad3d/campamento';
 import { puebloEnVista } from '../../src/ciudad3d/pueblo';
-import { ciudadEnVista, hash3, hashTexto, type CiudadEnVista } from '../../src/ciudad3d/estado';
+import { ciudadEnVista, hash3, hashTexto, type CiudadEnVista, type FuenteDeCiudad } from '../../src/ciudad3d/estado';
 import { encuadreDeSvg, Minimapa } from '../../src/ciudad3d/minimapa';
 import { VistaCiudad3D } from '../../src/ciudad3d/vista';
 import { escenaCampamento, plazaDeContrato } from '../../src/motor/proyeccion';
 import { EDIFICIO_NOMBRE } from '../../src/paletas';
 import { pintarAsentamiento } from '../../src/render';
-import type { Asentamiento, EscenaCampamento, EscenaPueblo, TrazadoAsentamiento } from '../../src/tiposDominio';
+import type { Asentamiento, EscenaCampamento, EscenaPueblo, RectanguloLocal, TrazadoAsentamiento } from '../../src/tiposDominio';
 import { svgPlanoCampamento } from '../../src/ui/planoCampamento';
 import { svgPlanoPueblo } from '../../src/ui/planoPueblo';
 
@@ -145,14 +145,101 @@ async function rehacerPueblo(nombre: string): Promise<void> {
   $('lectura').textContent = `${nombre}: ${j.tipoExtractor}, estilo ${c?.nivel}, ${c?.edificios.length ?? 0} piezas, radio ${c?.radio} ul, ${c?.libres.length ?? 0} celdas libres\npiezas: ${cuentas.edificios} edificios · ${cuentas.relleno} relleno`;
 }
 
+/**
+ * El Albergue de caravanas en todos sus estilos (columnas, del 1 al 5) y sus niveles (filas, del 1 al 3), cada uno con su calle delante, a la que
+ * da su portón. Una plaza de mentira con su trazado: lo demás es la proyección de verdad (`ciudadEnVista`); solo se fija el estilo de cada uno.
+ */
+function rehacerMuestra(): void {
+  actual = null;
+  ultima = null;
+  $('mini').hidden = true;
+  $('mini-camp').hidden = true;
+  const edificios: Asentamiento['edificios'] = [], huellas: Record<string, RectanguloLocal> = {}, calles: RectanguloLocal[] = [];
+  for (let n = 1; n <= 3; n++) {
+    const y = -18 + (n - 1) * 12;
+    calles.push({ x: -33, y: y + 6, ancho: 63, alto: 3 });
+    for (let estilo = 1; estilo <= 5; estilo++) {
+      const id = `albergue-e${estilo}-n${n}`, x = -30 + (estilo - 1) * 12;
+      edificios.push({ id, tipo: 'albergueCaravanas', estado: 'activo', posicion: { x: x + 4.5, y: y + 3 }, nivelInterno: n });
+      huellas[id] = { x, y, ancho: 9, alto: 6 };
+    }
+  }
+  for (let k = 0; k < 4; k++) calles.push({ x: -21 + k * 12, y: -18, ancho: 3, alto: 33 });
+  const a: FuenteDeCiudad = { id: 'muestra-albergue', nivel: 3, edificios, recintos: [], ascenso: undefined };
+  const c = ciudadEnVista(a, { calles, caminos: [], huellas, murallas: [], radio: 36, celda: 3 }, { instante: 0 })!;
+  for (const e of c.edificios) e.estilo = Number(/-e(\d)-/.exec(e.id)![1]);
+  campActual = c;
+  vista.fijar(c);
+  vista.seleccionar(seleccion);
+  const cuentas = vista.cuentas();
+  $('lectura').textContent = `Albergue de caravanas: estilo 1 a 5 de izquierda a derecha, nivel 1 a 3 de arriba abajo\npiezas: ${cuentas.edificios} edificios · ${cuentas.relleno} relleno`;
+}
+
+/**
+ * Pone un Albergue de caravanas de nivel `nivel` en una plaza del banco (las del motor no lo tienen): en el hueco libre de 2 × 3 celdas, dentro
+ * del disco urbano (y de la muralla, si la hay) y con calle a lo largo de un lado largo (mejor entero), más cerca del Mercado (su ancla en el
+ * motor).
+ */
+function conAlbergue(a: Asentamiento, t: TrazadoAsentamiento, nivel: number): { asentamiento: Asentamiento; trazado: TrazadoAsentamiento } {
+  const T = t.celda ?? 3, clave = (c: number, f: number): string => `${c},${f}`, ocupada = new Set<string>(), calle = new Set<string>();
+  const marcar = (r: RectanguloLocal, s: Set<string>): void => {
+    for (let c = Math.floor(r.x / T + 1e-6); c < Math.ceil((r.x + r.ancho) / T - 1e-6); c++) for (let f = Math.floor(r.y / T + 1e-6); f < Math.ceil((r.y + r.alto) / T - 1e-6); f++) s.add(clave(c, f));
+  };
+  for (const r of [...t.calles, ...t.caminos]) { marcar(r, ocupada); marcar(r, calle); }
+  for (const r of Object.values(t.huellas)) marcar(r, ocupada);
+  for (const r of a.recintos ?? []) for (const k of r.celdas) ocupada.add(clave(k.col, k.row));
+  const mercado = a.edificios.find((e) => e.tipo === 'mercado'), hm = mercado ? t.huellas[mercado.id] : undefined;
+  const ancla = hm ? { x: hm.x + hm.ancho / 2, y: hm.y + hm.alto / 2 } : { x: 0, y: 0 }, radio = t.radio ?? 40, R = Math.ceil(radio / T);
+  // con muralla, lo de fuera: lo que se alcanza desde el borde sin pisar una celda de muro (de lado, que la muralla también va en diagonal)
+  const fuera = new Set<string>();
+  if ((a.recintos ?? []).length) {
+    const muro = new Set((a.recintos ?? []).flatMap((r) => r.celdas.map((k) => clave(k.col, k.row)))), cola: [number, number][] = [];
+    for (let k = -R - 1; k <= R + 1; k++) cola.push([k, -R - 1], [k, R + 1], [-R - 1, k], [R + 1, k]);
+    while (cola.length) {
+      const [c, f] = cola.pop()!;
+      if (Math.abs(c) > R + 1 || Math.abs(f) > R + 1 || fuera.has(clave(c, f)) || muro.has(clave(c, f))) continue;
+      fuera.add(clave(c, f));
+      cola.push([c + 1, f], [c - 1, f], [c, f + 1], [c, f - 1]);
+    }
+  }
+  const buscar = (dentro: boolean): { r: RectanguloLocal; d: number } | null => {
+    let mejor: { r: RectanguloLocal; d: number } | null = null;
+    for (const [w, h] of [[3, 2], [2, 3]] as const) for (let c = -R; c <= R; c++) for (let f = -R; f <= R; f++) {
+      let libre = true;
+      for (let i = 0; i < w && libre; i++) for (let j = 0; j < h && libre; j++) if (ocupada.has(clave(c + i, f + j)) || (dentro && fuera.has(clave(c + i, f + j)))) libre = false;
+      const r = { x: c * T, y: f * T, ancho: w * T, alto: h * T };
+      if (!libre || Math.hypot(r.x + r.ancho / 2, r.y + r.alto / 2) + 5 > radio) continue;
+      // cuántas celdas de calle tiene pegadas su mejor lado largo (el motor lo pone con calle delante); se prefiere el lado entero
+      const cuenta = (n: number, k: (i: number) => string): number => Array.from({ length: n }, (_, i) => k(i)).filter((x) => calle.has(x)).length;
+      const pegadas = w > h ? Math.max(cuenta(w, (i) => clave(c + i, f + h)), cuenta(w, (i) => clave(c + i, f - 1))) : Math.max(cuenta(h, (j) => clave(c - 1, f + j)), cuenta(h, (j) => clave(c + w, f + j)));
+      if (pegadas < 2) continue;
+      const d = Math.hypot(r.x + r.ancho / 2 - ancla.x, r.y + r.alto / 2 - ancla.y) + (3 - pegadas) * 30;
+      if (!mejor || d < mejor.d) mejor = { r, d };
+    }
+    return mejor;
+  };
+  // dentro de la muralla si cabe; las plazas del banco van muy llenas y a veces no cabe más que fuera
+  const mejor = buscar(true) ?? buscar(false);
+  if (!mejor) return { asentamiento: a, trazado: t };
+  const id = 'albergue-banco', r = mejor.r;
+  return {
+    asentamiento: { ...a, edificios: [...a.edificios, { id, tipo: 'albergueCaravanas', estado: 'activo', ambito: 'asentamiento', posicion: { x: r.x + r.ancho / 2, y: r.y + r.alto / 2 }, nivelInterno: nivel }] },
+    trazado: { ...t, huellas: { ...t.huellas, [id]: r } },
+  };
+}
+
+let ultima: CiudadEnVista | null = null;
+
 async function rehacer(): Promise<void> {
   const nombre = $<HTMLSelectElement>('ciudad').value;
   if (nombre.startsWith('campamento')) return rehacerCampamento(nombre);
   if (nombre.startsWith('pueblos/')) return rehacerPueblo(nombre.slice('pueblos/'.length));
+  if (nombre === 'muestra-albergue') return rehacerMuestra();
   campActual = null;
   $('mini').hidden = false;
   $('mini-camp').hidden = true;
-  const base = await cargar(nombre);
+  const cargada = await cargar(nombre), albergue = $<HTMLSelectElement>('albergue').value;
+  const base = albergue && cargada.trazado ? conAlbergue(cargada.asentamiento, cargada.trazado, Number(albergue)) : cargada;
   const instante = DIAS[nombre]! * 24 * HORA;
   const nivel = $<HTMLSelectElement>('nivel').value, muralla = $<HTMLSelectElement>('muralla').value;
   const obras = Number($<HTMLInputElement>('obras').value) / 100;
@@ -174,6 +261,7 @@ async function rehacer(): Promise<void> {
   // las obras: la barra de «Obras» fija su avance (el banco no tiene el catálogo: toda obra dura una hora)
   const c = ciudadEnVista(a, base.trazado, { instante, minutosDeObra: () => 60 });
   if (c) for (const e of c.edificios) if (e.avance !== null) e.avance = Math.max(0, Math.min(1, obras + (hash3(e.semilla, 1, 1) - 0.5) * 0.3));
+  ultima = c;
   vista.fijar(c);
   vista.seleccionar(seleccion);
   repintarMini();
@@ -181,7 +269,7 @@ async function rehacer(): Promise<void> {
   $('lectura').textContent = `${nombre}: nivel ${a.nivel}, radio ${c?.radio} ul, ${n} edificios, ${c?.recintos.length ?? 0} recintos, ${c?.libres.length ?? 0} celdas libres\npiezas: ${cuentas.edificios} edificios · ${cuentas.murallas} muralla · ${cuentas.relleno} relleno`;
 }
 
-for (const id of ['ciudad', 'nivel', 'muralla', 'obras', 'ajena', 'saqueo', 'ascenso']) $(id).addEventListener(id === 'obras' ? 'input' : 'change', () => void rehacer());
+for (const id of ['ciudad', 'nivel', 'muralla', 'albergue', 'obras', 'ajena', 'saqueo', 'ascenso']) $(id).addEventListener(id === 'obras' ? 'input' : 'change', () => void rehacer());
 setInterval(() => {
   const r = vista.rendimiento();
   const t = $('lectura').textContent?.split('\n').slice(0, 2).join('\n') ?? '';
@@ -194,6 +282,8 @@ void rehacer();
 (window as unknown as { banco: unknown }).banco = {
   vista,
   rehacer,
+  /** Dónde está un edificio de la plaza que se ve (su huella, en ul). */
+  huella(id: string) { const e = (ultima ?? campActual)?.edificios.find((x) => x.id === id); return e ? { x: e.x, y: e.y, ancho: e.ancho, alto: e.alto, frente: e.frente, estilo: e.estilo } : null; },
   mirar(o: { x?: number; y?: number; distancia?: number; giro?: number; inclinacion?: number }) {
     const p = (vista.camara as unknown as { pedido: Record<string, number> }).pedido;
     Object.assign(p, Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)));

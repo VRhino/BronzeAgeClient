@@ -365,7 +365,7 @@ function carrosEnHuecos(c: Caravana, a: Asentamiento, editable: boolean, otras: 
   }
   const vacio = carros.length === 0 ? '<p class="asent-lado-nota">Casco vacío: no sale hasta que le montes un carro con su animal.</p>' : '';
   return `<div class="caravana-seccion">
-      <div class="caravana-seccion-cab"><strong class="heroe-sub">Carros</strong>${editable && carrosLleno ? '<small class="asent-lado-nota">La flota ya tiene el tope de carros de tu Mercado.</small>' : ''}</div>
+      <div class="caravana-seccion-cab"><strong class="heroe-sub">Carros</strong>${editable && carrosLleno ? `<small class="asent-lado-nota">La flota ya tiene el tope de carros de ${a.edificios.some((x) => x.tipo === 'albergueCaravanas' && x.estado === 'activo') ? 'tu Mercado y tu Albergue' : 'tu Mercado'}.</small>` : ''}</div>
       ${vacio}<div class="salida-huecos carro-huecos">${huecos.join('')}</div>${acciones}${nuevo}
     </div>`;
 }
@@ -503,31 +503,35 @@ export function htmlCaravanas(p: ProyeccionJugador, a: Asentamiento, e: Escapar,
   // Las de otra plaza que un ejército dejó aparcadas aquí: salen después de las de la flota.
   const aparcadas = p.caravanas.filter((k) => k.estado === 'aparcada' && k.origenAsentamientoId !== a.id && k.posicionActual.x === a.posicion.x && k.posicionActual.y === a.posicion.y);
   const almacen = Object.fromEntries(Object.entries(a.almacen ?? {}).map(([r, v]) => [r, v.cantidad]));
-  // Topes de la flota (Doc 3.13.2): los pone el nivel interno del Mercado y vienen en el balance; el servidor sigue siendo quien rechaza.
-  const nivelMercado = Math.max(0, ...(a.edificios ?? []).filter((x) => x.tipo === 'mercado' && x.estado === 'activo').map((x) => x.nivelInterno ?? 1));
-  const cupo = nivelMercado > 0 ? cupoDeFlota(nivelMercado, alCargar) : null;
+  // Topes de la flota (Doc 3.13.2): los pone el nivel interno del Mercado, más el del Albergue de caravanas activo (motor b5e27ace) y la
+  // «Ampliación de Flota»; vienen en el balance. El servidor sigue siendo quien rechaza.
+  const activo = (tipo: string): number => Math.max(0, ...(a.edificios ?? []).filter((x) => x.tipo === tipo && x.estado === 'activo').map((x) => x.nivelInterno ?? 1));
+  const nivelMercado = activo('mercado'), nivelAlbergue = activo('albergueCaravanas');
+  const politicas = catalogoDePoliticas(alCargar)?.catalogo ?? [];
+  const extra = (a.politicasActivas ?? []).reduce((t, x) => { const v = politicas.find((q) => q.id === x.politicaId)?.['cupoCaravanaExtra']; return typeof v === 'number' ? t + v : t; }, 0);
+  const cupo = nivelMercado > 0 ? cupoDeFlota(nivelMercado, nivelAlbergue, extra, alCargar) : null;
+  const deQuien = nivelAlbergue > 0 ? 'tu Mercado y tu Albergue' : 'tu Mercado';
   const carros = flota.reduce((t, c) => t + (c.carros?.length ?? 0), 0);
   const carrosLleno = cupo?.carros !== undefined && carros >= cupo.carros;
   const flotaLlena = cupo?.caravanas !== undefined && flota.length >= cupo.caravanas;
   const cat = catalogoDeCaravanas(alCargar);
-  const politicas = catalogoDePoliticas(alCargar)?.catalogo ?? [];
   const factor = (campo: string): number => (a.politicasActivas ?? []).reduce((t, x) => { const v = politicas.find((q) => q.id === x.politicaId)?.[campo]; return typeof v === 'number' ? t * v : t; }, 1);
   const datos: DatosCaravana | null = cat ? { cat, fCapacidad: factor('factorCapacidadCaravana'), fVelocidad: factor('factorVelocidadCaravana'), escoltaPts: nivelMercado > 0 ? cat.escoltaPorNivelMercado[nivelMercado - 1] : undefined } : null;
   const pips = (usadas: number, tope: number | undefined, clase: string): string => tope === undefined ? `<b>${usadas}</b>`
     : `<span class="flota-pips ${clase}">${Array.from({ length: Math.max(tope, usadas) }, (_, i) => `<i class="${i < usadas ? 'usada' : ''}"></i>`).join('')}</span><b>${usadas}/${tope}</b>`;
-  const topes = cupo ? `<span class="flota-cupo" title="Caravanas de la flota sobre el tope de tu Mercado"><small>Caravanas</small>${pips(flota.length, cupo.caravanas, 'caravanas')}</span>
-    <span class="flota-cupo" title="Carros de la flota sobre el tope de tu Mercado"><small>Carros</small>${pips(carros, cupo.carros, 'carros')}</span>
+  const topes = cupo ? `<span class="flota-cupo" title="Caravanas de la flota sobre el tope de ${deQuien}"><small>Caravanas</small>${pips(flota.length, cupo.caravanas, 'caravanas')}</span>
+    <span class="flota-cupo" title="Carros de la flota sobre el tope de ${deQuien}"><small>Carros</small>${pips(carros, cupo.carros, 'carros')}</span>
     ${datos?.escoltaPts !== undefined ? `<span class="obra-chip" title="Liderazgo de escolta por caravana">♛ ${datos.escoltaPts}</span>` : ''}` : '';
   // Entre dos caravanas creadas hay una espera (`CARAVANA_COOLDOWN`), compartida con la fundación.
   const listaEn = cat && a.ultimaCaravanaCreadaEn ? a.ultimaCaravanaCreadaEn + cat.cooldownMinutos * 60_000 : 0;
-  const motivoCrear = nivelMercado === 0 ? 'Hace falta un Mercado activo.' : flotaLlena ? 'La flota ya tiene el tope de caravanas de tu Mercado.' : listaEn > p.instante ? `Podrás crear otra en ${falta(listaEn, p)}.` : null;
+  const motivoCrear = nivelMercado === 0 ? 'Hace falta un Mercado activo.' : flotaLlena ? `La flota ya tiene el tope de caravanas de ${deQuien}.` : listaEn > p.instante ? `Podrás crear otra en ${falta(listaEn, p)}.` : null;
   const todas = [...flota, ...aparcadas];
   const elegida = todas.find((c) => c.id === caravanaElegida) ?? todas[0];
   const info = ayuda('mercado:caravanas', 'Tu flota: un casco se arma con carros (que pagas con materiales del almacén) y un animal por carro, y sale a mano hacia otra plaza con la carga que elijas. Solo cuentan los carros con animal. El cupo de flota y los costes los decide el servidor. Los carros se reparten como quieras entre las caravanas; mover un carro no gasta cupo.<br>La carga sale del almacén al prepararla; si la cancelas antes de salir, vuelve entera.<br><strong>Escolta:</strong> cede escuadras de tu campamento a una caravana parada en su origen: viajarán con ella y volverán al campamento al acabar el viaje. El cupo es de la caravana, en puntos de Liderazgo (lo da tu Mercado) y lo comparten los residentes; ceder no gasta tu Liderazgo.<br><strong>Aparcadas:</strong> caravanas de tu Facción que un ejército dejó aquí al entrar. No las usa esta plaza: puedes pasar carga entre su carro y el almacén, y solo salen enganchadas a un ejército (desde el panel del ejército) o enviadas a su origen. Vacía, aparece en su origen al instante; con carga, vuelve por el camino y la deja allí al llegar.');
   return `<div class="obra-titulo"><span class="faction-kicker">Caravanas comerciales</span>${info}</div>
     <div class="flota-cab">
       <span class="flota-icono">${iconoEdificio('mercado', 32)}</span>
-      <span class="flota-cuerpo"><strong>${nivelMercado > 0 ? `Mercado nivel ${nivelMercado}` : 'Sin Mercado activo'}</strong><span class="flota-cupos">${topes}</span></span>
+      <span class="flota-cuerpo"><strong>${nivelMercado > 0 ? `Mercado nivel ${nivelMercado}${nivelAlbergue > 0 ? ` · Albergue nivel ${nivelAlbergue}` : ''}` : 'Sin Mercado activo'}</strong><span class="flota-cupos">${topes}</span></span>
       ${reside ? `<button class="flota-crear" type="button" data-caravana-crear${motivoCrear ? ` disabled title="${e(motivoCrear)}"` : ' title="Crear una caravana nueva (un casco vacío)"'}>＋ Crear</button>` : ''}
     </div>
     ${reside ? (motivoCrear ? `<p class="asent-lado-nota">${e(motivoCrear)}</p>` : '') : '<p class="asent-lado-nota">Solo quien reside en esta plaza maneja la flota.</p>'}

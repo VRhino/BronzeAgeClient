@@ -3,6 +3,25 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.128.0] — 2026-11-03 · El Albergue de caravanas · contrato del motor b5e27ace (0.11.0), sin cambio
+
+Pedido de Víctor (2026-11-03), pasado por el hilo del motor: el edificio nuevo que da cupo de caravanas y carros (motor b5e27ace,
+`albergueCaravanas`, 2 × 3 celdas junto al Mercado), con su modelo 3D en todos los niveles de la plaza y en «añadir edificio».
+
+- **Modelo 3D** (`albergueCaravanas` en `ciudad3d/modelos.ts`), dentro de su huella: un patio cerrado con el portón a la calle (`frente`), la
+  casa de los arrieros al fondo, el cobertizo de los carros contra una tapia y, desde el nivel 2, la cuadra contra la otra. El estilo de la
+  plaza pone los materiales (valla de zarzo y paja; barro; adobe; enlucido sobre piedra con zaguán; franja y columnas rojas) y el nivel del
+  albergue lo de dentro: más carros y bestias, la casa de dos plantas con pórtico y el pozo en el 3. Carros de ruedas macizas, bueyes y
+  asnos (`carroParado`, `bestia`); `pozo` se puede poner en cualquier sitio de la huella.
+- **Construir**: sale en Gobierno, junto al Mercado, con su icono, solo con un Mercado activo (`motivoParaConstruir` mira el `requiereEdificio`
+  del nivel 1). El rechazo nuevo `obra.falta_edificio` tiene su texto.
+- **Flota**: el tope de caravanas y carros del Mercado suma el del Albergue activo a su nivel, y la «Ampliación de Flota»
+  (`cupoDeFlota(nivelMercado, nivelAlbergue, extra)`); la cabecera dice «Mercado nivel N · Albergue nivel K». Su ficha dice lo que suma. Un
+  clic en él en la vista 3D abre el Mercado en Caravanas.
+- Pruebas: huella en los cinco estilos, tres niveles, los dos giros y los tres estados; más carros y bestias con el nivel; el portón a la
+  calle (`pruebas/ciudad3d.test.ts`); Construir, el rechazo y el cupo (`pruebas/albergueCaravanas.test.ts`). Banco: el muestrario de estilos ×
+  niveles y el mando «Albergue» para ponerlo en la aldea, el pueblo o la ciudad. Docs en `Ciudad_3D.md` y `Panel_Asentamiento.md`.
+
 ## [0.127.0] — 2026-11-03 · La producción de verdad, también con el almacén lleno · contrato del motor b5e27ace (0.11.0)
 
 Pedido de Víctor (2026-11-03), pasado por el hilo del motor: con el almacén lleno, la ficha del recurso salía a la baja aunque los edificios
