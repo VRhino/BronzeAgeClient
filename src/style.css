@@ -4691,16 +4691,18 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 /* =====================================================================================
    PLAZA EN 3D A PANTALLA COMPLETA (`.plaza-3d`; peticiones de Víctor del 2026-11-02)
    La escena 3D llena la pantalla y todo lo demás flota encima, repartido por los bordes como el HUD de un juego de estrategia («rehacer la
-   interfaz de asentamiento», 0.97.0): arriba a la izquierda el blasón, la subida en curso, el riel de las ventanas y las obras en marcha; al
+   interfaz de asentamiento», 0.97.0): arriba a la izquierda el blasón, la subida en curso y las obras en marcha; al
    borde derecho el rastreador de misiones y la ficha del edificio elegido; arriba a la derecha «Ejércitos» y «Salir al mundo»; arriba al
-   centro la franja de la ocupación; abajo, Población, Almacén y Estado; abajo a la derecha, pegado a los bordes, el minimapa. Cada ventana
-   del riel se abre a media pantalla junto a él, sin tapar la ciudad entera. Solo la plaza: el campamento y el pueblo comparten las clases
+   centro la franja de la ocupación; abajo, Población, Almacén y Estado y, debajo, el riel de las ventanas (0.104.0); abajo a la derecha, pegado a los bordes, el minimapa. Cada ventana
+   del riel se abre a media pantalla junto a la columna izquierda, sin tapar la ciudad entera. Solo la plaza: el campamento y el pueblo comparten las clases
    `asent-*` y no cambian.
    ===================================================================================== */
 .plaza-3d {
   --col-izq: clamp(240px, 28vmin, 300px);
   --minimapa: clamp(170px, 25vmin, 260px);
-  --pie-alto: 66px;
+  --riel-alto: 50px;
+  /* La barra de abajo con el riel debajo (0.104.0): lo que ocupan las dos, para que la columna izquierda y las ventanas no se metan. */
+  --pie-alto: calc(66px + var(--riel-alto) + 10px);
   background: #0b0805;
 }
 
@@ -4759,7 +4761,7 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
   overflow: hidden;
 }
 
-/* Arriba a la izquierda: blasón, lo que cuelga de él, la subida en curso, el riel y las obras, en una columna que flota (los clics pasan a la
+/* Arriba a la izquierda: blasón, lo que cuelga de él, la subida en curso y las obras, en una columna que flota (los clics pasan a la
    escena). */
 .plaza-3d .asent-izq {
   position: absolute;
@@ -4888,7 +4890,7 @@ button.asent-blason-medallon:hover .medallon-nivel, button.asent-blason-medallon
   position: absolute;
   left: 16px;
   right: calc(var(--minimapa) + 16px);
-  bottom: 12px;
+  bottom: calc(var(--riel-alto) + 20px);
   z-index: 2;
   display: flex;
   flex-wrap: wrap;
@@ -4941,18 +4943,33 @@ body:has(.asent-ocupacion:not([hidden])) .aviso-global,
 body:has(.asent-ocupacion:not([hidden])) .eleccion-clic { top: calc(var(--jugador-alto) + 52px); }
 
 /* El riel: una columna de iconos, uno por ventana; al pasar, su nombre a la derecha. */
-.asent-riel { order: -2; display: flex; flex-direction: column; gap: 6px; width: fit-content; }
+/* El riel: una fila de iconos, uno por ventana, debajo de la barra de Población, Almacén y Estado y centrado con ella (0.104.0; antes era una
+   columna bajo el blasón). Al pasar, su nombre encima. */
+.asent-riel { display: flex; flex-direction: row; gap: 6px; width: fit-content; }
+.asent-riel:empty { display: none; }
+.plaza-3d .asent-riel {
+  position: absolute;
+  bottom: 12px;
+  left: calc(16px + (100% - var(--minimapa) - 32px) / 2);
+  transform: translateX(-50%);
+  z-index: 3;
+  max-width: calc(100% - var(--minimapa) - 32px);
+  padding: 4px 6px;
+  background: linear-gradient(180deg, rgba(26, 19, 12, 0.72), rgba(12, 9, 6, 0.82));
+  border: 1px solid var(--bronce-osc);
+  border-radius: 3px;
+  box-shadow: var(--placa-sutil);
+}
 .asent-riel-boton { position: relative; width: 46px; height: 46px; display: grid; place-items: center; padding: 0; background: linear-gradient(180deg, rgba(38, 28, 17, 0.94), rgba(18, 13, 8, 0.94)); border: 1px solid var(--bronce); border-radius: 3px; box-shadow: var(--placa-sutil); color: var(--oro); cursor: pointer; }
 .asent-riel-boton .icono-edificio { display: block; }
 .asent-riel-boton:hover, .asent-riel-boton:focus-visible { border-color: var(--oro); color: var(--oro-claro); --relleno: rgba(216, 184, 120, 0.35); outline: none; }
-.asent-riel-boton.activo { border-color: var(--oro); color: var(--oro-claro); --relleno: rgba(216, 184, 120, 0.4); background: linear-gradient(180deg, rgba(118, 86, 42, 0.96), rgba(52, 37, 18, 0.96)); box-shadow: inset 3px 0 0 var(--oro), 0 0 12px rgba(255, 210, 74, 0.3); }
+.asent-riel-boton.activo { border-color: var(--oro); color: var(--oro-claro); --relleno: rgba(216, 184, 120, 0.4); background: linear-gradient(180deg, rgba(118, 86, 42, 0.96), rgba(52, 37, 18, 0.96)); box-shadow: inset 0 -3px 0 var(--oro), 0 0 12px rgba(255, 210, 74, 0.3); }
 .asent-riel-boton.bloqueada { color: var(--text-muted); border-color: var(--bronce-osc); --relleno: rgba(120, 100, 70, 0.15); }
 .asent-riel-boton.bloqueada::before { content: "🔒"; position: absolute; right: 2px; bottom: 1px; font-size: 0.6rem; }
-.asent-riel-boton::after { content: attr(data-etiqueta); position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%); padding: 4px 10px; white-space: nowrap; font-family: var(--fuente-titulo); font-size: 0.78rem; letter-spacing: 0.05em; color: var(--oro-claro); background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg)); border: 1px solid var(--bronce); border-radius: 2px; box-shadow: var(--placa-sutil); opacity: 0; pointer-events: none; transition: opacity 0.12s; z-index: 5; }
+.asent-riel-boton::after { content: attr(data-etiqueta); position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); padding: 4px 10px; white-space: nowrap; font-family: var(--fuente-titulo); font-size: 0.78rem; letter-spacing: 0.05em; color: var(--oro-claro); background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg)); border: 1px solid var(--bronce); border-radius: 2px; box-shadow: var(--placa-sutil); opacity: 0; pointer-events: none; transition: opacity 0.12s; z-index: 5; }
 .asent-riel-boton:hover::after, .asent-riel-boton:focus-visible::after { opacity: 1; }
 .asent-riel-insignia { position: absolute; top: -5px; right: -6px; min-width: 16px; padding: 0 4px; line-height: 16px; text-align: center; font-size: 0.66rem; font-style: normal; color: #1b1308; background: var(--obra-ambar); border-radius: 8px; }
 /* el riel va pegado al borde: la columna no recorta sus nombres */
-.plaza-3d .asent-izq:has(.asent-riel-boton:hover) { overflow: visible; }
 
 /* Bajo el riel: las obras en marcha (las 3 que antes acaban) y cuántas esperan; un clic abre Construcción. */
 .asent-obras-hud { order: -1; }
@@ -4968,7 +4985,7 @@ body:has(.asent-ocupacion:not([hidden])) .eleccion-clic { top: calc(var(--jugado
 .obras-hud-mas { font-size: 0.68rem; color: var(--text-secondary); }
 
 /* Sin WebGL: el 2D vuelve al centro, a pantalla entera, entre la barra y el almacén. */
-.plaza-3d.sin-3d .asent-mapa { padding: calc(var(--jugador-alto) + 16px) 16px 72px; }
+.plaza-3d.sin-3d .asent-mapa { padding: calc(var(--jugador-alto) + 16px) 16px calc(var(--pie-alto) + 12px); }
 
 /* Las ventanas de la plaza: a media pantalla, junto a la columna izquierda y entre la barra de arriba y la de abajo, sin tapar el resto de la
    ciudad (se sigue viendo y se puede tocar). Una sola abierta; se cierra con ✕, Esc o su icono del riel. Mercado y Reclutamiento van más
@@ -5014,6 +5031,7 @@ body:has(.asent-ocupacion:not([hidden])) .eleccion-clic { top: calc(var(--jugado
   .asent-pie .asent-recurso-icono { font-size: 0.85rem; }
 }
 @media (max-height: 820px) {
+  .plaza-3d { --riel-alto: 44px; }
   .asent-riel { gap: 4px; }
   .asent-riel-boton { width: 40px; height: 40px; }
   .asent-riel-boton .icono-edificio { width: 24px; height: 24px; }
@@ -5022,7 +5040,7 @@ body:has(.asent-ocupacion:not([hidden])) .eleccion-clic { top: calc(var(--jugado
 
 /* Estrecho: la columna izquierda más estrecha, el minimapa más pequeño y la ventana a todo lo ancho, encima de todo. */
 @media (max-width: 900px) {
-  .plaza-3d { --col-izq: clamp(150px, 40vw, 240px); --minimapa: clamp(110px, 28vmin, 170px); }
+  .plaza-3d { --col-izq: clamp(150px, 40vw, 240px); --minimapa: clamp(110px, 28vmin, 170px); --riel-alto: 44px; }
   .plaza-3d .asent-blason { gap: 6px; padding: 6px; }
   .plaza-3d .asent-blason-escudo .sigilo { width: 40px; }
   .plaza-3d .asent-blason-texto .asent-nombre { font-size: 0.92rem; }

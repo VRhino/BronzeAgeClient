@@ -2233,12 +2233,12 @@ function montarAsentamiento(): void {
         <div class="asent-blason"></div>
         <div class="asent-blason-pop" hidden></div>
         <div class="asent-ascenso-hud" role="status" hidden></div>
-        <nav class="asent-riel" aria-label="Ventanas de la plaza"></nav>
         <div class="asent-obras-hud" hidden></div>
       </aside>
       <aside class="asent-der"></aside>
       <div class="asent-ocupacion" role="status" hidden></div>
       <div class="asent-pie" hidden></div>
+      <nav class="asent-riel" aria-label="Ventanas de la plaza"></nav>
       <div class="asent-lienzo asent-minimapa" title="Minimapa: un clic lleva la vista ahí"><canvas id="mapa" width="900" height="900"></canvas></div>
       <header class="asent-barra">
         <div class="asent-barra-acciones">

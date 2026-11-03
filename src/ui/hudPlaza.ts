@@ -1,8 +1,8 @@
 // El HUD de la plaza en 3D tras «rehacer la interfaz de asentamiento» (Víctor, 2026-11-02). Abajo, una barra en tres placas separadas:
 // Población (total y clases, que antes iban en el Resumen), Almacén (la tira de siempre) y Estado (mantenimiento y nutrición, los medidores del
 // Resumen). Arriba a la izquierda, el blasón: el lápiz para cambiar el nombre, la casa (resides aquí o no), la corona (capital) y el medallón
-// del nivel, que abre la subida. Debajo, el riel de iconos de las ventanas de la plaza y las obras en marcha. Arriba al centro, la franja de la
-// ocupación militar. Aquí está el HTML y su cableado; quien lo pinta y ejecuta los comandos es `main.ts`.
+// del nivel, que abre la subida. Debajo del blasón, las obras en marcha. Debajo de la barra de abajo, el riel de iconos de las ventanas de la
+// plaza (0.104.0). Arriba al centro, la franja de la ocupación militar. Aquí está el HTML y su cableado; quien lo pinta y ejecuta los comandos es `main.ts`.
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { Asentamiento } from '../tiposDominio';
 import { iconoEdificio } from './iconosEdificio';

@@ -3,6 +3,19 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.104.0] — 2026-11-03 · El riel de la plaza, debajo de la barra de abajo · sin cambio de contrato
+
+Petición de Víctor (2026-11-03, segundo punto del frente de interfaces): mover el riel de botones de la izquierda debajo de la barra central
+inferior (Población, Almacén y Estado).
+
+- **El riel es ahora una fila de iconos al pie de la pantalla**, centrada con la barra de Población, Almacén y Estado, que sube para dejarle
+  sitio. El nombre de cada ventana sale encima del icono al pasar el ratón. La ventana elegida se marca con una raya dorada abajo.
+- **Debajo del blasón solo quedan las obras en marcha** (y la subida en curso).
+- Las ventanas y la columna izquierda descuentan la altura del riel para no meterse debajo.
+- Va con las clases comunes `asent-*`: el campamento y los pueblos lo tendrán igual cuando pasen al esqueleto de la plaza.
+- Banco nuevo `pruebas/hud/` con el esqueleto de la plaza (`?ventana=mercado` abre una ventana, `?3d=1` pone la ciudad en 3D, `?fondo=<url>`
+  una imagen de fondo).
+
 ## [0.103.0] — 2026-11-03 · La ventana de Diplomacia se adapta a la pantalla · sin cambio de contrato
 
 Petición de Víctor (2026-11-03, primer punto del frente de interfaces): que la diplomacia se adapte al tamaño de la pantalla.
