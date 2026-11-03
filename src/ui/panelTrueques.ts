@@ -91,11 +91,13 @@ function html(c: ContextoPlaza): string {
         <div class="trueque-platillo recibe"><strong><i aria-hidden="true">▼</i> Recibes <small>la otra plaza</small></strong>${filasLado('B')}</div>
       </div>
       <div class="trueque-pie"><button class="trueque-proponer" type="button" data-trueque-proponer>🤝 Proponer trueque</button></div>`;
-  return `<div class="obra-titulo"><span class="faction-kicker">Trueques en curso</span><span class="obra-chip">${vivos.length}</span>${porContestar ? `<span class="obra-chip activa" title="Propuestas que esperan tu respuesta">📜 ${porContestar} por contestar</span>` : ''}${ayuda('mercado:trueques', 'Un trueque es un pacto entre dos plazas: cada una se compromete a entregar sus líneas, que van en caravanas. No obliga a nadie hasta que la otra plaza dice que sí; una propuesta sin contestar caduca sin castigo. Aceptado, el plazo corre desde el sí, y vencer sin cumplir resta reputación a cada lado en proporción a lo que dejó sin entregar (Doc 2.7).')}</div>
+  // A pantalla completa, los trueques a la izquierda y el formulario de proponer a la derecha (`cols-completa`).
+  return `<div class="cols-completa"><div class="col-completa"><div class="obra-titulo"><span class="faction-kicker">Trueques en curso</span><span class="obra-chip">${vivos.length}</span>${porContestar ? `<span class="obra-chip activa" title="Propuestas que esperan tu respuesta">📜 ${porContestar} por contestar</span>` : ''}${ayuda('mercado:trueques', 'Un trueque es un pacto entre dos plazas: cada una se compromete a entregar sus líneas, que van en caravanas. No obliga a nadie hasta que la otra plaza dice que sí; una propuesta sin contestar caduca sin castigo. Aceptado, el plazo corre desde el sí, y vencer sin cumplir resta reputación a cada lado en proporción a lo que dejó sin entregar (Doc 2.7).')}</div>
     ${vivos.length === 0 ? '<p class="mapa-lista-vacia">No hay trueques propuestos ni en vigor.</p>' : `<div class="pactos">${vivos.map((x) => tarjeta(x, c)).join('')}</div>`}
     ${cerrados.length === 0 ? '' : `<div class="obra-titulo"><span class="faction-kicker">Cerrados</span><span class="obra-chip">${cerrados.length}</span></div><div class="pactos cerrados">${cerrados.map((x) => tarjeta(x, c)).join('')}</div>`}
+</div><div class="col-completa">
     <div class="obra-titulo"><span class="faction-kicker">Proponer un trueque</span>${ayuda('mercado:trueques-proponer', `Elige la plaza y hasta ${FILAS_POR_LADO} líneas por lado, sin repetir recurso. Deja en «nada» las que no uses.`)}</div>
-    ${proponer}`;
+    ${proponer}</div></div>`;
 }
 
 function cablear(c: ContextoPlaza): void {

@@ -106,10 +106,11 @@ export function htmlOrdenes(p: ProyeccionJugador, a: Asentamiento, e: Escapar): 
       <span class="orden-ficha-cuerpo"><b>${o.tipo === 'venta' ? 'Vende' : 'Compra'} ${Math.floor(o.cantidad)}</b><span class="obra-barra"><i style="width:${(hecho * 100).toFixed(1)}%"></i></span><small>${Math.floor(o.cantidadCumplida)}/${Math.floor(o.cantidad)} · 🪙 ${o.precioUnitario.toFixed(2)} · ⏳ ${falta(o.expiraEn, p)}</small></span>
     </div>`;
   };
-  return `<div class="obra-titulo"><span class="faction-kicker">Órdenes de mercado</span><span class="obra-chip" title="Oro de la plaza">🪙 ${hay('oro')}</span>${info}</div>
-    ${boletaHtml}
+  // A pantalla completa, la boleta a la izquierda y las órdenes en pie a la derecha (`cols-completa`, sin efecto en una ventana estrecha).
+  return `<div class="cols-completa"><div class="col-completa"><div class="obra-titulo"><span class="faction-kicker">Órdenes de mercado</span><span class="obra-chip" title="Oro de la plaza">🪙 ${hay('oro')}</span>${info}</div>
+    ${boletaHtml}</div><div class="col-completa">
     <div class="obra-titulo"><span class="faction-kicker">En pie</span><span class="obra-chip">${mias.length}</span></div>
-    ${mias.length === 0 ? '<p class="mapa-lista-vacia">No hay órdenes en pie.</p>' : `<div class="orden-fichas">${mias.map(ficha).join('')}</div>`}`;
+    ${mias.length === 0 ? '<p class="mapa-lista-vacia">No hay órdenes en pie.</p>' : `<div class="orden-fichas">${mias.map(ficha).join('')}</div>`}</div></div>`;
 }
 
 export function cablearOrdenes(raiz: HTMLElement, a: Asentamiento, ejecutar: Ejecutar): void {
@@ -401,7 +402,7 @@ export function htmlCaravanas(p: ProyeccionJugador, a: Asentamiento, e: Escapar,
       ${reside ? `<button class="flota-crear" type="button" data-caravana-crear${motivoCrear ? ` disabled title="${e(motivoCrear)}"` : ' title="Crear una caravana nueva (un casco vacío)"'}>＋ Crear</button>` : ''}
     </div>
     ${reside ? (motivoCrear ? `<p class="asent-lado-nota">${e(motivoCrear)}</p>` : '') : '<p class="asent-lado-nota">Solo quien reside en esta plaza maneja la flota.</p>'}
-    ${flota.length + aparcadas.length === 0 ? '<p class="mapa-lista-vacia">No hay caravanas en esta plaza.</p>' : [...flota, ...aparcadas].map((c) => tarjeta(c, p, a, reside, flota, almacen, carrosLleno, datos, e)).join('')}`;
+    ${flota.length + aparcadas.length === 0 ? '<p class="mapa-lista-vacia">No hay caravanas en esta plaza.</p>' : `<div class="caravanas-lista">${[...flota, ...aparcadas].map((c) => tarjeta(c, p, a, reside, flota, almacen, carrosLleno, datos, e)).join('')}</div>`}`;
 }
 
 export function cablearCaravanas(raiz: HTMLElement, p: ProyeccionJugador, a: Asentamiento, ejecutar: Ejecutar, repintar: () => void = () => {}): void {

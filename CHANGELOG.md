@@ -3,6 +3,19 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.106.0] — 2026-11-03 · Mercado y Taberna de la plaza a pantalla completa · sin cambio de contrato
+
+Petición de Víctor (2026-11-03, tercer punto del frente de interfaces): mercado, tropa, mercenarios y taberna a pantalla completa. Aquí van los
+dos de la plaza. Tropa y Mercenarios son del campamento y llegan cuando pase al esqueleto de la plaza.
+
+- **Las ventanas Mercado y Taberna ocupan toda la pantalla**, de la barra de arriba al riel, que se queda a la vista para cambiar de ventana.
+  Mientras están abiertas tapan el blasón, la barra de Población, Almacén y Estado y el minimapa. Se cierran como siempre (✕, Esc o su icono).
+- **Con 1000 px de ancho o más, el contenido va en dos columnas**: en Órdenes, la boleta a la izquierda y las órdenes en pie a la derecha; en
+  Trueques, los trueques en curso y cerrados a la izquierda y el formulario de proponer a la derecha; en la Taberna, Mirada e Informe a la
+  izquierda y tus Miradas e Informes a la derecha. Las caravanas van en rejilla, una tarjeta al lado de otra.
+- En una ventana más estrecha nada cambia: las columnas son `display: contents` y se apilan como antes (vale para cuando estos paneles se usen
+  en el campamento o en otra ventana).
+- El banco `pruebas/hud/` abre Mercado y Taberna a pantalla completa (`?ventana=mercado`).
 ## [0.105.0] — 2026-11-03 · El mundo sin saltos y el acarreo dentro hasta que sale · sin cambio de contrato
 
 Fallos que vio Víctor (2026-11-03): con 40-50 héroes en marcha, tras un rato las columnas y caravanas iban a saltos; y las miniaturas de

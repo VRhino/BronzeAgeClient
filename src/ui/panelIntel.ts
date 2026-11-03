@@ -218,11 +218,11 @@ export function renderPanelIntel(p: ProyeccionJugador, e: Escapar, origenId?: st
   const abierto = informes.find((i) => i.asentamientoId === estadoIntel.informeAbierto);
   return `
     <div class="intel-panel" data-origen="${t ? e(t.origen.id) : ''}">
-      ${compra}
+      <div class="cols-completa"><div class="col-completa">${compra}</div><div class="col-completa">
       <div class="obra-titulo"><span class="faction-kicker">Tus Miradas</span><span class="obra-chip">${p.miradasIntel.length}</span></div>${listaMiradas(p)}
       <div class="obra-titulo"><span class="faction-kicker">Tus Informes</span><span class="obra-chip">${informes.length}</span></div>
       ${informes.length === 0 ? '<p class="mapa-lista-vacia">Ninguno.</p>' : `<div class="intel-informes">${informes.map((i) => `<button class="intel-informe-btn${i === abierto ? ' abierto' : ''}" type="button" data-informe="${e(i.asentamientoId)}" title="${e(`${i.nombre ?? i.asentamientoId} · nivel ${i.nivel} · hace ${hace(p.instante - i.conocidoEn)}`)}">${medallonNivel(i.nivel)}<span><b>${e(i.nombre ?? i.asentamientoId)}</b><small>hace ${hace(p.instante - i.conocidoEn)}</small></span></button>`).join('')}</div>`}
-      ${abierto ? detalleInforme(abierto, p, e) : ''}
+      ${abierto ? detalleInforme(abierto, p, e) : ''}</div></div>
     </div>`;
 }
 

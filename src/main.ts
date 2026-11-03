@@ -2042,7 +2042,7 @@ function renderPanelEdificios(): void {
 }
 
 /** Una ventana de la plaza: su título e icono, sus subpestañas (si tiene varias), lo que pinta y lo que cablea, y si va ancha o estrecha. */
-interface ContenidoVentana { titulo: string; icono: string; subs: [string, string][]; sub: string; html: string; cablear: () => void; ancho?: 'ancha' | 'estrecha' }
+interface ContenidoVentana { titulo: string; icono: string; subs: [string, string][]; sub: string; html: string; cablear: () => void; ancho?: 'ancha' | 'estrecha' | 'completa' }
 
 /** La ventana abierta, junto al riel; sin ventana, escondida y vacía. */
 function pintarVentanaPlaza(p: ProyeccionJugador, a: Asentamiento, ajena: boolean): void {
@@ -2104,13 +2104,13 @@ function contenidoDeVentana(v: VentanaPlaza, c: ContextoPlaza, ajena: boolean): 
     case 'reclutamiento':
       return { ...base, ancho: 'ancha', html: htmlReclutamiento(p, a, escaparHtml, renderPanelEdificios), cablear: () => cablearReclutamiento(cuerpo, p, a, ejecutarYRefrescar, renderPanelEdificios) };
     case 'taberna':
-      return { ...base, html: renderPanelIntel(p, escaparHtml), cablear: () => cablearPanelIntel(cuerpo, p, ejecutarYRefrescar, () => { olvidarEdicion(cuerpo); invalidar(cuerpo); renderPanelEdificios(); }) };
+      return { ...base, ancho: 'completa', html: renderPanelIntel(p, escaparHtml), cablear: () => cablearPanelIntel(cuerpo, p, ejecutarYRefrescar, () => { olvidarEdicion(cuerpo); invalidar(cuerpo); renderPanelEdificios(); }) };
     case 'mercado': {
       if (ajena) {
         // las órdenes abiertas de la plaza, que se toman con el carro de tu columna (`comerciarEnPlaza`), como desde su ficha en el mapa
         const ordenes = htmlMercadoDePlaza(p, a.id, escaparHtml);
         return {
-          ...base,
+          ...base, ancho: 'completa',
           html: `${ordenes || '<p class="asent-lado-nota">No hay órdenes abiertas de compra ni de venta a la vista.</p>'}<p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`,
           cablear: () => cablearMercadoDePlaza(cuerpo, a.id, { ejecutarConDatos: ejecutarConDatosYRefrescar, aviso: avisoMapa }, p.heroeId),
         };
@@ -2119,7 +2119,7 @@ function contenidoDeVentana(v: VentanaPlaza, c: ContextoPlaza, ajena: boolean): 
       const sub = elegir(subs);
       const s = SUBPESTANAS_MERCADO_EXTRA.find((x) => x.id === sub);
       return {
-        ...base, ancho: 'ancha', subs, sub,
+        ...base, ancho: 'completa', subs, sub,
         html: s ? s.html(c) : sub === 'caravanas' ? htmlCaravanas(p, a, escaparHtml, renderPanelEdificios) : htmlOrdenes(p, a, escaparHtml),
         cablear: () => {
           if (s) s.cablear?.(c);

@@ -43,7 +43,7 @@ document.getElementById('app')!.innerHTML = `<div class="asent-screen plaza-3d">
     <nav class="asent-riel">${riel}</nav>
     <div class="asent-lienzo asent-minimapa"><canvas id="mapa" width="900" height="900"></canvas></div>
     <header class="asent-barra"><div class="asent-barra-acciones"><button type="button">Ejércitos</button><button class="btn-primary" type="button">Salir al mundo</button></div></header>
-    ${ventana ? `<section class="asent-ventana" data-ancho="${ventana === 'mercado' ? 'ancha' : ''}"><header class="asent-ventana-cab"><div class="asent-ventana-titulo"><h2>${ventana}</h2></div><button class="asent-ventana-cerrar">✕</button></header><div class="asent-edif-cuerpo">${'<p>Contenido de la ventana.</p>'.repeat(40)}</div></section>` : ''}
+    ${ventana ? `<section class="asent-ventana" data-ancho="${ventana === 'mercado' || ventana === 'taberna' ? 'completa' : ventana === 'reclutamiento' ? 'ancha' : ''}"><header class="asent-ventana-cab"><div class="asent-ventana-titulo"><h2>${ventana}</h2></div><button class="asent-ventana-cerrar">✕</button></header><div class="asent-edif-cuerpo">${'<p>Contenido de la ventana.</p>'.repeat(40)}</div></section>` : ''}
   </div>
 </div>`;
 const escena = document.querySelector<HTMLElement>('.ciudad3d-escena')!;

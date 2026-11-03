@@ -5009,6 +5009,19 @@ body:has(.asent-ocupacion:not([hidden])) .eleccion-clic { top: calc(var(--jugado
 }
 .asent-ventana[data-ancho="ancha"] { width: min(920px, calc(100% - var(--col-izq) - 60px)); }
 .asent-ventana[data-ancho="estrecha"] { width: min(460px, calc(100% - var(--col-izq) - 60px)); }
+/* A pantalla completa (0.106.0: Mercado y Taberna): de la barra de arriba al riel, que se queda a la vista para cambiar de ventana. Tapa el blasón,
+   la barra de Población, Almacén y Estado y el minimapa mientras está abierta. El contenido se reparte en columnas (`asent-completa-*`). */
+.asent-ventana[data-ancho="completa"] { left: 16px; right: 16px; width: auto; bottom: calc(var(--riel-alto) + 22px); max-height: none; z-index: 5; }
+/* Las columnas de pantalla completa: sin efecto (`display: contents`) salvo en una ventana completa de 1000 px o más, donde el contenido va en
+   dos columnas que se desplazan juntas y las caravanas en rejilla. */
+.cols-completa, .col-completa, .caravanas-lista { display: contents; }
+.asent-ventana[data-ancho="completa"] .asent-edif-cuerpo { container-type: inline-size; }
+@container (min-width: 1000px) {
+  .cols-completa { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; align-items: start; }
+  .col-completa { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .intel-panel .col-completa { gap: 4px; }
+  .caravanas-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(560px, 1fr)); gap: 10px; align-items: start; }
+}
 @keyframes ventana-plaza-entra { from { opacity: 0; transform: translateX(-10px); } }
 .asent-ventana::after { content: ""; position: absolute; left: 8px; right: 8px; top: 5px; height: 4px; background: var(--denticulo); opacity: 0.5; pointer-events: none; }
 .asent-ventana-cab { flex: none; display: flex; align-items: center; gap: 10px; padding: 14px 12px 10px 16px; border-bottom: 1px solid rgba(169, 121, 63, 0.3); }
