@@ -5238,3 +5238,7 @@ body:has(.eleccion-clic) .aviso-global { visibility: hidden; }
 .ficha-mejora-tiempo { margin-left: auto; color: var(--pergamino); }
 .ficha-mejora .btn-primary { align-self: flex-start; }
 .ficha-mejora.caro .btn-primary { opacity: 0.8; }
+.mapa-capas-rango { display: flex; flex-direction: column; gap: 4px; padding: 3px 0; }
+.mapa-capas-rango > span { display: flex; justify-content: space-between; gap: 8px; }
+.mapa-capas-rango output { color: var(--oro-claro); font-variant-numeric: tabular-nums; }
+.mapa-capas-rango input { width: 100%; accent-color: var(--oro); margin: 0; }

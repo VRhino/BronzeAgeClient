@@ -7,9 +7,9 @@
 import * as THREE from 'three';
 import './mundo3d.css';
 import { CamaraDeJuego, type Zoom } from './camara';
-import { MUNDO3D } from './config';
+import { DISTANCIA_CARGA, MUNDO3D } from './config';
 import { instalarEntrada, type Entrada } from './entrada';
-import type { CaravanaEnVista, Carros, ColumnaEnVista, EstadoVista, EtiquetaEnVista } from './estado';
+import type { CaravanaEnVista, Carros, ColumnaEnVista, EstadoVista, EtiquetaEnVista, MundoEnVista } from './estado';
 import { Etiquetas } from './etiquetas';
 import { RejillaDeMovimiento, type Navegacion } from './rejilla';
 import { FigurasDeColumna, type TropaDeColumna } from './figuras';
@@ -48,8 +48,11 @@ const PRESUPUESTO = 8;
 /** Lo mínimo que mide en pantalla la zona de clic de algo seleccionable, en px de radio. */
 const MIN_PX_CLIC = 26;
 const SIN_TROPA: TropaDeColumna = { porHeroe: [], ejercito: false };
-/** Hasta dónde llegan, como mucho, los árboles y lo que va sobre el suelo (u); más allá la bruma ya casi lo tapa todo. */
+/** Hasta dónde llegan, como mucho, los árboles y lo que va sobre el suelo (u) con la distancia de carga de serie; con otra, en proporción. Más
+ * allá la bruma ya casi lo tapa todo. */
 const ALCANCE = { arboles: 200, paisaje: 240, trazos: 240 };
+/** Cada cuánto (fracción de la distancia de carga) se rehace la lista de lo que cae dentro: así no se rehacen las maquetas a cada paso. */
+const PASO_CERCANO = 1 / 8;
 
 export class VistaMundo3D {
   readonly lienzo = document.createElement('canvas');
@@ -83,6 +86,10 @@ export class VistaMundo3D {
   private nodos: { clave: string; lista: EtiquetaEnVista[] } = { clave: '', lista: [] };
   /** Sin los nombres de los nodos (botón de capas): solo quedan los de la vista previa de fundar. */
   private sinNombresDeNodos = false;
+  /** Hasta dónde se carga el mundo (u), el ajuste del jugador (`DISTANCIA_CARGA`). */
+  private distanciaCarga: number = DISTANCIA_CARGA.porDefecto;
+  /** Lo de `estado.mundo` que cae dentro de la distancia de carga, medido desde un centro que solo cambia cada `PASO_CERCANO`. */
+  private cercano: { de: MundoEnVista | null; clave: string; mundo: MundoEnVista } | null = null;
   private readonly matMira = new THREE.MeshBasicMaterial({ color: 0xf1e6c8, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -5 });
   private readonly observador: ResizeObserver;
   /** La ruta de cada columna y caravana con su material (`id|material`), la mira bajo tu columna y el aro de tu destino, con lo que los hizo. */
@@ -276,27 +283,33 @@ export class VistaMundo3D {
     this.camara.colocar(this.foco, w / h, (cx, cz) => this.alturaU(cx, cz), dt);
     this.o.alCambiarEscala?.(this.camara.pxPorUnidad(h));
     // el suelo hasta donde llega la vista (con la cámara baja, hasta la bruma)
-    const d = this.camara.distancia;
-    this.bruma.near = d * 2.2;
-    this.bruma.far = d * 7;
-    const alcance = Math.min(320, d * 7), hasta = performance.now() + PRESUPUESTO;
+    // Hasta dónde se carga: lo que pide la cámara, sin pasar de la distancia de carga. La bruma acaba justo ahí: no se ve el borde.
+    const d = this.camara.distancia, carga = this.distanciaCarga, k = carga / DISTANCIA_CARGA.porDefecto;
+    const alcance = Math.min(carga, d * 7), hasta = performance.now() + PRESUPUESTO;
+    this.bruma.far = alcance;
+    this.bruma.near = Math.min(d * 2.2, alcance * 0.4);
+    const hastaTrazos = Math.min(alcance, ALCANCE.trazos * k);
     t = this.medir('camara', t);
+    this.terreno.escalaDetalle = Math.min(1, k);
     this.faltan.terreno = this.terreno.actualizar(x, y, alcance, hasta);
     t = this.medir('terreno', t);
-    this.maquetas.actualizar(estado.mundo);
-    this.trazos.actualizar(estado.mundo.trazos, x, y, Math.min(alcance, ALCANCE.trazos));
+    const cerca = this.mundoCercano(estado.mundo, x, y);
+    this.maquetas.actualizar(cerca);
+    this.trazos.actualizar(estado.mundo.trazos, x, y, hastaTrazos);
     t = this.medir('maquetasYTrazos', t);
     this.arboles.fijarDespejes(this.maquetas.claros, this.trazos.caminos, `${this.maquetas.claveClaros}|${this.trazos.claveCaminos}`);
-    this.faltan.paisaje = this.paisaje.actualizar(x, y, Math.min(alcance, ALCANCE.paisaje), hasta);
+    this.faltan.paisaje = this.paisaje.actualizar(x, y, Math.min(alcance, ALCANCE.paisaje * k), hasta);
     t = this.medir('paisaje', t);
-    this.faltan.arboles = this.arboles.actualizar(x, y, Math.min(alcance, ALCANCE.arboles), hasta);
+    this.faltan.arboles = this.arboles.actualizar(x, y, Math.min(alcance, ALCANCE.arboles * k), hasta);
     t = this.medir('arboles', t);
-    this.ponerColumnas(estado.columnas, estado.caravanas);
-    this.ponerLineas(estado.columnas, estado.caravanas, estado.heroe, Math.min(alcance, ALCANCE.trazos));
+    const dentro = (p: Punto) => Math.hypot(p.x - x, p.y - y) <= carga;
+    const columnas = estado.columnas.filter((c) => c.mia || dentro(c.posicion)), caravanas = estado.caravanas.filter((c) => dentro(c.posicion));
+    this.ponerColumnas(columnas, caravanas);
+    this.ponerLineas(columnas, caravanas, estado.heroe, hastaTrazos);
     this.marcas.actualizar(estado, ahora);
     this.rejilla.actualizar(x, y);
     t = this.medir('columnasYMarcas', t);
-    this.etiquetas.actualizar([...estado.etiquetas, ...this.etiquetasDeNodos(x, y, estado)], this.camara.camara, w, h, this.alturaU, estado.heroe, (this.bruma.near + this.bruma.far) / 2);
+    this.etiquetas.actualizar([...estado.etiquetas.filter((e) => dentro(e.posicion)), ...this.etiquetasDeNodos(x, y, estado)], this.camara.camara, w, h, this.alturaU, estado.heroe, (this.bruma.near + this.bruma.far) / 2);
     t = this.medir('etiquetas', t);
     // la sombra sigue al héroe y cubre lo que se ve
     const r = Math.min(120, Math.max(20, d * 1.6));
@@ -378,6 +391,29 @@ export class VistaMundo3D {
       this.destino = destino ? aro(destino, 0.5, this.alturaU, this.matRuta) : null;
       if (this.destino) this.lineas.add(this.destino);
     }
+  }
+
+  /** Hasta dónde se carga el mundo alrededor del héroe (u, entre `DISTANCIA_CARGA.min` y `.max`): el ajuste del botón de capas. */
+  fijarDistanciaDeCarga(u: number): void {
+    this.distanciaCarga = Math.min(DISTANCIA_CARGA.max, Math.max(DISTANCIA_CARGA.min, u));
+    this.cercano = null;
+  }
+
+  /** Las maquetas que caen dentro de la distancia de carga (con medio paso de holgura), medidas desde el héroe redondeado a `PASO_CERCANO`: la
+   * lista, y con ella las maquetas, solo cambia cuando el héroe ha andado un trecho o cambia el mundo. */
+  private mundoCercano(m: MundoEnVista, x: number, y: number): MundoEnVista {
+    const paso = this.distanciaCarga * PASO_CERCANO, cx = Math.round(x / paso) * paso, cy = Math.round(y / paso) * paso;
+    const clave = `${cx},${cy},${this.distanciaCarga}`;
+    if (this.cercano && this.cercano.de === m && this.cercano.clave === clave) return this.cercano.mundo;
+    const r = this.distanciaCarga + paso, dentro = (p: Punto) => Math.hypot(p.x - cx, p.y - cy) <= r;
+    const mundo: MundoEnVista = {
+      plazas: m.plazas.filter((p) => dentro(p.posicion)), pueblos: m.pueblos.filter((p) => dentro(p.posicion)),
+      avanzadas: m.avanzadas.filter((p) => dentro(p.posicion)), obras: m.obras.filter((p) => dentro(p.posicion)),
+      campamentos: m.campamentos.filter((p) => dentro(p.posicion)), bandidos: m.bandidos.filter((p) => dentro(p.posicion)),
+      alijos: m.alijos.filter((p) => dentro(p.posicion)), batallas: m.batallas.filter((p) => dentro(p.posicion)), trazos: m.trazos,
+    };
+    this.cercano = { de: m, clave, mundo };
+    return mundo;
   }
 
   /** Pone o quita los nombres de los nodos (botón de capas). Quitados, la vista previa de fundar sigue nombrando los de su zona. */

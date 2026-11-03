@@ -1,6 +1,8 @@
-// El botón de capas del mapa (Víctor, 2026-11-03), encima del zoom: en el modo mundo, los nombres de los nodos; en el modo mapa, además la
-// fertilidad del suelo y las parcelas de bosque, cada una con su leyenda. Lo puesto se recuerda (`mundo/capasDelMapa.ts`).
-import { capasDelMapa, colorDeFertilidad, fijarCapa, type CapasDelMapa } from '../mundo/capasDelMapa';
+// El botón de capas del mapa (Víctor, 2026-11-03), encima del zoom: en el modo mundo, los nombres de los nodos y hasta dónde se carga el mundo;
+// en el modo mapa, los nombres y además la fertilidad del suelo y las parcelas de bosque, cada una con su leyenda. Lo puesto se recuerda
+// (`mundo/capasDelMapa.ts`).
+import { capasDelMapa, colorDeFertilidad, distanciaDeCarga, fijarCapa, fijarDistanciaDeCarga, type CapasDelMapa } from '../mundo/capasDelMapa';
+import { DISTANCIA_CARGA } from '../mundo3d/config';
 
 const ICONO = `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
   <path d="M12 3 2.5 8 12 13l9.5-5z"/><path d="m2.5 12 9.5 5 9.5-5"/><path d="m2.5 16 9.5 5 9.5-5"/></svg>`;
@@ -33,7 +35,12 @@ export function htmlCapas(modo: 'mundo' | 'mapa', minimaAldea = 0.3): string {
         <span class="mapa-capas-nota">Más llena cuanto más densa: más madera.</span>
       </div>
       <p class="mapa-capas-nota">Solo sobre lo que has explorado.</p>`
-    : '';
+    : `<span class="faction-kicker">Vista</span>
+      <label class="mapa-capas-rango">
+        <span>Distancia de carga <output data-carga-valor>${distanciaDeCarga()} u</output></span>
+        <input type="range" data-carga min="${DISTANCIA_CARGA.min}" max="${DISTANCIA_CARGA.max}" step="${DISTANCIA_CARGA.paso}" value="${distanciaDeCarga()}">
+      </label>
+      <p class="mapa-capas-nota">Hasta dónde se carga el mundo a tu alrededor. Más corta, menos trabajo para el equipo; la bruma tapa lo de más allá.</p>`;
   return `<div class="mapa-capas">
     <button type="button" class="mapa-capas-boton" aria-expanded="false" aria-label="Capas del mapa" title="Capas del mapa">${ICONO}</button>
     <div class="mapa-capas-lista" hidden>
@@ -44,8 +51,8 @@ export function htmlCapas(modo: 'mundo' | 'mapa', minimaAldea = 0.3): string {
   </div>`;
 }
 
-/** Abre y cierra la lista (un clic fuera de ella la cierra) y avisa con las capas nuevas cada vez que se marca o desmarca una. */
-export function cablearCapas(raiz: HTMLElement, alCambiar: (capas: Readonly<CapasDelMapa>) => void): void {
+/** Abre y cierra la lista (un clic fuera de ella la cierra) y avisa cada vez que se marca o desmarca una capa o se mueve la distancia de carga. */
+export function cablearCapas(raiz: HTMLElement, alCambiar: () => void): void {
   const caja = raiz.querySelector<HTMLElement>(':scope > .mapa-capas');
   const boton = caja?.querySelector<HTMLButtonElement>('.mapa-capas-boton');
   const lista = caja?.querySelector<HTMLElement>('.mapa-capas-lista');
@@ -59,7 +66,14 @@ export function cablearCapas(raiz: HTMLElement, alCambiar: (capas: Readonly<Capa
     fijarCapa(capa, casilla.checked);
     const leyenda = lista.querySelector<HTMLElement>(`[data-leyenda="${capa}"]`);
     if (leyenda) leyenda.hidden = !casilla.checked;
-    alCambiar(capasDelMapa());
+    alCambiar();
   }));
+  const rango = lista.querySelector<HTMLInputElement>('[data-carga]');
+  rango?.addEventListener('input', () => {
+    fijarDistanciaDeCarga(Number(rango.value));
+    const valor = lista.querySelector<HTMLOutputElement>('[data-carga-valor]');
+    if (valor) valor.value = `${distanciaDeCarga()} u`;
+    alCambiar();
+  });
 }
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CAPAS_POR_DEFECTO, capasDelMapa, colorDeFertilidad, exploradoDe, fijarCapa, pixelesDeFertilidad } from '../src/mundo/capasDelMapa';
+import { ajustarCarga, CAPAS_POR_DEFECTO, capasDelMapa, colorDeFertilidad, distanciaDeCarga, exploradoDe, fijarCapa, fijarDistanciaDeCarga, pixelesDeFertilidad } from '../src/mundo/capasDelMapa';
+import { DISTANCIA_CARGA } from '../src/mundo3d/config';
 import type { ProyeccionJugador } from '../src/apiCliente';
 
 (globalThis as Record<string, unknown>).location = { protocol: 'http:', host: 'x', hostname: 'x', search: '' };
@@ -13,6 +14,18 @@ describe('capas puestas', () => {
     fijarCapa('fertilidad', true);
     expect(capasDelMapa()).toEqual({ ...CAPAS_POR_DEFECTO, fertilidad: true });
     fijarCapa('fertilidad', false);
+  });
+});
+
+describe('distancia de carga', () => {
+  it('de serie, la de antes (320 u); se ajusta al rango y a su paso', () => {
+    expect(distanciaDeCarga()).toBe(DISTANCIA_CARGA.porDefecto);
+    expect(ajustarCarga(10)).toBe(DISTANCIA_CARGA.min);
+    expect(ajustarCarga(9999)).toBe(DISTANCIA_CARGA.max);
+    expect(ajustarCarga(171)).toBe(180);
+    fijarDistanciaDeCarga(155);
+    expect(distanciaDeCarga()).toBe(160);
+    fijarDistanciaDeCarga(DISTANCIA_CARGA.porDefecto);
   });
 });
 

@@ -126,6 +126,8 @@ async function arrancar(): Promise<void> {
       else { seleccion = null; ruta = [p]; }
     },
   });
+  // `?carga=N`: la distancia de carga del jugador (u)
+  if (parametros.has('carga')) vista.fijarDistanciaDeCarga(Number(parametros.get('carga')));
   const irA = (x: number, y: number) => { ruta = [{ x, y }]; };
   $('cerca').addEventListener('click', () => vista.zoom('cerca'));
   $('normal').addEventListener('click', () => vista.zoom('normal'));

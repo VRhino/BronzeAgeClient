@@ -111,10 +111,14 @@ export class Terreno {
     this.material = niebla.aplicar(new THREE.MeshLambertMaterial({ vertexColors: true }));
   }
 
-  /** El paso al que va una tesela a `d` u del centro. */
+  /** Cuánto detalle (×1 con la distancia de carga de serie): con una distancia de carga más corta, el detalle fino llega menos lejos. */
+  escalaDetalle = 1;
+
+  /** El paso al que va una tesela a `d` u del centro: 0,5 u hasta 80 u, 1 u hasta 160 u y 2 u más allá (por `escalaDetalle`, sin bajar de 32 y
+   * 64 u). */
   private pasoA(d: number): number {
-    const base = this.fuente.paso;
-    return Math.max(base, d < 80 ? 0.5 : d < 160 ? 1 : 2);
+    const base = this.fuente.paso, k = this.escalaDetalle;
+    return Math.max(base, d < Math.max(32, 80 * k) ? 0.5 : d < Math.max(64, 160 * k) ? 1 : 2);
   }
 
   /** Pide las teselas a menos de `alcance` u de (cx, cy) y suelta las que quedan más lejos. Construye las más cercanas primero mientras quede

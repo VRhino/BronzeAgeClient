@@ -93,8 +93,9 @@ y la tesela va con zstd. La semilla 42 ocupa 8,6 MB.
 
 - **Escena.** Coordenadas: x = x del mapa, z = y del mapa, y = altura en unidades (metros / 12). Luz de cielo y sol con sombras alrededor del
   héroe. El fondo y la bruma lejana son del color de la niebla de guerra: lo que queda lejos se funde con ella.
-- **Suelo.** Teselas de 64 u a menos de `min(320, 7·d)` u del héroe (d, la distancia de la cámara); las más cercanas primero, dos por fotograma.
-  Paso de 0,5 u a menos de 80 u, 1 u a menos de 160 y 2 u más allá; un faldón de 3 u en el borde tapa las grietas entre niveles. Color por la
+- **Suelo.** Teselas de 64 u a menos de `min(carga, 7·d)` u del héroe (d, la distancia de la cámara; carga, la distancia de carga del jugador,
+  320 u de serie: ver «Distancia de carga»); las más cercanas primero, dos por fotograma. Paso de 0,5 u a menos de 80 u, 1 u a menos de 160 y
+  2 u más allá (con menos carga, en proporción); un faldón de 3 u en el borde tapa las grietas entre niveles. Color por la
   clase de terreno según la altura (los umbrales del generador: agua 375 m, costa 420, colina 545, montaña 600, cima 685), roca en las laderas
   y sotobosque donde el artefacto tiene bosque.
 - **Niebla.** La rejilla de `proyeccion.exploracion` es una textura (rojo: explorado; verde: se ve ahora) que el sombreado del suelo mezcla con
@@ -258,6 +259,25 @@ celdas exploradas alguna vez: son geografía, y de lo no explorado no se sabe ni
 explorado, no por fotograma; las parcelas van en una pasada por estado y grado de densidad. Medido con las dos puestas, el pintado del modo
 mapa tarda lo mismo que sin ellas.
 
+## Distancia de carga (0.111.0)
+
+Pedido de Víctor del 2026-11-03: que el mundo no se cargue entero, sino hasta una distancia que se pueda ajustar. Está en el botón de capas del
+modo mundo, apartado «Vista»: un deslizador de 100 a 480 u, de 20 en 20, que se recuerda en el navegador (`bronzeage.distanciaCarga`). De serie,
+320 u, lo que se cargaba antes (`DISTANCIA_CARGA` en `mundo3d/config.ts`).
+
+- Lo que se construye llega hasta `min(carga, 7·d)`: suelo, paisaje, árboles y rayas como antes (estos tres, con sus topes de 200 y 240 u en
+  proporción a la carga). Y ahora también se limita lo que antes se construía en todo el mundo conocido: las maquetas (plazas, pueblos,
+  avanzadas, obras, campamentos, bandidos, alijos y batallas), las columnas y caravanas ajenas con sus rutas, y los nombres. Las maquetas se
+  cuentan desde el héroe redondeado a un octavo de la carga, para no rehacerlas a cada paso.
+- La bruma acaba donde acaba lo cargado (antes seguía hasta 7·d aunque el suelo acabase en 320 u, y alejado se veía el borde) y empieza a
+  `min(2,2·d, 0,4·alcance)`.
+- Con menos carga el suelo fino llega menos lejos: el paso de 0,5 u hasta `max(32, 80·k)` u y el de 1 u hasta `max(64, 160·k)` u, con
+  k = carga / 320.
+
+Medido en el banco (héroe solo, encuadre normal, a 30°): con 320 u, 0,93 M triángulos (0,54 M del suelo) y 11.800 árboles; con 160 u, 0,61 M y
+10.400; con 100 u, 0,47 M y 7.700. A esa inclinación la pantalla no llega más allá de unas 100 u, así que bajar la carga apenas cambia lo que se
+ve; con la cámara baja, la bruma se echa antes sobre el horizonte.
+
 ## Banco de pruebas
 
 `npm run mundo3d` abre `pruebas/mundo3d/` con el artefacto y el relieve que haya en `generador/salida/mundo/` del motor (el checkout hermano
@@ -280,5 +300,6 @@ Parámetros:
 - `?sinMaquetas` quita las maquetas de mentira;
 - `?acarreo=N` pone N carros de acarreo que van y vienen entre un pueblo cerca del héroe y una plaza a entre 40 y 220 u, para medir con muchas
   caravanas en marcha.
+- `?carga=N` fija la distancia de carga en N u.
 
 En desarrollo, el juego deja la vista en `window.__vista3d` y `?sinNiebla` la quita.

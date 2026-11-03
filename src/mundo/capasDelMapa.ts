@@ -1,7 +1,9 @@
 // Las capas del mapa que el jugador pone y quita (Víctor, 2026-11-03): los nombres de los nodos, en el modo mundo y en el modo mapa, y en el
-// modo mapa la fertilidad del suelo y las parcelas de bosque, estas dos solo sobre lo explorado alguna vez. Se recuerdan en este navegador.
+// modo mapa la fertilidad del suelo y las parcelas de bosque, estas dos solo sobre lo explorado alguna vez. También hasta dónde se carga el mundo
+// 3D. Se recuerdan en este navegador.
 // Aquí va lo que no pinta: qué capas hay puestas, qué se ha explorado y el color de cada fertilidad. Lo pinta `render.ts`.
 import type { RasterU8 } from '../terreno';
+import { DISTANCIA_CARGA } from '../mundo3d/config';
 import type { NieblaProyectada } from '../tiposDominio';
 
 export interface CapasDelMapa {
@@ -39,6 +41,30 @@ export function capasDelMapa(): Readonly<CapasDelMapa> {
 export function fijarCapa(nombre: keyof CapasDelMapa, si: boolean): void {
   capas = { ...capasDelMapa(), [nombre]: si };
   try { localStorage.setItem(CLAVE, JSON.stringify(capas)); } catch { /* sin almacenamiento */ }
+}
+
+const CLAVE_CARGA = 'bronzeage.distanciaCarga';
+let carga: number | null = null;
+
+/** Hasta dónde se carga el mundo 3D alrededor del héroe (u): el ajuste del jugador, dentro de `DISTANCIA_CARGA`, en pasos de `paso`. */
+export function distanciaDeCarga(): number {
+  if (carga === null) {
+    let guardada = Number.NaN;
+    try { guardada = Number(localStorage.getItem(CLAVE_CARGA) ?? Number.NaN); } catch { /* sin almacenamiento */ }
+    carga = Number.isFinite(guardada) ? ajustarCarga(guardada) : DISTANCIA_CARGA.porDefecto;
+  }
+  return carga;
+}
+
+/** Lleva `u` a un valor válido de la distancia de carga: dentro del rango y en su paso. */
+export function ajustarCarga(u: number): number {
+  const { min, max, paso } = DISTANCIA_CARGA;
+  return Math.min(max, Math.max(min, Math.round(u / paso) * paso));
+}
+
+export function fijarDistanciaDeCarga(u: number): void {
+  carga = ajustarCarga(u);
+  try { localStorage.setItem(CLAVE_CARGA, String(carga)); } catch { /* sin almacenamiento */ }
 }
 
 /** Lo explorado alguna vez, como pregunta por un punto (u). Sin niebla, todo. Se decodifica una vez por máscara. */

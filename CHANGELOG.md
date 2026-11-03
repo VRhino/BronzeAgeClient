@@ -3,6 +3,19 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.111.0] — 2026-11-03 · Distancia de carga del mundo, ajustable · sin cambio de contrato
+
+Petición de Víctor (2026-11-03): que el mundo no se cargue entero, sino hasta una distancia que sea un valor de configuración.
+
+- **Distancia de carga** en el botón de capas del modo mundo, apartado «Vista»: un deslizador de 100 a 480 u que se recuerda en el navegador.
+  De serie, 320 u, lo que se cargaba antes.
+- Hasta ahí se construyen el suelo, el paisaje, los árboles y las rayas, como antes, y ahora también las maquetas (plazas, pueblos, avanzadas,
+  campamentos…), las columnas y caravanas ajenas con sus rutas y los nombres, que antes se ponían en todo el mundo conocido.
+- La bruma acaba justo donde acaba lo cargado: alejado ya no se ve el borde del suelo.
+- Con menos carga, el suelo fino llega menos lejos. En el banco, con el héroe solo: 0,93 M triángulos y 11.800 árboles con 320 u; 0,61 M y
+  10.400 con 160 u; 0,47 M y 7.700 con 100 u. Con la cámara a 30° apenas cambia lo que se ve.
+- El banco del mundo 3D acepta `?carga=N`.
+
 ## [0.110.0] — 2026-11-03 · Construcción en un cajón bajo la barra, mejorar en la ficha y solo lo que se puede hacer · sin cambio de contrato
 
 Peticiones de Víctor (2026-11-03, 12:55), con la premisa «si no lo puedo hacer, para qué lo muestro»:

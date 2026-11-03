@@ -33,6 +33,10 @@ export const MUNDO3D = {
   cielo: { cenit: 0x3d72b0, horizonte: 0xb7c6cf, bajoHorizonte: 0x8e9a98 },
 } as const;
 
+/** Hasta dónde se carga el mundo alrededor del héroe (u), un ajuste del jugador (botón de capas; Víctor, 2026-11-03). Más allá no se construye
+ * suelo, árboles, maquetas, columnas ni nombres, y la bruma acaba justo ahí. 320 es lo que se cargaba antes de haber ajuste. */
+export const DISTANCIA_CARGA = { min: 100, max: 480, paso: 20, porDefecto: 320 } as const;
+
 /** El zoom de cerca (Víctor, 2026-11-02): además del normal y el alejado, uno que enseña 0,6 veces lo del normal. */
 export const ACERCADO = 0.6;
 

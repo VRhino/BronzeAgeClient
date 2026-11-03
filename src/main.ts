@@ -46,7 +46,7 @@ import { pintarVentanaSalida, reiniciarVentanaSalida, type LugarDeSalida } from 
 import { elegirPestanaHeroe, minutosHerido, pintarPanelHeroe } from './ui/panelHeroe';
 import { htmlBarraJugador, type PanelJugador } from './ui/barraJugador';
 import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno, type CapasTematicas } from './render';
-import { capasDelMapa, type CapasDelMapa } from './mundo/capasDelMapa';
+import { capasDelMapa, distanciaDeCarga, type CapasDelMapa } from './mundo/capasDelMapa';
 import { cablearCapas, htmlCapas } from './ui/capasMapa';
 import { RECURSO_NOMBRE } from './paletas';
 import type { Alijo, Asentamiento, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, EscenaCampamento, Faccion, ParamsCrearHeroe, PuebloDeMapa, Sigilo } from './tiposDominio';
@@ -1653,8 +1653,9 @@ function alternarVistaMapa(abrir: boolean = !vistaMapaAbierta, centro?: { x: num
 }
 
 /** Las capas puestas o quitadas (botón de capas, en el modo mundo o en el mapa): las casillas de las dos pantallas dicen lo mismo, la vista 3D
- * pone o quita los nombres de los nodos y el modo mapa se repinta. */
-function aplicarCapas(c: Readonly<CapasDelMapa>): void {
+ * pone o quita los nombres de los nodos y toma la distancia de carga, y el modo mapa se repinta. */
+function aplicarCapas(): void {
+  const c = capasDelMapa();
   document.querySelectorAll<HTMLInputElement>('.mapa-capas [data-capa]').forEach((casilla) => {
     const capa = casilla.dataset.capa as keyof CapasDelMapa;
     casilla.checked = c[capa];
@@ -1662,6 +1663,7 @@ function aplicarCapas(c: Readonly<CapasDelMapa>): void {
     if (leyenda) leyenda.hidden = !c[capa];
   });
   vista3dActiva?.fijarNombresDeNodos(c.nombresDeNodos);
+  vista3dActiva?.fijarDistanciaDeCarga(distanciaDeCarga());
   if (vistaMapaAbierta) void pintarVistaMapa();
 }
 
@@ -1928,7 +1930,7 @@ function montarMapa(): void {
   // y selección. Se monta cuando están el mapa y el relieve.
   let vista3d: VistaMundo3D | null = null, desmontado = false;
   enModoMundo = true;
-  listoDeLaVista = montarVista3D(lienzo, alClicar).then((v) => { if (desmontado) v?.destruir(); else { vista3d = vista3dActiva = v; aplicarRejilla(); v?.fijarNombresDeNodos(capasDelMapa().nombresDeNodos); } });
+  listoDeLaVista = montarVista3D(lienzo, alClicar).then((v) => { if (desmontado) v?.destruir(); else { vista3d = vista3dActiva = v; aplicarRejilla(); aplicarCapas(); } });
   // El mundo solo avanza por tick y este cliente aún no tiene tiempo real (`WS .../tiempo-real`): sin esto el
   // mapa sería una foto y la columna nunca parecería moverse. Sondeo suave mientras la pantalla Mapa esté
   // montada; se corta al cambiar de pantalla (`limpiarPantalla`).
