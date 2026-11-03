@@ -359,7 +359,7 @@ sombreado (en cada fotograma solo cambia el reloj; el JS del fotograma no cambia
   lo que se ve ahora) no las lleva.
 - **Viento en las copas.** Las copas de los árboles se mecen un poco, más arriba que abajo y cada árbol a su ritmo; el tronco no
   (`especies.ts`). La hierba, las flores y los juncos ya se mecían (0.118.0).
-- **Humo** (`vida.ts`). Columnas de bocanadas grises que suben 3 u en 10 s, crecen, se las lleva el viento y se deshacen: en las plazas que
+- **Humo** (`vida.ts`). Columnas de bocanadas grises (bolas de borde desvaído) que suben 3 u en 10 s, crecen, se las lleva el viento y se deshacen: en las plazas que
   se ven (de 2 a 4 columnas según el nivel, dentro de la ciudad), en cada pueblo, en las avanzadas en pie desde el fuerte y en el fuego de
   los campamentos de mercenarios y de bandidos. Cada columna en un sitio fijo del asentamiento.
 - **Pájaros** (`vida.ts`). Bandadas de 3 a 7 que dan vueltas de 4 a 11 u de radio a unas 4 u sobre el suelo, unos detrás de otros, a ratos

@@ -68,7 +68,7 @@ export class Vida {
   private readonly tiempo = { value: 0 };
   private readonly matHumo: THREE.MeshLambertMaterial;
   private readonly matAves: THREE.MeshBasicMaterial;
-  private readonly geoHumo = new THREE.IcosahedronGeometry(0.5, 0);
+  private readonly geoHumo = new THREE.IcosahedronGeometry(0.5, 1);
   private readonly geoAve = pajaro();
   private humo: THREE.InstancedMesh | null = null;
   private aves: THREE.InstancedMesh | null = null;
@@ -78,7 +78,12 @@ export class Vida {
 
   constructor(niebla: NieblaDeGuerra, private readonly alturaU: (x: number, y: number) => number) {
     const tiempo = this.tiempo;
-    this.matHumo = new THREE.MeshLambertMaterial({ color: new THREE.Color().setRGB(0.78, 0.79, 0.8, THREE.SRGBColorSpace), transparent: true, depthWrite: false });
+    this.matHumo = new THREE.MeshLambertMaterial({
+      color: new THREE.Color().setRGB(0.74, 0.75, 0.76, THREE.SRGBColorSpace),
+      emissive: new THREE.Color().setRGB(0.3, 0.3, 0.3, THREE.SRGBColorSpace),
+      transparent: true,
+      depthWrite: false,
+    });
     this.matHumo.onBeforeCompile = (sh) => {
       sh.uniforms.uTiempo = tiempo;
       const [vx, vz] = HUMO.viento;
@@ -90,7 +95,9 @@ export class Vida {
           vHumo = t;
         }`);
       sh.fragmentShader = 'varying float vHumo;\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
-        diffuseColor.a *= 0.8 * smoothstep(0.0, 0.1, vHumo) * (1.0 - vHumo) * (1.0 - vHumo * 0.5);`);
+        diffuseColor.a *= 0.8 * smoothstep(0.0, 0.1, vHumo) * (1.0 - vHumo) * (1.0 - vHumo * 0.5);`).replace('#include <opaque_fragment>', `#include <opaque_fragment>
+        // el borde de cada bocanada, desvaído: una bola de humo, no una piedra
+        gl_FragColor.a *= pow(abs(dot(normalize(normal), normalize(vViewPosition))), 1.5);`);
       niebla.parchear(sh);
     };
     this.matHumo.customProgramCacheKey = () => 'humo';
