@@ -1,6 +1,7 @@
 // Lo que pinta el mundo 3D, sacado de la proyección del jugador: las columnas y caravanas, lo que hay en el mundo (con el lado de la niebla de
 // cada capa, como en `render.ts`), las Miradas, los nombres, lo seleccionado y la vista previa de fundar. La vista no lee la proyección
 // directamente: así se prueba sola (y el banco de pruebas de `pruebas/mundo3d/` le da un estado de mentira).
+import { caravanaEnElMapa } from '../mundo/caravanas';
 import type { ProyeccionJugador } from '../apiCliente';
 import type { SitiosDeAldea } from '../mundo/fertilidad';
 import { faccionColor } from '../paletas';
@@ -158,6 +159,16 @@ export interface ExtraDeVista {
 
 /** El estado de la vista para la proyección `p` (la del instante, con las columnas ya movidas). `dondeEsta` es el sitio del héroe cuando no va
  * en una columna en el mapa (dentro de una plaza o de un campamento). */
+/** ¿Anda algo de lo que se ve? Las columnas y caravanas propias con ruta y las ajenas que van por su plan (`enMarcha`). Mientras algo anda, la
+ * vista se rehace con la proyección del instante y no solo cuando llega una del servidor: sin las ajenas, con tu columna parada, las demás iban
+ * a saltos (una vez por cambio del servidor; Víctor lo vio con 40-50 héroes en marcha, 2026-11-03). */
+export function algoSeMueve(p: ProyeccionJugador): boolean {
+  return p.ejercitos.some((e) => e.estado !== 'estacionado' && (e.ruta?.length ?? 0) >= 2)
+    || (p.caravanas ?? []).some((c) => (c.ruta?.length ?? 0) >= 2)
+    || (p.ejercitosAvistados ?? []).some((e) => e.enMarcha)
+    || (p.caravanasAvistadas ?? []).some((c) => c.enMarcha);
+}
+
 export function estadoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVista, dondeEsta: Punto | null, extra: ExtraDeVista = {}): EstadoVista {
   const radios = reglas.vision;
   const color = (faccionId: string | null | undefined) => (faccionId ? faccionColor(faccionId, p.facciones) : COLOR_SIN_FACCION);
@@ -208,10 +219,11 @@ export function estadoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVist
       color: color(a.faccionId), carros: { carga: Math.min(2, a.caravanasAdjuntasIds.length), fundacion: !!a.caravanaFundacionId }, formacion: !!a.enFormacion,
     });
   }
-  // las caravanas sueltas: las enganchadas (propias o ajenas) van con su columna y la de fundación que espera dentro de su plaza no está en el mapa
+  // las caravanas sueltas: las enganchadas (propias o ajenas) van con su columna, y las que esperan dentro (en su plaza, su pueblo o una parada)
+  // no están en el mapa (`caravanaEnElMapa`)
   const adjuntas = new Set([...p.ejercitos, ...(p.ejercitosAvistados ?? [])].flatMap((e) => [...(e.caravanasAdjuntasIds ?? []), ...(e.caravanaFundacionId ? [e.caravanaFundacionId] : [])]));
   const caravanas: CaravanaEnVista[] = (p.caravanas ?? [])
-    .filter((c) => !adjuntas.has(c.id) && c.estado !== 'adjunta' && !(c.tipo === 'construccion' && c.estado === 'disponible'))
+    .filter((c) => !adjuntas.has(c.id) && caravanaEnElMapa(c))
     .map((c) => {
       const fundacion = c.tipo === 'construccion', escolta = Math.min(MAX_ESCOLTA, c.escoltaIds?.length ?? 0);
       const animales = fundacion ? [] : animalesDe(c, MAX_CARROS_CARAVANA);

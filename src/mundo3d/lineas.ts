@@ -31,6 +31,78 @@ export function aro(centro: Punto, r: number, alturaU: (x: number, y: number) =>
   return new THREE.Line(new THREE.BufferGeometry().setFromPoints(pegarAlSuelo(pts, alturaU, Math.max(0.1, r / 20), dy)), material);
 }
 
+/**
+ * La ruta de una columna o una caravana pegada al suelo, que se va acortando por delante según anda. El trazado se muestrea una vez (cada 0,5 u,
+ * con su altura) y, mientras lo que queda por andar sea el final de lo muestreado, solo cambia desde qué muestra se dibuja (`drawRange`) y el
+ * tramo corto de la cabeza al siguiente vértice. Antes se volvían a muestrear todas las rutas cada vez que cualquier cabeza avanzaba 0,1 u: con
+ * muchas caravanas en marcha (los carros de acarreo) era casi en cada fotograma.
+ */
+export class RutaEnSuelo {
+  readonly grupo = new THREE.Group();
+  private vertices: Punto[] = [];
+  /** Dónde empieza cada vértice en las muestras de `linea`. */
+  private inicioDe: number[] = [];
+  private readonly linea: THREE.Line;
+  private readonly cabeza: THREE.Line;
+  private claveCabeza = '';
+
+  constructor(private readonly material: THREE.LineBasicMaterial, private readonly alturaU: (x: number, y: number) => number, private readonly dy = 0.12) {
+    this.linea = new THREE.Line(new THREE.BufferGeometry(), material);
+    this.cabeza = new THREE.Line(new THREE.BufferGeometry(), material);
+    this.linea.frustumCulled = false; // el `drawRange` cambia y la esfera de la geometría entera no
+    this.grupo.add(this.linea, this.cabeza);
+  }
+
+  /** `ruta`: la cabeza y lo que le queda por andar (como la da la proyección). */
+  fijar(ruta: readonly Punto[]): void {
+    const resto = ruta.slice(1), cabeza = ruta[0];
+    if (!cabeza || !resto.length) { this.grupo.visible = false; return; }
+    this.grupo.visible = true;
+    let desde = this.vertices.length - resto.length;
+    if (desde < 0 || !mismosPuntos(this.vertices, resto, desde)) {
+      this.construir(resto);
+      desde = 0;
+    }
+    const inicio = this.inicioDe[desde] ?? 0, total = this.linea.geometry.getAttribute('position')?.count ?? 0;
+    this.linea.geometry.setDrawRange(inicio, Math.max(0, total - inicio));
+    // de la cabeza al siguiente vértice: corto (≤ 4 u en la red del servidor), se rehace cuando la cabeza avanza 0,05 u
+    const sig = resto[0]!, clave = `${cabeza.x.toFixed(2)},${cabeza.y.toFixed(2)}>${sig.x},${sig.y}`;
+    if (clave !== this.claveCabeza) {
+      this.claveCabeza = clave;
+      const pts = pegarAlSuelo([cabeza, sig], this.alturaU, 0.5, this.dy);
+      this.cabeza.geometry.dispose();
+      this.cabeza.geometry = new THREE.BufferGeometry().setFromPoints(pts);
+      if (this.material instanceof THREE.LineDashedMaterial) this.cabeza.computeLineDistances();
+    }
+  }
+
+  private construir(vertices: readonly Punto[]): void {
+    this.vertices = vertices.map((p) => ({ x: p.x, y: p.y }));
+    this.inicioDe = [];
+    const pts: THREE.Vector3[] = [];
+    for (let k = 0; k < vertices.length; k++) {
+      pts.push(...(k ? pegarAlSuelo([vertices[k - 1]!, vertices[k]!], this.alturaU, 0.5, this.dy).slice(1) : pegarAlSuelo([vertices[0]!], this.alturaU, 0.5, this.dy)));
+      this.inicioDe.push(pts.length - 1);
+    }
+    this.linea.geometry.dispose();
+    this.linea.geometry = new THREE.BufferGeometry().setFromPoints(pts);
+    if (this.material instanceof THREE.LineDashedMaterial) this.linea.computeLineDistances();
+  }
+
+  destruir(): void {
+    this.linea.geometry.dispose();
+    this.cabeza.geometry.dispose();
+    this.grupo.removeFromParent();
+  }
+}
+
+/** ¿Es `b` igual a `a` desde `desde`? */
+function mismosPuntos(a: readonly Punto[], b: readonly Punto[], desde: number): boolean {
+  if (a.length - desde !== b.length) return false;
+  for (let k = 0; k < b.length; k++) if (a[desde + k]!.x !== b[k]!.x || a[desde + k]!.y !== b[k]!.y) return false;
+  return true;
+}
+
 /** Lo que queda por andar de una ruta: desde el tramo más cercano a `donde` hasta el final. */
 export function rutaPendiente(ruta: readonly Punto[], donde: Punto): Punto[] {
   if (ruta.length < 2) return [];

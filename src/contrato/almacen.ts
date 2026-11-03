@@ -92,7 +92,10 @@ export function identidad(c: Cuerpo): [TipoEntidad, string] {
   }
 }
 
-/** Todos los ámbitos del cliente, por su clave `TIPO:id`, y los hechos que le llegaron (con el ámbito por el que llegaron). */
+/** Cuántos hechos se guardan, como mucho (los últimos). */
+const MAX_HECHOS = 500;
+
+/** Todos los ámbitos del cliente, por su clave `TIPO:id`, y los últimos hechos que le llegaron (con el ámbito por el que llegaron). */
 export class Almacen {
   readonly ambitos = new Map<string, Ambito>();
   readonly hechos: { ambito: string; evento: EventoDominio }[] = [];
@@ -154,6 +157,8 @@ export class Almacen {
     }
     a.version = d.hasta;
     for (const evento of d.eventos) this.hechos.push({ ambito: k, evento });
+    // Solo los últimos: guardarlos todos hacía crecer la memoria sin parar en una sesión larga con mucho movimiento.
+    if (this.hechos.length > MAX_HECHOS) this.hechos.splice(0, this.hechos.length - MAX_HECHOS);
     return k;
   }
 

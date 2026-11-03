@@ -89,7 +89,7 @@ import { cablearCargos } from './ui/panelCargos';
 import { cablearDiplomacia } from './ui/panelDiplomacia';
 import { instalarZoomPan, type ControlMapa } from './ui/pantallaMapa';
 import { agarre, fijarEscalaDeAgarre } from './ui/agarre';
-import { estadoDesdeProyeccion, type EstadoVista, type FundacionEnVista, type RadiosDeVision } from './mundo3d/estado';
+import { algoSeMueve, estadoDesdeProyeccion, type EstadoVista, type FundacionEnVista, type RadiosDeVision } from './mundo3d/estado';
 import { fuenteDesdeMapa, fuenteDesdeRelieve } from './mundo3d/fuente';
 import { VistaMundo3D } from './mundo3d/vista';
 import { navegacionDesdeGrafo, type Navegacion } from './mundo3d/rejilla';
@@ -1117,14 +1117,14 @@ let estado3d: { p: ProyeccionJugador; clave: string; en: number; estado: EstadoV
  * sin saltos (rehacerla cuesta ~1 ms). */
 const CADA_PROYECCION_MS = 15;
 
-/** El estado que pinta la vista 3D en cada fotograma. Mientras algo propio marcha (las columnas y caravanas avanzan por su plan sin que el
- * servidor mande nada), la proyección del instante, como mucho cada `CADA_PROYECCION_MS`; si no, la última que llegó. Si no cambió nada, el
+/** El estado que pinta la vista 3D en cada fotograma. Mientras algo marcha, propio o ajeno (`algoSeMueve`: las columnas y caravanas avanzan
+ * por su plan sin que el servidor mande nada), la proyección del instante, como mucho cada `CADA_PROYECCION_MS`; si no, la última que llegó. Si no cambió nada, el
  * mismo estado de antes. */
 function estadoDeLaVista3D(): EstadoVista | null {
   const base = estadoCliente.proyeccionUltima;
   if (!base) return null;
   const ahora = performance.now();
-  const marcha = base.ejercitos.some((e) => e.estado !== 'estacionado' && (e.ruta?.length ?? 0) >= 2) || base.caravanas.some((c) => (c.ruta?.length ?? 0) >= 2);
+  const marcha = algoSeMueve(base);
   const fundacion = fundacionEnVista();
   const reglas = { vision: radiosDeVision, radioZonaInicial: radioZonaInicial(), radioProteccion: radioDeProteccionMercenarios() };
   const clave = `${claveSeleccion()}|${fundacion3d.clave}|${reglas.vision.solo},${reglas.vision.ejercito},${reglas.radioZonaInicial},${reglas.radioProteccion}`;
@@ -1804,9 +1804,7 @@ function montarMapa(): void {
     if (!vistaMapaAbierta || estadoCliente.modoVista !== 'mundo') return;
     const p = proyeccionAlInstante();
     if (!p) return;
-    const marchaPropia = p.ejercitos.some((e) => e.estado !== 'estacionado' && (e.ruta?.length ?? 0) >= 2) || p.caravanas.some((c) => (c.ruta?.length ?? 0) >= 2);
-    const ajenoALaVista = (p.ejercitosAvistados?.length ?? 0) + (p.caravanasAvistadas?.length ?? 0) > 0;
-    if (!marchaPropia && !ajenoALaVista) return;
+    if (!algoSeMueve(p)) return;
     // El modo mapa ya se repinta al mover la cámara y con cada sondeo: aquí solo mientras algo marcha, y a ~4 fps (a esa escala no se nota más).
     if (t - ultimoFotograma < 250) return;
     ultimoFotograma = t;
@@ -2946,8 +2944,13 @@ function canalesDe(p: ProyeccionJugador): string[] {
  * eventos llegan en ráfagas (un tick narra varios), así que se agrupan en un solo refresco. */
 let refrescoPorEvento: ReturnType<typeof setTimeout> | undefined;
 function alEventoDelServidor(): void {
-  clearTimeout(refrescoPorEvento);
-  refrescoPorEvento = setTimeout(() => { if (estadoCliente.usuarioActivo) void refrescarDatosJuego().catch(() => {}); }, 250);
+  // Un refresco a los 250 ms del primer cambio, y los que lleguen mientras tanto entran en él. Antes cada cambio volvía a esperar 250 ms: con
+  // muchos héroes en marcha los cambios llegan seguidos y el refresco se iba retrasando sin llegar nunca.
+  if (refrescoPorEvento !== undefined) return;
+  refrescoPorEvento = setTimeout(() => {
+    refrescoPorEvento = undefined;
+    if (estadoCliente.usuarioActivo) void refrescarDatosJuego().catch(() => {});
+  }, 250);
 }
 
 /** La partida se abrió en otra pestaña con la misma cuenta: el servidor admite una sola sesión por cuenta y cerró esta. Se queda quieta (si se

@@ -15,7 +15,7 @@ import { RejillaDeMovimiento, type Navegacion } from './rejilla';
 import { FigurasDeColumna, type TropaDeColumna } from './figuras';
 import type { FuenteDeAltura } from './fuente';
 import { Arboles } from './arboles';
-import { aro, cinta, circulo, linea, rutaPendiente } from './lineas';
+import { aro, cinta, circulo, rutaPendiente, RutaEnSuelo } from './lineas';
 import { Maquetas } from './maquetas';
 import { MarcasEnSuelo } from './marcas';
 import { NieblaDeGuerra } from './niebla';
@@ -83,7 +83,12 @@ export class VistaMundo3D {
   private nodos: { clave: string; lista: EtiquetaEnVista[] } = { clave: '', lista: [] };
   private readonly matMira = new THREE.MeshBasicMaterial({ color: 0xf1e6c8, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -5 });
   private readonly observador: ResizeObserver;
-  private claveLineas = '';
+  /** La ruta de cada columna y caravana con su material (`id|material`), la mira bajo tu columna y el aro de tu destino, con lo que los hizo. */
+  private readonly rutas = new Map<string, RutaEnSuelo>();
+  private mira: THREE.Mesh | null = null;
+  private claveMira = '';
+  private destino: THREE.Line | null = null;
+  private claveDestino = '';
   private fotograma = 0;
   private antes = performance.now();
   private pausada = false;
@@ -285,7 +290,7 @@ export class VistaMundo3D {
     this.faltan.arboles = this.arboles.actualizar(x, y, Math.min(alcance, ALCANCE.arboles), hasta);
     t = this.medir('arboles', t);
     this.ponerColumnas(estado.columnas, estado.caravanas);
-    this.ponerLineas(estado.columnas, estado.caravanas);
+    this.ponerLineas(estado.columnas, estado.caravanas, estado.heroe, Math.min(alcance, ALCANCE.trazos));
     this.marcas.actualizar(estado, ahora);
     this.rejilla.actualizar(x, y);
     t = this.medir('columnasYMarcas', t);
@@ -330,28 +335,46 @@ export class VistaMundo3D {
   }
 
   /** Bajo la columna del jugador, un aro en el suelo (la mira del 2D: entre los árboles se pierde), su ruta y el aro de su destino; las demás
-   * de la Facción y las caravanas propias, su rastro discontinuo. Se rehacen cuando una cabeza avanza un poco o cambia una ruta. */
-  private ponerLineas(lista: readonly ColumnaEnVista[], caravanas: readonly CaravanaEnVista[]): void {
-    const conRuta = [...lista.filter((c) => c.propia), ...caravanas.filter((c) => c.ruta.length >= 2)];
-    const clave = conRuta.map((c) => `${c.id}:${c.posicion.x.toFixed(1)},${c.posicion.y.toFixed(1)}:${c.ruta.length}:${c.ruta.length ? `${c.ruta[c.ruta.length - 1]!.x},${c.ruta[c.ruta.length - 1]!.y}` : ''}`).join('|');
-    if (clave === this.claveLineas) return;
-    this.claveLineas = clave;
-    for (const l of [...this.lineas.children]) { this.lineas.remove(l); (l as THREE.Line).geometry.dispose(); }
+   * de la Facción y las caravanas propias, su rastro discontinuo. Cada ruta se muestrea una vez y se va acortando por delante (`RutaEnSuelo`);
+   * la mira se rehace cuando la columna avanza un poco y el aro, cuando cambia el destino. Las rutas de lo que está más allá de lo que se
+   * carga no se pintan (la bruma las tapa). */
+  private ponerLineas(lista: readonly ColumnaEnVista[], caravanas: readonly CaravanaEnVista[], heroe: Punto, alcance: number): void {
+    const vivas = new Set<string>();
+    const ruta = (id: string, puntos: readonly Punto[], posicion: Punto, material: THREE.LineBasicMaterial): void => {
+      if (puntos.length < 2 || Math.hypot(posicion.x - heroe.x, posicion.y - heroe.y) > alcance) return;
+      const pendiente = rutaPendiente(puntos, posicion);
+      if (pendiente.length < 2) return;
+      const clave = `${id}|${material.uuid}`;
+      vivas.add(clave);
+      let r = this.rutas.get(clave);
+      if (!r) { r = new RutaEnSuelo(material, this.alturaU); this.rutas.set(clave, r); this.lineas.add(r.grupo); }
+      r.fijar(pendiente);
+    };
+    let mira: Punto | null = null, destino: Punto | null = null;
     for (const c of lista) {
       if (!c.propia) continue;
-      if (c.mia) {
-        const mira = cinta(circulo(c.posicion, 0.45, 32), this.alturaU, 0.05, { dy: 0.06, paso: 0.1 });
-        if (mira) this.lineas.add(new THREE.Mesh(mira, this.matMira));
-      }
-      if (c.ruta.length < 2) continue;
-      const pendiente = rutaPendiente(c.ruta, c.posicion);
-      if (pendiente.length >= 2) this.lineas.add(linea(pendiente, this.alturaU, c.mia ? this.matRutaMia : this.matRutaFaccion).computeLineDistances());
-      if (c.mia) this.lineas.add(aro(c.ruta[c.ruta.length - 1]!, 0.5, this.alturaU, this.matRuta));
+      if (c.mia) { mira = c.posicion; if (c.ruta.length >= 2) destino = c.ruta[c.ruta.length - 1]!; }
+      ruta(c.id, c.ruta, c.posicion, c.mia ? this.matRutaMia : this.matRutaFaccion);
     }
-    for (const c of caravanas) {
-      if (c.ruta.length < 2) continue;
-      const pendiente = rutaPendiente(c.ruta, c.posicion);
-      if (pendiente.length >= 2) this.lineas.add(linea(pendiente, this.alturaU, this.matRutaCaravana).computeLineDistances());
+    for (const c of caravanas) ruta(`caravana:${c.id}`, c.ruta, c.posicion, this.matRutaCaravana);
+    for (const [clave, r] of this.rutas) if (!vivas.has(clave)) { r.destruir(); this.rutas.delete(clave); }
+    // la mira bajo tu columna y el aro de tu destino
+    const claveMira = mira ? `${mira.x.toFixed(1)},${mira.y.toFixed(1)}` : '';
+    if (claveMira !== this.claveMira) {
+      this.claveMira = claveMira;
+      this.mira?.geometry.dispose();
+      this.mira?.removeFromParent();
+      const g = mira ? cinta(circulo(mira, 0.45, 32), this.alturaU, 0.05, { dy: 0.06, paso: 0.1 }) : null;
+      this.mira = g ? new THREE.Mesh(g, this.matMira) : null;
+      if (this.mira) this.lineas.add(this.mira);
+    }
+    const claveDestino = destino ? `${destino.x},${destino.y}` : '';
+    if (claveDestino !== this.claveDestino) {
+      this.claveDestino = claveDestino;
+      this.destino?.geometry.dispose();
+      this.destino?.removeFromParent();
+      this.destino = destino ? aro(destino, 0.5, this.alturaU, this.matRuta) : null;
+      if (this.destino) this.lineas.add(this.destino);
     }
   }
 
@@ -376,7 +399,9 @@ export class VistaMundo3D {
     this.observador.disconnect();
     this.entrada.destruir();
     for (const f of this.columnas.values()) f.figuras.destruir();
-    for (const l of this.lineas.children) (l as THREE.Line).geometry.dispose();
+    for (const r of this.rutas.values()) r.destruir();
+    this.mira?.geometry.dispose();
+    this.destino?.geometry.dispose();
     this.matRuta.dispose();
     this.matRutaMia.dispose();
     this.matRutaFaccion.dispose();

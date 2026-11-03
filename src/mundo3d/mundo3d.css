@@ -9,7 +9,9 @@
 
 .mundo3d-etiqueta {
   position: absolute;
-  transform: translate(-50%, -100%);
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -100%); /* la posición la pone `etiquetas.ts` delante, en el mismo transform */
   padding: 2px 7px;
   border: 1px solid rgba(244, 234, 210, 0.18);
   border-radius: 4px;

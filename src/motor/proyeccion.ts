@@ -57,6 +57,13 @@ export function evaluarPlan(plan: pb.Ejercito['plan'], posicion: Punto | undefin
   return { posicion: punto(v[v.length - 1]!.p), ruta: [] };
 }
 
+/** La posición de algo ajeno en el instante y, si aún anda su plan, `enMarcha` (sin su ruta, que no se enseña): así la vista sabe que tiene que
+ * recolocarlo en cada fotograma y no solo cuando el servidor manda algo (con 40-50 héroes en marcha iban a saltos, Víctor 2026-11-03). */
+function enPlan(plan: pb.Ejercito['plan'], posicion: Punto | undefined, ahora: number): { posicionActual: d.Point; enMarcha?: true } {
+  const { posicion: posicionActual, ruta } = evaluarPlan(plan, posicion, ahora);
+  return ruta.length ? { posicionActual, enMarcha: true } : { posicionActual };
+}
+
 function hex(b: Uint8Array): string {
   let s = '';
   for (let i = 0; i < b.length; i++) s += (b[i]! < 16 ? '0' : '') + b[i]!.toString(16);
@@ -633,11 +640,11 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
     }),
     ejercitosAvistados: ejercitosAjenos.map((e) => ({
       id: e.id, tipo: e.tipo === pb.TipoColumna.COLUMNA_EJERCITO ? 'ejercito' : 'personal', enFormacion: e.formacionExpiraEnMs !== undefined ? true : undefined,
-      faccionId: e.faccionId, posicionActual: evaluarPlan(e.plan, e.posicion, ahora).posicion, participantes: e.participantes.length,
+      faccionId: e.faccionId, ...enPlan(e.plan, e.posicion, ahora), participantes: e.participantes.length,
       heroeIds: e.participantes.map((p) => p.heroeId), teSigue: e.teSigue ? true : undefined,
       caravanaFundacionId: opcional(e.caravanaFundacionId), caravanasAdjuntasIds: [...e.caravanasAdjuntasIds],
     })),
-    caravanasAvistadas: caravanasAjenas.map((x) => ({ id: x.id, posicionActual: evaluarPlan(x.plan, x.posicion, ahora).posicion, faccionId: x.faccionId, escoltada: x.escoltada, recursos: x.recursosAvistados })),
+    caravanasAvistadas: caravanasAjenas.map((x) => ({ id: x.id, ...enPlan(x.plan, x.posicion, ahora), faccionId: x.faccionId, escoltada: x.escoltada, recursos: x.recursosAvistados })),
     // Lo que sacó tu héroe de mirar de cerca (`inspeccionar`): viaja en HEROE y vale 10 minutos.
     informesDeInspeccion: deAmbito('HEROE:', 'informeInspeccion').map((i): d.InformeDeInspeccion => {
       const tipo: d.InformeDeInspeccion['objetivo']['tipo'] = i.objetivoId.startsWith('as-') ? 'asentamiento' : i.objetivoId.startsWith('car-') ? 'caravana' : 'ejercito';

@@ -1,4 +1,5 @@
 import { contornosBosques, evaluarBioma, type MapaGenerado } from './terreno';
+import { caravanaEnElMapa } from './mundo/caravanas';
 import { radioDeProteccionMercenarios, radioZonaInicial, type ProyeccionJugador } from './apiCliente';
 import type { Asentamiento, Sigilo, Edificio, MiradaIntel, NieblaProyectada, Point, RectanguloLocal, TrazadoAsentamiento, TrazadoMuralla } from './tiposDominio';
 import {
@@ -832,7 +833,7 @@ export function pintarTerreno(
   ctx.lineWidth = anchoRuta;
   ctx.setLineDash(trazoRuta);
   for (const caravana of proyeccion.caravanas || []) {
-    if (!caravana.ruta || caravana.ruta.length < 2) continue;
+    if (!caravana.ruta || caravana.ruta.length < 2 || !caravanaEnElMapa(caravana)) continue;
     ctx.beginPath();
     caravana.ruta.forEach((p, i) => {
       const x = p.x * escalaCanvas;
@@ -849,11 +850,10 @@ export function pintarTerreno(
   dibujarPueblosYObras(ctx, proyeccion, escalaCanvas, k);
 
   // 14. CARAVANAS (Triángulos identificables por color de origen). Las enganchadas a un ejército van pegadas detrás de él (16); la de
-  // fundación suelta, con su carromato. La de fundación que espera dentro de su plaza o campamento (`disponible`) no está en el mapa.
+  // fundación suelta, con su carromato. Las que esperan dentro de su plaza, su pueblo o una parada no están en el mapa (`caravanaEnElMapa`).
   const adjuntas = new Set((proyeccion.ejercitos || []).flatMap((e) => [...(e.caravanasAdjuntasIds ?? []), ...(e.caravanaFundacionId ? [e.caravanaFundacionId] : [])]));
   for (const caravana of proyeccion.caravanas || []) {
-    if (adjuntas.has(caravana.id) || caravana.estado === 'adjunta') continue;
-    if (caravana.tipo === 'construccion' && caravana.estado === 'disponible') continue;
+    if (adjuntas.has(caravana.id) || !caravanaEnElMapa(caravana)) continue;
     const x = caravana.posicionActual.x * escalaCanvas;
     const y = caravana.posicionActual.y * escalaCanvas;
 

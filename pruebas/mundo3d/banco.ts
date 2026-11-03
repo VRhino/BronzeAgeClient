@@ -4,7 +4,8 @@
 // partida: una plaza propia con su zona, sus pueblos, avanzadas y obras, una plaza ajena que se ve y otra que se recuerda, caminos, una columna
 // ajena en formación, caravanas, bandidos, un alijo, una batalla y dos Miradas. Un clic cerca de algo lo selecciona (como en el juego); en el
 // suelo, la columna va allí. «Fundar aquí» enciende la vista previa de fundar alrededor del héroe.
-// `?x=…&y=…` pone el héroe en otro sitio; `?raster` usa el raster de 4 u del artefacto en vez del relieve; `?sinMaquetas` quita lo de mentira.
+// `?x=…&y=…` pone el héroe en otro sitio; `?raster` usa el raster de 4 u del artefacto en vez del relieve; `?sinMaquetas` quita lo de mentira;
+// `?acarreo=N` pone N carros de acarreo en marcha (para medir el mundo con muchas caravanas andando).
 import { fromBinary } from '@bufbuild/protobuf';
 import { ArtefactoDeMundoSchema, PaqueteRelieveSchema } from '../../src/contrato/gen/bronzeage/v1/world_pb';
 import { mapaDesdeArtefacto } from '../../src/mundo/artefacto';
@@ -26,6 +27,7 @@ async function bajar(ruta: string): Promise<Uint8Array> {
 }
 
 const VELOCIDAD = 0.5; // u por segundo (30 u/min)
+const VELOCIDAD_ACARREO = 0.4; // u por segundo (24 u/min, el buey)
 const CELDA = 5; // la rejilla de exploración del servidor
 
 async function arrancar(): Promise<void> {
@@ -63,6 +65,8 @@ async function arrancar(): Promise<void> {
 
   // lo que hay en el mundo: los campamentos del artefacto y, si no se quitan, las maquetas de mentira alrededor de donde arranca el héroe
   const { mundo, ajenas, caravanas, miradas, etiquetas } = mundoDePrueba(cabeza, parametros.has('sinMaquetas'));
+  const acarreos = carrosDeAcarreo(cabeza, Number(parametros.get('acarreo') ?? 0));
+  caravanas.push(...acarreos.map((a) => a.caravana));
   let seleccion: SeleccionEnVista | null = null, fundacion: FundacionEnVista | null = null;
   // lo que se puede seleccionar con un clic, con el radio de su aro
   const seleccionables = (): SeleccionEnVista[] => [
@@ -91,9 +95,19 @@ async function arrancar(): Promise<void> {
     const radio = soldados ? 30 : 15;
     ponerNiebla(radio);
     // las caravanas de mentira van y vienen por su ruta
-    for (const c of caravanas) if (c.ruta.length >= 2) {
+    for (const c of caravanas) if (c.ruta.length >= 2 && !c.id.startsWith('acarreo-')) {
       const t = (ahora / 40000) % 1, a = c.ruta[0]!, b = c.ruta[1]!;
       c.posicion = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+    }
+    // los carros de acarreo (`?acarreo=N`) andan su trazado de ida y vuelta, y su ruta es lo que les queda, como en el juego
+    for (const a of acarreos) {
+      const total = a.largos[a.largos.length - 1]!, d = ((ahora / 1000) * VELOCIDAD_ACARREO + a.desfase) % (2 * total);
+      const ida = d <= total, s = ida ? d : 2 * total - d;
+      let k = 1;
+      while (k < a.trazado.length - 1 && a.largos[k]! < s) k++;
+      const p0 = a.trazado[k - 1]!, p1 = a.trazado[k]!, l0 = a.largos[k - 1]!, f = (s - l0) / Math.max(1e-6, a.largos[k]! - l0);
+      a.caravana.posicion = { x: p0.x + (p1.x - p0.x) * f, y: p0.y + (p1.y - p0.y) * f };
+      a.caravana.ruta = ida ? [a.caravana.posicion, ...a.trazado.slice(k)] : [a.caravana.posicion, ...a.trazado.slice(0, k).reverse()];
     }
     const mia: ColumnaEnVista = {
       id: 'mia', mia: true, propia: true, posicion: cabeza, ruta: ruta.length ? [cabeza, ...ruta] : [], jinetes: 1, tropa: { porHeroe: [soldados ? 1 : 0], ejercito: false },
@@ -195,6 +209,26 @@ function mundoDePrueba(c: Punto, vacio: boolean): { mundo: MundoEnVista; ajenas:
     ...miradas.map((x) => ({ id: `mirada:${x.id}`, posicion: x.centro, texto: `${x.abierta ? '👁' : '⏳'} ${x.minutos} min`, tipo: 'mirada' as const, tenue: !x.abierta })),
   );
   return { mundo: m, ajenas, caravanas, miradas, etiquetas };
+}
+
+/** `n` carros de acarreo de mentira (`?acarreo=N`), para medir el mundo con muchas caravanas en marcha: cada uno va y viene por un trazado en
+ * escalera de 4 u (como los manda el servidor) entre un pueblo cerca del héroe y una plaza a entre 40 y 220 u, algunas fuera de lo que se carga. */
+function carrosDeAcarreo(c: Punto, n: number): { caravana: CaravanaEnVista; trazado: Punto[]; largos: number[]; desfase: number }[] {
+  const out: { caravana: CaravanaEnVista; trazado: Punto[]; largos: number[]; desfase: number }[] = [];
+  for (let i = 0; i < n; i++) {
+    const ang = (i / Math.max(1, n)) * Math.PI * 2, cerca = 6 + (i % 5) * 4, lejos = 40 + ((i * 37) % 180);
+    const a = { x: c.x + Math.cos(ang) * cerca, y: c.y + Math.sin(ang) * cerca }, b = { x: c.x + Math.cos(ang + 0.4) * lejos, y: c.y + Math.sin(ang + 0.4) * lejos };
+    const trazado = [a];
+    for (let q = a; Math.hypot(b.x - q.x, b.y - q.y) > 4;) {
+      const dx = Math.sign(Math.round((b.x - q.x) / 4)), dy = Math.sign(Math.round((b.y - q.y) / 4));
+      trazado.push((q = { x: q.x + 4 * dx, y: q.y + 4 * dy }));
+    }
+    trazado.push(b);
+    const largos = [0];
+    for (let k = 1; k < trazado.length; k++) largos.push(largos[k - 1]! + Math.hypot(trazado[k]!.x - trazado[k - 1]!.x, trazado[k]!.y - trazado[k - 1]!.y));
+    out.push({ caravana: { id: `acarreo-${i}`, posicion: a, ruta: trazado, fundacion: false, color: '#d4a017', animales: ['buey'] }, trazado, largos, desfase: i * 13.7 });
+  }
+  return out;
 }
 
 arrancar().catch((e) => { $('lectura').textContent = `el banco no arrancó: ${(e as Error).message}`; console.error(e); });

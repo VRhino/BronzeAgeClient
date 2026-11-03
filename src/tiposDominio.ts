@@ -446,6 +446,8 @@ export interface EjercitoAvistado {
   enFormacion?: true;
   faccionId: string;
   posicionActual: Point;
+  /** Va andando su plan ahora: su posición cambia con el instante (`proyeccionAlInstante`), aunque el servidor no mande nada. */
+  enMarcha?: true;
   participantes: number;
   /** Quiénes van (Doc 5.16.7): un héroe que se ve es público. Su ficha, en `proyeccion.heroesVisibles`. */
   heroeIds: string[];
@@ -464,6 +466,8 @@ export interface EjercitoAvistado {
 export interface CaravanaAvistada {
   id: string;
   posicionActual: Point;
+  /** Va andando su plan ahora (ver `EjercitoAvistado.enMarcha`). */
+  enMarcha?: true;
   /** De quién es, por su plaza de origen; ausente si esa plaza ya no existe. */
   faccionId?: string;
   escoltada: boolean;

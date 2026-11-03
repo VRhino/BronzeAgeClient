@@ -161,7 +161,9 @@ suelo, luego el paisaje y los árboles. Lo que se aleja se suelta.
 - **Caravanas sueltas.** Su **escolta** delante (0.93.0): las escuadras cedidas de la propia (`escoltaIds`, hasta tres), de dos filas de tres
   como la tropa de una columna personal; de la avistada solo se sabe si va escoltada, y se pinta una. Detrás, sus carros: uno por carro de la
   caravana con su animal (hasta tres; la que no dice sus carros, uno con buey), a 1,5 veces, y el de fundación con lona. Las propias llevan su
-  ruta, tenue; las avistadas, no. El 2D no pintaba las avistadas aunque se podían seleccionar.
+  ruta, tenue; las avistadas, no. El 2D no pintaba las avistadas aunque se podían seleccionar. De las propias solo están en el mapa las que van
+  de camino o están aparcadas en el campo (`caravanaEnElMapa`, 0.105.0): el carro de acarreo que carga dentro de su pueblo, la caravana
+  disponible en su plaza o la que espera en una parada no se ven (Víctor, 2026-11-03: el acarreo, hasta que sale lleno). Igual en el modo mapa.
 - **Bandidos, alijos y batallas** son maquetas, encima de la niebla:
   - bandidos: tiendas oscuras en corro, más cuanto más nivel, con su hoguera y su bandera roja;
   - alijo: fardos y un cofre con el oro;
@@ -212,11 +214,30 @@ contenedor el WebGL es por software, así que solo valen las cifras de JS, medid
   aparte, con los 8 ms de presupuesto.
 - **El estado del juego** era lo más caro: `proyectar` rehace la proyección entera desde el almacén (≈1 ms) y la vista la pedía en cada
   fotograma. Ahora (`estadoDeLaVista3D` en `main.ts`) solo se rehace cuando llega otra proyección o cambia la selección, la vista previa de
-  fundar o las reglas. Mientras algo propio marcha, la proyección del instante se recalcula como mucho cada 33 ms: a 0,5 u/s, la columna
-  no avanza ni 0,02 u entre dos. En vacío baja de 1,07 ms a 0,002.
+  fundar o las reglas. Mientras algo marcha (propio o ajeno, desde 0.105.0), la proyección del instante se recalcula como mucho cada 15 ms: a
+  0,5 u/s, la columna no avanza ni 0,01 u entre dos. En vacío baja de 1,07 ms a 0,002.
 - **Densidad de píxeles** como mucho 1,5 (antes 2): en una pantalla retina, 2 sombrearía cada píxel cuatro veces.
 - Lo que falta medir es la tarjeta gráfica de un equipo de verdad. La escena más pesada es la de sin niebla alejada (2,6 M triángulos),
   que en el juego no se da: la niebla quita los árboles de lo que no se ha explorado.
+
+## Lo que anda, sin saltos (0.105.0)
+
+Víctor vio que, tras un rato, las columnas y las caravanas iban a saltos, con 40-50 héroes en marcha (2026-11-03). Con 45 cuentas de prueba en el
+servidor local marchando a destinos al azar alrededor de tu columna parada, las ajenas solo se recolocaban 1,5 veces por segundo, a saltos de
+casi 1 u.
+
+- **Lo ajeno también anda solo.** La vista solo rehacía la proyección del instante si algo **propio** marchaba; lo ajeno se quedaba donde lo
+  dejó la última proyección hasta el siguiente cambio del servidor, que no manda nada mientras una columna sigue su plan. Ahora las columnas y
+  caravanas avistadas llevan `enMarcha` mientras van por su plan, y `algoSeMueve` (`mundo3d/estado.ts`) cuenta con ellas. Medido igual: se
+  mueven en 590 de cada 600 fotogramas, unos 0,02 u cada uno; el estado cuesta 1,2 ms por fotograma con las 45.
+- **Las rutas se muestrean una vez** (`RutaEnSuelo`, `lineas.ts`): el trazado pegado al suelo se hace cuando cambia la ruta y, mientras la cabeza
+  anda, solo se acorta por delante (`drawRange`) y se rehace el tramo corto de la cabeza al siguiente vértice. Antes se volvían a muestrear
+  todas cada vez que cualquier cabeza avanzaba 0,1 u. Con 30 carros de acarreo en el banco (`?acarreo=30`), esa parte baja de 0,76 a 0,27 ms
+  por fotograma y el peor fotograma, de 50 a 20 ms. Las rutas de lo que está más allá de lo que se carga no se pintan.
+- **Los nombres se colocan con `transform`**, no con `left`/`top`, y solo se escribe lo que cambió: moverlos no obliga a recolocar la página.
+- **Los refrescos por cambios del servidor no se retrasan sin fin**: uno a los 250 ms del primer cambio, y los que lleguen mientras tanto entran
+  en él (antes cada cambio volvía a esperar 250 ms).
+- El almacén guarda los últimos 500 hechos, no todos.
 
 ## Banco de pruebas
 
@@ -237,5 +258,8 @@ Un clic cerca de algo lo selecciona; en el suelo, la columna va allí. «Fundar 
 Parámetros:
 - `?x=…&y=…` pone el héroe en otro sitio;
 - `?raster` pinta con el raster de 4 u en vez del relieve;
-- `?sinMaquetas` quita las maquetas de mentira. En desarrollo, el juego deja la vista en `window.__vista3d` y
-`?sinNiebla` la quita.
+- `?sinMaquetas` quita las maquetas de mentira;
+- `?acarreo=N` pone N carros de acarreo que van y vienen entre un pueblo cerca del héroe y una plaza a entre 40 y 220 u, para medir con muchas
+  caravanas en marcha.
+
+En desarrollo, el juego deja la vista en `window.__vista3d` y `?sinNiebla` la quita.

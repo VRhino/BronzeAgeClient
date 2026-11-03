@@ -3,6 +3,24 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.105.0] — 2026-11-03 · El mundo sin saltos y el acarreo dentro hasta que sale · sin cambio de contrato
+
+Fallos que vio Víctor (2026-11-03): con 40-50 héroes en marcha, tras un rato las columnas y caravanas iban a saltos; y las miniaturas de
+acarreo se veían en el mundo mientras estaban dentro de su pueblo.
+
+- **Lo ajeno anda sin saltos.** Con tu columna parada, las columnas y caravanas de otros solo se recolocaban cuando llegaba algo del servidor
+  (medido con 45 cuentas de prueba: 1,5 veces por segundo, a saltos de casi 1 u). Ahora, mientras van por su plan (`enMarcha`), se recolocan
+  en cada fotograma como las tuyas.
+- **Las rutas no se vuelven a trazar cada vez que algo avanza**: se trazan una vez y se acortan por delante. Con 30 carros de acarreo en marcha,
+  el peor fotograma baja de 50 a 20 ms. Las rutas de lo que está más allá de lo que se carga no se pintan.
+- **El carro de acarreo no está en el mapa mientras carga dentro de su pueblo**: solo se ve cuando sale lleno, y a la vuelta. En general, de
+  tus caravanas solo se ven las que van de camino o están aparcadas en el campo; las que esperan dentro de su plaza o de una parada, no. En
+  el mundo 3D y en el modo mapa.
+- Los nombres sobre el mundo se colocan sin recolocar la página en cada fotograma; los refrescos por cambios del servidor ya no se retrasan
+  sin fin cuando llegan muchos seguidos; el almacén guarda solo los últimos 500 hechos.
+- Banco del mundo 3D: `?acarreo=N` pone N carros de acarreo en marcha, para medir. Pruebas de lo que anda, de qué caravanas se ven y del
+  trazado de las rutas.
+
 ## [0.104.0] — 2026-11-03 · El riel de la plaza, debajo de la barra de abajo · sin cambio de contrato
 
 Petición de Víctor (2026-11-03, segundo punto del frente de interfaces): mover el riel de botones de la izquierda debajo de la barra central

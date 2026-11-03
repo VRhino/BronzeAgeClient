@@ -34,7 +34,7 @@ function pintar(el: HTMLElement, e: EtiquetaEnVista): void {
 
 export class Etiquetas {
   readonly capa = document.createElement('div');
-  private readonly vivas = new Map<string, { el: HTMLElement; texto: string; posicion: { x: number; y: number } }>();
+  private readonly vivas = new Map<string, { el: HTMLElement; texto: string; posicion: { x: number; y: number }; donde?: string; color?: string }>();
   private readonly v = new THREE.Vector3();
 
   constructor(contenedor: HTMLElement, private readonly alPulsar?: (punto: { x: number; y: number }) => void) {
@@ -67,10 +67,11 @@ export class Etiquetas {
       viva.posicion = e.posicion;
       const clave = `${e.texto}|${e.subtexto ?? ''}|${e.sigilo ?? ''}`;
       if (viva.texto !== clave) { pintar(viva.el, e); viva.texto = clave; }
-      viva.el.style.borderLeftColor = e.color ?? '';
-      viva.el.classList.toggle('es-tenue', !!e.tenue);
-      viva.el.style.left = `${(((v.x + 1) / 2) * ancho).toFixed(1)}px`;
-      viva.el.style.top = `${(((1 - v.y) / 2) * alto).toFixed(1)}px`;
+      if (viva.color !== (e.color ?? '')) { viva.color = e.color ?? ''; viva.el.style.borderLeftColor = viva.color; }
+      if (viva.el.classList.contains('es-tenue') !== !!e.tenue) viva.el.classList.toggle('es-tenue', !!e.tenue);
+      // con `transform` y no con left/top: así moverla no obliga a recolocar la página en cada fotograma, y solo se escribe si cambió
+      const donde = `translate(${(((v.x + 1) / 2) * ancho).toFixed(1)}px, ${(((1 - v.y) / 2) * alto).toFixed(1)}px) translate(-50%, -100%)`;
+      if (viva.donde !== donde) { viva.el.style.transform = donde; viva.donde = donde; }
     }
     for (const [id, viva] of this.vivas) if (!usadas.has(id)) { viva.el.remove(); this.vivas.delete(id); }
   }
