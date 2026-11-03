@@ -262,10 +262,26 @@ function encargo(e: pb.Encargo): d.Encargo {
 
 const TIPO_OBRA: Record<number, d.ObraDeMapa['tipo']> = { 1: 'pueblo', 2: 'avanzada', 3: 'mejoraAvanzada', 4: 'reparacion', 5: 'aldea', 6: 'mejoraAldea' };
 
+/**
+ * Lo que saca cada extractor: el `produccionBase<Recurso>` de su edificio en el catálogo del motor (`Pueblo::recurso`). El motor manda el almacén
+ * de un extractor en `almacen_local`, sin el nombre del recurso (solo la aldea llega por recurso, en `almacen_por_recurso`).
+ */
+const RECURSO_DE_EXTRACTOR: Record<string, string> = { cantera: 'piedra', mina: 'oro', minaCobre: 'cobre', minaEstano: 'estano', minaHierro: 'hierro' };
+
+/** El recurso que guarda el almacén de un extractor (un tipo nuevo que este cliente no conoce, con su propio nombre). */
+export function recursoDeExtractor(tipo: string): string {
+  return RECURSO_DE_EXTRACTOR[tipo] ?? tipo;
+}
+
+export function puebloDeContrato(x: pb.Pueblo, propio: boolean, ahora: number): d.PuebloDeMapa {
+  return pueblo(x, propio, ahora);
+}
+
 function pueblo(x: pb.Pueblo, propio: boolean, ahora: number): d.PuebloDeMapa {
   const almacen: Record<string, number> = {};
   for (const [r, e] of Object.entries(x.almacenPorRecurso)) almacen[r] = valorDeRitmo(e.cantidad, ahora);
-  if (Object.keys(almacen).length === 0 && x.almacenLocal) almacen[''] = valorDeRitmo(x.almacenLocal.cantidad, ahora);
+  // el almacén de un extractor, con el nombre de su recurso: con la clave vacía, las placas y el acarreo lo daban por vacío
+  if (Object.keys(almacen).length === 0 && x.almacenLocal) almacen[recursoDeExtractor(x.tipoExtractor)] = valorDeRitmo(x.almacenLocal.cantidad, ahora);
   return {
     id: x.id, madreId: x.asentamientoMadreId, propio, tipo: x.tipoExtractor, nodoId: opcional(x.nodoId), posicion: punto(x.posicion),
     almacen, capacidad: mil(x.almacenLocal?.capacidad), carroId: opcional(x.carroAcarreoId), guarnicionId: opcional(x.guarnicionEscuadronId), guarnicionReponeEn: instante(x.guarnicionReponeEnMs),

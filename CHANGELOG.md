@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.119.0] — 2026-11-03 · Arreglo: el almacén de los pueblos extractores salía vacío · sin cambio de contrato
+
+Fallo que vio Víctor (2026-11-03) en una partida local: el almacén de la cantera de Ugarit salía siempre «Vacío», aunque en el motor tenía
+380 de piedra.
+
+- El motor manda el almacén de un extractor en `Pueblo.almacen_local`, sin el nombre del recurso (solo la aldea llega por recurso, en
+  `almacen_por_recurso`). La proyección lo guardaba con la clave vacía, y la placa del almacén, el resumen y el acarreo del pueblo quitan las
+  claves vacías: lo daban por vacío. Ahora se guarda con el recurso del extractor (`recursoDeExtractor` en `motor/proyeccion.ts`: cantera,
+  piedra; mina, oro; minaCobre, cobre; minaEstano, estaño; minaHierro, hierro; el `produccionBase<Recurso>` de cada uno en el catálogo).
+- Pruebas en `pruebas/almacenPueblo.test.ts`.
 ## [0.118.0] — 2026-11-03 · Suelo con vegetación y siete especies de árbol en el mundo 3D · sin cambio de contrato
 
 Petición de Víctor (2026-11-03): «mejorar el piso, con vegetación y diferentes tipos de árboles».
