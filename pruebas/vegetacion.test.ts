@@ -117,7 +117,7 @@ describe('vegetación baja', () => {
 });
 
 describe('vida: humo y pájaros', () => {
-  const vacio = { plazas: [], pueblos: [], avanzadas: [], obras: [], campamentos: [], bandidos: [], alijos: [], batallas: [], trazos: [] };
+  const vacio = { plazas: [], pueblos: [], avanzadas: [], obras: [], campamentos: [], bandidos: [], alijos: [], batallas: [], trazos: [], territorios: [] };
   it('humo: más columnas cuanto más nivel la plaza, ninguna en una recordada; una por pueblo, avanzada en pie desde el fuerte y campamento', () => {
     const plaza = (nivel: number, recordada = false) => ({ id: 'p', posicion: { x: 100, y: 100 }, radioCiudad: 3, color: '#fff', recordada, nivel });
     expect(chimeneas({ ...vacio, plazas: [plaza(1)] })).toHaveLength(2);

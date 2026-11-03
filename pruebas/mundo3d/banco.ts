@@ -10,7 +10,7 @@ import { fromBinary } from '@bufbuild/protobuf';
 import { ArtefactoDeMundoSchema, PaqueteRelieveSchema } from '../../src/contrato/gen/bronzeage/v1/world_pb';
 import { mapaDesdeArtefacto } from '../../src/mundo/artefacto';
 import { Relieve } from '../../src/mundo/relieve';
-import { ANCHOS, mundoVacio, trazosDeFronteras, type CaravanaEnVista, type ColumnaEnVista, type EstadoVista, type EtiquetaEnVista, type FundacionEnVista, type MiradaEnVista, type MundoEnVista, type SeleccionEnVista } from '../../src/mundo3d/estado';
+import { ANCHOS, mundoVacio, rellenosDeTerritorio, trazosDeFronteras, type CaravanaEnVista, type ColumnaEnVista, type EstadoVista, type EtiquetaEnVista, type FundacionEnVista, type MiradaEnVista, type MundoEnVista, type SeleccionEnVista } from '../../src/mundo3d/estado';
 import { circulo, suavizarCamino } from '../../src/mundo3d/lineas';
 import { fuenteDesdeMapa, fuenteDesdeRelieve } from '../../src/mundo3d/fuente';
 import { VistaMundo3D } from '../../src/mundo3d/vista';
@@ -177,14 +177,20 @@ function mundoDePrueba(c: Punto, vacio: boolean): { mundo: MundoEnVista; ajenas:
   // frontera de su lado)
   const choque = en(-20, -14), cuadro = (x0: number, x1: number, y0 = -4, y1 = 4): Punto[] => [en(x0, y0, choque), en(x1, y0, choque), en(x1, y1, choque), en(x0, y1, choque)];
   const colores: Record<string, string> = { a: AJENO, b: OTRO };
-  m.trazos.push(...trazosDeFronteras([
-    { faccionId: 'a', contorno: cuadro(-12, -4), recordada: false },
-    { faccionId: 'a', contorno: cuadro(-4, 4), recordada: false },
-    { faccionId: 'b', contorno: cuadro(4, 12), recordada: false },
-  ], (f) => colores[f] ?? OTRO, 'propia', true));
-  // caminos: calzada del héroe a la plaza, camino a la ajena (en escalera, nodo a nodo como los manda el servidor) y sendero a la aldea, con el
-  // trazado suavizado como en el juego
-  const camino = (puntos: Punto[], escalon: 0 | 1 | 2) => m.trazos.push({ puntos: suavizarCamino(puntos), ancho: ANCHOS.caminos[escalon], color: '#8b5a2b', bajoNiebla: true, tipo: 'camino', escalon });
+  const zonasChoque = [
+    { faccionId: 'a', contorno: cuadro(-12, -4), recordada: false, color: AJENO },
+    { faccionId: 'a', contorno: cuadro(-4, 4), recordada: false, color: AJENO },
+    { faccionId: 'b', contorno: cuadro(4, 12), recordada: false, color: OTRO },
+  ];
+  m.trazos.push(...trazosDeFronteras(zonasChoque, (f) => colores[f] ?? OTRO, 'propia', true));
+  // el relleno del territorio, como lo saca `mundoDesdeProyeccion`
+  m.territorios.push(...rellenosDeTerritorio(
+    [{ faccionId: 'ajena', contorno: circulo(ajena, 10, 48).slice(0, -1), recordada: false, color: AJENO }, { faccionId: 'otra', contorno: circulo(recordada, 10).slice(0, -1), recordada: true, color: OTRO }, ...zonasChoque],
+    [{ faccionId: 'propia', contornos: [circulo(plaza, 15, 48).slice(0, -1)] }], () => PROPIO, 'propia', true,
+  ));
+  // caminos (en escalera, nodo a nodo como los manda el servidor), con el trazado suavizado como en el juego: un solo tramo del héroe a la ajena
+  // que cruza la plaza (pasa por ella: ese vértice no se suaviza) y un sendero a la aldea
+  const camino = (puntos: Punto[], escalon: 0 | 1, fijos: number[] = []) => m.trazos.push({ puntos: suavizarCamino(puntos, fijos), ancho: ANCHOS.caminos[escalon], color: '#8b5a2b', bajoNiebla: true, tipo: 'camino', escalon });
   const escalera = (a: Punto, b: Punto): Punto[] => {
     const out = [a];
     for (let q = a; Math.hypot(b.x - q.x, b.y - q.y) > 4;) {
@@ -193,8 +199,8 @@ function mundoDePrueba(c: Punto, vacio: boolean): { mundo: MundoEnVista; ajenas:
     }
     return [...out, b];
   };
-  camino([c, en(4, -1), plaza], 2);
-  camino(escalera(plaza, ajena), 1);
+  const hastaPlaza = escalera(c, plaza);
+  camino([...hastaPlaza, ...escalera(plaza, ajena).slice(1)], 1, [hastaPlaza.length - 1]);
   camino([plaza, en(3, 4, plaza), en(6, 5, plaza)], 0);
   // lo ajeno: una columna en formación junto a la plaza ajena, bandidos, un alijo y una batalla; caravanas propia y ajena; dos Miradas
   ajenas.push({ id: 'ajena', mia: false, propia: false, posicion: en(-6, 4, ajena), ruta: [], jinetes: 2, tropa: { porHeroe: [0, 0], ejercito: false }, color: AJENO, carros: { carga: 0, fundacion: true }, formacion: true });

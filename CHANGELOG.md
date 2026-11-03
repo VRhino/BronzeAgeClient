@@ -3,6 +3,23 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.124.0] — 2026-11-03 · El territorio sobre el relieve, solo caminos de tierra y el camino por la plaza · sin cambio de contrato
+
+Peticiones de Víctor (2026-11-03), en el mundo 3D:
+
+- **El territorio se nota.** Las zonas de influencia llevan un relleno suave del color de su Facción sobre el suelo (`mundo3d/territorio.ts`),
+  como el del 2D: la tuya al 18 % con su zona fusionada, las ajenas al 13 %, con una franja de 4 u algo más marcada por dentro del borde. El
+  suelo lo mezcla antes de la luz, así sigue las laderas. Un color oscuro (el negro) tiñe hasta 1,6 veces más, para que no parezca la sombra de
+  una nube. Árboles, matas y agua quedan con su color.
+- **Solo caminos de tierra.** En la Edad del Bronce no había calzadas: el escalón más alto de la red de caminos se pinta como camino de tierra
+  (dos rodadas), del mismo ancho. Se quitó la textura de adoquines.
+- **El camino pasa por la plaza.** Dos caminos que se encuentran en una plaza llegan del servidor como un solo tramo, y el suavizado le cortaba
+  la esquina por dentro de la ciudad, sin tocar la maqueta. Ahora el tramo se parte en cada plaza, pueblo o campamento y cada trozo se suaviza
+  aparte (`suavizarCamino(puntos, fijos)`).
+- **Fronteras más finas.** La raya discontinua de la frontera pasa de 0,24 a 0,12 u y la de tu zona de 0,36 a 0,18 u.
+
+Docs: `docs/Mundo_3D.md` («Territorio y caminos (0.124.0)»).
+
 ## [0.123.0] — 2026-11-03 · Respuesta inmediata al construir, Tecnología en la Facción y aviso al guardar el loadout · sin cambio de contrato
 
 Peticiones de Víctor (2026-11-03):

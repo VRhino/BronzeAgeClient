@@ -263,8 +263,20 @@ export function chaikin(puntos: readonly Punto[], vueltas: number, corteMax: num
 
 /** El trazado de un camino tal como se pinta. El servidor lo manda nodo a nodo de su red (cada 4 u, en ocho direcciones): una escalera. Se pasa
  * por el punto medio de cada tramo (que sigue sobre la red), se quitan los vértices que no doblan y se redondean las curvas; los extremos, que
- * es donde se juntan los caminos, no se mueven. */
-export function suavizarCamino(puntos: readonly Punto[]): Punto[] {
+ * es donde se juntan los caminos, no se mueven, ni los vértices de `fijos` (índices, en orden: las plazas y pueblos que el camino cruza), donde
+ * se parte y cada trozo se suaviza aparte. */
+export function suavizarCamino(puntos: readonly Punto[], fijos: readonly number[] = []): Punto[] {
+  if (fijos.length) {
+    const out: Punto[] = [];
+    let desde = 0;
+    for (const k of [...fijos, puntos.length - 1]) {
+      if (k <= desde || k > puntos.length - 1) continue;
+      const trozo = suavizarCamino(puntos.slice(desde, k + 1));
+      out.push(...(out.length ? trozo.slice(1) : trozo));
+      desde = k;
+    }
+    return out;
+  }
   if (puntos.length < 3) return [...puntos];
   const medios: Punto[] = [puntos[0]!];
   for (let k = 1; k < puntos.length; k++) medios.push({ x: (puntos[k - 1]!.x + puntos[k]!.x) / 2, y: (puntos[k - 1]!.y + puntos[k]!.y) / 2 });

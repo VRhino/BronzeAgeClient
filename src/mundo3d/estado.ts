@@ -11,6 +11,7 @@ import { MUNDO3D } from './config';
 import type { TropaDeColumna } from './figuras';
 import { circulo, sentidoDe, suavizarCamino } from './lineas';
 import { partirFronteras, type ZonaDeFaccion } from '../mundo/fronteras';
+import type { RellenoDeTerritorio } from './territorio';
 
 type Punto = { x: number; y: number };
 
@@ -85,8 +86,8 @@ export interface ObraEnVista { id: string; posicion: Punto; arrancada: boolean; 
 export interface CampamentoEnVista { id: string; posicion: Punto; radioProteccion: number }
 /** Una raya sobre el terreno: camino, frontera o zona. `bajoNiebla` = la oscurece la niebla, como en el 2D; si no, va encima. */
 export interface TrazoEnVista { puntos: Punto[]; ancho: number; color: string; bajoNiebla: boolean; discontinuo?: boolean; tipo: 'camino' | 'frontera' | 'zona' | 'anillo'; recordada?: boolean;
-  /** De un camino: 0 sendero, 1 camino, 2 calzada (su textura). */
-  escalon?: 0 | 1 | 2;
+  /** De un camino: 0 sendero, 1 camino de tierra (su textura). En el mundo abierto no hay calzadas: el escalón 2 del servidor va como 1. */
+  escalon?: 0 | 1;
   /** De un contorno: 1 o -1 según su sentido, para correr la raya hacia dentro y que, donde chocan dos zonas, se vean las dos. */
   haciaDentro?: 1 | -1;
   /** La línea entre dos provincias de la misma Facción: fina y medio transparente. */
@@ -105,9 +106,11 @@ export interface MundoEnVista {
   /** Batallas de Unity: donde se libran; `propia` = combates en ella. */
   batallas: { id: string; posicion: Punto; propia: boolean }[];
   trazos: TrazoEnVista[];
+  /** El relleno suave de las zonas de influencia sobre el suelo, uno por Facción (`territorio.ts`). */
+  territorios: RellenoDeTerritorio[];
 }
 
-export const mundoVacio = (): MundoEnVista => ({ plazas: [], pueblos: [], avanzadas: [], obras: [], campamentos: [], bandidos: [], alijos: [], batallas: [], trazos: [] });
+export const mundoVacio = (): MundoEnVista => ({ plazas: [], pueblos: [], avanzadas: [], obras: [], campamentos: [], bandidos: [], alijos: [], batallas: [], trazos: [], territorios: [] });
 
 export interface EstadoVista {
   /** Donde mira la cámara: la cabeza de la columna del jugador o, si no va en una, el sitio donde está. */
@@ -133,10 +136,12 @@ export interface ReglasDeVista { vision: RadiosDeVision; radioZonaInicial: numbe
 
 /** La ciudad del juego, respecto al radio de su zona (`Economia_Construccion`). */
 const FRACCION_CIUDAD = 0.1;
-/** Anchura de las rayas, en u: caminos por escalón (sendero, camino, calzada), fronteras, la zona propia y el anillo de los mercenarios. Más
+/** Anchura de las rayas, en u: caminos por escalón (sendero, camino de tierra), fronteras, la zona propia y el anillo de los mercenarios. Más
  * gruesas que en la realidad para que se lean desde la cámara de juego. De un camino es la cinta entera: lo que se ve es algo menos, que sus
- * bordes se funden con el suelo (`caminos.ts`). */
-export const ANCHOS = { caminos: [0.4, 0.65, 0.9], frontera: 0.24, zona: 0.36, provincia: 0.08, anillo: 0.1 } as const;
+ * bordes se funden con el suelo (`caminos.ts`). La frontera y la zona, la mitad que antes de 0.124.0 (Víctor: «reducimos el grosor»). */
+export const ANCHOS = { caminos: [0.4, 0.65], frontera: 0.12, zona: 0.18, provincia: 0.06, anillo: 0.1 } as const;
+/** Opacidad del relleno de las zonas de influencia sobre el suelo: la propia y las ajenas (`territorio.ts`). */
+export const ALFA_TERRITORIO = { propio: 0.18, ajeno: 0.13 } as const;
 const COLOR_AJENO = '#9a927f', COLOR_CAMINO = '#8b5a2b', COLOR_ANILLO = '#2e5e8c';
 /** La tropa de quien aún no tiene Facción. */
 const COLOR_SIN_FACCION = '#c0392b';
@@ -328,13 +333,50 @@ export function trazosDeFronteras(zonas: readonly (ZonaDeFaccion & { recordada: 
   return out;
 }
 
+/** Los sitios por los que un camino tiene que pasar tal cual (plazas, pueblos, campamentos): su punto redondeado a la u y los de alrededor,
+ * que el servidor redondea a la u los extremos de cada tramo de su red. */
+function anclasDe(sitios: readonly Punto[]): Set<string> {
+  const out = new Set<string>();
+  for (const p of sitios) {
+    const x = Math.round(p.x), y = Math.round(p.y);
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) out.add(`${x + dx},${y + dy}`);
+  }
+  return out;
+}
+
+/** El relleno de las zonas, como en el 2D (`render.ts`): uno por Facción con sus zonas juntas (las que se ven y las que se recuerdan) y el de
+ * tu Facción con su zona fusionada, que respeta los huecos. */
+export function rellenosDeTerritorio(
+  zonas: readonly (ZonaDeFaccion & { color: string })[],
+  fusionadas: readonly { faccionId: string; contornos: Punto[][] }[],
+  color: (faccionId: string) => string,
+  miFaccion: string | null | undefined,
+  conZonaPropia: boolean,
+): RellenoDeTerritorio[] {
+  const porFaccion = new Map<string, RellenoDeTerritorio>();
+  for (const z of zonas) {
+    if (conZonaPropia && z.faccionId === miFaccion) continue;
+    let r = porFaccion.get(z.faccionId);
+    if (!r) porFaccion.set(z.faccionId, (r = { color: z.color, alfa: z.faccionId === miFaccion ? ALFA_TERRITORIO.propio : ALFA_TERRITORIO.ajeno, contornos: [], regla: 'nonzero' }));
+    (r.contornos as Punto[][]).push(z.contorno as Punto[]);
+  }
+  const out = [...porFaccion.values()];
+  for (const z of fusionadas) if (z.contornos.length) out.push({ color: color(z.faccionId), alfa: ALFA_TERRITORIO.propio, contornos: z.contornos, regla: 'evenodd' });
+  return out;
+}
+
 /** El trazado suavizado de cada camino (`suavizarCamino`), guardado por su lista de puntos: la proyección del instante, que se rehace en cada
- * fotograma mientras algo marcha, trae los mismos. */
-const CAMINOS_SUAVES = new WeakMap<readonly Punto[], Punto[]>();
-function caminoSuave(puntos: readonly Punto[]): Punto[] {
-  let s = CAMINOS_SUAVES.get(puntos);
-  if (!s) CAMINOS_SUAVES.set(puntos, (s = suavizarCamino(puntos)));
-  return s;
+ * fotograma mientras algo marcha, trae los mismos. Un vértice en una plaza o un pueblo no se suaviza: el camino que la cruza pasa por ella y no
+ * le corta la esquina por dentro de la ciudad (Víctor, 2026-11-03). */
+const CAMINOS_SUAVES = new WeakMap<readonly Punto[], { fijos: string; suave: Punto[] }>();
+function caminoSuave(puntos: readonly Punto[], anclas: ReadonlySet<string>): Punto[] {
+  const fijos: number[] = [];
+  for (let k = 1; k < puntos.length - 1; k++) if (anclas.has(`${Math.round(puntos[k]!.x)},${Math.round(puntos[k]!.y)}`)) fijos.push(k);
+  const clave = fijos.join(','), guardado = CAMINOS_SUAVES.get(puntos);
+  if (guardado?.fijos === clave) return guardado.suave;
+  const suave = suavizarCamino(puntos, fijos);
+  CAMINOS_SUAVES.set(puntos, { fijos: clave, suave });
+  return suave;
 }
 
 /** Plazas, pueblos, avanzadas, obras, campamentos y rayas de la proyección, con el lado de la niebla de cada capa como en `render.ts`. */
@@ -344,26 +386,32 @@ export function mundoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVista
   const plazas: PlazaEnVista[] = [];
   const trazos: TrazoEnVista[] = [];
   // bajo la niebla: caminos, fronteras de lo que se ve (su silueta real) y de lo que se recuerda (un círculo discontinuo con su radio)
+  const anclas = anclasDe([
+    ...(p.asentamientosAvistados ?? []).map((a) => a.posicion), ...(p.asentamientosConocidos ?? []).map((c) => c.posicion),
+    ...(p.pueblos ?? []).map((x) => x.posicion), ...(p.campamentosMercenarios ?? []).map((c) => c.posicion),
+  ]);
   for (const c of p.caminos ?? []) {
     if (c.puntos.length < 2) continue;
-    const escalon = c.escalon === 0 || c.escalon === 2 ? c.escalon : 1;
-    trazos.push({ puntos: caminoSuave(c.puntos), ancho: ANCHOS.caminos[escalon], color: COLOR_CAMINO, bajoNiebla: true, tipo: 'camino', escalon });
+    // sendero o camino de tierra: en la Edad del Bronce no hay calzadas
+    const escalon = c.escalon === 0 ? 0 : 1;
+    trazos.push({ puntos: caminoSuave(c.puntos, anclas), ancho: ANCHOS.caminos[escalon], color: COLOR_CAMINO, bajoNiebla: true, tipo: 'camino', escalon });
   }
   // Las zonas de una misma Facción, fusionadas (`mundo/fronteras.ts`): frontera por fuera y una línea tenue entre sus provincias. La frontera
   // exterior de lo tuyo la traza la zona fusionada, encima; de ti solo salen aquí las líneas entre provincias, también encima.
   const conZonaPropia = (p.zonasFusionadas ?? []).some((z) => z.faccionId === p.faccionId && z.contornos.length > 0);
-  const zonas: (ZonaDeFaccion & { recordada: boolean })[] = [];
+  const zonas: (ZonaDeFaccion & { recordada: boolean; color: string })[] = [];
   for (const a of p.asentamientosAvistados ?? []) {
     const zona = a.zona ?? [], radioZona = zona.length >= 3 ? radioDelContorno(a.posicion, zona) : reglas.radioZonaInicial;
     plazas.push({ id: a.id, posicion: a.posicion, radioCiudad: radioZona * FRACCION_CIUDAD, color: color(a.faccionId), recordada: false, nivel: a.nivel ?? 1 });
-    if (zona.length >= 3) zonas.push({ faccionId: a.faccionId || `sin-${a.id}`, contorno: zona, recordada: false });
+    if (zona.length >= 3) zonas.push({ faccionId: a.faccionId || `sin-${a.id}`, contorno: zona, recordada: false, color: color(a.faccionId) });
   }
   for (const c of p.asentamientosConocidos ?? []) {
     const radioZona = c.radioPotencial ?? reglas.radioZonaInicial;
     plazas.push({ id: c.asentamientoId, posicion: c.posicion, radioCiudad: radioZona * FRACCION_CIUDAD, color: color(c.faccionId), recordada: true, nivel: c.nivel ?? 1 });
-    if (c.radioPotencial !== undefined) zonas.push({ faccionId: c.faccionId || `sin-${c.asentamientoId}`, contorno: circulo(c.posicion, c.radioPotencial).slice(0, -1), recordada: true });
+    if (c.radioPotencial !== undefined) zonas.push({ faccionId: c.faccionId || `sin-${c.asentamientoId}`, contorno: circulo(c.posicion, c.radioPotencial).slice(0, -1), recordada: true, color: color(c.faccionId) });
   }
   trazos.push(...trazosDeFronteras(zonas, color, p.faccionId, conZonaPropia));
+  const territorios = rellenosDeTerritorio(zonas, p.zonasFusionadas ?? [], color, p.faccionId, conZonaPropia);
   // encima: la zona propia y el anillo de protección de los campamentos de mercenarios
   for (const z of p.zonasFusionadas ?? []) for (const c of z.contornos) if (c.length >= 3) trazos.push({ puntos: [...c, c[0]!], ancho: ANCHOS.zona, color: color(z.faccionId), bajoNiebla: false, discontinuo: true, tipo: 'zona', haciaDentro: sentidoDe(c) });
   const campamentos = (p.campamentosMercenarios ?? []).map((c) => ({ id: c.id, posicion: c.posicion, radioProteccion: reglas.radioProteccion }));
@@ -379,5 +427,6 @@ export function mundoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVista
     alijos: (p.alijos ?? []).map((a) => ({ id: a.id, posicion: a.posicion })),
     batallas: (p.batallas ?? []).map((b) => ({ id: b.battleId, posicion: b.punto, propia: !!b.ladoPropio })),
     trazos,
+    territorios,
   };
 }

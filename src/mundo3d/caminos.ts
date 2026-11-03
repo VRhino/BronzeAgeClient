@@ -1,10 +1,12 @@
 // El aspecto de los caminos del mundo 3D (Víctor, 2026-11-02: «que parezcan caminos y no una línea fea»): una textura por escalón, pintada una
-// vez píxel a píxel. El sendero es una huella de tierra pisada que serpentea; el camino, tierra con dos rodadas y algo de hierba en medio; la
-// calzada, adoquines con bordillo y arcén. Los bordes se funden con el suelo. Va de lado a lado de la cinta una vez (`u`) y se repite a lo largo
+// vez píxel a píxel. El sendero es una huella de tierra pisada que serpentea; el camino, tierra con dos rodadas y algo de hierba en medio. En el
+// mundo abierto no hay nada más allá del camino de tierra (Víctor, 2026-11-03: en la Edad del Bronce aún no había calzadas): el escalón más
+// alto del servidor se pinta como camino. Los bordes se funden con el suelo. Va de lado a lado de la cinta una vez (`u`) y se repite a lo largo
 // (`v` = lo andado / `periodoDeCamino`), con la misma escala en los dos sentidos para que nada se estire.
 import * as THREE from 'three';
 
-export type Escalon = 0 | 1 | 2;
+/** 0 sendero, 1 camino de tierra. */
+export type Escalon = 0 | 1;
 
 const ANCHO_PX = 128, LARGO_PX = 512;
 
@@ -77,51 +79,13 @@ function camino(): (u: number, v: number) => Rgba {
   };
 }
 
-/** Calzada: adoquines en hileras al tresbolillo con su junta, un bordillo de losas largas a cada lado y fuera un arcén de tierra que se funde. */
-function calzada(): (u: number, v: number) => Rgba {
-  const r = azar(37), g = grano(r, 24, 96), bi = ondas(r, 5), bd = ondas(r, 5);
-  const ALTO_FILA = 16, FILAS = LARGO_PX / ALTO_FILA, x0 = 0.14 * ANCHO_PX, x1 = 0.86 * ANCHO_PX;
-  // las juntas de cada hilera (en píxeles de lado) y el tono de cada adoquín
-  const hileras = Array.from({ length: FILAS }, () => {
-    const juntas = [x0 - r() * 14];
-    while (juntas[juntas.length - 1]! < x1) juntas.push(juntas[juntas.length - 1]! + 11 + r() * 9);
-    return { juntas, tonos: juntas.map(() => 0.88 + 0.24 * r()) };
-  });
-  // el bordillo: ocho losas a lo largo, con su junta un poco movida
-  const LOSAS = 8, juntasBordillo = [0, 1].map(() => Array.from({ length: LOSAS }, (_, k) => k * (LARGO_PX / LOSAS) + (r() - 0.5) * 20));
-  const piedra = (tono: number, d: number, n: number): [number, number, number] => {
-    const t = tono * (0.84 + 0.16 * Math.min(1, d / 3)) + 0.05 * n;
-    return [158 * t, 148 * t, 130 * t];
-  };
-  return (u, v) => {
-    const px = u * ANCHO_PX, py = v * LARGO_PX, n = g(u, v);
-    const izq = 0.035 + 0.02 * bi(v), der = 0.965 + 0.02 * bd(v);
-    const a = paso(izq - 0.03, izq + 0.03, u) * (1 - paso(der - 0.03, der + 0.03, u));
-    const JUNTA: [number, number, number] = [86, 78, 66];
-    let rgb: [number, number, number];
-    if (u < 0.075 || u > 0.925) rgb = [128 + 12 * n, 104 + 10 * n, 74 + 7 * n]; // el arcén
-    else if (u < 0.14 || u > 0.86) {
-      const lado = u < 0.5 ? 0 : 1, juntas = juntasBordillo[lado]!, bx0 = lado ? 0.86 * ANCHO_PX : 0.075 * ANCHO_PX, bx1 = lado ? 0.925 * ANCHO_PX : 0.14 * ANCHO_PX;
-      const dy = Math.min(...juntas.map((j) => { const e = (((py - j) % LARGO_PX) + LARGO_PX) % LARGO_PX; return Math.min(e, LARGO_PX - e); })), d = Math.min(dy, px - bx0, bx1 - px);
-      rgb = d < 1 ? JUNTA : piedra(0.92, d, n);
-    } else {
-      const fila = Math.min(FILAS - 1, Math.floor(py / ALTO_FILA)), y = py - fila * ALTO_FILA, { juntas, tonos } = hileras[fila]!;
-      let k = 0;
-      while (k < juntas.length - 2 && juntas[k + 1]! <= px) k++;
-      const d = Math.min(px - juntas[k]!, juntas[k + 1]! - px, y, ALTO_FILA - y, px - x0, x1 - px);
-      rgb = d < 1.2 ? JUNTA : piedra(tonos[k]!, d - 1.2, n);
-    }
-    return [...rgb, a];
-  };
-}
-
 const TEXTURAS = new Map<Escalon, THREE.DataTexture>();
 
-/** La textura del camino de un escalón (0 sendero, 1 camino, 2 calzada), hecha la primera vez que hace falta. */
+/** La textura del camino de un escalón (0 sendero, 1 camino de tierra), hecha la primera vez que hace falta. */
 export function texturaDeCamino(escalon: Escalon): THREE.DataTexture {
   let t = TEXTURAS.get(escalon);
   if (t) return t;
-  const pintar = [sendero, camino, calzada][escalon]!(), datos = new Uint8Array(ANCHO_PX * LARGO_PX * 4);
+  const pintar = [sendero, camino][escalon]!(), datos = new Uint8Array(ANCHO_PX * LARGO_PX * 4);
   for (let y = 0; y < LARGO_PX; y++) {
     for (let x = 0; x < ANCHO_PX; x++) {
       const [r, g, b, a] = pintar((x + 0.5) / ANCHO_PX, (y + 0.5) / LARGO_PX), i = 4 * (y * ANCHO_PX + x);

@@ -6,7 +6,8 @@ import type { ProyeccionJugador } from '../src/apiCliente';
 import { arbolesDelTrozo, caucesDe, franjas, POR_ARBOL, type Entorno } from '../src/mundo3d/arboles';
 import { CamaraDeJuego, distanciaDeEncuadre } from '../src/mundo3d/camara';
 import { ACERCADO, encuadres } from '../src/mundo3d/config';
-import { ANCHOS, dondeEstaLaSeleccion, estadoDesdeProyeccion, mundoDesdeProyeccion } from '../src/mundo3d/estado';
+import { ALFA_TERRITORIO, ANCHOS, dondeEstaLaSeleccion, estadoDesdeProyeccion, mundoDesdeProyeccion } from '../src/mundo3d/estado';
+import { refuerzo } from '../src/mundo3d/territorio';
 import { bloquesDeTropa } from '../src/mundo3d/figuras';
 import { fuenteDesdeMapa, type FuenteDeAltura } from '../src/mundo3d/fuente';
 import { chaikin, cinta, circulo, rutaPendiente, simplificar, suavizarCamino, tramosEnCaja } from '../src/mundo3d/lineas';
@@ -197,14 +198,37 @@ describe('lo que hay en el mundo, sacado de la proyección', () => {
     expect(m.plazas.map((x) => [x.id, +x.radioCiudad.toFixed(3), x.recordada])).toEqual([['a-1', 1.5, false], ['a-2', 0.8, true], ['a-3', 0.6, true]]);
   });
 
-  test('cada camino con su escalón (su textura) y su trazado suavizado', () => {
-    expect(m.trazos.filter((x) => x.tipo === 'camino').map((x) => [x.escalon, x.puntos.length])).toEqual([[2, 2], [0, 2]]);
+  test('cada camino con su escalón (su textura) y su trazado suavizado; la calzada del servidor va como camino de tierra', () => {
+    expect(m.trazos.filter((x) => x.tipo === 'camino').map((x) => [x.escalon, x.puntos.length])).toEqual([[1, 2], [0, 2]]);
+  });
+
+  test('un camino que cruza una plaza pasa por ella: ese vértice no se suaviza', () => {
+    // del campamento (50, 50) a la plaza (100, 100) y de ahí, doblando en ángulo recto, hacia (100, 150), cada 4 u
+    const tramo = [...Array.from({ length: 13 }, (_, k) => ({ x: 52 + 4 * k, y: 100 })), ...Array.from({ length: 12 }, (_, k) => ({ x: 100, y: 104 + 4 * k }))];
+    const q = { ...p, caminos: [{ id: 'cruza', escalon: 1, puntos: tramo }] } as unknown as ProyeccionJugador;
+    const cerca = (pts: { x: number; y: number }[]) => Math.min(...pts.map((v) => Math.hypot(v.x - 100, v.y - 100)));
+    expect(cerca(mundoDesdeProyeccion(q, REGLAS).trazos.find((x) => x.tipo === 'camino')!.puntos)).toBe(0);
+    // sin la plaza, la esquina se redondea
+    const sinPlaza = { ...q, asentamientosAvistados: [] } as unknown as ProyeccionJugador;
+    expect(cerca(mundoDesdeProyeccion(sinPlaza, REGLAS).trazos.find((x) => x.tipo === 'camino')!.puntos)).toBeGreaterThan(1);
+  });
+
+  test('el relleno del territorio: uno por Facción ajena con sus zonas (vistas y recordadas) y el tuyo con la zona fusionada, más marcado', () => {
+    expect(m.territorios.map((r) => [r.contornos.length, r.alfa, r.regla])).toEqual([[2, ALFA_TERRITORIO.ajeno, 'nonzero'], [1, ALFA_TERRITORIO.propio, 'evenodd']]);
+    expect(m.territorios[0]!.color).toBe(m.plazas[0]!.color);
+  });
+
+  test('un color de Facción oscuro tiñe más fuerte (si no, se confunde con la sombra de una nube); uno claro, igual', () => {
+    expect(refuerzo('#000000')).toBeCloseTo(1.6, 6);
+    expect(refuerzo('#d4a017')).toBe(1);
+    expect(refuerzo('#1c1c1c')).toBeGreaterThan(1.4);
+    expect(refuerzo('rojo')).toBe(1);
   });
 
   test('cada raya en su lado de la niebla: caminos y fronteras debajo, la zona propia y el anillo de los mercenarios encima', () => {
     const t = m.trazos.map((x) => [x.tipo, x.bajoNiebla, x.ancho, x.discontinuo ?? false]);
     expect(t).toEqual([
-      ['camino', true, ANCHOS.caminos[2], false],
+      ['camino', true, ANCHOS.caminos[1], false],
       ['camino', true, ANCHOS.caminos[0], false],
       ['frontera', true, ANCHOS.frontera, true],
       ['frontera', true, ANCHOS.frontera, true],

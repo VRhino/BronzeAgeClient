@@ -59,7 +59,8 @@ del héroe solo (`radioDeVision`); el 3D tiene que seguir a la de la columna. El
 | Ríos, vados y nodos de recursos | `src/mundo3d/paisaje.ts` (hecho) | Ríos y nodos del artefacto |
 | Plazas, pueblos, avanzadas, obras, campamentos, bandidos, alijos, batallas | `src/mundo3d/maquetas.ts` (hecho) | Proyección |
 | Caminos, fronteras, zona propia, anillo de los mercenarios | `src/mundo3d/trazos.ts` (hecho) | Proyección |
-| Textura de los caminos (sendero, camino, calzada) | `src/mundo3d/caminos.ts` (hecho) | Escalón del camino |
+| Textura de los caminos (sendero, camino de tierra) | `src/mundo3d/caminos.ts` (hecho) | Escalón del camino |
+| Relleno de las zonas de influencia sobre el suelo | `src/mundo3d/territorio.ts` (hecho) | Zonas de la proyección |
 | Columnas (de la Facción y avistadas), sus carros y las caravanas | `src/mundo3d/figuras.ts` (hecho) | Proyección: ruta y posición en el instante |
 | Formaciones, Miradas, lo seleccionado, la vista previa de fundar | `src/mundo3d/marcas.ts` (hecho) | Proyección, `seleccionMapa` y el panel Fundar |
 | Ruta, destino, mira del héroe; cintas pegadas al relieve | `src/mundo3d/lineas.ts` (hecho) | Proyección |
@@ -143,15 +144,17 @@ suelo, luego el paisaje, los árboles y la vegetación baja. Lo que se aleja se 
     recordado de lo que no;
   - encima: la zona propia (0,18 u) y el anillo de protección de los campamentos de mercenarios (0,1 u).
 
-  Son más anchas que en la realidad para que se lean desde la cámara. A diferencia del 2D, la zona propia va sin relleno.
+  Son más anchas que en la realidad para que se lean desde la cámara. Desde 0.124.0 las zonas llevan además su relleno en el suelo
+  (`territorio.ts`, ver «Territorio y caminos»).
 - **Caminos** (0.93.0, `caminos.ts`). El servidor manda cada tramo nodo a nodo de su red (cada 4 u, en ocho direcciones): una escalera. Se
   pinta pasando por el punto medio de cada tramo (que sigue sobre la red), sin los vértices que no doblan (se apartan menos de 0,3 u) y con
   las curvas redondeadas (tres vueltas de Chaikin, sin cortar más de 1,5 u por esquina). Los extremos, donde se juntan los caminos, no se
-  mueven. Los árboles se apartan de ese mismo trazado. Cada escalón lleva su textura, pintada una vez píxel a píxel, con los bordes que se
-  funden con el suelo:
+  mueven, ni los vértices que caen en una plaza, un pueblo o un campamento (0.124.0): el camino que la cruza pasa por ella. Los árboles se
+  apartan de ese mismo trazado. Cada escalón lleva su textura, pintada una vez píxel a píxel, con los bordes que se funden con el suelo:
   - sendero (cinta de 0,4 u): una huella de tierra pisada, más clara en medio, que serpentea y tiene los bordes deshilachados;
-  - camino (0,65 u): tierra con dos rodadas, algo de hierba entre ellas y la orilla un poco más oscura;
-  - calzada (0,9 u): adoquines en hileras al tresbolillo, un bordillo de losas largas a cada lado y fuera un arcén de tierra.
+  - camino de tierra (0,65 u): tierra con dos rodadas, algo de hierba entre ellas y la orilla un poco más oscura.
+
+  En el mundo abierto no hay nada más allá del camino de tierra (0.124.0): el escalón más alto del servidor («calzada») se pinta como camino.
 
   La textura va de lado a lado una vez y se repite a lo largo con la misma escala en los dos sentidos; se cuenta lo andado desde el principio
   del camino, así no se corre cuando el recorte alrededor del héroe empieza en otro vértice.
@@ -366,6 +369,25 @@ sombreado (en cada fotograma solo cambia el reloj; el JS del fotograma no cambia
   aleteando y a ratos planeando. Hay bandada en un tercio de las celdas de 24 u alrededor del héroe (hasta 60 u), siempre la misma en cada
   celda, así al moverse no aparecen ni desaparecen las de cerca.
 
+## Territorio y caminos (0.124.0)
+
+Peticiones de Víctor del 2026-11-03:
+
+- **El territorio sobre el relieve** (`territorio.ts`): «una capa con un opacity suave sobre el interior de la zona de influencia, para que se
+  note bien el territorio». Las zonas se pintan en un lienzo de 1024 px que cubre 1200 u alrededor del héroe (se vuelve a centrar al cruzar
+  una celda de 128 u: siempre cubre más que la distancia de carga más larga) y el suelo lo mezcla con su color antes de la luz, así el tinte
+  sigue las laderas. Como en el 2D: uno por Facción ajena con sus zonas juntas (vistas y recordadas) al 13 %, y el tuyo con la zona fusionada
+  (respeta los huecos) al 18 %. Por dentro del contorno, una franja de 4 u algo más marcada que se desvanece hacia el centro. Un color oscuro
+  va hasta 1,6 veces más opaco: un tinte negro solo oscurece, y con la misma opacidad se confundiría con la sombra de una nube. Solo el
+  suelo: árboles, matas y agua quedan con su color.
+- **Solo caminos de tierra**: «los caminos en mundo abierto nunca pueden ser más allá de camino de tierra, dado que en esta época histórica no
+  estaban ni las calzadas romanas aún». Se quitó la textura de adoquines; el escalón «calzada» del servidor se pinta como camino de tierra,
+  del mismo ancho.
+- **El camino pasa por la plaza**: el servidor funde en un solo tramo dos caminos del mismo escalón que se encuentran en una plaza (el del
+  pueblo y el de la otra plaza, por ejemplo), y el suavizado le cortaba la esquina por dentro de la ciudad, sin pasar por la maqueta. Ahora
+  el tramo se parte en cada plaza, pueblo o campamento que cruza y cada trozo se suaviza aparte.
+- **Rayas más finas**: la frontera ajena pasa de 0,24 a 0,12 u, la de tu zona de 0,36 a 0,18 u y la línea entre provincias de 0,08 a 0,06 u.
+
 ## Banco de pruebas
 
 `npm run mundo3d` abre `pruebas/mundo3d/` con el artefacto y el relieve que haya en `generador/salida/mundo/` del motor (el checkout hermano
@@ -374,7 +396,9 @@ desarrollo. Una columna propia va en línea recta adonde haces clic, a 30 u/min,
 de mercenarios son los del artefacto, y junto al héroe hay maquetas de mentira:
 - una plaza propia de nivel 3 con su zona, dos pueblos, tres avanzadas (una en ruinas) y dos obras;
 - una plaza ajena que se ve y otra que se recuerda;
-- caminos entre ellas, uno de cada escalón (el camino, en escalera como los manda el servidor), con el trazado suavizado del juego;
+- caminos (en escalera como los manda el servidor) con el trazado suavizado del juego: uno de tierra que sale del héroe, cruza la plaza propia
+  y sigue hasta la ajena, y un sendero a la aldea;
+- el relleno del territorio de cada zona;
 - tu columna con su carrito y un carro tirado por un caballo;
 - una columna ajena en formación, una caravana propia que va y viene (dos escuadras de escolta y dos carros, de buey y de camello) y otra
   ajena con una de escolta;

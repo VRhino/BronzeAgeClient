@@ -10,6 +10,7 @@ import { MUNDO3D } from './config';
 import { bosqueEn, fertilidadEn, type FuenteDeAltura } from './fuente';
 import { manchas } from './ruido';
 import type { NieblaDeGuerra } from './niebla';
+import type { Territorio } from './territorio';
 
 const { metrosPorUnidad: MPU, ladoTesela: LADO, umbrales: U } = MUNDO3D;
 /** Lo que baja el faldón del borde de cada tesela. */
@@ -162,8 +163,8 @@ float grano(vec2 p) {
 `;
 
 /** El material del suelo: el color de cada vértice con un grano fino encima (manchas de 0,1 a 1 u más claras u oscuras, y a trozos más
- * amarillas o más verdes), que de cerca quita lo liso y de lejos se apaga. Va bajo la niebla de guerra. */
-function materialDelSuelo(niebla: NieblaDeGuerra): THREE.MeshLambertMaterial {
+ * amarillas o más verdes), que de cerca quita lo liso y de lejos se apaga. Lleva el tinte del territorio y va bajo la niebla de guerra. */
+function materialDelSuelo(niebla: NieblaDeGuerra, territorio: Territorio): THREE.MeshLambertMaterial {
   const m = new THREE.MeshLambertMaterial({ vertexColors: true });
   m.onBeforeCompile = (sh) => {
     sh.vertexShader = 'varying vec2 vSueloXZ;\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
@@ -175,9 +176,10 @@ function materialDelSuelo(niebla: NieblaDeGuerra): THREE.MeshLambertMaterial {
         vec3 c = diffuseColor.rgb * (0.86 + 0.28 * g) * vec3(1.0 + t * 0.1, 1.0, 1.0 - t * 0.14);
         diffuseColor.rgb = mix(c, diffuseColor.rgb, lejos * 0.75);
       }`);
+    territorio.parchear(sh);
     niebla.parchear(sh);
   };
-  m.customProgramCacheKey = () => 'suelo-grano';
+  m.customProgramCacheKey = () => 'suelo-grano-territorio';
   return m;
 }
 
@@ -186,8 +188,8 @@ export class Terreno {
   private readonly material: THREE.MeshLambertMaterial;
   private readonly teselas = new Map<string, { malla: THREE.Mesh; agua: THREE.Mesh | null; paso: number }>();
 
-  constructor(private readonly fuente: FuenteDeAltura, private readonly mapa: MapaGenerado, niebla: NieblaDeGuerra, private readonly materialAgua: THREE.Material) {
-    this.material = materialDelSuelo(niebla);
+  constructor(private readonly fuente: FuenteDeAltura, private readonly mapa: MapaGenerado, niebla: NieblaDeGuerra, private readonly materialAgua: THREE.Material, territorio: Territorio) {
+    this.material = materialDelSuelo(niebla, territorio);
   }
 
   /** Cuánto detalle (×1 con la distancia de carga de serie): con una distancia de carga más corta, el detalle fino llega menos lejos. */

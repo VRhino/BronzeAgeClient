@@ -22,6 +22,7 @@ import { aro, cinta, circulo, rutaPendiente, RutaEnSuelo } from './lineas';
 import { Maquetas } from './maquetas';
 import { MarcasEnSuelo } from './marcas';
 import { NieblaDeGuerra } from './niebla';
+import { Territorio } from './territorio';
 import { Cielo, colorHorizonte } from './cielo';
 import { Paisaje } from './paisaje';
 import { Terreno } from './terreno';
@@ -69,6 +70,7 @@ export class VistaMundo3D {
   private readonly cielo = new Cielo(VistaMundo3D.SOL);
   private readonly niebla = new NieblaDeGuerra();
   private readonly agua = new Agua(this.niebla);
+  private readonly territorio: Territorio;
   private readonly terreno: Terreno;
   private readonly paisaje: Paisaje;
   private readonly arboles: Arboles;
@@ -144,7 +146,8 @@ export class VistaMundo3D {
     this.sol.shadow.normalBias = 0.03;
     this.escena.add(this.sol, this.sol.target);
 
-    this.terreno = new Terreno(o.fuente, o.mapa, this.niebla, this.agua.mar);
+    this.territorio = new Territorio();
+    this.terreno = new Terreno(o.fuente, o.mapa, this.niebla, this.agua.mar, this.territorio);
     this.paisaje = new Paisaje(o.fuente, o.mapa, this.niebla, this.alturaU, this.agua.rio);
     this.arboles = new Arboles(o.fuente, o.mapa, this.niebla);
     this.matas = new Matas(o.fuente, o.mapa, this.niebla);
@@ -285,6 +288,7 @@ export class VistaMundo3D {
     this.niebla.actualizar(estado.niebla, this.sinNiebla);
     this.camara.radioVision = estado.radioVision;
     const w = this.lienzo.clientWidth || 1, h = this.lienzo.clientHeight || 1, { x, y } = estado.heroe;
+    this.territorio.actualizar(estado.mundo.territorios, x, y);
     this.objetivo.set(x, this.alturaU(x, y), y);
     // Un salto grande (otra columna, entrar al mundo) se corta; lo demás se sigue suave.
     if (!this.foco || this.foco.distanceTo(this.objetivo) > MUNDO3D.camaraSuave.corte) this.foco = this.objetivo.clone();
@@ -429,7 +433,7 @@ export class VistaMundo3D {
       plazas: m.plazas.filter((p) => dentro(p.posicion)), pueblos: m.pueblos.filter((p) => dentro(p.posicion)),
       avanzadas: m.avanzadas.filter((p) => dentro(p.posicion)), obras: m.obras.filter((p) => dentro(p.posicion)),
       campamentos: m.campamentos.filter((p) => dentro(p.posicion)), bandidos: m.bandidos.filter((p) => dentro(p.posicion)),
-      alijos: m.alijos.filter((p) => dentro(p.posicion)), batallas: m.batallas.filter((p) => dentro(p.posicion)), trazos: m.trazos,
+      alijos: m.alijos.filter((p) => dentro(p.posicion)), batallas: m.batallas.filter((p) => dentro(p.posicion)), trazos: m.trazos, territorios: m.territorios,
     };
     this.cercano = { de: m, clave, mundo };
     return mundo;
@@ -481,6 +485,7 @@ export class VistaMundo3D {
     this.maquetas.destruir();
     this.trazos.destruir();
     this.niebla.destruir();
+    this.territorio.destruir();
     this.cielo.destruir();
     this.agua.destruir();
     this.renderer.dispose();
