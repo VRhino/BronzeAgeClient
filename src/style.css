@@ -3477,6 +3477,52 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .diplo-datos span { color: var(--text-secondary); font-size: 0.78rem; }
 .diplo-datos strong { color: var(--pergamino); }
 @media (max-width: 720px) { .diplo-marco { flex-direction: column-reverse; } .diplo-lista { flex: none; width: 100%; max-height: 40vh; } }
+/* Diplomacia adaptable (0.103.0): ocupa todo el cuerpo de la ventana (sin el tope de 960 px de las otras pestañas) y cada columna se desplaza por
+   su cuenta, con la lista de Facciones a toda la altura. El formulario de proponer, en rejilla con rótulos; el tributo solo con vasallaje. */
+.faccion-principal:has(> .faccion-cuerpo-diplomacia) { overflow: hidden; }
+.faccion-cuerpo.faccion-cuerpo-diplomacia { width: 100%; flex: 1; min-height: 0; }
+.faccion-cuerpo-diplomacia .diplo-marco { flex: 1; min-height: 0; align-items: stretch; }
+.faccion-cuerpo-diplomacia .diplo-centro { overflow-y: auto; padding-right: 4px; }
+.faccion-cuerpo-diplomacia .diplo-centro > * { flex-shrink: 0; }
+.faccion-cuerpo-diplomacia .diplo-lista { flex-basis: clamp(220px, 22%, 320px); max-height: none; }
+.diplo-proponer { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px solid var(--border-glass); border-radius: var(--radius-sm); background: rgba(255, 255, 255, 0.035); }
+.diplo-proponer-campos { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.diplo-campo { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.diplo-campo > span { font-size: 0.75rem; color: var(--text-secondary); }
+.diplo-campo .form-input { width: 100%; min-width: 0; }
+.faccion-cuerpo-diplomacia .form-input { padding: 6px 8px; min-height: 0; }
+.diplo-campo-tributo { display: none; }
+.diplo-proponer:has(#tipo-diplomacia option[value="vasallaje"]:checked) .diplo-campo-tributo { display: flex; }
+.diplo-proponer #btn-proponer-diplomacia { align-self: flex-end; }
+/* Pantallas medianas: el panel de la Facción de la izquierda se estrecha y el escudo se achica; en pantallas bajas, también. */
+@media (max-width: 1280px) {
+  .faccion-lateral { flex-basis: 21%; min-width: 200px; padding: 10px 8px; }
+  .faccion-lateral-escudo .sigilo { width: min(110px, 60%); }
+  .faccion-cuerpo-diplomacia .diplo-lista { flex-basis: 210px; }
+}
+@media (max-width: 1100px) {
+  .faccion-lateral { flex-basis: 180px; min-width: 180px; }
+  .faccion-marco { gap: 12px; }
+  .faccion-cuerpo-diplomacia .diplo-lista { flex-basis: 190px; }
+  /* En la columna estrecha, los datos de la Facción en filas de «rótulo … cifra». */
+  .faccion-lateral-resumen .faction-stats, .faccion-lateral-resumen .faction-roles { grid-template-columns: 1fr; gap: 4px; }
+  .faccion-lateral-resumen .faction-stats div, .faccion-lateral-resumen .faction-roles div { flex-direction: row; justify-content: space-between; align-items: baseline; gap: 6px; padding: 4px 8px; }
+  .faccion-lateral-resumen .faction-roles strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .faccion-lateral .liga-fila { flex-direction: column; align-items: flex-start; }
+}
+@media (max-height: 800px) {
+  .faccion-lateral-escudo { padding: 2px 0; }
+  .faccion-lateral-escudo .sigilo { width: min(84px, 50%); }
+  .faccion-pestana { padding: 4px 12px; }
+}
+/* Por debajo de 900 px la ventana va en una sola columna (regla de la Facción): la lista pasa arriba, en una franja que se desplaza. */
+@media (max-width: 900px) {
+  .faccion-cuerpo-diplomacia .diplo-marco { flex-direction: column-reverse; justify-content: flex-end; }
+  .faccion-cuerpo-diplomacia .diplo-lista { flex: none; width: 100%; max-height: 30vh; box-sizing: border-box; }
+  .faccion-cuerpo-diplomacia .diplo-centro { overflow: visible; }
+  .faccion-lateral { flex: none; overflow: visible; }
+}
+
 
 /* ── Mercenarios por contrato (0.77.0): tablón del campamento, pestaña de la Facción y ficha ── */
 .merc-tablon-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }

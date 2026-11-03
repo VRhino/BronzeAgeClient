@@ -3,6 +3,19 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.103.0] — 2026-11-03 · La ventana de Diplomacia se adapta a la pantalla · sin cambio de contrato
+
+Petición de Víctor (2026-11-03, primer punto del frente de interfaces): que la diplomacia se adapte al tamaño de la pantalla.
+
+- **Ocupa todo el ancho de la ventana de la Facción.** Antes el centro se quedaba en 960 px aunque sobrara pantalla. Ahora la ficha va en el
+  centro y la lista de Facciones a la derecha, a toda la altura, y cada columna se desplaza por su cuenta.
+- **El formulario de proponer** va en una rejilla con un rótulo sobre cada campo (A, Qué, Tributo, Por minuto). El tributo solo aparece al
+  elegir vasallaje. Los campos de anexión y fusión son más bajos.
+- **Pantallas medianas y bajas** (afecta a toda la ventana de la Facción): por debajo de 1280 px el panel de la izquierda se estrecha y el
+  escudo se achica; por debajo de 1100 px los datos de la Facción pasan a filas «rótulo … cifra» y la Liga se apila. Con menos de 800 px de
+  alto, escudo y pestañas más bajos. Por debajo de 900 px todo va en una columna, con la lista de Facciones arriba en una franja.
+- Banco nuevo `pruebas/diplomacia/` (`?elegida=fac-2` para ver otra Facción), sin servidor.
+
 ## [0.102.0] — 2026-11-02 · Pantallas de carga con consejos · sin cambio de contrato
 
 Petición de Víctor (2026-11-02): pantallas de carga entre la vista del mundo y las de dentro, con consejos del juego e imágenes tomadas de la

@@ -56,12 +56,16 @@ export function htmlDiplomacia(proyeccion: ProyeccionJugador, faccion: Faccion, 
   const filaEnviada = (p: PropuestaRelacion) => `<div class="faction-list-item faction-list-item-texto"><div><strong>Propones ${p.tipo === 'alianza' ? 'una alianza' : `un vasallaje (${tributo(p)})`} a ${nombreDe(p.faccionBId)}</strong><span>${plazo(p.expiraEn, proyeccion.instante)}</span></div>${conAutoridad ? boton('data-dipl-retirar', p.id, 'Retirar') : ''}</div>`;
   const bloquePropuestas = (titulo: string, lista: PropuestaRelacion[], pintarFila: (p: PropuestaRelacion) => string) => lista.length > 0 ? `<span class="faction-kicker">${titulo}</span>${lista.map(pintarFila).join('')}` : '';
 
+  // El formulario en una rejilla con su rótulo encima de cada campo, que se reparte en una, dos o cuatro columnas según el ancho. El tributo solo
+  // aparece al elegir vasallaje (lo hace el CSS con `:has`, así sobrevive al repintado).
+  const campo = (rotulo: string, control: string, clase = '') => `<label class="diplo-campo${clase}"><span>${rotulo}</span>${control}</label>`;
   const formulario = conAutoridad && candidatas.length > 0
-    ? `<div class="faction-list-item">${con ? `<input id="sel-diplomacia" type="hidden" value="${escaparHtml(con.id)}" />` : `<select id="sel-diplomacia" class="form-input">${candidatas.map((f) => `<option value="${escaparHtml(f.id)}">${escaparHtml(f.nombre)}</option>`).join('')}</select>`}` +
-      `<select id="tipo-diplomacia" class="form-input"><option value="alianza">Alianza</option><option value="vasallaje">Vasallaje (tú, señora)</option><option value="guerra">Declarar guerra</option></select></div>` +
-      `<div class="faction-list-item"><select id="tributo-recurso" class="form-input">${TRIBUTOS.map((t) => `<option value="${t}">${escaparHtml(RECURSO_NOMBRE[t] ?? t)}</option>`).join('')}</select>` +
-      `<input id="tributo-cantidad" class="form-input" type="number" min="0" step="1" value="10" aria-label="Tributo por minuto" /><button id="btn-proponer-diplomacia" class="btn-secondary" type="button">Proponer</button></div>` +
-      ''
+    ? `<div class="diplo-proponer"><span class="faction-kicker">Proponer</span><div class="diplo-proponer-campos">` +
+      (con ? `<input id="sel-diplomacia" type="hidden" value="${escaparHtml(con.id)}" />` : campo('A', `<select id="sel-diplomacia" class="form-input">${candidatas.map((f) => `<option value="${escaparHtml(f.id)}">${escaparHtml(f.nombre)}</option>`).join('')}</select>`)) +
+      campo('Qué', `<select id="tipo-diplomacia" class="form-input"><option value="alianza">Alianza</option><option value="vasallaje">Vasallaje (tú, señora)</option><option value="guerra">Declarar guerra</option></select>`) +
+      campo('Tributo (vasallaje)', `<select id="tributo-recurso" class="form-input">${TRIBUTOS.map((t) => `<option value="${t}">${escaparHtml(RECURSO_NOMBRE[t] ?? t)}</option>`).join('')}</select>`, ' diplo-campo-tributo') +
+      campo('Por minuto', `<input id="tributo-cantidad" class="form-input" type="number" min="0" step="1" value="10" aria-label="Tributo por minuto" />`, ' diplo-campo-tributo diplo-campo-corto') +
+      `</div><button id="btn-proponer-diplomacia" class="btn-secondary" type="button">Proponer</button></div>`
     : '';
   const info = ayuda('faccion:diplomacia', 'Tributo por minuto, solo en vasallaje. Alianza y vasallaje son propuestas: solo nacen si el Rey de la otra Facción las acepta antes de que caduquen (3 días de mundo); mientras tanto las puedes retirar. Una Facción con reputación por debajo de −40 no puede proponer alianzas. La guerra es libre y arrastra a señor y vasallos del rival; solo se acaba con la paz de las dos. Romper una alianza sin más cuesta 12 puntos de reputación; liberar a un vasallo da 6.');
 

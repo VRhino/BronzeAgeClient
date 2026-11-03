@@ -1349,7 +1349,7 @@ function renderPanelJugador(forzar = false): void {
     const cabecera = `<div class="faccion-cabecera"><div class="mapa-panel-jugador">${propia ? 'Facción' : escaparHtml(proyeccion.heroe.displayName)}</div><button class="btn-secondary" type="button" data-cerrar-faccion aria-label="Cerrar">Cerrar</button></div>`;
     // Con Facción: el panel fijo de la izquierda (escudo, nombre, plazas, títulos y Dejar) y, a la derecha, las pestañas.
     const html = propia
-      ? `${cabecera}<div class="faccion-marco">${htmlLateralFaccion(proyeccion, escaparHtml)}<div class="faccion-principal">${pestanas}<div class="faccion-cuerpo">${cuerpo}</div></div></div>`
+      ? `${cabecera}<div class="faccion-marco">${htmlLateralFaccion(proyeccion, escaparHtml)}<div class="faccion-principal">${pestanas}<div class="faccion-cuerpo${pestana === 'diplomacia' ? ' faccion-cuerpo-diplomacia' : ''}">${cuerpo}</div></div></div>`
       : `${cabecera}<div class="faccion-cuerpo">${cuerpo}</div>`;
     panel.classList.add('jugador-panel-completo');
     panel.classList.toggle('jugador-panel-faccion', Boolean(propia));
