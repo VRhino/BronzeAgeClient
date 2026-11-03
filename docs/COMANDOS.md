@@ -184,7 +184,7 @@ Panel «Salir» de un campamento y «Salir al mundo» de la plaza (`ui/convocato
 ### Ejércitos y logística de campaña
 
 - [x] `movilizarEjercito` — `asentamientoId`, `heroeId`, `escuadronIds`, `objetivo`: `{ tipo: 'asentamiento', id }` o `{ tipo: 'punto', punto: { x, y } }`; opcional: `politicaDeUnion` (`rechazar` \| `aceptar` \| `preguntar`, Doc 5.14.1 — qué hacer con quien pida unirse en campo) · `objetivo` opcional desde 2026-10-08 (sin él sale quieto); la UI usa la convocatoria + `partirConvocatoria`
-- [x] `unirseAEjercito` — `ejercitoId`, `asentamientoId`, `heroeId`, `escuadronIds` · panel «Ejércitos» de la plaza: sumarte con tropa de tu campamento a un ejército de tu Facción que pasa a ≤ 60 de la plaza
+- [x] `unirseAEjercito` — `ejercitoId`, `asentamientoId`, `heroeId`, `escuadronIds` · icono «Unirse a un ejército» del riel de la plaza (solo sale cuando se puede, desde 0.114.0): sumarte con tropa de tu campamento a un ejército de tu Facción que pasa a ≤ 60 de la plaza
 - [x] `replegarEjercito` — `ejercitoId` · panel ⚑ Ejército del mapa (Líder)
 - [x] `estacionarEjercito` — `ejercitoId` · panel ⚑ Ejército del mapa (Líder, en marcha)
 - [x] `alternarReabastecerAliados` — `{ asentamientoId, permitido }` · `src/ui/panelAliados.ts` (subpestaña «Aliados» de Centro urbano)

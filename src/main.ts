@@ -86,7 +86,7 @@ import { montarPartidas } from './ui/pantallaPartidas';
 import { cablearCaravanas, cablearOrdenes, htmlCaravanas, htmlOrdenes } from './ui/panelMercado';
 import { cablearReclutamiento, htmlReclutamiento } from './ui/reclutamiento';
 import { peticionesNuevasConv } from './ui/convocatoria';
-import { cablearUnirseDesdePlaza, htmlUnirseDesdePlaza } from './ui/unirseDesdePlaza';
+import { cablearUnirseDesdePlaza, ejercitosParaUnirse, htmlUnirseDesdePlaza } from './ui/unirseDesdePlaza';
 import { cablearCargos } from './ui/panelCargos';
 import { cablearDiplomacia } from './ui/panelDiplomacia';
 import { instalarZoomPan, type ControlMapa } from './ui/pantallaMapa';
@@ -2041,11 +2041,9 @@ function renderVentanaSalida(): void {
 
 // --- PANTALLA ASENTAMIENTO (T6) -----------------------------------------------------------------
 
-type PanelAsent = 'ejercito';
-let panelAsentAbierto: PanelAsent | null = null;
 /** Las ventanas de la plaza (Víctor, 2026-11-02, «rehacer la interfaz de asentamiento»): cada una con su icono en el riel de la izquierda, salvo la
  * subida de nivel (el medallón del blasón) e Información (el «?» de la barra). Solo hay una abierta, a media pantalla, junto al riel. */
-type VentanaPlaza = 'construccion' | 'gobierno' | 'defensa' | 'territorio' | 'reclutamiento' | 'taberna' | 'mercado' | 'ascenso' | 'informacion' | 'almacen';
+type VentanaPlaza = 'construccion' | 'gobierno' | 'defensa' | 'territorio' | 'reclutamiento' | 'taberna' | 'mercado' | 'ejercito' | 'ascenso' | 'informacion' | 'almacen';
 let ventanaPlaza: VentanaPlaza | null = null;
 /** La subpestaña elegida en cada ventana que tiene varias. */
 const subDeVentana: Partial<Record<VentanaPlaza, string>> = {};
@@ -2115,6 +2113,8 @@ const RIEL: { id: VentanaPlaza; titulo: string; icono: string; requiere?: { tipo
   { id: 'reclutamiento', titulo: 'Reclutamiento', icono: iconoEdificio('barracon', 28) },
   { id: 'taberna', titulo: 'Taberna', icono: iconoEdificio('taberna', 28), requiere: { tipo: 'taberna', nombre: 'una Taberna' } },
   { id: 'mercado', titulo: 'Mercado', icono: iconoEdificio('mercado', 28), requiere: { tipo: 'mercado', nombre: 'un Mercado' }, deVisita: true },
+  // unirse a un ejército de tu Facción que pasa cerca (antes, el botón «Ejércitos» de arriba): solo sale cuando hay a cuál (`ejercitosParaUnirse`)
+  { id: 'ejercito', titulo: 'Unirse a un ejército', icono: ICONO_RIEL.ejercito },
 ];
 
 /** Un clic en uno de estos edificios (en pie) en la vista 3D abre su ventana, además de su ficha. */
@@ -2142,6 +2142,7 @@ function ventanaDisponible(v: VentanaPlaza, p: ProyeccionJugador, a: Asentamient
   if (v === 'almacen') return !ajena && Boolean(a.almacen);
   // construir es cosa del Gobernador o del Maestro de Obras (el motor: `AlternarAutoConstruccion` y la cola, `Cargo(GOBERNADOR_O_MAESTRO)`)
   if (v === 'construccion') return !ajena && Boolean(cargoConstructor(a, p.heroeId));
+  if (v === 'ejercito') return !ajena && ejercitosParaUnirse(p, a).length > 0;
   const def = RIEL.find((x) => x.id === v);
   if (!def || (ajena && !def.deVisita)) return false;
   return !def.requiere || a.edificios.some((e) => e.tipo === def.requiere!.tipo && e.estado === 'activo');
@@ -2150,7 +2151,6 @@ function ventanaDisponible(v: VentanaPlaza, p: ProyeccionJugador, a: Asentamient
 /** Abre una ventana de la plaza (o ninguna, con `null`) y repinta. */
 function abrirVentanaPlaza(v: VentanaPlaza | null): void {
   ventanaPlaza = v;
-  if (v && panelAsentAbierto) { panelAsentAbierto = null; renderPanelAsent(); }
   renderPanelEdificios();
 }
 const alternarVentanaPlaza = (v: VentanaPlaza): void => abrirVentanaPlaza(ventanaPlaza === v ? null : v);
@@ -2312,6 +2312,8 @@ function contenidoDeVentana(v: VentanaPlaza, c: ContextoPlaza, ajena: boolean): 
         html: htmlAscensoPlaza(p, a, c.cargo === 'gobernador', escaparHtml, renderPanelEdificios, true) || '<p class="asent-lado-nota">Cargando los requisitos…</p>',
         cablear: () => { cablearAccionesAsentLado(cuerpo, a, c.cargo); cablearPlegables(cuerpo); },
       };
+    case 'ejercito':
+      return { ...base, ancho: 'estrecha', html: htmlUnirseDesdePlaza(p, a, escaparHtml), cablear: () => cablearUnirseDesdePlaza(cuerpo, p, a, ejecutarYRefrescar) };
     case 'informacion': {
       const s = SUBPESTANAS_CENTRO_EXTRA.find((x) => x.id === 'informacion');
       return { titulo: 'Información', icono: '<b class="asent-ventana-interrogacion">?</b>', subs: [], sub: '', html: s ? s.html(c) : '', cablear: () => { cablearPlegables(cuerpo); s?.cablear?.(c); } };
@@ -2360,41 +2362,27 @@ function renderPieDePlaza(): void {
   }, 'pie');
 }
 
-/** Pinta el panel flotante de la barra (Ejércitos) según `panelAsentAbierto`. */
+/** El botón de salir, abajo a la izquierda (0.113.0; antes, arriba a la derecha junto a «Ejércitos», que se quitó): «Salir al mundo» si resides
+ * en la plaza, «Salir» si estás de visita. */
 function renderPanelAsent(): void {
   const proyeccion = estadoCliente.proyeccionUltima;
-  const barra = document.querySelector<HTMLElement>('.asent-barra');
-  const panel = document.querySelector<HTMLElement>('.asent-panel');
-  if (!barra || !panel || !proyeccion) return;
-  const botonSalir = barra.querySelector('#btn-salir-mundo');
-  const plazaActual = proyeccion.asentamientos[0];
-  if (botonSalir && plazaActual) botonSalir.textContent = resideEnLaPlaza(proyeccion, plazaActual) ? 'Salir al mundo' : 'Salir';
-  barra.querySelectorAll<HTMLButtonElement>('[data-panel-asent]').forEach((boton) => {
-    boton.classList.toggle('activo', boton.dataset.panelAsent === panelAsentAbierto);
-  });
-  if (panelAsentAbierto === null) { panel.hidden = true; vaciar(panel); return; }
-  panel.hidden = false;
-  if (panelAsentAbierto === 'ejercito') {
-    const asentamiento = proyeccion.asentamientos[0];
-    if (!asentamiento) return;
-    pintar(panel, htmlUnirseDesdePlaza(proyeccion, asentamiento, escaparHtml), () => cablearUnirseDesdePlaza(panel, proyeccion, asentamiento, ejecutarYRefrescar), 'ejercito');
-    return;
-  }
+  const botonSalir = document.querySelector('.asent-barra #btn-salir-mundo');
+  const plazaActual = proyeccion?.asentamientos[0];
+  if (botonSalir && proyeccion && plazaActual) botonSalir.textContent = resideEnLaPlaza(proyeccion, plazaActual) ? 'Salir al mundo' : 'Salir';
 }
 
 /**
  * Pantalla ASENTAMIENTO: la plaza en 3D a pantalla completa y su HUD encima, repartido por los bordes (Víctor, 2026-11-02, «rehacer la interfaz
  * de asentamiento»: había demasiado en muy poco espacio). Arriba a la izquierda, el blasón (con el nombre, la casa, la corona y el medallón que
  * abre la subida), la subida en curso, el riel de las ventanas y las obras en marcha; al borde derecho, el rastreador de misiones y la ficha del
- * edificio elegido; arriba a la derecha, «Ejércitos» y «Salir al mundo»; arriba al centro, la ocupación militar; abajo, Población, Almacén y Estado;
- * abajo a la derecha, pegado a los bordes, el minimapa. El «?» de la barra abre Información.
+ * edificio elegido; arriba al centro, Población, Almacén y Estado (0.112.0) y, debajo, la ocupación militar; abajo, el riel; abajo a la izquierda,
+ * «Salir al mundo» (0.113.0); abajo a la derecha, pegado a los bordes, el minimapa. El «?» de la barra abre Información.
  */
 function montarAsentamiento(): void {
   const proyeccion = estadoCliente.proyeccionUltima;
   const asentamiento = proyeccion?.asentamientos[0];
   if (!proyeccion || !asentamiento) { montar('cargando'); return; }
   estadoCliente.modoVista = 'asentamiento';
-  panelAsentAbierto = null;
   menuEsquinaAbierto = false;
   ventanaPlaza = null;
   popBlason = null;
@@ -2421,10 +2409,8 @@ function montarAsentamiento(): void {
       <div class="asent-lienzo asent-minimapa" title="Minimapa: un clic lleva la vista ahí"><canvas id="mapa" width="900" height="900"></canvas></div>
       <header class="asent-barra">
         <div class="asent-barra-acciones">
-          <button type="button" data-panel-asent="ejercito">Ejércitos</button>
           <button id="btn-salir-mundo" class="btn-primary" type="button">Salir al mundo</button>
         </div>
-        <aside class="asent-panel" hidden></aside>
       </header>
       <section class="asent-ventana asent-edificios" role="dialog" aria-label="Plaza" hidden>
         <header class="asent-ventana-cab"><div class="asent-ventana-titulo"></div><button class="asent-ventana-cerrar" type="button" data-ventana-cerrar title="Cerrar (Esc)" aria-label="Cerrar">✕</button></header>
@@ -2438,15 +2424,7 @@ function montarAsentamiento(): void {
   </div>`;
   vigilarPieArriba(app.querySelector<HTMLElement>('.plaza-3d'));
   const contenedor = document.querySelector<HTMLElement>('.asent-screen')!;
-  contenedor.querySelectorAll<HTMLButtonElement>('[data-panel-asent]').forEach((boton) => {
-    boton.addEventListener('click', () => {
-      panelAsentAbierto = panelAsentAbierto === boton.dataset.panelAsent ? null : (boton.dataset.panelAsent as PanelAsent);
-      menuEsquinaAbierto = false;
-      sincronizarMenuEsquina();
-      renderPanelAsent();
-    });
-  });
-  contenedor.querySelector('#btn-salir-mundo')?.addEventListener('click', () => { panelAsentAbierto = null; menuEsquinaAbierto = false; sincronizarMenuEsquina(); renderPanelAsent(); abrirVentanaSalida(); });
+  contenedor.querySelector('#btn-salir-mundo')?.addEventListener('click', () => { menuEsquinaAbierto = false; sincronizarMenuEsquina(); abrirVentanaSalida(); });
   contenedor.querySelector('[data-ventana-info]')?.addEventListener('click', () => alternarVentanaPlaza('informacion'));
   contenedor.querySelector('[data-ventana-cerrar]')?.addEventListener('click', () => abrirVentanaPlaza(null));
   document.addEventListener('pointerdown', cerrarPopFuera, true);

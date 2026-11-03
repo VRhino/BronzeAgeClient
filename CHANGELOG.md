@@ -3,6 +3,22 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.114.0] — 2026-11-03 · La plaza sin «Ejércitos», con el blasón arriba del todo y «Salir al mundo» abajo a la izquierda · sin cambio de contrato
+
+Petición de Víctor (2026-11-03, 13:29):
+
+- **La barra del jugador, sin el nombre del héroe ni «Dentro de…»** en la plaza, el campamento y el pueblo: el blasón ya dice dónde estás. Lo que
+  avisa de peligro (te persiguen, estados) sale bajo la barra de Población, Almacén y Estado.
+- **El blasón y lo que cuelga debajo** (obras, subida) suben arriba del todo.
+- **Población, Almacén y Estado** a la altura del blasón, a su tamaño (ya no estiran) y centrados en el hueco hasta los botones del jugador. Si no
+  caben, el Almacén pasa a dos filas y, más estrecho, a una fila suya debajo. Se mide dónde acaba (`--pie-fin`) y lo que ocupan los botones
+  (`--botones-ancho`) para que ventanas, ocupación y avisos vayan debajo.
+- **Fuera el botón «Ejércitos»** y su panel. Lo que hacía (unirse con tropa del campamento a un ejército de tu Facción que pasa cerca,
+  `unirseAEjercito`) sale ahora como icono del riel **solo cuando se puede** (`ejercitosParaUnirse`: resides, tienes tropa libre, la columna
+  admite y está a `radioReabastecimiento` o menos), y su ventana enseña solo esos ejércitos.
+- **«Salir al mundo», abajo a la izquierda** (en móvil, encima del riel). El misiones sube a ras de la barra del jugador. El cajón de
+  Construcción queda entre el botón y el minimapa.
+
 ## [0.113.0] — 2026-11-03 · Agua de verdad en el mundo 3D · sin cambio de contrato
 
 Petición de Víctor (2026-11-03): «hay que mejorar la vista del agua, q no solo sea el piso pintado de azul».

@@ -236,6 +236,10 @@ La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, es
 > o cuándo se acaba), la mano de obra en un medidor, los extractores como edificio ➜ recurso y los talleres como insumos ➜ producto con el
 > interruptor ▶ / ❚❚. Las cifras van en los títulos (al pasar el ratón).
 >
+> **Desde 0.114.0** la barra del jugador no lleva el nombre del héroe en la plaza; el blasón sube arriba del todo y la barra de Población,
+> Almacén y Estado va a su lado, a su tamaño y centrada hasta los botones del jugador. «Ejércitos» desaparece: unirse a un ejército es un icono
+> del riel que solo sale cuando se puede. «Salir al mundo» va abajo a la izquierda.
+>
 > **La barra de Población, Almacén y Estado, arriba al centro desde 0.112.0** (2026-11-03): en el hueco entre el blasón y el panel de
 > misiones, en una fila (el Almacén estira y, si no cabe, pasa sus recursos a dos filas); abajo solo queda el riel.
 >

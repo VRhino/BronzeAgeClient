@@ -31,15 +31,30 @@ function grupo(clase: string, titulo: string, piezas: string, extra = ''): strin
 /** Cuántos recursos caben en la placa del Almacén (Víctor, 2026-11-03). */
 export const MAX_BARRA_ALMACEN = 8;
 
-/** La barra de Población, Almacén y Estado va arriba al centro (Víctor, 2026-11-03) y su alto cambia (en pantallas medianas pasa a dos filas):
- * se mide y se deja en `--pie-arriba` (en la raíz, porque los avisos flotantes cuelgan del body) para que las ventanas, la franja de ocupación y el aviso de batalla se pongan debajo. */
+/** La barra de Población, Almacén y Estado va arriba al centro (Víctor, 2026-11-03), junto al blasón y a la izquierda de los botones del jugador,
+ * y su alto cambia (en pantallas medianas pasa a dos o tres filas). Se mide y se deja en la raíz (los avisos flotantes cuelgan del body):
+ * `--pie-fin`, dónde acaba por abajo (o la barra del jugador, si no hay), para que las ventanas, la franja de ocupación y los avisos se pongan
+ * debajo; y `--botones-ancho`, lo que ocupan a la derecha los botones del jugador, hasta donde llega la barra. */
 export function vigilarPieArriba(pantalla: HTMLElement | null): void {
   const pie = pantalla?.querySelector<HTMLElement>('.asent-pie');
   if (!pantalla || !pie || typeof ResizeObserver === 'undefined') return;
-  const medir = (): void => document.documentElement.style.setProperty('--pie-arriba', `${pie.hidden ? 0 : Math.ceil(pie.getBoundingClientRect().height)}px`);
-  new ResizeObserver(medir).observe(pie);
+  const botones = pantalla.querySelector<HTMLElement>('.jugador-botones');
+  const barra = pantalla.querySelector<HTMLElement>('.jugador-barra');
+  const raiz = document.documentElement.style;
+  const medir = (): void => {
+    if (!pantalla.isConnected) return;
+    const arriba = pantalla.getBoundingClientRect();
+    const fin = pie.hidden ? (barra?.getBoundingClientRect().bottom ?? arriba.top) : pie.getBoundingClientRect().bottom;
+    raiz.setProperty('--pie-fin', `${Math.ceil(fin - arriba.top)}px`);
+    if (botones) raiz.setProperty('--botones-ancho', `${Math.ceil(arriba.right - botones.getBoundingClientRect().left)}px`);
+  };
+  const vigia = new ResizeObserver(medir);
+  vigia.observe(pie);
+  vigia.observe(pantalla);
+  if (botones) vigia.observe(botones);
   medir();
 }
+
 /** Los de partida, mientras el jugador no elija: lo básico de cualquier plaza. */
 const BARRA_ALMACEN_DEFECTO = ['trigo', 'madera', 'piedra', 'cobre', 'estano', 'oro', 'lingoteBronce', 'livestock'];
 const CLAVE_BARRA = 'bronzeage:barra-almacen';
@@ -264,4 +279,6 @@ export const ICONO_RIEL = {
   territorio: `<svg class="icono-edificio" width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><path ${R} d="M3 26l8-11 5 6 4-4 9 9Z"/><path ${T} d="M16 15V4l7 3-7 3M3 29h26M7 26l2 3M13 26l2 3M19 26l2 3"/></svg>`,
   // el sello de la Facción: un escudo con la corona
   gobierno: `<svg class="icono-edificio" width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><path ${R} d="M16 4l10 4v8c0 7-5 11-10 13C11 27 6 23 6 16V8Z"/><path ${T} d="M11 19l-1-7 3 2 3-4 3 4 3-2-1 7Z"/></svg>`,
+  // un estandarte con su asta: unirse a un ejército que pasa
+  ejercito: `<svg class="icono-edificio" width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><path ${R} d="M10 5h15l-4 5 4 5H10Z"/><path ${T} d="M10 3v26M6 29h8M10 5h15l-4 5 4 5H10"/></svg>`,
 } as const;
