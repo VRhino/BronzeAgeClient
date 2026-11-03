@@ -3,6 +3,11 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.121.0] — 2026-11-03 · El tooltip de los recursos de arriba se abre hacia abajo · sin cambio de contrato
+
+Petición de Víctor (2026-11-03): en la barra de Población, Almacén y Estado (arriba desde 0.112.0), el tooltip de cada recurso se abría hacia
+arriba y se salía de la pantalla; ahora se abre hacia abajo.
+
 ## [0.120.0] — 2026-11-03 · El mundo 3D con vida: nubes, viento, humo y pájaros · sin cambio de contrato
 
 Petición de Víctor (2026-11-03): «mejorar la vista de mundo en general».

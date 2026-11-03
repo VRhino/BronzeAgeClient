@@ -5076,6 +5076,8 @@ body:has(.asent-ocupacion:not([hidden])) .eleccion-clic { top: calc(var(--pie-fi
 .plaza-3d .asent-pie-grupo { padding: 5px 5px 11px; }
 /* arriba, el letrero de cada placa va por debajo (Víctor, 2026-11-03) */
 .plaza-3d .asent-pie-titulo { top: auto; bottom: -9px; }
+/* arriba, el tooltip de cada recurso se abre hacia abajo (hacia arriba se salía de la pantalla; Víctor, 2026-11-03) */
+.plaza-3d .asent-pie .asent-recurso::after { bottom: auto; top: calc(100% + 7px); z-index: 6; }
 .plaza-3d .asent-pie-grupo { box-shadow: inset 0 -2px 0 var(--acento), var(--placa); }
 .plaza-3d .asent-pie-almacen[data-abrir-almacen]:hover, .plaza-3d .asent-pie-almacen[data-abrir-almacen]:focus-visible { box-shadow: inset 0 -2px 0 var(--acento), 0 0 10px rgba(255, 210, 74, 0.25), var(--placa); }
 .plaza-3d .asent-pie-piezas { gap: 3px; }
