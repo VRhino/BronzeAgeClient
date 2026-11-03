@@ -44,7 +44,8 @@ export function vigilarPieArriba(pantalla: HTMLElement | null): void {
   const medir = (): void => {
     if (!pantalla.isConnected) return;
     const arriba = pantalla.getBoundingClientRect();
-    const fin = pie.hidden ? (barra?.getBoundingClientRect().bottom ?? arriba.top) : pie.getBoundingClientRect().bottom;
+    // los letreros de las placas cuelgan 9 px por debajo de la barra
+    const fin = pie.hidden ? (barra?.getBoundingClientRect().bottom ?? arriba.top) : pie.getBoundingClientRect().bottom + 10;
     raiz.setProperty('--pie-fin', `${Math.ceil(fin - arriba.top)}px`);
     if (botones) raiz.setProperty('--botones-ancho', `${Math.ceil(arriba.right - botones.getBoundingClientRect().left)}px`);
   };

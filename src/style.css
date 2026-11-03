@@ -4723,6 +4723,8 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
   pointer-events: none;
 }
 .plaza-3d > .jugador-barra > * { pointer-events: auto; }
+/* el degradado de arriba queda por detrás del blasón y de la barra de Población, Almacén y Estado, que se leen sin velo (Víctor, 2026-11-03) */
+.plaza-3d > .jugador-barra { z-index: 2; }
 .plaza-3d > .jugador-barra .jugador-quien { text-shadow: 0 1px 3px #000, 0 0 8px rgba(0, 0, 0, 0.8); }
 .plaza-3d > .jugador-barra .jugador-quien small { color: var(--pergamino); }
 .plaza-3d .jugador-botones { gap: 6px; align-items: center; }
@@ -4894,7 +4896,7 @@ button.asent-blason-medallon:hover .medallon-nivel, button.asent-blason-medallon
 .asent-pie[hidden] { display: none; }
 .plaza-3d .asent-pie {
   position: absolute;
-  top: 16px;
+  top: 8px;
   left: calc(16px + var(--col-izq) + 12px);
   right: calc(var(--botones-ancho, 460px) + 12px);
   z-index: 3;
@@ -5071,7 +5073,11 @@ body:has(.asent-ocupacion:not([hidden])) .eleccion-clic { top: calc(var(--pie-fi
 /* Pantallas medianas (1280 × 720): la barra de abajo más apretada para que quepa en una fila, y el riel más bajo. */
 /* Arriba, la barra va apretada siempre (cabe en una fila desde ~1600 px de ancho con 8 recursos), y algo más en pantallas medianas. */
 .plaza-3d .asent-pie { gap: 16px 6px; }
-.plaza-3d .asent-pie-grupo { padding: 10px 5px 5px; }
+.plaza-3d .asent-pie-grupo { padding: 5px 5px 11px; }
+/* arriba, el letrero de cada placa va por debajo (Víctor, 2026-11-03) */
+.plaza-3d .asent-pie-titulo { top: auto; bottom: -9px; }
+.plaza-3d .asent-pie-grupo { box-shadow: inset 0 -2px 0 var(--acento), var(--placa); }
+.plaza-3d .asent-pie-almacen[data-abrir-almacen]:hover, .plaza-3d .asent-pie-almacen[data-abrir-almacen]:focus-visible { box-shadow: inset 0 -2px 0 var(--acento), 0 0 10px rgba(255, 210, 74, 0.25), var(--placa); }
 .plaza-3d .asent-pie-piezas { gap: 3px; }
 .plaza-3d .asent-pie .asent-recurso { gap: 3px; padding: 3px 5px 7px; font-size: 0.76rem; }
 .plaza-3d .asent-pie .asent-recurso-icono { font-size: 0.85rem; }
@@ -5110,7 +5116,7 @@ body:has(.asent-ocupacion:not([hidden])) .eleccion-clic { top: calc(var(--pie-fi
   .plaza-3d .asent-blason .medallon-nivel b { font-size: 0.72rem; }
   /* estrecho: los botones del jugador ocupan la fila de arriba; debajo, la barra a todo lo ancho, y debajo el blasón y las misiones */
   .asent-der { width: clamp(180px, 38vw, 260px); top: calc(var(--pie-fin, var(--jugador-alto)) + 12px); }
-  .plaza-3d .asent-pie { top: calc(var(--jugador-alto) + 16px); left: 8px; right: 8px; }
+  .plaza-3d .asent-pie { top: calc(var(--jugador-alto) + 8px); left: 8px; right: 8px; }
   /* «Salir al mundo», encima del riel, que aquí ocupa el ancho */
   .plaza-3d .asent-barra { bottom: calc(var(--riel-alto) + 24px); left: 8px; }
   .plaza-3d .asent-izq { top: calc(var(--pie-fin, var(--jugador-alto)) + 12px); max-height: calc(100% - var(--pie-fin, var(--jugador-alto)) - var(--pie-alto) - 70px); }

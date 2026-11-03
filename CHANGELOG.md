@@ -3,6 +3,15 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.116.0] — 2026-11-03 · Sin velo sobre el blasón y la barra de arriba, con sus letreros debajo · sin cambio de contrato
+
+Peticiones de Víctor (2026-11-03):
+
+- El degradado oscuro del borde de arriba de la plaza (la barra del jugador) queda por detrás del blasón y de la barra de Población, Almacén y
+  Estado, que ya no se leen con velo (`.plaza-3d > .jugador-barra`, z-index 2).
+- En la barra de arriba, los letreros «Población», «Almacén» y «Estado» van por debajo de cada placa, y la raya de color también abajo. La barra
+  sube a la altura del blasón.
+
 ## [0.115.0] — 2026-11-03 · Construcción sin la pestaña «Todos» · sin cambio de contrato
 
 Petición de Víctor (2026-11-03): en el cajón de Construcción ya no está la pestaña «Todos». Siempre hay un tipo elegido; al abrir, el primero que
