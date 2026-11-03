@@ -3,6 +3,11 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.115.0] — 2026-11-03 · Construcción sin la pestaña «Todos» · sin cambio de contrato
+
+Petición de Víctor (2026-11-03): en el cajón de Construcción ya no está la pestaña «Todos». Siempre hay un tipo elegido; al abrir, el primero que
+tiene algo que construir (`grupoConstruir`, ui/panelObras.ts).
+
 ## [0.114.0] — 2026-11-03 · La plaza sin «Ejércitos», con el blasón arriba del todo y «Salir al mundo» abajo a la izquierda · sin cambio de contrato
 
 Petición de Víctor (2026-11-03, 13:29):

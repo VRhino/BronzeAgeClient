@@ -99,13 +99,14 @@ const GRUPOS_CONSTRUIR: { id: string; nombre: string; icono: string; tipos: stri
 ];
 const grupoDe = (tipo: string): string => GRUPOS_CONSTRUIR.find((g) => g.tipos.includes(tipo))?.id ?? 'otros';
 
-/** La pestaña de «Construir» elegida ('todos' = sin filtro). Vive entre repintados. */
-let grupoConstruir = 'todos';
+/** La pestaña de «Construir» elegida. Sin «Todos» desde 0.115.0 (Víctor, 2026-11-03): siempre hay un tipo elegido, de serie el primero que tiene
+ * algo. Vive entre repintados. */
+let grupoConstruir = '';
 
 /** La Granja es única en la ciudad (motor e4923d4d, `EDIFICIOS_UNICOS`): con la de la fundación en pie no se ofrece otra. */
 const hayGranja = (a: Asentamiento): boolean => (a.edificios ?? []).some((x) => x.tipo === 'granja');
 
-/** Construir: pestañas por tipo (todos, ciudad, recursos, talleres, militar, gobierno) con cuántos se pueden levantar ya, y una casilla por edificio
+/** Construir: pestañas por tipo (ciudad, recursos, talleres, militar, gobierno) con cuántos se pueden levantar ya, y una casilla por edificio
  * con su icono y su coste. Solo los que se pueden pedir: los que el cliente sabe que no (`motivoParaConstruir`) no salen. Vacío sin cargo. */
 export function htmlConstruir(a: Asentamiento, cargo: Cargo, esc: Escapar): string {
   if (!cargo) return '';
@@ -121,17 +122,17 @@ export function htmlConstruir(a: Asentamiento, cargo: Cargo, esc: Escapar): stri
     return { t, def, motivo, coste, caro, grupo: grupoDe(t) };
   }).filter((x) => !x.motivo);
   const grupos = [...GRUPOS_CONSTRUIR, { id: 'otros', nombre: 'Otros', icono: 'centroUrbano', tipos: [] }].filter((g) => info.some((x) => x.grupo === g.id));
-  if (grupoConstruir !== 'todos' && !grupos.some((g) => g.id === grupoConstruir)) grupoConstruir = 'todos';
+  if (!grupos.some((g) => g.id === grupoConstruir)) grupoConstruir = grupos[0]?.id ?? '';
   // En cada pestaña, cuántos se pueden poner ya en la cola (sin candado y con qué pagarlos).
-  const listos = (id: string): number => info.filter((x) => (id === 'todos' || x.grupo === id) && !x.motivo && !x.caro).length;
+  const listos = (id: string): number => info.filter((x) => x.grupo === id && !x.motivo && !x.caro).length;
   const pestana = (id: string, nombre: string, icono: string): string => {
     const n = listos(id);
     return `<button class="obra-grupo${grupoConstruir === id ? ' activo' : ''}" type="button" data-grupo-construir="${esc(id)}" title="${esc(`${nombre}: ${n} para construir ya`)}" aria-pressed="${grupoConstruir === id}">
       <span class="obra-grupo-icono">${icono}</span><span class="obra-grupo-nombre">${esc(nombre)}</span>${n ? `<span class="obra-grupo-n">${n}</span>` : ''}
     </button>`;
   };
-  const pestanas = `<div class="obra-grupos" role="tablist">${pestana('todos', 'Todos', '<span class="obra-grupo-todos" aria-hidden="true">▦</span>')}${grupos.map((g) => pestana(g.id, g.nombre, iconoEdificio(g.icono, 20))).join('')}</div>`;
-  const casillas = info.filter((x) => grupoConstruir === 'todos' || x.grupo === grupoConstruir).map(({ t, def, coste, caro }) => {
+  const pestanas = `<div class="obra-grupos" role="tablist">${grupos.map((g) => pestana(g.id, g.nombre, iconoEdificio(g.icono, 20))).join('')}</div>`;
+  const casillas = info.filter((x) => x.grupo === grupoConstruir).map(({ t, def, coste, caro }) => {
     const tiempo = def.tiempoConstruccionMinutos ? ` · ${duracion(Math.round(def.tiempoConstruccionMinutos * factorDePoliticas(a, 'factorTiempoConstruccion')))}` : '';
     const costeTexto = Object.entries(coste).map(([r, n]) => `${n} ${RECURSO_NOMBRE[r] ?? r}`).join(', ');
     const titulo = `${nombreDe(t)}${costeTexto ? ` · ${costeTexto}` : ''}${tiempo}${caro ? ' · No hay bastante en el almacén' : ''}`;

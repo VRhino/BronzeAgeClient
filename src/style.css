@@ -3905,7 +3905,6 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .obra-grupo:hover { color: var(--oro-claro); border-color: var(--bronce); }
 .obra-grupo.activo { color: var(--oro-claro); border-color: var(--oro); background: linear-gradient(180deg, rgba(110, 80, 40, 0.9), rgba(40, 29, 16, 0.95)); box-shadow: inset 0 -2px 0 var(--oro), 0 0 10px rgba(232, 190, 100, 0.25); --relleno: rgba(216, 184, 120, 0.4); }
 .obra-grupo-icono { display: flex; height: 20px; align-items: center; }
-.obra-grupo-todos { font-size: 1.05rem; line-height: 1; }
 .obra-grupo-nombre { max-width: 100%; font-size: 0.62rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .obra-grupo-n { position: absolute; top: -5px; right: -3px; min-width: 15px; padding: 0 3px; border-radius: 8px; background: var(--obra-verde); color: #10200a; font-size: 0.6rem; font-weight: 800; line-height: 15px; text-align: center; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6); }
 
