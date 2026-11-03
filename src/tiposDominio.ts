@@ -221,8 +221,9 @@ export interface Asentamiento {
   /** Racha de ticks con mantenimiento sano (para recuperar `nivelActual`). */
   rachaMantenimientoSano?: number;
   /** `porMinuto`: la tendencia neta de ese recurso ahora (producción − consumo), la del ritmo del motor. */
-  /** `porMinuto` es el neto del último paso de minuto; `producido` y `consumido`, lo que entró por los flujos de la plaza y lo que salió (comida, insumos, mantenimiento). */
-  almacen?: Record<string, { cantidad: number; capacidad: number; porMinuto?: number; producido?: number; consumido?: number }>;
+  /** `porMinuto` es el neto del último paso de minuto; `producido` y `consumido`, lo que entró por los flujos de la plaza y lo que salió (comida, insumos, mantenimiento).
+   * `produccion` (contrato 0.11.0): lo que rindieron de verdad esos flujos, quepa o no; con el almacén lleno, `producido` baja a lo que entró. */
+  almacen?: Record<string, { cantidad: number; capacidad: number; porMinuto?: number; producido?: number; produccion?: number; consumido?: number }>;
   edificios: Edificio[];
   /** El almacén está abierto a los ejércitos ALIADOS que pasan (`alternarReabastecerAliados`, Doc 5.13). Ausente = cerrado. */
   permiteReabastecerAliados?: boolean;

@@ -75,7 +75,7 @@ export function htmlTesoreria(c: ContextoPlaza): string {
 
   // Solo los recursos que la plaza produce o guarda, y los que ya tienen reserva; el Tesorero añade otros con «+ Añadir recurso».
   const almacen = a.almacen ?? {};
-  const produce = (r: string): number => almacen[r]?.producido ?? Math.max(0, almacen[r]?.porMinuto ?? 0);
+  const produce = (r: string): number => almacen[r]?.produccion ?? almacen[r]?.producido ?? Math.max(0, almacen[r]?.porMinuto ?? 0);
   const borrador = borradorReserva.get(a.id) ?? {};
   const visibles = RECURSOS_RESERVA.filter((r) => produce(r) > 0 || (almacen[r]?.cantidad ?? 0) >= 1 || (a.reservaManual?.[r] ?? 0) > 0 || r in borrador || (calibra && anadidos.get(a.id)?.has(r)));
   const resto = RECURSOS_RESERVA.filter((r) => !visibles.includes(r));

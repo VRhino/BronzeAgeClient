@@ -3,6 +3,17 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.127.0] — 2026-11-03 · La producción de verdad, también con el almacén lleno · contrato del motor b5e27ace (0.11.0)
+
+Pedido de Víctor (2026-11-03), pasado por el hilo del motor: con el almacén lleno, la ficha del recurso salía a la baja aunque los edificios
+siguieran rindiendo, porque `producido_por_minuto` baja a lo que entra.
+
+- Contrato regenerado desde b5e27ace: `Existencia.produccion_por_minuto` (campo 5), lo que rinden los edificios quepa o no. Llega como
+  `almacen[r].produccion` (con un servidor anterior, el mismo valor que `producido`).
+- La ficha del Almacén dice «produce» con `produccion` y «consume» con `consumido`. Con el almacén LLENO, la flecha y la cifra son el balance
+  producción − consumo, no el neto del almacén: ya no sale ▼ por estar lleno. El ▼ del resumen cuenta igual.
+- La reserva del Tesorero usa también la producción de verdad para decidir qué recursos enseña.
+
 ## [0.126.1] — 2026-11-03 · El mundo 3D, sin reservar memoria en cada fotograma · sin cambio de contrato
 
 Petición de Víctor (2026-11-03): quitar los tirones sueltos de la vista 3D del mundo. Medido en la partida real, en camp-1 con unas 52 columnas

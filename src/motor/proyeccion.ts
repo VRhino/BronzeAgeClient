@@ -186,7 +186,7 @@ function asentamiento(a: pb.Asentamiento, ahora: number): d.Asentamiento {
     nutricionPoblacion: a.nutricion ? valorDeRitmo(a.nutricion, ahora) : undefined,
     rachaMantenimientoSano: a.rachaMantenimientoSano,
     almacen: Object.keys(a.almacen).length
-      ? Object.fromEntries(Object.entries(a.almacen).map(([k, x]) => [k, { cantidad: valorDeRitmo(x.cantidad, ahora), capacidad: mil(x.capacidad), porMinuto: mil(x.cantidad?.porMinuto), producido: mil(x.producidoPorMinuto), consumido: mil(x.consumidoPorMinuto) }]))
+      ? Object.fromEntries(Object.entries(a.almacen).map(([k, x]) => [k, { cantidad: valorDeRitmo(x.cantidad, ahora), capacidad: mil(x.capacidad), porMinuto: mil(x.cantidad?.porMinuto), producido: mil(x.producidoPorMinuto), produccion: Math.max(mil(x.produccionPorMinuto), mil(x.producidoPorMinuto)), consumido: mil(x.consumidoPorMinuto) }]))
       : undefined,
     edificios: a.edificios.map(edificio),
     permiteReabastecerAliados: a.permiteReabastecerAliados || undefined,

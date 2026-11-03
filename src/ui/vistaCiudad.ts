@@ -315,27 +315,35 @@ function extractoresDe(a: Asentamiento, alCargar: () => void): Map<string, { rec
   return porTipo;
 }
 
-type Existencia = { cantidad: number; capacidad: number; porMinuto?: number; producido?: number; consumido?: number };
+type Existencia = { cantidad: number; capacidad: number; porMinuto?: number; producido?: number; produccion?: number; consumido?: number };
+
+/** Lo que rinden los edificios (quepa o no), lo que se consume y lo que se enseña como neto: con el almacén lleno, el balance producción − consumo
+ * y no el neto del almacén, que baja a lo que entra y hacía parecer la ficha a la baja (Víctor, 2026-11-03: «sale como si tuviera producción
+ * negativa cuando no es así»). */
+function flujosDe(x: Existencia): { produce: number; consume: number; neto: number; lleno: boolean } {
+  const produce = x.produccion ?? x.producido ?? 0, consume = x.consumido ?? 0;
+  const lleno = x.capacidad > 0 && x.cantidad >= x.capacidad;
+  return { produce, consume, neto: lleno ? produce - consume : x.porMinuto ?? 0, lleno };
+}
 
 /** Los recursos que se mueven o que hay, en el orden de la paleta (los básicos primero). */
 function recursosDelAlmacen(a: Asentamiento): [string, Existencia][] {
   const orden = Object.keys(RECURSO_ICONO);
   const pos = (r: string): number => { const i = orden.indexOf(r); return i < 0 ? orden.length : i; };
   return Object.entries(a.almacen ?? {})
-    .filter(([, x]) => x.cantidad >= 1 || (x.porMinuto ?? 0) !== 0 || (x.producido ?? 0) !== 0 || (x.consumido ?? 0) !== 0)
+    .filter(([, x]) => x.cantidad >= 1 || (x.porMinuto ?? 0) !== 0 || (x.produccion ?? x.producido ?? 0) !== 0 || (x.consumido ?? 0) !== 0)
     .sort(([r1], [r2]) => pos(r1) - pos(r2) || r1.localeCompare(r2));
 }
 
 /** Una ficha del almacén: icono, neto por minuto con flecha y color, lo que hay frente a lo que cabe, lo que entra frente a lo que sale y cuándo
  * se llena o se acaba. */
 function fichaRecurso(r: string, x: Existencia, e: Escapar): string {
-  const n = x.porMinuto ?? 0, p = x.producido ?? 0, c = x.consumido ?? 0;
-  const lleno = x.capacidad > 0 && x.cantidad >= x.capacidad;
+  const { produce: p, consume: c, neto: n, lleno } = flujosDe(x);
   const fraccion = x.capacidad > 0 ? Math.min(1, x.cantidad / x.capacidad) : 0;
   const nombre = RECURSO_NOMBRE[r] ?? r;
   const minutos = n > 0 && x.capacidad > 0 && !lleno ? (x.capacidad - x.cantidad) / n : n < 0 && x.cantidad > 0 ? x.cantidad / -n : null;
   const cuando = minutos === null ? '' : `${n > 0 ? 'Lleno' : 'Se acaba'} en ${textoEnTiempoReal(minutos * 60_000)}`;
-  const titulo = `${nombre}: ${Math.floor(x.cantidad)} de ${Math.floor(x.capacidad)}${p || c ? ` · por minuto +${fmt(p)} producido, −${fmt(c)} consumido` : ''} · neto ${n > 0 ? '+' : ''}${fmt(n)}/min${lleno ? ' · almacén lleno: lo que se produce de más se pierde' : cuando ? ` · ${cuando.toLowerCase()}` : ''}`;
+  const titulo = `${nombre}: ${Math.floor(x.cantidad)} de ${Math.floor(x.capacidad)}${p || c ? ` · por minuto produce ${fmt(p)}, consume ${fmt(c)}` : ''} · ${lleno ? 'balance' : 'neto'} ${n > 0 ? '+' : ''}${fmt(n)}/min${lleno ? ' · almacén lleno: lo que se produce de más se pierde' : cuando ? ` · ${cuando.toLowerCase()}` : ''}`;
   const flujo = p + c > 0 ? `<span class="prod-flujo" aria-hidden="true"><i class="entra" style="width:${((p / (p + c)) * 100).toFixed(1)}%"></i><i class="sale"></i></span>` : '<span class="prod-flujo quieto" aria-hidden="true"></span>';
   const aviso = lleno ? '<span class="prod-ficha-aviso lleno">LLENO</span>' : minutos !== null && n < 0 && minutos < 60 ? `<span class="prod-ficha-aviso baja">⏳${e(textoEnTiempoReal(minutos * 60_000).replace(/ (min|h|s|d)$/, (_, u: string) => (u === 'min' ? 'm' : u)))}</span>` : '';
   return `<div class="prod-ficha${lleno ? ' lleno' : ''}${n < 0 ? ' baja' : n > 0 ? ' sube' : ''}" title="${e(titulo)}">
@@ -375,7 +383,7 @@ export function htmlExtraccion(c: ContextoPlaza): string {
       ${parados ? `<span class="obra-insignia parado">⏸${parados > 1 ? parados : ''}</span>` : ''}${danados ? `<span class="obra-insignia danado">⚠${danados > 1 ? danados : ''}</span>` : ''}
     </div>`;
   }).join('');
-  return `<div class="obra-titulo"><span class="faction-kicker">Almacén</span><small>por minuto</small>${ayuda('plaza:produccion', 'Cada ficha: el neto del último minuto (▲ sube, ▼ baja), lo que hay frente a lo que cabe y, en la tira de abajo, lo que entra (verde) frente a lo que sale (rojo). Entra lo de edificios, pueblos y recaudación; sale la comida de la población y la guarnición, los insumos de los talleres y el mantenimiento. Órdenes, comercio, botín y caravanas no cuentan. LLENO: lo que se produce de más se pierde. Pasa el ratón para las cifras.')}</div>
+  return `<div class="obra-titulo"><span class="faction-kicker">Almacén</span><small>por minuto</small>${ayuda('plaza:produccion', 'Cada ficha: el neto del último minuto (▲ sube, ▼ baja), lo que hay frente a lo que cabe y, en la tira de abajo, lo que entra (verde) frente a lo que sale (rojo). Entra lo de edificios, pueblos y recaudación; sale la comida de la población y la guarnición, los insumos de los talleres y el mantenimiento. Órdenes, comercio, botín y caravanas no cuentan. LLENO: lo que se produce de más se pierde, y la flecha da el balance de lo que rinden los edificios menos lo que se consume. Pasa el ratón para las cifras.')}</div>
     ${fichas}
     <div class="obra-titulo"><span class="faction-kicker">Extracción</span>${obra}</div>
     <div class="prod-extractores">${extractores || '<p class="mapa-lista-vacia">Sin extractores ni granjas activos.</p>'}</div>`;
@@ -393,7 +401,7 @@ export function htmlProduccionYRecetas(c: ContextoPlaza): string {
 export function resumenProduccion(c: ContextoPlaza): string {
   const recursos = recursosDelAlmacen(c.asentamiento);
   const llenos = recursos.filter(([, x]) => x.capacidad > 0 && x.cantidad >= x.capacidad).length;
-  const bajan = recursos.filter(([, x]) => (x.porMinuto ?? 0) < 0).length;
+  const bajan = recursos.filter(([, x]) => flujosDe(x).neto < 0).length;
   const parados = (c.asentamiento.edificios ?? []).filter((x) => x.estado === 'activo' && x.pausadoPorAlmacenLleno).length;
   return [
     bajan ? `<span class="obra-chip baja" title="${bajan} recurso(s) a la baja">▼ ${bajan}</span>` : '',
