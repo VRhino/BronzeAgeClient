@@ -77,8 +77,15 @@ export class NieblaDeGuerra {
 
   /** Hace que `material` se oscurezca con la niebla (para lo que en el 2D va bajo ella). Devuelve el mismo material. */
   aplicar<M extends THREE.Material>(material: M): M {
+    material.onBeforeCompile = (sh) => this.parchear(sh);
+    material.customProgramCacheKey = () => 'niebla-de-guerra';
+    return material;
+  }
+
+  /** Mete la niebla en el sombreado de un material que ya cambia el suyo (el agua): se llama desde su `onBeforeCompile`, lo último. */
+  parchear(sh: THREE.WebGLProgramParametersWithUniforms): void {
     const u = this.uniformes;
-    material.onBeforeCompile = (sh) => {
+    {
       Object.assign(sh.uniforms, u);
       sh.vertexShader = 'varying vec2 vNieblaXZ;\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
         vec4 nieblaMundo = vec4(transformed, 1.0);
@@ -93,9 +100,7 @@ export class NieblaDeGuerra {
           gl_FragColor.rgb = mix(gl_FragColor.rgb, uColorNiebla, alfa);
         }
         #include <fog_fragment>`);
-    };
-    material.customProgramCacheKey = () => 'niebla-de-guerra';
-    return material;
+    }
   }
 
   destruir(): void {

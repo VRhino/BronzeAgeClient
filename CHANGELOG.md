@@ -3,6 +3,20 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.113.0] — 2026-11-03 · Agua de verdad en el mundo 3D · sin cambio de contrato
+
+Petición de Víctor (2026-11-03): «hay que mejorar la vista del agua, q no solo sea el piso pintado de azul».
+
+- **Mar y lagos**: una lámina de agua transparente a su nivel, sobre un fondo que baja desde la orilla (nada junto a ella, 31 m a 6 u). Turquesa
+  donde cubre poco, azul hondo mar adentro, con olas que se mueven, brillo del sol, el cielo reflejado al mirar de lado y espuma en la orilla.
+- **Orilla suave**: la costa ya no sigue los dientes de las muestras de agua; la tierra baja hacia el agua sin hundirse.
+- **Ríos**: la misma agua, somera en los bordes y honda en medio, con la corriente bajando río abajo; la orilla de tierra mojada se desvanece
+  hacia fuera en vez de ser una raya marrón.
+- El clic y lo que se pone encima del agua van a la altura de la lámina; todo sigue bajo la niebla de guerra.
+- Junto al mar, unos 0,1 M triángulos más (0,81 M frente a 0,71 M); el mismo tiempo de construcción y el mismo coste por fotograma.
+- Código: `mundo3d/agua.ts` (nuevo), `terreno.ts` (fondo y lámina por tesela), `paisaje.ts` (ríos), `niebla.ts` (`parchear`, para los materiales
+  que ya cambian su sombreado). Pruebas en `pruebas/agua.test.ts`. Documentado en `docs/Mundo_3D.md`, «El agua».
+
 ## [0.112.0] — 2026-11-03 · La barra de Población, Almacén y Estado, arriba al centro · sin cambio de contrato
 
 Petición de Víctor (2026-11-03): la barra de Población, Almacén y Estado sube arriba y ocupa el hueco entre el blasón y el panel de misiones.

@@ -14,6 +14,7 @@ import { Etiquetas } from './etiquetas';
 import { RejillaDeMovimiento, type Navegacion } from './rejilla';
 import { FigurasDeColumna, type TropaDeColumna } from './figuras';
 import type { FuenteDeAltura } from './fuente';
+import { Agua, alturaVisible } from './agua';
 import { Arboles } from './arboles';
 import { aro, cinta, circulo, rutaPendiente, RutaEnSuelo } from './lineas';
 import { Maquetas } from './maquetas';
@@ -65,6 +66,7 @@ export class VistaMundo3D {
   private static readonly SOL = new THREE.Vector3(-60, 110, 45);
   private readonly cielo = new Cielo(VistaMundo3D.SOL);
   private readonly niebla = new NieblaDeGuerra();
+  private readonly agua = new Agua(this.niebla);
   private readonly terreno: Terreno;
   private readonly paisaje: Paisaje;
   private readonly arboles: Arboles;
@@ -138,8 +140,8 @@ export class VistaMundo3D {
     this.sol.shadow.normalBias = 0.03;
     this.escena.add(this.sol, this.sol.target);
 
-    this.terreno = new Terreno(o.fuente, o.mapa, this.niebla);
-    this.paisaje = new Paisaje(o.fuente, o.mapa, this.niebla, this.alturaU);
+    this.terreno = new Terreno(o.fuente, o.mapa, this.niebla, this.agua.mar);
+    this.paisaje = new Paisaje(o.fuente, o.mapa, this.niebla, this.alturaU, this.agua.rio);
     this.arboles = new Arboles(o.fuente, o.mapa, this.niebla);
     this.maquetas = new Maquetas(this.niebla, this.alturaU);
     this.trazos = new Trazos(this.niebla, this.alturaU);
@@ -155,7 +157,8 @@ export class VistaMundo3D {
   }
 
   /** Altura del suelo en (x, y) del mapa, en unidades de escena. */
-  readonly alturaU = (x: number, y: number): number => this.o.fuente.alturaEn(x, y) / MUNDO3D.metrosPorUnidad;
+  /** La altura que se ve en (x, y), en u: la del suelo, o la de la lámina donde hay agua (lo que va encima y el clic se quedan en ella). */
+  readonly alturaU = (x: number, y: number): number => alturaVisible(this.o.fuente.alturaEn(x, y), this.o.fuente.aguaEn(x, y));
 
   zoom(z: Zoom): void {
     this.camara.zoom = z;
@@ -318,6 +321,7 @@ export class VistaMundo3D {
     const sc = this.sol.shadow.camera;
     if (sc.right !== r) { sc.left = -r; sc.right = r; sc.top = r; sc.bottom = -r; sc.near = 1; sc.far = 600; sc.updateProjectionMatrix(); }
     this.cielo.actualizar(this.camara.camara, ahora);
+    this.agua.actualizar(ahora / 1000);
     this.renderer.render(this.escena, this.camara.camara);
     this.medir('render', t);
     this.medir('total', inicio);
@@ -461,6 +465,7 @@ export class VistaMundo3D {
     this.trazos.destruir();
     this.niebla.destruir();
     this.cielo.destruir();
+    this.agua.destruir();
     this.renderer.dispose();
     this.lienzo.remove();
   }

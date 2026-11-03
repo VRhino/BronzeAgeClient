@@ -1,8 +1,10 @@
 // El suelo, por teselas de 64 u alrededor del héroe: se construyen las que caen a la vista, las más cercanas primero, y se sueltan las que se
 // quedan lejos. Cerca van a 0,5 u (las muestras del paquete de relieve), más lejos a 1 y a 2 u; un faldón en el borde de cada tesela tapa las
-// grietas entre niveles. Color por clase de terreno (los umbrales del generador), roca en las laderas, sotobosque donde hay bosque y agua.
+// grietas entre niveles. Color por clase de terreno (los umbrales del generador), roca en las laderas y sotobosque donde hay bosque. Donde hay
+// agua (mar o lago) el fondo baja desde la orilla y encima va su lámina (`agua.ts`).
 import * as THREE from 'three';
 import type { MapaGenerado } from '../terreno';
+import { AGUA, colorDelFondo, distanciaATierra, laminaDeAgua, mascaraSuave, nivelDelAgua, sueloJuntoAlAgua } from './agua';
 import { MUNDO3D } from './config';
 import { bosqueEn, type FuenteDeAltura } from './fuente';
 import type { NieblaDeGuerra } from './niebla';
@@ -23,7 +25,6 @@ const PAL = {
   montana: lineal(0.53, 0.47, 0.39),
   cima: lineal(0.76, 0.74, 0.7),
   roca: lineal(0.47, 0.43, 0.39),
-  agua: lineal(0.27, 0.46, 0.6),
   sotobosque: lineal(0.36, 0.44, 0.25),
 };
 /** Un número fijo entre 0 y 1 por punto de la rejilla, para variar un poco el color y que el suelo no se vea liso. */
@@ -47,12 +48,41 @@ function colorDelSuelo(h: number, pendiente: number, bosque: number): [number, n
   return mezcla(c, PAL.sotobosque, 0.55 * suave(0.15, 0.6, bosque));
 }
 
-/** La malla de la tesela (tx, ty) con muestras cada `paso` u. */
-function mallaDeTesela(fuente: FuenteDeAltura, mapa: MapaGenerado, tx: number, ty: number, paso: number, material: THREE.Material): THREE.Mesh {
+/** La malla de la tesela (tx, ty) con muestras cada `paso` u, y su lámina de agua si la tiene. */
+function mallaDeTesela(fuente: FuenteDeAltura, mapa: MapaGenerado, tx: number, ty: number, paso: number, material: THREE.Material, materialAgua: THREE.Material): { suelo: THREE.Mesh; agua: THREE.Mesh | null } {
   const n = Math.round(LADO / paso) + 1, x0 = tx * LADO, y0 = ty * LADO, m = n + 2;
   // alturas con un anillo de más alrededor, para las normales del borde
   const h = new Float32Array(m * m);
   for (let j = 0; j < m; j++) for (let i = 0; i < m; i++) h[j * m + i] = fuente.alturaEn(x0 + (i - 1) * paso, y0 + (j - 1) * paso);
+  // El agua: en una ventana con `orilla` u de margen, cada muestra de agua sabe a qué distancia queda la tierra y cada muestra cuánta agua tiene
+  // alrededor (la máscara suave); el fondo baja desde la orilla, la tierra de junto al agua baja hacia ella (sin hundirse) y la lámina va a su
+  // nivel. `nivel` es NaN en tierra; en u, como la malla.
+  const M = Math.ceil(AGUA.orilla / paso), W = n + 2 * M, enVentana = new Uint8Array(W * W);
+  const xv = (i: number) => x0 + (i - M) * paso, yv = (j: number) => y0 + (j - M) * paso;
+  let hayAgua = false;
+  for (let j = 0; j < W; j++) for (let i = 0; i < W; i++) if (fuente.aguaEn(xv(i), yv(j))) { enVentana[j * W + i] = 1; hayAgua = true; }
+  const nivel = new Float32Array(m * m).fill(Number.NaN);
+  if (hayAgua) {
+    const dist = distanciaATierra(enVentana, W, W), b = mascaraSuave(enVentana, W, W);
+    // el nivel de la lámina junto a una muestra de tierra: el de la muestra de agua más cercana de su alrededor
+    const nivelCerca = (i: number, j: number): number => {
+      for (let r = 1; r <= 2; r++) for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) {
+        const a = i + di, c = j + dj;
+        if (a >= 0 && c >= 0 && a < W && c < W && enVentana[c * W + a]) return nivelDelAgua(fuente.alturaEn(xv(a), yv(c)));
+      }
+      return Number.NaN;
+    };
+    for (let j = 0; j < m; j++) {
+      for (let i = 0; i < m; i++) {
+        const iv = i - 1 + M, jv = j - 1 + M, v = jv * W + iv, k = j * m + i, agua = enVentana[v] === 1;
+        if (!agua && !b[v]) continue;
+        const sobre = agua ? nivelDelAgua(h[k]!) : nivelCerca(iv, jv);
+        if (Number.isNaN(sobre)) continue;
+        if (agua) nivel[k] = sobre / MPU;
+        h[k] = sueloJuntoAlAgua(h[k]!, sobre, agua, b[v]!, dist[v]! * paso);
+      }
+    }
+  }
   const perimetro = 4 * (n - 1), total = n * n + perimetro;
   const pos = new Float32Array(total * 3), nor = new Float32Array(total * 3), col = new Float32Array(total * 3);
   for (let j = 0; j < n; j++) {
@@ -63,7 +93,8 @@ function mallaDeTesela(fuente: FuenteDeAltura, mapa: MapaGenerado, tx: number, t
       const l = Math.hypot(dx, 1, dz);
       pos.set([x, alt / MPU, y], 3 * k);
       nor.set([-dx / l, 1 / l, -dz / l], 3 * k);
-      const base = fuente.aguaEn(x, y) ? PAL.agua : colorDelSuelo(alt, Math.hypot(dx, dz), bosqueEn(mapa, x, y)), v = 0.93 + 0.12 * ruido(x, y);
+      const cubre = nivel[c]! - alt / MPU;
+      const base = cubre >= 0 ? colorDelFondo(cubre) : colorDelSuelo(alt, Math.hypot(dx, dz), bosqueEn(mapa, x, y)), v = 0.93 + 0.12 * ruido(x, y);
       col.set([base[0] * v, base[1] * v, base[2] * v], 3 * k);
     }
   }
@@ -99,15 +130,25 @@ function mallaDeTesela(fuente: FuenteDeAltura, mapa: MapaGenerado, tx: number, t
   const malla = new THREE.Mesh(geo, material);
   malla.receiveShadow = true;
   malla.matrixAutoUpdate = false;
-  return malla;
+  if (!hayAgua) return { suelo: malla, agua: null };
+  // la lámina: el nivel y el fondo de los vértices de la tesela (sin el anillo)
+  const nv = new Float32Array(n * n), fondo = new Float32Array(n * n);
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const c = (j + 1) * m + (i + 1); nv[j * n + i] = nivel[c]!; fondo[j * n + i] = h[c]! / MPU; }
+  const lamina = laminaDeAgua(n, paso, x0, y0, nv, fondo);
+  if (!lamina) return { suelo: malla, agua: null };
+  const agua = new THREE.Mesh(lamina, materialAgua);
+  agua.receiveShadow = true;
+  agua.matrixAutoUpdate = false;
+  agua.renderOrder = 1;
+  return { suelo: malla, agua };
 }
 
 export class Terreno {
   readonly grupo = new THREE.Group();
   private readonly material: THREE.MeshLambertMaterial;
-  private readonly teselas = new Map<string, { malla: THREE.Mesh; paso: number }>();
+  private readonly teselas = new Map<string, { malla: THREE.Mesh; agua: THREE.Mesh | null; paso: number }>();
 
-  constructor(private readonly fuente: FuenteDeAltura, private readonly mapa: MapaGenerado, niebla: NieblaDeGuerra) {
+  constructor(private readonly fuente: FuenteDeAltura, private readonly mapa: MapaGenerado, niebla: NieblaDeGuerra, private readonly materialAgua: THREE.Material) {
     this.material = niebla.aplicar(new THREE.MeshLambertMaterial({ vertexColors: true }));
   }
 
@@ -142,10 +183,11 @@ export class Terreno {
     let hechas = 0;
     for (const [clave, t] of pendientes) {
       if (hechas && performance.now() > hasta) break;
-      const malla = mallaDeTesela(this.fuente, this.mapa, t.tx, t.ty, t.paso, this.material);
+      const { suelo: malla, agua } = mallaDeTesela(this.fuente, this.mapa, t.tx, t.ty, t.paso, this.material, this.materialAgua);
       this.soltar(clave);
       this.grupo.add(malla);
-      this.teselas.set(clave, { malla, paso: t.paso });
+      if (agua) this.grupo.add(agua);
+      this.teselas.set(clave, { malla, agua, paso: t.paso });
       hechas++;
     }
     return pendientes.length - hechas;
@@ -156,6 +198,7 @@ export class Terreno {
     if (!t) return;
     this.grupo.remove(t.malla);
     t.malla.geometry.dispose();
+    if (t.agua) { this.grupo.remove(t.agua); t.agua.geometry.dispose(); }
     this.teselas.delete(clave);
   }
 

@@ -1,6 +1,6 @@
 // Lo que el artefacto pone sobre el suelo, por teselas de 64 u alrededor del héroe: los ríos (una cinta de agua de 1,5 u, 3 si es
-// navegable, a la altura del punto más bajo de su corte, con su corriente más clara en medio y una orilla de tierra mojada a cada lado que
-// sigue al relieve), sus vados (un paso de grava de orilla a orilla) y los nodos de recursos (rocas: grises la piedra, del color de su metal
+// navegable, a la altura del punto más bajo de su corte, del agua de `agua.ts` que corre río abajo, y una orilla de tierra mojada a cada lado
+// que sigue al relieve), sus vados (un paso de grava de orilla a orilla) y los nodos de recursos (rocas: grises la piedra, del color de su metal
 // los afloramientos). Donde el suelo ya es agua (un lago, el mar) el río se acaba en la orilla y no lleva vados. Todo va bajo la niebla.
 import * as THREE from 'three';
 import { RECURSO_COLOR } from '../paletas';
@@ -8,13 +8,28 @@ import type { MapaGenerado } from '../terreno';
 import type { RioZona } from '../terreno/tipos';
 import { MUNDO3D } from './config';
 import type { FuenteDeAltura } from './fuente';
-import { cinta, tramosEnCaja } from './lineas';
+import { cinta, recorridos, tramosEnCaja } from './lineas';
 import type { NieblaDeGuerra } from './niebla';
 
 type Punto = { x: number; y: number };
 
 const LADO = MUNDO3D.ladoTesela;
-const COLOR = { agua: 0x45769a, corriente: 0x5d8fb4, orilla: 0x7a6a4c, vado: 0xd9c79a, piedra: 0x8d8d8d };
+const COLOR = { orilla: 0x6b5d40, vado: 0xd9c79a, piedra: 0x8d8d8d };
+/** El ancho (u) de la tierra mojada a cada lado del río: oscura junto al agua y desvaída hacia fuera. */
+const ORILLA = 1.2;
+
+/** La tierra mojada de la orilla: transparente hacia fuera (la u de la cinta: 0 junto al agua, 1 en su borde), para que no se vea una raya. */
+function orillaMojada(niebla: NieblaDeGuerra, sobre: THREE.MeshLambertMaterialParameters): THREE.MeshLambertMaterial {
+  const m = new THREE.MeshLambertMaterial({ color: COLOR.orilla, transparent: true, depthWrite: false, ...sobre });
+  m.defines = { USE_UV: '' };
+  m.onBeforeCompile = (sh) => {
+    sh.fragmentShader = sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+      diffuseColor.a *= 0.8 * (1.0 - smoothstep(0.1, 1.0, vUv.x));`);
+    niebla.parchear(sh);
+  };
+  m.customProgramCacheKey = () => 'orilla-mojada';
+  return m;
+}
 
 /** Chaikin: redondea los quiebros de la polilínea del artefacto (cada pasada, dos puntos por tramo al 25 y al 75 %). */
 export function suavizar(puntos: readonly Punto[], pasadas = 2): Punto[] {
@@ -96,28 +111,34 @@ export function tramosEnTierra(puntos: readonly Punto[], aguaEn: (x: number, y: 
   return out;
 }
 
+/** De un tramo de río, lo andado hasta cada vértice (se calcula una vez): la corriente sigue en su sitio aunque el recorte de la tesela empiece
+ * en otro vértice. */
+const andados = new WeakMap<readonly Punto[], Map<Punto, number>>();
+function andadoEn(puntos: readonly Punto[]): Map<Punto, number> {
+  let a = andados.get(puntos);
+  if (!a) { const s = recorridos(puntos); a = new Map(puntos.map((q, k) => [q, s[k]!])); andados.set(puntos, a); }
+  return a;
+}
+
 export class Paisaje {
   readonly grupo = new THREE.Group();
-  private readonly agua: THREE.MeshLambertMaterial;
   private readonly vado: THREE.MeshLambertMaterial;
-  private readonly corriente: THREE.MeshLambertMaterial;
   private readonly orilla: THREE.MeshLambertMaterial;
   private readonly roca: THREE.MeshLambertMaterial;
   private readonly rios: RioSuave[];
   private readonly teselas = new Map<string, THREE.Group>();
 
-  constructor(private readonly fuente: FuenteDeAltura, private readonly mapa: MapaGenerado, niebla: NieblaDeGuerra, private readonly alturaU: (x: number, y: number) => number) {
+  constructor(private readonly fuente: FuenteDeAltura, private readonly mapa: MapaGenerado, niebla: NieblaDeGuerra, private readonly alturaU: (x: number, y: number) => number, private readonly materialRio: THREE.Material) {
     const sobre = (factor: number) => ({ polygonOffset: true, polygonOffsetFactor: factor, polygonOffsetUnits: factor });
-    this.agua = niebla.aplicar(new THREE.MeshLambertMaterial({ color: COLOR.agua, ...sobre(-2) }));
     this.vado = niebla.aplicar(new THREE.MeshLambertMaterial({ color: COLOR.vado, ...sobre(-4) }));
-    this.corriente = niebla.aplicar(new THREE.MeshLambertMaterial({ color: COLOR.corriente, ...sobre(-3) }));
-    this.orilla = niebla.aplicar(new THREE.MeshLambertMaterial({ color: COLOR.orilla, ...sobre(-1) }));
+    this.orilla = orillaMojada(niebla, sobre(-1));
     this.roca = niebla.aplicar(new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true }));
     this.rios = mapa.rios.filter((r) => r.puntos.length >= 2).map((rio) => {
       const puntos = alargarHastaElAgua(suavizar(rio.puntos), (x, y) => fuente.aguaEn(x, y));
       let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
       for (const p of puntos) { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); }
-      return { rio, tramos: tramosEnTierra(puntos, (x, y) => fuente.aguaEn(x, y)), puntos, ancho: rio.navegable ? 3 : 1.5, x0, y0, x1, y1 };
+      // el agua del río entra medio u en el lago o el mar, para que no quede un hueco en la boca: el resto ya es su lámina
+      return { rio, tramos: tramosEnTierra(puntos, (x, y) => fuente.aguaEn(x, y), 0.5, 0.5), puntos, ancho: rio.navegable ? 3 : 1.5, x0, y0, x1, y1 };
     });
   }
 
@@ -150,18 +171,24 @@ export class Paisaje {
     for (const r of this.rios) {
       if (r.x1 + 2 < x0 || r.x0 - 2 > x1 || r.y1 + 2 < y0 || r.y0 - 2 > y1) continue;
       for (const t of r.tramos) {
-        // el agua al nivel más bajo del corte (del color del lago, en el que se mete un poco), la corriente más clara en medio y la orilla
-        // mojada a cada lado, sobre el relieve
+        // el agua al nivel más bajo del corte, con su corriente (`agua.ts`: la cinta lleva de orilla a orilla y lo recorrido, para que el agua
+        // baje), y la orilla mojada a cada lado, sobre el relieve
         for (const tramo of tramosEnCaja(t.agua, x0 - 1, y0 - 1, x1 + 1, y1 + 1)) {
-          const agua = cinta(tramo, this.alturaU, r.ancho, { asiento: 'bajo', dy: 0.04 });
-          if (agua) g.add(new THREE.Mesh(agua, this.agua));
+          const agua = cinta(tramo, this.alturaU, r.ancho, { asiento: 'bajo', dy: 0.04, textura: { periodo: 1, desde: andadoEn(t.agua).get(tramo[0]!) ?? 0 } });
+          if (!agua) continue;
+          agua.setAttribute('uvRio', agua.getAttribute('uv'));
+          const malla = new THREE.Mesh(agua, this.materialRio);
+          malla.renderOrder = 1;
+          g.add(malla);
         }
         for (const tramo of tramosEnCaja(t.tierra, x0 - 1, y0 - 1, x1 + 1, y1 + 1)) {
-          const corriente = cinta(tramo, this.alturaU, r.ancho * 0.3, { asiento: 'bajo', dy: 0.05 });
-          if (corriente) g.add(new THREE.Mesh(corriente, this.corriente));
           for (const lado of [1, -1]) {
-            const orilla = cinta(tramo, this.alturaU, 0.6, { dy: 0.03, desplazar: lado * (r.ancho / 2 + 0.15) });
-            if (orilla) g.add(new THREE.Mesh(orilla, this.orilla));
+            const orilla = cinta(tramo, this.alturaU, ORILLA, { dy: 0.03, desplazar: lado * (r.ancho / 2 + ORILLA / 2 - 0.1), textura: { periodo: 1 } });
+            if (!orilla) continue;
+            // u: 0 junto al agua y 1 en el borde de fuera (la cinta lleva u = 0 en su lado izquierdo)
+            const uv = orilla.getAttribute('uv') as THREE.BufferAttribute;
+            if (lado > 0) for (let k = 0; k < uv.count; k++) uv.setX(k, 1 - uv.getX(k));
+            g.add(new THREE.Mesh(orilla, this.orilla));
           }
         }
       }
@@ -213,9 +240,7 @@ export class Paisaje {
 
   destruir(): void {
     for (const clave of [...this.teselas.keys()]) this.soltar(clave);
-    this.agua.dispose();
     this.vado.dispose();
-    this.corriente.dispose();
     this.orilla.dispose();
     this.roca.dispose();
   }

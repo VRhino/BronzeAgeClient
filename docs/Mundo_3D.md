@@ -48,7 +48,8 @@ del héroe solo (`radioDeVision`); el 3D tiene que seguir a la de la columna. El
 | Valores | `src/mundo3d/config.ts` (hecho) | Los de la tabla de arriba y los umbrales del generador |
 | De dónde sale la altura | `src/mundo3d/fuente.ts` (hecho) | El relieve o, sin él, el raster de 4 u del artefacto |
 | Lo que pinta, sacado de la proyección | `src/mundo3d/estado.ts` (hecho) | `proyeccionAlInstante`; el banco le da uno de mentira |
-| Terreno por teselas de 64 u alrededor del héroe | `src/mundo3d/terreno.ts` (hecho) | Relieve; color por clase, roca en laderas, sotobosque, agua |
+| Terreno por teselas de 64 u alrededor del héroe | `src/mundo3d/terreno.ts` (hecho) | Relieve; color por clase, roca en laderas, sotobosque, fondo bajo el agua |
+| Agua: lámina del mar y los lagos, sombreado de olas, espuma y reflejo, el de los ríos | `src/mundo3d/agua.ts` (hecho) | Relieve (bit de agua) |
 | Niebla en el sombreado | `src/mundo3d/niebla.ts` (hecho) | `proyeccion.exploracion` |
 | Árboles instanciados por trozos | `src/mundo3d/arboles.ts` (hecho) | Densidad de bosque del artefacto (4 u), lo explorado |
 | Ríos, vados y nodos de recursos | `src/mundo3d/paisaje.ts` (hecho) | Ríos y nodos del artefacto |
@@ -97,7 +98,8 @@ y la tesela va con zstd. La semilla 42 ocupa 8,6 MB.
   320 u de serie: ver «Distancia de carga»); las más cercanas primero, dos por fotograma. Paso de 0,5 u a menos de 80 u, 1 u a menos de 160 y
   2 u más allá (con menos carga, en proporción); un faldón de 3 u en el borde tapa las grietas entre niveles. Color por la
   clase de terreno según la altura (los umbrales del generador: agua 375 m, costa 420, colina 545, montaña 600, cima 685), roca en las laderas
-  y sotobosque donde el artefacto tiene bosque.
+  y sotobosque donde el artefacto tiene bosque. Bajo el agua, el fondo: de arena junto a la orilla a oscuro donde cubre mucho; el agua es una
+  lámina aparte (ver «El agua»).
 - **Niebla.** La rejilla de `proyeccion.exploracion` es una textura (rojo: explorado; verde: se ve ahora) que el sombreado del suelo mezcla con
   el color de `NIEBLA` (`paletas.ts`) con sus tres alfas, igual que `render.ts`. La columna propia, la ruta y el destino van encima.
 - **Cámara.** `distanciaDeEncuadre` busca la distancia a la que el círculo de «en pantalla» cabe entero en la pantalla con la inclinación de
@@ -119,7 +121,8 @@ suelo, luego el paisaje y los árboles. Lo que se aleja se suelta.
   agua, los cauces o los caminos, ni en laderas de más de 1,1 m/m, ni en los claros de las maquetas. Un trozo se rehace solo si cambian sus
   celdas exploradas, su banda, los claros o los caminos.
 - **Paisaje** (`paisaje.ts`). Por teselas de 64 u hasta 240 u. Los ríos, suavizados, son una cinta de agua de 1,5 u (3 si es navegable)
-  plana a la altura del punto más bajo de su corte. Los vados son un paso de grava de orilla a orilla. Los nodos son rocas: grises las de
+  plana a la altura del punto más bajo de su corte, con el agua de los ríos (ver «El agua») y 1,2 u de tierra mojada a cada lado que se
+  desvanece hacia fuera. Los vados son un paso de grava de orilla a orilla. Los nodos son rocas: grises las de
   piedra y del color de su metal los afloramientos. Todo bajo la niebla.
 - **Maquetas** (`maquetas.ts`). Las piezas de la mesa a ×1. La ciudad tiene muralla al 10 % del radio de su zona (el del contorno si se
   ve, el recordado si no) y casas dentro, más cuanto mayor. El pueblo es una empalizada con casas: la aldea agrícola lleva sus campos y el
@@ -277,6 +280,28 @@ modo mundo, apartado «Vista»: un deslizador de 100 a 480 u, de 20 en 20, que s
 Medido en el banco (héroe solo, encuadre normal, a 30°): con 320 u, 0,93 M triángulos (0,54 M del suelo) y 11.800 árboles; con 160 u, 0,61 M y
 10.400; con 100 u, 0,47 M y 7.700. A esa inclinación la pantalla no llega más allá de unas 100 u, así que bajar la carga apenas cambia lo que se
 ve; con la cámara baja, la bruma se echa antes sobre el horizonte.
+
+## El agua (0.113.0)
+
+Pedido de Víctor del 2026-11-03: «hay que mejorar la vista del agua, q no solo sea el piso pintado de azul». Antes el suelo de las muestras
+de agua se pintaba de azul a la altura del relieve y los ríos eran una cinta azul lisa. Ahora (`mundo3d/agua.ts`):
+
+- **Lámina.** El mar y los lagos son una lámina transparente a su nivel, un metro por debajo de la costa (el mar, a 374 m; cada lago, a su
+  altura plana menos uno), una malla por tesela con el paso del suelo. Una tesela toda de agua honda es un solo cuadrado.
+- **Fondo.** El suelo bajo el agua baja desde la orilla: nada junto a ella y 2,6 u (31 m) de agua a 6 u de la orilla y más allá (el fondo del
+  mar del relieve, más hondo, se respeta). Se pinta de arena a oscuro según lo que cubre, y la lámina deja verlo donde cubre poco.
+- **Orilla suave.** La costa no sigue los dientes de las muestras de agua: la máscara de agua emborronada (dos pasadas de 3 × 3) da la línea
+  donde vale 0,5, y el suelo de alrededor se ajusta para que la lámina lo corte por ahí. La tierra junto al agua baja hacia ella (0,8 u de
+  pendiente de la tierra entera al agua entera) sin quedar nunca bajo la lámina.
+- **Sombreado.** Turquesa donde cubre poco y azul hondo mar adentro, más opaca cuanto más honda. Olas que se mueven: seis ondas cruzadas,
+  de largas a cortas, que a ratos se calman, y que de lejos se alisan (si no, harían rayas). Brillo del sol, el cielo reflejado cuando se
+  mira de lado y espuma donde cubre poco, que va y viene.
+- **Ríos.** La misma agua en la cinta del río: somera en los bordes y honda en medio, con las olas corriendo río abajo (la cinta lleva lo
+  recorrido desde la fuente, así la corriente sigue de una tesela a otra). Su orilla de tierra mojada se desvanece hacia fuera.
+- Todo va bajo la niebla de guerra como el resto de la geografía; el clic y lo que se pone encima del agua usan la altura de la lámina.
+
+Medido en el banco junto al mar (1163, 1690; carga 320, encuadre normal): 0,81 M triángulos frente a 0,71 M sin la lámina, el mismo tiempo de
+construcción y el mismo coste de JS por fotograma.
 
 ## Banco de pruebas
 
