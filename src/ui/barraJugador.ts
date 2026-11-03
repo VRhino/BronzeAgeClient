@@ -4,14 +4,14 @@
 import type { ProyeccionJugador } from '../apiCliente';
 import { nombreDePueblo } from './pueblos';
 
-export type PanelJugador = 'heroe' | 'escuadras' | 'carro' | 'faccion' | 'tecnologia' | 'misiones' | 'avisos';
+// Tecnología ya no tiene botón: es una pestaña de la Facción (Víctor, 2026-11-03: «las tecnologías afectan al jugador a través de la Facción»).
+export type PanelJugador = 'heroe' | 'escuadras' | 'carro' | 'faccion' | 'misiones' | 'avisos';
 
 const BOTONES: [PanelJugador, string][] = [
   ['heroe', 'Héroe'],
   ['escuadras', 'Escuadras'],
   ['carro', 'Carro'],
   ['faccion', 'Facción'],
-  ['tecnologia', 'Tecnología'],
   ['misiones', 'Misiones'],
   ['avisos', 'Avisos'],
 ];
@@ -26,8 +26,6 @@ const ICONO: Record<PanelJugador | 'mapa' | 'asentamiento', string> = {
   carro: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="1.6"/><path d="M12 4v16M4 12h16M6.3 6.3l11.4 11.4M17.7 6.3L6.3 17.7"/>',
   // estandarte
   faccion: '<path d="M6 21V3"/><path d="M6 4h12l-3 4 3 4H6"/>',
-  // tablilla de escritura
-  tecnologia: '<rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M8 7h8M8 11h8M8 15h5"/>',
   // diana
   misiones: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.8"/>',
   // campana

@@ -25,6 +25,7 @@ export function faccionDelJugador(proyeccion: ProyeccionJugador): Faccion | unde
 export const PESTANAS_FACCION = [
   ['miembros', 'Miembros'],
   ['plazas', 'Plazas'],
+  ['tecnologia', 'Tecnología'],
   ['tablon', 'Tablón'],
   ['misiones', 'Misiones'],
   ['mercenarios', 'Mercenarios'],

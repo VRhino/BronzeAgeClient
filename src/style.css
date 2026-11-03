@@ -5288,3 +5288,15 @@ body:has(.eleccion-clic) .aviso-global { visibility: hidden; }
 .mapa-capas-rango > span { display: flex; justify-content: space-between; gap: 8px; }
 .mapa-capas-rango output { color: var(--oro-claro); font-variant-numeric: tabular-nums; }
 .mapa-capas-rango input { width: 100%; accent-color: var(--oro); margin: 0; }
+
+/* Un botón de la plaza cuya orden está en camino (0.123.0): se nota al momento, sin esperar a que llegue la respuesta y se repinte. */
+.pendiente { cursor: progress !important; pointer-events: none; animation: obra-latido 0.9s ease-in-out infinite; }
+.obra-construir.pendiente, .obras-hud-ctl button.pendiente { border-color: var(--oro); box-shadow: 0 0 0 1px var(--oro), 0 0 12px rgba(232, 190, 100, 0.45); }
+
+/* Tecnología como pestaña de la Facción (0.123.0; antes, el panel lateral de la barra de arriba): con más sitio, las filas son tarjetas y los botones,
+ * de su tamaño. */
+.faccion-tecnologia .tec-panel { gap: 10px; }
+.faccion-tecnologia .tec-lista { font-size: 0.9rem; gap: 8px; }
+.faccion-tecnologia .tec-fila { padding: 8px 12px; border: 1px solid rgba(166, 124, 70, 0.35); border-radius: 3px; background: rgba(28, 21, 13, 0.6); }
+.faccion-tecnologia .tec-fila > .btn-primary, .faccion-tecnologia .tec-fila > .btn-secondary { width: auto; flex: 0 0 auto; padding: 6px 18px; min-height: 0; }
+.faccion-tecnologia .tec-fila > .form-input { width: auto; flex: 0 1 260px; }

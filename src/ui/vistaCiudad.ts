@@ -162,13 +162,21 @@ export function repintarFicha(): void {
   fichaEl.hidden = false;
   pintar(fichaEl, htmlFicha(p, a, edificio, escaparFicha), () => {
     // El rechazo sale flotando arriba al centro (`.aviso-global`), no al pie de la ficha, donde se perdía.
-    const lanzar = async (tipo: string, params: object): Promise<void> => {
-      const mensaje = await ejecutarFicha!(tipo, params);
-      if (mensaje) mostrarAviso(mensaje, true);
+    // El botón se queda «en marcha» hasta la respuesta, para que el clic se note al momento.
+    const lanzar = async (tipo: string, params: object, boton: HTMLElement): Promise<void> => {
+      boton.classList.add('pendiente');
+      boton.setAttribute('aria-busy', 'true');
+      try {
+        const mensaje = await ejecutarFicha!(tipo, params);
+        if (mensaje) mostrarAviso(mensaje, true);
+      } finally {
+        boton.classList.remove('pendiente');
+        boton.removeAttribute('aria-busy');
+      }
     };
     fichaEl!.querySelector('[data-ficha-cerrar]')?.addEventListener('click', () => { seleccion = null; alCambiar(); });
-    fichaEl!.querySelector<HTMLElement>('[data-ficha-mejorar]')?.addEventListener('click', () => void lanzar('mejorarEdificioAhora', { asentamientoId: a.id, cargo: cargoDe(a, p.heroeId), edificioId: edificio.id }));
-    fichaEl!.querySelector<HTMLElement>('[data-ficha-quitar]')?.addEventListener('click', () => void lanzar('quitarDeCola', { asentamientoId: a.id, cargo: cargoDe(a, p.heroeId), edificioId: edificio.id }));
+    fichaEl!.querySelector<HTMLElement>('[data-ficha-mejorar]')?.addEventListener('click', (ev) => void lanzar('mejorarEdificioAhora', { asentamientoId: a.id, cargo: cargoDe(a, p.heroeId), edificioId: edificio.id }, ev.currentTarget as HTMLElement));
+    fichaEl!.querySelector<HTMLElement>('[data-ficha-quitar]')?.addEventListener('click', (ev) => void lanzar('quitarDeCola', { asentamientoId: a.id, cargo: cargoDe(a, p.heroeId), edificioId: edificio.id }, ev.currentTarget as HTMLElement));
   }, 'ficha-edificio');
 }
 

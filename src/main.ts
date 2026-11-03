@@ -1451,6 +1451,9 @@ function renderPanelJugador(forzar = false): void {
     let cuerpo: string;
     if (propia && pestana === 'tablon') {
       cuerpo = propia.tablon ? `<section class="faccion-tablon">${htmlTablon(proyeccion, { tipo: 'faccion', id: propia.id, tablon: propia.tablon }, escaparHtml)}</section>` : '<p class="mapa-lista-vacia">Tu Facción aún no tiene tablón.</p>';
+    } else if (propia && pestana === 'tecnologia') {
+      // antes, el botón «Tecnología» de la barra de arriba (hasta la 0.121): la tecnología es de la Facción
+      cuerpo = `<section class="faccion-tecnologia">${htmlTecnologia(proyeccion, escaparHtml, false)}</section>`;
     } else if (propia && pestana === 'mercenarios') {
       cuerpo = htmlMercenariosFaccion(proyeccion, escaparHtml);
     } else if (propia && pestana === 'misiones') {
@@ -1490,6 +1493,8 @@ function renderPanelJugador(forzar = false): void {
       }));
       const seccion = panel.querySelector<HTMLElement>('.faccion-misiones');
       if (seccion) cablearMisiones(seccion, proyeccion, ejecutarYRefrescar, () => renderPanelJugador(true));
+      const tecnologia = panel.querySelector<HTMLElement>('.faccion-tecnologia');
+      if (tecnologia) cablearTecnologia(tecnologia, ejecutarYRefrescar);
       const mercenarios = panel.querySelector<HTMLElement>('.faccion-mercenarios');
       if (mercenarios) cablearMercenariosFaccion(mercenarios, ejecutarYRefrescar, () => renderPanelJugador(true));
       const tablon = panel.querySelector<HTMLElement>('.faccion-tablon');
@@ -1509,10 +1514,6 @@ function renderPanelJugador(forzar = false): void {
       panel.querySelectorAll<HTMLButtonElement>('[data-diario-vista]').forEach((b) => b.addEventListener('click', () => { misionesEnTablon = b.dataset.diarioVista === 'tablon'; renderPanelJugador(true); }));
       panel.querySelector('[data-mision-cerrar]')?.addEventListener('click', () => { panelJugador = null; renderPanelJugador(true); });
     }, `misiones:${tablon?.viendo ? 'tablon' : 'lista'}`);
-    return;
-  }
-  if (panelJugador === 'tecnologia') {
-    pintar(panel, htmlTecnologia(proyeccion, escaparHtml), () => cablearTecnologia(panel, ejecutarYRefrescar), 'tecnologia');
     return;
   }
   pintarPanelHeroe(panel, proyeccion, escaparHtml, aplicarYRefrescar, forzar);
@@ -2090,15 +2091,46 @@ function errorDePlaza(mensaje: string | null | undefined): void {
   if (mensaje) mostrarAviso(mensaje, true);
 }
 
-/** Lanza un comando de gestión del asentamiento y refresca; el rechazo sale flotando (`errorDePlaza`). */
-async function ejecutarAccionAsent(tipo: string, params: Record<string, unknown>): Promise<void> {
+/** Lanza un comando de gestión del asentamiento y refresca; el rechazo sale flotando (`errorDePlaza`). El botón pulsado (`boton`) se queda «en
+ * marcha» hasta que llega la respuesta, para que el clic se note al momento (Víctor, 2026-11-03: pasaban segundos sin que la interfaz dijera
+ * nada). En la consola queda cuánto tardó cada parte: el motor en contestar, la proyección y los paneles, y la vista 3D. */
+async function ejecutarAccionAsent(tipo: string, params: Record<string, unknown>, boton?: HTMLElement | null): Promise<void> {
+  boton?.classList.add('pendiente');
+  boton?.setAttribute('aria-busy', 'true');
+  const t0 = performance.now();
   try {
     const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, tipo, params);
+    const t1 = performance.now();
     if (!respuesta.resultado.ok) throw errorDeRechazo(respuesta.resultado, 'El servidor rechazó la operación.');
     await refrescarDatosJuego();
+    const t2 = performance.now();
+    const dibujo = dibujoPlaza?.hecho;
+    void (dibujo ?? Promise.resolve(0)).then((ms) => console.info(`[plaza] ${tipo}: motor ${Math.round(t1 - t0)} ms · proyección y paneles ${Math.round(t2 - t1)} ms · vista 3D ${Math.round(ms)} ms`));
   } catch (err) {
     errorDePlaza(mensajeError(err));
+  } finally {
+    boton?.classList.remove('pendiente');
+    boton?.removeAttribute('aria-busy');
   }
+}
+
+/** El dibujo de la plaza (el plano 2D del minimapa y la vista 3D), después de que se vean los paneles: rehacer las mallas de los edificios
+ * cuando cambian lleva su rato, y antes se hacía en el mismo paso que los paneles, que no se veían hasta acabarlo. Varios refrescos seguidos
+ * se juntan en un solo dibujo, con la proyección más nueva. `hecho` da lo que tardó (ms). */
+let dibujoPlaza: { proyeccion: ProyeccionJugador; hecho: Promise<number> } | null = null;
+function programarDibujoPlaza(proyeccion: ProyeccionJugador): void {
+  if (dibujoPlaza) { dibujoPlaza.proyeccion = proyeccion; return; }
+  const d = { proyeccion, hecho: Promise.resolve(0) };
+  d.hecho = new Promise<number>((listo) => {
+    // el fotograma en el que se pintan los paneles, y justo después, el dibujo
+    requestAnimationFrame(() => setTimeout(() => {
+      if (dibujoPlaza === d) dibujoPlaza = null;
+      if (pantallaMontada !== 'asentamiento') { listo(0); return; }
+      const t = performance.now();
+      void dibujarPantallaSegunModo(d.proyeccion).catch(() => {}).then(() => listo(performance.now() - t));
+    }, 0));
+  });
+  dibujoPlaza = d;
 }
 
 /** Las ventanas del riel. De visita en una plaza ajena solo quedan Territorio y Mercado (decisión de Víctor del 2026-10-29: lo que se ve o se usa
@@ -2330,21 +2362,21 @@ function cablearAccionesAsentLado(cont: HTMLElement, a: Asentamiento, cargo: 'go
   cont.querySelector('#chk-autoconstruccion')?.addEventListener('change', (ev) => {
     void ejecutarAccionAsent('alternarAutoConstruccion', { asentamientoId: a.id, pausada: !(ev.target as HTMLInputElement).checked });
   });
-  cont.querySelector('#btn-solicitar-ascenso')?.addEventListener('click', () => void ejecutarAccionAsent('solicitarAscenso', { asentamientoId: a.id }));
+  cont.querySelector<HTMLButtonElement>('#btn-solicitar-ascenso')?.addEventListener('click', (ev) => void ejecutarAccionAsent('solicitarAscenso', { asentamientoId: a.id }, ev.currentTarget as HTMLElement));
   if (!cargo) return;
   cont.querySelectorAll<HTMLButtonElement>('[data-construir]').forEach((b) => b.addEventListener('click', () => {
     // Uno apagado dice por qué no, en vez de pedirlo.
     if (b.classList.contains('apagado')) { errorDePlaza(b.title); return; }
-    void ejecutarAccionAsent('anadirEdificioManualmente', { asentamientoId: a.id, cargo, tipo: b.dataset.construir });
+    void ejecutarAccionAsent('anadirEdificioManualmente', { asentamientoId: a.id, cargo, tipo: b.dataset.construir }, b);
   }));
   cont.querySelectorAll<HTMLButtonElement>('[data-mejorar]').forEach((b) => {
-    b.addEventListener('click', () => void ejecutarAccionAsent('mejorarEdificioAhora', { asentamientoId: a.id, cargo, edificioId: b.dataset.mejorar }));
+    b.addEventListener('click', () => void ejecutarAccionAsent('mejorarEdificioAhora', { asentamientoId: a.id, cargo, edificioId: b.dataset.mejorar }, b));
   });
   cont.querySelectorAll<HTMLButtonElement>('[data-cola-mover]').forEach((b) => {
-    b.addEventListener('click', () => void ejecutarAccionAsent('moverEnCola', { asentamientoId: a.id, cargo, edificioId: b.dataset.edificio, direccion: b.dataset.colaMover }));
+    b.addEventListener('click', () => void ejecutarAccionAsent('moverEnCola', { asentamientoId: a.id, cargo, edificioId: b.dataset.edificio, direccion: b.dataset.colaMover }, b));
   });
   cont.querySelectorAll<HTMLButtonElement>('[data-cola-quitar]').forEach((b) => {
-    b.addEventListener('click', () => void ejecutarAccionAsent('quitarDeCola', { asentamientoId: a.id, cargo, edificioId: b.dataset.colaQuitar }));
+    b.addEventListener('click', () => void ejecutarAccionAsent('quitarDeCola', { asentamientoId: a.id, cargo, edificioId: b.dataset.colaQuitar }, b));
   });
 }
 
@@ -3021,7 +3053,7 @@ function refrescarPantalla(pantalla: Pantalla): void {
   if (pantalla === 'campamento' || pantalla === 'pueblo' || pantalla === 'asentamiento') renderVentanaSalida();
   if (pantalla === 'campamento') { const c = campamentoActual(proyeccion); if (c) pintarCampamento(proyeccion, c); return; }
   if (pantalla === 'pueblo') { pintarPueblo(proyeccion); return; }
-  if (pantalla === 'asentamiento') { void dibujarPantallaSegunModo(proyeccion); renderPanelEdificios(); renderPieDePlaza(); renderPanelAsent(); return; }
+  if (pantalla === 'asentamiento') { renderPanelEdificios(); renderPieDePlaza(); renderPanelAsent(); programarDibujoPlaza(proyeccion); return; }
   if (pantalla !== 'legacy') return;
   renderizarPanelInteraccion(proyeccion);
   void dibujarPantallaSegunModo(proyeccion);

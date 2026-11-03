@@ -3,6 +3,23 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.123.0] — 2026-11-03 · Respuesta inmediata al construir, Tecnología en la Facción y aviso al guardar el loadout · sin cambio de contrato
+
+Peticiones de Víctor (2026-11-03):
+
+- **Construir responde al momento.** Pasaban segundos entre pulsar un botón de construcción y ver algo en la interfaz. El motor atiende la orden en
+  cuanto llega; en el cliente, los paneles esperaban a que se rehicieran el plano 2D y la vista 3D (las mallas de los edificios), y el botón no
+  decía nada mientras tanto. Ahora:
+  - el botón pulsado (construir, mejorar en la ficha, mover o quitar de la cola, pedir la subida) late en dorado hasta que llega la respuesta;
+  - los paneles se pintan primero y la plaza se dibuja en el fotograma siguiente (`programarDibujoPlaza`; varios refrescos seguidos se juntan
+    en un solo dibujo);
+  - la consola dice cuánto tardó cada parte (`[plaza] anadirEdificioManualmente: motor … ms · proyección y paneles … ms · vista 3D … ms`), para
+    saber dónde mirar si sigue tardando.
+- **Tecnología, en la ventana de la Facción.** Las tecnologías afectan al jugador a través de su Facción: el botón «Tecnología» de la barra de
+  arriba se quita y su contenido pasa a ser una pestaña de la Facción, entre Plazas y Tablón, con las filas como tarjetas y los botones a su tamaño.
+- **«Loadout guardado».** En la ventana de salir al mundo, «Guardar loadout» no decía nada cuando salía bien: ahora sale el aviso. Y al guardar ya
+  no se arrastran del loadout viejo las escuadras que el héroe ya no tiene (tropa prestada devuelta), que hacían que el motor lo rechazara entero.
+
 ## [0.122.0] — 2026-11-03 · Pagar a un mercenario desde dentro del campamento, con el almacén personal o el carro · contrato 2b2c2a58
 
 Petición de Víctor (2026-11-03): poder pagar un contrato de mercenario desde dentro del campamento con el almacén personal o el carro. El motor

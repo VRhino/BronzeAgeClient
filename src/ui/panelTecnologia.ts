@@ -17,9 +17,10 @@ export type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
 const legible = (id: string): string => { const t = id.replace(/[._]/g, ' '); return t.charAt(0).toUpperCase() + t.slice(1); };
 const cifra = (n: number): string => n.toLocaleString('es');
 
-export function htmlTecnologia(p: ProyeccionJugador, e: Escapar): string {
+export function htmlTecnologia(p: ProyeccionJugador, e: Escapar, conCabecera = true): string {
   const t = p.tecnologia;
-  const cabecera = `<div class="mapa-panel-jugador">${e(p.heroe.displayName)} · tecnología y Aedas</div>`;
+  // en la pestaña de la Facción, sin cabecera: ya está la de la ventana
+  const cabecera = conCabecera ? `<div class="mapa-panel-jugador">${e(p.heroe.displayName)} · tecnología y Aedas</div>` : '';
   if (!t) return `${cabecera}<p class="asent-lado-nota">Este servidor no envía el estado de la tecnología.</p>`;
   // El panel se repinta con el sondeo, así que no hace falta avisar cuando llegue el balance.
   const cat = catalogoDeTecnologia(() => {});

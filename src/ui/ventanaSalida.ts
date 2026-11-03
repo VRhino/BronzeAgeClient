@@ -16,6 +16,7 @@ import { chipLiderazgo } from './liderazgo';
 import { iconoTropa } from './iconosTropa';
 import { miColumna } from './ejercitos';
 import { pintar } from './repintado';
+import { mostrar as mostrarAviso } from './avisos';
 import { cablearCargaDeSalida, htmlCargaDeSalida, leerCarga } from './cargaDeSalida';
 import { cablearPreparacion, htmlPreparacion } from './convocatoria';
 import { actualizarConvocatorias, cablearSalidaComoEjercito, htmlSalidaComoEjercito } from './salidaComoEjercito';
@@ -254,12 +255,15 @@ export function pintarVentanaSalida(raiz: HTMLElement, p: ProyeccionJugador, l: 
       if (!sel || !loadout) return;
       const motivo = bloqueo();
       if (motivo) { avisar(motivo); return; }
-      // Las escuadras del loadout que no están aquí (en guarnición, escoltando…) se quedan en él.
+      // Las escuadras del loadout que no están aquí (en guarnición, escoltando…) se quedan en él, si siguen siendo del héroe: un loadout viejo
+      // puede guardar escuadras que ya no tiene (tropa prestada que se devolvió), y el motor rechaza el loadout entero por ellas.
       const aqui = new Set(tropaDe(p, l).map((s) => s.id));
-      const squadIds = [...loadout.squadIds.filter((id) => !aqui.has(id)), ...sel.ids];
+      const suyas = new Set(p.heroe.escuadrones.map((s) => s.id));
+      const squadIds = [...loadout.squadIds.filter((id) => !aqui.has(id) && suyas.has(id)), ...sel.ids];
       boton.disabled = true;
       const mensaje = await ejecutar('guardarLoadout', { loadoutId: loadout.id, displayName: loadout.displayName, squadIds, perksSeleccionados: loadout.perksSeleccionados });
       if (mensaje) { boton.disabled = false; avisar(mensaje); }
+      else mostrarAviso(`Loadout «${loadout.displayName}» guardado.`);
     });
     const ir = raiz.querySelector<HTMLButtonElement>('[data-salida-ir]');
     ir?.addEventListener('click', async () => {

@@ -3,6 +3,7 @@
 import '../../src/style.css';
 import type { ProyeccionJugador } from '../../src/apiCliente';
 import { elegirFaccion, htmlLateralFaccion, PESTANAS_FACCION, renderPestanaFaccion } from '../../src/ui/pestanaFaccion';
+import { htmlTecnologia } from '../../src/ui/panelTecnologia';
 
 const AHORA = Date.parse('2026-11-03T12:00:00Z');
 const H = 3_600_000;
@@ -33,14 +34,23 @@ const p = {
   ],
   campamentosMercenarios: [], heroesVisibles: [], titulos: [],
   nombresDeCompaneros: { 'heroe-9': 'Agamenón', 'heroe-40': 'Hattusili', 'heroe-50': 'Niqmaddu', 'heroe-60': 'Néstor' },
+  tecnologia: {
+    era: 'bronce_temprano', eraDesde: AHORA - 30 * H, capitalId: 'as-1',
+    logros: [{ contador: 'plazas_fundadas', umbral: 10, en: AHORA - 20 * H }, { contador: 'batallas_libradas', umbral: 25, en: AHORA - 6 * H }],
+    propias: { aparecidas: ['leva_comunal', 'arado_de_bronce'], adoptadas: ['leva_comunal'] },
+    reveladas: [{ tecnologiaId: 'carro_de_guerra', descubridorFaccionId: 'fac-2', hito: [{ tipo: 'edificio', edificio: 'caballerizas', nivelInterno: 2 }], cumplidas: [false] }],
+  },
+  aedasResidentes: [],
 } as unknown as ProyeccionJugador;
 
 const panel = document.querySelector<HTMLElement>('.jugador-panel')!;
 function pintar(): void {
   elegirFaccion(new URLSearchParams(location.search).get('elegida'));
-  const pestanas = `<nav class="faccion-pestanas" role="tablist">${PESTANAS_FACCION.map(([id, nombre]) => `<button type="button" class="faccion-pestana${id === 'diplomacia' ? ' activo' : ''}">${nombre}</button>`).join('')}</nav>`;
-  const cuerpo = renderPestanaFaccion(p, e, 'diplomacia', '', true);
-  panel.innerHTML = `<div class="faccion-cabecera"><div class="mapa-panel-jugador">Facción</div><button class="btn-secondary" type="button">Cerrar</button></div><div class="faccion-marco">${htmlLateralFaccion(p, e)}<div class="faccion-principal">${pestanas}<div class="faccion-cuerpo faccion-cuerpo-diplomacia">${cuerpo}</div></div></div>`;
+  // `?pestana=tecnologia`: la pestaña de Tecnología (0.123.0), como la pinta main.ts
+  const pestana = new URLSearchParams(location.search).get('pestana') ?? 'diplomacia';
+  const pestanas = `<nav class="faccion-pestanas" role="tablist">${PESTANAS_FACCION.map(([id, nombre]) => `<button type="button" class="faccion-pestana${id === pestana ? ' activo' : ''}">${nombre}</button>`).join('')}</nav>`;
+  const cuerpo = pestana === 'tecnologia' ? `<section class="faccion-tecnologia">${htmlTecnologia(p, e, false)}</section>` : renderPestanaFaccion(p, e, 'diplomacia', '', true);
+  panel.innerHTML = `<div class="faccion-cabecera"><div class="mapa-panel-jugador">Facción</div><button class="btn-secondary" type="button">Cerrar</button></div><div class="faccion-marco">${htmlLateralFaccion(p, e)}<div class="faccion-principal">${pestanas}<div class="faccion-cuerpo${pestana === 'diplomacia' ? ' faccion-cuerpo-diplomacia' : ''}">${cuerpo}</div></div></div>`;
 }
 pintar();
 (window as unknown as { __banco: unknown }).__banco = { listo: true };

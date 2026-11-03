@@ -22,7 +22,7 @@ Lo que le falta al cliente‑jugador, **contrastado con el backend** (`BronzeAge
 ## 1. Hecho
 
 - **Sesión:** login solo con la cuenta y pantalla de partidas (tu héroe, Facción con emblema y nivel; «Cambiar de partida»).
-- **Héroe y mundo:** barra del jugador (Héroe, Escuadras, Carro, Facción, **Tecnología**, Avisos), panel Héroe, tiempo real por WebSocket con sondeo de apoyo, presencia, avisos por eventos, panel del Carro, víveres, repintado mínimo (`ui/repintado.ts`) y mapa de errores (`ui/erroresServidor.ts`). **La vista del mapa persiste** (zoom, pan, panel y selección, por partida).
+- **Héroe y mundo:** barra del jugador (Héroe, Escuadras, Carro, Facción, Misiones, Avisos; la Tecnología, como pestaña de la Facción desde 0.123.0), panel Héroe, tiempo real por WebSocket con sondeo de apoyo, presencia, avisos por eventos, panel del Carro, víveres, repintado mínimo (`ui/repintado.ts`) y mapa de errores (`ui/erroresServidor.ts`). **La vista del mapa persiste** (zoom, pan, panel y selección, por partida).
 - **Salir al mundo** (tropa y carga; como ejército) y **ejércitos** completos: formar, unirse, preparación, sin destino fijo, entrar entero a campamento o plaza. **Salir de una plaza donde no resides** (`salirDeAsentamiento`).
 - **Mapa:** fichas de plaza (con **mercado de la plaza: tomar una orden ajena**), campamentos, alijos, ejércitos propios y **columnas y caravanas ajenas** (inspeccionar, perseguir, atacar/interceptar, dejar de perseguir, plantar cara a quien te persigue, fichas públicas de héroes ajenos).
 - **Plaza por edificio:**
