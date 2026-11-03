@@ -3,6 +3,32 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.117.0] — 2026-11-03 · Los puestos del mercado como tiendas y las puertas de muralla entre dos torres · sin cambio de contrato
+
+Peticiones de Víctor (2026-11-03): que los puestos de mercado de más allá del nivel 1 sean tiendas (los de varias celdas, varias tiendas con
+varias puertas o una tienda grande), y que las puertas de muralla sean puertas de verdad con una torre a cada lado, también en la empalizada.
+
+- **Puestos de mercado** (`ciudad3d/modelos.ts`): en una plaza de nivel 1 siguen siendo tenderetes. Del nivel 2 en adelante, cada celda es una
+  tienda con su cuerpo al fondo, su portal, el mostrador sacado a la calle, el toldo sobre postes y tinajas o cestos delante; de barro y paja en
+  el 2 y de adobe, piedra o palacio (una o dos plantas) del 3 al 5. Un puesto de varias celdas puede ser, fijo por puesto, una tienda grande
+  con el portal en medio, dos mostradores y un pórtico corrido (de columnas en el 4 y el 5).
+- **Abren a la calle**: `ciudadEnVista` mira las celdas vecinas del trazado a cada lado largo del puesto y apunta en `EdificioEnVista.frente` el
+  que da a una calle o un camino (si no se sabe, a suertes).
+- **Puertas de muralla entre dos torres** (`ciudad3d/murallas.ts`): las celdas de muro que tocan el paso llevan la torre de la puerta, más alta
+  que el muro. En la empalizada, dos torres de madera unidas por una pasarela; en el nivel 2, torres cuadradas de piedra y adobe que salen del
+  muro, y el paso con jambas, dintel, hojas y el muro por encima; en el nivel 3, torres macizas más altas a los lados de la puerta de los Leones.
+  Van con los ejes de la celda (en una esquina no salen de ella) y solo donde la celda toca el paso. El motor no cambia.
+- **Un puesto de mercado de una plaza de nivel 2 o más nunca se queda en tenderete** (`estiloDe`): puede ir un estilo atrás, como las casas,
+  pero no por debajo del 2.
+- **Arreglo: la muralla de una plaza se dibuja de vecina en vecina** (`ciudadEnVista`). El motor manda las celdas en el orden de sus obras y
+  puede llevar una torre al final de la lista; el cliente las encadenaba en ese orden, así que el anillo salía abierto, con un muro tendido de
+  punta a punta por dentro de la plaza y la puerta con una sola torre. Ahora el dibujo las encadena como la empalizada del campamento
+  (`anillosDe`, que pasa a `estado.ts`) si hacen un solo anillo; lo levantado y lo mejorado sigue el orden del motor.
+- Pruebas en `pruebas/ciudad3d.test.ts`: las tiendas no salen de su huella en ninguna forma, estilo ni lado; el toldo cae del lado de la calle;
+  en la ciudad del banco, el frente de cada puesto da a una calle; un puesto de nivel 2 o más no es tenderete; la muralla de la ciudad del
+  banco sale cerrada y de vecina en vecina; y en el pueblo y la ciudad, en cada nivel de muralla, una torre a cada lado del paso, más alta que
+  el muro y dentro de su celda.
+- Docs: `Ciudad_3D.md`.
 ## [0.116.0] — 2026-11-03 · Sin velo sobre el blasón y la barra de arriba, con sus letreros debajo · sin cambio de contrato
 
 Peticiones de Víctor (2026-11-03):

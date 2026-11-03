@@ -43,6 +43,12 @@ formas, reutilizando del mundo 3D el cielo, la luz y la manera de pintar miles d
     parque.
   - Variedad: cada edificio tiene una semilla (de su id) que decide sus variaciones (orientación de la puerta, plantas, patio, pérgola,
     tono...), siempre las mismas para el mismo edificio.
+  - **Puestos de mercado** (desde 0.117.0): en una plaza de nivel 1 son tenderetes al aire, uno por celda. Del nivel 2 en adelante son
+    tiendas (un puesto puede ir un estilo atrás, como las casas, pero nunca vuelve al tenderete): un cuerpo cerrado al fondo de la parcela (de barro y paja en el 2; de adobe, piedra o palacio, con una o dos plantas, del 3 al 5),
+    con su portal, el hueco del mostrador con las tablas sacadas a la calle y lo que se vende encima, un toldo sobre postes y tinajas o cestos
+    delante. Un puesto de varias celdas es una tienda por celda, cada una con su puerta, o (a suertes, fijo por puesto) una tienda grande con el
+    portal en medio, dos mostradores y un pórtico corrido (de columnas en el 4 y el 5). La tienda abre al lado largo que da a una calle o un
+    camino (`EdificioEnVista.frente`, de las celdas vecinas del trazado); si hay calle a los dos lados o a ninguno, lo echa a suertes.
 - **Estados**:
   - en obra, el armazón: postes, muros que suben con el avance, vigas y el montón de material;
   - en cola (solo la propia), estacas y cuerdas;
@@ -57,6 +63,15 @@ formas, reutilizando del mundo 3D el cielo, la luz y la manera de pintar miles d
   - 3, ciclópea de bloques, con adarve y una puerta de los Leones.
 
   Puertas y torres van donde dice la clase de la celda. Las celdas planificadas salen como zanja, y las que se están mejorando, con andamio.
+  El motor manda las celdas en el orden de sus obras, que no siempre es el del anillo (puede llevar una torre al final de la lista). Lo
+  levantado y lo mejorado sigue ese orden, pero el dibujo encadena las celdas de vecina en vecina (`anillosDe`, como la empalizada del
+  campamento) cuando hacen un solo anillo; si no, se queda con el orden del motor.
+- **Las puertas, entre dos torres** (desde 0.117.0): las celdas de muro que tocan el paso, una a cada lado, llevan la torre de la puerta, más
+  alta que el muro y las otras torres. En la empalizada son dos torres de madera unidas por una pasarela con su baranda (si falta una, la
+  puerta lleva su tejadillo); en el nivel 2, torres cuadradas de piedra y adobe que salen del muro, con almenas y una aspillera, y el paso
+  con jambas de piedra, dintel, hojas abiertas y el muro corrido por encima; en el nivel 3, torres macizas que suben por encima de la puerta
+  de los Leones. Van alineadas con la celda, así que en una esquina del anillo tampoco salen de ella; el motor no cambia. Si el anillo salta a
+  una celda que no toca el paso (un recinto a medio comprometer), ese lado va sin torre.
 - **Suelo** (`suelo.ts`): una textura pintada una vez, con:
   - el color del terreno del mapa donde está la plaza;
   - la tierra pisada alrededor de lo poblado y bajo las calles y los caminos;

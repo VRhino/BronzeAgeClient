@@ -9,7 +9,9 @@ import { anillosDe, campamentoEnVista } from '../src/ciudad3d/campamento';
 import { FORMA_BASE, girarLados } from '../src/ciudad3d/calles';
 import { montarGuardacantones, teselasDe } from '../src/ciudad3d/calzada';
 import { ciudadEnVista, estiloDe, type CiudadEnVista } from '../src/ciudad3d/estado';
+import { COLOR } from '../src/ciudad3d/config';
 import { montarEdificio } from '../src/ciudad3d/modelos';
+import { idDeCeldaDeMuro, montarMurallas } from '../src/ciudad3d/murallas';
 import { puebloEnVista } from '../src/ciudad3d/pueblo';
 import { Piezas, type Pieza } from '../src/ciudad3d/piezas';
 import { AsentamientoSchema, CampamentoMercenariosSchema } from '../src/contrato/gen/bronzeage/v1/entities_pb';
@@ -184,6 +186,13 @@ describe('el estilo de cada casa', () => {
     expect(estiloDe('ed-1', 'vivienda', 1, undefined, 0)).toBe(1);
   });
 
+  test('un puesto de mercado de una plaza de nivel 2 o más nunca se queda en tenderete', () => {
+    const ids = Array.from({ length: 400 }, (_, i) => `ed-${i}`);
+    expect(ids.every((id) => estiloDe(id, 'puestoMercado', 2, undefined, 0) === 2)).toBe(true);
+    expect(new Set(ids.map((id) => estiloDe(id, 'puestoMercado', 3, undefined, 0)))).toEqual(new Set([2, 3]));
+    expect(estiloDe('ed-1', 'puestoMercado', 1, undefined, 0)).toBe(1);
+  });
+
   test('al subir de nivel, la ciudad cambia por partes y el gobierno al final', () => {
     const ids = Array.from({ length: 400 }, (_, i) => `ed-${i}`);
     const ascenso = { nivelObjetivo: 4, iniciadoEn: 0, completaEn: 1000 };
@@ -239,6 +248,92 @@ describe('los pueblos extractores y las aldeas', () => {
     }
     expect(peor.fuera, peor.que).toBeLessThanOrEqual(ALERO);
   });
+});
+
+describe('las tiendas del mercado', () => {
+  // los puestos de 1 × 1, 1 × 2 y 1 × 3 celdas, tumbados y de pie (`PUESTO_MERCADO_FORMA` del motor)
+  const HUELLAS = [[1, 1], [2, 1], [1, 2], [3, 1], [1, 3]] as const;
+  const puesto = (cw: number, ch: number, estilo: number, frente: 1 | -1 | undefined, semilla: number) =>
+    ({ id: `pm-${semilla}`, tipo: 'puestoMercado', x: 0, y: 0, ancho: cw * 3, alto: ch * 3, estado: 'activo' as const, avance: null, mejora: false, danado: false, nivel: cw * ch === 2 ? 1 : cw * ch === 3 ? 2 : 3, estilo, semilla, frente });
+  const toldos = (p: Piezas) => p.lista.filter((q) => q.forma === 'caja' && Math.abs(q.alto - 0.05) < 1e-9 && (COLOR.toldo as readonly number[]).includes(q.color));
+
+  test('en cualquier forma, estilo y lado de la calle, no salen de su huella más que un alero', () => {
+    let peor = { fuera: 0, que: '' };
+    for (const [cw, ch] of HUELLAS) for (const estilo of [1, 2, 3, 4, 5]) for (const frente of [1, -1, undefined] as const) for (let k = 0; k < 25; k++) {
+      const e = puesto(cw, ch, estilo, frente, k * 7919 + 5);
+      const p = new Piezas();
+      montarEdificio(p, e);
+      for (const q of p.lista) { const fuera = salida(q, e); if (fuera > peor.fuera) peor = { fuera, que: `${cw}×${ch} estilo ${estilo} frente ${frente} semilla ${e.semilla}: ${q.forma}` }; }
+    }
+    expect(peor.fuera, peor.que).toBeLessThanOrEqual(ALERO);
+  });
+
+  test('de estilo 2 en adelante abren a la calle: el toldo cae del lado del frente', () => {
+    for (const [cw, ch] of HUELLAS) for (const estilo of [2, 3, 4, 5]) for (const frente of [1, -1] as const) for (let k = 0; k < 10; k++) {
+      const e = puesto(cw, ch, estilo, frente, k * 104_729 + 3);
+      const p = new Piezas();
+      montarEdificio(p, e);
+      const ts = toldos(p);
+      expect(ts.length, `${cw}×${ch} estilo ${estilo}`).toBeGreaterThan(0);
+      // tumbado, +v es hacia abajo (+y del plano); de pie, hacia la izquierda (−x)
+      for (const q of ts) {
+        if (e.ancho >= e.alto) expect(Math.sign(q.z - e.alto / 2)).toBe(frente);
+        else expect(Math.sign(e.ancho / 2 - q.x)).toBe(frente);
+      }
+    }
+  });
+
+  test('en la ciudad, el frente de cada puesto da a una calle o un camino', () => {
+    const { c } = plaza('ciudad'), T = c.celda;
+    const puestos = c.edificios.filter((e) => e.tipo === 'puestoMercado');
+    expect(puestos.some((e) => e.frente !== undefined)).toBe(true);
+    const enVia = (x: number, y: number) => [...c.calles, ...c.caminos].some((r) => x > r.x && x < r.x + r.ancho && y > r.y && y < r.y + r.alto);
+    for (const e of puestos.filter((x) => x.frente !== undefined)) {
+      const delante = e.ancho >= e.alto
+        ? Array.from({ length: Math.round(e.ancho / T) }, (_, i) => [e.x + T * (i + 0.5), e.frente === 1 ? e.y + e.alto + T / 2 : e.y - T / 2])
+        : Array.from({ length: Math.round(e.alto / T) }, (_, i) => [e.frente === 1 ? e.x - T / 2 : e.x + e.ancho + T / 2, e.y + T * (i + 0.5)]);
+      expect(delante.some(([x, y]) => enVia(x!, y!)), e.id).toBe(true);
+    }
+  });
+});
+
+describe('las puertas de muralla', () => {
+  // la muralla del pueblo y la de la ciudad (anillos cerrados con su puerta), levantadas enteras en cada nivel
+  const recintos = (nombre: string, nivel: number) => plaza(nombre).c.recintos.map((r) => ({ ...r, mejorandoA: undefined, celdas: r.celdas.map((k) => ({ ...k, enPie: true, nivel })) }));
+
+  test('se dibujan de vecina en vecina aunque el motor mande las celdas en otro orden (la ciudad lleva una torre al final de la lista)', () => {
+    const { a, c } = plaza('ciudad');
+    const lista = a.recintos![0]!.celdas, salta = (p: { col: number; row: number }, q: { col: number; row: number }) => Math.max(Math.abs(p.col - q.col), Math.abs(p.row - q.row)) > 1;
+    expect(lista.some((k, i) => salta(k, lista[(i + 1) % lista.length]!))).toBe(true);
+    const r = c.recintos[0]!;
+    expect(r.cerrado).toBe(true);
+    expect(r.celdas.every((k, i) => { const s = r.celdas[(i + 1) % r.celdas.length]!; return Math.max(Math.abs(k.x - s.x), Math.abs(k.y - s.y)) <= c.celda + 1e-6; })).toBe(true);
+    // lo levantado sigue el orden de las obras del motor
+    expect(r.celdas.filter((k) => k.enPie).length).toBe(Math.min(a.recintos![0]!.avance, lista.length));
+  });
+
+  for (const [nombre, nivel] of [['pueblo', 1], ['pueblo', 2], ['pueblo', 3], ['ciudad', 1], ['ciudad', 2], ['ciudad', 3]] as const) {
+    test(`${nombre}, nivel ${nivel}: una torre a cada lado del paso, más alta que el muro, sin salir de su celda más que un alero`, () => {
+      const rs = recintos(nombre, nivel), p = new Piezas();
+      montarMurallas(p, rs);
+      for (const r of rs) {
+        const N = r.celdas.length, T = 3;
+        const arriba = (i: number) => Math.max(...p.lista.filter((q) => q.de === idDeCeldaDeMuro(r.id, i)).map((q) => q.y + q.alto));
+        const muro = Math.max(...r.celdas.map((k, i) => (k.clase === 'muro' && r.celdas[(i + 1) % N]!.clase !== 'puerta' && r.celdas[(i - 1 + N) % N]!.clase !== 'puerta' ? arriba(i) : 0)));
+        const puertas = r.celdas.flatMap((k, i) => (k.clase === 'puerta' ? [i] : []));
+        expect(puertas.length).toBeGreaterThan(0);
+        for (const i of puertas) for (const j of [(i - 1 + N) % N, (i + 1) % N]) {
+          const k = r.celdas[j]!;
+          if (k.clase === 'puerta') continue;
+          // una torre de las otras (de vigía, el bastión) a un lado de la puerta también la flanquea; la de la puerta, más alta que el muro
+          expect(arriba(j), `celda ${j}`).toBeGreaterThan(muro + 0.5);
+          const celda = { x: k.x - T / 2, y: k.y - T / 2, ancho: T, alto: T };
+          // las torres de la puerta: lo que pasa de la altura del muro, dentro de su celda
+          for (const q of p.lista.filter((x) => x.de === idDeCeldaDeMuro(r.id, j) && x.y + x.alto > muro + 0.3)) expect(salida(q, celda), `${q.forma} en la celda ${j}`).toBeLessThanOrEqual(ALERO);
+        }
+      }
+    });
+  }
 });
 
 /** Lo más que una pieza puede asomar fuera de su huella (un alero, un poste de la valla), en ul (0,2 ul = 60 cm). */

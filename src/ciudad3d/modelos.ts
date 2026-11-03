@@ -706,8 +706,61 @@ function mercado(m: Marco, estilo: number): void {
   }
 }
 
-function puestoMercado(m: Marco): void {
-  puesto(m, 0, 0, Math.min(m.L - 0.6, 1.6), Math.min(m.S - 0.6, 1.1), m.e.semilla);
+/**
+ * Un puesto del Mercado (Víctor, 2026-11-03: «más allá del nivel 1 son edificios, tiendas más que puestos; los de varias celdas son varias
+ * tiendas con varias puertas o una tienda grande»). En una plaza de nivel 1 (y en el campamento), puestos al aire, uno por celda. Desde el nivel
+ * 2, tiendas: cada una con su cuerpo al fondo, la puerta y el mostrador al frente, que da a la calle (`frente`), y el toldo sobre la calle. Un
+ * puesto de varias celdas es una fila de tiendas, una por celda, o (por su semilla) una tienda grande con el portal en medio y un pórtico corrido.
+ */
+function puestoMercado(m: Marco, estilo: number): void {
+  const T = m.L / Math.max(1, Math.round(m.L / Math.max(0.5, m.S))), n = Math.max(1, Math.round(m.L / T));
+  if (estilo <= 1) {
+    for (let i = 0; i < n; i++) puesto(m, -m.L / 2 + T * (i + 0.5), 0, Math.min(T - 0.6, 1.6), Math.min(m.S - 0.6, 1.1), m.e.semilla + i * 3);
+    return;
+  }
+  const f = m.e.frente ?? (m.azar(1) < 0.5 ? 1 : -1), S = m.S - 0.3;
+  if (n >= 2 && m.azar(2) < 0.4) { tiendaDeMercado(m, estilo, 0, m.L - 0.3, S, f, 0, true); return; }
+  for (let i = 0; i < n; i++) tiendaDeMercado(m, estilo, -m.L / 2 + T * (i + 0.5), T - 0.3, S, f, i, false);
+}
+
+/** Una tienda de `l` de ancho (o la grande de todo el puesto) centrada en `u`: cuerpo al fondo, portal, mostrador y toldo hacia `f`. */
+function tiendaDeMercado(m: Marco, estilo: number, u: number, l: number, S: number, f: number, k: number, grande: boolean): void {
+  const s = S * 0.58, v0 = -f * (S - s) / 2, fachada = v0 + (f * s) / 2, fondo = S - s;
+  const toldo = COLOR.toldo[(m.e.semilla + k * 3) % COLOR.toldo.length]!;
+  let alto: number;
+  if (estilo === 2) {
+    // barro y paja: muros bajos y tejado a dos aguas con la cumbrera a lo largo de la fachada
+    alto = 0.95 + (m.azar(10 + k) - 0.5) * 0.15;
+    m.caja(COLOR.barro, u, v0, l, s, alto);
+    m.forma('aguas', COLOR.paja, u, v0, l + 0.2, s + 0.35, s * 0.55, alto * 0.88);
+  } else {
+    alto = bloque(m, estilo, u, v0, l, s, { frente: f, plantas: grande || m.azar(11 + k) < 0.35 ? 2 : 1 }) - 0.16;
+  }
+  // el portal y el hueco del mostrador en la fachada (la grande, el portal en medio y un mostrador a cada lado)
+  const portal = grande ? Math.min(1.1, l * 0.18) : Math.min(0.5, l * 0.22), uPortal = grande ? u : u - l * 0.25;
+  m.caja(COLOR.hueco, uPortal, fachada + f * 0.015, portal, 0.06, grande ? 0.85 : 0.7);
+  const mostradores = grande ? [u - l * 0.3, u + l * 0.3] : [u + l * 0.18];
+  const anchoMostrador = grande ? Math.min(1.1, l * 0.22) : Math.min(0.95, l * 0.4);
+  for (const um of mostradores) {
+    m.caja(COLOR.hueco, um, fachada + f * 0.015, anchoMostrador, 0.06, 0.32, 0.5);
+    // el mostrador de tablas, sacado a la calle, y lo que se vende encima
+    m.caja(COLOR.maderaOscura, um, fachada + f * 0.2, anchoMostrador + 0.1, 0.3, 0.46);
+    m.caja(COLOR.madera, um, fachada + f * 0.2, anchoMostrador + 0.16, 0.36, 0.05, 0.46);
+    for (let i = 0; i < 3; i++) m.forma('cilindro', (i + k) % 2 ? COLOR.ocre : COLOR.barro, um - anchoMostrador * 0.3 + i * anchoMostrador * 0.3, fachada + f * 0.2, 0.13, 0.13, 0.15, 0.51);
+  }
+  // el toldo sobre la calle, de la fachada a dos postes (en la grande, un pórtico corrido; de columnas en el palacio)
+  const hT = Math.min(alto * 0.85, 1.25), largoToldo = l * 0.94, dv = fondo * 0.9;
+  m.caja(toldo, u, fachada + (f * dv) / 2, largoToldo, dv, 0.05, hT);
+  if (estilo >= 4 && grande) m.caja(estilo === 5 ? COLOR.rojo : COLOR.maderaOscura, u, fachada + f * (dv - 0.04), largoToldo + 0.04, 0.1, 0.12, hT - 0.06);
+  const postes = grande ? Math.max(3, Math.round(largoToldo / 1.2) + 1) : 2;
+  for (let i = 0; i < postes; i++) {
+    const up = u - largoToldo / 2 + 0.06 + ((largoToldo - 0.12) * i) / (postes - 1), vp = fachada + f * (dv - 0.06);
+    if (estilo >= 4 && grande) columna(m, up, vp, hT, 0, estilo === 5);
+    else m.poste(COLOR.madera, up, vp, hT, 0.06);
+  }
+  // en la calle, junto al portal: tinajas, o fardos y cestos
+  if (m.azar(20 + k) < 0.5) tinajas(m, uPortal + (grande ? -portal : portal) * 0.9, fachada + f * dv * 0.55, 2, COLOR.ocre);
+  else for (let i = 0; i < 2; i++) m.forma('cilindro', COLOR.zarzo, uPortal - portal * 0.9 - i * 0.26, fachada + f * dv * 0.6, 0.24, 0.24, 0.22);
 }
 
 function plaza(m: Marco, estilo: number): void {
@@ -1083,7 +1136,7 @@ function terminado(m: Marco, tipo: string, estilo: number): void {
     case 'galeriaDeTiro': return galeriaDeTiro(m, estilo);
     case 'taberna': return taberna(m, estilo);
     case 'mercado': return mercado(m, estilo);
-    case 'puestoMercado': return puestoMercado(m);
+    case 'puestoMercado': return puestoMercado(m, estilo);
     case 'plaza': return plaza(m, estilo);
     case 'plazaDeArmas': return plazaDeArmas(m, estilo);
     case 'patioDeGremios': return patioDeGremios(m, estilo);

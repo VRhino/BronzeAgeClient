@@ -2,38 +2,10 @@
 // nivel 1, con su empalizada de estacas; las viviendas son tiendas de campaña (`tienda` en `modelos.ts`). Las piezas van en sus huellas
 // exactas: el trazado manda (Víctor, 2026-11-02).
 import type { Edificio, EscenaCampamento, RectanguloLocal } from '../tiposDominio';
-import { ciudadEnVista, hash3, type CiudadEnVista, type OpcionesCiudad, type Relleno, type TipoRelleno } from './estado';
+import { anillosDe, ciudadEnVista, hash3, type CiudadEnVista, type OpcionesCiudad, type Relleno, type TipoRelleno } from './estado';
 
-type Celda = { col: number; row: number };
-
-const LADOS = [[1, 0], [0, 1], [-1, 0], [0, -1]] as const;
-const DIAGONALES = [[1, 1], [-1, 1], [-1, -1], [1, -1]] as const;
-
-/**
- * Las celdas de una empalizada en el orden de sus anillos (el motor las manda sueltas): de vecina en vecina, antes de lado que en diagonal,
- * desde la de más arriba a la izquierda. Si quedan celdas que no tocan a las ya recorridas, empiezan otro anillo.
- */
-export function anillosDe<T extends Celda>(celdas: T[]): T[][] {
-  const clave = (c: number, r: number): string => `${c},${r}`;
-  const quedan = new Map(celdas.map((c) => [clave(c.col, c.row), c]));
-  const anillos: T[][] = [];
-  while (quedan.size) {
-    let actual: T | undefined = [...quedan.values()].sort((a, b) => a.row - b.row || a.col - b.col)[0];
-    const anillo: T[] = [];
-    while (actual) {
-      anillo.push(actual);
-      quedan.delete(clave(actual.col, actual.row));
-      const desde: T = actual;
-      actual = undefined;
-      for (const [dc, dr] of [...LADOS, ...DIAGONALES]) {
-        const v = quedan.get(clave(desde.col + dc, desde.row + dr));
-        if (v) { actual = v; break; }
-      }
-    }
-    anillos.push(anillo);
-  }
-  return anillos;
-}
+// el orden de las celdas de una empalizada vive en `estado.ts` (lo usa también la muralla de las plazas)
+export { anillosDe } from './estado';
 
 /** El campamento que se dibuja, o `null` sin planta. */
 export function campamentoEnVista(e: EscenaCampamento, o: OpcionesCiudad): CiudadEnVista | null {

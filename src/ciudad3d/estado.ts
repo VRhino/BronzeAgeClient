@@ -28,6 +28,11 @@ export interface EdificioEnVista {
   estilo: number;
   /** Un número fijo por edificio (de su id), para el azar de su maqueta. */
   semilla: number;
+  /**
+   * Hacia qué lado largo da la calle, en el `v` del marco de su maqueta (`modelos.ts`): +1 o −1. Sin calle a un lado (o con calle a los dos),
+   * no se sabe y la maqueta lo echa a suertes. Lo usan las tiendas del mercado para abrir su puerta y su mostrador a la calle.
+   */
+  frente?: 1 | -1;
 }
 
 export type ClaseCelda = 'muro' | 'puerta' | 'torre';
@@ -41,6 +46,8 @@ export interface CeldaDeMuro {
   enPie: boolean;
   /** El nivel con que está en pie (con una mejora en obra, las primeras celdas ya son del nivel nuevo). */
   nivel: number;
+  /** Su puesto en el orden de las obras del motor (el de la lista del recinto), si la vista las ordenó de otra manera. */
+  obra?: number;
 }
 
 export interface RecintoEnVista {
@@ -119,7 +126,39 @@ export function estiloDe(id: string, tipo: string, nivel: number, ascenso: Asent
   let n = nivel;
   if (ascenso && (MONUMENTALES.has(tipo) ? p >= 1 : u < p)) n = ascenso.nivelObjetivo;
   else if (!MONUMENTALES.has(tipo) && u > VIEJAS && nivel > 1) n = nivel - 1;
+  // un puesto de mercado de una plaza de nivel 2 o más es siempre una tienda (Víctor, 2026-11-03), nunca el tenderete del 1
+  if (tipo === 'puestoMercado' && nivel >= 2) n = Math.max(2, n);
   return Math.max(1, Math.min(5, n));
+}
+
+const VECINAS_LADO = [[1, 0], [0, 1], [-1, 0], [0, -1]] as const;
+const VECINAS_DIAGONAL = [[1, 1], [-1, 1], [-1, -1], [1, -1]] as const;
+
+/**
+ * Las celdas de una empalizada o una muralla en el orden de sus anillos: de vecina en vecina, antes de lado que en diagonal, desde la de más
+ * arriba a la izquierda. Si quedan celdas que no tocan a las ya recorridas, empiezan otro anillo. El campamento manda sus celdas sueltas, y la
+ * plaza, en el orden en que se levantan, que no siempre es el del anillo.
+ */
+export function anillosDe<T extends { col: number; row: number }>(celdas: T[]): T[][] {
+  const clave = (c: number, r: number): string => `${c},${r}`;
+  const quedan = new Map(celdas.map((c) => [clave(c.col, c.row), c]));
+  const anillos: T[][] = [];
+  while (quedan.size) {
+    let actual: T | undefined = [...quedan.values()].sort((a, b) => a.row - b.row || a.col - b.col)[0];
+    const anillo: T[] = [];
+    while (actual) {
+      anillo.push(actual);
+      quedan.delete(clave(actual.col, actual.row));
+      const desde: T = actual;
+      actual = undefined;
+      for (const [dc, dr] of [...VECINAS_LADO, ...VECINAS_DIAGONAL]) {
+        const v = quedan.get(clave(desde.col + dc, desde.row + dr));
+        if (v) { actual = v; break; }
+      }
+    }
+    anillos.push(anillo);
+  }
+  return anillos;
 }
 
 /** Lo que hace falta de una plaza para dibujarla (un campamento se dibuja igual: `campamento.ts`). */
@@ -161,12 +200,16 @@ export function ciudadEnVista(a: FuenteDeCiudad, t: TrazadoAsentamiento | undefi
 
   const recintos: RecintoEnVista[] = (a.recintos ?? []).map((r) => {
     const enPie = Math.max(0, r.avance);
-    const celdas = r.celdas.map((c, i) => ({
-      x: (c.col + 0.5) * T, y: (c.row + 0.5) * T, clase: c.clase, enPie: i < enPie,
-      nivel: r.mejorandoA !== undefined && i < (r.mejoradas ?? 0) ? r.mejorandoA : r.nivel,
+    // lo levantado y lo mejorado va por el orden del motor (el de las obras); el dibujo, por el del anillo, si las celdas hacen uno solo (una
+    // torre añadida al final de la lista partía el anillo y tendía un muro de punta a punta por dentro de la plaza)
+    const anillos = anillosDe(r.celdas.map((c, i) => ({ ...c, i })));
+    const orden = anillos.length === 1 ? anillos[0]! : r.celdas.map((c, i) => ({ ...c, i }));
+    const celdas = orden.map((c) => ({
+      x: (c.col + 0.5) * T, y: (c.row + 0.5) * T, clase: c.clase, enPie: c.i < enPie,
+      nivel: r.mejorandoA !== undefined && c.i < (r.mejoradas ?? 0) ? r.mejorandoA : r.nivel, obra: c.i,
     }));
-    const a0 = r.celdas[0], a1 = r.celdas[r.celdas.length - 1];
-    const cerrado = !!a0 && !!a1 && r.celdas.length > 2 && Math.max(Math.abs(a0.col - a1.col), Math.abs(a0.row - a1.row)) <= 1;
+    const a0 = orden[0], a1 = orden[orden.length - 1];
+    const cerrado = !!a0 && !!a1 && orden.length > 2 && Math.max(Math.abs(a0.col - a1.col), Math.abs(a0.row - a1.row)) <= 1;
     return { id: r.id, nivel: r.nivel, celdas, cerrado, mejorandoA: r.mejorandoA };
   });
 
@@ -193,6 +236,17 @@ export function ciudadEnVista(a: FuenteDeCiudad, t: TrazadoAsentamiento | undefi
   for (const r of t.caminos) marcar(r, 'camino');
   for (const e of edificios) marcar(e, e.tipo);
   for (const r of a.recintos ?? []) for (const c of r.celdas) ocupada.set(clave(c.col, c.row), 'muro');
+
+  // El frente de cada edificio: el lado largo con más calle (o camino) pegada. Con el lado largo en x, +v es hacia abajo (y crece); con el lado
+  // largo en y, la maqueta gira un cuarto de vuelta y +v es hacia la izquierda (x decrece).
+  const esCalle = (c: number, f: number): boolean => { const q = ocupada.get(clave(c, f)); return q === 'calle' || q === 'camino'; };
+  for (const e of edificios) {
+    const { c0, c1, f0, f1 } = celdasDe(e, T);
+    let mas = 0, menos = 0;
+    if (e.ancho >= e.alto) for (let c = c0; c <= c1; c++) { if (esCalle(c, f1 + 1)) mas++; if (esCalle(c, f0 - 1)) menos++; }
+    else for (let f = f0; f <= f1; f++) { if (esCalle(c0 - 1, f)) mas++; if (esCalle(c1 + 1, f)) menos++; }
+    if (mas !== menos) e.frente = mas > menos ? 1 : -1;
+  }
 
   // Lo poblado: a cuántas celdas está cada una de un edificio o una calle (búsqueda en anchura, hasta `LEJOS`). El disco urbano es el techo de la
   // ciudad, no lo que ocupa: lo que queda lejos de todo es campo.
