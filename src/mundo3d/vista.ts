@@ -17,6 +17,7 @@ import type { FuenteDeAltura } from './fuente';
 import { Agua, alturaVisible } from './agua';
 import { Arboles } from './arboles';
 import { Matas } from './matas';
+import { Vida } from './vida';
 import { aro, cinta, circulo, rutaPendiente, RutaEnSuelo } from './lineas';
 import { Maquetas } from './maquetas';
 import { MarcasEnSuelo } from './marcas';
@@ -72,6 +73,7 @@ export class VistaMundo3D {
   private readonly paisaje: Paisaje;
   private readonly arboles: Arboles;
   private readonly matas: Matas;
+  private readonly vida: Vida;
   private readonly maquetas: Maquetas;
   private readonly trazos: Trazos;
   private readonly marcas: MarcasEnSuelo;
@@ -146,12 +148,13 @@ export class VistaMundo3D {
     this.paisaje = new Paisaje(o.fuente, o.mapa, this.niebla, this.alturaU, this.agua.rio);
     this.arboles = new Arboles(o.fuente, o.mapa, this.niebla);
     this.matas = new Matas(o.fuente, o.mapa, this.niebla);
+    this.vida = new Vida(this.niebla, this.alturaU);
     this.maquetas = new Maquetas(this.niebla, this.alturaU);
     this.trazos = new Trazos(this.niebla, this.alturaU);
     this.marcas = new MarcasEnSuelo(this.alturaU);
     this.etiquetas = new Etiquetas(contenedor, (punto) => this.o.alClicar(punto));
     this.rejilla = new RejillaDeMovimiento(this.alturaU);
-    this.escena.add(this.terreno.grupo, this.paisaje.grupo, this.arboles.grupo, this.matas.grupo, this.maquetas.grupo, this.trazos.grupo, this.marcas.grupo, this.lineas, this.rejilla.grupo);
+    this.escena.add(this.terreno.grupo, this.paisaje.grupo, this.arboles.grupo, this.matas.grupo, this.vida.grupo, this.maquetas.grupo, this.trazos.grupo, this.marcas.grupo, this.lineas, this.rejilla.grupo);
     this.entrada = instalarEntrada(this.lienzo, this.camara, (e) => this.clic(e), () => {}); // el zoom se lee de la cámara en cada fotograma
     this.observador = new ResizeObserver(() => this.ajustar());
     this.observador.observe(contenedor);
@@ -312,6 +315,8 @@ export class VistaMundo3D {
     t = this.medir('arboles', t);
     this.faltan.matas = this.matas.actualizar(x, y, Math.min(alcance, ALCANCE.matas * Math.min(1, k)), hasta);
     t = this.medir('matas', t);
+    this.vida.actualizar(cerca, x, y, ahora / 1000);
+    t = this.medir('vida', t);
     const dentro = (p: Punto) => Math.hypot(p.x - x, p.y - y) <= carga;
     const columnas = estado.columnas.filter((c) => c.mia || dentro(c.posicion)), caravanas = estado.caravanas.filter((c) => dentro(c.posicion));
     this.ponerColumnas(columnas, caravanas);
@@ -330,6 +335,8 @@ export class VistaMundo3D {
     this.cielo.actualizar(this.camara.camara, ahora);
     this.agua.actualizar(ahora / 1000);
     this.matas.mover(ahora / 1000);
+    this.arboles.mover(ahora / 1000);
+    this.niebla.mover(ahora / 1000);
     this.renderer.render(this.escena, this.camara.camara);
     this.medir('render', t);
     this.medir('total', inicio);
@@ -470,6 +477,7 @@ export class VistaMundo3D {
     this.paisaje.destruir();
     this.arboles.destruir();
     this.matas.destruir();
+    this.vida.destruir();
     this.maquetas.destruir();
     this.trazos.destruir();
     this.niebla.destruir();

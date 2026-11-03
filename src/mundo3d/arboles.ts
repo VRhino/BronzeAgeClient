@@ -153,6 +153,7 @@ interface Trozo { grupo: THREE.Group; clave: string }
 export class Arboles {
   readonly grupo = new THREE.Group();
   private readonly material: THREE.MeshLambertMaterial;
+  private readonly tiempo = { value: 0 };
   private readonly trozos = new Map<string, Trozo>();
   private readonly cauces: Cauces;
   private claros: readonly Claro[] = [];
@@ -160,8 +161,13 @@ export class Arboles {
   private claveClaros = '';
 
   constructor(private readonly fuente: FuenteDeAltura, private readonly mapa: MapaGenerado, niebla: NieblaDeGuerra) {
-    this.material = materialDeArboles((sh) => niebla.parchear(sh));
+    this.material = materialDeArboles((sh) => niebla.parchear(sh), this.tiempo);
     this.cauces = caucesDe(mapa);
+  }
+
+  /** Mueve el viento en las copas: `segundos` desde que empezó la vista. */
+  mover(segundos: number): void {
+    this.tiempo.value = segundos % 3600;
   }
 
   /** Donde no deben crecer árboles además de los ríos: los claros de las maquetas y los caminos. `clave` resume los dos: si cambia, los trozos

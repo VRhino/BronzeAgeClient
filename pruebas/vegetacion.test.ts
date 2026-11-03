@@ -5,6 +5,7 @@ import { ESPECIES, especieDe, geometrias, RIBERA, zonaDe } from '../src/mundo3d/
 import type { FuenteDeAltura } from '../src/mundo3d/fuente';
 import { matasDelTrozo, POR_MATA, probabilidades, TIPOS_DE_MATA } from '../src/mundo3d/matas';
 import { colorDelSuelo } from '../src/mundo3d/terreno';
+import { AVES, bandadas, chimeneas } from '../src/mundo3d/vida';
 import type { MapaGenerado } from '../src/terreno';
 
 // El suelo, los árboles por especie y la vegetación baja del mundo 3D (Víctor, 2026-11-03: «mejorar el piso, con vegetación y diferentes
@@ -112,5 +113,38 @@ describe('vegetación baja', () => {
     let juncos = 0;
     for (let k = 0; k < lista.length; k += POR_MATA) if (lista[k + 4] === T.junco) { juncos++; expect(lista[k]!).toBeLessThan(6); }
     expect(juncos).toBeGreaterThan(5);
+  });
+});
+
+describe('vida: humo y pájaros', () => {
+  const vacio = { plazas: [], pueblos: [], avanzadas: [], obras: [], campamentos: [], bandidos: [], alijos: [], batallas: [], trazos: [] };
+  it('humo: más columnas cuanto más nivel la plaza, ninguna en una recordada; una por pueblo, avanzada en pie desde el fuerte y campamento', () => {
+    const plaza = (nivel: number, recordada = false) => ({ id: 'p', posicion: { x: 100, y: 100 }, radioCiudad: 3, color: '#fff', recordada, nivel });
+    expect(chimeneas({ ...vacio, plazas: [plaza(1)] })).toHaveLength(2);
+    expect(chimeneas({ ...vacio, plazas: [plaza(5)] })).toHaveLength(4);
+    expect(chimeneas({ ...vacio, plazas: [plaza(3, true)] })).toHaveLength(0);
+    const resto = chimeneas({
+      ...vacio,
+      pueblos: [{ id: 'a', posicion: { x: 10, y: 10 }, aldea: true, color: '#fff' }],
+      avanzadas: [{ id: 'b', posicion: { x: 20, y: 20 }, etapa: 1, ruinas: false, color: '#fff' }, { id: 'c', posicion: { x: 30, y: 30 }, etapa: 2, ruinas: false, color: '#fff' }, { id: 'd', posicion: { x: 40, y: 40 }, etapa: 3, ruinas: true, color: '#fff' }],
+      campamentos: [{ id: 'e', posicion: { x: 50, y: 50 }, radioProteccion: 10 }],
+      bandidos: [{ id: 'f', posicion: { x: 60, y: 60 }, nivel: 1 }],
+    });
+    expect(resto).toHaveLength(4);
+    // dentro de la ciudad, siempre en el mismo sitio
+    const [a] = chimeneas({ ...vacio, plazas: [plaza(1)] }), [b] = chimeneas({ ...vacio, plazas: [plaza(1)] });
+    expect(a).toEqual(b);
+    expect(Math.hypot(a!.x - 100, a!.y - 100)).toBeLessThanOrEqual(3 * 0.6 + 1e-9);
+  });
+  it('pájaros: las bandadas de cada celda son siempre las mismas, y al moverse el héroe las de las celdas que siguen cerca no cambian', () => {
+    const aqui = bandadas(500, 500), otraVez = bandadas(500, 500), alLado = bandadas(500 + AVES.celda, 500);
+    expect(aqui).toEqual(otraVez);
+    const clave = (b: { x: number; y: number }) => `${b.x},${b.y}`, enAlLado = new Set(alLado.map(clave));
+    const comunes = aqui.filter((b) => enAlLado.has(clave(b)));
+    expect(comunes.length).toBeGreaterThan(0);
+    for (const b of [...aqui, ...alLado]) {
+      expect(b.radio).toBeGreaterThanOrEqual(4);
+      expect(b.pajaros).toBeGreaterThanOrEqual(3);
+    }
   });
 });

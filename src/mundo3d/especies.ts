@@ -199,11 +199,20 @@ export function geometrias(): GeometriasDeArbol {
 }
 
 /** El material de los árboles: el color de la copa sale de cada árbol (`instanceColor`) por el de la geometría, el del tronco solo de la
- * geometría. `parchear` es la niebla de guerra, que va la última. */
-export function materialDeArboles(parchear: (sh: THREE.WebGLProgramParametersWithUniforms) => void): THREE.MeshLambertMaterial {
+ * geometría. Las copas se mecen un poco con el viento (`tiempo`, en segundos), más arriba que abajo; el tronco, no. `parchear` es la niebla
+ * de guerra, que va la última. */
+export function materialDeArboles(parchear: (sh: THREE.WebGLProgramParametersWithUniforms) => void, tiempo: { value: number }): THREE.MeshLambertMaterial {
   const m = new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true });
   m.onBeforeCompile = (sh) => {
-    sh.vertexShader = 'attribute float tinte;\n' + sh.vertexShader.replace('#include <color_vertex>', `
+    sh.uniforms.uTiempo = tiempo;
+    sh.vertexShader = 'attribute float tinte;\nuniform float uTiempo;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      #ifdef USE_INSTANCING
+      {
+        vec2 sitio = instanceMatrix[3].xz;
+        float rafaga = sin(uTiempo * 1.1 + sitio.x * 0.3 + sitio.y * 0.2) * 0.6 + sin(uTiempo * 2.3 + sitio.x * 1.1 - sitio.y * 0.7) * 0.25;
+        transformed.xz += vec2(0.045, 0.02) * rafaga * tinte * max(transformed.y - 0.3, 0.0);
+      }
+      #endif`).replace('#include <color_vertex>', `
       vColor = color;
       #ifdef USE_INSTANCING_COLOR
       vColor *= mix(vec3(1.0), instanceColor, tinte);

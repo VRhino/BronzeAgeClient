@@ -55,6 +55,7 @@ del héroe solo (`radioDeVision`); el 3D tiene que seguir a la de la columna. El
 | Especies de árbol: cuál crece dónde, geometrías y material | `src/mundo3d/especies.ts` (hecho) | Altura, agua cercana |
 | Hierba, flores, matas, juncos y piedras cerca del héroe | `src/mundo3d/matas.ts` (hecho) | Fertilidad y bosque del artefacto, pendiente, agua |
 | Ruido fijo (azar por punto y manchas suaves) | `src/mundo3d/ruido.ts` (hecho) | — |
+| Humo de los asentamientos y bandadas de pájaros | `src/mundo3d/vida.ts` (hecho) | Plazas, pueblos, avanzadas y campamentos de la proyección |
 | Ríos, vados y nodos de recursos | `src/mundo3d/paisaje.ts` (hecho) | Ríos y nodos del artefacto |
 | Plazas, pueblos, avanzadas, obras, campamentos, bandidos, alijos, batallas | `src/mundo3d/maquetas.ts` (hecho) | Proyección |
 | Caminos, fronteras, zona propia, anillo de los mercenarios | `src/mundo3d/trazos.ts` (hecho) | Proyección |
@@ -347,6 +348,23 @@ especie de otra ni cuenta la hierba.
 
 Medido en el banco (héroe solo, encuadre normal, a 30°, carga 320): 1,30 M triángulos (0,42 M de árboles y 0,24 M de matas) frente a 0,95 M
 antes; 622 mallas frente a 438; el JS del fotograma, igual (0,5 a 0,65 ms).
+
+## El mundo con vida (0.120.0)
+
+Pedido de Víctor del 2026-11-03: «mejorar la vista de mundo en general». Cosas que no son del juego y se mueven solas, todas en el
+sombreado (en cada fotograma solo cambia el reloj; el JS del fotograma no cambia y son dos mallas más):
+
+- **Sombras de nubes.** Manchas de unas 15 u, un 20 % más oscuras, que el viento arrastra a 0,6 u/s. Van en el parche de la niebla de guerra
+  (`niebla.ts`), así caen sobre toda la geografía (suelo, agua, árboles, matas, ríos, lo recordado); lo que va encima de la niebla (lo propio,
+  lo que se ve ahora) no las lleva.
+- **Viento en las copas.** Las copas de los árboles se mecen un poco, más arriba que abajo y cada árbol a su ritmo; el tronco no
+  (`especies.ts`). La hierba, las flores y los juncos ya se mecían (0.118.0).
+- **Humo** (`vida.ts`). Columnas de bocanadas grises que suben 3 u en 10 s, crecen, se las lleva el viento y se deshacen: en las plazas que
+  se ven (de 2 a 4 columnas según el nivel, dentro de la ciudad), en cada pueblo, en las avanzadas en pie desde el fuerte y en el fuego de
+  los campamentos de mercenarios y de bandidos. Cada columna en un sitio fijo del asentamiento.
+- **Pájaros** (`vida.ts`). Bandadas de 3 a 7 que dan vueltas de 4 a 11 u de radio a unas 4 u sobre el suelo, unos detrás de otros, a ratos
+  aleteando y a ratos planeando. Hay bandada en un tercio de las celdas de 24 u alrededor del héroe (hasta 60 u), siempre la misma en cada
+  celda, así al moverse no aparecen ni desaparecen las de cerca.
 
 ## Banco de pruebas
 

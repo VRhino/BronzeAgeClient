@@ -3,6 +3,18 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.120.0] — 2026-11-03 · El mundo 3D con vida: nubes, viento, humo y pájaros · sin cambio de contrato
+
+Petición de Víctor (2026-11-03): «mejorar la vista de mundo en general».
+
+- **Sombras de nubes** que pasan despacio sobre el suelo, el agua y los bosques.
+- **Viento**: las copas de los árboles se mecen un poco, cada una a su ritmo.
+- **Humo** que sube de las plazas (más columnas cuanto más nivel), los pueblos, las avanzadas en pie y los fuegos de los campamentos.
+- **Pájaros**: bandadas que dan vueltas cerca del héroe, aleteando y planeando.
+- Todo se mueve en el sombreado: el JS de cada fotograma no cambia y son dos mallas más.
+- Código: `mundo3d/vida.ts` (nuevo), `niebla.ts` (las nubes), `especies.ts` y `arboles.ts` (el viento). Pruebas en `pruebas/vegetacion.test.ts`.
+  Documentado en `docs/Mundo_3D.md`, «El mundo con vida».
+
 ## [0.119.0] — 2026-11-03 · Arreglo: el almacén de los pueblos extractores salía vacío · sin cambio de contrato
 
 Fallo que vio Víctor (2026-11-03) en una partida local: el almacén de la cantera de Ugarit salía siempre «Vacío», aunque en el motor tenía
