@@ -5,6 +5,7 @@
 // plaza (0.104.0). Arriba al centro, la franja de la ocupación militar. Aquí está el HTML y su cableado; quien lo pinta y ejecuta los comandos es `main.ts`.
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { Asentamiento, ObraDeMapa } from '../tiposDominio';
+import { textoEnTiempoReal } from './estadoCliente';
 import { iconoEdificio } from './iconosEdificio';
 import { ahora, barraAvance, cuentaAtras, medallonNivel, miles, tonoDe, type Tono } from './juegoVisual';
 import { avanceDeObra } from './panelObras';
@@ -290,6 +291,7 @@ export function htmlOcupacion(a: Asentamiento): string {
 /** Las obras de pueblo y de aldea de la plaza que salen en «Obras» del panel izquierdo (Víctor, 2026-11-04). */
 const OBRA_MAPA: Partial<Record<ObraDeMapa['tipo'], [string, string]>> = { pueblo: ['⛏️', 'Pueblo'], aldea: ['🌾', 'Aldea agrícola'], mejoraAldea: ['⬆️', 'Mejora de aldea'] };
 
+/** El tiempo que le queda, en tiempo real al ritmo del mundo, como en la tarjeta de Territorio (0.149.1). */
 function filaObraMapa(o: ObraDeMapa, esc: Escapar): string {
   const [icono, nombre] = OBRA_MAPA[o.tipo] ?? ['🔨', 'Obra'];
   const pedido = Object.values(o.requerido).reduce((t, n) => t + n, 0);
@@ -297,7 +299,7 @@ function filaObraMapa(o: ObraDeMapa, esc: Escapar): string {
   const avance = pedido > 0 ? hecho / pedido : 1;
   const levantando = o.terminaEn !== undefined;
   return `<div class="obras-hud-fila obras-hud-mapa"><span class="obras-hud-icono" aria-hidden="true">${icono}</span>`
-    + `<span class="obras-hud-texto"><span class="obras-hud-linea"><strong>${esc(nombre)}</strong><b class="obras-hud-falta">${levantando ? cuentaAtras(o.terminaEn!) : `${Math.floor(avance * 100)} %`}</b></span>`
+    + `<span class="obras-hud-texto"><span class="obras-hud-linea"><strong>${esc(nombre)}</strong><b class="obras-hud-falta">${levantando ? textoEnTiempoReal(o.terminaEn! - ahora()) : `${Math.floor(avance * 100)} %`}</b></span>`
     + `<small>${levantando ? 'Levantándose en el mapa' : 'Esperando materiales en el mapa'}</small>${barraAvance(levantando ? null : avance)}</span></div>`;
 }
 

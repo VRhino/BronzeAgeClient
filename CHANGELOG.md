@@ -3,6 +3,11 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.149.1] — 2026-11-04 · El tiempo de las obras de pueblos y aldeas en «Obras», al ritmo del mundo · sin cambio de contrato
+
+Arreglo pedido por Víctor (2026-11-04, 17:59): «Pueblos y aldeas» del panel izquierdo contaba el tiempo de mundo (2 h 7 min) en vez del real
+al ritmo del mundo (13 min) que enseña la tarjeta de Territorio; ahora usa lo mismo que ella (`textoEnTiempoReal`).
+
 ## [0.149.0] — 2026-11-04 · El mapa a toda la ventana y las obras de pueblos y aldeas en «Obras» · sin cambio de contrato
 
 Petición de Víctor (2026-11-04, 17:54):
