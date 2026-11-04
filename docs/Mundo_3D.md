@@ -61,6 +61,7 @@ del héroe solo (`radioDeVision`); el 3D tiene que seguir a la de la columna. El
 | Caminos, fronteras, zona propia, anillo de los mercenarios | `src/mundo3d/trazos.ts` (hecho) | Proyección |
 | Textura de los caminos (sendero, camino de tierra) | `src/mundo3d/caminos.ts` (hecho) | Escalón del camino |
 | Relleno de las zonas de influencia sobre el suelo | `src/mundo3d/territorio.ts` (hecho) | Zonas de la proyección |
+| Capa de fertilidad sobre el suelo (botón de capas) | `src/mundo3d/capaFertilidad.ts` (hecho) | Raster de fertilidad del artefacto |
 | Columnas (de la Facción y avistadas), sus carros y las caravanas | `src/mundo3d/figuras.ts` (hecho) | Proyección: ruta y posición en el instante |
 | Formaciones, Miradas, lo seleccionado, la vista previa de fundar | `src/mundo3d/marcas.ts` (hecho) | Proyección, `seleccionMapa` y el panel Fundar |
 | Ruta, destino, mira del héroe; cintas pegadas al relieve | `src/mundo3d/lineas.ts` (hecho) | Proyección |
@@ -438,6 +439,13 @@ Mientras algo marcha, `estadoDeLaVista3D` (`main.ts`) rehace el estado de la vis
 (`moverAlInstante`). Hasta la 0.128.0 lo hacía como mucho cada 15 ms (`CADA_PROYECCION_MS`), que en pantallas de 120 o 144 Hz dejaba lo ajeno
 quieto un fotograma de cada dos. Queda por medir en camp-1 cuánto JS añade por fotograma (antes, el estado costaba 0,13-0,32 ms con unos 2 de
 cada 3 fotogramas rehechos).
+
+## Capa de fertilidad (0.131.0)
+
+Petición de Víctor del 2026-11-04: la fertilidad del suelo se pone y se quita en el botón de capas del modo mundo, como los nombres de los
+nodos (la casilla es la misma que en el modo mapa). La rampa es la del modo mapa (`pixelesDeFertilidad`: rojiza la yerma, amarilla en el corte
+de la aldea agrícola, verde la fértil), en una textura del raster de fertilidad que se hace una vez por mundo. El suelo la mezcla antes de la
+luz, encima del tinte del territorio. Solo sobre lo explorado (lo lee de la textura de la niebla, en el mismo sombreado) y nunca en el agua.
 
 ## Banco de pruebas
 

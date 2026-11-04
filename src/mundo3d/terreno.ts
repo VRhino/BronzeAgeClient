@@ -10,6 +10,7 @@ import { MUNDO3D } from './config';
 import { bosqueEn, fertilidadEn, type FuenteDeAltura } from './fuente';
 import { manchas } from './ruido';
 import type { NieblaDeGuerra } from './niebla';
+import type { CapaDeFertilidad } from './capaFertilidad';
 import type { Territorio } from './territorio';
 
 const { metrosPorUnidad: MPU, ladoTesela: LADO, umbrales: U } = MUNDO3D;
@@ -163,8 +164,8 @@ float grano(vec2 p) {
 `;
 
 /** El material del suelo: el color de cada vértice con un grano fino encima (manchas de 0,1 a 1 u más claras u oscuras, y a trozos más
- * amarillas o más verdes), que de cerca quita lo liso y de lejos se apaga. Lleva el tinte del territorio y va bajo la niebla de guerra. */
-function materialDelSuelo(niebla: NieblaDeGuerra, territorio: Territorio): THREE.MeshLambertMaterial {
+ * amarillas o más verdes), que de cerca quita lo liso y de lejos se apaga. Lleva el tinte del territorio, la capa de fertilidad (encima) y va bajo la niebla de guerra. */
+function materialDelSuelo(niebla: NieblaDeGuerra, territorio: Territorio, fertilidad: CapaDeFertilidad): THREE.MeshLambertMaterial {
   const m = new THREE.MeshLambertMaterial({ vertexColors: true });
   m.onBeforeCompile = (sh) => {
     sh.vertexShader = 'varying vec2 vSueloXZ;\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
@@ -176,10 +177,12 @@ function materialDelSuelo(niebla: NieblaDeGuerra, territorio: Territorio): THREE
         vec3 c = diffuseColor.rgb * (0.86 + 0.28 * g) * vec3(1.0 + t * 0.1, 1.0, 1.0 - t * 0.14);
         diffuseColor.rgb = mix(c, diffuseColor.rgb, lejos * 0.75);
       }`);
+    // cada parche va justo detrás de `color_fragment`: el último que entra corre el primero, así la fertilidad queda encima del territorio
+    fertilidad.parchear(sh);
     territorio.parchear(sh);
     niebla.parchear(sh);
   };
-  m.customProgramCacheKey = () => 'suelo-grano-territorio';
+  m.customProgramCacheKey = () => 'suelo-grano-territorio-fertilidad';
   return m;
 }
 
@@ -188,8 +191,8 @@ export class Terreno {
   private readonly material: THREE.MeshLambertMaterial;
   private readonly teselas = new Map<string, { malla: THREE.Mesh; agua: THREE.Mesh | null; paso: number }>();
 
-  constructor(private readonly fuente: FuenteDeAltura, private readonly mapa: MapaGenerado, niebla: NieblaDeGuerra, private readonly materialAgua: THREE.Material, territorio: Territorio) {
-    this.material = materialDelSuelo(niebla, territorio);
+  constructor(private readonly fuente: FuenteDeAltura, private readonly mapa: MapaGenerado, niebla: NieblaDeGuerra, private readonly materialAgua: THREE.Material, territorio: Territorio, fertilidad: CapaDeFertilidad) {
+    this.material = materialDelSuelo(niebla, territorio, fertilidad);
   }
 
   /** Cuánto detalle (×1 con la distancia de carga de serie): con una distancia de carga más corta, el detalle fino llega menos lejos. */

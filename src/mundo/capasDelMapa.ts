@@ -9,7 +9,7 @@ import type { NieblaProyectada } from '../tiposDominio';
 export interface CapasDelMapa {
   /** Los nombres de los nodos de recursos (en el 3D, los cercanos; en el modo mapa, de cerca). */
   nombresDeNodos: boolean;
-  /** La fertilidad del suelo, con el corte de la aldea agrícola. Solo en el modo mapa. */
+  /** La fertilidad del suelo, con el corte de la aldea agrícola. En el modo mapa y, desde 0.131.0, en el mundo 3D. */
   fertilidad: boolean;
   /** Las parcelas de bosque (el cupo de Leñeras), libres, con Leñera o en zona ajena. Solo en el modo mapa. */
   parcelas: boolean;

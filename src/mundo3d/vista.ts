@@ -23,6 +23,7 @@ import { Maquetas } from './maquetas';
 import { MarcasEnSuelo } from './marcas';
 import { NieblaDeGuerra } from './niebla';
 import { Territorio } from './territorio';
+import { CapaDeFertilidad } from './capaFertilidad';
 import { Cielo, colorHorizonte } from './cielo';
 import { Paisaje } from './paisaje';
 import { Terreno } from './terreno';
@@ -71,6 +72,7 @@ export class VistaMundo3D {
   private readonly niebla = new NieblaDeGuerra();
   private readonly agua = new Agua(this.niebla);
   private readonly territorio: Territorio;
+  private readonly fertilidad: CapaDeFertilidad;
   private readonly terreno: Terreno;
   private readonly paisaje: Paisaje;
   private readonly arboles: Arboles;
@@ -151,7 +153,8 @@ export class VistaMundo3D {
     this.escena.add(this.sol, this.sol.target);
 
     this.territorio = new Territorio();
-    this.terreno = new Terreno(o.fuente, o.mapa, this.niebla, this.agua.mar, this.territorio);
+    this.fertilidad = new CapaDeFertilidad(o.mapa);
+    this.terreno = new Terreno(o.fuente, o.mapa, this.niebla, this.agua.mar, this.territorio, this.fertilidad);
     this.paisaje = new Paisaje(o.fuente, o.mapa, this.niebla, this.alturaU, this.agua.rio);
     this.arboles = new Arboles(o.fuente, o.mapa, this.niebla);
     this.matas = new Matas(o.fuente, o.mapa, this.niebla);
@@ -454,6 +457,11 @@ export class VistaMundo3D {
     return mundo;
   }
 
+  /** Pone o quita la capa de fertilidad del suelo (botón de capas); `minima`, la fertilidad desde la que cabe una aldea. */
+  fijarFertilidad(si: boolean, minima: number): void {
+    this.fertilidad.fijar(si, minima);
+  }
+
   /** Pone o quita los nombres de los nodos (botón de capas). Quitados, la vista previa de fundar sigue nombrando los de su zona. */
   fijarNombresDeNodos(si: boolean): void {
     this.sinNombresDeNodos = !si;
@@ -501,6 +509,7 @@ export class VistaMundo3D {
     this.trazos.destruir();
     this.niebla.destruir();
     this.territorio.destruir();
+    this.fertilidad.destruir();
     this.cielo.destruir();
     this.agua.destruir();
     this.renderer.dispose();

@@ -1,5 +1,5 @@
-// El botón de capas del mapa (Víctor, 2026-11-03), encima del zoom: en el modo mundo, los nombres de los nodos y hasta dónde se carga el mundo;
-// en el modo mapa, los nombres y además la fertilidad del suelo y las parcelas de bosque, cada una con su leyenda. Lo puesto se recuerda
+// El botón de capas del mapa (Víctor, 2026-11-03), encima del zoom: en el modo mundo, los nombres de los nodos, la fertilidad del suelo
+// (2026-11-04) y hasta dónde se carga el mundo; en el modo mapa, los nombres, la fertilidad y las parcelas de bosque, cada una con su leyenda. Lo puesto se recuerda
 // (`mundo/capasDelMapa.ts`).
 import { capasDelMapa, colorDeFertilidad, distanciaDeCarga, fijarCapa, fijarDistanciaDeCarga, type CapasDelMapa } from '../mundo/capasDelMapa';
 import { DISTANCIA_CARGA } from '../mundo3d/config';
@@ -21,12 +21,13 @@ function degradadoFertilidad(minima: number): string {
 export function htmlCapas(modo: 'mundo' | 'mapa', minimaAldea = 0.3): string {
   const c = capasDelMapa();
   const decimal = (x: number) => x.toFixed(1).replace('.', ',');
-  const tematicas = modo === 'mapa'
-    ? `${fila('fertilidad', 'Fertilidad del suelo', c.fertilidad)}
+  const fertilidad = `${fila('fertilidad', 'Fertilidad del suelo', c.fertilidad)}
       <div class="mapa-capas-leyenda" data-leyenda="fertilidad"${c.fertilidad ? '' : ' hidden'}>
         <span class="mapa-capas-rampa" style="background:${degradadoFertilidad(minimaAldea)}"><i style="left:${(minimaAldea * 100).toFixed(1)}%"></i></span>
         <span class="mapa-capas-extremos"><span>Yerma</span><span>Aldea desde ${decimal(minimaAldea)}</span><span>Fértil</span></span>
-      </div>
+      </div>`;
+  const tematicas = modo === 'mapa'
+    ? `${fertilidad}
       ${fila('parcelas', 'Parcelas de bosque', c.parcelas)}
       <div class="mapa-capas-leyenda" data-leyenda="parcelas"${c.parcelas ? '' : ' hidden'}>
         <span class="mapa-capas-muestra"><i style="--c:rgb(96, 200, 84)"></i>Libre: cabe una Leñera</span>
@@ -35,7 +36,9 @@ export function htmlCapas(modo: 'mundo' | 'mapa', minimaAldea = 0.3): string {
         <span class="mapa-capas-nota">Más llena cuanto más densa: más madera.</span>
       </div>
       <p class="mapa-capas-nota">Solo sobre lo que has explorado.</p>`
-    : `<span class="faction-kicker">Vista</span>
+    : `${fertilidad}
+      <p class="mapa-capas-nota">Solo sobre lo que has explorado.</p>
+      <span class="faction-kicker">Vista</span>
       <label class="mapa-capas-rango">
         <span>Distancia de carga <output data-carga-valor>${distanciaDeCarga()} u</output></span>
         <input type="range" data-carga min="${DISTANCIA_CARGA.min}" max="${DISTANCIA_CARGA.max}" step="${DISTANCIA_CARGA.paso}" value="${distanciaDeCarga()}">

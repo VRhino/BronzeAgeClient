@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.131.0] — 2026-11-04 · La fertilidad del suelo, también en el mundo 3D · sin cambio de contrato
+
+Petición de Víctor (2026-11-04): «agregar el filtro de fertilidad a las capas del mapa para que se apague y se encienda como el nombre de los
+nodos».
+
+- El botón de capas del modo mundo tiene ahora «Fertilidad del suelo», con su leyenda (yerma, el corte de la aldea y fértil), igual que el modo
+  mapa; las dos pantallas comparten la casilla. Puesta, el suelo del mundo 3D toma la misma rampa de colores que el modo mapa, mezclada antes
+  de la luz para que siga el relieve (`mundo3d/capaFertilidad.ts`). Solo sobre lo explorado y nunca en el agua. La textura se hace una vez
+  por mundo; poner y quitar la capa no rehace nada.
+
 ## [0.130.0] — 2026-11-04 · «Salir al mundo» el doble de grande · sin cambio de contrato
 
 Petición de Víctor (2026-11-04): el botón de abajo a la izquierda, en la plaza, el campamento de mercenarios, el pueblo y la aldea, al doble

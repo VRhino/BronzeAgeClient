@@ -1661,6 +1661,7 @@ function aplicarCapas(): void {
     if (leyenda) leyenda.hidden = !c[capa];
   });
   vista3dActiva?.fijarNombresDeNodos(c.nombresDeNodos);
+  vista3dActiva?.fijarFertilidad(c.fertilidad, reglasDeAldea().fertilidadMinima);
   vista3dActiva?.fijarDistanciaDeCarga(distanciaDeCarga());
   if (vistaMapaAbierta) void pintarVistaMapa();
 }
@@ -1898,7 +1899,7 @@ function montarMapa(): void {
     <aside class="mapa-seleccion" hidden></aside>
     <p class="mapa-aviso" role="status" hidden></p>
     <div class="mapa-comida" role="status" hidden></div>
-    ${htmlCapas('mundo')}
+    ${htmlCapas('mundo', reglasDeAldea().fertilidadMinima)}
     <div class="mapa-zoom"><button type="button" data-zoom="in" aria-label="Acercar">+</button><button type="button" data-zoom="out" aria-label="Alejar">−</button></div>
     ${menuEsquinaHtml()}
   </div>`;
