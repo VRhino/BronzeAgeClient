@@ -52,7 +52,7 @@ import { RECURSO_NOMBRE } from './paletas';
 import type { Alijo, Asentamiento, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, EscenaCampamento, Faccion, ParamsCrearHeroe, PuebloDeMapa, Sigilo } from './tiposDominio';
 import { svgSigilo } from './sigilo/sigilo';
 import { alCargarSigilos } from './sigilo/lienzo';
-import { cablearCampamento, campamentoActual, htmlSeccionCampamento, seccionesDeCampamento, type SeccionCampamento } from './ui/pantallaCampamento';
+import { anchoDeParteCampamento, cablearCampamento, campamentoActual, htmlSeccionCampamento, seccionesDeCampamento, type SeccionCampamento } from './ui/pantallaCampamento';
 import { nombreDePiezaCampamento, svgPlanoCampamento } from './ui/planoCampamento';
 import { nombreDePiezaPueblo, svgPlanoPueblo } from './ui/planoPueblo';
 import type { MapaGenerado } from './terreno';
@@ -385,7 +385,6 @@ function montarHeroe(): void {
 /** La ventana abierta del campamento (una de sus partes, las pestañas de antes), o ninguna: al entrar se ve el campamento entero. */
 let ventanaCamp: SeccionCampamento | null = null;
 /** Las partes que se abren a pantalla completa (Víctor, 2026-11-03: «mercado, tropa, mercenarios y taberna como pantalla completa»). */
-const PARTES_ANCHAS = new Set<string>(['tropa', 'mercado', 'mercenarios', 'taberna']);
 
 /**
  * Pantalla CAMPAMENTO: dentro de un campamento de mercenarios (Doc 1.9b), donde se nace. A pantalla completa como la plaza (Víctor, 2026-11-03),
@@ -479,7 +478,7 @@ function montarCampamento3D(contenedor: HTMLElement): void {
         // elegir una pieza abre la ventana de lo que se hace en ella
         const seccion = pieza && SECCION_DE_PIEZA[pieza.tipo];
         const p = estadoCliente.proyeccionUltima, c = p && campamentoActual(p);
-        if (seccion && p && c && seccionesDeCampamento(p).some((x) => x.id === seccion) && seccion !== ventanaCamp) abrirParteCampamento(seccion);
+        if (seccion && p && c && seccionesDeCampamento(p, c).some((x) => x.id === seccion) && seccion !== ventanaCamp) abrirParteCampamento(seccion);
       },
       alPasar: (id, evento) => {
         const pieza = id ? vista.ciudadActual()?.edificios.find((e) => e.id === id) : undefined;
@@ -766,7 +765,7 @@ function pintarCampamento(p: ProyeccionJugador, campamento: CampamentoMercenario
 
   // el riel y la ventana abierta
   costoDeRefundacion(() => { invalidar(lado); if (estadoCliente.proyeccionUltima) pintarCampamento(estadoCliente.proyeccionUltima, campamento); });
-  const secciones = seccionesDeCampamento(p);
+  const secciones = seccionesDeCampamento(p, campamento);
   if (ventanaCamp && !secciones.some((x) => x.id === ventanaCamp)) ventanaCamp = null;
   pintar(riel, htmlRielInterior(secciones.map((x) => ({ id: x.id, titulo: x.etiqueta })), ventanaCamp, escaparHtml),
     () => riel.querySelectorAll<HTMLButtonElement>('[data-parte]').forEach((b) => b.addEventListener('click', () => {
@@ -776,7 +775,7 @@ function pintarCampamento(p: ProyeccionJugador, campamento: CampamentoMercenario
   const abierta = ventanaCamp;
   if (!abierta) { ventana.hidden = true; vaciar(lado); return; }
   ventana.hidden = false;
-  ventana.dataset.ancho = PARTES_ANCHAS.has(abierta) ? 'completa' : 'normal';
+  ventana.dataset.ancho = anchoDeParteCampamento(abierta);
   pintar(titulo, htmlTituloDeParte(abierta, secciones.find((x) => x.id === abierta)?.etiqueta ?? abierta, escaparHtml), undefined, 'titulo-camp');
   const html = `${htmlSeccionCampamento(abierta, p, campamento, escaparHtml)}<p id="camp-error" class="faction-error" role="alert"></p>`;
   // Solo se repinta si cambió el HTML, y lo que el jugador tenía marcado o escrito vuelve a su sitio (`ui/repintado.ts`); cada parte es un ámbito.

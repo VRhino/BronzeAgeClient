@@ -1,7 +1,8 @@
 // Banco del HUD de la plaza en 3D (`/pruebas/hud/`, `?ventana=mercado` para abrir una ventana, `?construir=1` con el cajón de Construcción en el
 // sitio del riel, `?ficha=mejora|activo|obra` con la ficha de un edificio, `?3d=1` con la escena 3D): la ciudad de nivel 5 del banco 3D con el mismo
 // esqueleto que monta `montarAsentamiento` en main.ts (blasón, obras, barra de abajo, riel, minimapa, columna derecha), sin servidor. Sirve para
-// mirar la disposición a distintos tamaños de pantalla; los botones no hacen nada.
+// mirar la disposición a distintos tamaños de pantalla; los botones no hacen nada. `?camp=resumen|tropa|mercado|mercenarios|taberna` pinta
+// en su lugar el riel y la ventana del campamento de mercenarios al empezar la partida (`&faccion=1` con Facción, `&tablon=1` con ofertas).
 import datos from '../plaza/datos.json';
 const fetchReal = window.fetch.bind(window);
 window.fetch = ((url: RequestInfo | URL, init?: RequestInit) =>
@@ -27,6 +28,9 @@ import { estadoCliente } from '../../src/ui/estadoCliente';
 import type { ContextoPlaza } from '../../src/ui/ganchos';
 import { iconoEdificio } from '../../src/ui/iconosEdificio';
 import type { ProyeccionJugador } from '../../src/apiCliente';
+import { anchoDeParteCampamento, htmlSeccionCampamento, seccionesDeCampamento, type SeccionCampamento } from '../../src/ui/pantallaCampamento';
+import { htmlRielInterior, htmlTituloDeParte } from '../../src/ui/hudInterior';
+import type { CampamentoMercenarios } from '../../src/tiposDominio';
 
 const e = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const RIEL: [string, string, string, boolean?][] = [
@@ -156,4 +160,33 @@ const elegirParaFicha = (): void => {
 const pintarObras = (): void => { document.querySelector<HTMLElement>('.asent-obras-hud')!.innerHTML = htmlObrasHud(a, e, true); };
 const alCargar = (): void => { if (bloqueDeDatos('EDIFICIO_CATALOGO', alCargar)) { pintarObras(); if (construir) pintarCajon(); elegirParaFicha(); repintarFicha(); } };
 alCargar();
+// `?camp=…`: el campamento de mercenarios al empezar la partida, con el riel de verdad (`seccionesDeCampamento`) y el ancho de verdad de cada parte
+const camp = qs.get('camp') as SeccionCampamento | null;
+if (camp) {
+  const q = p as unknown as Record<string, unknown>;
+  const c: CampamentoMercenarios = { id: 'mc-1', posicion: a.posicion, origen: 0, edificios: ['taberna', 'mercado', 'barracon'], residentesIds: ['h'], eligieronComoInicial: 3,
+    mercado: { trigo: 400, madera: 120, cobre: 30 }, fondos: {},
+    tablon: qs.get('tablon') ? [{ heroeId: 'bot07', tropa: [{ tropaId: 'milicia_lanceros', cantidad: 40, nivel: 1 }], tarifas: [{ plazoDias: 1, oro: 30 }, { plazoDias: 3, oro: 80 }, { oro: 600 }] }] : [] };
+  q.faccionId = qs.get('faccion') ? 'f1' : null;
+  q.heroe = { id: 'h', displayName: 'Víctor', ubicacion: { tipo: 'mercenarios', campamentoId: c.id }, escuadrones: [], loadouts: [], almacenPersonal: { oro: 120, trigo: 40 } };
+  q.ejercitos = []; q.caravanas = []; q.heroesVisibles = [{ id: 'bot07', displayName: 'Perdicas' }]; q.asentamientos = []; q.asentamientosAvistados = []; q.asentamientosConocidos = [];
+  q.campamentosMercenarios = [c];
+  q.mercadoCampamento = { precios: { trigo: 0.5, madera: 1.2, cobre: 4 }, cupoRestante: { trigo: 200, madera: 60, cobre: 10 },
+    reclutamiento: { tropas: [{ tropaId: 'milicia_lanceros', precioPorSoldado: 1.5, desbloqueada: true }], poblacion: 80, topePoblacion: 120 } };
+  const secciones = seccionesDeCampamento(p, c);
+  const raiz = document.querySelector<HTMLElement>('.plaza-3d')!;
+  raiz.classList.add('camp-screen');
+  document.querySelector<HTMLElement>('.asent-izq')!.style.display = 'none';
+  document.querySelector('.asent-blason')!.innerHTML = '';
+  document.querySelector('.asent-obras-hud')!.innerHTML = '';
+  document.querySelector('.asent-pie')!.innerHTML = '';
+  document.querySelector('.asent-der')!.innerHTML = '';
+  document.querySelector('.asent-riel')!.innerHTML = htmlRielInterior(secciones.map((x) => ({ id: x.id, titulo: x.etiqueta })), camp, e);
+  document.querySelector('.asent-ventana')?.remove();
+  if (secciones.some((x) => x.id === camp)) {
+    document.querySelector('.asent-cuerpo')!.insertAdjacentHTML('beforeend', `<section class="asent-ventana" data-ancho="${anchoDeParteCampamento(camp)}">
+      <header class="asent-ventana-cab"><div class="asent-ventana-titulo">${htmlTituloDeParte(camp, secciones.find((x) => x.id === camp)!.etiqueta, e)}</div><button class="asent-ventana-cerrar">✕</button></header>
+      <div class="asent-edif-cuerpo">${htmlSeccionCampamento(camp, p, c, e)}</div></section>`);
+  }
+}
 (window as unknown as { __banco: unknown }).__banco = { listo: true };

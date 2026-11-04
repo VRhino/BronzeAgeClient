@@ -3,6 +3,17 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.129.0] — 2026-11-04 · Campamento de mercenarios: solo lo que se usa, y Tropa y Mercado en ventana centrada · sin cambio de contrato
+
+Petición de Víctor (2026-11-04): al empezar la partida hay poco que poner en las ventanas del campamento.
+
+- **El riel solo enseña lo que se puede usar.** Mercenarios sale solo si alguien se ofrece en el tablón del campamento; la Taberna, solo si el
+  jugador tiene Facción (`seccionesDeCampamento(p, c)`). Elegir en 3D una pieza cuya parte no está no abre nada.
+- **Tropa y Mercado, en una ventana centrada** como la de Misiones (`data-ancho="centrada"`: hasta 960 px de ancho, del alto de lo que lleva,
+  entre la barra de arriba y el riel). Mercenarios y Taberna siguen a pantalla completa (`anchoDeParteCampamento`).
+- La plaza y el pueblo no cambian: el ancho nuevo solo lo pide el campamento.
+- Banco: `pruebas/hud/?camp=resumen|tropa|mercado|mercenarios|taberna` (`&faccion=1`, `&tablon=1`).
+
 ## [0.128.1] — 2026-11-03 · Lo que anda en el mundo 3D, en todos los fotogramas · sin cambio de contrato
 
 Petición de Víctor (2026-11-03), sin probar aún en la partida (se prueba al día siguiente):

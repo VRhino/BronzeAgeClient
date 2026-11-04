@@ -146,8 +146,9 @@ remata cabeceras y paneles con la moldura clásica. `opacity: .5` para que sea s
     `.pueblo-screen.plaza-3d`; piezas en `ui/hudInterior.ts`): su vista 3D a pantalla completa; arriba a la izquierda un blasón
     con el icono del sitio en vez del escudo (el campamento: «Tu residencia» o «De paso» y sus residentes; el pueblo: su plaza
     madre y si es de tu Facción); al borde derecho, el rastreador de misiones; abajo, el pie y, debajo, el riel con una ventana
-    por parte, que son las pestañas de antes. En el campamento: Resumen, Tropa, Mercado, Mercenarios, Fondo (si tu Facción no
-    tiene plaza) y Taberna; Tropa, Mercado, Mercenarios y Taberna se abren a pantalla completa. Su pie lleva tu almacén
+    por parte, que son las pestañas de antes. En el campamento: Resumen, Tropa, Mercado, Mercenarios (solo si alguien se ofrece en
+    el tablón), Fondo (si tu Facción no tiene plaza) y Taberna (solo con Facción); Tropa y Mercado se abren en una ventana
+    centrada como la de Misiones, y Mercenarios y Taberna a pantalla completa (0.129.0). Su pie lleva tu almacén
     personal (si resides allí) y el carro que llevas (el de tu columna o, dentro de tu residencia, el tuyo), cada uno solo si
     lleva algo. Un clic en una pieza (taberna, mercado, barracón…) abre su parte. En el pueblo: Resumen, Guarnición, Acarreo y
     Carga; su pie es el almacén del pueblo; la franja roja de batalla va arriba al centro (`.pueblo-aviso-batalla`). Esc o ✕

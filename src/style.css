@@ -5058,6 +5058,18 @@ body:has(.asent-ocupacion:not([hidden])) .eleccion-clic { top: calc(var(--pie-fi
    dos columnas que se desplazan juntas y las caravanas en rejilla. */
 .cols-completa, .col-completa, .caravanas-lista { display: contents; }
 .asent-ventana[data-ancho="completa"] .asent-edif-cuerpo { container-type: inline-size; }
+/* Centrada (0.129.0, solo el campamento: Tropa y Mercado): como la ventana de Misiones, en medio entre la barra de arriba y el riel, del alto
+   de lo que lleva. */
+.asent-ventana[data-ancho="centrada"] {
+  left: 50%;
+  top: calc((var(--pie-fin, var(--jugador-alto)) + 100% - var(--riel-alto) - 22px) / 2);
+  transform: translate(-50%, -50%);
+  width: min(960px, calc(100% - 32px));
+  max-height: calc(100% - var(--pie-fin, var(--jugador-alto)) - var(--riel-alto) - 46px);
+  z-index: 5;
+  animation-name: ventana-centrada-entra;
+}
+@keyframes ventana-centrada-entra { from { opacity: 0; transform: translate(-50%, calc(-50% + 8px)); } }
 @container (min-width: 1000px) {
   .cols-completa { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; align-items: start; }
   .col-completa { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
@@ -5130,6 +5142,7 @@ body:has(.asent-ocupacion:not([hidden])) .eleccion-clic { top: calc(var(--pie-fi
   .plaza-3d .asent-barra { bottom: calc(var(--riel-alto) + 24px); left: 8px; }
   .plaza-3d .asent-izq { top: calc(var(--pie-fin, var(--jugador-alto)) + 12px); max-height: calc(100% - var(--pie-fin, var(--jugador-alto)) - var(--pie-alto) - 70px); }
   .asent-ventana, .asent-ventana[data-ancho] { left: 6px; right: 6px; width: auto; top: calc(var(--jugador-alto) + 6px); max-height: calc(100% - var(--jugador-alto) - 12px); z-index: 6; }
+  .asent-ventana[data-ancho="centrada"] { transform: none; animation-name: ventana-plaza-entra; }
   .asent-riel-boton { width: 40px; height: 40px; }
   .asent-riel-boton .icono-edificio { width: 24px; height: 24px; }
 }

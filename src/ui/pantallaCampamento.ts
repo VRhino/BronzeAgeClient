@@ -51,10 +51,22 @@ function faccionConPlaza(p: ProyeccionJugador): boolean {
   return p.asentamientos.length > 0 || [...p.asentamientosAvistados, ...p.asentamientosConocidos].some((a) => a.faccionId === p.faccionId);
 }
 
-/** Las subpestañas que hay ahora: el Fondo de refundación solo aparece mientras tu Facción no tiene plaza. */
-export function seccionesDeCampamento(p: ProyeccionJugador): { id: SeccionCampamento; etiqueta: string }[] {
-  const ids: SeccionCampamento[] = ['resumen', 'tropa', 'mercado', 'mercenarios', ...(p.faccionId !== null && !faccionConPlaza(p) ? ['fondo' as const] : []), 'taberna'];
+/** Las subpestañas que hay ahora (solo lo que se puede usar): el Fondo de refundación mientras tu Facción no tiene plaza; Mercenarios
+ * solo si alguien se ofrece en el tablón de este campamento; la Taberna solo con Facción. */
+export function seccionesDeCampamento(p: ProyeccionJugador, c: Pick<CampamentoMercenarios, 'tablon'>): { id: SeccionCampamento; etiqueta: string }[] {
+  const ids: SeccionCampamento[] = [
+    'resumen', 'tropa', 'mercado',
+    ...((c.tablon?.length ?? 0) > 0 ? ['mercenarios' as const] : []),
+    ...(p.faccionId !== null && !faccionConPlaza(p) ? ['fondo' as const] : []),
+    ...(p.faccionId !== null ? ['taberna' as const] : []),
+  ];
   return ids.map((id) => ({ id, etiqueta: ETIQUETA[id] }));
+}
+
+/** El ancho de la ventana de cada parte (`.asent-ventana[data-ancho]`): Mercenarios y Taberna a pantalla completa; Tropa y Mercado en una ventana
+ * centrada como la de Misiones (0.129.0: al empezar la partida hay poco que poner en ellas); el resto, la normal. */
+export function anchoDeParteCampamento(parte: SeccionCampamento): 'completa' | 'centrada' | 'normal' {
+  return parte === 'mercenarios' || parte === 'taberna' ? 'completa' : parte === 'tropa' || parte === 'mercado' ? 'centrada' : 'normal';
 }
 
 function listaRecursos(recursos: Record<string, number>, e: Escapar): string {
