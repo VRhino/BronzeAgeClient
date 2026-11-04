@@ -4888,6 +4888,15 @@ button.asent-blason-medallon:hover .medallon-nivel, button.asent-blason-medallon
 .plaza-3d .asent-barra > * { pointer-events: auto; }
 .plaza-3d .asent-barra-acciones { margin-left: 0; }
 .plaza-3d .asent-barra-acciones button { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.55); }
+/* El doble de grande (0.130.0, Víctor 2026-11-04): en la plaza, el campamento, el pueblo y la aldea. Por debajo de 1240 px de ancho no cabe
+   al lado del riel centrado y sube encima de él (la columna izquierda se acorta para dejarle sitio); en el móvil, además, algo menos (×1,4),
+   para no pisar el minimapa. */
+.plaza-3d .asent-barra #btn-salir-mundo { padding: 12px 32px; font-size: 1.64rem; }
+@media (max-width: 1239px) {
+  .plaza-3d .asent-barra { bottom: calc(var(--riel-alto) + 24px); }
+  .plaza-3d .asent-izq { max-height: calc(100% - 8px - var(--pie-alto) - 90px); }
+}
+@media (max-width: 900px) { .plaza-3d .asent-barra #btn-salir-mundo { padding: 9px 22px; font-size: 1.15rem; } }
 
 /* La barra del jugador en la plaza: sin el nombre del héroe ni dónde está (ya lo dicen el blasón y el sitio); queda a la derecha con sus botones.
    Lo que avisa de peligro (te persiguen, estados) sale bajo la barra de Población, Almacén y Estado. */

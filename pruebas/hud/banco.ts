@@ -66,7 +66,7 @@ document.getElementById('app')!.innerHTML = `<div class="asent-screen plaza-3d${
     <div class="asent-pie">${htmlPieDePlaza(a, e)}</div>
     <nav class="asent-riel${construir ? ' asent-riel-cajon' : ''}">${construir ? '' : riel}</nav>
     <div class="asent-lienzo asent-minimapa"><canvas id="mapa" width="900" height="900"></canvas></div>
-    <header class="asent-barra"><div class="asent-barra-acciones"><button class="btn-primary" type="button">Salir al mundo</button></div></header>
+    <header class="asent-barra"><div class="asent-barra-acciones"><button id="btn-salir-mundo" class="btn-primary" type="button">Salir al mundo</button></div></header>
     ${ventana ? `<section class="asent-ventana" data-ancho="${ventana === 'mercado' || ventana === 'taberna' || ventana === 'almacen' || ventana === 'caravanas' ? 'completa' : ventana === 'reclutamiento' ? 'ancha' : ''}"><header class="asent-ventana-cab"><div class="asent-ventana-titulo"><h2>${ventana}</h2></div><button class="asent-ventana-cerrar">✕</button></header><div class="asent-edif-cuerpo">${ventana === 'almacen' || ventana === 'caravanas' ? '' : '<p>Contenido de la ventana.</p>'.repeat(40)}</div></section>` : ''}
   </div>
 </div>`;

@@ -3,6 +3,12 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.130.0] — 2026-11-04 · «Salir al mundo» el doble de grande · sin cambio de contrato
+
+Petición de Víctor (2026-11-04): el botón de abajo a la izquierda, en la plaza, el campamento de mercenarios, el pueblo y la aldea, al doble
+(324 × 56 px; antes 163 × 30). Por debajo de 1240 px de ancho no cabe al lado del riel centrado y sube encima de él (la columna izquierda se
+acorta para dejarle sitio); en el móvil (≤ 900 px), ×1,4 para no pisar el minimapa. El banco `pruebas/hud/` lleva ya el `id` del botón.
+
 ## [0.129.0] — 2026-11-04 · Campamento de mercenarios: solo lo que se usa, y Tropa y Mercado en ventana centrada · sin cambio de contrato
 
 Petición de Víctor (2026-11-04): al empezar la partida hay poco que poner en las ventanas del campamento.
