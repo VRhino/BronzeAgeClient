@@ -462,6 +462,12 @@ Como el detalle de una tesela cambia con la distancia al héroe, lo que se pone 
   de los nodos), con 4 u de margen, se rehacen. Cada cinta de caminos y fronteras guarda la de su caja y se rehace sola. Las maquetas se
   vuelven a asentar con cada versión. Columnas, rutas, aros, marcas, humo y la rejilla se rehacen.
 
+## Carros de dos en dos (0.143.0)
+
+Petición de Víctor del 2026-11-04: los carros de caravana de una columna o de una caravana suelta van en filas de dos, cada uno con su animal,
+a 0,13 unidades de figura (×`MUNDO3D.tropa`) a cada lado del rastro; con un número impar, el último va solo en el centro. El carrito del
+héroe va solo, delante.
+
 ## Banco de pruebas
 
 `npm run mundo3d` abre `pruebas/mundo3d/` con el artefacto y el relieve que haya en `generador/salida/mundo/` del motor (el checkout hermano

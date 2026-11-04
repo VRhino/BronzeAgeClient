@@ -1,5 +1,6 @@
 // Las maquetas de una columna: sus héroes a caballo al frente, su tropa detrás, de tres en fondo, el carrito del héroe (sin animal) si lleva algo y
-// al final los carros de sus caravanas (más grandes y cada uno con su animal; el de fundación, con lona), todos pisando el rastro de la cabeza.
+// al final los carros de sus caravanas (más grandes, cada uno con su animal y de dos en dos; el de fundación, con lona), todos pisando el rastro
+// de la cabeza.
 // Las mismas de la mesa de escalas 3D, a la escala `MUNDO3D.tropa`. Una caravana suelta es una columna sin héroes: su escolta y sus carros.
 import * as THREE from 'three';
 import { MUNDO3D } from './config';
@@ -125,6 +126,10 @@ export const ESCALA_CARRO_CARAVANA = 1.5;
  * sus varas. */
 const LARGO = { caravana: { frente: 0.325, cola: 0.085 }, carrito: { frente: 0.13, cola: 0.045 } } as const;
 
+/** A qué lado del centro va cada carro de una pareja, en el `lado` de los sitios (× 0,1 unidades de figura): el carro de caravana mide 0,13 de
+ * ancho (×1,5), así queda un palmo entre los dos. */
+const LADO_CARRO_PAREJA = 1.3;
+
 /** Lo que se separa un bloque de tropa del siguiente además del paso entre filas (en unidades de figura). */
 const HUECO_ENTRE_BLOQUES = 0.08;
 /** Como mucho, escuadras que se pintan: 6 en una columna personal (36 figuras), 12 en un ejército (48). */
@@ -223,16 +228,18 @@ export class FigurasDeColumna {
         for (let k = 0; k < b.ancho; k++) poner(soldado(color, soldados++ === 0), ultima, k - (b.ancho - 1) / 2);
       }
     });
-    // los carros, uno tras otro detrás de la última fila (sin nadie delante, el primero va en la cabeza): el carrito y los de las caravanas
+    // los carros detrás de la última fila (sin nadie delante, el primero va en la cabeza): el carrito y luego los de las caravanas, cada uno con
+    // su animal, de dos en dos (Víctor, 2026-11-04); si son impares, el último solo, en el centro
     let detras = jinetes + soldados ? ultima + 0.1 : null;
-    const enganchar = (f: THREE.Group, largo: { frente: number; cola: number }, escala: number) => {
+    const enganchar = (fila: THREE.Group[], largo: { frente: number; cola: number }, escala: number) => {
       const atras = detras === null ? 0 : detras + largo.frente * escala;
       detras = atras + largo.cola * escala + 0.04;
-      poner(f, atras, 0, escala);
+      fila.forEach((f, k) => poner(f, atras, fila.length === 1 ? 0 : (k === 0 ? -1 : 1) * LADO_CARRO_PAREJA, escala));
     };
-    if (carros.propio) enganchar(carrito(), LARGO.carrito, 1);
+    if (carros.propio) enganchar([carrito()], LARGO.carrito, 1);
     const n = carros.carga + (carros.fundacion ? 1 : 0);
-    for (let k = 0; k < n; k++) enganchar(carro(carros.fundacion && k === n - 1, carros.animales?.[k] ?? 'buey'), LARGO.caravana, ESCALA_CARRO_CARAVANA);
+    const carroN = (k: number) => carro(carros.fundacion && k === n - 1, carros.animales?.[k] ?? 'buey');
+    for (let k = 0; k < n; k += 2) enganchar(k + 1 < n ? [carroN(k), carroN(k + 1)] : [carroN(k)], LARGO.caravana, ESCALA_CARRO_CARAVANA);
   }
 
   /** Pone la columna con la cabeza en `cabeza`; `alturaU(x, y)` da el suelo en unidades de escena y `suelo` cambia cuando ese suelo cambia (se

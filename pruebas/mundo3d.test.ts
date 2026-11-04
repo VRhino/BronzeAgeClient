@@ -12,7 +12,7 @@ import { refuerzo, Territorio } from '../src/mundo3d/territorio';
 import { Terreno } from '../src/mundo3d/terreno';
 import { CapaDeFertilidad } from '../src/mundo3d/capaFertilidad';
 import type { NieblaDeGuerra } from '../src/mundo3d/niebla';
-import { bloquesDeTropa } from '../src/mundo3d/figuras';
+import { bloquesDeTropa, FigurasDeColumna } from '../src/mundo3d/figuras';
 import { fuenteDesdeMapa, type FuenteDeAltura } from '../src/mundo3d/fuente';
 import { chaikin, cinta, circulo, rutaPendiente, simplificar, suavizarCamino, tramosEnCaja } from '../src/mundo3d/lineas';
 import { alargarHastaElAgua, suavizar, tramosEnTierra } from '../src/mundo3d/paisaje';
@@ -452,5 +452,18 @@ describe('lo que se pone sobre el suelo se recoloca cuando el suelo cambia', () 
     arboles.actualizar(16, 16, 10, Number.POSITIVE_INFINITY);
     expect(malla()).toBe(primera); // la misma malla: solo se recolocó
     expect(y() - antes).toBeCloseTo(2, 5);
+  });
+});
+
+describe('los carros de las caravanas', () => {
+  test('van de dos en dos, cada uno con su animal; si son impares, el último solo en el centro', () => {
+    const f = new FigurasDeColumna(0, { porHeroe: [], ejercito: false }, 0xffffff, { carga: 3, fundacion: false, animales: ['buey', 'mula', 'buey'] });
+    f.mover({ x: 10, y: 10 }, () => 0); // la primera vez se forma detrás, hacia el sur (+y)
+    const [a, b, c] = f.figuras.map((g) => g.position);
+    expect(a!.y).toBeCloseTo(b!.y, 6); // la pareja, a la misma altura de la columna
+    expect(a!.z).toBeCloseTo(b!.z, 6);
+    expect(Math.abs(a!.x - b!.x)).toBeGreaterThan(0.2 * MUNDO3D.tropa); // uno a cada lado, sin tocarse
+    expect(c!.x).toBeCloseTo(10, 6); // el tercero, solo y en el centro
+    expect(c!.z).toBeGreaterThan(a!.z);
   });
 });

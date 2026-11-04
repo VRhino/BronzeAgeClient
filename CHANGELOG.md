@@ -3,6 +3,12 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.143.0] — 2026-11-04 · Mundo 3D: los carros de las caravanas, de dos en dos · sin cambio de contrato
+
+Petición de Víctor (2026-11-04): en el mundo, los carros de una caravana (o los que arrastra una columna) iban uno detrás de otro. Ahora van en
+filas de dos, cada uno con su animal; si son impares, el último va solo en el centro. El carrito del héroe sigue solo, delante de ellos.
+Banco: la caravana de prueba lleva cinco carros.
+
 ## [0.142.0] — 2026-11-04 · Facción → Plazas a todo el ancho y con la barra de la plaza · sin cambio de contrato
 
 Petición de Víctor (2026-11-04):

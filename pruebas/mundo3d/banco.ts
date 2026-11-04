@@ -207,7 +207,7 @@ function mundoDePrueba(c: Punto, vacio: boolean): { mundo: MundoEnVista; ajenas:
   m.bandidos.push({ id: 'bandidos', posicion: en(-4, 12), nivel: 2 });
   m.alijos.push({ id: 'alijo', posicion: en(3, 6) });
   m.batallas.push({ id: 'batalla', posicion: en(18, -10), propia: false });
-  caravanas.push({ id: 'caravana', posicion: plaza, ruta: [plaza, ajena], fundacion: false, color: PROPIO, escolta: 2, animales: ['buey', 'camello'] });
+  caravanas.push({ id: 'caravana', posicion: plaza, ruta: [plaza, ajena], fundacion: false, color: PROPIO, escolta: 2, animales: ['buey', 'camello', 'caballo', 'buey', 'camello'] });
   caravanas.push({ id: 'caravana-ajena', posicion: en(4, -3, ajena), ruta: [], fundacion: false, color: AJENO, escolta: 1 });
   miradas.push({ id: 'abierta', centro: en(-14, -4), radio: 6, abierta: true, minutos: 37 }, { id: 'caducada', centro: en(22, 2), radio: 5, abierta: false, minutos: 12 });
   etiquetas.push(
