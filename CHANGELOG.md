@@ -3,6 +3,22 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.139.0] — 2026-11-04 · De visita en una plaza de tu Facción: guarnición y escolta con tu columna · contrato del motor 7a6a0c48 (contrato 0.12.0)
+
+Pedido de Víctor (2026-11-04), con la parte del motor ya en main (aviso `motor/aviso-tropas-de-visita.md`):
+
+- **Defensa → Guarnición de visita**: dentro de una plaza de tu Facción donde no resides, el «+» ofrece las escuadras de la columna con la que
+  entraste (`asignarGuarnicion`); las tuyas salen «Tuya · de visita» con ✕ para recogerlas a la columna (`retirarGuarnicion`, solo desde dentro).
+  El cupo es el de la plaza (`Asentamiento.cupoGuarnicion`, el mismo por héroe que el de un residente).
+- **De quién es cada escuadra**: la guarnición llega con `Asentamiento.guarnicion` (tropa, hombres y héroe); las de otros salen con su icono, su
+  tropa y «de <héroe>».
+- **Escolta de visita**: en Caravanas, con la caravana en casa, el «+» de la escolta ofrece la tropa de tu columna (`asignarEscolta`); la nota de
+  la flota lo dice. Lo demás de la flota sigue siendo de residentes.
+- `Escuadron.contenedor` admite `{ tipo: 'plaza', asentamientoId }` (campo 7): lo que dejas no vuelve a salir en «Salir al mundo».
+- Rechazos nuevos traducidos: `guarnicion.faccion_ajena`, `guarnicion.no_estas_dentro`, `escuadra.fuera_de_tu_columna`.
+
+Bancos: `pruebas/hud/?ventana=defensa&visita=1`, `?ventana=caravanas&visita=1`.
+
 ## [0.138.0] — 2026-11-04 · Cupo de Fundación, Guarnición en Defensa, Rutas del Mercado y obras con barras · sin cambio de contrato
 
 Petición de Víctor (2026-11-04, seis puntos):

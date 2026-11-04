@@ -117,7 +117,7 @@ function htmlMiSituacion(p: ProyeccionJugador, mi: Ejercito | undefined, e: Esca
 }
 
 const nombreRecurso = (r: string): string => RECURSO_NOMBRE[r] ?? r;
-const nombreDeTropa = (id: string): string => tropasReclutables()?.find((t) => t.id === id)?.nombre ?? (id.charAt(0).toUpperCase() + id.slice(1)).replace(/_/g, ' ');
+export const nombreDeTropa = (id: string): string => tropasReclutables()?.find((t) => t.id === id)?.nombre ?? (id.charAt(0).toUpperCase() + id.slice(1)).replace(/_/g, ' ');
 
 /** Lo que lleva cada uno: lo tuyo, con el nombre de cada escuadra; lo de los demás, lo que el servidor deja ver (`heroesVisibles[].escuadrasQueLleva`). */
 function tropaDe(p: ProyeccionJugador, c: Ejercito, heroeId: string): { tropaId: string; nombre: string; cantidad: number; nivel: number; nota?: string }[] | null {

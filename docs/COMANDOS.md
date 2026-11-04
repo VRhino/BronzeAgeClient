@@ -86,8 +86,8 @@ Los cinco siguientes no llevan `heroeId`: el actor es su propio héroe. Wrapper 
 - [x] `repartirPuntos` — `atributos` (`{ fuerza?, destreza?, armadura?, vitalidad? }`, enteros) · cada punto suma 1, tope 100, sin pasar de `puntosDeAtributoSinGastar`; hoy ningún nivel da puntos
 - [x] `guardarLoadout` — `displayName`, `squadIds`, `perksSeleccionados` (enteros; hoy `[]`, el catálogo espera a CQ-004); opcionales: `loadoutId` (ausente = uno nuevo), `activo` · devuelve `{ loadoutId, liderazgoTotal }`; las escuadras tienen que caber en el Liderazgo, y el activo es el que defiende tu residencia mientras estás dentro
 - [x] `borrarLoadout` — `loadoutId`
-- [x] `asignarGuarnicion` — `squadId` · una escuadra de tu campamento pasa a la guarnición de tu residencia, dentro de `heroe.cupoGuarnicion`
-- [x] `retirarGuarnicion` — `squadId`
+- [x] `asignarGuarnicion` — `squadId` · una escuadra de tu campamento pasa a la guarnición de tu residencia, dentro de `heroe.cupoGuarnicion`; de visita en una plaza de tu Facción (motor 7a6a0c48), una de tu columna pasa a la guarnición de esa plaza (`contenedor: plaza`) · ventana Defensa → Guarnición (0.138.0, 0.139.0)
+- [x] `retirarGuarnicion` — `squadId` · la dejada de visita vuelve a tu columna, solo desde dentro (`guarnicion.no_estas_dentro`)
 
 ### Fundación y expansión
 

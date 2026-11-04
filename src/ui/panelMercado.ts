@@ -17,6 +17,7 @@ import { mostrar as mostrarAviso } from './avisos';
 import { olvidarEdicion } from './repintado';
 import { ICONO_CARRETA } from './juegoVisual';
 import { iconoRitmo, velocidadDePiezas } from './velocidadColumna';
+import { miColumna } from './ejercitos';
 
 type Escapar = (valor: string) => string;
 
@@ -383,8 +384,18 @@ function carrosEnHuecos(c: Caravana, a: Asentamiento, editable: boolean, otras: 
     </div>`;
 }
 
-/** La escolta en huecos: las escuadras tuyas (✕ para retirarlas), las de otros residentes, «+» para ceder y la barra de Liderazgo del cupo. */
-function escoltaEnHuecos(c: Caravana, p: ProyeccionJugador, editable: boolean, escoltaPts: number | undefined, e: Escapar): string {
+/** De dónde salen las escuadras para escoltar una caravana de `a` en casa: residente, de tu campamento; de visita dentro de una plaza de tu Facción
+ * (motor 7a6a0c48, 0.139.0), de la columna con la que entraste. `null` si no puedes ceder. */
+function fuenteDeEscolta(p: ProyeccionJugador, a: Asentamiento, reside: boolean): { lista: Escuadron[]; de: 'campamento' | 'columna' } | null {
+  if (reside) return { lista: p.heroe.escuadrones.filter((s) => s.contenedor.tipo === 'campamento' && !s.enGuarnicion && s.cantidad > 0), de: 'campamento' };
+  const dentro = p.heroe.ubicacion.tipo === 'asentamiento' && p.heroe.ubicacion.asentamientoId === a.id;
+  const columna = dentro && a.faccionId === p.faccionId ? miColumna(p) : undefined;
+  return columna ? { lista: p.heroe.escuadrones.filter((s) => s.contenedor.tipo === 'ejercito' && s.contenedor.ejercitoId === columna.id && s.cantidad > 0), de: 'columna' } : null;
+}
+
+/** La escolta en huecos: las escuadras tuyas (✕ para retirarlas), las de otros, «+» para ceder y la barra de Liderazgo del cupo. */
+function escoltaEnHuecos(c: Caravana, p: ProyeccionJugador, fuente: ReturnType<typeof fuenteDeEscolta>, escoltaPts: number | undefined, e: Escapar): string {
+  const editable = fuente !== null;
   const cupo = c.escoltaLiderazgo?.cupo ?? escoltaPts;
   if (cupo === undefined) return '';
   const cedidas = p.heroe.escuadrones.filter((s) => s.contenedor.tipo === 'escolta' && s.contenedor.caravanaId === c.id);
@@ -392,7 +403,7 @@ function escoltaEnHuecos(c: Caravana, p: ProyeccionJugador, editable: boolean, e
   const usado = c.escoltaLiderazgo?.usado ?? mias;
   const ajenas = (c.escoltaIds ?? []).filter((id) => !cedidas.some((s) => s.id === id));
   const libre = cupo - usado;
-  const candidatas = editable ? p.heroe.escuadrones.filter((s) => s.contenedor.tipo === 'campamento' && !s.enGuarnicion && s.cantidad > 0) : [];
+  const candidatas = fuente?.lista ?? [];
   const caben = candidatas.filter((s) => s.costeLiderazgo <= libre);
   const abierta = escoltaAbierta.has(c.id) && candidatas.length > 0;
   const huecos = [
@@ -401,16 +412,16 @@ function escoltaEnHuecos(c: Caravana, p: ProyeccionJugador, editable: boolean, e
         <small>Tuya · ${s.cantidad} hombres ${chipLiderazgo(s)}</small>
         ${editable ? `<button class="salida-hueco-quitar" type="button" data-quitar-escolta="${e(s.id)}" data-caravana="${e(c.id)}" title="Retirarla" aria-label="Retirar ${e(s.nombre)}">✕</button>` : ''}
       </div>`),
-    ...ajenas.map(() => `<div class="salida-hueco lleno ajena"><span class="salida-hueco-icono escolta-ajena-icono" aria-hidden="true">⚔</span><span class="salida-hueco-nombre">Escuadra</span><small>De otro residente</small></div>`),
+    ...ajenas.map(() => `<div class="salida-hueco lleno ajena"><span class="salida-hueco-icono escolta-ajena-icono" aria-hidden="true">⚔</span><span class="salida-hueco-nombre">Escuadra</span><small>De otro héroe</small></div>`),
   ];
-  if (editable && caben.length > 0) huecos.push(`<button class="salida-hueco mas${abierta ? ' activo' : ''}" type="button" data-escolta-mas="${e(c.id)}" title="Ceder una escuadra" aria-label="Ceder una escuadra">+</button>`);
+  if (editable && caben.length > 0) huecos.push(`<button class="salida-hueco mas${abierta ? ' activo' : ''}" type="button" data-escolta-mas="${e(c.id)}" title="Ceder una escuadra ${fuente.de === 'columna' ? 'de tu columna' : 'de tu campamento'}" aria-label="Ceder una escuadra">+</button>`);
   const lista = abierta ? `<div class="salida-elegir">${candidatas.map((s) => {
     const cabe = s.costeLiderazgo <= libre;
     return `<button class="salida-candidata" type="button" data-ceder-escolta="${e(s.id)}" data-caravana="${e(c.id)}"${cabe ? '' : ` disabled title="No cabe: quedan ${Math.max(0, libre)} pts"`}>${iconoTropa(s.tropaId, 26)}<span><strong>${e(s.nombre)}</strong><small>${s.cantidad} hombres · ${s.costeLiderazgo} de Liderazgo</small></span></button>`;
   }).join('')}</div>` : '';
   const deOtros = Math.max(0, usado - mias);
   return `<div class="caravana-seccion">
-      <div class="salida-tropa-cab"><strong class="heroe-sub">Escolta</strong><span class="salida-liderazgo${usado > cupo ? ' excedido' : ''}" title="Liderazgo de escolta: lo comparten los residentes; ceder no gasta el tuyo">Liderazgo ${usado} / ${cupo}${deOtros > 0 ? ` · ${deOtros} de otros residentes` : ''}</span></div>
+      <div class="salida-tropa-cab"><strong class="heroe-sub">Escolta</strong><span class="salida-liderazgo${usado > cupo ? ' excedido' : ''}" title="Liderazgo de escolta: lo comparten quienes la escoltan; ceder no gasta el tuyo">Liderazgo ${usado} / ${cupo}${deOtros > 0 ? ` · ${deOtros} de otros héroes` : ''}</span></div>
       <div class="escolta-barra${usado >= cupo ? ' llena' : ''}"><i style="width:${cupo > 0 ? Math.min(100, (usado / cupo) * 100).toFixed(1) : 0}%"></i></div>
       ${huecos.length ? `<div class="salida-huecos">${huecos.join('')}</div>` : '<p class="asent-lado-nota">Sin escolta.</p>'}${lista}
     </div>`;
@@ -476,7 +487,7 @@ function detalleFlota(c: Caravana, p: ProyeccionJugador, a: Asentamiento, reside
   }
   return `<div class="caravana-tarjeta flota-detalle ${e(estado)}">${cab}${chips}
     ${carrosEnHuecos(c, a, editable, otras, almacen, carrosLleno, d, e)}
-    ${escoltaEnHuecos(c, p, reside && (parada || (estado === 'esperando' && c.encargo?.paradaActual === 'origen')), d?.escoltaPts, e)}
+    ${escoltaEnHuecos(c, p, parada || (estado === 'esperando' && c.encargo?.paradaActual === 'origen') ? fuenteDeEscolta(p, a, reside) : null, d?.escoltaPts, e)}
     ${abajo}</div>`;
 }
 
@@ -581,7 +592,7 @@ export function htmlCaravanas(p: ProyeccionJugador, a: Asentamiento, e: Escapar,
       <span class="flota-cuerpo"><strong>${nivelMercado > 0 ? `Mercado nivel ${nivelMercado}${nivelAlbergue > 0 ? ` · Albergue nivel ${nivelAlbergue}` : ''}` : 'Sin Mercado activo'}</strong><span class="flota-cupos">${topes}</span></span>
       ${reside ? `<button class="flota-crear" type="button" data-caravana-crear${motivoCrear ? ` disabled title="${e(motivoCrear)}"` : ' title="Crear una caravana nueva (un casco vacío)"'}>＋ Crear</button>` : ''}
     </div>
-    ${reside ? (motivoCrear ? `<p class="asent-lado-nota">${e(motivoCrear)}</p>` : '') : '<p class="asent-lado-nota">Solo quien reside en esta plaza maneja la flota.</p>'}
+    ${reside ? (motivoCrear ? `<p class="asent-lado-nota">${e(motivoCrear)}</p>` : '') : `<p class="asent-lado-nota">Solo quien reside en esta plaza maneja la flota.${fuenteDeEscolta(p, a, false) ? ' De visita puedes cederles escolta de tu columna mientras están en casa.' : ''}</p>`}
     ${todas.length === 0 ? '<p class="mapa-lista-vacia">No hay caravanas en esta plaza.</p>' : `<div class="flota-marco">
       <div class="flota-lista" role="listbox" aria-label="Caravanas">${todas.map((c) => filaFlota(c, p, a, c.id === elegida!.id, datos, e)).join('')}</div>
       ${detalleFlota(elegida!, p, a, reside, flota, almacen, carrosLleno, datos, e)}

@@ -149,6 +149,16 @@ if (ventana === 'caravanas') {
     { id: 'car-3', nombre: 'Grano del valle', tipo: 'comercial', origenAsentamientoId: a.id, posicionActual: aldea, estado: 'aparcada', carros: [{ tipoCarro: 'basico', animal: 'camello' }], contenido: { trigo: 180 } },
     { id: 'car-4', tipo: 'comercial', origenAsentamientoId: a.id, posicionActual: a.posicion, estado: 'disponible', carros: [], contenido: {} },
   ];
+  // `&visita=1`: de visita con tu columna (0.139.0): no resides, pero cedes escolta de la columna.
+  if (qs.get('visita')) {
+    a.heroesFundadoresIds = [];
+    a.casasCompradas = [];
+    a.cargos = undefined;
+    const h = q.heroe as { escuadrones: { contenedor: object }[] };
+    h.escuadrones[1]!.contenedor = { tipo: 'ejercito', ejercitoId: 'ej-1' };
+    h.escuadrones[2]!.contenedor = { tipo: 'ejercito', ejercitoId: 'ej-1' };
+    q.ejercitos = [{ id: 'ej-1', liderId: 'h', participantes: [{ heroeId: 'h' }], posicionActual: a.posicion, estado: 'estacionado' }];
+  }
   if (qs.get('caravana')) (document.querySelector('.asent-ventana') as HTMLElement).dataset.elegir = qs.get('caravana')!;
   pintarCaravanas();
   bloqueDeDatos('EDIFICIO_CATALOGO', pintarCaravanas);
@@ -208,7 +218,7 @@ if (camp) {
 }
 // El «!» de Territorio (0.136.0) con la cuenta de verdad (`fundacionLista`): se repinta cuando llegan los datos del coste.
 function avisoFundacion(): void {
-  if (camp || construir) return;
+  if (camp || construir || qs.get('visita')) return;
   a.heroesFundadoresIds = ['h'];
   const q = p as unknown as { caravanas?: unknown[] };
   q.caravanas ??= [];
@@ -229,7 +239,7 @@ avisoFundacion();
 function pintarDefensa(): void {
   const cuerpo = document.querySelector<HTMLElement>('.asent-edif-cuerpo');
   if (ventana !== 'defensa' || !cuerpo) return;
-  const c = { proyeccion: p, asentamiento: a, cuerpo, ejecutar: async () => null, refrescar: pintarDefensa, cargo: null, resideAqui: true, escapar: e } as unknown as ContextoPlaza;
+  const c = { proyeccion: p, asentamiento: a, cuerpo, ejecutar: async () => null, refrescar: pintarDefensa, cargo: null, resideAqui: !qs.get('visita'), escapar: e } as unknown as ContextoPlaza;
   cuerpo.innerHTML = `<div class="asent-tabs asent-subtabs"><button class="asent-tab activo" type="button">Guarnición</button><button class="asent-tab" type="button">Muralla</button><button class="asent-tab" type="button">Puerta</button></div>${SUBPESTANA_GUARNICION.html(c)}`;
   SUBPESTANA_GUARNICION.cablear?.(c);
 }
@@ -240,7 +250,20 @@ if (ventana === 'defensa') {
   q.heroe = { displayName: 'Víctor', ubicacion: { tipo: 'asentamiento', asentamientoId: a.id }, cupoGuarnicion: 120, guarnicionOcupada: 70, loadouts: [], escuadrones: [
     escuadra('s1', 'Lanceros de Tebas', 'hoplitas_ciudadanos', 40, true), escuadra('s2', 'Honderos', 'honderos', 30, true),
     escuadra('s3', 'Arqueros', 'arqueros', 60, false), escuadra('s4', 'Carros ligeros', 'carros_ligeros', 45, false)] };
-  a.guarnicionIds = ['s1', 's2', 'esc-99'];
+  a.guarnicionIds = ['s1', 's2', 'esc-99', 'esc-98'];
+  a.guarnicion = [{ tropaId: 'hoplitas_ciudadanos', cantidad: 40, heroeId: 'h' }, { tropaId: 'honderos', cantidad: 40, heroeId: 'h' }, { tropaId: 'arqueros', cantidad: 55, heroeId: 'h2' }, { tropaId: 'lanceros', cantidad: 30, heroeId: 'h3' }];
+  a.cupoGuarnicion = 120;
+  q.nombresDeCompaneros = { h2: 'Ariadna', h3: 'Néstor' };
+  q.heroesVisibles = [];
+  // `&visita=1`: de visita con tu columna (0.139.0): las tuyas dentro llegan con `contenedor: plaza` y las de la columna se ofrecen.
+  if (qs.get('visita')) {
+    const h = q.heroe as { escuadrones: { contenedor: object; enGuarnicion: boolean }[] };
+    h.escuadrones[0]!.contenedor = { tipo: 'plaza', asentamientoId: a.id }; h.escuadrones[0]!.enGuarnicion = false;
+    h.escuadrones[1]!.contenedor = { tipo: 'plaza', asentamientoId: a.id }; h.escuadrones[1]!.enGuarnicion = false;
+    h.escuadrones[2]!.contenedor = { tipo: 'ejercito', ejercitoId: 'ej-1' };
+    h.escuadrones[3]!.contenedor = { tipo: 'ejercito', ejercitoId: 'ej-1' };
+    q.ejercitos = [{ id: 'ej-1', liderId: 'h', participantes: [{ heroeId: 'h' }], posicionActual: a.posicion, estado: 'estacionado' }];
+  }
   pintarDefensa();
 }
 // `?obra=1`: la ficha de una obra de pueblo en el mapa (0.138.0), con la columna al lado llevando parte de lo que falta.

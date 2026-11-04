@@ -209,6 +209,8 @@ function asentamiento(a: pb.Asentamiento, ahora: number): d.Asentamiento {
     participacion: Object.keys(a.participacion).length ? Object.fromEntries(Object.entries(a.participacion).map(([k, v]) => [k, Number(v)])) : undefined,
     tablon: a.tablon ? tablon(a.tablon) : undefined,
     guarnicionIds: a.guarnicionIds.length ? a.guarnicionIds : undefined,
+    cupoGuarnicion: a.cupoGuarnicion,
+    guarnicion: a.guarnicion.length ? a.guarnicion.map((g) => ({ tropaId: g.tropaId, cantidad: g.cantidad, heroeId: g.heroeId })) : undefined,
   };
 }
 
@@ -354,7 +356,7 @@ function recompensasMision(rs: pb.RecompensaMision[]): d.RecompensaMision[] {
 function escuadron(e: pb.Escuadron, ahora: number): d.Escuadron {
   const c = e.contenedor?.donde;
   const contenedor: d.Escuadron['contenedor'] =
-    c?.case === 'ejercitoId' ? { tipo: 'ejercito', ejercitoId: c.value } : c?.case === 'caravanaId' ? { tipo: 'escolta', caravanaId: c.value } : c?.case === 'puebloId' ? { tipo: 'pueblo', puebloId: c.value } : c?.case === 'fuera' ? { tipo: 'fuera' } : { tipo: 'campamento' };
+    c?.case === 'ejercitoId' ? { tipo: 'ejercito', ejercitoId: c.value } : c?.case === 'caravanaId' ? { tipo: 'escolta', caravanaId: c.value } : c?.case === 'puebloId' ? { tipo: 'pueblo', puebloId: c.value } : c?.case === 'asentamientoId' ? { tipo: 'plaza', asentamientoId: c.value } : c?.case === 'fuera' ? { tipo: 'fuera' } : { tipo: 'campamento' };
   return {
     id: e.id, nombre: e.nombre, heroeId: e.heroeId, tropaId: e.tropaId, origen: e.origen as d.Escuadron['origen'], cantidad: e.cantidad, nivel: e.nivel,
     experiencia: mil(e.experiencia), moral: valorDeRitmo(e.moral, ahora), contenedor,

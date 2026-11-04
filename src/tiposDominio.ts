@@ -268,6 +268,10 @@ export interface Asentamiento {
   tablon?: Tablon;
   /** Las escuadras (`esc-N`) de la guarnición de la plaza, de todos sus residentes (motor `guarnicion_ids`): solo ids, sin dueño ni tropa. */
   guarnicionIds?: string[];
+  /** De quién es cada escuadra de la guarnición (motor 7a6a0c48, `Asentamiento.guarnicion`): tropa, hombres y héroe, en el orden de `guarnicionIds`. */
+  guarnicion?: { tropaId: string; cantidad: number; heroeId: string }[];
+  /** El cupo de guarnición por héroe en esta plaza, en Liderazgo (motor `cupo_guarnicion`): el mismo para residentes y de visita. Solo desde dentro. */
+  cupoGuarnicion?: number;
 }
 
 export type GrupoPuerta = 'neutrales' | 'aliados' | 'enemigos' | 'aedas';
@@ -822,7 +826,8 @@ export interface Escuadron {
   moral: number;
   /** Dónde está: en el campamento de tu residencia, en una columna o escoltando una caravana. */
   /** `pueblo`: en la guarnición de un pueblo o una aldea (`guarnecerPueblo`), fuera de su campamento y de su columna. */
-  contenedor: { tipo: 'campamento' } | { tipo: 'ejercito'; ejercitoId: string } | { tipo: 'escolta'; caravanaId: string } | { tipo: 'pueblo'; puebloId: string } | { tipo: 'fuera' };
+  /** `plaza`: dejada de visita en la guarnición de una plaza de tu Facción donde no resides (motor 7a6a0c48): fuera de tu columna, se recoge desde dentro. */
+  contenedor: { tipo: 'campamento' } | { tipo: 'ejercito'; ejercitoId: string } | { tipo: 'escolta'; caravanaId: string } | { tipo: 'pueblo'; puebloId: string } | { tipo: 'plaza'; asentamientoId: string } | { tipo: 'fuera' };
   /** Prestada por un campamento de mercenarios (Doc 1.9b): gratis, sin experiencia. */
   prestada?: { campamentoId: string };
   /** En la guarnición de tu residencia (`asignarGuarnicion`). Solo con `contenedor: campamento`. */
