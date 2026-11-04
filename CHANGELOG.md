@@ -3,6 +3,17 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.140.0] — 2026-11-04 · Caravanas: barra de tiempo de la carga y la descarga, y lo que lleva · sin cambio de contrato
+
+Petición de Víctor (2026-11-04):
+
+- En Caravanas y en Rutas, la descarga y la carga de una caravana con encargo salen como una barra de tiempo con lo que queda (azul al descargar,
+  oro al cargar), y la píldora de la fase ya no repite el tiempo. El motor solo manda el fin del paso: hasta que mande el inicio (pedido), la barra
+  arranca cuando el cliente ve empezar el paso (`Encargo.inicioPaso` ya se usa si llega).
+- La ficha de una caravana en la plaza enseña lo que lleva (recurso y cantidad, y el total sobre la capacidad), con ruta o sin ella.
+- Pedido al motor: descargar al almacén de la plaza una caravana de la flota que está en casa (todo o una parte) y «Detener ruta» (acaba la ida y
+  vuelta comerciando y se queda sin encargo). Los botones llegan cuando esté.
+
 ## [0.139.0] — 2026-11-04 · De visita en una plaza de tu Facción: guarnición y escolta con tu columna · contrato del motor 7a6a0c48 (contrato 0.12.0)
 
 Pedido de Víctor (2026-11-04), con la parte del motor ya en main (aviso `motor/aviso-tropas-de-visita.md`):

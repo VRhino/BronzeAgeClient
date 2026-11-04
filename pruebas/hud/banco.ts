@@ -143,7 +143,7 @@ if (ventana === 'caravanas') {
         paradaDestino: { dejar: [{ recurso: 'trigo' }, { recurso: 'madera', tope: 200 }], desecharSobrante: true, recoger: [{ recurso: 'cobre', cantidad: 120 }], esperarExistencias: false } } },
     { id: 'car-5', nombre: 'Vino de Quíos', tipo: 'comercial', origenAsentamientoId: a.id, posicionActual: a.posicion, estado: 'esperando',
       carros: [{ tipoCarro: 'reforzado', animal: 'buey' }, { tipoCarro: 'basico', animal: 'caballo' }], contenido: { vino: 140 },
-      encargo: { modo: 'envio', destinoAsentamientoId: 'as-7', vueltas: 0, paradaActual: 'origen', fase: 'carga', finPaso: Date.now() + 90_000, cancelado: false,
+      encargo: { modo: 'envio', destinoAsentamientoId: 'as-7', vueltas: 0, paradaActual: 'origen', fase: 'carga', inicioPaso: Date.now() - 150_000, finPaso: Date.now() + 90_000, cancelado: false,
         paradaOrigen: { dejar: [], desecharSobrante: false, recoger: [{ recurso: 'vino', cantidad: 300 }, { recurso: 'oro', cantidad: 80 }], esperarExistencias: false },
         paradaDestino: { dejar: [{ recurso: 'vino', precioMin: 2.5 }], desecharSobrante: false, recoger: [{ recurso: 'estano', cantidad: 60, precioMax: 4 }], esperarExistencias: true } } },
     { id: 'car-3', nombre: 'Grano del valle', tipo: 'comercial', origenAsentamientoId: a.id, posicionActual: aldea, estado: 'aparcada', carros: [{ tipoCarro: 'basico', animal: 'camello' }], contenido: { trigo: 180 } },

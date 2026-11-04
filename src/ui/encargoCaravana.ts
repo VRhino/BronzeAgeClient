@@ -68,6 +68,26 @@ function paradaEnFichas(titulo: string, x: ParadaEncargo | undefined, ajena: boo
     </div>`;
 }
 
+/** Cuándo empezó el paso en curso (descarga o carga), por caravana y fin de paso: el motor solo manda el fin (`fin_paso_ms`), así que se apunta el
+ * primer instante en que se vio. Si se abre a mitad del paso, la barra arranca ahí. */
+const inicioVisto = new Map<string, number>();
+
+/** La barra de tiempo de la descarga o la carga (0.140.0, Víctor 2026-11-04), con lo que queda. `''` fuera de esos pasos. */
+function barraDePaso(c: Caravana, k: Encargo, p: ProyeccionJugador, e: Escapar): string {
+  if (c.estado !== 'esperando' || (k.fase !== 'carga' && k.fase !== 'descarga') || !k.finPaso) return '';
+  const clave = `${c.id}:${k.finPaso}`;
+  const inicio = k.inicioPaso ?? inicioVisto.get(clave) ?? p.instante;
+  if (k.inicioPaso === undefined && !inicioVisto.has(clave)) inicioVisto.set(clave, inicio);
+  const total = Math.max(1, k.finPaso - inicio);
+  const hecho = Math.min(1, Math.max(0, (p.instante - inicio) / total));
+  const queda = Math.max(0, k.finPaso - p.instante);
+  const donde = k.paradaActual === 'origen' ? 'el origen' : 'el destino';
+  return `<div class="ruta-paso ${k.fase}" title="${e(`${k.fase === 'carga' ? 'Cargando' : 'Descargando'} en ${donde}`)}">
+      <span class="ruta-paso-cab"><span>${k.fase === 'carga' ? '⬆ Cargando' : '⬇ Descargando'} en ${donde}</span><b>${queda > 0 ? `⏳ ${e(textoEnTiempoReal(queda))}` : 'ya casi'}</b></span>
+      <span class="obra-barra"><i style="width:${(hecho * 100).toFixed(1)}%"></i></span>
+    </div>`;
+}
+
 /** El dibujo de la ruta (0.138.0): origen y destino con la carreta en el camino (proyectada sobre la recta entre las dos plazas), la fase y las vueltas,
  * y lo que hace en cada parada en fichas. Lo usan la ficha de la caravana y la pestaña Rutas del Mercado. */
 export function htmlRutaVisual(c: Caravana, k: Encargo, p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
@@ -82,7 +102,10 @@ export function htmlRutaVisual(c: Caravana, k: Encargo, p: ProyeccionJugador, a:
     t = Math.min(0.92, Math.max(0.08, t));
   }
   const vuelve = estado === 'retornando';
-  const fase = k.cancelado ? '✕ Cancelado: termina al volver' : textoSituacion(c, k, p).replace(/\.$/, '') || 'Parada';
+  let fase = k.cancelado ? '✕ Cancelado: termina al volver' : textoSituacion(c, k, p).replace(/\.$/, '') || 'Parada';
+  // Con la barra de tiempo debajo, la píldora no repite lo que queda.
+  const conBarra = c.estado === 'esperando' && (k.fase === 'carga' || k.fase === 'descarga') && Boolean(k.finPaso);
+  if (conBarra) fase = fase.replace(/ \([^)]*\)$/, '');
   const faseClase = k.cancelado ? 'cancelado' : enCamino ? 'camino' : k.fase === 'espera' ? 'espera' : 'trabajo';
   const aquiO = !enCamino && k.paradaActual === 'origen', aquiD = !enCamino && k.paradaActual === 'destino';
   const punta = (nombreTxt: string, rol: string, aqui: boolean, deOtro: boolean): string =>
@@ -102,6 +125,7 @@ export function htmlRutaVisual(c: Caravana, k: Encargo, p: ProyeccionJugador, a:
         <span class="obra-chip">${k.modo === 'ruta' ? '⇄ Ruta permanente' : '→ Envío de ida y vuelta'}</span>
         ${k.modo === 'ruta' ? `<span class="obra-chip" title="Vueltas completas">↻ ${k.vueltas} ${k.vueltas === 1 ? 'vuelta' : 'vueltas'}</span>` : ''}
       </div>
+      ${barraDePaso(c, k, p, e)}
       <div class="ruta-paradas">
         ${paradaEnFichas(`En ${a.nombre ?? 'el origen'}`, k.paradaOrigen, false, aquiO, e)}
         ${paradaEnFichas(`En ${nombrePlaza(p, k.destinoAsentamientoId)}`, k.paradaDestino, ajena, aquiD, e)}

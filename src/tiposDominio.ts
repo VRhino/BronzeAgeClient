@@ -374,6 +374,8 @@ export interface Encargo {
   /** Solo cuenta con la caravana `esperando`. */
   fase: 'espera' | 'descarga' | 'carga' | '';
   finPaso?: number;
+  /** Cuándo empezó la descarga o la carga en curso, si el motor lo manda; sin él, el cliente apunta cuándo la vio empezar. */
+  inicioPaso?: number;
   cancelado: boolean;
 }
 

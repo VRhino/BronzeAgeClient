@@ -485,7 +485,10 @@ function detalleFlota(c: Caravana, p: ProyeccionJugador, a: Asentamiento, reside
     const pestanas = puedeEncargo ? `<div class="asent-tabs asent-subtabs caravana-modos">${(['viaje', 'encargo'] as const).map((m) => `<button type="button" class="asent-tab${m === modo ? ' activo' : ''}" data-caravana-modo="${e(c.id)}:${m}" aria-pressed="${m === modo}">${m === 'viaje' ? 'Viaje' : 'Encargo'}</button>`).join('')}</div>` : '<strong class="heroe-sub">Viaje</strong>';
     abajo = `${pestanas}${modo === 'viaje' ? seccionViaje(c, p, a, almacen, capacidad, e) : htmlEncargo(c, p, a, reside, capacidad, true, e, true)}`;
   }
-  return `<div class="caravana-tarjeta flota-detalle ${e(estado)}">${cab}${chips}
+  // Lo que lleva, con ruta o sin ella (0.140.0, Víctor 2026-11-04): cada recurso con su cantidad.
+  const lleva = Object.entries(c.contenido ?? {}).filter(([, n]) => n >= 1);
+  const carga = lleva.length ? `<div class="aparcada-carga flota-lleva"><small>Lleva</small>${lleva.map(([r, n]) => `<span class="pacto-linea" title="${e(RECURSO_NOMBRE[r] ?? r)}"><i aria-hidden="true">${RECURSO_ICONO[r] ?? '📦'}</i><b>${Math.floor(n)}</b><small>${e(RECURSO_NOMBRE[r] ?? r)}</small></span>`).join('')}<small class="flota-lleva-total">${cargaDe(c)}${capacidad ? ` / ${capacidad}` : ''}</small></div>` : '';
+  return `<div class="caravana-tarjeta flota-detalle ${e(estado)}">${cab}${chips}${carga}
     ${carrosEnHuecos(c, a, editable, otras, almacen, carrosLleno, d, e)}
     ${escoltaEnHuecos(c, p, parada || (estado === 'esperando' && c.encargo?.paradaActual === 'origen') ? fuenteDeEscolta(p, a, reside) : null, d?.escoltaPts, e)}
     ${abajo}</div>`;
