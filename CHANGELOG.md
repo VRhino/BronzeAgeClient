@@ -3,6 +3,11 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.146.1] — 2026-11-04 · Detener ruta y cancelar encargo con el diálogo del juego · sin cambio de contrato
+
+Petición de Víctor (2026-11-04): «Detener ruta» y «Cancelar encargo» ya no sacan el `confirm` del navegador, sino el diálogo
+del juego (título, explicación, «Seguir» y el botón rojo de la acción).
+
 ## [0.146.0] — 2026-11-04 · Facción → Plazas: la barra sin letreros y con el almacén entero · sin cambio de contrato
 
 Petición de Víctor (2026-11-04):

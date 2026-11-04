@@ -9,6 +9,7 @@ import type { Asentamiento, Caravana, Encargo, ParadaEncargo } from '../tiposDom
 import { ritmoDelMundo, textoEnTiempoReal } from './estadoCliente';
 import type { Ejecutar } from './panelCarro';
 import { mostrar as mostrarAviso } from './avisos';
+import { confirmar } from './dialogo';
 
 type Escapar = (valor: string) => string;
 type Punta = 'origen' | 'destino';
@@ -326,12 +327,12 @@ export function cablearEncargo(raiz: HTMLElement, p: ProyeccionJugador, ejecutar
     repintar();
   }));
   raiz.querySelectorAll<HTMLButtonElement>('[data-enc-cancelar]').forEach((b) => b.addEventListener('click', () => {
-    if (!confirm('¿Cancelar el encargo? La caravana termina lo que esté haciendo y vuelve a su origen.')) return;
-    void lanzar(b, 'cancelarEncargo', { caravanaId: b.dataset.encCancelar! });
+    void confirmar('La caravana termina lo que esté haciendo y vuelve a su origen.', { titulo: '¿Cancelar el encargo?', aceptar: 'Cancelar el encargo', cancelar: 'Seguir', peligro: true })
+      .then((ok) => { if (ok) void lanzar(b, 'cancelarEncargo', { caravanaId: b.dataset.encCancelar! }); });
   }));
   raiz.querySelectorAll<HTMLButtonElement>('[data-enc-detener]').forEach((b) => b.addEventListener('click', () => {
-    if (!confirm('¿Detener la ruta? Si va de camino, acaba esta ida y vuelta comerciando y al volver se queda sin ruta; si está en el origen, se queda ya sin ella.')) return;
-    void lanzar(b, 'detenerEncargo', { caravanaId: b.dataset.encDetener! });
+    void confirmar('Si va de camino, acaba esta ida y vuelta comerciando y al volver se queda sin ruta; si está en el origen, se queda ya sin ella.', { titulo: '¿Detener la ruta?', aceptar: 'Detener la ruta', cancelar: 'Seguir', peligro: true })
+      .then((ok) => { if (ok) void lanzar(b, 'detenerEncargo', { caravanaId: b.dataset.encDetener! }); });
   }));
   // Según el modo y el destino: una ruta solo va a plazas tuyas, y los precios solo valen en una plaza ajena.
   raiz.querySelectorAll<HTMLElement>('[data-enc-form]').forEach((form) => {
