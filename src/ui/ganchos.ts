@@ -10,7 +10,7 @@ import { SUBPESTANA_PUERTA } from './panelPuerta';
 import { SUBPESTANA_GUARNICION } from './panelGuarnicion';
 import { SUBPESTANA_RESIDENCIA } from './panelResidencia';
 import { cablearFundacionDePlaza, htmlFundacionDePlaza } from './panelFundacionDePlaza';
-import { cablearTesoreria, htmlTesoreria } from './panelTesoreria';
+import { cablearTesoreria, htmlPoliticas } from './panelTesoreria';
 import { SUBPESTANA_INFORMACION } from './vistaCiudad';
 import { SUBPESTANA_TRUEQUES } from './panelTrueques';
 import { SUBPESTANA_MISIONES } from './misiones';
@@ -56,7 +56,7 @@ export const SUBPESTANAS_CENTRO_EXTRA: SubpestanaPlaza[] = [
   SUBPESTANA_RESIDENCIA,
 
   // --- hueco bloque A2 (plaza › Centro urbano: tesorero y caravana de fundación)
-  { id: 'tesoreria', etiqueta: 'Tesorería', html: htmlTesoreria, cablear: cablearTesoreria },
+  { id: 'tesoreria', etiqueta: 'Políticas', html: htmlPoliticas, cablear: cablearTesoreria },
   { id: 'fundacion', etiqueta: 'Fundación', html: htmlFundacionDePlaza, cablear: cablearFundacionDePlaza },
 
   // (las recetas van dentro de «Producción»; reabastecer a los aliados, al final de «Puerta»)

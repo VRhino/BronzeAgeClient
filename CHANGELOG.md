@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.147.0] — 2026-11-04 · Gobierno → Políticas, la reserva en el Almacén, la obra del mundo sin desbordar y «Lo que llevas» sin «Para enganchar» · sin cambio de contrato
+
+Petición de Víctor (2026-11-04, 15:54):
+
+- Gobierno: la pestaña «Tesorería» se llama «Políticas» y solo lleva las políticas de cargo, a la vista (sin plegar).
+- La reserva de recursos del Tesorero pasa a la ventana del Almacén, debajo de la extracción (`htmlReservaRecursos` en panelTesoreria.ts).
+- Mundo: la ficha de una obra de pueblo o aldea sin empezar se salía de su caja (280 de ancho): cada material va ahora en dos renglones,
+  nombre y cifra arriba, barra y lo que falta (con lo que lleva tu columna) abajo. Banco: `pruebas/hud/?obra=1&sinEmpezar=1`.
+- «Lo que llevas» ya no tiene el apartado «Para enganchar»; quedan las caravanas enganchadas a tu columna.
+
 ## [0.146.1] — 2026-11-04 · Detener ruta y cancelar encargo con el diálogo del juego · sin cambio de contrato
 
 Petición de Víctor (2026-11-04): «Detener ruta» y «Cancelar encargo» ya no sacan el `confirm` del navegador, sino el diálogo

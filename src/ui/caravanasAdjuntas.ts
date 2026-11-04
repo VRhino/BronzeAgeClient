@@ -109,30 +109,16 @@ function htmlEnganchada(p: ProyeccionJugador, col: Ejercito, c: Caravana, e: Esc
     ${entregas ? `<div class="cc-entregas">${entregas}</div>` : ''}</div>`;
 }
 
-function htmlSuelta(p: ProyeccionJugador, col: Ejercito, c: Caravana, e: Escapar): string {
-  const motivo = motivoParaEnganchar(p, col, c);
-  const donde = c.estado === 'aparcada' ? ' · aparcada en una plaza' : '';
-  return `<div class="ejercito-fila">
-    <div><strong>${c.titularId !== undefined ? `Caravana de Fundación ${e(c.id)}` : e(nombreDeCaravana(c))}</strong><span>${ESTADO[c.estado ?? 'disponible']}${donde} · lleva ${Math.floor(cargaTotal(c))} · a ${Math.round(distancia(c.posicionActual, col.posicionActual))} de ti</span></div>
-    <button class="btn-primary" type="button" data-cc="enganchar" data-caravana="${e(c.id)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>Enganchar</button>
-    ${motivo ? corto(motivo, e) : ''}</div>`;
-}
-
 /** El bloque «Caravanas» del panel «Lo que llevas»; vacío si no estás en una columna. */
 export function htmlCaravanasAdjuntas(p: ProyeccionJugador, e: Escapar): string {
   const col = p.ejercitos.find((c) => c.participantes.some((x) => x.heroeId === p.heroeId));
   if (!col) return '';
   const idsEnganchadas = col.caravanasAdjuntasIds ?? [];
   const enganchadas = idsEnganchadas.flatMap((id) => p.caravanas.find((c) => c.id === id) ?? []);
-  const sueltas = p.caravanas
-    .filter((c) => !idsEnganchadas.includes(c.id) && esDeMiFaccion(p, c))
-    .sort((a, b) => distancia(a.posicionActual, col.posicionActual) - distancia(b.posicionActual, col.posicionActual) || (a.id < b.id ? -1 : 1));
   return `
     <strong class="heroe-sub">Caravanas de tu columna${ayuda('caravanas:columna', `Una caravana enganchada viaja con la columna (a su velocidad y a su suerte: si el ejército cae, se pierde) y ya no la reparte el comercio automático: tú eliges qué carga y a quién entregas. Sale de tu flota de comercio mientras dure. Cualquiera que vaya en la columna puede gestionarlas. Solo se engancha una caravana suelta o aparcada, no una ya despachada.${enganchadas.length > 0 ? ` <br>Cargar: de una plaza de tu Facción a ${radioDeReabastecimiento()} o menos (su almacén solo se ve a su puerta; si no hay de eso, el servidor lo dice). Entregar: junto a la plaza que recibe, de lo que lleve la caravana (el menor entre lo cargado y lo que falta; el destino cobra su comisión). Cuánto cabe lo dice el servidor al cargar.` : ''}`)}</strong>
     ${enganchadas.length > 0 ? enganchadas.map((c) => htmlEnganchada(p, col, c, e)).join('') : '<p class="mapa-lista-vacia">Ninguna enganchada.</p>'}
     ${idsEnganchadas.length > enganchadas.length ? '<p class="asent-lado-nota">Alguna caravana enganchada no llega en tu proyección.</p>' : ''}
-    <strong class="heroe-sub">Para enganchar</strong>
-    ${sueltas.length > 0 ? sueltas.map((c) => htmlSuelta(p, col, c, e)).join('') : '<p class="mapa-lista-vacia">No tienes más caravanas de tu Facción.</p>'}
     <p class="faction-error" data-campo="error-caravanas" role="alert"></p>`;
 }
 

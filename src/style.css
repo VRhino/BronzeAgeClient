@@ -5484,7 +5484,13 @@ button.carro-hueco:hover, .carro-hueco.activo { border-color: var(--oro); box-sh
 .obra-entrega-total b { color: var(--oro-claro); font-size: 1rem; }
 .obra-entrega > .obra-barra { height: 9px; }
 .obra-entrega-filas { display: grid; gap: 5px; margin-top: 4px; }
-.obra-entrega-fila { display: grid; grid-template-columns: 22px minmax(56px, auto) 1fr auto auto; align-items: center; gap: 6px; font-size: 0.8rem; }
+/* 0.147.0: en dos renglones (nombre y cifra; barra y lo que falta), para que quepa en la ficha del mundo (280 de ancho) aunque no haya nada entregado */
+.obra-entrega-fila { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; grid-template-areas: "i n c" "i b f"; align-items: center; column-gap: 6px; row-gap: 2px; font-size: 0.8rem; }
+.obra-entrega-icono { grid-area: i; }
+.obra-entrega-nombre { grid-area: n; overflow: hidden; text-overflow: ellipsis; }
+.obra-entrega-cifra { grid-area: c; text-align: right; }
+.obra-entrega-barra { grid-area: b; min-width: 0; }
+.obra-entrega-falta { grid-area: f; justify-content: flex-end; }
 .obra-entrega-icono { font-size: 1rem; text-align: center; }
 .obra-entrega-nombre { color: var(--text-secondary); white-space: nowrap; }
 .obra-entrega-cifra b { color: var(--oro-claro); }
@@ -5590,3 +5596,5 @@ button.carro-hueco:hover, .carro-hueco.activo { border-color: var(--oro); box-sh
 .encargo-fila-recurso i { font-style: normal; }
 .encargo-quitar { padding: 2px 7px; font: inherit; color: var(--text-secondary); background: none; border: 1px solid var(--bronce-osc); border-radius: 3px; cursor: pointer; }
 .encargo-quitar:hover { color: #ffb3a8; border-color: var(--obra-rojo); }
+/* 0.147.0 · La reserva de recursos del Tesorero, en la ventana del Almacén (antes en Gobierno → Tesorería) */
+.almacen-reserva { display: grid; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(169, 121, 63, 0.25); }

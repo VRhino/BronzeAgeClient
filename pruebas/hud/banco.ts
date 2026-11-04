@@ -23,6 +23,7 @@ import { cablearPanelObras, htmlConstruir } from '../../src/ui/panelObras';
 import { cablearCaravanas, cablearRutas, htmlCaravanas, htmlRutas } from '../../src/ui/panelMercado';
 import { SUBPESTANA_GUARNICION } from '../../src/ui/panelGuarnicion';
 import { FICHA_OBRA } from '../../src/ui/pueblos';
+import { cablearTesoreria, htmlReservaRecursos } from '../../src/ui/panelTesoreria';
 import { htmlAutoConstruccion } from '../../src/ui/panelCentro';
 import { bloqueDeDatos, nivelesDeEdificio } from '../../src/apiCliente';
 import type { Edificio } from '../../src/tiposDominio';
@@ -88,16 +89,23 @@ if (qs.get('3d')) {
 }
 pintarAsentamiento(lienzo.getContext('2d')!, a, trazado, null, null, true);
 minimapa.fijarTrazado(trazado);
-// `?ventana=almacen`: la ventana del Almacén de verdad (elección de la barra, almacén, extracción y talleres), con la barra repintándose.
+// `?ventana=almacen`: la ventana del Almacén de verdad (elección de la barra, almacén, extracción, reserva y talleres), con la barra repintándose.
+// `&tesorero=1`: el héroe es el Tesorero, en la plaza, y calibra la reserva (0.147.0: la reserva pasó de Gobierno al Almacén).
 function pintarAlmacen(): void {
   const cuerpo = document.querySelector<HTMLElement>('.asent-edif-cuerpo');
   const pie = document.querySelector<HTMLElement>('.asent-pie')!;
   pie.innerHTML = htmlPieDePlaza(a, e);
   if (ventana !== 'almacen' || !cuerpo) return;
   const c = { proyeccion: p, asentamiento: a, cuerpo, ejecutar: async () => null, refrescar: pintarAlmacen, cargo: 'gobernador', resideAqui: true, escapar: e } as unknown as ContextoPlaza;
-  cuerpo.innerHTML = `<div class="cols-completa"><div class="col-completa">${htmlEleccionBarra(a, e)}${htmlExtraccion(c)}</div><div class="col-completa">${htmlRecetas(c)}</div></div>`;
+  if (qs.get('tesorero')) {
+    a.cargos = { ...(a.cargos ?? {}), tesoreroId: 'h' } as typeof a.cargos;
+    (p.heroe as { ubicacion: unknown }).ubicacion = { tipo: 'asentamiento', asentamientoId: a.id };
+    a.reservaManual = { madera: 200, trigo: 300 };
+  }
+  cuerpo.innerHTML = `<div class="cols-completa"><div class="col-completa">${htmlEleccionBarra(a, e)}${htmlExtraccion(c)}<div class="almacen-reserva">${htmlReservaRecursos(c)}</div></div><div class="col-completa">${htmlRecetas(c)}</div></div>`;
   cablearEleccionBarra(cuerpo, a, pintarAlmacen, (m) => alert(m));
   cablearProduccionYRecetas(c);
+  cablearTesoreria(c);
 }
 pintarAlmacen();
 // `?ventana=caravanas`: la vista de flota de verdad (`htmlCaravanas`) con una flota de mentira: una en la plaza, una de camino, una en una aldea.
@@ -268,15 +276,19 @@ if (ventana === 'defensa') {
   }
   pintarDefensa();
 }
-// `?obra=1`: la ficha de una obra de pueblo en el mapa (0.138.0), con la columna al lado llevando parte de lo que falta.
+// `?obra=1`: la ficha de una obra de pueblo en el mapa (0.138.0), con la columna al lado llevando parte de lo que falta. `&sinEmpezar=1`: sin nada
+// entregado y en la caja de verdad del mundo (`.mapa-seleccion`, 280 de ancho), donde se desbordaba (0.147.0).
 if (qs.get('obra')) {
   const q = p as unknown as Record<string, unknown>;
-  const o = { id: 'obra-1', tipo: 'pueblo', madreId: a.id, propia: true, posicion: { x: a.posicion.x + 40, y: a.posicion.y }, requerido: { madera: 400, piedra: 250, trigo: 120 }, entregado: { madera: 400, piedra: 90 } };
+  const sinEmpezar = Boolean(qs.get('sinEmpezar'));
+  const o = { id: 'obra-1', tipo: 'pueblo', madreId: a.id, propia: true, posicion: { x: a.posicion.x + 40, y: a.posicion.y },
+    requerido: sinEmpezar ? { madera: 1200, piedra: 800, trigo: 600, cobre: 250, estano: 60 } : { madera: 400, piedra: 250, trigo: 120 },
+    entregado: sinEmpezar ? {} : { madera: 400, piedra: 90 } };
   q.ejercitos = [{ id: 'ej-1', liderId: 'h', participantes: [{ heroeId: 'h' }], posicionActual: o.posicion, suministro: { piedra: 200, trigo: 40 } }];
   q.heroe = { ...(p.heroe as object), ubicacion: { tipo: 'ejercito', ejercitoId: 'ej-1' } };
   const caja = document.createElement('div');
-  caja.className = 'mapa-panel';
-  caja.style.cssText = 'position:absolute;right:20px;top:120px;width:360px;z-index:50;padding:14px';
+  caja.className = sinEmpezar ? 'mapa-seleccion' : 'mapa-panel';
+  caja.style.cssText = sinEmpezar ? 'z-index:50' : 'position:absolute;right:20px;top:120px;width:360px;z-index:50;padding:14px';
   caja.innerHTML = FICHA_OBRA.html(p, o as never, { escapar: e } as never);
   document.body.append(caja);
 }

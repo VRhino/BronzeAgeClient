@@ -70,6 +70,7 @@ import { invalidar, olvidarEdicion, pintar, vaciar } from './ui/repintado';
 import { ayuda } from './ui/ayuda';
 import { htmlInformeDeInspeccion } from './ui/interaccionAjena';
 import { cablearPanelObras, htmlConstruir, minutosDeObra } from './ui/panelObras';
+import { cablearTesoreria, htmlReservaRecursos } from './ui/panelTesoreria';
 import { cablearProduccionYRecetas, cablearVistaCiudad, edificioSeleccionado, elegirEdificio, htmlExtraccion, htmlRecetas, htmlTooltipEdificio, repintarFicha } from './ui/vistaCiudad';
 import { campamentoEnVista } from './ciudad3d/campamento';
 import { puebloEnVista } from './ciudad3d/pueblo';
@@ -2305,7 +2306,7 @@ function contenidoDeVentana(v: VentanaPlaza, c: ContextoPlaza, ajena: boolean): 
       // no se pinta como ventana: es el cajón del riel (`htmlCajonConstruir`)
       return { ...base, html: '', cablear: () => undefined };
     case 'gobierno': {
-      // Cargos (con los residentes debajo), Tesorería y lo que se añada sin sitio
+      // Cargos (con los residentes debajo), Políticas (la subpestaña 'tesoreria') y lo que se añada sin sitio
       const otras = [extra('tesoreria'), ...SUBPESTANAS_CENTRO_EXTRA.filter((s) => !EXTRAS_CON_SITIO.has(s.id) && (s.visible?.(c) ?? true))].filter((s): s is SubpestanaPlaza => Boolean(s));
       const subs: [string, string][] = [['cargos', 'Cargos'], ...otras.map((s) => [s.id, s.etiqueta] as [string, string])];
       const sub = elegir(subs);
@@ -2319,13 +2320,15 @@ function contenidoDeVentana(v: VentanaPlaza, c: ContextoPlaza, ajena: boolean): 
     case 'defensa': return deExtras(['guarnicion', 'muralla', 'puerta']);
     case 'territorio': return { ...deExtras(ajena ? ['pueblos'] : ['pueblos', 'fundacion'], { pueblos: 'Pueblos y aldeas' }), avisos: !ajena && fundacionListaEn(p, a) ? ['fundacion'] : [] };
     case 'almacen':
-      // a pantalla completa: qué va en la barra de arriba, el almacén con su neto por minuto y la extracción a la izquierda; los talleres a la derecha
+      // a pantalla completa: qué va en la barra de arriba, el almacén con su neto por minuto, la extracción y la reserva de recursos del Tesorero
+      // a la izquierda (la reserva vino de Gobierno → Tesorería, Víctor 2026-11-04); los talleres a la derecha
       return {
         titulo: 'Almacén', icono: iconoEdificio('almacen', 28), subs: [], sub: '', ancho: 'completa',
-        html: `<div class="cols-completa"><div class="col-completa">${htmlEleccionBarra(a, escaparHtml)}${htmlExtraccion(c)}</div><div class="col-completa">${htmlRecetas(c)}</div></div>`,
+        html: `<div class="cols-completa"><div class="col-completa">${htmlEleccionBarra(a, escaparHtml)}${htmlExtraccion(c)}<div class="almacen-reserva">${htmlReservaRecursos(c)}</div></div><div class="col-completa">${htmlRecetas(c)}</div></div>`,
         cablear: () => {
           cablearEleccionBarra(cuerpo, a, () => { renderPieDePlaza(); renderPanelEdificios(); }, (m) => mostrarAviso(m, true));
           cablearProduccionYRecetas(c);
+          cablearTesoreria(c);
         },
       };
     case 'reclutamiento':

@@ -1,4 +1,4 @@
-// Subpestaña «Tesorería» de Centro urbano (Doc 4.2 y 4.4): la RESERVA de recursos del Tesorero (`calibrarReservaManual`) y las POLÍTICAS de cargo (`activarPolitica`).
+// La RESERVA (en la ventana del Almacén) y las POLÍTICAS (pestaña «Políticas» de Gobierno) de la antigua Tesorería (Doc 4.2 y 4.4): la RESERVA de recursos del Tesorero (`calibrarReservaManual`) y las POLÍTICAS de cargo (`activarPolitica`).
 // Reserva: lo que la auto-construcción no puede tocar, 0-999 por recurso; solo el Tesorero residente y presente la calibra. Políticas: cada cargo activa las de su pool
 // (el Gobernador, cualquiera); duran un plazo fijo, no se cancelan, y el cargo tiene un número limitado de slots. El catálogo, los slots y la duración salen del balance;
 // el servidor valida y su rechazo sale flotando.
@@ -65,7 +65,7 @@ function chipsEfecto(def: PoliticaDelCatalogo, e: (s: string) => string): string
  * reserva (lo que la auto-construcción no toca). Políticas: cada cargo con su emblema, sus slots en casillas, lo que tiene en vigor con la barra de lo
  * que le queda y, si es el tuyo, las que puede activar como cartas con sus efectos en chips (verde favorece, rojo castiga).
  */
-export function htmlTesoreria(c: ContextoPlaza): string {
+export function htmlReservaRecursos(c: ContextoPlaza): string {
   const { proyeccion: p, asentamiento: a, resideAqui: reside, escapar: e } = c;
   const presente = p.heroe.ubicacion.tipo === 'asentamiento' && p.heroe.ubicacion.asentamientoId === a.id;
   const puede = reside && presente;
@@ -104,6 +104,15 @@ export function htmlTesoreria(c: ContextoPlaza): string {
       ${cambios ? '<button class="puerta-deshacer" type="button" data-reserva-descartar>Descartar</button>' : ''}
       <button class="reserva-guardar" type="button" data-reserva-guardar${cambios ? '' : ' disabled'}>🔒 Guardar${cambios ? ` (${cambios})` : ''}</button></div>` : ''}`;
 
+  return reserva;
+}
+
+/** Políticas de cargo, en la pestaña «Políticas» de Gobierno (Víctor, 2026-11-04: la reserva pasó al Almacén). */
+export function htmlPoliticas(c: ContextoPlaza): string {
+  const { proyeccion: p, asentamiento: a, resideAqui: reside, escapar: e } = c;
+  const presente = p.heroe.ubicacion.tipo === 'asentamiento' && p.heroe.ubicacion.asentamientoId === a.id;
+  const puede = reside && presente;
+  const motivo = !reside ? 'Solo quien reside en esta plaza' : !presente ? 'Tienes que estar en la plaza' : '';
   const datos = catalogoDePoliticas(c.refrescar);
   let politicas = '';
   if (!datos) politicas += '<p class="asent-lado-nota">Cargando el catálogo de políticas…</p>';
@@ -152,10 +161,10 @@ export function htmlTesoreria(c: ContextoPlaza): string {
         ${enVigor ? `<div class="politica-cartas">${enVigor}</div>` : ''}${ofrecidas}</div>`;
     }).join('');
   }
-  const enVigor = (a.politicasActivas ?? []).length;
-  return `${reserva}${plegable(`tesoreria-politicas:${a.id}`, `Políticas de cargo · ${enVigor ? `${enVigor} en vigor` : 'ninguna en vigor'}`, politicas)}`;
+  return politicas;
 }
 
+/** Cablea la reserva y las políticas (cada una solo encuentra lo suyo en la ventana que la pinta). */
 export function cablearTesoreria(c: ContextoPlaza): void {
   const lanzar = async (boton: HTMLButtonElement, tipo: string, params: object): Promise<void> => {
     boton.disabled = true;
