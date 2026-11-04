@@ -3,6 +3,15 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.136.1] — 2026-11-04 · Tras cerrar sesión y volver a entrar se pide otra vez la VISTA · sin cambio de contrato
+
+Caso de Víctor (2026-11-04): Víctor no veía en el mundo a Jorge, de su misma Facción, aunque pasaba a su lado; Jorge sí lo veía a él. Con una
+copia de la partida (`partidas/mundo3d`) el motor manda bien la columna de Jorge a la sesión de Víctor (por la VISTA, en cuanto sale del
+campamento). El fallo era del cliente: la VISTA se pedía una vez por héroe en toda la vida de la página (`vistaPedidaPara`) y no por sesión.
+Víctor había cerrado sesión y vuelto a entrar sin recargar: la sesión nueva nunca pidió su VISTA, y sin ella solo llegaba lo propio (su héroe,
+su columna y lo de su Facción), nada de las demás columnas. Pasaba igual al cambiar de partida y volver, o al retomar una pestaña reemplazada.
+Ahora se pide una vez por cada `Sesion` y héroe.
+
 ## [0.136.0] — 2026-11-04 · Caravanas: mover un carro, la lista por disponibles y el «!» de Fundación · sin cambio de contrato
 
 Petición de Víctor (2026-11-04):
