@@ -516,16 +516,19 @@ export function proyeccionAlInstante(base?: ProyeccionJugador | null): Proyeccio
 export async function consultarProyeccion(_gameId: string): Promise<ProyeccionJugador | PartidaSinHeroe> {
   const s = await sesionAbierta();
   await esperarHeroe(s);
-  // La VISTA la pide el cliente (en el REST venía sola): en cuanto hay héroe, una vez por héroe. La sesión la vuelve a pedir al reconectar.
+  // La VISTA la pide el cliente (en el REST venía sola): en cuanto hay héroe, una vez por sesión y héroe. La sesión la vuelve a pedir al reconectar.
   const heroe = [...s.almacen.ambitos.keys()].find((k) => k.startsWith('HEROE:'));
-  if (heroe && vistaPedidaPara !== heroe) {
-    vistaPedidaPara = heroe;
+  if (heroe && (vistaPedida?.sesion !== s || vistaPedida.heroe !== heroe)) {
+    vistaPedida = { sesion: s, heroe };
     pedirVistaEntera(s);
   }
   return proyeccionActual(s);
 }
 
-let vistaPedidaPara: string | null = null;
+/** La sesión y el héroe para los que ya se pidió la VISTA. Va con la sesión y no solo con el héroe: al cerrar sesión y volver a entrar con la
+ * misma cuenta, al cambiar de partida o al retomar una pestaña reemplazada nace otra `Sesion`, que no sabe nada de la vista de la anterior;
+ * hasta la 0.136.2 no se le pedía y el jugador se quedaba sin VISTA (sin ver a nadie más en el mundo, ni a los de su Facción, Víctor 2026-11-04). */
+let vistaPedida: { sesion: Sesion; heroe: string } | null = null;
 
 /** La VISTA del mundo entero: el servidor filtra por la niebla, así que pedir todo el rectángulo es lo que hacía el REST. */
 function pedirVistaEntera(s: Sesion): void {
