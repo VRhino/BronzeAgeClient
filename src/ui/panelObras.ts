@@ -143,6 +143,7 @@ export function htmlConstruir(a: Asentamiento, cargo: Cargo, esc: Escapar): stri
     const titulo = `${nombreDe(t)}${costeTexto ? ` · ${costeTexto}` : ''}${tiempo}${caro ? ' · No hay bastante en el almacén' : ''}`;
     return `<button class="obra-construir${caro ? ' caro' : ''}" type="button" data-construir="${esc(t)}" title="${esc(titulo)}" aria-label="${esc(titulo)}">
       <span class="obra-construir-icono">${iconoEdificio(t, 30)}</span>
+      <span class="obra-construir-nombre">${esc(nombreDe(t))}</span>
       <span class="obra-construir-coste">${chipsDeCoste(a, coste, esc, 2)}</span>
     </button>`;
   });

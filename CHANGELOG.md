@@ -3,6 +3,11 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.133.0] — 2026-11-04 · El nombre de cada edificio en el cajón de Construcción · sin cambio de contrato
+
+Petición de Víctor (2026-11-04): en cada botón del cajón de Construcción de la plaza, entre el icono y el coste, el nombre del edificio
+(hasta dos líneas; la rejilla pasa de 70 a 84 px por botón para que quepa).
+
 ## [0.132.0] — 2026-11-04 · La ventana Ejército del mundo · sin cambio de contrato
 
 Petición de Víctor (2026-11-04):

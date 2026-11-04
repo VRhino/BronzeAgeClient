@@ -3809,6 +3809,9 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .obra-construir:hover { border-color: var(--oro); box-shadow: 0 0 0 1px var(--oro), 0 0 12px rgba(232, 190, 100, 0.4); transform: translateY(-1px); }
 .obra-construir:active { transform: translateY(0); }
 .obra-construir-icono { display: flex; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6)); }
+/* el nombre entre el icono y el coste (0.133.0, Víctor 2026-11-04): hasta dos líneas */
+.obra-construir-nombre { max-width: 100%; font-size: 0.66rem; line-height: 1.15; text-align: center; color: var(--pergamino); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.obra-construir.apagado .obra-construir-nombre { color: inherit; }
 .obra-construir-coste { display: flex; flex-wrap: wrap; justify-content: center; gap: 1px 3px; min-height: 14px; }
 .obra-coste { font-size: 0.64rem; line-height: 1.2; color: var(--pergamino); white-space: nowrap; }
 .obra-coste.falta { color: var(--obra-rojo); }
@@ -5317,7 +5320,7 @@ body:has(.eleccion-clic) .aviso-global { visibility: hidden; }
 .cajon-construir-cuerpo { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 10px 6px; }
 .cajon-construir-cuerpo .obra-grupos { position: sticky; top: 0; z-index: 1; background: rgba(26, 19, 12, 0.98); }
 .cajon-construir-cuerpo .obra-grupo { flex: 0 1 92px; }
-.cajon-construir-cuerpo .obra-construir-rejilla { margin-bottom: 0; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); }
+.cajon-construir-cuerpo .obra-construir-rejilla { margin-bottom: 0; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
 @media (max-height: 820px) { .plaza-3d.construyendo { --riel-alto: 184px; } }
 @media (max-width: 600px) {
   .plaza-3d.construyendo { --riel-alto: 230px; }
