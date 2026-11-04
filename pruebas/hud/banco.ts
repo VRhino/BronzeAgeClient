@@ -23,6 +23,7 @@ import { cablearPanelObras, htmlConstruir } from '../../src/ui/panelObras';
 import { cablearCaravanas, cablearRutas, htmlCaravanas, htmlRutas } from '../../src/ui/panelMercado';
 import { SUBPESTANA_GUARNICION } from '../../src/ui/panelGuarnicion';
 import { FICHA_OBRA } from '../../src/ui/pueblos';
+import { ahora as ahoraJuego } from '../../src/ui/juegoVisual';
 import { cablearTesoreria, htmlReservaRecursos } from '../../src/ui/panelTesoreria';
 import { htmlAutoConstruccion } from '../../src/ui/panelCentro';
 import { bloqueDeDatos, nivelesDeEdificio } from '../../src/apiCliente';
@@ -43,6 +44,11 @@ const RIEL: [string, string, string, boolean?][] = [
   ['taberna', 'Taberna', iconoEdificio('taberna', 28), true], ['mercado', 'Mercado', iconoEdificio('mercado', 28)],
 ];
 const ventana = new URLSearchParams(location.search).get('ventana');
+// `?obrasMapa=1`: «Obras» del panel izquierdo con una aldea esperando materiales y un pueblo levantándose (0.149.0).
+const obrasMapa = (): never[] => new URLSearchParams(location.search).get('obrasMapa') ? [
+  { id: 'obra-7', tipo: 'aldea', madreId: a.id, propia: true, posicion: a.posicion, requerido: { madera: 300, trigo: 200 }, entregado: { madera: 300, trigo: 40 } },
+  { id: 'obra-8', tipo: 'pueblo', madreId: a.id, propia: true, posicion: a.posicion, requerido: { madera: 400 }, entregado: { madera: 400 }, terminaEn: ahoraJuego() + 26 * 60_000 },
+] as never[] : [];
 
 const binario = new Uint8Array(await (await fetch(new URL('../ciudad3d/ciudades/ciudad.bin', import.meta.url).href)).arrayBuffer());
 const { asentamiento: a, trazado } = plazaDeContrato(fromBinary(AsentamientoSchema, binario), 16 * 24 * 3_600_000);
@@ -64,7 +70,7 @@ document.getElementById('app')!.innerHTML = `<div class="asent-screen plaza-3d${
     <div class="asent-centro"><div class="asent-mapa asent-mapa-3d"><div class="ciudad3d-escena"></div></div></div>
     <aside class="asent-izq">
       <div class="asent-blason">${htmlBlasonHud({ nombre: a.nombre ?? 'Pesinunte', faccion: 'Casa de Micenas', escudo: svgSigilo(undefined, 64), nivel: a.nivel, renombrar: true, editando: false, residencia: 'dentro', capital: 'si', abierto: null, ascenso: new URLSearchParams(location.search).get('ascenso') === 'listo' ? 'listo' : 'abrir' }, e)}</div>
-      <div class="asent-obras-hud">${htmlObrasHud(a, e, true)}</div>
+      <div class="asent-obras-hud">${htmlObrasHud(a, e, true, obrasMapa())}</div>
     </aside>
     <aside class="asent-der">${new URLSearchParams(location.search).get('ficha') ? '' : '<div class="misiones-rastreador" style="padding:10px;border:1px solid var(--bronce);background:rgba(18,13,8,.9);color:var(--pergamino)">Misiones 3/3</div>'}</aside>
     <div class="asent-pie">${htmlPieDePlaza(a, e)}</div>
@@ -194,7 +200,7 @@ const elegirParaFicha = (): void => {
   elegirEdificio(elegido.id);
   pintarObras();
 };
-const pintarObras = (): void => { document.querySelector<HTMLElement>('.asent-obras-hud')!.innerHTML = htmlObrasHud(a, e, true); };
+const pintarObras = (): void => { document.querySelector<HTMLElement>('.asent-obras-hud')!.innerHTML = htmlObrasHud(a, e, true, obrasMapa()); };
 const alCargar = (): void => { if (bloqueDeDatos('EDIFICIO_CATALOGO', alCargar)) { pintarObras(); if (construir) pintarCajon(); elegirParaFicha(); repintarFicha(); } };
 alCargar();
 // `?camp=…`: el campamento de mercenarios al empezar la partida, con el riel de verdad (`seccionesDeCampamento`) y el ancho de verdad de cada parte

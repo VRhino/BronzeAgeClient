@@ -4,7 +4,7 @@
 // del nivel, que abre la subida. Debajo del blasón, las obras en marcha. Abajo, el riel de iconos de las ventanas de la
 // plaza (0.104.0). Arriba al centro, la franja de la ocupación militar. Aquí está el HTML y su cableado; quien lo pinta y ejecuta los comandos es `main.ts`.
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
-import type { Asentamiento } from '../tiposDominio';
+import type { Asentamiento, ObraDeMapa } from '../tiposDominio';
 import { iconoEdificio } from './iconosEdificio';
 import { ahora, barraAvance, cuentaAtras, medallonNivel, miles, tonoDe, type Tono } from './juegoVisual';
 import { avanceDeObra } from './panelObras';
@@ -287,13 +287,28 @@ export function htmlOcupacion(a: Asentamiento): string {
 /** El panel de obras bajo el blasón (0.109.0: sustituye a «Obras» de Construcción). Arriba lo que está en obra, cada una con su barra de avance y
  * lo que le falta (las 4 que antes acaban; el resto, en un «N más»); debajo, la cola en casillas numeradas por orden de arranque. Quien puede
  * tocarla (Gobernador o Maestro de Obras, `puedeTocar`) ve ◀ ✕ ▶ en cada casilla; los demás, solo la cola. Vacío sin obras. */
-export function htmlObrasHud(a: Asentamiento, esc: Escapar, puedeTocar = false): string {
+/** Las obras de pueblo y de aldea de la plaza que salen en «Obras» del panel izquierdo (Víctor, 2026-11-04). */
+const OBRA_MAPA: Partial<Record<ObraDeMapa['tipo'], [string, string]>> = { pueblo: ['⛏️', 'Pueblo'], aldea: ['🌾', 'Aldea agrícola'], mejoraAldea: ['⬆️', 'Mejora de aldea'] };
+
+function filaObraMapa(o: ObraDeMapa, esc: Escapar): string {
+  const [icono, nombre] = OBRA_MAPA[o.tipo] ?? ['🔨', 'Obra'];
+  const pedido = Object.values(o.requerido).reduce((t, n) => t + n, 0);
+  const hecho = Object.entries(o.requerido).reduce((t, [r, n]) => t + Math.min(n, o.entregado[r] ?? 0), 0);
+  const avance = pedido > 0 ? hecho / pedido : 1;
+  const levantando = o.terminaEn !== undefined;
+  return `<div class="obras-hud-fila obras-hud-mapa"><span class="obras-hud-icono" aria-hidden="true">${icono}</span>`
+    + `<span class="obras-hud-texto"><span class="obras-hud-linea"><strong>${esc(nombre)}</strong><b class="obras-hud-falta">${levantando ? cuentaAtras(o.terminaEn!) : `${Math.floor(avance * 100)} %`}</b></span>`
+    + `<small>${levantando ? 'Levantándose en el mapa' : 'Esperando materiales en el mapa'}</small>${barraAvance(levantando ? null : avance)}</span></div>`;
+}
+
+export function htmlObrasHud(a: Asentamiento, esc: Escapar, puedeTocar = false, obrasDeMapa: readonly ObraDeMapa[] = []): string {
+  const deMapa = obrasDeMapa.filter((o) => o.madreId === a.id && o.propia && OBRA_MAPA[o.tipo]).sort((x, y) => (x.terminaEn ?? Infinity) - (y.terminaEn ?? Infinity));
   const enMarcha = a.edificios.flatMap((e) => {
     const fin = e.mejora?.completaEn ?? (e.estado === 'en_construccion' ? e.completaEn : undefined);
     return typeof fin === 'number' ? [{ e, fin, que: e.mejora ? `Mejora a nivel ${e.mejora.nivelObjetivo}` : e.danado ? 'Reparación' : 'Obra nueva' }] : [];
   }).sort((x, y) => x.fin - y.fin);
   const esperan = a.edificios.filter((e) => e.estado === 'en_cola').sort((x, y) => (y.prioridad ?? 0) - (x.prioridad ?? 0));
-  if (!enMarcha.length && !esperan.length) return '';
+  if (!enMarcha.length && !esperan.length && !deMapa.length) return '';
   const filas = enMarcha.slice(0, 4).map(({ e, fin, que }) => `<div class="obras-hud-fila"><span class="obras-hud-icono">${iconoEdificio(e.tipo, 22)}</span>`
     + `<span class="obras-hud-texto"><span class="obras-hud-linea"><strong>${esc(EDIFICIO_NOMBRE[e.tipo] ?? e.tipo)}</strong><b class="obras-hud-falta">${cuentaAtras(fin)}</b></span>`
     + `<small>${que}</small>${barraAvance(avanceDeObra(a, e))}</span></div>`).join('');
@@ -302,8 +317,9 @@ export function htmlObrasHud(a: Asentamiento, esc: Escapar, puedeTocar = false):
     + `<span class="obras-hud-n">${i + 1}</span>${iconoEdificio(e.tipo, 22)}`
     + (puedeTocar ? `<span class="obras-hud-ctl"><button type="button" data-cola-mover="arriba" data-edificio="${esc(e.id)}" title="Antes" aria-label="Antes"${i === 0 ? ' disabled' : ''}>◀</button><button type="button" data-cola-quitar="${esc(e.id)}" title="Quitar de la cola" aria-label="Quitar">✕</button><button type="button" data-cola-mover="abajo" data-edificio="${esc(e.id)}" title="Después" aria-label="Después"${i === esperan.length - 1 ? ' disabled' : ''}>▶</button></span>` : '')
     + '</div>').join('');
-  return `<div class="obras-hud"><span class="obras-hud-cab">Obras${enMarcha.length ? ` · ${enMarcha.length} en marcha` : ''}</span>${filas}${mas}`
+  return `<div class="obras-hud">${enMarcha.length || esperan.length ? `<span class="obras-hud-cab">Obras${enMarcha.length ? ` · ${enMarcha.length} en marcha` : ''}</span>` : ''}${filas}${mas}`
     + (esperan.length ? `<span class="obras-hud-cab obras-hud-cab-cola">En cola · ${esperan.length}</span><div class="obras-hud-cola">${casillas}</div>` : '')
+    + (deMapa.length ? `<span class="obras-hud-cab obras-hud-cab-cola">Pueblos y aldeas · ${deMapa.length}</span>${deMapa.map((o) => filaObraMapa(o, esc)).join('')}` : '')
     + '</div>';
 }
 

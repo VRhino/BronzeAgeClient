@@ -2221,8 +2221,8 @@ function renderPanelEdificios(): void {
   const cargo = cargoConstructor(a, p.heroeId);
   const obras = document.querySelector<HTMLElement>('.asent-obras-hud');
   if (obras) {
-    // las obras en marcha con su barra y la cola; quien tiene cargo la ordena desde aquí
-    const html = ajena ? '' : htmlObrasHud(a, escaparHtml, Boolean(cargo));
+    // las obras en marcha con su barra y la cola (quien tiene cargo la ordena desde aquí) y, debajo, las de sus pueblos y aldeas en el mapa
+    const html = ajena ? '' : htmlObrasHud(a, escaparHtml, Boolean(cargo), p.obrasDeMapa ?? []);
     obras.hidden = !html;
     pintar(obras, html, () => cablearAccionesAsentLado(obras, a, cargo), 'obras');
   }

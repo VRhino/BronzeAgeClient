@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.149.0] — 2026-11-04 · El mapa a toda la ventana y las obras de pueblos y aldeas en «Obras» · sin cambio de contrato
+
+Petición de Víctor (2026-11-04, 17:54):
+
+- El mapa «desde dentro» (botón Mapa) ocupa toda la ventana, encima de la barra y del HUD; antes dejaba la franja de la barra. Se cierra con «Volver».
+- «Obras» del panel izquierdo de la plaza, debajo del blasón, enseña también las obras de sus pueblos y aldeas agrícolas en el mapa: esperando
+  materiales (con lo entregado en %) o levantándose (con lo que le falta). Banco: `pruebas/hud/?obrasMapa=1`.
+
 ## [0.148.0] — 2026-11-04 · Cupos de plazas por nivel en la Facción y avanzadas desde la plaza · contrato del motor 2484be46
 
 Peticiones de Víctor (2026-11-04), con el motor 2484be46 (contrato 0.14.0; hace falta partida nueva):

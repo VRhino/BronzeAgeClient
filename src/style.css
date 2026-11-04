@@ -2765,10 +2765,11 @@ kbd {
 .jugador-panel > * { flex-shrink: 0; }
 
 /* Mapa «desde dentro»: el mismo mapa del mundo, solo para mirar, encima de la plaza o del campamento. */
+/* 0.149.0: a toda la ventana, encima de la barra y del HUD (dejaba la franja de la barra y se veía mal); se cierra con «Volver». */
 .mapa-interior {
-  top: var(--jugador-alto);
-  height: calc(100vh - var(--jugador-alto));
-  z-index: 4;
+  top: 0;
+  height: 100vh;
+  z-index: 40;
 }
 .mapa-interior-cerrar { position: absolute; top: 14px; left: 16px; z-index: 3; }
 
