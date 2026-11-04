@@ -88,7 +88,7 @@ function pintar(): void {
   const pestana = new URLSearchParams(location.search).get('pestana') ?? 'diplomacia';
   const pestanas = `<nav class="faccion-pestanas" role="tablist">${PESTANAS_FACCION.map(([id, nombre]) => `<button type="button" class="faccion-pestana${id === pestana ? ' activo' : ''}">${nombre}</button>`).join('')}</nav>`;
   const cuerpo = pestana === 'plazas' ? renderPestanaFaccion(p, e, 'plazas', '', true) : pestana === 'tecnologia' ? `<section class="faccion-tecnologia">${htmlTecnologia(p, e, false)}</section>` : renderPestanaFaccion(p, e, 'diplomacia', '', true);
-  panel.innerHTML = `<div class="faccion-cabecera"><div class="mapa-panel-jugador">Facción</div><button class="btn-secondary" type="button">Cerrar</button></div><div class="faccion-marco">${htmlLateralFaccion(p, e)}<div class="faccion-principal">${pestanas}<div class="faccion-cuerpo${pestana === 'diplomacia' ? ' faccion-cuerpo-diplomacia' : ''}">${cuerpo}</div></div></div>`;
+  panel.innerHTML = `<div class="faccion-cabecera"><div class="mapa-panel-jugador">Facción</div><button class="btn-secondary" type="button">Cerrar</button></div><div class="faccion-marco">${htmlLateralFaccion(p, e)}<div class="faccion-principal">${pestanas}<div class="faccion-cuerpo${pestana === 'diplomacia' ? ' faccion-cuerpo-diplomacia' : pestana === 'plazas' ? ' faccion-cuerpo-ancho' : ''}">${cuerpo}</div></div></div>`;
   cablearPlazasFaccion(panel, pintar);
 }
 pintar();

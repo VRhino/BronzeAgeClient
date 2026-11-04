@@ -1,9 +1,10 @@
 import { bloqueDeDatos, type ProyeccionJugador } from '../apiCliente';
 import type { Asentamiento, Faccion, Sigilo } from '../tiposDominio';
-import { EDIFICIO_NOMBRE } from '../paletas';
+import { EDIFICIO_NOMBRE, RECURSO_NOMBRE } from '../paletas';
+import { grupo, htmlPieDePlaza, pieza } from './hudPlaza';
 import { iconoEdificio } from './iconosEdificio';
 import { iconoTropa } from './iconosTropa';
-import { ahora, barraAvance, cuentaAtras } from './juegoVisual';
+import { ahora, barraAvance, cuentaAtras, miles } from './juegoVisual';
 import { avanceDeObra } from './panelObras';
 import { nombreDeTropa } from './ejercitos';
 import { fichaRecurso, recursosDelAlmacen } from './vistaCiudad';
@@ -127,39 +128,34 @@ export function htmlLateralFaccion(proyeccion: ProyeccionJugador, e: (valor: str
 const plazasAbiertas = new Set<string>();
 let plazasTocadas = false;
 
-/** Un medidor 0-100 en pequeño: icono, barra y cifra, en rojo por debajo de 50 y ámbar por debajo de 80. */
-function medidor(icono: string, nombre: string, valor: number | undefined, nota: string, e: (v: string) => string): string {
-  if (valor === undefined) return '';
-  const v = Math.max(0, Math.min(100, valor));
-  const clase = v < 50 ? ' mal' : v < 80 ? ' regular' : '';
-  return `<span class="fplaza-medidor${clase}" title="${e(`${nombre}: ${Math.round(v)} de 100${nota ? ` · ${nota}` : ''}`)}"><span aria-hidden="true">${icono}</span><span class="fplaza-medidor-barra"><i style="width:${v.toFixed(1)}%"></i></span><strong>${Math.round(v)}</strong></span>`;
-}
-
 /** Lo de dentro de una plaza propia vista desde fuera (motor 5776ab69): chips de estado arriba y, desplegado, almacén por minuto, obras y guarnición. */
 function htmlInteriorPlaza(p: ProyeccionJugador, a: Asentamiento, abierta: boolean, e: (v: string) => string): { chips: string; detalle: string } {
   const pob = a.poblacion;
-  const total = pob ? Math.floor(pob.pesants) + Math.floor(pob.artesanos) + Math.floor(pob.nobleza) : 0;
   const obras = (a.edificios ?? []).filter((x) => x.estado === 'en_construccion' || x.mejora);
   const parados = (a.edificios ?? []).filter((x) => x.estado === 'activo' && x.pausadoPorAlmacenLleno).length;
   const danados = (a.edificios ?? []).filter((x) => x.danado).length;
   const recursos = recursosDelAlmacen(a);
   const bajan = recursos.filter(([, x]) => (x.porMinuto ?? 0) < 0 && !(x.capacidad > 0 && x.cantidad >= x.capacidad)).length;
-  const llenos = recursos.filter(([, x]) => x.capacidad > 0 && x.cantidad >= x.capacidad).length;
   const escuadras = a.guarnicionIds?.length ?? 0;
   const ascenso = a.ascenso;
-  const chips = [
-    medidor('🛠', 'Mantenimiento', a.medidorMantenimiento, a.nivelActual !== undefined && a.nivelActual < a.nivel ? `rinde como nivel ${a.nivelActual}` : '', e),
-    medidor('🍞', 'Nutrición', a.nutricionPoblacion, '', e),
-    pob ? `<span class="obra-chip" title="${e(`Población: ${Math.floor(pob.pesants)} pesants, ${Math.floor(pob.artesanos)} artesanos y ${Math.floor(pob.nobleza)} de nobleza`)}">👥 ${total}</span>` : '',
-    ascenso ? `<span class="obra-chip sube" title="${e(`Sube a nivel ${ascenso.nivelObjetivo}: ${cuentaAtras(ascenso.completaEn)}`)}">⬆ Nivel ${ascenso.nivelObjetivo} · ${e(cuentaAtras(ascenso.completaEn))}</span>` : '',
-    obras.length ? `<span class="obra-chip" title="${obras.length} obra(s) o mejora(s) en curso">🏗 ${obras.length}</span>` : '',
-    bajan ? `<span class="obra-chip baja" title="${bajan} recurso(s) a la baja">▼ ${bajan}</span>` : '',
-    llenos ? `<span class="obra-chip lleno" title="${llenos} recurso(s) con el almacén lleno">📦 ${llenos}</span>` : '',
-    parados ? `<span class="obra-chip parado" title="${parados} edificio(s) parados por almacén lleno">⏸ ${parados}</span>` : '',
-    danados ? `<span class="obra-chip parado" title="${danados} edificio(s) dañado(s)">⚠ ${danados}</span>` : '',
-    escuadras ? `<span class="obra-chip" title="${escuadras} escuadra(s) en la guarnición">🛡 ${escuadras}</span>` : '',
-    a.autoConstruccionPausada ? '<span class="obra-chip parado" title="El Gobernador o el Maestro de Obras apagó la auto-construcción: no se levantan edificios nuevos solos">⏸ Auto-construcción apagada</span>' : '',
-  ].filter(Boolean).join('');
+  // La vista reducida (0.142.0, Víctor 2026-11-04): la barra de la plaza en 3D (Población, Almacén con los recursos elegidos para ella, Estado) y
+  // dos placas más con lo que se mueve: Obras (subida de nivel, obras y mejoras, parados y dañados) y Guarnición.
+  const enCurso = obras.map((x) => avanceDeObra(a, x)).filter((x): x is number => x !== null);
+  const obrasPiezas = [
+    ascenso ? (() => {
+      const dur = ascenso.completaEn - ascenso.iniciadoEn;
+      const x = dur > 0 ? Math.max(0, Math.min(1, (ahora() - ascenso.iniciadoEn) / dur)) : 0;
+      return pieza('⬆', `Nivel ${ascenso.nivelObjetivo} · ${e(cuentaAtras(ascenso.completaEn))}`, x * 100, `Subida a nivel ${ascenso.nivelObjetivo}`, [`Acaba en ${cuentaAtras(ascenso.completaEn)}`], '', e);
+    })() : '',
+    obras.length ? pieza('🏗', String(obras.length), enCurso.length ? (enCurso.reduce((t, x) => t + x, 0) / enCurso.length) * 100 : 0, 'Obras y mejoras',
+      obras.map((x) => `${EDIFICIO_NOMBRE[x.tipo] ?? x.tipo}${x.mejora ? ` a nivel ${x.mejora.nivelObjetivo}` : ''}: ${cuentaAtras(x.mejora?.completaEn ?? x.completaEn) || 'en cola'}`), '', e) : '',
+    bajan ? pieza('▼', String(bajan), 0, 'Recursos a la baja', recursos.filter(([, x]) => (x.porMinuto ?? 0) < 0 && !(x.capacidad > 0 && x.cantidad >= x.capacidad)).map(([r, x]) => `${RECURSO_NOMBRE[r] ?? r}: ${(x.porMinuto ?? 0).toFixed(1)}/min`), 'tono-mal', e) : '',
+    parados ? pieza('⏸', String(parados), 100, 'Parados', [`${parados} edificio(s) parados por almacén lleno`], 'lleno', e) : '',
+    danados ? pieza('⚠', String(danados), 100, 'Dañados', [`${danados} edificio(s) dañados`], 'lleno', e) : '',
+  ].join('');
+  const hombres = (a.guarnicion ?? []).reduce((t, g) => t + g.cantidad, 0);
+  const guarnicionPieza = escuadras ? pieza('🛡', hombres ? miles(hombres) : String(escuadras), 0, 'Guarnición', [`${escuadras} escuadra(s)${hombres ? `, ${miles(hombres)} hombres` : ''}`], '', e) : '';
+  const chips = `<div class="fplaza-pie">${htmlPieDePlaza(a, e).replace(/ data-abrir-almacen role="button" tabindex="0" title="Abrir el Almacén"/, '')}${obrasPiezas ? grupo('obras', 'Obras', obrasPiezas) : ''}${guarnicionPieza ? grupo('guarnicion', 'Guarnición', guarnicionPieza) : ''}</div>`;
   if (!abierta) return { chips, detalle: '' };
 
   const almacen = recursos.length
@@ -194,7 +190,8 @@ function htmlInteriorPlaza(p: ProyeccionJugador, a: Asentamiento, abierta: boole
     : escuadras ? `<p class="legend-note">${escuadras} escuadra(s).</p>` : '<p class="mapa-lista-vacia">Nadie ha dejado tropa en la guarnición.</p>';
   const cupo = a.cupoGuarnicion !== undefined ? `<small>cupo ${a.cupoGuarnicion} pts por héroe</small>` : '';
   const detalle = `<div class="fplaza-detalle">
-      <div class="fplaza-bloque fplaza-almacen"><div class="obra-titulo"><span class="faction-kicker">Almacén</span><small>por minuto · ▲ entra, ▼ sale</small></div>${almacen}</div>
+      <div class="fplaza-bloque fplaza-almacen"><div class="obra-titulo"><span class="faction-kicker">Almacén</span><small>por minuto · ▲ entra, ▼ sale</small></div>${almacen}
+        ${a.autoConstruccionPausada ? '<p class="legend-note">La auto-construcción está apagada: no se levantan edificios nuevos solos.</p>' : ''}</div>
       <div class="fplaza-columna">
         ${poblacion ? `<div class="fplaza-bloque"><div class="obra-titulo"><span class="faction-kicker">Población</span></div>${poblacion}</div>` : ''}
         <div class="fplaza-bloque"><div class="obra-titulo"><span class="faction-kicker">Obras y mejoras</span></div>${obrasHtml}</div>
@@ -228,11 +225,12 @@ function htmlPlazasFaccion(p: ProyeccionJugador, faccion: Faccion, e: (valor: st
       <div class="faccion-plaza-fila">
         <div class="faccion-plaza-info"><strong>${e(a.nombre)}${id === capitalId ? ' <span class="faccion-publica-relacion">Capital</span>' : ''}</strong>
           <span>Nivel ${a.nivel}${dentro?.nivelActual !== undefined && dentro.nivelActual < a.nivel ? ` <span class="falta">(rinde como ${dentro.nivelActual})</span>` : ''} · (${Math.round(a.posicion.x)}, ${Math.round(a.posicion.y)})${a.recordada ? ' · recordada' : ''}</span>
-          ${interior?.chips ? `<div class="fplaza-chips">${interior.chips}</div>` : ''}</div>
+</div>
         <div class="faccion-publica-cifras"><div><strong>${residentes(id)}</strong><span>Residentes</span></div></div>
         ${interior ? `<button class="btn-secondary" type="button" data-plaza-detalle="${e(id)}" aria-expanded="${abierta}">${abierta ? 'Ocultar ▴' : 'Detalle ▾'}</button>` : ''}
         <button class="btn-secondary" type="button" data-centrar-x="${a.posicion.x}" data-centrar-y="${a.posicion.y}">Ver en el mapa</button>
       </div>
+      ${interior?.chips ?? ''}
       ${interior?.detalle ?? ''}
     </div>`;
     }).join('')}</div>`;

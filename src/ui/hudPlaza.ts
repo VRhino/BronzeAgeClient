@@ -15,14 +15,14 @@ type Escapar = (valor: string) => string;
 // ---------------------------------------------------------------- la barra de Población, Almacén y Estado (arriba al centro)
 
 /** Una pieza de la barra: icono, cifra y barrita de llenado; al pasar, un letrero con el nombre y el detalle (una línea por elemento). */
-function pieza(icono: string, cifra: string, llenado: number, nombre: string, detalle: string[], clase: string, esc: Escapar): string {
+export function pieza(icono: string, cifra: string, llenado: number, nombre: string, detalle: string[], clase: string, esc: Escapar): string {
   const pct = Math.max(0, Math.min(100, llenado));
   return `<span class="asent-recurso${clase ? ` ${clase}` : ''}" data-nombre="${esc(nombre)}" data-detalle="${detalle.map(esc).join('&#10;')}">`
     + `<span class="asent-recurso-icono" aria-hidden="true">${icono}</span>${cifra}<span class="asent-recurso-barra" style="--llenado:${pct.toFixed(1)}%"></span></span>`;
 }
 
 /** Una placa de la barra, con su letrero encima. `extra`: atributos más (la del Almacén se pulsa). */
-function grupo(clase: string, titulo: string, piezas: string, extra = ''): string {
+export function grupo(clase: string, titulo: string, piezas: string, extra = ''): string {
   return `<section class="asent-pie-grupo asent-pie-${clase}" aria-label="${titulo}"${extra}><span class="asent-pie-titulo">${titulo}</span><div class="asent-pie-piezas">${piezas}</div></section>`;
 }
 

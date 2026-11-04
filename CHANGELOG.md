@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.142.0] — 2026-11-04 · Facción → Plazas a todo el ancho y con la barra de la plaza · sin cambio de contrato
+
+Petición de Víctor (2026-11-04):
+
+- La pestaña Plazas ocupa todo el ancho de la ventana (antes, 960 px como las demás).
+- En la vista reducida, debajo del nivel y las coordenadas, va la barra de la plaza en 3D: Población, Almacén (los recursos elegidos para la
+  barra) y Estado, más dos placas con lo que se mueve: Obras (subida de nivel, obras y mejoras, recursos a la baja, parados y dañados) y
+  Guarnición. Al pasar el ratón, el detalle de cada pieza. «Detalle» y «Ver en el mapa» suben junto al nombre.
+- La auto-construcción apagada sale de la vista reducida: queda como nota en el detalle, bajo el almacén.
+
 ## [0.141.0] — 2026-11-04 · Caravanas en casa, «Detener ruta» y las plazas propias en la ventana de Facción · contrato 0.13.0 (motor 5776ab69)
 
 Petición de Víctor (2026-11-04), con lo que el motor añadió para ello (`motor/aviso-plaza-propia-y-rutas.md`):
