@@ -316,27 +316,40 @@ function carrosEnHuecos(c: Caravana, a: Asentamiento, editable: boolean, otras: 
     const def = d?.cat.carros[r.tipoCarro];
     const an = r.animal ? d?.cat.animales[r.animal] : undefined;
     const cap = def && an ? Math.floor(def.capacidadBase * an.factorCarga * (d?.fCapacidad ?? 1)) : null;
-    const accion = editable && (!r.animal || otras.length > 0);
+    const accion = editable;
     const cuerpo = `<span class="salida-hueco-icono carro-hueco-icono"><span aria-hidden="true">${r.animal ? ANIMAL_ICONO[r.animal] ?? '🐾' : '∅'}</span><i>${r.tipoCarro === 'reforzado' ? 'R' : 'B'}</i></span>
       <span class="salida-hueco-nombre">${e(r.tipoCarro === 'reforzado' ? 'Reforzado' : r.tipoCarro === 'basico' ? 'Básico' : r.tipoCarro)}</span>
       <small>${r.animal ? `${e(ANIMAL[r.animal] ?? r.animal)}${cap !== null ? ` · 📦 ${cap}` : ''}` : 'sin animal: no tira'}</small>`;
     return accion
-      ? `<button type="button" class="salida-hueco lleno carro-hueco${r.animal ? '' : ' sin-animal'}${elegido === i ? ' activo' : ''}" data-carro-elegir="${e(c.id)}:${i}" title="${r.animal ? 'Pasarlo a otra caravana' : 'Comprarle un animal'}">${cuerpo}</button>`
+      ? `<button type="button" class="salida-hueco lleno carro-hueco${r.animal ? '' : ' sin-animal'}${elegido === i ? ' activo' : ''}" data-carro-elegir="${e(c.id)}:${i}" title="Ver el carro y pasarlo a otra caravana">${cuerpo}</button>`
       : `<div class="salida-hueco lleno carro-hueco${r.animal ? '' : ' sin-animal'}">${cuerpo}</div>`;
   });
   const abierto = carroNuevoAbierto.has(c.id);
   if (editable && !carrosLleno) huecos.push(`<button class="salida-hueco mas${abierto ? ' activo' : ''}" type="button" data-carro-mas="${e(c.id)}" title="Añadir un carro" aria-label="Añadir un carro">+</button>`);
-  // Lo del carro elegido: el animal que le falta o pasarlo a otra caravana parada.
+  // El carro elegido (Víctor, 2026-11-04): una ficha pequeña en el sitio del «añadir», con lo que es, lo que lleva y lo que tira, el animal que
+  // le falte y pasarlo a otra caravana parada en la plaza (`moverCarroCaravana`: las dos disponibles y de esta flota).
   const r = elegido !== null ? carros[elegido] : undefined;
   let acciones = '';
   if (editable && r && elegido !== null) {
+    const def = d?.cat.carros[r.tipoCarro];
+    const an = r.animal ? d?.cat.animales[r.animal] : undefined;
+    const cap = def && an ? Math.floor(def.capacidadBase * an.factorCarga * (d?.fCapacidad ?? 1)) : null;
+    const vel = an ? Math.round(an.velocidad * (d?.fVelocidad ?? 1) * 10) / 10 : null;
     const animales = Object.entries(d?.cat.animales ?? {}).map(([id, x]) => {
       const m = motivoCosto(x.costo, almacen);
       return `<option value="${e(id)}"${m ? ' disabled' : ''}>${ANIMAL_ICONO[id] ?? ''} ${e(ANIMAL[id] ?? id)} · ${iconos(x.costo)} · ×${x.factorCarga} · vel. ${x.velocidad}</option>`;
     }).join('');
-    acciones = `<div class="carro-acciones">
-      ${!r.animal ? `<span>Le falta el animal:</span><select class="form-input" data-animal-tipo="${e(c.id)}:${elegido}">${animales}</select><button class="btn-secondary btn-chico" type="button" data-animal="${e(c.id)}" data-carro="${elegido}">Comprar</button>` : ''}
-      ${otras.length > 0 ? `<select class="form-input carro-mover" data-mover-a="${e(c.id)}:${elegido}" title="Pasar este carro a otra caravana parada"><option value="">⇄ Pasar a…</option>${otras.map((x) => `<option value="${e(x.id)}">${e(nombreDeCaravana(x))}</option>`).join('')}</select>` : ''}
+    const dato = (t: string, v: string): string => `<span><small>${t}</small><strong>${v}</strong></span>`;
+    acciones = `<div class="carro-ficha">
+      <div class="carro-ficha-cab"><span class="carro-ficha-icono" aria-hidden="true">${r.animal ? ANIMAL_ICONO[r.animal] ?? '🐾' : '∅'}</span>
+        <strong>${e(CARRO[r.tipoCarro] ?? r.tipoCarro)}${r.animal ? ` con ${e((ANIMAL[r.animal] ?? r.animal).toLowerCase())}` : ', sin animal'}</strong>
+        <button class="carro-ficha-cerrar" type="button" data-carro-elegir="${e(c.id)}:${elegido}" aria-label="Cerrar">✕</button></div>
+      <div class="carro-ficha-datos">${dato('Capacidad', cap !== null ? `📦 ${cap}` : def ? `${def.capacidadBase} con animal` : '—')}${dato('Velocidad', vel !== null ? String(vel) : 'no tira')}${an ? dato('Carga', `×${an.factorCarga}`) : ''}</div>
+      ${!r.animal ? `<div class="carro-acciones"><span>Le falta el animal:</span><select class="form-input" data-animal-tipo="${e(c.id)}:${elegido}">${animales}</select><button class="btn-secondary btn-chico" type="button" data-animal="${e(c.id)}" data-carro="${elegido}">Comprar</button></div>` : ''}
+      ${otras.length > 0
+        ? `<div class="carro-acciones"><span>Pasarlo a</span><select class="form-input" data-mover-destino="${e(c.id)}:${elegido}">${otras.map((x) => `<option value="${e(x.id)}">${e(nombreDeCaravana(x))} · 🛞 ${(x.carros ?? []).length}</option>`).join('')}</select>
+            <button class="btn-primary btn-chico" type="button" data-mover-carro="${e(c.id)}:${elegido}">⇄ Mover</button></div>`
+        : '<p class="asent-lado-nota">Para pasarlo hace falta otra caravana de esta flota parada en la plaza (crea una con «＋ Crear»).</p>'}
     </div>`;
   }
   // Añadir: el tipo de carro (solo los que se pueden fabricar aquí) y su animal; lo que no se puede pagar sale en rojo.
@@ -525,7 +538,9 @@ export function htmlCaravanas(p: ProyeccionJugador, a: Asentamiento, e: Escapar,
   // Entre dos caravanas creadas hay una espera (`CARAVANA_COOLDOWN`), compartida con la fundación.
   const listaEn = cat && a.ultimaCaravanaCreadaEn ? a.ultimaCaravanaCreadaEn + cat.cooldownMinutos * 60_000 : 0;
   const motivoCrear = nivelMercado === 0 ? 'Hace falta un Mercado activo.' : flotaLlena ? `La flota ya tiene el tope de caravanas de ${deQuien}.` : listaEn > p.instante ? `Podrás crear otra en ${falta(listaEn, p)}.` : null;
-  const todas = [...flota, ...aparcadas];
+  // Primero las que están en la plaza (las que se pueden usar), luego las aparcadas aquí y al final las que andan fuera (Víctor, 2026-11-04).
+  const rango = (c: Caravana): number => (c.origenAsentamientoId !== a.id ? 1 : ubicacionDe(c, p, a).enPlaza ? 0 : 2);
+  const todas = [...flota, ...aparcadas].map((c, i) => ({ c, i, r: rango(c) })).sort((x, y) => x.r - y.r || x.i - y.i).map((x) => x.c);
   const elegida = todas.find((c) => c.id === caravanaElegida) ?? todas[0];
   const info = ayuda('mercado:caravanas', 'Tu flota: un casco se arma con carros (que pagas con materiales del almacén) y un animal por carro, y sale a mano hacia otra plaza con la carga que elijas. Solo cuentan los carros con animal. El cupo de flota y los costes los decide el servidor. Los carros se reparten como quieras entre las caravanas; mover un carro no gasta cupo.<br>La carga sale del almacén al prepararla; si la cancelas antes de salir, vuelve entera.<br><strong>Escolta:</strong> cede escuadras de tu campamento a una caravana parada en su origen: viajarán con ella y volverán al campamento al acabar el viaje. El cupo es de la caravana, en puntos de Liderazgo (lo da tu Mercado) y lo comparten los residentes; ceder no gasta tu Liderazgo.<br><strong>Aparcadas:</strong> caravanas de tu Facción que un ejército dejó aquí al entrar. No las usa esta plaza: puedes pasar carga entre su carro y el almacén, y solo salen enganchadas a un ejército (desde el panel del ejército) o enviadas a su origen. Vacía, aparece en su origen al instante; con carga, vuelve por el camino y la deja allí al llegar.');
   return `<div class="obra-titulo"><span class="faction-kicker">Caravanas comerciales</span>${info}</div>
@@ -558,10 +573,18 @@ export function cablearCaravanas(raiz: HTMLElement, p: ProyeccionJugador, a: Ase
     const caravanaId = b.dataset.animal!;
     void lanzar(b, 'comprarAnimalCaravana', { caravanaId, carroIndice: Number(b.dataset.carro), tipoAnimal: valor(`[data-animal-tipo="${caravanaId}:${b.dataset.carro}"]`) });
   }));
-  raiz.querySelectorAll<HTMLSelectElement>('[data-mover-a]').forEach((sel) => sel.addEventListener('change', () => {
-    if (!sel.value) return;
-    const [desdeCaravanaId, carro] = sel.dataset.moverA!.split(':');
-    void lanzar(sel as unknown as HTMLButtonElement, 'moverCarroCaravana', { desdeCaravanaId, haciaCaravanaId: sel.value, carroIndice: Number(carro) }).then(() => { sel.value = ''; });
+  // Mover el carro elegido a otra caravana parada: hecho, la ficha se cierra (los índices de la tira cambian).
+  raiz.querySelectorAll<HTMLButtonElement>('[data-mover-carro]').forEach((b) => b.addEventListener('click', async () => {
+    const clave = b.dataset.moverCarro!;
+    const corte = clave.lastIndexOf(':');
+    const desdeCaravanaId = clave.slice(0, corte);
+    const haciaCaravanaId = raiz.querySelector<HTMLSelectElement>(`[data-mover-destino="${CSS.escape(clave)}"]`)?.value;
+    if (!haciaCaravanaId) return;
+    b.disabled = true;
+    const mensaje = await ejecutar('moverCarroCaravana', { desdeCaravanaId, haciaCaravanaId, carroIndice: Number(clave.slice(corte + 1)) });
+    if (mensaje) { b.disabled = false; mostrarAviso(mensaje, true); return; }
+    carroElegido = null;
+    repintar();
   }));
   // La carga elegida contra la capacidad de la caravana, a cada tecla; de más, no se deja lanzar.
   raiz.querySelectorAll<HTMLElement>('[data-carga-total]').forEach((caja) => {
@@ -628,11 +651,13 @@ export function cablearCaravanas(raiz: HTMLElement, p: ProyeccionJugador, a: Ase
   raiz.querySelectorAll<HTMLButtonElement>('[data-flota-elegir]').forEach((b) => b.addEventListener('click', () => { caravanaElegida = b.dataset.flotaElegir!; carroElegido = null; repintar(); }));
   raiz.querySelectorAll<HTMLButtonElement>('[data-carro-elegir]').forEach((b) => b.addEventListener('click', () => {
     carroElegido = carroElegido === b.dataset.carroElegir ? null : b.dataset.carroElegir!;
+    // la ficha del carro va en el sitio de «añadir carro»: una u otra
+    if (carroElegido) carroNuevoAbierto.delete(carroElegido.slice(0, carroElegido.lastIndexOf(':')));
     repintar();
   }));
   raiz.querySelectorAll<HTMLButtonElement>('[data-carro-mas]').forEach((b) => b.addEventListener('click', () => {
     const id = b.dataset.carroMas!;
-    if (carroNuevoAbierto.has(id)) carroNuevoAbierto.delete(id); else carroNuevoAbierto.add(id);
+    if (carroNuevoAbierto.has(id)) carroNuevoAbierto.delete(id); else { carroNuevoAbierto.add(id); carroElegido = null; }
     repintar();
   }));
   raiz.querySelectorAll<HTMLInputElement>('[data-carro-nuevo-tipo], [data-carro-nuevo-animal]').forEach((r) => r.addEventListener('change', () => {

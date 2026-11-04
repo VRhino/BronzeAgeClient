@@ -26,12 +26,35 @@ const ESTADO_ICONO: Record<string, string> = { disponible: '⚓', adjunta: '🔗
  * los requisitos como pilotos (verde cumplido, rojo no, con el porqué) y «Lanzar»; las caravanas de la plaza en tarjetas con su estado, su titular y
  * la barra de lo que les queda antes de caducar.
  */
-export function htmlFundacionDePlaza(c: ContextoPlaza): string {
+/** Los requisitos para lanzar una Caravana de Fundación ahora: [cumplido, icono, texto, por qué no]. Los usan la subpestaña y el «!» del riel. */
+function requisitosDeFundacion(c: Pick<ContextoPlaza, 'proyeccion' | 'asentamiento' | 'resideAqui' | 'escapar' | 'refrescar'>): [boolean, string, string, string][] {
   const { proyeccion: p, asentamiento: a, resideAqui: reside, escapar: e } = c;
   const presente = p.heroe.ubicacion.tipo === 'asentamiento' && p.heroe.ubicacion.asentamientoId === a.id;
   const faccion = p.facciones.find((f) => f.id === a.faccionId);
   const costo = costoCompletoDeCaravanaDeFundacion(c.refrescar);
   const cap = capDeFundacion(faccion?.nivel ?? 1, c.refrescar);
+  const faltantes = costo ? Object.entries(costo).filter(([r, n]) => Math.floor(a.almacen?.[r]?.cantidad ?? 0) < n) : [];
+  const nivel = a.nivelActual ?? a.nivel;
+  const msCooldown = a.ultimaCaravanaCreadaEn === undefined ? 0 : Math.max(0, a.ultimaCaravanaCreadaEn + cooldownDeCaravanaMinutos(c.refrescar) * 60_000 - p.instante);
+  const propias = p.asentamientos.filter((x) => x.faccionId === a.faccionId).length;
+  const vivas = p.caravanas.filter((k) => k.tipo === 'construccion' && (k.faccionId ?? a.faccionId) === a.faccionId).length;
+  return [
+    [reside && presente, '🏠', 'Residente presente', !reside ? 'solo la lanza quien reside en esta plaza' : 'tienes que estar en la plaza'],
+    [nivel >= 2, '🏛️', 'Plaza de nivel 2 o más', `la plaza es de nivel ${nivel}`],
+    [msCooldown === 0, '⏱', 'Sin enfriamiento de caravanas', `faltan ~${textoEnTiempoReal(msCooldown)} (lo comparten las caravanas comerciales)`],
+    [cap === null || propias + vivas < cap, '🏕️', `Cupo de Fundación${cap !== null ? ` ${propias + vivas}/${cap}` : ''}`, `${propias + vivas}/${cap} contando las caravanas ya lanzadas (nivel de Facción ${faccion?.nivel ?? 1})`],
+    [costo !== null && faltantes.length === 0, '📦', 'Coste completo en el almacén', costo ? `faltan ${faltantes.map(([r, n]) => `${n - Math.floor(a.almacen?.[r]?.cantidad ?? 0)} de ${e(RECURSO_NOMBRE[r] ?? r)}`).join(', ')}` : 'aún no se conoce el coste'],
+  ];
+}
+
+/** ¿Puedes lanzar ya una Caravana de Fundación desde esta plaza? Enciende el «!» de Territorio y de su pestaña Fundación (0.136.0) hasta que la lanzas. */
+export function fundacionLista(c: Pick<ContextoPlaza, 'proyeccion' | 'asentamiento' | 'resideAqui' | 'escapar' | 'refrescar'>): boolean {
+  return requisitosDeFundacion(c).every(([ok]) => ok);
+}
+
+export function htmlFundacionDePlaza(c: ContextoPlaza): string {
+  const { proyeccion: p, asentamiento: a, escapar: e } = c;
+  const costo = costoCompletoDeCaravanaDeFundacion(c.refrescar);
 
   const fichas = costo
     ? Object.entries(costo).map(([r, n]) => {
@@ -40,20 +63,8 @@ export function htmlFundacionDePlaza(c: ContextoPlaza): string {
         return `<span class="fundar-coste${falta ? ' falta' : ''}" title="${e(`${RECURSO_NOMBRE[r] ?? r}: ${falta ? `faltan ${falta}` : 'en el almacén'}`)}"><i aria-hidden="true">${RECURSO_ICONO[r] ?? '📦'}</i><b>${Math.min(hay, n)}<small>/${n}</small></b>${barraAvance(Math.min(1, hay / n))}</span>`;
       }).join('')
     : '<p class="asent-lado-nota">Cargando el coste de la caravana…</p>';
-  const faltantes = costo ? Object.entries(costo).filter(([r, n]) => Math.floor(a.almacen?.[r]?.cantidad ?? 0) < n) : [];
-
   // Cada gate: ¿se cumple? y, si no, por qué.
-  const nivel = a.nivelActual ?? a.nivel;
-  const msCooldown = a.ultimaCaravanaCreadaEn === undefined ? 0 : Math.max(0, a.ultimaCaravanaCreadaEn + cooldownDeCaravanaMinutos(c.refrescar) * 60_000 - p.instante);
-  const propias = p.asentamientos.filter((x) => x.faccionId === a.faccionId).length;
-  const vivas = p.caravanas.filter((k) => k.tipo === 'construccion' && (k.faccionId ?? a.faccionId) === a.faccionId).length;
-  const gates: [boolean, string, string, string][] = [
-    [reside && presente, '🏠', 'Residente presente', !reside ? 'solo la lanza quien reside en esta plaza' : 'tienes que estar en la plaza'],
-    [nivel >= 2, '🏛️', 'Plaza de nivel 2 o más', `la plaza es de nivel ${nivel}`],
-    [msCooldown === 0, '⏱', 'Sin enfriamiento de caravanas', `faltan ~${textoEnTiempoReal(msCooldown)} (lo comparten las caravanas comerciales)`],
-    [cap === null || propias + vivas < cap, '🏕️', `Cupo de Fundación${cap !== null ? ` ${propias + vivas}/${cap}` : ''}`, `${propias + vivas}/${cap} contando las caravanas ya lanzadas (nivel de Facción ${faccion?.nivel ?? 1})`],
-    [costo !== null && faltantes.length === 0, '📦', 'Coste completo en el almacén', costo ? `faltan ${faltantes.map(([r, n]) => `${n - Math.floor(a.almacen?.[r]?.cantidad ?? 0)} de ${e(RECURSO_NOMBRE[r] ?? r)}`).join(', ')}` : 'aún no se conoce el coste'],
-  ];
+  const gates = requisitosDeFundacion(c);
   const lanzable = gates.every(([ok]) => ok);
   const pendientes = gates.filter(([ok]) => !ok).length;
 

@@ -3,6 +3,18 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.136.0] — 2026-11-04 · Caravanas: mover un carro, la lista por disponibles y el «!» de Fundación · sin cambio de contrato
+
+Petición de Víctor (2026-11-04):
+
+- En Caravanas de la plaza, con una caravana elegida, un clic sobre un carro de la barra abre una ficha pequeña en el mismo sitio que la de «añadir»
+  (son excluyentes): tipo y animal, capacidad, velocidad y factor de carga, la compra de animal si no lo tiene y «Pasarlo a» otra caravana con
+  «⇄ Mover» (`moverCarroCaravana`). Si no hay otra caravana comercial disponible en la plaza, lo dice y apunta a «＋ Crear».
+- La lista de caravanas de la izquierda pone primero las que están en la plaza; luego las aparcadas de otro origen y al final las que andan fuera.
+- Cuando ya se puede lanzar una Caravana de Fundación (residente presente, plaza de nivel 2+, sin enfriamiento, cupo y coste completo en el almacén)
+  sale el «!» sobre el botón Territorio del riel y sobre la subpestaña Fundación; se quita al lanzarla (el cupo o el coste dejan de cumplirse).
+  Los requisitos son los mismos que pinta la subpestaña (`fundacionLista` en `panelFundacionDePlaza.ts`).
+
 ## [0.135.0] — 2026-11-04 · «Pedir ingreso»: primero las Facciones de jugadores · sin cambio de contrato
 
 Petición de Víctor (2026-11-04), en la lista de «Pedir ingreso» sin Facción:

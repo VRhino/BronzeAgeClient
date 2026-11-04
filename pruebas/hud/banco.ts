@@ -31,6 +31,7 @@ import type { ProyeccionJugador } from '../../src/apiCliente';
 import { anchoDeParteCampamento, htmlSeccionCampamento, seccionesDeCampamento, type SeccionCampamento } from '../../src/ui/pantallaCampamento';
 import { htmlRielInterior, htmlTituloDeParte } from '../../src/ui/hudInterior';
 import type { CampamentoMercenarios } from '../../src/tiposDominio';
+import { fundacionLista } from '../../src/ui/panelFundacionDePlaza';
 
 const e = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const RIEL: [string, string, string, boolean?][] = [
@@ -189,4 +190,23 @@ if (camp) {
       <div class="asent-edif-cuerpo">${htmlSeccionCampamento(camp, p, c, e)}</div></section>`);
   }
 }
-(window as unknown as { __banco: unknown }).__banco = { listo: true };
+// El «!» de Territorio (0.136.0) con la cuenta de verdad (`fundacionLista`): se repinta cuando llegan los datos del coste.
+function avisoFundacion(): void {
+  if (camp || construir) return;
+  a.heroesFundadoresIds = ['h'];
+  const q = p as unknown as { caravanas?: unknown[] };
+  q.caravanas ??= [];
+  const fs = p.facciones as unknown as { id: string; nivel: number }[];
+  if (a.faccionId && !fs.some((f) => f.id === a.faccionId)) fs.push({ id: a.faccionId, nivel: 3 });
+  const lista = fundacionLista({ proyeccion: p, asentamiento: a, resideAqui: true, escapar: e, refrescar: avisoFundacion });
+  const boton = document.querySelectorAll<HTMLElement>('.asent-riel-boton')[3];
+  const previo = boton?.querySelector('.asent-aviso-atencion');
+  if (previo) previo.outerHTML = '';
+  if (lista) boton?.insertAdjacentHTML('beforeend', '<b class="asent-aviso-atencion">!</b>');
+  if (ventana === 'territorio') {
+    const cuerpo = document.querySelector<HTMLElement>('.asent-edif-cuerpo')!;
+    cuerpo.innerHTML = `<div class="asent-tabs asent-subtabs"><button class="asent-tab activo" type="button">Pueblos y aldeas</button><button class="asent-tab" type="button">Fundación${lista ? '<b class="asent-aviso-atencion">!</b>' : ''}</button></div><p>…</p>`;
+  }
+}
+avisoFundacion();
+(window as unknown as { __banco: unknown }).__banco = { listo: true, p, a };

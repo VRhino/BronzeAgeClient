@@ -96,6 +96,7 @@ import { fuenteDesdeMapa, fuenteDesdeRelieve } from './mundo3d/fuente';
 import { VistaMundo3D } from './mundo3d/vista';
 import { navegacionDesdeGrafo, type Navegacion } from './mundo3d/rejilla';
 import { guardarVistaMapa, leerVistaMapa } from './ui/vistaMapaGuardada';
+import { fundacionLista } from './ui/panelFundacionDePlaza';
 import { alCambiarAvisos, alLlegarInforme, avisarDeEventos, avisosNoLeidos, hayPeligroSinLeer, historialDeAvisos, mostrar as mostrarAviso, reiniciarAvisos } from './ui/avisos';
 import { htmlInforme, type InformeDeCombate } from './ui/informeCombate';
 import { cablearAvisos, htmlAvisos } from './ui/panelAvisos';
@@ -2165,8 +2166,13 @@ const SUB_DE_EDIFICIO: Record<string, string> = { albergueCaravanas: 'caravanas'
  * Misiones de la barra; la Residencia, en la casa del blasón; Información, en el «?». */
 const EXTRAS_CON_SITIO = new Set(['muralla', 'puerta', 'residencia', 'tesoreria', 'fundacion', 'misiones', 'tablon', 'pueblos', 'informacion']);
 
-function subpestanas(lista: [string, string][], actual: string): string {
-  return `<div class="asent-tabs asent-subtabs">${lista.map(([id, nombre]) => `<button class="asent-tab${id === actual ? ' activo' : ''}" type="button" data-sub="${id}">${nombre}</button>`).join('')}</div>`;
+function subpestanas(lista: [string, string][], actual: string, avisos: readonly string[] = []): string {
+  return `<div class="asent-tabs asent-subtabs">${lista.map(([id, nombre]) => `<button class="asent-tab${id === actual ? ' activo' : ''}" type="button" data-sub="${id}">${nombre}${avisos.includes(id) ? '<b class="asent-aviso-atencion" aria-label="Lista">!</b>' : ''}</button>`).join('')}</div>`;
+}
+
+/** ¿Se puede lanzar ya una Caravana de Fundación desde esta plaza? Enciende el «!» de Territorio y de su pestaña Fundación (Víctor, 2026-11-04). */
+function fundacionListaEn(p: ProyeccionJugador, a: Asentamiento): boolean {
+  return a.faccionId === p.faccionId && fundacionLista({ proyeccion: p, asentamiento: a, resideAqui: resideEnLaPlaza(p, a), escapar: escaparHtml, refrescar: renderPanelEdificios });
 }
 
 /** Lo que reciben las piezas de la plaza para pintarse en `cuerpo`. */
@@ -2232,7 +2238,8 @@ function renderPanelEdificios(): void {
   } else {
     const enMarcha = a.edificios.filter((e) => e.mejora || e.estado === 'en_construccion').length;
     const botones = RIEL.filter((v) => ventanaDisponible(v.id, p, a)).map((v) => {
-      const insignia = v.id === 'construccion' && enMarcha ? `<b class="asent-riel-insignia">${enMarcha}</b>` : '';
+      const insignia = v.id === 'construccion' && enMarcha ? `<b class="asent-riel-insignia">${enMarcha}</b>`
+        : v.id === 'territorio' && !ajena && fundacionListaEn(p, a) ? '<b class="asent-aviso-atencion" title="Ya puedes lanzar una Caravana de Fundación">!</b>' : '';
       return `<button type="button" class="asent-riel-boton${v.id === ventanaPlaza ? ' activo' : ''}" data-ventana-plaza="${v.id}" data-etiqueta="${escaparHtml(v.titulo)}" aria-label="${escaparHtml(v.titulo)}" aria-pressed="${v.id === ventanaPlaza}">${v.icono}${insignia}</button>`;
     }).join('');
     pintar(riel, botones, () => riel.querySelectorAll<HTMLButtonElement>('[data-ventana-plaza]').forEach((b) => b.addEventListener('click', () => alternarVentanaPlaza(b.dataset.ventanaPlaza as VentanaPlaza))), 'riel');
@@ -2254,7 +2261,7 @@ function htmlCajonConstruir(a: Asentamiento, cargo: 'gobernador' | 'maestroObras
 }
 
 /** Una ventana de la plaza: su título e icono, sus subpestañas (si tiene varias), lo que pinta y lo que cablea, y si va ancha o estrecha. */
-interface ContenidoVentana { titulo: string; icono: string; subs: [string, string][]; sub: string; html: string; cablear: () => void; ancho?: 'ancha' | 'estrecha' | 'completa' }
+interface ContenidoVentana { titulo: string; icono: string; subs: [string, string][]; sub: string; html: string; cablear: () => void; ancho?: 'ancha' | 'estrecha' | 'completa'; avisos?: string[] }
 
 /** La ventana abierta, junto al riel; sin ventana, escondida y vacía. */
 function pintarVentanaPlaza(p: ProyeccionJugador, a: Asentamiento, ajena: boolean): void {
@@ -2270,7 +2277,7 @@ function pintarVentanaPlaza(p: ProyeccionJugador, a: Asentamiento, ajena: boolea
   ventana.dataset.ancho = x.ancho ?? 'normal';
   ventana.setAttribute('aria-label', x.titulo);
   pintar(titulo, `<span class="asent-ventana-icono" aria-hidden="true">${x.icono}</span><h2>${x.titulo}</h2>`, undefined, 'titulo');
-  pintar(cuerpo, `${x.subs.length > 1 ? subpestanas(x.subs, x.sub) : ''}<div class="asent-lado-cuerpo">${x.html}</div>`, () => {
+  pintar(cuerpo, `${x.subs.length > 1 ? subpestanas(x.subs, x.sub, x.avisos) : ''}<div class="asent-lado-cuerpo">${x.html}</div>`, () => {
     cuerpo.querySelectorAll<HTMLButtonElement>('[data-sub]').forEach((b) => b.addEventListener('click', () => { subDeVentana[v] = b.dataset.sub!; renderPanelEdificios(); }));
     x.cablear();
   }, `${v}:${x.sub}`);
@@ -2308,7 +2315,7 @@ function contenidoDeVentana(v: VentanaPlaza, c: ContextoPlaza, ajena: boolean): 
       };
     }
     case 'defensa': return deExtras(['muralla', 'puerta']);
-    case 'territorio': return deExtras(ajena ? ['pueblos'] : ['pueblos', 'fundacion'], { pueblos: 'Pueblos y aldeas' });
+    case 'territorio': return { ...deExtras(ajena ? ['pueblos'] : ['pueblos', 'fundacion'], { pueblos: 'Pueblos y aldeas' }), avisos: !ajena && fundacionListaEn(p, a) ? ['fundacion'] : [] };
     case 'almacen':
       // a pantalla completa: qué va en la barra de arriba, el almacén con su neto por minuto y la extracción a la izquierda; los talleres a la derecha
       return {
