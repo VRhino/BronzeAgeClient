@@ -9,6 +9,7 @@ import { CamaraDeJuego, distanciaDeEncuadre } from '../src/mundo3d/camara';
 import { ACERCADO, encuadres, MUNDO3D } from '../src/mundo3d/config';
 import { ALFA_TERRITORIO, ANCHOS, dondeEstaLaSeleccion, estadoDesdeProyeccion, mundoDesdeProyeccion } from '../src/mundo3d/estado';
 import { refuerzo, Territorio } from '../src/mundo3d/territorio';
+import { zonasDeLoRecordado } from '../src/mundo/zonasRecordadas';
 import { Terreno } from '../src/mundo3d/terreno';
 import { CapaDeFertilidad } from '../src/mundo3d/capaFertilidad';
 import type { NieblaDeGuerra } from '../src/mundo3d/niebla';
@@ -17,7 +18,7 @@ import { fuenteDesdeMapa, type FuenteDeAltura } from '../src/mundo3d/fuente';
 import { chaikin, cinta, circulo, rutaPendiente, simplificar, suavizarCamino, tramosEnCaja } from '../src/mundo3d/lineas';
 import { alargarHastaElAgua, suavizar, tramosEnTierra } from '../src/mundo3d/paisaje';
 import type { MapaGenerado } from '../src/terreno';
-import type { Ejercito } from '../src/tiposDominio';
+import type { AsentamientoConocido, Ejercito } from '../src/tiposDominio';
 
 const tg = Math.tan((35 * Math.PI) / 360), grados = (g: number) => (g * Math.PI) / 180;
 
@@ -244,6 +245,28 @@ describe('lo que hay en el mundo, sacado de la proyección', () => {
     expect(frontera[frontera.length - 1]).toEqual(frontera[0]);
   });
 
+  test('lo recordado se recorta como en el motor: donde chocan dos zonas de Facciones distintas, la frontera; las de la misma se funden', () => {
+    // dos plazas recordadas a 30 u, de radios 20 y 10: la frontera, a 30 · 20 / 30 = 20 u de la primera
+    const conocidos = [
+      { asentamientoId: 'r-1', faccionId: 'f-2', posicion: { x: 0, y: 0 }, nivel: 1, conocidoEn: 0, radioPotencial: 20 },
+      { asentamientoId: 'r-2', faccionId: 'f-3', posicion: { x: 30, y: 0 }, nivel: 1, conocidoEn: 0, radioPotencial: 10 },
+    ];
+    const z = zonasDeLoRecordado([], conocidos as AsentamientoConocido[]);
+    expect(Math.max(...z.get('r-1')!.map((q) => q.x))).toBeCloseTo(20, 6);
+    expect(Math.min(...z.get('r-2')!.map((q) => q.x))).toBeCloseTo(20, 6);
+    // de la misma Facción no se recortan
+    const misma = zonasDeLoRecordado([], conocidos.map((c) => ({ ...c, faccionId: 'f-2' })) as AsentamientoConocido[]);
+    expect(Math.max(...misma.get('r-1')!.map((q) => q.x))).toBeCloseTo(20, 6); // el círculo entero (vértice a 0°)
+    expect(Math.min(...misma.get('r-2')!.map((q) => q.x))).toBeCloseTo(20, 6);
+    expect(misma.get('r-1')!.length).toBe(48);
+    // una vista recorta a una recordada con el radio de su silueta, y la frontera sale con el trazo de lo que se ve
+    const q = { ...p, asentamientosConocidos: [{ asentamientoId: 'r-1', faccionId: 'f-3', posicion: { x: 120, y: 100 }, nivel: 1, conocidoEn: 0, radioPotencial: 15 }] } as unknown as ProyeccionJugador;
+    const fr = mundoDesdeProyeccion(q, REGLAS).trazos.filter((x) => x.tipo === 'frontera');
+    expect(fr.every((x) => !x.recordada)).toBe(true);
+    const recortada = zonasDeLoRecordado(q.asentamientosAvistados, q.asentamientosConocidos).get('r-1')!;
+    expect(Math.min(...recortada.map((v) => v.x))).toBeCloseTo(110, 1); // a 20 · 15 / 30 = 10 u de la vista
+  });
+
   test('pueblos, avanzadas y obras con el color de su Facción; la mejora de una aldea no se pinta aparte', () => {
     expect(m.pueblos.map((x) => [x.id, x.aldea])).toEqual([['pu', true], ['ex', false]]);
     expect(m.pueblos[0]!.color).toBe(m.plazas[0]!.color); // el de su plaza madre ajena
@@ -457,7 +480,7 @@ describe('lo que se pone sobre el suelo se recoloca cuando el suelo cambia', () 
 
 describe('los carros de las caravanas', () => {
   test('van de dos en dos, cada uno con su animal; si son impares, el último solo en el centro', () => {
-    const f = new FigurasDeColumna(0, { porHeroe: [], ejercito: false }, 0xffffff, { carga: 3, fundacion: false, animales: ['buey', 'mula', 'buey'] });
+    const f = new FigurasDeColumna(0, { porHeroe: [], ejercito: false }, 0xffffff, { carga: 3, fundacion: false, animales: ['buey', 'camello', 'buey'] });
     f.mover({ x: 10, y: 10 }, () => 0); // la primera vez se forma detrás, hacia el sur (+y)
     const [a, b, c] = f.figuras.map((g) => g.position);
     expect(a!.y).toBeCloseTo(b!.y, 6); // la pareja, a la misma altura de la columna

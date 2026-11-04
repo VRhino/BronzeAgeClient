@@ -468,6 +468,14 @@ Petición de Víctor del 2026-11-04: los carros de caravana de una columna o de 
 a 0,13 unidades de figura (×`MUNDO3D.tropa`) a cada lado del rastro; con un número impar, el último va solo en el centro. El carrito del
 héroe va solo, delante.
 
+## Fronteras de lo que solo se recuerda (0.151.0)
+
+Petición de Víctor del 2026-11-04. De una plaza que se vio y ya no se ve, el servidor guarda el radio y no la silueta (`AsentamientoConocido`);
+como círculo entero, su zona se metía en las vecinas. El cliente la recorta como el motor (`mundo/zonasRecordadas.ts`, el mismo corte que
+`territorio::zona::poligono`) contra los discos de otras Facciones que conoce: las plazas que se ven, con el radio de su silueta, y las
+recordadas. Donde chocan dos zonas sale la frontera. Se pinta con el trazo de lo que se ve; vale también para el relleno del territorio y
+para el modo mapa.
+
 ## Banco de pruebas
 
 `npm run mundo3d` abre `pruebas/mundo3d/` con el artefacto y el relieve que haya en `generador/salida/mundo/` del motor (el checkout hermano

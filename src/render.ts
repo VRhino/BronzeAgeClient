@@ -16,6 +16,7 @@ import { pintarSitiosDeAldea, type SitiosDeAldea } from './mundo/fertilidad';
 import { colorDelSueloEn, esDeCerca, hayArtefacto, pintarArbolesDelArtefacto, pintarSueloDelArtefacto, vistaDelLienzo } from './mundo/pintarArtefacto';
 import { dibujarPueblosYObras } from './ui/pueblos';
 import { partirFronteras, type ZonaDeFaccion } from './mundo/fronteras';
+import { zonasDeLoRecordado } from './mundo/zonasRecordadas';
 import { exploradoDe, pixelesDeFertilidad, RADIO_PARCELA, type Explorado } from './mundo/capasDelMapa';
 
 /** px de pantalla por unidad con la que los glifos de las columnas salen a su tamaño de diseño (≈ la escala de visión en un portátil).
@@ -294,15 +295,6 @@ function trazoHaciaDentro(ctx: CanvasRenderingContext2D, color: string, segmento
   ctx.lineWidth = 8;
   ctx.stroke();
   ctx.restore();
-}
-
-/** El contorno de una zona RECORDADA: un círculo del radio que se recuerda, ya que la silueta real no se
- * guarda. 32 lados bastan — es una aproximación por definición, y a la escala del mapa no se distingue. */
-function circuloDe(centro: Point, radio: number): Point[] {
-  return Array.from({ length: 32 }, (_, i) => {
-    const a = (i / 32) * Math.PI * 2;
-    return { x: centro.x + Math.cos(a) * radio, y: centro.y + Math.sin(a) * radio };
-  });
 }
 
 // --- NIEBLA DE GUERRA ---
@@ -777,15 +769,20 @@ export function pintarTerreno(
   // ver el tramo que cae en tierra explorada. Pasar cerca de una frontera te enseña ESE tramo, no el mapa
   // politico entero — que es justo como funcionaria de verdad.
   //
-  // Silueta real (recortada contra sus vecinos) la de una plaza que ves; circulo punteado la de una que solo
-  // recuerdas, porque de esa el servidor guarda el radio y no el contorno.
+  // Silueta real (recortada contra sus vecinos) la de una plaza que ves; la de una que solo recuerdas, de la que el
+  // servidor guarda el radio, su disco recortado como lo recorta el motor contra los de otras Facciones que conoces
+  // (`mundo/zonasRecordadas.ts`): donde chocan dos zonas se ve la frontera, no dos circulos solapados.
   // Las zonas de una misma Facción van FUSIONADAS (`mundo/fronteras.ts`): un relleno por Facción, la frontera solo por fuera y una línea
   // tenue entre sus provincias. La frontera exterior de lo tuyo la traza la zona fusionada (paso 9); tus líneas entre provincias, encima de
   // ella, después.
   const conZonaPropia = (proyeccion.zonasFusionadas || []).some((z) => z.faccionId === proyeccion.faccionId && z.contornos.length > 0);
+  const recordadas = zonasDeLoRecordado(proyeccion.asentamientosAvistados, proyeccion.asentamientosConocidos);
   const zonas: (ZonaDeFaccion & { recordada: boolean; color: string })[] = [
     ...(proyeccion.asentamientosAvistados || []).filter((a) => (a.zona?.length ?? 0) >= 3).map((a) => ({ faccionId: a.faccionId || `sin-${a.id}`, contorno: a.zona!, recordada: false, color: faccionColor(a.faccionId, proyeccion.facciones) })),
-    ...(proyeccion.asentamientosConocidos || []).filter((c) => c.radioPotencial !== undefined).map((c) => ({ faccionId: c.faccionId || `sin-${c.asentamientoId}`, contorno: circuloDe(c.posicion, c.radioPotencial!), recordada: true, color: faccionColor(c.faccionId, proyeccion.facciones) })),
+    ...(proyeccion.asentamientosConocidos || []).flatMap((c) => {
+      const zona = recordadas.get(c.asentamientoId);
+      return zona ? [{ faccionId: c.faccionId || `sin-${c.asentamientoId}`, contorno: zona, recordada: false, color: faccionColor(c.faccionId, proyeccion.facciones) }] : [];
+    }),
   ];
   const deEstaFaccion = new Map<string, typeof zonas>();
   for (const z of zonas) deEstaFaccion.set(z.faccionId, [...(deEstaFaccion.get(z.faccionId) ?? []), z]);

@@ -3,6 +3,19 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.151.0] — 2026-11-04 · Fronteras de lo que solo se recuerda: recortadas donde chocan · sin cambio de contrato
+
+Víctor (2026-11-04): en la vista de mundo las fronteras se ven bien en lo que ves ahora, pero en la segunda capa de la niebla (lo explorado)
+se dejan de ver bien; y en el modo mapa, «debería mostrar la frontera cuando chocan las áreas de influencia». De una plaza que ya no se ve, el
+servidor da solo el radio (`radioPotencial`), y su zona se pintaba como un círculo entero de rayas cortas que se metía en las vecinas.
+
+- `mundo/zonasRecordadas.ts`: la zona de cada plaza recordada se recorta como lo hace el motor (`territorio::zona::poligono`): contra cada
+  disco de otra Facción que la toca, por la recta perpendicular a la que une los centros, a d · r_yo / (r_yo + r_otro) de su centro. Los discos
+  son los que se conocen: los que se ven (con el radio de su silueta) y los recordados. Las de la misma Facción no se recortan y se funden al
+  pintar, como las que se ven.
+- Su frontera va con el trazo de lo que se ve (la raya corta del recuerdo se va) y su relleno con la misma forma.
+- Igual en el mundo 3D (`estado.ts`) y en el modo mapa (`render.ts`).
+
 ## [0.150.0] — 2026-11-04 · Las obras de avanzada en «Obras» del panel izquierdo · sin cambio de contrato
 
 Petición de Víctor (2026-11-04, 18:48): debajo de «Pueblos y aldeas», una sección «Avanzadas» con las obras de avanzada de la plaza (atalaya

@@ -11,6 +11,7 @@ import { MUNDO3D } from './config';
 import type { TropaDeColumna } from './figuras';
 import { circulo, sentidoDe, suavizarCamino } from './lineas';
 import { partirFronteras, type ZonaDeFaccion } from '../mundo/fronteras';
+import { zonasDeLoRecordado } from '../mundo/zonasRecordadas';
 import type { RellenoDeTerritorio } from './territorio';
 
 type Punto = { x: number; y: number };
@@ -385,7 +386,7 @@ export function mundoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVista
   const colorDeMadre = (madreId: string, propio: boolean) => (propio ? color(p.faccionId) : color(p.asentamientosAvistados?.find((a) => a.id === madreId)?.faccionId));
   const plazas: PlazaEnVista[] = [];
   const trazos: TrazoEnVista[] = [];
-  // bajo la niebla: caminos, fronteras de lo que se ve (su silueta real) y de lo que se recuerda (un círculo discontinuo con su radio)
+  // bajo la niebla: caminos y fronteras, de lo que se ve (su silueta real) y de lo que se recuerda (su disco recortado por los vecinos)
   const anclas = anclasDe([
     ...(p.asentamientosAvistados ?? []).map((a) => a.posicion), ...(p.asentamientosConocidos ?? []).map((c) => c.posicion),
     ...(p.pueblos ?? []).map((x) => x.posicion), ...(p.campamentosMercenarios ?? []).map((c) => c.posicion),
@@ -405,10 +406,13 @@ export function mundoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVista
     plazas.push({ id: a.id, posicion: a.posicion, radioCiudad: radioZona * FRACCION_CIUDAD, color: color(a.faccionId), recordada: false, nivel: a.nivel ?? 1 });
     if (zona.length >= 3) zonas.push({ faccionId: a.faccionId || `sin-${a.id}`, contorno: zona, recordada: false, color: color(a.faccionId) });
   }
+  // lo que solo se recuerda: el disco de su radio recortado por los de otras Facciones que se conocen, como lo recorta el motor
+  // (`zonasRecordadas.ts`); con el trazo de lo que se ve
+  const recordadas = zonasDeLoRecordado(p.asentamientosAvistados, p.asentamientosConocidos);
   for (const c of p.asentamientosConocidos ?? []) {
-    const radioZona = c.radioPotencial ?? reglas.radioZonaInicial;
+    const radioZona = c.radioPotencial ?? reglas.radioZonaInicial, zona = recordadas.get(c.asentamientoId);
     plazas.push({ id: c.asentamientoId, posicion: c.posicion, radioCiudad: radioZona * FRACCION_CIUDAD, color: color(c.faccionId), recordada: true, nivel: c.nivel ?? 1 });
-    if (c.radioPotencial !== undefined) zonas.push({ faccionId: c.faccionId || `sin-${c.asentamientoId}`, contorno: circulo(c.posicion, c.radioPotencial).slice(0, -1), recordada: true, color: color(c.faccionId) });
+    if (zona) zonas.push({ faccionId: c.faccionId || `sin-${c.asentamientoId}`, contorno: zona, recordada: false, color: color(c.faccionId) });
   }
   trazos.push(...trazosDeFronteras(zonas, color, p.faccionId, conZonaPropia));
   const territorios = rellenosDeTerritorio(zonas, p.zonasFusionadas ?? [], color, p.faccionId, conZonaPropia);
