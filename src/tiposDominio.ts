@@ -377,6 +377,8 @@ export interface Encargo {
   /** Cuándo empezó la descarga o la carga en curso, si el motor lo manda; sin él, el cliente apunta cuándo la vio empezar. */
   inicioPaso?: number;
   cancelado: boolean;
+  /** «Detener ruta» (motor 5776ab69): acaba la ida y vuelta comerciando y, al dejar en el origen, se queda sin encargo. */
+  detener?: boolean;
 }
 
 /** Copia local de `Ejercito` (motor, Doc 5.12) — los de TU Facción, que la proyección manda completos.

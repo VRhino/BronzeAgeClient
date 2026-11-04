@@ -161,7 +161,8 @@ Una caravana ya no nace lista: se crea un casco vacío, se le montan carros y an
 - [x] `pasarAViveres` — `cantidad` · responde `{ movido }` · botón «＋ desde el carro» de la barra de víveres del mundo abierto: pasa trigo del carro a TUS víveres, solo lo que cabe (350 por héroe); solo el Líder de la columna (nuevo 2026-10-08, Doc 5.13)
 - [x] `prepararCaravana` — `caravanaId`, `heroeId`, `destinoAsentamientoId`, `carga` (recurso→cantidad); opcional: `escoltaEscuadronIds` — lanzamiento manual con preparación (escolta sin héroe, Doc 3.13.4) · Mercado › Caravanas: destino y carga del almacén (la escolta se cede en Mercado › Escolta)
 - [x] `cancelarCaravana` — `caravanaId` · Mercado › Caravanas, solo en `preparando`
-- [x] `moverCargaCaravanaAparcada` — `{ heroeId, caravanaId, asentamientoId, recurso, cantidad, sentido: 'cargar'|'descargar' }` · Mercado › Aparcadas (`src/ui/panelAparcadas.ts`)
+- [x] `moverCargaCaravanaAparcada` — `{ heroeId, caravanaId, asentamientoId, recurso, cantidad, sentido: 'cargar'|'descargar' }` · Mercado › Aparcadas (`src/ui/panelAparcadas.ts`) · descargar también la comercial en casa (0.141.0, Caravanas)
+- [x] `detenerEncargo` — `{ caravanaId }` · «⏹ Detener ruta» en Caravanas y Mercado › Rutas (`src/ui/encargoCaravana.ts`, 0.141.0)
 - [x] `enviarCaravanaAlOrigen` — `{ heroeId, caravanaId, asentamientoId }` · Mercado › Aparcadas
 
 ### Militar

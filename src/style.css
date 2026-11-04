@@ -3252,7 +3252,8 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .faccion-lateral-resumen .faction-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 0; }
 .faccion-lateral-resumen .faction-stats div, .faccion-lateral-resumen .faction-roles div { padding: 6px 8px; }
 .faccion-lateral-resumen .faction-roles { grid-template-columns: 1fr; gap: 6px; margin-top: 0; }
-.faccion-plaza { display: flex; align-items: center; gap: 14px; padding: 8px 10px; border-bottom: 1px solid rgba(169, 121, 63, 0.18); }
+.faccion-plaza { padding: 8px 10px; border-bottom: 1px solid rgba(169, 121, 63, 0.18); }
+.faccion-plaza-fila { display: flex; align-items: center; gap: 14px; }
 .faccion-plaza.capital { background: rgba(169, 121, 63, 0.12); border-left: 3px solid var(--oro); }
 .faccion-plaza-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .faccion-plaza-info strong { font-family: var(--fuente-titulo); color: var(--pergamino); }
@@ -5503,3 +5504,41 @@ button.carro-hueco:hover, .carro-hueco.activo { border-color: var(--oro); box-sh
 .flota-lleva { margin: 8px 0 2px; }
 .flota-lleva .pacto-linea small { margin-left: 3px; font-size: 0.7rem; color: var(--text-secondary); }
 .flota-lleva-total { margin-left: auto; color: var(--text-muted); }
+.ruta-fase.detenida { color: #e8c27a; border-color: rgba(232, 194, 122, 0.55); background: rgba(90, 70, 20, 0.25); }
+
+/* Plazas propias desde fuera en la ventana Facción (0.141.0) */
+.fplaza-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 3px; }
+.fplaza-chips .obra-chip { margin-left: 0; }
+.obra-chip.sube { border-color: var(--oro); color: var(--oro-claro); }
+.fplaza-medidor { display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem; color: var(--text-secondary); }
+.fplaza-medidor strong { color: var(--pergamino); min-width: 1.6em; }
+.fplaza-medidor-barra { width: 46px; height: 6px; border-radius: 3px; background: rgba(0, 0, 0, 0.45); overflow: hidden; border: 1px solid rgba(169, 121, 63, 0.35); }
+.fplaza-medidor-barra i { display: block; height: 100%; background: #6fae5a; }
+.fplaza-medidor.regular .fplaza-medidor-barra i { background: var(--obra-ambar); }
+.fplaza-medidor.mal .fplaza-medidor-barra i { background: var(--obra-rojo); }
+.fplaza-medidor.mal strong { color: #ffb3a8; }
+.faccion-plaza.abierta { background: rgba(0, 0, 0, 0.18); }
+.faccion-plaza.capital.abierta { background: rgba(169, 121, 63, 0.14); }
+.fplaza-detalle { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 12px; margin-top: 10px; }
+.fplaza-columna { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.fplaza-bloque { min-width: 0; }
+.fplaza-poblacion { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.fplaza-poblacion > div { display: flex; flex-direction: column; align-items: center; padding: 4px; border: 1px solid rgba(169, 121, 63, 0.25); border-radius: 6px; background: rgba(0, 0, 0, 0.25); }
+.fplaza-poblacion strong { font-family: var(--fuente-titulo); color: var(--pergamino); font-size: 1rem; }
+.fplaza-poblacion small { font-size: 0.68rem; color: var(--text-muted); }
+.fplaza-obra { display: grid; grid-template-columns: 24px minmax(0, 1fr) 80px auto; align-items: center; gap: 6px; padding: 3px 0; font-size: 0.8rem; }
+.fplaza-obra-icono { display: inline-flex; justify-content: center; }
+.fplaza-obra-nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--pergamino); }
+.fplaza-obra-nombre small, .fplaza-obra > small { color: var(--text-secondary); font-size: 0.72rem; }
+.fplaza-guarnicion { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 3px 0; font-size: 0.8rem; }
+.fplaza-guarnicion strong { min-width: 70px; }
+.fplaza-tropa { display: inline-flex; align-items: center; gap: 2px; }
+.fplaza-tropa small { font-size: 0.72rem; color: var(--text-secondary); }
+.fplaza-almacen .prod-fichas { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); }
+@media (max-width: 720px) {
+  .fplaza-detalle { grid-template-columns: 1fr; }
+  .faccion-plaza-fila { flex-wrap: wrap; gap: 8px; }
+  .faccion-plaza-fila .faccion-plaza-info { flex-basis: 100%; }
+}
+.flota-lleva-caja { display: flex; flex-direction: column; gap: 4px; }
+.flota-descargar { margin-bottom: 4px; max-width: 620px; }

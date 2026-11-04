@@ -335,7 +335,7 @@ function flujosDe(x: Existencia): { produce: number; consume: number; neto: numb
 }
 
 /** Los recursos que se mueven o que hay, en el orden de la paleta (los básicos primero). */
-function recursosDelAlmacen(a: Asentamiento): [string, Existencia][] {
+export function recursosDelAlmacen(a: Asentamiento): [string, Existencia][] {
   const orden = Object.keys(RECURSO_ICONO);
   const pos = (r: string): number => { const i = orden.indexOf(r); return i < 0 ? orden.length : i; };
   return Object.entries(a.almacen ?? {})
@@ -345,7 +345,7 @@ function recursosDelAlmacen(a: Asentamiento): [string, Existencia][] {
 
 /** Una ficha del almacén: icono, neto por minuto con flecha y color, lo que hay frente a lo que cabe, lo que entra frente a lo que sale y cuándo
  * se llena o se acaba. */
-function fichaRecurso(r: string, x: Existencia, e: Escapar): string {
+export function fichaRecurso(r: string, x: Existencia, e: Escapar): string {
   const { produce: p, consume: c, neto: n, lleno } = flujosDe(x);
   const fraccion = x.capacidad > 0 ? Math.min(1, x.cantidad / x.capacidad) : 0;
   const nombre = RECURSO_NOMBRE[r] ?? r;

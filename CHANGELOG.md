@@ -3,6 +3,23 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.141.0] — 2026-11-04 · Caravanas en casa, «Detener ruta» y las plazas propias en la ventana de Facción · contrato 0.13.0 (motor 5776ab69)
+
+Petición de Víctor (2026-11-04), con lo que el motor añadió para ello (`motor/aviso-plaza-propia-y-rutas.md`):
+
+- **Barra del paso exacta.** La barra de la descarga y la carga usa `Encargo.inicio_paso_ms`: ya no arranca cuando el cliente ve empezar el paso.
+- **«⏹ Detener ruta»** en las rutas (Caravanas y Mercado → Rutas), solo en las rutas sin detener (`OrdenDetenerEncargo`, `detenerEncargo`): la
+  caravana acaba la ida y vuelta comerciando y se queda sin ruta. Detenida, sale «⏹ Última vuelta: vuelve y se queda sin ruta» y se oculta «Cambiar».
+- **Descargar al almacén** una caravana en casa (disponible, o esperando en su origen aunque tenga ruta), a quien reside y está dentro: recurso,
+  cantidad (vacía = todo ese recurso) y «⬇ Todo» (`moverCargaCaravanaAparcada` con `descargar`). Entra lo que el almacén admite y cabe.
+- **Facción → Plazas** con lo de dentro de cada plaza propia (`ProyeccionJugador.plazasPropias`, de `FACCION`): mantenimiento y nutrición en barra,
+  población, subida de nivel, obras, recursos a la baja, almacén lleno, edificios parados o dañados, guarnición y auto-construcción apagada en
+  chips; con «Detalle», el almacén con lo que entra y sale por minuto, la población por escalón, las obras y mejoras con su barra y la guarnición
+  por dueño. La capital, desplegada de entrada.
+- El paso de minuto de esas plazas llega parcial en `FACCION` (se aplica como el de `ASENTAMIENTO`), y al reconectar el `Hola` declara su
+  `version_interior` con la clave `PROPIA:as-N`.
+- Los talleres de fabricación del motor están a 5 minutos de prueba: hace falta partida nueva.
+
 ## [0.140.0] — 2026-11-04 · Caravanas: barra de tiempo de la carga y la descarga, y lo que lleva · sin cambio de contrato
 
 Petición de Víctor (2026-11-04):

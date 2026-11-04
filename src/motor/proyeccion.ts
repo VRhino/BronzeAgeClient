@@ -290,7 +290,7 @@ function encargo(e: pb.Encargo): d.Encargo {
     modo: e.modo === 'envio' ? 'envio' : 'ruta', destinoAsentamientoId: e.destinoAsentamientoId, salirEn: instante(e.salirEnMs),
     paradaOrigen: parada(e.paradaOrigen), paradaDestino: parada(e.paradaDestino), vueltas: e.vueltas,
     paradaActual: e.paradaActual === 'destino' ? 'destino' : 'origen', fase: (['espera', 'descarga', 'carga'].includes(e.fase) ? e.fase : '') as d.Encargo['fase'],
-    finPaso: instante(e.finPasoMs), cancelado: e.cancelado,
+    finPaso: instante(e.finPasoMs), inicioPaso: instante(e.inicioPasoMs), cancelado: e.cancelado, detener: e.detener || undefined,
   };
 }
 
@@ -654,6 +654,9 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
     directorioFacciones: deAmbito('VISTA:', 'directorioFacciones')[0]?.facciones.map((f) => ({ id: f.id, nombre: f.nombre, sigilo: sigilo(f.sigilo), nivel: f.nivel, ciudadanos: f.ciudadanos, derrotada: f.derrotada, esBot: f.esBot })),
     // Lo de siempre: SOLO la plaza donde el jugador está (cero o un elemento), con todo su interior.
     asentamientos: interior ? [asentamiento(interior, ahora)] : [],
+    // Las de tu Facción con su interior (motor 5776ab69): almacén, población, obras, ascenso y guarnición en FACCION, refrescados en cada paso de
+    // minuto de la plaza; la de dentro, de ASENTAMIENTO. Para la pestaña Plazas de la ventana de Facción.
+    plazasPropias: propias.filter((p) => p.versionInterior > 0n || p.id === interior?.id).map((p) => asentamiento(p, ahora)),
     asentamientosAvistados: [...ajenas, ...propias].filter((p) => p.id !== interior?.id).map((p) => ({
       id: p.id, nombre: p.nombre, faccionId: p.faccionId, posicion: punto(p.posicion), nivel: p.nivel, zona: p.zona.map(punto),
       edificios: p.edificios.map(edificio),

@@ -46,6 +46,9 @@ export interface ProyeccionJugador {
    * proposito: la diferencia entre "lo veo entero" y "solo lo avisto" es de tipo, no un campo opcional del
    * que este cliente pueda olvidarse. */
   asentamientosAvistados: AsentamientoAvistado[];
+  /** Las plazas de tu Facción con lo de dentro que el motor da desde fuera (almacén con su tendencia, población, mantenimiento, obras, ascenso,
+   * guarnición; motor 5776ab69). Ausente con un motor anterior; la de dentro va también en `asentamientos`. */
+  plazasPropias?: Asentamiento[];
   /** Los que se vieron alguna vez y ahora no se ven: la ultima foto, congelada, con su `conocidoEn`. Nunca
    * repite lo que ya esta en `asentamientosAvistados` — cuando algo se ve y ademas se recuerda, gana lo que
    * se ve. */

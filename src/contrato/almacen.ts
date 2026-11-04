@@ -200,6 +200,12 @@ export class Almacen {
           if (c.case === 'asentamiento') h.versionesInterioresConocidas[`ASENTAMIENTO:${c.value.id}`] = c.value.versionInterior;
         }
       }
+      // Las plazas de tu Facción vistas desde fuera (motor 5776ab69): su paso de minuto viaja parcial en FACCION; se declara con la clave PROPIA.
+      if (k.startsWith('FACCION:')) {
+        for (const c of a.entidades.values()) {
+          if (c.case === 'asentamiento' && c.value.versionInterior > 0n) h.versionesInterioresConocidas[`PROPIA:${c.value.id}`] = c.value.versionInterior;
+        }
+      }
     }
     return h;
   }

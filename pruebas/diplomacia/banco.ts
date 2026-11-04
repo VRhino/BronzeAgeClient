@@ -2,7 +2,7 @@
 // estructura que pinta `renderPanelJugador` en main.ts, para mirarla a distintos tamaños de pantalla. `?sinFaccion=1`: «Pedir ingreso» sin Facción.
 import '../../src/style.css';
 import type { ProyeccionJugador } from '../../src/apiCliente';
-import { elegirFaccion, htmlLateralFaccion, htmlListaFacciones, PESTANAS_FACCION, renderPestanaFaccion } from '../../src/ui/pestanaFaccion';
+import { cablearPlazasFaccion, elegirFaccion, htmlLateralFaccion, htmlListaFacciones, PESTANAS_FACCION, renderPestanaFaccion } from '../../src/ui/pestanaFaccion';
 import { estadoCliente } from '../../src/ui/estadoCliente';
 import { htmlTecnologia } from '../../src/ui/panelTecnologia';
 
@@ -44,6 +44,29 @@ const p = {
   aedasResidentes: [],
 } as unknown as ProyeccionJugador;
 
+// `?pestana=plazas`: las plazas de tu Facción con su interior desde fuera (0.141.0, motor 5776ab69).
+const M = 60_000;
+const ex = (cantidad: number, capacidad: number, producido: number, consumido: number) => ({ cantidad, capacidad, porMinuto: producido - consumido, producido, produccion: producido, consumido });
+(p as unknown as { plazasPropias: unknown[] }).plazasPropias = [
+  { id: 'as-1', nombre: 'Micenas', faccionId: 'fac-1', nivel: 3, nivelActual: 3, posicion: { x: 410, y: 300 }, medidorMantenimiento: 92, nutricionPoblacion: 100,
+    poblacion: { pesants: 182, artesanos: 41, nobleza: 9 },
+    almacen: { trigo: ex(640, 1200, 18, 11.5), madera: ex(1200, 1200, 9, 2), piedra: ex(310, 1200, 4, 1), cobre: ex(88, 600, 1.5, 0), estano: ex(12, 600, 0, 0.4), bronce: ex(40, 600, 0.6, 0), oro: ex(512, 2000, 3.2, 0.8) },
+    edificios: [
+      { id: 'ed-1', tipo: 'fundicion', estado: 'en_construccion', ambito: 'asentamiento', posicion: { x: 0, y: 0 }, completaEn: AHORA + 3 * M },
+      { id: 'ed-2', tipo: 'granero', estado: 'activo', ambito: 'asentamiento', posicion: { x: 0, y: 0 }, nivelInterno: 1, mejora: { nivelObjetivo: 2, completaEn: AHORA + 42 * M } },
+      { id: 'ed-3', tipo: 'lenera', estado: 'activo', ambito: 'asentamiento', posicion: { x: 0, y: 0 }, pausadoPorAlmacenLleno: true },
+    ],
+    ascenso: { nivelObjetivo: 4, iniciadoEn: AHORA - 4 * M, completaEn: AHORA + 6 * M },
+    guarnicionIds: ['esc-1', 'esc-2', 'esc-3'], cupoGuarnicion: 60,
+    guarnicion: [{ tropaId: 'lanceros', cantidad: 40, heroeId: 'heroe-1' }, { tropaId: 'arqueros', cantidad: 25, heroeId: 'heroe-1' }, { tropaId: 'lanceros', cantidad: 30, heroeId: 'heroe-9' }] },
+  { id: 'as-4', nombre: 'Tirinto', faccionId: 'fac-1', nivel: 2, nivelActual: 1, posicion: { x: 380, y: 340 }, medidorMantenimiento: 38, nutricionPoblacion: 64,
+    poblacion: { pesants: 64, artesanos: 8, nobleza: 0 }, autoConstruccionPausada: true,
+    almacen: { trigo: ex(22, 600, 4, 6.5), madera: ex(140, 600, 3, 1), oro: ex(70, 1000, 0.8, 0.4) },
+    edificios: [{ id: 'ed-9', tipo: 'vivienda', estado: 'activo', ambito: 'asentamiento', posicion: { x: 0, y: 0 }, danado: true }], cupoGuarnicion: 30 },
+];
+p.asentamientosAvistados.push({ id: 'as-4', nombre: 'Tirinto', faccionId: 'fac-1', nivel: 2, posicion: { x: 380, y: 340 } } as never);
+estadoCliente.proyeccionUltima = p;
+
 const panel = document.querySelector<HTMLElement>('.jugador-panel')!;
 function pintar(): void {
   if (new URLSearchParams(location.search).get('sinFaccion')) {
@@ -64,8 +87,9 @@ function pintar(): void {
   // `?pestana=tecnologia`: la pestaña de Tecnología (0.123.0), como la pinta main.ts
   const pestana = new URLSearchParams(location.search).get('pestana') ?? 'diplomacia';
   const pestanas = `<nav class="faccion-pestanas" role="tablist">${PESTANAS_FACCION.map(([id, nombre]) => `<button type="button" class="faccion-pestana${id === pestana ? ' activo' : ''}">${nombre}</button>`).join('')}</nav>`;
-  const cuerpo = pestana === 'tecnologia' ? `<section class="faccion-tecnologia">${htmlTecnologia(p, e, false)}</section>` : renderPestanaFaccion(p, e, 'diplomacia', '', true);
+  const cuerpo = pestana === 'plazas' ? renderPestanaFaccion(p, e, 'plazas', '', true) : pestana === 'tecnologia' ? `<section class="faccion-tecnologia">${htmlTecnologia(p, e, false)}</section>` : renderPestanaFaccion(p, e, 'diplomacia', '', true);
   panel.innerHTML = `<div class="faccion-cabecera"><div class="mapa-panel-jugador">Facción</div><button class="btn-secondary" type="button">Cerrar</button></div><div class="faccion-marco">${htmlLateralFaccion(p, e)}<div class="faccion-principal">${pestanas}<div class="faccion-cuerpo${pestana === 'diplomacia' ? ' faccion-cuerpo-diplomacia' : ''}">${cuerpo}</div></div></div>`;
+  cablearPlazasFaccion(panel, pintar);
 }
 pintar();
 (window as unknown as { __banco: unknown }).__banco = { listo: true };

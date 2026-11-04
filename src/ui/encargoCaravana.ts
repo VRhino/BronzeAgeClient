@@ -124,6 +124,7 @@ export function htmlRutaVisual(c: Caravana, k: Encargo, p: ProyeccionJugador, a:
         <span class="ruta-fase ${faseClase}">${e(fase)}</span>
         <span class="obra-chip">${k.modo === 'ruta' ? '⇄ Ruta permanente' : '→ Envío de ida y vuelta'}</span>
         ${k.modo === 'ruta' ? `<span class="obra-chip" title="Vueltas completas">↻ ${k.vueltas} ${k.vueltas === 1 ? 'vuelta' : 'vueltas'}</span>` : ''}
+        ${k.detener && !k.cancelado ? '<span class="ruta-fase detenida" title="Detener ruta: acaba esta vuelta comerciando y, al dejar en el origen, se queda sin ruta">⏹ Última vuelta: vuelve y se queda sin ruta</span>' : ''}
       </div>
       ${barraDePaso(c, k, p, e)}
       <div class="ruta-paradas">
@@ -214,8 +215,10 @@ export function htmlEncargo(c: Caravana, p: ProyeccionJugador, a: Asentamiento, 
     </div>`;
   }
   // Solo quien puede cambiarla ve «Cambiar» y «Cancelar» (lo que no puedes hacer no se enseña).
+  // «Detener ruta» (0.141.0): solo en una ruta que sigue viva; un envío ya acaba solo.
+  const detener = k.modo === 'ruta' && !k.detener ? `<button class="btn-secondary btn-chico" type="button" data-enc-detener="${e(c.id)}" title="Acaba esta ida y vuelta comerciando y se queda sin ruta">⏹ Detener ruta</button>` : '';
   const botones = k.cancelado || motivo ? '' : `<span class="caravana-botones">
-      <button class="btn-secondary btn-chico" type="button" data-enc-abrir="${e(c.id)}">${abierto ? '▾ Cerrar' : '✎ Cambiar'}</button>
+      ${k.detener ? '' : `<button class="btn-secondary btn-chico" type="button" data-enc-abrir="${e(c.id)}">${abierto ? '▾ Cerrar' : '✎ Cambiar'}</button>`}${detener}
       <button class="btn-secondary btn-chico" type="button" data-enc-cancelar="${e(c.id)}">Cancelar encargo</button></span>`;
   return `<div class="caravana-seccion encargo">
     <div class="caravana-seccion-cab"><strong class="heroe-sub">${titulo ?? (k.modo === 'ruta' ? 'Ruta' : 'Envío')}</strong>${botones}</div>
@@ -263,6 +266,10 @@ export function cablearEncargo(raiz: HTMLElement, p: ProyeccionJugador, ejecutar
   raiz.querySelectorAll<HTMLButtonElement>('[data-enc-cancelar]').forEach((b) => b.addEventListener('click', () => {
     if (!confirm('¿Cancelar el encargo? La caravana termina lo que esté haciendo y vuelve a su origen.')) return;
     void lanzar(b, 'cancelarEncargo', { caravanaId: b.dataset.encCancelar! });
+  }));
+  raiz.querySelectorAll<HTMLButtonElement>('[data-enc-detener]').forEach((b) => b.addEventListener('click', () => {
+    if (!confirm('¿Detener la ruta? Si va de camino, acaba esta ida y vuelta comerciando y al volver se queda sin ruta; si está en el origen, se queda ya sin ella.')) return;
+    void lanzar(b, 'detenerEncargo', { caravanaId: b.dataset.encDetener! });
   }));
   // Según el modo y el destino: una ruta solo va a plazas tuyas, y los precios solo valen en una plaza ajena.
   raiz.querySelectorAll<HTMLElement>('[data-enc-form]').forEach((form) => {

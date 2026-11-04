@@ -1,5 +1,12 @@
 import { bloqueDeDatos, type ProyeccionJugador } from '../apiCliente';
-import type { Faccion, Sigilo } from '../tiposDominio';
+import type { Asentamiento, Faccion, Sigilo } from '../tiposDominio';
+import { EDIFICIO_NOMBRE } from '../paletas';
+import { iconoEdificio } from './iconosEdificio';
+import { iconoTropa } from './iconosTropa';
+import { ahora, barraAvance, cuentaAtras } from './juegoVisual';
+import { avanceDeObra } from './panelObras';
+import { nombreDeTropa } from './ejercitos';
+import { fichaRecurso, recursosDelAlmacen } from './vistaCiudad';
 import { htmlLiga, htmlTitulos, ligaDe } from '../sigilo/imperio';
 import { CATALOGO_SIGILO, opciones, sigiloAleatorio, svgSigilo } from '../sigilo/sigilo';
 import { ayuda } from './ayuda';
@@ -116,23 +123,129 @@ export function htmlLateralFaccion(proyeccion: ProyeccionJugador, e: (valor: str
   </aside>`;
 }
 
-/** La pestaña Plazas: las de tu Facción que conoce el cliente, con su nivel, si es la capital, cuántos ciudadanos residen y «Ver» en el mapa. */
+/** Las plazas desplegadas en la pestaña Plazas: sobreviven a los repintados. La capital, de entrada. */
+const plazasAbiertas = new Set<string>();
+let plazasTocadas = false;
+
+/** Un medidor 0-100 en pequeño: icono, barra y cifra, en rojo por debajo de 50 y ámbar por debajo de 80. */
+function medidor(icono: string, nombre: string, valor: number | undefined, nota: string, e: (v: string) => string): string {
+  if (valor === undefined) return '';
+  const v = Math.max(0, Math.min(100, valor));
+  const clase = v < 50 ? ' mal' : v < 80 ? ' regular' : '';
+  return `<span class="fplaza-medidor${clase}" title="${e(`${nombre}: ${Math.round(v)} de 100${nota ? ` · ${nota}` : ''}`)}"><span aria-hidden="true">${icono}</span><span class="fplaza-medidor-barra"><i style="width:${v.toFixed(1)}%"></i></span><strong>${Math.round(v)}</strong></span>`;
+}
+
+/** Lo de dentro de una plaza propia vista desde fuera (motor 5776ab69): chips de estado arriba y, desplegado, almacén por minuto, obras y guarnición. */
+function htmlInteriorPlaza(p: ProyeccionJugador, a: Asentamiento, abierta: boolean, e: (v: string) => string): { chips: string; detalle: string } {
+  const pob = a.poblacion;
+  const total = pob ? Math.floor(pob.pesants) + Math.floor(pob.artesanos) + Math.floor(pob.nobleza) : 0;
+  const obras = (a.edificios ?? []).filter((x) => x.estado === 'en_construccion' || x.mejora);
+  const parados = (a.edificios ?? []).filter((x) => x.estado === 'activo' && x.pausadoPorAlmacenLleno).length;
+  const danados = (a.edificios ?? []).filter((x) => x.danado).length;
+  const recursos = recursosDelAlmacen(a);
+  const bajan = recursos.filter(([, x]) => (x.porMinuto ?? 0) < 0 && !(x.capacidad > 0 && x.cantidad >= x.capacidad)).length;
+  const llenos = recursos.filter(([, x]) => x.capacidad > 0 && x.cantidad >= x.capacidad).length;
+  const escuadras = a.guarnicionIds?.length ?? 0;
+  const ascenso = a.ascenso;
+  const chips = [
+    medidor('🛠', 'Mantenimiento', a.medidorMantenimiento, a.nivelActual !== undefined && a.nivelActual < a.nivel ? `rinde como nivel ${a.nivelActual}` : '', e),
+    medidor('🍞', 'Nutrición', a.nutricionPoblacion, '', e),
+    pob ? `<span class="obra-chip" title="${e(`Población: ${Math.floor(pob.pesants)} pesants, ${Math.floor(pob.artesanos)} artesanos y ${Math.floor(pob.nobleza)} de nobleza`)}">👥 ${total}</span>` : '',
+    ascenso ? `<span class="obra-chip sube" title="${e(`Sube a nivel ${ascenso.nivelObjetivo}: ${cuentaAtras(ascenso.completaEn)}`)}">⬆ Nivel ${ascenso.nivelObjetivo} · ${e(cuentaAtras(ascenso.completaEn))}</span>` : '',
+    obras.length ? `<span class="obra-chip" title="${obras.length} obra(s) o mejora(s) en curso">🏗 ${obras.length}</span>` : '',
+    bajan ? `<span class="obra-chip baja" title="${bajan} recurso(s) a la baja">▼ ${bajan}</span>` : '',
+    llenos ? `<span class="obra-chip lleno" title="${llenos} recurso(s) con el almacén lleno">📦 ${llenos}</span>` : '',
+    parados ? `<span class="obra-chip parado" title="${parados} edificio(s) parados por almacén lleno">⏸ ${parados}</span>` : '',
+    danados ? `<span class="obra-chip parado" title="${danados} edificio(s) dañado(s)">⚠ ${danados}</span>` : '',
+    escuadras ? `<span class="obra-chip" title="${escuadras} escuadra(s) en la guarnición">🛡 ${escuadras}</span>` : '',
+    a.autoConstruccionPausada ? '<span class="obra-chip parado" title="El Gobernador o el Maestro de Obras apagó la auto-construcción: no se levantan edificios nuevos solos">⏸ Auto-construcción apagada</span>' : '',
+  ].filter(Boolean).join('');
+  if (!abierta) return { chips, detalle: '' };
+
+  const almacen = recursos.length
+    ? `<div class="prod-fichas">${recursos.map(([r, x]) => fichaRecurso(r, x, e)).join('')}</div>`
+    : '<p class="mapa-lista-vacia">El almacén está vacío.</p>';
+  const poblacion = pob
+    ? `<div class="fplaza-poblacion">${[['🧑‍🌾', 'Pesants', pob.pesants], ['🔨', 'Artesanos', pob.artesanos], ['👑', 'Nobleza', pob.nobleza]].map(([i, n, v]) => `<div title="${n}"><span aria-hidden="true">${i}</span><strong>${Math.floor(v as number)}</strong><small>${n}</small></div>`).join('')}</div>`
+    : '';
+  const lineaAscenso = ascenso
+    ? (() => {
+      const dur = ascenso.completaEn - ascenso.iniciadoEn;
+      const x = dur > 0 ? Math.max(0, Math.min(1, (ahora() - ascenso.iniciadoEn) / dur)) : null;
+      return `<div class="fplaza-obra"><span class="fplaza-obra-icono" aria-hidden="true">⬆</span><span class="fplaza-obra-nombre">Subida a nivel ${ascenso.nivelObjetivo}</span>${barraAvance(x)}<small>${e(cuentaAtras(ascenso.completaEn))}</small></div>`;
+    })()
+    : '';
+  const lineasObra = obras.map((x) => {
+    const nombre = EDIFICIO_NOMBRE[x.tipo] ?? x.tipo;
+    const que = x.mejora ? `a nivel ${x.mejora.nivelObjetivo}` : 'en obra';
+    const fin = x.mejora?.completaEn ?? x.completaEn;
+    return `<div class="fplaza-obra"><span class="fplaza-obra-icono" aria-hidden="true">${iconoEdificio(x.tipo, 22)}</span><span class="fplaza-obra-nombre">${e(nombre)} <small>${que}</small></span>${barraAvance(avanceDeObra(a, x))}<small>${e(cuentaAtras(fin) || 'en cola')}</small></div>`;
+  }).join('');
+  const obrasHtml = lineaAscenso || lineasObra ? `${lineaAscenso}${lineasObra}` : '<p class="mapa-lista-vacia">Sin obras ni mejoras en curso.</p>';
+  // La guarnición, por dueño y tropa (`guarnicion` en el orden de `guarnicionIds`).
+  const porDueno = new Map<string, Map<string, number>>();
+  for (const g of a.guarnicion ?? []) {
+    const m = porDueno.get(g.heroeId) ?? new Map<string, number>();
+    m.set(g.tropaId, (m.get(g.tropaId) ?? 0) + g.cantidad);
+    porDueno.set(g.heroeId, m);
+  }
+  const guarnicion = porDueno.size
+    ? [...porDueno.entries()].map(([h, m]) => `<div class="fplaza-guarnicion"><strong class="guarnicion-dueno">${e(h === p.heroeId ? 'Tuya' : nombreDeHeroe(p, h))}</strong>${[...m.entries()].map(([t, n]) => `<span class="fplaza-tropa" title="${e(`${nombreDeTropa(t)} · ${n} hombres`)}">${iconoTropa(t, 22)}<small>${n}</small></span>`).join('')}</div>`).join('')
+    : escuadras ? `<p class="legend-note">${escuadras} escuadra(s).</p>` : '<p class="mapa-lista-vacia">Nadie ha dejado tropa en la guarnición.</p>';
+  const cupo = a.cupoGuarnicion !== undefined ? `<small>cupo ${a.cupoGuarnicion} pts por héroe</small>` : '';
+  const detalle = `<div class="fplaza-detalle">
+      <div class="fplaza-bloque fplaza-almacen"><div class="obra-titulo"><span class="faction-kicker">Almacén</span><small>por minuto · ▲ entra, ▼ sale</small></div>${almacen}</div>
+      <div class="fplaza-columna">
+        ${poblacion ? `<div class="fplaza-bloque"><div class="obra-titulo"><span class="faction-kicker">Población</span></div>${poblacion}</div>` : ''}
+        <div class="fplaza-bloque"><div class="obra-titulo"><span class="faction-kicker">Obras y mejoras</span></div>${obrasHtml}</div>
+        <div class="fplaza-bloque"><div class="obra-titulo"><span class="faction-kicker">Guarnición</span>${cupo}</div>${guarnicion}</div>
+      </div>
+    </div>`;
+  return { chips, detalle };
+}
+
+/** La pestaña Plazas: las de tu Facción que conoce el cliente, con su nivel, si es la capital, cuántos ciudadanos residen y «Ver» en el mapa.
+ * Con el interior que da el motor desde fuera (0.141.0, Víctor 2026-11-04): mantenimiento, nutrición, población, obras, ascenso, guarnición y
+ * auto-construcción en chips, y desplegada el almacén con lo que entra y sale por minuto. */
 function htmlPlazasFaccion(p: ProyeccionJugador, faccion: Faccion, e: (valor: string) => string): string {
   const plazas = new Map<string, { nombre: string; nivel: number; posicion: { x: number; y: number }; recordada: boolean }>();
   for (const a of p.asentamientosConocidos) if (a.faccionId === faccion.id) plazas.set(a.asentamientoId, { nombre: a.nombre ?? a.asentamientoId, nivel: a.nivel, posicion: a.posicion, recordada: true });
   for (const a of p.asentamientosAvistados) if (a.faccionId === faccion.id) plazas.set(a.id, { nombre: a.nombre ?? a.id, nivel: a.nivel, posicion: a.posicion, recordada: false });
   for (const a of p.asentamientos) if (a.faccionId === faccion.id && !plazas.has(a.id)) plazas.set(a.id, { nombre: a.nombre ?? a.id, nivel: a.nivel, posicion: a.posicion, recordada: false });
+  const interiores = new Map((p.plazasPropias ?? []).filter((a) => a.faccionId === faccion.id).map((a) => [a.id, a]));
+  for (const a of interiores.values()) if (!plazas.has(a.id)) plazas.set(a.id, { nombre: a.nombre ?? a.id, nivel: a.nivel, posicion: a.posicion, recordada: false });
   if (plazas.size === 0) return '<p class="mapa-lista-vacia">Tu Facción aún no tiene plazas.</p>';
   const capitalId = faccion.capitalId ?? p.tecnologia?.capitalId ?? undefined;
+  if (!plazasTocadas) { plazasAbiertas.clear(); plazasAbiertas.add(capitalId && interiores.has(capitalId) ? capitalId : [...interiores.keys()][0] ?? ''); }
   const residentes = (id: string) => (faccion.miembros ?? []).filter((m) => m.residenciaId === id).length;
   const lista = [...plazas.entries()].sort(([ia, a], [ib, b]) => Number(ib === capitalId) - Number(ia === capitalId) || b.nivel - a.nivel || a.nombre.localeCompare(b.nombre));
   return `<div class="faction-list faction-list-libre"><span class="faction-kicker">Plazas de tu Facción (${plazas.size})</span>
-    ${lista.map(([id, a]) => `<div class="faccion-plaza${id === capitalId ? ' capital' : ''}">
-      <div class="faccion-plaza-info"><strong>${e(a.nombre)}${id === capitalId ? ' <span class="faccion-publica-relacion">Capital</span>' : ''}</strong>
-        <span>Nivel ${a.nivel} · (${Math.round(a.posicion.x)}, ${Math.round(a.posicion.y)})${a.recordada ? ' · recordada' : ''}</span></div>
-      <div class="faccion-publica-cifras"><div><strong>${residentes(id)}</strong><span>Residentes</span></div></div>
-      <button class="btn-secondary" type="button" data-centrar-x="${a.posicion.x}" data-centrar-y="${a.posicion.y}">Ver en el mapa</button>
-    </div>`).join('')}</div>`;
+    ${lista.map(([id, a]) => {
+      const dentro = interiores.get(id);
+      const abierta = Boolean(dentro) && plazasAbiertas.has(id);
+      const interior = dentro ? htmlInteriorPlaza(p, dentro, abierta, e) : null;
+      return `<div class="faccion-plaza${id === capitalId ? ' capital' : ''}${interior ? ' con-interior' : ''}${abierta ? ' abierta' : ''}">
+      <div class="faccion-plaza-fila">
+        <div class="faccion-plaza-info"><strong>${e(a.nombre)}${id === capitalId ? ' <span class="faccion-publica-relacion">Capital</span>' : ''}</strong>
+          <span>Nivel ${a.nivel}${dentro?.nivelActual !== undefined && dentro.nivelActual < a.nivel ? ` <span class="falta">(rinde como ${dentro.nivelActual})</span>` : ''} · (${Math.round(a.posicion.x)}, ${Math.round(a.posicion.y)})${a.recordada ? ' · recordada' : ''}</span>
+          ${interior?.chips ? `<div class="fplaza-chips">${interior.chips}</div>` : ''}</div>
+        <div class="faccion-publica-cifras"><div><strong>${residentes(id)}</strong><span>Residentes</span></div></div>
+        ${interior ? `<button class="btn-secondary" type="button" data-plaza-detalle="${e(id)}" aria-expanded="${abierta}">${abierta ? 'Ocultar ▴' : 'Detalle ▾'}</button>` : ''}
+        <button class="btn-secondary" type="button" data-centrar-x="${a.posicion.x}" data-centrar-y="${a.posicion.y}">Ver en el mapa</button>
+      </div>
+      ${interior?.detalle ?? ''}
+    </div>`;
+    }).join('')}</div>`;
+}
+
+/** «Detalle» de la pestaña Plazas: despliega o pliega la ficha de esa plaza. */
+export function cablearPlazasFaccion(root: ParentNode, rerender: () => void): void {
+  root.querySelectorAll<HTMLButtonElement>('[data-plaza-detalle]').forEach((b) => b.addEventListener('click', () => {
+    const id = b.dataset.plazaDetalle!;
+    plazasTocadas = true;
+    if (plazasAbiertas.has(id)) plazasAbiertas.delete(id); else plazasAbiertas.add(id);
+    rerender();
+  }));
 }
 
 const RELACION: Record<string, string> = { alianza: 'Aliada', guerra: 'En guerra', vasallaje: 'Vasallaje' };

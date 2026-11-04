@@ -487,7 +487,20 @@ function detalleFlota(c: Caravana, p: ProyeccionJugador, a: Asentamiento, reside
   }
   // Lo que lleva, con ruta o sin ella (0.140.0, Víctor 2026-11-04): cada recurso con su cantidad.
   const lleva = Object.entries(c.contenido ?? {}).filter(([, n]) => n >= 1);
-  const carga = lleva.length ? `<div class="aparcada-carga flota-lleva"><small>Lleva</small>${lleva.map(([r, n]) => `<span class="pacto-linea" title="${e(RECURSO_NOMBRE[r] ?? r)}"><i aria-hidden="true">${RECURSO_ICONO[r] ?? '📦'}</i><b>${Math.floor(n)}</b><small>${e(RECURSO_NOMBRE[r] ?? r)}</small></span>`).join('')}<small class="flota-lleva-total">${cargaDe(c)}${capacidad ? ` / ${capacidad}` : ''}</small></div>` : '';
+  // En casa (disponible, o esperando en su origen con encargo) quien reside y está dentro la descarga al almacén, todo o una parte (motor 5776ab69,
+  // `moverCargaCaravanaAparcada` con `descargar`): entra lo que el almacén admite y cabe.
+  const enCasa = estado === 'disponible' || (estado === 'esperando' && c.encargo?.paradaActual === 'origen');
+  const descarga = lleva.length && enCasa && reside && dentro;
+  const hueco = (r: string): number => { const x = a.almacen?.[r]; return x && x.capacidad > 0 ? Math.max(0, Math.floor(x.capacidad - x.cantidad)) : Infinity; };
+  const carga = lleva.length ? `<div class="flota-lleva-caja">
+      <div class="aparcada-carga flota-lleva"><small>Lleva</small>${lleva.map(([r, n]) => `<span class="pacto-linea" title="${e(RECURSO_NOMBRE[r] ?? r)}"><i aria-hidden="true">${RECURSO_ICONO[r] ?? '📦'}</i><b>${Math.floor(n)}</b><small>${e(RECURSO_NOMBRE[r] ?? r)}</small></span>`).join('')}<small class="flota-lleva-total">${cargaDe(c)}${capacidad ? ` / ${capacidad}` : ''}</small></div>
+      ${descarga ? `<div class="aparcada-mover flota-descargar">
+        <select class="form-input" data-descargar-recurso="${e(c.id)}" aria-label="Recurso">${lleva.map(([r, n]) => { const h = hueco(r); return `<option value="${e(r)}" data-lleva="${Math.floor(n)}">${RECURSO_ICONO[r] ?? '📦'} ${e(RECURSO_NOMBRE[r] ?? r)} (lleva ${Math.floor(n)}${Number.isFinite(h) ? ` · cabe ${h}` : ''})</option>`; }).join('')}</select>
+        <input class="form-input" type="number" min="1" step="1" placeholder="todo" aria-label="Cantidad" data-descargar-cantidad="${e(c.id)}" />
+        <button class="btn-secondary btn-chico" type="button" data-descargar="${e(c.id)}" title="Del carro al almacén de la plaza (vacío = todo ese recurso)">⬇ Descargar</button>
+        <button class="btn-secondary btn-chico" type="button" data-descargar-todo="${e(c.id)}" title="Todo lo que lleva, recurso a recurso: entra lo que cabe">⬇ Todo</button>
+      </div>` : ''}
+    </div>` : '';
   return `<div class="caravana-tarjeta flota-detalle ${e(estado)}">${cab}${chips}${carga}
     ${carrosEnHuecos(c, a, editable, otras, almacen, carrosLleno, d, e)}
     ${escoltaEnHuecos(c, p, parada || (estado === 'esperando' && c.encargo?.paradaActual === 'origen') ? fuenteDeEscolta(p, a, reside) : null, d?.escoltaPts, e)}
@@ -747,6 +760,33 @@ export function cablearCaravanas(raiz: HTMLElement, p: ProyeccionJugador, a: Ase
     const cantidad = Number(raiz.querySelector<HTMLInputElement>(`[data-aparcada-cantidad="${caravanaId}"]`)?.value);
     if (!recurso || !(cantidad >= 1)) { mostrarAviso('Elige un recurso y una cantidad de 1 o más.', true); return; }
     void lanzar(b, 'moverCargaCaravanaAparcada', { ...base, caravanaId, recurso, cantidad, sentido });
+  }));
+  // Descargar al almacén una caravana de la flota en casa (0.141.0): un recurso (vacío = todo lo que lleva de él) o todo, recurso a recurso.
+  const descargar = (caravanaId: string, recurso: string, cantidad: number) => ejecutar('moverCargaCaravanaAparcada', { ...base, caravanaId, recurso, cantidad, sentido: 'descargar' });
+  raiz.querySelectorAll<HTMLButtonElement>('[data-descargar]').forEach((b) => b.addEventListener('click', async () => {
+    const id = b.dataset.descargar!;
+    const sel = raiz.querySelector<HTMLSelectElement>(`[data-descargar-recurso="${CSS.escape(id)}"]`);
+    const recurso = sel?.value ?? '';
+    const pedido = Number(raiz.querySelector<HTMLInputElement>(`[data-descargar-cantidad="${CSS.escape(id)}"]`)?.value || 0);
+    const cantidad = pedido >= 1 ? pedido : Number(sel?.selectedOptions[0]?.dataset.lleva ?? 0);
+    if (!recurso || !(cantidad >= 1)) return;
+    b.disabled = true;
+    const m = await descargar(id, recurso, cantidad);
+    b.disabled = false;
+    if (m) mostrarAviso(m, true);
+  }));
+  raiz.querySelectorAll<HTMLButtonElement>('[data-descargar-todo]').forEach((b) => b.addEventListener('click', async () => {
+    const c = p.caravanas.find((x) => x.id === b.dataset.descargarTodo);
+    if (!c) return;
+    b.disabled = true;
+    let error: string | null = null;
+    for (const [r, n] of Object.entries(c.contenido ?? {})) {
+      if (n < 1) continue;
+      const m = await descargar(c.id, r, Math.floor(n));
+      if (m && !error) error = m;
+    }
+    b.disabled = false;
+    if (error) mostrarAviso(error, true);
   }));
   raiz.querySelectorAll<HTMLButtonElement>('[data-aparcada-origen]').forEach((b) => b.addEventListener('click', () => void lanzar(b, 'enviarCaravanaAlOrigen', { ...base, caravanaId: b.dataset.aparcadaOrigen! })));
 }

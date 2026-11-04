@@ -149,6 +149,8 @@ if (ventana === 'caravanas') {
     { id: 'car-3', nombre: 'Grano del valle', tipo: 'comercial', origenAsentamientoId: a.id, posicionActual: aldea, estado: 'aparcada', carros: [{ tipoCarro: 'basico', animal: 'camello' }], contenido: { trigo: 180 } },
     { id: 'car-4', tipo: 'comercial', origenAsentamientoId: a.id, posicionActual: a.posicion, estado: 'disponible', carros: [], contenido: {} },
   ];
+  // `&detener=1`: la ruta de car-2 ya detenida (0.141.0): acaba la vuelta y se queda sin ruta.
+  if (qs.get('detener')) (q.caravanas.find((x) => x.id === 'car-2')!.encargo as { detener?: boolean }).detener = true;
   // `&visita=1`: de visita con tu columna (0.139.0): no resides, pero cedes escolta de la columna.
   if (qs.get('visita')) {
     a.heroesFundadoresIds = [];
