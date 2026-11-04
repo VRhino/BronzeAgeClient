@@ -60,7 +60,7 @@ export function colorDelSuelo(h: number, pendiente: number, bosque: number, f = 
 }
 
 /** La malla de la tesela (tx, ty) con muestras cada `paso` u, y su lámina de agua si la tiene. */
-function mallaDeTesela(fuente: FuenteDeAltura, mapa: MapaGenerado, tx: number, ty: number, paso: number, material: THREE.Material, materialAgua: THREE.Material): { suelo: THREE.Mesh; agua: THREE.Mesh | null } {
+function mallaDeTesela(fuente: FuenteDeAltura, mapa: MapaGenerado, tx: number, ty: number, paso: number, material: THREE.Material, materialAgua: THREE.Material): { suelo: THREE.Mesh; agua: THREE.Mesh | null; pisada: Float32Array } {
   const n = Math.round(LADO / paso) + 1, x0 = tx * LADO, y0 = ty * LADO, m = n + 2;
   // alturas con un anillo de más alrededor, para las normales del borde
   const h = new Float32Array(m * m);
@@ -132,6 +132,9 @@ function mallaDeTesela(fuente: FuenteDeAltura, mapa: MapaGenerado, tx: number, t
     const a = borde[b]!, s = borde[(b + 1) % perimetro]!, a2 = n * n + b, s2 = n * n + ((b + 1) % perimetro);
     indices.push(a, a2, s, s, a2, s2, a, s, a2, s, s2, a2); // las dos caras: el faldón se ve desde fuera y desde dentro
   }
+  // lo que se pisa en cada vértice, en u: el suelo o, en el agua, la lámina
+  const pisada = new Float32Array(n * n);
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const c = (j + 1) * m + (i + 1), nv = nivel[c]!; pisada[j * n + i] = Number.isNaN(nv) ? h[c]! / MPU : Math.max(h[c]! / MPU, nv); }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
@@ -141,17 +144,17 @@ function mallaDeTesela(fuente: FuenteDeAltura, mapa: MapaGenerado, tx: number, t
   const malla = new THREE.Mesh(geo, material);
   malla.receiveShadow = true;
   malla.matrixAutoUpdate = false;
-  if (!hayAgua) return { suelo: malla, agua: null };
+  if (!hayAgua) return { suelo: malla, agua: null, pisada };
   // la lámina: el nivel y el fondo de los vértices de la tesela (sin el anillo)
   const nv = new Float32Array(n * n), fondo = new Float32Array(n * n);
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const c = (j + 1) * m + (i + 1); nv[j * n + i] = nivel[c]!; fondo[j * n + i] = h[c]! / MPU; }
   const lamina = laminaDeAgua(n, paso, x0, y0, nv, fondo);
-  if (!lamina) return { suelo: malla, agua: null };
+  if (!lamina) return { suelo: malla, agua: null, pisada };
   const agua = new THREE.Mesh(lamina, materialAgua);
   agua.receiveShadow = true;
   agua.matrixAutoUpdate = false;
   agua.renderOrder = 1;
-  return { suelo: malla, agua };
+  return { suelo: malla, agua, pisada };
 }
 
 /** Ruido de valor en GLSL (0..1), para el grano del suelo. Las coordenadas se pliegan para no perder precisión lejos del origen. */
@@ -189,7 +192,9 @@ function materialDelSuelo(niebla: NieblaDeGuerra, territorio: Territorio, fertil
 export class Terreno {
   readonly grupo = new THREE.Group();
   private readonly material: THREE.MeshLambertMaterial;
-  private readonly teselas = new Map<string, { malla: THREE.Mesh; agua: THREE.Mesh | null; paso: number }>();
+  private readonly teselas = new Map<string, { malla: THREE.Mesh; agua: THREE.Mesh | null; paso: number; pisada: Float32Array }>();
+  /** Sube cada vez que se pone o se quita una tesela: lo que se colocó con `alturaPintada` sabe así que el suelo de debajo pudo cambiar. */
+  version = 0;
 
   constructor(private readonly fuente: FuenteDeAltura, private readonly mapa: MapaGenerado, niebla: NieblaDeGuerra, private readonly materialAgua: THREE.Material, territorio: Territorio, fertilidad: CapaDeFertilidad) {
     this.material = materialDelSuelo(niebla, territorio, fertilidad);
@@ -226,11 +231,12 @@ export class Terreno {
     let hechas = 0;
     for (const [clave, t] of pendientes) {
       if (hechas && performance.now() > hasta) break;
-      const { suelo: malla, agua } = mallaDeTesela(this.fuente, this.mapa, t.tx, t.ty, t.paso, this.material, this.materialAgua);
+      const { suelo: malla, agua, pisada } = mallaDeTesela(this.fuente, this.mapa, t.tx, t.ty, t.paso, this.material, this.materialAgua);
       this.soltar(clave);
       this.grupo.add(malla);
       if (agua) this.grupo.add(agua);
-      this.teselas.set(clave, { malla, agua, paso: t.paso });
+      this.teselas.set(clave, { malla, agua, paso: t.paso, pisada });
+      this.version++;
       hechas++;
     }
     return pendientes.length - hechas;
@@ -243,6 +249,22 @@ export class Terreno {
     t.malla.geometry.dispose();
     if (t.agua) { this.grupo.remove(t.agua); t.agua.geometry.dispose(); }
     this.teselas.delete(clave);
+    this.version++;
+  }
+
+  /** La altura, en u, del suelo tal como se pinta en (x, y): con el detalle de su tesela (lejos, cada 1 o 2 u, más basto que el relieve), la
+   * tierra de junto al agua bajada hacia ella y, en el agua, la lámina. Por los mismos dos triángulos de cada cuadro que la malla. `null` si
+   * esa tesela no está puesta. */
+  alturaPintada(x: number, y: number): number | null {
+    const tx = Math.floor(x / LADO), ty = Math.floor(y / LADO), t = this.teselas.get(`${tx},${ty}`);
+    if (!t) return null;
+    const n = Math.round(LADO / t.paso) + 1;
+    const fi = Math.min(Math.max((x - tx * LADO) / t.paso, 0), n - 1), fj = Math.min(Math.max((y - ty * LADO) / t.paso, 0), n - 1);
+    const i = Math.min(n - 2, Math.floor(fi)), j = Math.min(n - 2, Math.floor(fj)), a = fi - i, b = fj - j, k = j * n + i, p = t.pisada;
+    // los triángulos de la malla: (i, j)-(i, j+1)-(i+1, j) y (i+1, j)-(i, j+1)-(i+1, j+1)
+    if (a + b <= 1) return p[k]! + a * (p[k + 1]! - p[k]!) + b * (p[k + n]! - p[k]!);
+    const d = p[k + n + 1]!;
+    return d + (1 - a) * (p[k + n]! - d) + (1 - b) * (p[k + 1]! - d);
   }
 
   destruir(): void {

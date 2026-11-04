@@ -1,13 +1,17 @@
 // Lo que el mundo 3D calcula sin pintar: el encuadre de la cámara, lo que cabe en pantalla según la visión, el estado que sale de la proyección
 // (columnas y lo que hay en el mundo, con el lado de la niebla de cada capa), la ruta que queda, las cintas pegadas al suelo, dónde van los
 // árboles y la altura del raster del artefacto.
+import * as THREE from 'three';
 import { describe, expect, test } from 'vitest';
 import type { ProyeccionJugador } from '../src/apiCliente';
 import { arbolesDelTrozo, caucesDe, franjas, POR_ARBOL, type Entorno } from '../src/mundo3d/arboles';
 import { CamaraDeJuego, distanciaDeEncuadre } from '../src/mundo3d/camara';
-import { ACERCADO, encuadres } from '../src/mundo3d/config';
+import { ACERCADO, encuadres, MUNDO3D } from '../src/mundo3d/config';
 import { ALFA_TERRITORIO, ANCHOS, dondeEstaLaSeleccion, estadoDesdeProyeccion, mundoDesdeProyeccion } from '../src/mundo3d/estado';
-import { refuerzo } from '../src/mundo3d/territorio';
+import { refuerzo, Territorio } from '../src/mundo3d/territorio';
+import { Terreno } from '../src/mundo3d/terreno';
+import { CapaDeFertilidad } from '../src/mundo3d/capaFertilidad';
+import type { NieblaDeGuerra } from '../src/mundo3d/niebla';
 import { bloquesDeTropa } from '../src/mundo3d/figuras';
 import { fuenteDesdeMapa, type FuenteDeAltura } from '../src/mundo3d/fuente';
 import { chaikin, cinta, circulo, rutaPendiente, simplificar, suavizarCamino, tramosEnCaja } from '../src/mundo3d/lineas';
@@ -369,5 +373,55 @@ describe('ríos que llegan a un lago', () => {
   test('si acaba a poco del agua se alarga hasta ella; si no, se queda', () => {
     expect(alargarHastaElAgua([{ x: 0, y: 0 }, { x: 7, y: 0 }], lago).at(-1)!.x).toBe(10);
     expect(alargarHastaElAgua([{ x: 0, y: 0 }, { x: 1, y: 0 }], lago).length).toBe(2);
+  });
+});
+
+describe('lo que camina pisa el suelo que se pinta', () => {
+  // un relieve con lomas de 3 u y un lago hondo en una esquina, con la costa en acantilado: lejos (teselas de 2 u) y junto al agua la malla no es
+  // el relieve
+  const fuente: FuenteDeAltura = {
+    ancho: 256, alto: 256, paso: 0.5,
+    alturaEn: (x, y) => (x < 20 && y < 20 ? 360 : 500 + 40 * Math.sin(x * 2.1) * Math.cos(y * 1.7)),
+    aguaEn: (x, y) => x < 20 && y < 20,
+  };
+  const mapa = { config: { ancho: 256, alto: 256, seed: 0 }, rios: [] } as unknown as MapaGenerado;
+  const agua = new THREE.MeshBasicMaterial();
+  const terreno = new Terreno(fuente, mapa, {} as NieblaDeGuerra, agua, new Territorio(), new CapaDeFertilidad(mapa));
+  terreno.actualizar(10, 10, 200, Number.POSITIVE_INFINITY);
+  terreno.grupo.updateMatrixWorld(true);
+  const rayo = new THREE.Raycaster();
+  const sueloEn = (x: number, y: number): number | null => {
+    rayo.set(new THREE.Vector3(x, 1000, y), new THREE.Vector3(0, -1, 0));
+    const tocado = rayo.intersectObjects(terreno.grupo.children.filter((m) => (m as THREE.Mesh).material !== agua), false)[0];
+    return tocado ? tocado.point.y : null;
+  };
+
+  test('cerca, lejos y junto al agua, la altura es la de la malla', () => {
+    for (const [x, y] of [[30.3, 31.7], [130.25, 100.6], [190.9, 177.15], [22.4, 6.2], [25.1, 21.3]] as const) {
+      const malla = sueloEn(x, y), pintada = terreno.alturaPintada(x, y);
+      expect(malla).not.toBeNull();
+      expect(pintada!).toBeCloseTo(malla!, 4);
+    }
+  });
+
+  test('lejos, la malla de 2 u se aparta del relieve: por eso se pisa la malla', () => {
+    let peor = 0;
+    for (let k = 0; k < 400; k++) {
+      const x = 180 + (k % 20) * 0.37, y = 180 + Math.floor(k / 20) * 0.41;
+      peor = Math.max(peor, Math.abs(terreno.alturaPintada(x, y)! - fuente.alturaEn(x, y) / MUNDO3D.metrosPorUnidad));
+    }
+    expect(peor).toBeGreaterThan(0.3);
+  });
+
+  test('junto al agua la tierra baja hacia ella, y lo que camina baja con ella', () => {
+    const relieve = fuente.alturaEn(20.2, 10.3) / MUNDO3D.metrosPorUnidad;
+    expect(terreno.alturaPintada(20.2, 10.3)!).toBeLessThan(relieve - 5);
+  });
+
+  test('cada tesela que se pone o se quita cambia la versión del suelo', () => {
+    const antes = terreno.version;
+    terreno.actualizar(200, 200, 40, Number.POSITIVE_INFINITY);
+    expect(terreno.version).toBeGreaterThan(antes);
+    expect(terreno.alturaPintada(5, 5)).toBeNull(); // esa tesela ya no está
   });
 });

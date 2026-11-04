@@ -3,6 +3,20 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.136.1] — 2026-11-04 · Mundo 3D: las columnas pisan el suelo que se pinta · sin cambio de contrato
+
+Arreglo de lo que vio Víctor (2026-11-04): en el mundo 3D había columnas y caravanas que andaban por encima del suelo (junto a la costa, con la
+sombra muy abajo) y otras medio hundidas (cerca de Alepo). Las figuras se ponían a la altura del relieve fino (0,5 u), pero el suelo que se
+pinta no es siempre ese: lejos del héroe las teselas van cada 1 u (desde 80 u) o 2 u (desde 160 u); en el relieve del mundo (semilla 42), las
+de 2 u se apartan más de 0,28 u en el 1 % de los puntos y casi 3 u en lo más abrupto (en lomas quedan por debajo y en vaguadas por encima). Y
+junto al agua la tierra baja hacia ella (`sueloJuntoAlAgua`), unos metros en una costa alta.
+
+- `Terreno.alturaPintada(x, y)`: la altura de la malla tal como se pinta, por los mismos dos triángulos de cada cuadro, con la tierra bajada
+  junto al agua y, en el agua, la lámina. Cada tesela guarda la suya al construirse.
+- Columnas y caravanas usan esa altura (`VistaMundo3D.alturaPisada`); donde no hay tesela, la de antes. `Terreno.version` sube cuando se pone o
+  se quita una tesela, y una columna quieta se recoloca entonces (al cambiar el detalle de su tesela no se queda flotando).
+- Pruebas: la altura coincide con un rayo sobre la malla cerca, lejos y en la costa.
+
 ## [0.136.0] — 2026-11-04 · Caravanas: mover un carro, la lista por disponibles y el «!» de Fundación · sin cambio de contrato
 
 Petición de Víctor (2026-11-04):

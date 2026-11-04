@@ -200,7 +200,7 @@ export class FigurasDeColumna {
   /** Por dónde ha pasado la cabeza, del más viejo al más nuevo. */
   private rastro: Punto[] = [];
   /** Dónde estaba la cabeza la última vez que se colocó. */
-  private puesta: Punto | null = null;
+  private puesta: (Punto & { suelo: number }) | null = null;
 
   /** Cuánto va cada figura detrás de la cabeza y a qué lado (−1, 0, 1), en unidades de figura (×`MUNDO3D.tropa`). */
   private readonly sitios: { atras: number; lado: number }[] = [];
@@ -235,11 +235,12 @@ export class FigurasDeColumna {
     for (let k = 0; k < n; k++) enganchar(carro(carros.fundacion && k === n - 1, carros.animales?.[k] ?? 'buey'), LARGO.caravana, ESCALA_CARRO_CARAVANA);
   }
 
-  /** Pone la columna con la cabeza en `cabeza`; `alturaU(x, y)` da el suelo en unidades de escena. */
-  mover(cabeza: Punto, alturaU: (x: number, y: number) => number): void {
-    // quieta, todo sigue donde estaba (con decenas de columnas, la mayoría lo están)
-    if (this.puesta && cabeza.x === this.puesta.x && cabeza.y === this.puesta.y) return;
-    this.puesta = { x: cabeza.x, y: cabeza.y };
+  /** Pone la columna con la cabeza en `cabeza`; `alturaU(x, y)` da el suelo en unidades de escena y `suelo` cambia cuando ese suelo cambia (se
+   * puso o quitó una tesela). */
+  mover(cabeza: Punto, alturaU: (x: number, y: number) => number, suelo = 0): void {
+    // quieta y sobre el mismo suelo, todo sigue donde estaba (con decenas de columnas, la mayoría lo están)
+    if (this.puesta && cabeza.x === this.puesta.x && cabeza.y === this.puesta.y && this.puesta.suelo === suelo) return;
+    this.puesta = { x: cabeza.x, y: cabeza.y, suelo };
     const ultimo = this.rastro[this.rastro.length - 1];
     if (!ultimo || Math.hypot(cabeza.x - ultimo.x, cabeza.y - ultimo.y) > 6) {
       // primera vez o un salto: la columna se forma detrás, hacia el sur

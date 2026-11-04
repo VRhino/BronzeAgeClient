@@ -175,6 +175,9 @@ export class VistaMundo3D {
   /** Altura del suelo en (x, y) del mapa, en unidades de escena. */
   /** La altura que se ve en (x, y), en u: la del suelo, o la de la lámina donde hay agua (lo que va encima y el clic se quedan en ella). */
   readonly alturaU = (x: number, y: number): number => alturaVisible(this.o.fuente.alturaEn(x, y), this.o.fuente.aguaEn(x, y));
+  /** El suelo que se pinta, para lo que camina por él (columnas y caravanas): lejos la malla va más basta que el relieve y junto al agua baja
+   * hacia ella, y con `alturaU` las figuras flotaban o se hundían. Donde no hay tesela, `alturaU`. */
+  readonly alturaPisada = (x: number, y: number): number => this.terreno.alturaPintada(x, y) ?? this.alturaU(x, y);
 
   zoom(z: Zoom): void {
     this.camara.zoom = z;
@@ -375,7 +378,7 @@ export class VistaMundo3D {
         f = { figuras: new FigurasDeColumna(jinetes, tropa, hex, carros), clave };
         this.columnas.set(id, f);
       }
-      f.figuras.mover(posicion, this.alturaU);
+      f.figuras.mover(posicion, this.alturaPisada, this.terreno.version);
     };
     for (const c of lista) poner(c.id, c.jinetes, c.tropa, c.color, c.carros, c.posicion);
     // una caravana suelta: su escolta delante y detrás sus carros, uno por animal (sin animales, uno con buey)

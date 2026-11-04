@@ -447,6 +447,14 @@ nodos (la casilla es la misma que en el modo mapa). La rampa es la del modo mapa
 de la aldea agrícola, verde la fértil), en una textura del raster de fertilidad que se hace una vez por mundo. El suelo la mezcla antes de la
 luz, encima del tinte del territorio. Solo sobre lo explorado (lo lee de la textura de la niebla, en el mismo sombreado) y nunca en el agua.
 
+## El suelo que se pisa (0.136.1)
+
+Arreglo de lo que vio Víctor el 2026-11-04 (columnas que flotaban junto a la costa y otras hundidas). Lo que camina (columnas y caravanas) se
+pone sobre la malla tal como se pinta (`Terreno.alturaPintada`), no sobre el relieve fino: lejos la malla va cada 1 o 2 u y en terreno abrupto
+se aparta del relieve, y junto al agua la tierra baja hacia ella. Cada tesela guarda las alturas de sus vértices (la lámina donde hay agua) y
+se interpola por los mismos dos triángulos que la malla. `Terreno.version` cambia al poner o quitar una tesela, y entonces se recolocan también
+las columnas quietas. Árboles, matas, maquetas y caminos siguen sobre el relieve fino: van cerca del héroe, donde la malla es la de 0,5 u.
+
 ## Banco de pruebas
 
 `npm run mundo3d` abre `pruebas/mundo3d/` con el artefacto y el relieve que haya en `generador/salida/mundo/` del motor (el checkout hermano
