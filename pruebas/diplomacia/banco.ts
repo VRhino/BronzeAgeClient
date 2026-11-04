@@ -1,8 +1,9 @@
 // Banco de la ventana de Diplomacia de la Facción (`/pruebas/diplomacia/?elegida=fac-2`): una partida de mentira, sin servidor, con la misma
-// estructura que pinta `renderPanelJugador` en main.ts, para mirarla a distintos tamaños de pantalla.
+// estructura que pinta `renderPanelJugador` en main.ts, para mirarla a distintos tamaños de pantalla. `?sinFaccion=1`: «Pedir ingreso» sin Facción.
 import '../../src/style.css';
 import type { ProyeccionJugador } from '../../src/apiCliente';
-import { elegirFaccion, htmlLateralFaccion, PESTANAS_FACCION, renderPestanaFaccion } from '../../src/ui/pestanaFaccion';
+import { elegirFaccion, htmlLateralFaccion, htmlListaFacciones, PESTANAS_FACCION, renderPestanaFaccion } from '../../src/ui/pestanaFaccion';
+import { estadoCliente } from '../../src/ui/estadoCliente';
 import { htmlTecnologia } from '../../src/ui/panelTecnologia';
 
 const AHORA = Date.parse('2026-11-03T12:00:00Z');
@@ -45,6 +46,15 @@ const p = {
 
 const panel = document.querySelector<HTMLElement>('.jugador-panel')!;
 function pintar(): void {
+  if (new URLSearchParams(location.search).get('sinFaccion')) {
+    // como `renderPanelJugador` sin Facción: la cabecera y el cuerpo, con la lista que rellena `cablearFaccion`
+    (p as unknown as { faccionId: null }).faccionId = null;
+    estadoCliente.modoPanelFaccion = 'unirse';
+    panel.classList.remove('jugador-panel-faccion');
+    panel.innerHTML = `<div class="faccion-cabecera"><div class="mapa-panel-jugador">Víctor</div><button class="btn-secondary" type="button">Cerrar</button></div><div class="faccion-cuerpo">${renderPestanaFaccion(p, e, 'resumen')}</div>`;
+    panel.querySelector('#lista-facciones')!.innerHTML = htmlListaFacciones(p, e, { accion: () => '<button class="btn-join-faction" type="button">Pedir ingreso</button>' });
+    return;
+  }
   elegirFaccion(new URLSearchParams(location.search).get('elegida'));
   // `?pestana=tecnologia`: la pestaña de Tecnología (0.123.0), como la pinta main.ts
   const pestana = new URLSearchParams(location.search).get('pestana') ?? 'diplomacia';

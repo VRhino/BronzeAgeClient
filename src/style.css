@@ -586,6 +586,15 @@ body {
   overflow-y: auto;
 }
 
+/* «Pedir ingreso» sin Facción, en la ventana a pantalla completa (0.134.0, Víctor 2026-11-04): la lista llega hasta abajo y se desplaza
+   ella sola, con el buscador siempre a la vista (antes se cortaba a 330 px, a media pantalla). */
+.jugador-panel-completo:has(.faction-join-view) { overflow: hidden; }
+.jugador-panel-completo > .faccion-cuerpo:has(.faction-join-view) { flex: 1 1 auto; min-height: 0; }
+.jugador-panel-completo .faction-join-view { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto auto minmax(0, 1fr); align-items: center; column-gap: 8px; }
+.jugador-panel-completo .faction-join-view > :not(.back-button):not(.faction-kicker) { grid-column: 1 / -1; }
+.jugador-panel-completo .faction-join-view .faction-list { align-self: stretch; min-height: 0; max-height: none; padding-right: 4px; }
+.jugador-panel-completo .faction-join-view .faction-list > * { flex-shrink: 0; }
+
 /* Diplomacia: lista con relaciones, propuestas y formulario; no cabe en 330px sin esconder el formulario. */
 .faction-list.faction-list-libre {
   max-height: none;

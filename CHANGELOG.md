@@ -3,6 +3,11 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.134.0] — 2026-11-04 · «Pedir ingreso» usa todo el alto · sin cambio de contrato
+
+Petición de Víctor (2026-11-04): sin Facción, la lista de «Pedir ingreso» se cortaba a 330 px, a media pantalla. Ahora llega hasta abajo de
+la ventana y se desplaza ella sola, con el buscador siempre a la vista. Banco: `pruebas/diplomacia/?sinFaccion=1`.
+
 ## [0.133.0] — 2026-11-04 · El nombre de cada edificio en el cajón de Construcción · sin cambio de contrato
 
 Petición de Víctor (2026-11-04): en cada botón del cajón de Construcción de la plaza, entre el icono y el coste, el nombre del edificio
