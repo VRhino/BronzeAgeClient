@@ -22,7 +22,7 @@ const nombre = (r: string): string => RECURSO_NOMBRE[r] ?? r;
 const icono = (r: string): string => RECURSO_ICONO[r] ?? '📦';
 
 /** Cuánto lleva y cuánto cabe, con una barra: verde, ámbar desde el 80 % y roja llena. Sin capacidad (un backend anterior), solo el título. */
-function ocupacion(titulo: string, recursos: Record<string, number>, capacidad: number | undefined): string {
+export function ocupacion(titulo: string, recursos: Record<string, number>, capacidad: number | undefined): string {
   if (capacidad === undefined || capacidad <= 0) return `<strong class="heroe-sub">${titulo}</strong>`;
   const total = Math.floor(Object.values(recursos).reduce((a, b) => a + b, 0));
   const pct = Math.min(100, Math.round((total / capacidad) * 100));

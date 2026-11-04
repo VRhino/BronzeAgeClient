@@ -1,11 +1,13 @@
-// EJÉRCITOS de tu Facción (backend Doc 5.12 y 5.14): panel «Ejército» del riel del mapa y ficha de un ejército en el panel de Selección.
+// EJÉRCITOS de tu Facción (backend Doc 5.12 y 5.14): la ventana «Ejército» del riel del mapa (centrada, como la de Misiones, desde la 0.132.0: quiénes
+// van con su tropa, la carga, las caravanas y lo que toca hacer), la pestaña «Ejércitos» de la Facción (los demás ejércitos y formaciones, para verlos y
+// unirse) y la ficha de un ejército en el panel de Selección.
 // Aquí no se decide ninguna regla: el backend valida quién puede unirse, la distancia y el Liderazgo, y el rechazo se enseña con su motivo. Este módulo
 // ofrece lo que tiene sentido en cada estado de TU columna:
 //   sin columna         estás dentro: se sale como ejército desde «Salir» (campamento) o «Salir al mundo» (plaza)
 //   columna personal    `organizarEjercito` (formar con otros dos) o `unirseEnCampo` a un ejército/formación de tu Facción que tengas al lado
 //   formación           `cancelarFormacion` (Líder) / `separarseDelEjercito`
 //   ejército            Líder: `responderPeticionDeUnion`, `cederLiderazgo`, `estacionarEjercito`, `replegarEjercito`; el resto: `separarseDelEjercito`
-//   marcha forzada      el Líder de la columna (también la personal): `marchaForzada { ejercitoId, activa }`, puesta hasta que se quita
+// La marcha forzada se pone junto a los víveres, abajo en el mapa (`main.ts`); desde la 0.132.0 ya no sale aquí.
 // La política de unión («abierto» = aceptar, «decide el Líder» = preguntar, «cerrado» = rechazar) la fija el Líder al formar y no cambia.
 import type { ProyeccionJugador } from '../apiCliente';
 import { radioDeEncuentro } from '../apiCliente';
@@ -13,7 +15,11 @@ import type { Ejercito } from '../tiposDominio';
 import { ayuda } from './ayuda';
 import { nombreDeHeroe } from './nombres';
 import { textoEnTiempoReal } from './estadoCliente';
-import { cablearCarro, htmlCarro, type Ejecutar } from './panelCarro';
+import { ocupacion, type Ejecutar } from './panelCarro';
+import { tropasReclutables } from '../apiCliente';
+import { iconoEnFila } from './iconosTropa';
+import { nombreDeCaravana } from './panelMercado';
+import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import { confirmar } from './dialogo';
 
 type Escapar = (valor: string) => string;
@@ -72,7 +78,7 @@ function filaEjercito(p: ProyeccionJugador, c: Ejercito, e: Escapar): string {
   return `<div class="ejercito-fila">
     <div><strong>${c.formacion ? 'Formación' : 'Ejército'} de ${e(lider)}</strong>
       <span>${c.participantes.length} héroe(s)${c.formacion ? ` (hacen falta ${MINIMO_FORMACION}; se deshace en ${plazo})` : ` · ${ESTADO[c.estado]}`} · ${POLITICA[politica]}${lejos}</span></div>
-    <button class="btn-secondary" type="button" data-centrar-ejercito="${e(c.id)}">Ver</button>
+    ${c.dentroDe ? '' : `<button class="btn-secondary" type="button" data-centrar-x="${c.posicionActual.x}" data-centrar-y="${c.posicionActual.y}">Ver en el mapa</button>`}
     <button class="btn-primary" type="button" data-unirse-ejercito="${e(c.id)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>${politica === 'preguntar' ? 'Pedir unirme' : 'Unirme'}</button>
     ${motivo && mi ? `<small>${e(motivo)}</small>` : ''}</div>`;
 }
@@ -89,13 +95,10 @@ function htmlMiSituacion(p: ProyeccionJugador, mi: Ejercito | undefined, e: Esca
   if (mi.tipo === 'ejercito') {
     const peticiones = lider ? peticionesVivas(mi, p.instante) : [];
     const resto = mi.participantes.filter((x) => x.heroeId !== p.heroeId);
-    return `<p class="asent-lado-nota"><strong>Tu ejército</strong> · ${mi.participantes.length} héroe(s) · ${ESTADO[mi.estado]} · ${POLITICA[mi.politicaDeUnion ?? 'rechazar']}.
+    return `<p class="asent-lado-nota"><strong>Unión</strong>: ${POLITICA[mi.politicaDeUnion ?? 'rechazar']}.
         ${ayuda(lider ? 'ejercito:lider' : 'ejercito:integrante', `${lider ? 'Tú lo diriges: haz clic en el mapa y marchará hacia allí; cada clic cambia el rumbo.' : 'Lo dirige su Líder con clics en el mapa.'}${(mi.caravanasAdjuntasIds?.length ?? 0) > 0 ? ' Las caravanas enganchadas se cargan, entregan y sueltan en «Lo que llevas» (⚔).' : ''}${lider && resto.length > 0 ? ' El Líder no puede separarse: para irse tiene que ceder el mando antes.' : ''}${lider ? '' : ' Si te separas, te llevas lo tuyo y vuelves a ser una columna personal donde estés.'}`)}</p>
-      ${(mi.caravanasAdjuntasIds?.length ?? 0) > 0 ? `<p class="asent-lado-nota">Lleva ${mi.caravanasAdjuntasIds!.length} caravana(s) enganchada(s).</p>` : ''}
-      <ul class="ejercito-lista">${mi.participantes.map((x) => `<li>${e(nombreDeHeroe(p, x.heroeId))}${x.heroeId === mi.liderId ? ' <em>(Líder)</em>' : ''}${x.heroeId === p.heroeId ? ' · tú' : ''}</li>`).join('')}</ul>
       ${peticiones.length > 0 ? `<strong class="heroe-sub">Piden unirse</strong>${peticiones.map((x) => `<div class="ejercito-fila"><div><strong>${e(nombreDeHeroe(p, x.heroeId))}</strong><span>${textoEnTiempoReal(x.expiraEn - p.instante)} para contestar</span></div>
           <button class="btn-primary" type="button" data-peticion="${e(x.heroeId)}" data-aceptar="si">Aceptar</button><button class="btn-secondary" type="button" data-peticion="${e(x.heroeId)}" data-aceptar="no">Rechazar</button></div>`).join('')}` : ''}
-      ${marchaForzadaHtml(mi, lider)}
       ${lider
         ? `<div class="mapa-seleccion-acciones">
             ${mi.estado === 'marchando' ? '<button class="btn-secondary" type="button" data-ej="estacionar">Acampar aquí</button>' : ''}
@@ -107,34 +110,92 @@ function htmlMiSituacion(p: ProyeccionJugador, mi: Ejercito | undefined, e: Esca
   if (mi.participantes.length === 1) {
     return `<p class="asent-lado-nota">Vas por tu cuenta.${ayuda('ejercito:personal', 'Con otros dos héroes de tu Facción puedes formar un ejército aquí, sin pasar por una plaza: te quedas quieto hasta que se unan.')}</p>
       ${p.faccionId ? '' : '<p class="asent-lado-nota"><strong>Sin Facción nadie podrá unirse a ti</strong>: un ejército lo componen ciudadanos de una sola Facción.</p>'}
-      ${marchaForzadaHtml(mi, true)}
       <div class="mapa-seleccion-acciones"><button class="btn-secondary" type="button" data-ej="organizar" data-politica="aceptar">Organizar ejército (abierto)</button>
       <button class="btn-secondary" type="button" data-ej="organizar" data-politica="preguntar">Organizar ejército (decido yo)</button></div>`;
   }
   return '';
 }
 
-/** El interruptor de la marcha forzada para el Líder; los demás solo ven si está puesta. */
-function marchaForzadaHtml(c: Ejercito, lider: boolean): string {
-  const nota = ayuda('ejercito:marcha-forzada', 'La columna entera, caravanas enganchadas incluidas, va 1,5 veces más rápida y, solo mientras marcha, come el doble de víveres. Se queda puesta hasta que la quitas.');
-  if (!lider) return c.marchaForzada ? `<p class="asent-lado-nota"><strong>Marcha forzada</strong>: ×1,5 de velocidad, ×2 de víveres al marchar.${nota}</p>` : '';
-  return `<label class="mapa-lista-item"><span><strong>Marcha forzada</strong> · ×1,5 de velocidad, ×2 de víveres al marchar${nota}</span>
-    <button class="${c.marchaForzada ? 'btn-primary' : 'btn-secondary'}" type="button" data-ej="forzada" aria-pressed="${c.marchaForzada ? 'true' : 'false'}">${c.marchaForzada ? 'Puesta · quitar' : 'Poner'}</button></label>`;
+const nombreRecurso = (r: string): string => RECURSO_NOMBRE[r] ?? r;
+const nombreDeTropa = (id: string): string => tropasReclutables()?.find((t) => t.id === id)?.nombre ?? (id.charAt(0).toUpperCase() + id.slice(1)).replace(/_/g, ' ');
+
+/** Lo que lleva cada uno: lo tuyo, con el nombre de cada escuadra; lo de los demás, lo que el servidor deja ver (`heroesVisibles[].escuadrasQueLleva`). */
+function tropaDe(p: ProyeccionJugador, c: Ejercito, heroeId: string): { tropaId: string; nombre: string; cantidad: number; nivel: number; nota?: string }[] | null {
+  if (heroeId === p.heroeId) {
+    return p.heroe.escuadrones.filter((s) => c.escuadronIds.includes(s.id) || (s.contenedor.tipo === 'ejercito' && s.contenedor.ejercitoId === c.id))
+      .map((s) => ({ tropaId: s.tropaId, nombre: s.nombre, cantidad: s.cantidad, nivel: s.nivel, nota: s.prestada ? 'prestada' : undefined }));
+  }
+  const visto = p.heroesVisibles.find((h) => h.heroeId === heroeId);
+  return visto ? visto.escuadrasQueLleva.map((t) => ({ ...t, nombre: nombreDeTropa(t.tropaId) })) : null;
 }
 
+function htmlIntegrantes(p: ProyeccionJugador, c: Ejercito, e: Escapar): string {
+  const filas = [...c.participantes].sort((a, b) => Number(b.heroeId === c.liderId) - Number(a.heroeId === c.liderId) || a.unidoEn - b.unidoEn).map((x) => {
+    const tropa = tropaDe(p, c, x.heroeId);
+    const papel = [x.heroeId === c.liderId ? 'Líder' : '', x.heroeId === p.heroeId ? 'tú' : ''].filter(Boolean).join(' · ');
+    const hombres = (tropa ?? []).reduce((t, s) => t + s.cantidad, 0);
+    return `<li class="conv-integrante"><div class="conv-integrante-cab"><strong>${e(nombreDeHeroe(p, x.heroeId))}</strong>${papel ? ` <em>${papel}</em>` : ''}<span>${tropa ? `${tropa.length} escuadra(s) · ${hombres} hombres` : ''}</span></div>
+      ${tropa === null ? '<small class="asent-lado-nota">Su tropa no se ve desde aquí.</small>'
+        : tropa.length === 0 ? '<small class="asent-lado-nota">Sin tropa.</small>'
+        : `<ul class="ejv-tropas">${tropa.map((s) => `<li class="ejv-tropa">${iconoEnFila(s.tropaId)}<strong>${e(s.nombre)}</strong><span class="ejv-tropa-dato">${s.cantidad} hombres · nivel ${s.nivel}${s.nota ? ` · ${s.nota}` : ''}</span></li>`).join('')}</ul>`}</li>`;
+  }).join('');
+  return `<strong class="heroe-sub">Integrantes</strong><ul class="conv-integrantes">${filas}</ul>`;
+}
+
+const recursos = (r: Record<string, number> | undefined, e: Escapar): string => {
+  const hay = Object.entries(r ?? {}).filter(([, n]) => n >= 1).sort((a, b) => b[1] - a[1]);
+  return hay.length ? `<div class="ejv-recursos">${hay.map(([k, n]) => `<span title="${e(nombreRecurso(k))}">${RECURSO_ICONO[k] ?? '📦'} ${Math.floor(n)}</span>`).join('')}</div>` : '<small class="asent-lado-nota">Nada.</small>';
+};
+
+const CARRO: Record<string, string> = { basico: 'básico', reforzado: 'reforzado' };
+
+/** Las caravanas que lleva la columna (enganchadas y la de Fundación), con sus carros y su carga. */
+function htmlCaravanasDeLaColumna(p: ProyeccionJugador, c: Ejercito, e: Escapar): string {
+  const ids = [...new Set([...(c.caravanasAdjuntasIds ?? []), ...(c.caravanaFundacionId ? [c.caravanaFundacionId] : [])])];
+  if (ids.length === 0) return '';
+  const filas = ids.map((id) => {
+    const k = p.caravanas.find((x) => x.id === id);
+    if (!k) return '<div class="ejv-caravana"><small class="asent-lado-nota">Una caravana que no llega en tu proyección.</small></div>';
+    const fundacion = id === c.caravanaFundacionId || k.titularId !== undefined;
+    const carros = (k.carros ?? []).map((r) => `${CARRO[r.tipoCarro] ?? r.tipoCarro} ${r.animal ? `con ${r.animal}` : 'sin animal'}`);
+    const carga = Math.floor(Object.values(k.contenido ?? {}).reduce((t, n) => t + n, 0));
+    return `<div class="ejv-caravana"><div class="conv-integrante-cab"><strong>${e(fundacion ? 'Caravana de Fundación' : nombreDeCaravana(k))}</strong><span>lleva ${carga}</span></div>
+      ${carros.length ? `<small>${carros.length} carro(s): ${e(carros.join(' · '))}</small>` : ''}
+      ${(k.escoltaIds?.length ?? 0) > 0 ? `<small>Escolta: ${k.escoltaIds!.length} escuadra(s)</small>` : ''}
+      ${recursos(k.contenido, e)}</div>`;
+  }).join('');
+  return `<strong class="heroe-sub">Caravanas${ayuda('ejercito:caravanas', 'Van con la columna, a su paso. Se cargan, entregan y sueltan en «Lo que llevas» (⚔).')}</strong>${filas}`;
+}
+
+/** La ventana «Ejército» del riel del mapa, centrada como la de Misiones: a la izquierda quiénes van y su tropa; a la derecha lo que toca hacer, la carga y
+ * las caravanas. */
 export function htmlPanelEjercito(p: ProyeccionJugador, e: Escapar): string {
   const mi = miColumna(p);
-  const otros = ejercitosDeLaFaccion(p);
-  return `<span class="faction-kicker">Ejército</span>
-    ${htmlMiSituacion(p, mi, e)}
-    ${mi && (mi.tipo === 'ejercito' || mi.participantes.length > 1) ? htmlCarro(p, e, false) : ''}
-    <strong class="heroe-sub">Ejércitos y formaciones de tu Facción${ayuda('ejercito:otros', 'Se forman con «Organizar ejército» en el mapa, o convocándolos dentro de un campamento o de tu plaza.')}</strong>
-    ${otros.length > 0 ? otros.map((c) => filaEjercito(p, c, e)).join('') : '<p class="asent-lado-nota">No hay ninguno.</p>'}
-    <p class="faction-error" data-campo="error-ejercito" role="alert"></p>`;
+  const titulo = !mi ? 'Ejército' : mi.formacion ? 'Formación' : mi.tipo === 'ejercito' ? `Ejército de ${nombreDeHeroe(p, mi.liderId ?? p.heroeId)}` : 'Tu columna';
+  const hombres = mi ? mi.participantes.reduce((t, x) => t + (tropaDe(p, mi, x.heroeId) ?? []).reduce((u, s) => u + s.cantidad, 0), 0) : 0;
+  const resumen = mi ? `${mi.participantes.length} héroe(s) · ${hombres} hombres${mi.formacion ? '' : ` · ${ESTADO[mi.estado]}`}` : '';
+  const carga = mi
+    ? `${ocupacion('Carga', mi.suministro ?? {}, mi.capacidadCarga)}${recursos(mi.suministro, e)}<small class="asent-lado-nota">Se carga y descarga en «Lo que llevas» (⚔).</small>`
+    : '';
+  return `<header class="diario-cab"><span class="diario-cab-titulo">${e(titulo)}</span>${resumen ? `<small>${e(resumen)}</small>` : ''}<button class="btn-secondary" type="button" data-cerrar-ejercito aria-label="Cerrar">✕</button></header>
+    <div class="ejv-cuerpo">
+      ${mi ? `<section class="ejv-col">${htmlIntegrantes(p, mi, e)}</section>` : ''}
+      <section class="ejv-col">${htmlMiSituacion(p, mi, e)}${carga}${mi ? htmlCaravanasDeLaColumna(p, mi, e) : ''}
+        <p class="faction-error" data-campo="error-ejercito" role="alert"></p></section>
+    </div>`;
 }
 
-/** Cablea los botones del panel y de la ficha: `centrar` lleva el mapa a un punto; `avisar` es el aviso global si no hay dónde escribir el error. */
-export function cablearPanelEjercito(raiz: ParentNode, p: ProyeccionJugador, ejecutar: Ejecutar, avisar: (mensaje: string) => void, centrar?: (punto: { x: number; y: number }) => void): void {
+/** La pestaña «Ejércitos» de la Facción (antes, al pie del panel del mapa): los ejércitos y formaciones de tu Facción que no son tu columna. */
+export function htmlEjercitosFaccion(p: ProyeccionJugador, e: Escapar): string {
+  const otros = ejercitosDeLaFaccion(p);
+  return `<section class="faccion-ejercitos">
+    <strong class="heroe-sub">Ejércitos y formaciones de tu Facción${ayuda('ejercito:otros', 'Se forman con «Organizar ejército» en la ventana Ejército del mapa (⚑), o convocándolos dentro de un campamento o de tu plaza. Para unirte en campo, ve con tu columna personal junto a él.')}</strong>
+    ${otros.length > 0 ? otros.map((c) => filaEjercito(p, c, e)).join('') : '<p class="mapa-lista-vacia">No hay ninguno ahora.</p>'}
+    <p class="faction-error" data-campo="error-ejercito" role="alert"></p></section>`;
+}
+
+/** Cablea los botones de la ventana, de la pestaña de la Facción y de la ficha («Ver en el mapa» lo cablea quien la monta); `avisar` es el aviso global si no hay dónde escribir el error. */
+export function cablearPanelEjercito(raiz: ParentNode, p: ProyeccionJugador, ejecutar: Ejecutar, avisar: (mensaje: string) => void): void {
   const error = raiz.querySelector<HTMLElement>('[data-campo="error-ejercito"]');
   const mi = miColumna(p);
   const enviar = async (boton: HTMLButtonElement, tipo: string, params: object, nota?: string): Promise<void> => {
@@ -145,10 +206,6 @@ export function cablearPanelEjercito(raiz: ParentNode, p: ProyeccionJugador, eje
       if (error) error.textContent = mensaje; else avisar(mensaje);
     } else if (nota) avisar(nota);
   };
-  raiz.querySelectorAll<HTMLButtonElement>('[data-centrar-ejercito]').forEach((b) => b.addEventListener('click', () => {
-    const c = p.ejercitos.find((x) => x.id === b.dataset.centrarEjercito);
-    if (c) centrar?.(c.posicionActual);
-  }));
   raiz.querySelectorAll<HTMLButtonElement>('[data-unirse-ejercito]').forEach((b) => b.addEventListener('click', () => {
     const c = p.ejercitos.find((x) => x.id === b.dataset.unirseEjercito);
     void enviar(b, 'unirseEnCampo', { ejercitoId: b.dataset.unirseEjercito, heroeId: p.heroeId }, c?.politicaDeUnion === 'preguntar' ? 'Petición enviada: el Líder tiene 10 segundos para contestar.' : undefined);
@@ -158,7 +215,6 @@ export function cablearPanelEjercito(raiz: ParentNode, p: ProyeccionJugador, eje
       case 'organizar': return void enviar(b, 'organizarEjercito', { heroeId: p.heroeId, politicaDeUnion: b.dataset.politica });
       case 'cancelar-formacion': return void enviar(b, 'cancelarFormacion', { heroeId: p.heroeId });
       case 'separarme': return void enviar(b, 'separarseDelEjercito', { heroeId: p.heroeId });
-      case 'forzada': return void (mi && enviar(b, 'marchaForzada', { ejercitoId: mi.id, activa: !mi.marchaForzada }));
       case 'estacionar': return void (mi && enviar(b, 'estacionarEjercito', { ejercitoId: mi.id }));
       case 'replegar':
         if (mi) void confirmar('Cancela la marcha y todos vuelven a su origen.', { titulo: '¿Replegar el ejército?', aceptar: 'Replegar' }).then((ok) => { if (ok) void enviar(b, 'replegarEjercito', { ejercitoId: mi.id }); });
@@ -170,7 +226,6 @@ export function cablearPanelEjercito(raiz: ParentNode, p: ProyeccionJugador, eje
       }
     }
   }));
-  if (mi && (mi.tipo === 'ejercito' || mi.participantes.length > 1) && raiz instanceof HTMLElement) cablearCarro(raiz, ejecutar);
   raiz.querySelectorAll<HTMLButtonElement>('[data-peticion]').forEach((b) => b.addEventListener('click', () => {
     if (mi) void enviar(b, 'responderPeticionDeUnion', { ejercitoId: mi.id, heroeId: p.heroeId, solicitanteId: b.dataset.peticion, aceptar: b.dataset.aceptar === 'si' });
   }));

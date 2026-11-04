@@ -1411,6 +1411,31 @@ pre#proyeccion {
   box-shadow: var(--shadow-main);
 }
 
+/* La ventana Ejército (0.132.0): centrada, como la de Misiones; del alto de lo que lleva y, si no cabe, desplaza por dentro. */
+.mapa-panel.mapa-panel-ventana {
+  left: 50%;
+  top: calc(50% + var(--jugador-alto) / 2);
+  transform: translate(-50%, -50%);
+  width: min(960px, calc(100vw - 32px));
+  max-width: none;
+  max-height: calc(100% - var(--jugador-alto) - 40px);
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+  z-index: 8;
+}
+.mapa-panel-ventana > .ejv-cuerpo { flex-shrink: 1; }
+.ejv-cuerpo { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; padding: 14px 16px 16px; overflow-y: auto; min-height: 0; align-items: start; }
+.ejv-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.ejv-tropas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.ejv-tropa { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; }
+.ejv-tropa strong { color: var(--pergamino); font-weight: 600; }
+.ejv-tropa .ejv-tropa-dato { margin-left: auto; font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap; }
+.ejv-recursos { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 0.82rem; color: var(--pergamino); }
+.ejv-caravana { padding: 8px 10px; border: 1px solid var(--bronce-osc); border-radius: 3px; background: rgba(20, 16, 11, 0.35); display: flex; flex-direction: column; gap: 4px; }
+.ejv-col .campamento-fila .form-input { flex: 1; min-width: 0; }
+.ejv-caravana small { color: var(--text-secondary); font-size: 0.75rem; }
+
 .mapa-panel-jugador {
   font-size: 0.78rem;
   letter-spacing: 0.08em;

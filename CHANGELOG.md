@@ -3,6 +3,21 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.132.0] — 2026-11-04 · La ventana Ejército del mundo · sin cambio de contrato
+
+Petición de Víctor (2026-11-04):
+
+- **Ventana en vez de panel lateral.** El ⚑ del riel del mapa abre una ventana centrada como la de Misiones (`.mapa-panel-ventana`),
+  del alto de lo que lleva.
+- **Integrantes con su tropa.** El Líder primero; de cada uno, sus escuadras con hombres y nivel (lo tuyo con su nombre y si es
+  prestada; lo de los demás, lo que deja ver el servidor; si no se ve, se dice). Arriba, cuántos héroes y hombres van y si marcha.
+- **La carga y las caravanas.** La ocupación del carro y lo que lleva, y de cada caravana enganchada (también la de Fundación) sus
+  carros, su escolta y su carga. Cargar y descargar sigue en «Lo que llevas» (⚔).
+- **Fuera la marcha forzada** de aquí: se pone junto a los víveres, abajo en el mapa, como hasta ahora.
+- **«Ejércitos y formaciones de tu Facción» pasa a la Facción**, en una pestaña «Ejércitos» nueva (tras Plazas), con «Ver en el mapa» y
+  «Unirme».
+- Banco: `pruebas/ejercito/` (`?lider=1`, `?solo=1`, `?faccion=1`).
+
 ## [0.131.0] — 2026-11-04 · La fertilidad del suelo, también en el mundo 3D · sin cambio de contrato
 
 Petición de Víctor (2026-11-04): «agregar el filtro de fertilidad a las capas del mapa para que se apague y se encienda como el nombre de los

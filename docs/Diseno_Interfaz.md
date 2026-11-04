@@ -155,6 +155,12 @@ remata cabeceras y paneles con la moldura clásica. `opacity: .5` para que sea s
     cierra la ventana. El minimapa es la planta en SVG (`.camp-lienzo`, `.pueblo-mini`); sin planta del motor o sin WebGL, la
     planta del campamento o el anillo de huecos del pueblo (`.pueblo-lienzo`) vuelven en grande al centro (`.sin-3d`).
 - **Login / Facción**: tarjeta central (`.login-card`) sobre el fondo, como un menú de campaña.
+- **Ventana Ejército del mundo** (⚑ del riel del mapa, `.mapa-panel.mapa-panel-ventana`, 0.132.0, Víctor 2026-11-04): centrada como
+  la de Misiones. A la izquierda, los integrantes (el Líder primero) con su tropa: lo tuyo con el nombre de cada escuadra, lo de los
+  demás lo que deja ver el servidor (`heroesVisibles[].escuadrasQueLleva`). A la derecha, lo que toca hacer según tu papel (organizar,
+  aceptar peticiones, acampar, replegar, ceder el mando, separarte), la carga del carro y las caravanas que lleva (carros, escolta y
+  carga); cargar y descargar sigue en «Lo que llevas» (⚔). La marcha forzada se pone junto a los víveres, abajo. Los demás ejércitos
+  y formaciones de tu Facción, para verlos y unirte, van en la pestaña «Ejércitos» de la Facción.
 - **Pantalla de carga** (`.pantalla-carga`, 0.102.0, petición de Víctor del 2026-11-02): al pasar del mundo a una plaza, un
   campamento o un pueblo, al volver y al entrar en la partida. Una imagen a pantalla completa (de la mesa de escalas 3D o de la
   vista 3D de la plaza) con un acercamiento lento; el consejo centrado en el cuarto inferior, con «Consejo» encima en Cinzel oro,

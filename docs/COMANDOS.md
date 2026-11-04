@@ -185,8 +185,8 @@ Panel «Salir» de un campamento y «Salir al mundo» de la plaza (`ui/convocato
 
 - [x] `movilizarEjercito` — `asentamientoId`, `heroeId`, `escuadronIds`, `objetivo`: `{ tipo: 'asentamiento', id }` o `{ tipo: 'punto', punto: { x, y } }`; opcional: `politicaDeUnion` (`rechazar` \| `aceptar` \| `preguntar`, Doc 5.14.1 — qué hacer con quien pida unirse en campo) · `objetivo` opcional desde 2026-10-08 (sin él sale quieto); la UI usa la convocatoria + `partirConvocatoria`
 - [x] `unirseAEjercito` — `ejercitoId`, `asentamientoId`, `heroeId`, `escuadronIds` · icono «Unirse a un ejército» del riel de la plaza (solo sale cuando se puede, desde 0.114.0): sumarte con tropa de tu campamento a un ejército de tu Facción que pasa a ≤ 60 de la plaza
-- [x] `replegarEjercito` — `ejercitoId` · panel ⚑ Ejército del mapa (Líder)
-- [x] `estacionarEjercito` — `ejercitoId` · panel ⚑ Ejército del mapa (Líder, en marcha)
+- [x] `replegarEjercito` — `ejercitoId` · ventana ⚑ Ejército del mapa (Líder)
+- [x] `estacionarEjercito` — `ejercitoId` · ventana ⚑ Ejército del mapa (Líder, en marcha)
 - [x] `alternarReabastecerAliados` — `{ asentamientoId, permitido }` · `src/ui/panelAliados.ts` (subpestaña «Aliados» de Centro urbano)
 - [x] `adjuntarCaravana` — `{ ejercitoId, caravanaId, heroeId }` · «Lo que llevas» › Para enganchar (`src/ui/caravanasAdjuntas.ts`); acepta también `aparcada`. El flujo de la Caravana de Fundación del panel `fundar` sigue igual.
 - [x] `soltarCaravana` — `{ ejercitoId, caravanaId, heroeId }` · «Lo que llevas» › caravana enganchada › Soltar
@@ -223,10 +223,10 @@ decidido acercarse (`inspeccionar`) o ir a por algo (`atacar`/`perseguir`) para 
 Varios jugadores pueden compartir una columna. La política de quién entra la fija el Líder al parir la columna
 (`movilizarEjercito.politicaDeUnion`, arriba); estos comandos gestionan la vida de esa composición después.
 
-- [x] `unirseEnCampo` — `ejercitoId`, `heroeId` · pedir unirse a una columna que ya está en marcha · panel ⚑ Ejército y ficha del ejército en el mapa
-- [x] `responderPeticionDeUnion` — `ejercitoId`, `heroeId`, `solicitanteId`, `aceptar` (boolean) · solo el Líder, y solo si su política es `preguntar` · panel ⚑ Ejército del mapa (Líder, política «decide el Líder»)
-- [x] `separarseDelEjercito` — `heroeId` (sin `ejercitoId`: se sale de la columna en la que vas, y solo puedes ir en una) · panel ⚑ Ejército
-- [x] `cederLiderazgo` — `ejercitoId`, `heroeId`, `sucesorId` · el Líder es quien formó la columna y el único que puede cancelar la marcha; para irse tiene que ceder antes · panel ⚑ Ejército del mapa (Líder)
+- [x] `unirseEnCampo` — `ejercitoId`, `heroeId` · pedir unirse a una columna que ya está en marcha · pestaña «Ejércitos» de la Facción y ficha del ejército en el mapa
+- [x] `responderPeticionDeUnion` — `ejercitoId`, `heroeId`, `solicitanteId`, `aceptar` (boolean) · solo el Líder, y solo si su política es `preguntar` · ventana ⚑ Ejército del mapa (Líder, política «decide el Líder»)
+- [x] `separarseDelEjercito` — `heroeId` (sin `ejercitoId`: se sale de la columna en la que vas, y solo puedes ir en una) · ventana ⚑ Ejército
+- [x] `cederLiderazgo` — `ejercitoId`, `heroeId`, `sucesorId` · el Líder es quien formó la columna y el único que puede cancelar la marcha; para irse tiene que ceder antes · ventana ⚑ Ejército del mapa (Líder)
 
 ### Batallas de Unity (doc 02 §3.1)
 

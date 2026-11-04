@@ -65,7 +65,7 @@ import { cablearAnexion } from './ui/panelAnexion';
 import { cablearFusion } from './ui/panelFusion';
 import { cablearAdmision } from './ui/panelAdmision';
 import { cablearFichaBatalla, cablearFichaFormacion, formacionesVisibles, htmlFichaBatalla, htmlFichaFormacion } from './ui/panelBatalla';
-import { cablearPanelEjercito, ejercitosDeLaFaccion, htmlFichaEjercito, htmlPanelEjercito, peticionesNuevas } from './ui/ejercitos';
+import { cablearPanelEjercito, ejercitosDeLaFaccion, htmlEjercitosFaccion, htmlFichaEjercito, htmlPanelEjercito, peticionesNuevas } from './ui/ejercitos';
 import { invalidar, olvidarEdicion, pintar, vaciar } from './ui/repintado';
 import { ayuda } from './ui/ayuda';
 import { htmlInformeDeInspeccion } from './ui/interaccionAjena';
@@ -1449,6 +1449,9 @@ function renderPanelJugador(forzar = false): void {
     } else if (propia && pestana === 'tecnologia') {
       // antes, el botón «Tecnología» de la barra de arriba (hasta la 0.121): la tecnología es de la Facción
       cuerpo = `<section class="faccion-tecnologia">${htmlTecnologia(proyeccion, escaparHtml, false)}</section>`;
+    } else if (propia && pestana === 'ejercitos') {
+      // antes, al pie del panel Ejército del mapa (hasta la 0.131)
+      cuerpo = htmlEjercitosFaccion(proyeccion, escaparHtml);
     } else if (propia && pestana === 'mercenarios') {
       cuerpo = htmlMercenariosFaccion(proyeccion, escaparHtml);
     } else if (propia && pestana === 'misiones') {
@@ -1490,6 +1493,8 @@ function renderPanelJugador(forzar = false): void {
       if (seccion) cablearMisiones(seccion, proyeccion, ejecutarYRefrescar, () => renderPanelJugador(true));
       const tecnologia = panel.querySelector<HTMLElement>('.faccion-tecnologia');
       if (tecnologia) cablearTecnologia(tecnologia, ejecutarYRefrescar);
+      const ejercitos = panel.querySelector<HTMLElement>('.faccion-ejercitos');
+      if (ejercitos) cablearPanelEjercito(ejercitos, proyeccion, ejecutarYRefrescar, (m) => mostrarAviso(m, true));
       const mercenarios = panel.querySelector<HTMLElement>('.faccion-mercenarios');
       if (mercenarios) cablearMercenariosFaccion(mercenarios, ejecutarYRefrescar, () => renderPanelJugador(true));
       const tablon = panel.querySelector<HTMLElement>('.faccion-tablon');
@@ -1748,13 +1753,18 @@ function renderPanelRiel(): void {
   });
   riel.querySelector('[data-panel="fundar"]')?.classList.toggle('destaca', puedeFundar && !tieneAsentamientoPropio(proyeccion));
 
+  // El Ejército va en una ventana centrada, como la de Misiones (0.132.0); el resto, en el panel junto al riel.
+  panel.classList.toggle('mapa-panel-ventana', panelMapaAbierto === 'ejercito');
   if (panelMapaAbierto === null) { panel.hidden = true; vaciar(panel); return; }
   panel.hidden = false;
   if (panelMapaAbierto === 'columna') {
     pintar(panel, htmlColumna(proyeccion, escaparHtml), () => cablearColumna(panel, proyeccion, ejecutarYRefrescar), 'columna');
   } else if (panelMapaAbierto === 'ejercito') {
     // El modo mundo no se separa del héroe: ver otro sitio es abrir el modo mapa allí.
-    pintar(panel, htmlPanelEjercito(proyeccion, escaparHtml), () => cablearPanelEjercito(panel, proyeccion, ejecutarYRefrescar, avisoMapa, (punto) => alternarVistaMapa(true, punto)), 'ejercito');
+    pintar(panel, htmlPanelEjercito(proyeccion, escaparHtml), () => {
+      cablearPanelEjercito(panel, proyeccion, ejecutarYRefrescar, avisoMapa);
+      panel.querySelector('[data-cerrar-ejercito]')?.addEventListener('click', () => abrirPanelRiel('ejercito'));
+    }, 'ejercito');
   } else if (panelMapaAbierto === 'cosas') {
     const asentamientos = asentamientosDelMapa(proyeccion).filter((a) => a.faccionId === proyeccion.faccionId);
     const columnas = proyeccion.ejercitos;
@@ -1890,7 +1900,7 @@ function montarMapa(): void {
     ${htmlBarraJugador(proyeccion, escaparHtml)}
     <nav class="mapa-riel" aria-label="Paneles del mapa">
       <button type="button" data-panel="columna" title="Lo que llevas: tropa y carro" aria-label="Lo que llevas: tropa y carro">⚔</button>
-      <button type="button" data-panel="ejercito" title="Ejército: formar uno o unirte a uno" aria-label="Ejército">⚑</button>
+      <button type="button" data-panel="ejercito" title="Ejército: quién va, su tropa, la carga y las caravanas" aria-label="Ejército">⚑</button>
       <button type="button" data-panel="cosas" title="Mis cosas" aria-label="Mis cosas">📍</button>
       <button type="button" data-panel="fundar" title="Fundar asentamiento" aria-label="Fundar asentamiento" hidden>⌂</button>
     </nav>
