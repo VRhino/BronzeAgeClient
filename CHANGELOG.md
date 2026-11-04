@@ -3,6 +3,27 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.138.0] — 2026-11-04 · Cupo de Fundación, Guarnición en Defensa, Rutas del Mercado y obras con barras · sin cambio de contrato
+
+Petición de Víctor (2026-11-04, seis puntos):
+
+1. **Cupo de Fundación**: contaba solo la plaza de dentro (`asentamientos`); ahora cuenta todas las plazas de la Facción (también las de
+   `asentamientosAvistados`) más las Caravanas de Fundación vivas, como el motor (`plazas_de + fundaciones_de`).
+2. **Escolta y guarnición con la tropa de la columna estando de visita**: el motor solo las admite a residentes, desde su campamento. Pedido al
+   motor (solo en plazas de tu Facción). Lo que dejas en escolta o guarnición ya no sale en «Salir al mundo» (contenedor escolta / `enGuarnicion`).
+3. **Defensa → Guarnición** (nueva subpestaña, `panelGuarnicion.ts`): las escuadras de la guarnición en huecos (las tuyas con ✕ para sacarlas, las de
+   otros residentes como «De otro residente» hasta que el motor mande su dueño), tu cupo en Liderazgo con su barra y «+» para dejar escuadras del
+   campamento (`asignarGuarnicion` / `retirarGuarnicion`). `Asentamiento.guarnicionIds` llega de `guarnicion_ids`.
+   `heroe.guarnicionOcupada` pasa a contarse en Liderazgo (antes sumaba hombres contra un cupo en Liderazgo).
+4. **Mercado → Rutas** (nueva pestaña): las caravanas de la flota con ruta o envío, cada una con su dibujo y «✎ Cambiar» / «Cancelar encargo».
+5. **Detalle de la ruta** (`htmlRutaVisual`): origen y destino como placas, la carreta sobre el camino donde va, la fase en una píldora de color,
+   ruta o envío y las vueltas; en cada parada, «Deja/Vende» y «Recoge/Compra» en fichas con icono, cifra y precio. «Cambiar» y «Cancelar» solo
+   salen a quien puede (Gobernador, Tesorero o Maestro de Caravanas, residente y dentro).
+6. **Obra de pueblo en el mapa**: lo que pide en filas con icono, barra de lo entregado, «faltan N» y lo que lleva tu columna de ese material
+   (verde si alcanza, ámbar si en parte), con la barra y el % del total arriba.
+
+Bancos: `pruebas/hud/?ventana=defensa`, `?ventana=caravanas&sub=rutas`, `?obra=1`.
+
 ## [0.137.0] — 2026-11-04 · Mundo 3D: todo lo de encima pisa el suelo que se pinta · sin cambio de contrato
 
 Víctor probó la 0.136.1 (2026-11-04): soldados, héroes y caravanas ya iban bien, pero caminos, la línea de frontera, los nodos, los árboles y lo

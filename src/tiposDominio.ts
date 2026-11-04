@@ -266,6 +266,8 @@ export interface Asentamiento {
   participacion?: Record<string, number>;
   /** El tablón de misiones recurrentes de la plaza. Solo desde dentro. */
   tablon?: Tablon;
+  /** Las escuadras (`esc-N`) de la guarnición de la plaza, de todos sus residentes (motor `guarnicion_ids`): solo ids, sin dueño ni tropa. */
+  guarnicionIds?: string[];
 }
 
 export type GrupoPuerta = 'neutrales' | 'aliados' | 'enemigos' | 'aedas';

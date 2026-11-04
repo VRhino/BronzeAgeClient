@@ -466,7 +466,11 @@ export async function unirseAPartida(_gameId: string): Promise<{ jugadorId: stri
 function proyeccionActual(s: Sesion): ProyeccionJugador | PartidaSinHeroe {
   const p = proyectar({ almacen: s.almacen, bienvenida: s.bienvenida!, ahora: s.ahoraMundo(), gameId: PARTIDA, mapaId: s.bienvenida?.mundo?.hash ?? '' });
   // El Liderazgo de una escuadra va por el escalón de su tropa (LIDERAZGO.costePorEscalon), no por sus hombres: el motor no lo manda en la escuadra.
-  if ('heroe' in p) for (const x of p.heroe.escuadrones) x.costeLiderazgo = costeDeLiderazgo(x.tropaId);
+  if ('heroe' in p) {
+    for (const x of p.heroe.escuadrones) x.costeLiderazgo = costeDeLiderazgo(x.tropaId);
+    // La guarnición ocupada también va en Liderazgo (el cupo del motor lo es): antes sumaba hombres.
+    p.heroe.guarnicionOcupada = p.heroe.escuadrones.filter((x) => x.enGuarnicion).reduce((t, x) => t + x.costeLiderazgo, 0);
+  }
   // Las tarifas de la taberna tampoco viajan en el estado: salen de `INTEL` y del cupo de cada nivel de la Taberna en `/v1/datos`.
   if ('tarifasIntel' in p) p.tarifasIntel = tarifasDeIntel();
   return p;

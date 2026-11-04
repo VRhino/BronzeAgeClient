@@ -510,6 +510,39 @@ export function cablearEscolta(raiz: HTMLElement, p: ProyeccionJugador, ejecutar
   escoltar('quitarEscolta', 'data-quitar-escolta');
 }
 
+/** El catálogo de caravanas con los multiplicadores de las políticas de la plaza y la escolta de su Mercado; `null` mientras no llegue el balance. */
+function datosDeCaravanas(a: Asentamiento, alCargar?: () => void): DatosCaravana | null {
+  const cat = catalogoDeCaravanas(alCargar);
+  if (!cat) return null;
+  const politicas = catalogoDePoliticas(alCargar)?.catalogo ?? [];
+  const factor = (campo: string): number => (a.politicasActivas ?? []).reduce((t, x) => { const v = politicas.find((q) => q.id === x.politicaId)?.[campo]; return typeof v === 'number' ? t * v : t; }, 1);
+  const nivelMercado = Math.max(0, ...(a.edificios ?? []).filter((x) => x.tipo === 'mercado' && x.estado === 'activo').map((x) => x.nivelInterno ?? 1));
+  return { cat, fCapacidad: factor('factorCapacidadCaravana'), fVelocidad: factor('factorVelocidadCaravana'), escoltaPts: nivelMercado > 0 ? cat.escoltaPorNivelMercado[nivelMercado - 1] : undefined };
+}
+
+/** La pestaña Rutas del Mercado (0.138.0, Víctor 2026-11-04): las caravanas de la flota con encargo (rutas permanentes y envíos), cada una con su
+ * dibujo de ruta y, para quien tiene el cargo, «Cambiar» y «Cancelar encargo» ahí mismo. */
+export function htmlRutas(p: ProyeccionJugador, a: Asentamiento, e: Escapar, alCargar?: () => void): string {
+  const reside = resideAqui(p, a);
+  const d = datosDeCaravanas(a, alCargar);
+  const conEncargo = p.caravanas.filter((c) => c.tipo === 'comercial' && c.origenAsentamientoId === a.id && c.encargo)
+    .sort((x, y) => Number(x.encargo!.modo !== 'ruta') - Number(y.encargo!.modo !== 'ruta') || Number(x.encargo!.cancelado) - Number(y.encargo!.cancelado));
+  const rutas = conEncargo.filter((c) => c.encargo!.modo === 'ruta').length;
+  const envios = conEncargo.length - rutas;
+  const motivo = motivoSinEncargo(p, a, reside);
+  const cab = `<div class="obra-titulo"><span class="faction-kicker">Rutas de caravanas</span>${ayuda('mercado:rutas', 'Las caravanas de esta plaza que van y vienen solas. Una <strong>ruta</strong> une dos plazas tuyas y se repite sin fin; un <strong>envío</strong> hace una ida y vuelta, también a una plaza ajena (allí vende y compra a sus órdenes). En cada parada primero deja y luego recoge. Las dan, cambian y cancelan el Gobernador, el Tesorero o el Maestro de Caravanas, residentes y dentro de la plaza. Una caravana nueva se encarga desde la pestaña Caravanas.')}</div>
+    <div class="rutas-resumen"><span class="obra-chip">⇄ ${rutas} ${rutas === 1 ? 'ruta' : 'rutas'}</span><span class="obra-chip">→ ${envios} ${envios === 1 ? 'envío' : 'envíos'}</span>${motivo ? `<small class="asent-lado-nota">${e(motivo)}</small>` : ''}</div>`;
+  if (conEncargo.length === 0) return `${cab}<p class="mapa-lista-vacia">Ninguna caravana de esta plaza tiene ruta ni envío. Dale uno desde Caravanas → Encargo.</p>`;
+  return `${cab}<div class="rutas-lista">${conEncargo.map((c) => {
+    const tira = (c.carros ?? []).some((r) => r.animal);
+    return `<div class="caravana-tarjeta ruta-tarjeta">${htmlEncargo(c, p, a, reside, capacidadDe(c, d) ?? 0, tira, e, false, `<span class="caravana-icono">${ICONO_CARRETA}</span> ${e(nombreDeCaravana(c))}`)}</div>`;
+  }).join('')}</div>`;
+}
+
+export function cablearRutas(raiz: HTMLElement, p: ProyeccionJugador, ejecutar: Ejecutar, repintar: () => void): void {
+  cablearEncargo(raiz, p, ejecutar, repintar);
+}
+
 export function htmlCaravanas(p: ProyeccionJugador, a: Asentamiento, e: Escapar, alCargar?: () => void): string {
   const reside = resideAqui(p, a);
   const flota = p.caravanas.filter((c) => c.tipo === 'comercial' && c.origenAsentamientoId === a.id);
@@ -528,8 +561,7 @@ export function htmlCaravanas(p: ProyeccionJugador, a: Asentamiento, e: Escapar,
   const carrosLleno = cupo?.carros !== undefined && carros >= cupo.carros;
   const flotaLlena = cupo?.caravanas !== undefined && flota.length >= cupo.caravanas;
   const cat = catalogoDeCaravanas(alCargar);
-  const factor = (campo: string): number => (a.politicasActivas ?? []).reduce((t, x) => { const v = politicas.find((q) => q.id === x.politicaId)?.[campo]; return typeof v === 'number' ? t * v : t; }, 1);
-  const datos: DatosCaravana | null = cat ? { cat, fCapacidad: factor('factorCapacidadCaravana'), fVelocidad: factor('factorVelocidadCaravana'), escoltaPts: nivelMercado > 0 ? cat.escoltaPorNivelMercado[nivelMercado - 1] : undefined } : null;
+  const datos = datosDeCaravanas(a, alCargar);
   const pips = (usadas: number, tope: number | undefined, clase: string): string => tope === undefined ? `<b>${usadas}</b>`
     : `<span class="flota-pips ${clase}">${Array.from({ length: Math.max(tope, usadas) }, (_, i) => `<i class="${i < usadas ? 'usada' : ''}"></i>`).join('')}</span><b>${usadas}/${tope}</b>`;
   const topes = cupo ? `<span class="flota-cupo" title="Caravanas de la flota sobre el tope de ${deQuien}"><small>Caravanas</small>${pips(flota.length, cupo.caravanas, 'caravanas')}</span>

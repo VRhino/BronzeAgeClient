@@ -37,6 +37,12 @@ function nombrePlaza(p: ProyeccionJugador, id: string): string {
   return destinos(p, '').find((x) => x.id === id)?.nombre ?? id;
 }
 
+/** Dónde está una plaza que conoces (para situar la carreta en el dibujo de la ruta). */
+function posicionPlaza(p: ProyeccionJugador, id: string): { x: number; y: number } | undefined {
+  return p.asentamientos.find((x) => x.id === id)?.posicion ?? p.asentamientosAvistados.find((x) => x.id === id)?.posicion
+    ?? p.asentamientosConocidos.find((x) => x.asentamientoId === id)?.posicion;
+}
+
 /** Por qué no puedes dar ni tocar encargos en esta plaza, o `null` si puedes. */
 export function motivoSinEncargo(p: ProyeccionJugador, a: Asentamiento, reside: boolean): string | null {
   const c = a.cargos;
@@ -47,15 +53,60 @@ export function motivoSinEncargo(p: ProyeccionJugador, a: Asentamiento, reside: 
   return null;
 }
 
-function textoParada(x: ParadaEncargo | undefined, ajena: boolean, e: Escapar): string {
-  if (!x || (x.recoger.length === 0 && x.dejar.length === 0)) return 'nada';
-  const dejar = x.dejar.map((l) => `${icono(l.recurso)} ${e(nombre(l.recurso))}${l.tope !== undefined ? ` hasta ${cifra(l.tope)}` : ''}${l.precioMin !== undefined ? ` a ≥${cifra(l.precioMin)}` : ''}`);
-  const recoger = x.recoger.map((l) => `${icono(l.recurso)} ${e(nombre(l.recurso))} ${cifra(l.cantidad)}${l.precioMax !== undefined ? ` a ≤${cifra(l.precioMax)}` : ''}`);
-  const partes = [
-    dejar.length ? `${ajena ? 'vende' : 'deja'} ${dejar.join(', ')}${x.desecharSobrante ? ' (tira lo que no quepa)' : ''}` : '',
-    recoger.length ? `${ajena ? 'compra' : 'recoge'} ${recoger.join(', ')}${x.esperarExistencias ? ' (espera a tenerlo)' : ''}` : '',
-  ].filter(Boolean);
-  return partes.join(' · ');
+/** Lo que hace en una parada, en fichas: «Deja» (o «Vende») y «Recoge» (o «Compra»), cada recurso con su icono, su cifra y su precio. */
+function paradaEnFichas(titulo: string, x: ParadaEncargo | undefined, ajena: boolean, aqui: boolean, e: Escapar): string {
+  const ficha = (r: string, cifraTxt: string, precio: string): string =>
+    `<span class="ruta-ficha" title="${e(nombre(r))}"><i>${icono(r)}</i><b>${cifraTxt}</b><small>${e(nombre(r))}${precio}</small></span>`;
+  const dejar = (x?.dejar ?? []).map((l) => ficha(l.recurso, l.tope !== undefined ? `≤ ${cifra(l.tope)}` : 'todo', l.precioMin !== undefined ? ` · a ≥ ${cifra(l.precioMin)}` : ''));
+  const recoger = (x?.recoger ?? []).map((l) => ficha(l.recurso, cifra(l.cantidad), l.precioMax !== undefined ? ` · a ≤ ${cifra(l.precioMax)}` : ''));
+  const fila = (verbo: string, fichas: string[], marca: string): string =>
+    `<div class="ruta-accion"><span class="ruta-verbo">${verbo}</span>${fichas.length ? fichas.join('') : '<span class="ruta-nada">nada</span>'}${marca}</div>`;
+  return `<div class="ruta-parada${aqui ? ' aqui' : ''}">
+      <strong class="ruta-parada-cab">${e(titulo)}</strong>
+      ${fila(ajena ? '⬇ Vende' : '⬇ Deja', dejar, x?.desecharSobrante ? '<span class="ruta-marca" title="Lo que no quepa en el almacén se tira">tira lo que sobre</span>' : '')}
+      ${fila(ajena ? '⬆ Compra' : '⬆ Recoge', recoger, x?.esperarExistencias ? '<span class="ruta-marca" title="No sale hasta tenerlo todo">espera a tenerlo</span>' : '')}
+    </div>`;
+}
+
+/** El dibujo de la ruta (0.138.0): origen y destino con la carreta en el camino (proyectada sobre la recta entre las dos plazas), la fase y las vueltas,
+ * y lo que hace en cada parada en fichas. Lo usan la ficha de la caravana y la pestaña Rutas del Mercado. */
+export function htmlRutaVisual(c: Caravana, k: Encargo, p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
+  const ajena = !destinos(p, a.id).find((x) => x.id === k.destinoAsentamientoId)?.propia;
+  const o = a.posicion, d = posicionPlaza(p, k.destinoAsentamientoId);
+  const estado = c.estado ?? 'disponible';
+  const enCamino = estado === 'en_transito' || estado === 'retornando';
+  let t = k.paradaActual === 'destino' ? 0.97 : 0.03;
+  if (enCamino) {
+    const dx = (d?.x ?? o.x) - o.x, dy = (d?.y ?? o.y) - o.y, l2 = dx * dx + dy * dy;
+    t = l2 > 0 ? ((c.posicionActual.x - o.x) * dx + (c.posicionActual.y - o.y) * dy) / l2 : 0.5;
+    t = Math.min(0.92, Math.max(0.08, t));
+  }
+  const vuelve = estado === 'retornando';
+  const fase = k.cancelado ? '✕ Cancelado: termina al volver' : textoSituacion(c, k, p).replace(/\.$/, '') || 'Parada';
+  const faseClase = k.cancelado ? 'cancelado' : enCamino ? 'camino' : k.fase === 'espera' ? 'espera' : 'trabajo';
+  const aquiO = !enCamino && k.paradaActual === 'origen', aquiD = !enCamino && k.paradaActual === 'destino';
+  const punta = (nombreTxt: string, rol: string, aqui: boolean, deOtro: boolean): string =>
+    `<div class="ruta-punta${aqui ? ' aqui' : ''}"><span class="ruta-punta-icono">${deOtro ? '🏴' : '🏛️'}</span><strong>${e(nombreTxt)}</strong><small>${rol}${deOtro ? ' · ajena' : ''}</small></div>`;
+  return `<div class="ruta-vis">
+      <div class="ruta-linea">
+        ${punta(a.nombre ?? a.id, 'origen', aquiO, false)}
+        <div class="ruta-pista${enCamino ? ' en-camino' : ''}" aria-hidden="true">
+          <span class="ruta-camino"></span>
+          <span class="ruta-carreta${vuelve ? ' vuelve' : ''}" style="left:${(t * 100).toFixed(1)}%" title="${e(fase)}">🛞</span>
+          <span class="ruta-sentido">${k.modo === 'ruta' ? '⇄' : '→ ←'}</span>
+        </div>
+        ${punta(nombrePlaza(p, k.destinoAsentamientoId), 'destino', aquiD, ajena)}
+      </div>
+      <div class="ruta-estado">
+        <span class="ruta-fase ${faseClase}">${e(fase)}</span>
+        <span class="obra-chip">${k.modo === 'ruta' ? '⇄ Ruta permanente' : '→ Envío de ida y vuelta'}</span>
+        ${k.modo === 'ruta' ? `<span class="obra-chip" title="Vueltas completas">↻ ${k.vueltas} ${k.vueltas === 1 ? 'vuelta' : 'vueltas'}</span>` : ''}
+      </div>
+      <div class="ruta-paradas">
+        ${paradaEnFichas(`En ${a.nombre ?? 'el origen'}`, k.paradaOrigen, false, aquiO, e)}
+        ${paradaEnFichas(`En ${nombrePlaza(p, k.destinoAsentamientoId)}`, k.paradaDestino, ajena, aquiD, e)}
+      </div>
+    </div>`;
 }
 
 /** Dónde anda y qué hace la caravana con encargo. */
@@ -125,7 +176,7 @@ function htmlFormulario(c: Caravana, p: ProyeccionJugador, a: Asentamiento, capa
 
 /** La sección «Encargo» de la tarjeta de una caravana de la flota de `a` (su origen). */
 /** `siempreAbierto`: sin encargo, el formulario directamente (la vista de flota, en «Encargo»), sin el botón «Dar encargo». */
-export function htmlEncargo(c: Caravana, p: ProyeccionJugador, a: Asentamiento, reside: boolean, capacidad: number, conAnimal: boolean, e: Escapar, siempreAbierto = false): string {
+export function htmlEncargo(c: Caravana, p: ProyeccionJugador, a: Asentamiento, reside: boolean, capacidad: number, conAnimal: boolean, e: Escapar, siempreAbierto = false, titulo?: string): string {
   if (c.tipo !== 'comercial' || c.origenAsentamientoId !== a.id) return '';
   const k = c.encargo;
   const motivo = motivoSinEncargo(p, a, reside);
@@ -138,15 +189,13 @@ export function htmlEncargo(c: Caravana, p: ProyeccionJugador, a: Asentamiento, 
       ${abierto ? htmlFormulario(c, p, a, capacidad, e) : '<p class="asent-lado-nota">Sin encargo. Con uno va y viene sola: una ruta entre dos plazas tuyas, o un envío de una ida y vuelta.</p>'}
     </div>`;
   }
-  const ajena = !destinos(p, a.id).find((x) => x.id === k.destinoAsentamientoId)?.propia;
-  const situacion = textoSituacion(c, k, p);
-  const botones = k.cancelado ? '' : `<span class="caravana-botones">
-      <button class="btn-secondary btn-chico" type="button" data-enc-abrir="${e(c.id)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>${abierto ? '▾ Cerrar' : 'Cambiar'}</button>
-      <button class="btn-secondary btn-chico" type="button" data-enc-cancelar="${e(c.id)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>Cancelar encargo</button></span>`;
+  // Solo quien puede cambiarla ve «Cambiar» y «Cancelar» (lo que no puedes hacer no se enseña).
+  const botones = k.cancelado || motivo ? '' : `<span class="caravana-botones">
+      <button class="btn-secondary btn-chico" type="button" data-enc-abrir="${e(c.id)}">${abierto ? '▾ Cerrar' : '✎ Cambiar'}</button>
+      <button class="btn-secondary btn-chico" type="button" data-enc-cancelar="${e(c.id)}">Cancelar encargo</button></span>`;
   return `<div class="caravana-seccion encargo">
-    <div class="caravana-seccion-cab"><strong class="heroe-sub">${k.modo === 'ruta' ? 'Ruta' : 'Envío'} → ${e(nombrePlaza(p, k.destinoAsentamientoId))}${ajena ? ' (ajena)' : ''}</strong>${botones}</div>
-    <p class="asent-lado-nota">${k.cancelado ? 'Cancelado: termina al volver al origen.' : e(situacion)}${k.modo === 'ruta' ? ` · ${k.vueltas} ${k.vueltas === 1 ? 'vuelta' : 'vueltas'}` : ''}</p>
-    <p class="asent-lado-nota">Origen: ${textoParada(k.paradaOrigen, false, e)}<br>Destino: ${textoParada(k.paradaDestino, ajena, e)}</p>
+    <div class="caravana-seccion-cab"><strong class="heroe-sub">${titulo ?? (k.modo === 'ruta' ? 'Ruta' : 'Envío')}</strong>${botones}</div>
+    ${htmlRutaVisual(c, k, p, a, e)}
     ${abierto && !k.cancelado ? htmlFormulario(c, p, a, capacidad, e) : ''}
   </div>`;
 }

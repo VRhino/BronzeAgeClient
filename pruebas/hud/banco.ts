@@ -20,7 +20,9 @@ import { htmlBarraJugador } from '../../src/ui/barraJugador';
 import { cablearEleccionBarra, htmlBlasonHud, htmlEleccionBarra, htmlObrasHud, htmlPieDePlaza, ICONO_RIEL, vigilarPieArriba } from '../../src/ui/hudPlaza';
 import { cablearProduccionYRecetas, cablearVistaCiudad, elegirEdificio, htmlExtraccion, htmlRecetas, repintarFicha } from '../../src/ui/vistaCiudad';
 import { cablearPanelObras, htmlConstruir } from '../../src/ui/panelObras';
-import { cablearCaravanas, htmlCaravanas } from '../../src/ui/panelMercado';
+import { cablearCaravanas, cablearRutas, htmlCaravanas, htmlRutas } from '../../src/ui/panelMercado';
+import { SUBPESTANA_GUARNICION } from '../../src/ui/panelGuarnicion';
+import { FICHA_OBRA } from '../../src/ui/pueblos';
 import { htmlAutoConstruccion } from '../../src/ui/panelCentro';
 import { bloqueDeDatos, nivelesDeEdificio } from '../../src/apiCliente';
 import type { Edificio } from '../../src/tiposDominio';
@@ -102,6 +104,12 @@ pintarAlmacen();
 function pintarCaravanas(): void {
   const cuerpo = document.querySelector<HTMLElement>('.asent-edif-cuerpo');
   if (ventana !== 'caravanas' || !cuerpo) return;
+  // `&sub=rutas`: la pestaña Rutas del Mercado (0.138.0) con la misma flota.
+  if (qs.get('sub') === 'rutas') {
+    cuerpo.innerHTML = `<div class="asent-lado-cuerpo">${htmlRutas(p, a, e, pintarCaravanas)}</div>`;
+    cablearRutas(cuerpo, p, async () => null, pintarCaravanas);
+    return;
+  }
   cuerpo.innerHTML = `<div class="asent-lado-cuerpo">${htmlCaravanas(p, a, e, pintarCaravanas)}</div>`;
   cablearCaravanas(cuerpo, p, a, async () => null, pintarCaravanas);
 }
@@ -113,7 +121,8 @@ if (ventana === 'caravanas') {
   const aldea = { x: a.posicion.x + 30, y: a.posicion.y + 12 };
   q.pueblos = [{ id: 'pu1', madreId: a.id, propio: true, tipo: 'aldeaAgricola', posicion: aldea, almacen: {}, capacidad: 500 }];
   q.asentamientosAvistados = [{ id: 'as-9', nombre: 'Cnosos', faccionId: 'f1', posicion: { x: a.posicion.x + 200, y: a.posicion.y }, nivel: 3 }];
-  q.asentamientosConocidos = [];
+  q.asentamientosConocidos = [{ asentamientoId: 'as-7', nombre: 'Ugarit', faccionId: 'f2', posicion: { x: a.posicion.x - 150, y: a.posicion.y + 80 }, nivel: 4, conocidoEn: Date.now() }];
+  a.cargos = { gobernadorId: 'h', maestroObrasId: null, maestroCaravanasId: null, tesoreroId: null, generalId: null, sacerdoteId: null };
   q.faccionId = 'f1';
   a.faccionId = 'f1';
   q.instante = Date.now();
@@ -129,7 +138,14 @@ if (ventana === 'caravanas') {
       carros: [{ tipoCarro: 'basico', animal: 'buey' }, { tipoCarro: 'basico', animal: 'caballo' }, { tipoCarro: 'reforzado' }], escoltaIds: ['s1', 'x-otro'], escoltaLiderazgo: { usado: 75, cupo: 200 }, contenido: {} },
     { id: 'car-2', nombre: 'Sal del Egeo', tipo: 'comercial', origenAsentamientoId: a.id, posicionActual: { x: a.posicion.x + 90, y: a.posicion.y }, estado: 'en_transito', destinoAsentamientoId: 'as-9',
       carros: [{ tipoCarro: 'basico', animal: 'buey' }, { tipoCarro: 'basico', animal: 'buey' }], contenido: { trigo: 600, madera: 200 },
-      encargo: { modo: 'ruta', destinoAsentamientoId: 'as-9', vueltas: 3, paradaActual: 'destino', fase: '', cancelado: false } },
+      encargo: { modo: 'ruta', destinoAsentamientoId: 'as-9', vueltas: 3, paradaActual: 'destino', fase: '', cancelado: false,
+        paradaOrigen: { dejar: [], desecharSobrante: false, recoger: [{ recurso: 'trigo', cantidad: 600 }, { recurso: 'madera', cantidad: 200 }], esperarExistencias: true },
+        paradaDestino: { dejar: [{ recurso: 'trigo' }, { recurso: 'madera', tope: 200 }], desecharSobrante: true, recoger: [{ recurso: 'cobre', cantidad: 120 }], esperarExistencias: false } } },
+    { id: 'car-5', nombre: 'Vino de Quíos', tipo: 'comercial', origenAsentamientoId: a.id, posicionActual: a.posicion, estado: 'esperando',
+      carros: [{ tipoCarro: 'reforzado', animal: 'buey' }, { tipoCarro: 'basico', animal: 'caballo' }], contenido: { vino: 140 },
+      encargo: { modo: 'envio', destinoAsentamientoId: 'as-7', vueltas: 0, paradaActual: 'origen', fase: 'carga', finPaso: Date.now() + 90_000, cancelado: false,
+        paradaOrigen: { dejar: [], desecharSobrante: false, recoger: [{ recurso: 'vino', cantidad: 300 }, { recurso: 'oro', cantidad: 80 }], esperarExistencias: false },
+        paradaDestino: { dejar: [{ recurso: 'vino', precioMin: 2.5 }], desecharSobrante: false, recoger: [{ recurso: 'estano', cantidad: 60, precioMax: 4 }], esperarExistencias: true } } },
     { id: 'car-3', nombre: 'Grano del valle', tipo: 'comercial', origenAsentamientoId: a.id, posicionActual: aldea, estado: 'aparcada', carros: [{ tipoCarro: 'basico', animal: 'camello' }], contenido: { trigo: 180 } },
     { id: 'car-4', tipo: 'comercial', origenAsentamientoId: a.id, posicionActual: a.posicion, estado: 'disponible', carros: [], contenido: {} },
   ];
@@ -209,4 +225,34 @@ function avisoFundacion(): void {
   }
 }
 avisoFundacion();
+// `?ventana=defensa`: la Guarnición de verdad (0.138.0): dos tuyas dentro, una de otro residente y las del campamento para dejar.
+function pintarDefensa(): void {
+  const cuerpo = document.querySelector<HTMLElement>('.asent-edif-cuerpo');
+  if (ventana !== 'defensa' || !cuerpo) return;
+  const c = { proyeccion: p, asentamiento: a, cuerpo, ejecutar: async () => null, refrescar: pintarDefensa, cargo: null, resideAqui: true, escapar: e } as unknown as ContextoPlaza;
+  cuerpo.innerHTML = `<div class="asent-tabs asent-subtabs"><button class="asent-tab activo" type="button">Guarnición</button><button class="asent-tab" type="button">Muralla</button><button class="asent-tab" type="button">Puerta</button></div>${SUBPESTANA_GUARNICION.html(c)}`;
+  SUBPESTANA_GUARNICION.cablear?.(c);
+}
+if (ventana === 'defensa') {
+  const q = p as unknown as Record<string, unknown>;
+  q.faccionId = a.faccionId;
+  const escuadra = (id: string, nombre: string, tropaId: string, coste: number, enGuarnicion: boolean) => ({ id, nombre, tropaId, cantidad: 40, nivel: 1, costeLiderazgo: coste, contenedor: { tipo: 'campamento' }, enGuarnicion });
+  q.heroe = { displayName: 'Víctor', ubicacion: { tipo: 'asentamiento', asentamientoId: a.id }, cupoGuarnicion: 120, guarnicionOcupada: 70, loadouts: [], escuadrones: [
+    escuadra('s1', 'Lanceros de Tebas', 'hoplitas_ciudadanos', 40, true), escuadra('s2', 'Honderos', 'honderos', 30, true),
+    escuadra('s3', 'Arqueros', 'arqueros', 60, false), escuadra('s4', 'Carros ligeros', 'carros_ligeros', 45, false)] };
+  a.guarnicionIds = ['s1', 's2', 'esc-99'];
+  pintarDefensa();
+}
+// `?obra=1`: la ficha de una obra de pueblo en el mapa (0.138.0), con la columna al lado llevando parte de lo que falta.
+if (qs.get('obra')) {
+  const q = p as unknown as Record<string, unknown>;
+  const o = { id: 'obra-1', tipo: 'pueblo', madreId: a.id, propia: true, posicion: { x: a.posicion.x + 40, y: a.posicion.y }, requerido: { madera: 400, piedra: 250, trigo: 120 }, entregado: { madera: 400, piedra: 90 } };
+  q.ejercitos = [{ id: 'ej-1', liderId: 'h', participantes: [{ heroeId: 'h' }], posicionActual: o.posicion, suministro: { piedra: 200, trigo: 40 } }];
+  q.heroe = { ...(p.heroe as object), ubicacion: { tipo: 'ejercito', ejercitoId: 'ej-1' } };
+  const caja = document.createElement('div');
+  caja.className = 'mapa-panel';
+  caja.style.cssText = 'position:absolute;right:20px;top:120px;width:360px;z-index:50;padding:14px';
+  caja.innerHTML = FICHA_OBRA.html(p, o as never, { escapar: e } as never);
+  document.body.append(caja);
+}
 (window as unknown as { __banco: unknown }).__banco = { listo: true, p, a };

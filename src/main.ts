@@ -83,7 +83,7 @@ import { cablearPlegables } from './ui/plegable';
 import { FICHAS_MAPA_EXTRA, SELECTORES_MAPA_EXTRA, SUBPESTANAS_CENTRO_EXTRA, SUBPESTANAS_MERCADO_EXTRA, type ContextoPlaza, type SubpestanaPlaza } from './ui/ganchos';
 import { abrirEleccionClic, cerrarEleccionClic, eleccionClicAbierta, sinRepetir, type ObjetoDelClic } from './ui/eleccionClic';
 import { montarPartidas } from './ui/pantallaPartidas';
-import { cablearCaravanas, cablearOrdenes, htmlCaravanas, htmlOrdenes } from './ui/panelMercado';
+import { cablearCaravanas, cablearOrdenes, cablearRutas, htmlCaravanas, htmlOrdenes, htmlRutas } from './ui/panelMercado';
 import { cablearReclutamiento, htmlReclutamiento } from './ui/reclutamiento';
 import { peticionesNuevasConv } from './ui/convocatoria';
 import { cablearUnirseDesdePlaza, ejercitosParaUnirse, htmlUnirseDesdePlaza } from './ui/unirseDesdePlaza';
@@ -2164,7 +2164,7 @@ const SUB_DE_EDIFICIO: Record<string, string> = { albergueCaravanas: 'caravanas'
 
 /** Las subpestañas extra de Centro urbano que ya tienen ventana; las que se añadan sin sitio salen en Gobierno. Misiones y Tablón van en el botón
  * Misiones de la barra; la Residencia, en la casa del blasón; Información, en el «?». */
-const EXTRAS_CON_SITIO = new Set(['muralla', 'puerta', 'residencia', 'tesoreria', 'fundacion', 'misiones', 'tablon', 'pueblos', 'informacion']);
+const EXTRAS_CON_SITIO = new Set(['guarnicion', 'muralla', 'puerta', 'residencia', 'tesoreria', 'fundacion', 'misiones', 'tablon', 'pueblos', 'informacion']);
 
 function subpestanas(lista: [string, string][], actual: string, avisos: readonly string[] = []): string {
   return `<div class="asent-tabs asent-subtabs">${lista.map(([id, nombre]) => `<button class="asent-tab${id === actual ? ' activo' : ''}" type="button" data-sub="${id}">${nombre}${avisos.includes(id) ? '<b class="asent-aviso-atencion" aria-label="Lista">!</b>' : ''}</button>`).join('')}</div>`;
@@ -2314,7 +2314,7 @@ function contenidoDeVentana(v: VentanaPlaza, c: ContextoPlaza, ajena: boolean): 
         cablear: () => { cablearPlegables(cuerpo); if (s) s.cablear?.(c); else cablearCargosPlaza(c); },
       };
     }
-    case 'defensa': return deExtras(['muralla', 'puerta']);
+    case 'defensa': return deExtras(['guarnicion', 'muralla', 'puerta']);
     case 'territorio': return { ...deExtras(ajena ? ['pueblos'] : ['pueblos', 'fundacion'], { pueblos: 'Pueblos y aldeas' }), avisos: !ajena && fundacionListaEn(p, a) ? ['fundacion'] : [] };
     case 'almacen':
       // a pantalla completa: qué va en la barra de arriba, el almacén con su neto por minuto y la extracción a la izquierda; los talleres a la derecha
@@ -2340,15 +2340,16 @@ function contenidoDeVentana(v: VentanaPlaza, c: ContextoPlaza, ajena: boolean): 
           cablear: () => cablearMercadoDePlaza(cuerpo, a.id, { ejecutarConDatos: ejecutarConDatosYRefrescar, aviso: avisoMapa }, p.heroeId),
         };
       }
-      const subs: [string, string][] = [['ordenes', 'Órdenes'], ['caravanas', 'Caravanas'], ...SUBPESTANAS_MERCADO_EXTRA.map((s) => [s.id, s.etiqueta] as [string, string])];
+      const subs: [string, string][] = [['ordenes', 'Órdenes'], ['caravanas', 'Caravanas'], ['rutas', 'Rutas'], ...SUBPESTANAS_MERCADO_EXTRA.map((s) => [s.id, s.etiqueta] as [string, string])];
       const sub = elegir(subs);
       const s = SUBPESTANAS_MERCADO_EXTRA.find((x) => x.id === sub);
       return {
         ...base, ancho: 'completa', subs, sub,
-        html: s ? s.html(c) : sub === 'caravanas' ? htmlCaravanas(p, a, escaparHtml, renderPanelEdificios) : htmlOrdenes(p, a, escaparHtml),
+        html: s ? s.html(c) : sub === 'caravanas' ? htmlCaravanas(p, a, escaparHtml, renderPanelEdificios) : sub === 'rutas' ? htmlRutas(p, a, escaparHtml, renderPanelEdificios) : htmlOrdenes(p, a, escaparHtml),
         cablear: () => {
           if (s) s.cablear?.(c);
           else if (sub === 'caravanas') cablearCaravanas(cuerpo, p, a, ejecutarYRefrescar, renderPanelEdificios);
+          else if (sub === 'rutas') cablearRutas(cuerpo, p, ejecutarYRefrescar, renderPanelEdificios);
           else cablearOrdenes(cuerpo, a, ejecutarYRefrescar);
         },
       };

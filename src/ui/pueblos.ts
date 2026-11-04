@@ -538,16 +538,43 @@ function htmlEntrar(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar): string {
     ${motivo ? `<p class="asent-lado-nota">${e(motivo)}</p>` : ''}<p class="faction-error" data-entrar-error role="alert"></p>`;
 }
 
+/** Lo que pide la obra, recurso a recurso (0.138.0, Víctor 2026-11-04): icono, barra de lo entregado, «faltan» y lo que lleva tu columna de ese
+ * material (en verde si alcanza), con la barra del total arriba. */
+function htmlMaterialesDeObra(o: ObraDeMapa, lleva: Record<string, number> | undefined, e: Escapar): string {
+  const filas = Object.entries(o.requerido);
+  const pedido = filas.reduce((t, [, n]) => t + n, 0);
+  const hecho = filas.reduce((t, [r, n]) => t + Math.min(n, o.entregado[r] ?? 0), 0);
+  const total = pedido > 0 ? hecho / pedido : 1;
+  const lineas = filas.map(([r, n]) => {
+    const hay = Math.min(n, o.entregado[r] ?? 0);
+    const queda = Math.max(0, n - hay);
+    const tuyo = Math.floor(lleva?.[r] ?? 0);
+    const listo = queda === 0;
+    const columna = listo || lleva === undefined ? '' : `<small class="obra-entrega-lleva${tuyo >= queda ? ' alcanza' : tuyo > 0 ? ' parte' : ''}" title="Lo que lleva tu columna de ${e(RECURSO_NOMBRE[r] ?? r)}">🛒 ${n0(tuyo)}</small>`;
+    return `<div class="obra-entrega-fila${listo ? ' lista' : ''}">
+        <span class="obra-entrega-icono">${RECURSO_ICONO[r] ?? '📦'}</span>
+        <span class="obra-entrega-nombre">${e(RECURSO_NOMBRE[r] ?? r)}</span>
+        <span class="obra-entrega-barra">${barraAvance(n ? hay / n : 1)}</span>
+        <span class="obra-entrega-cifra"><b>${n0(hay)}</b><small>/${n0(n)}</small></span>
+        <span class="obra-entrega-falta">${listo ? '✓' : `faltan ${n0(queda)}`}${columna}</span>
+      </div>`;
+  }).join('');
+  return `<div class="obra-entrega">
+      <div class="obra-entrega-total"><span>${total >= 1 ? '✓ Todo entregado: se levanta' : '📦 Materiales entregados'}</span><b>${Math.floor(total * 100)} %</b></div>
+      ${barraAvance(total)}
+      <div class="obra-entrega-filas">${lineas}</div>
+    </div>`;
+}
+
 function htmlEntrega(p: ProyeccionJugador, o: ObraDeMapa, c: { escapar: Escapar }): string {
   const e = c.escapar;
-  const falta = faltan(o);
   const mi = miColumna(p);
   const d = mi ? distancia(mi.posicionActual, o.posicion) : null;
   const puerta = radioDePuerta();
   const motivo = o.terminaEn !== undefined ? '' : !o.propia ? '' : !mi ? 'Hace falta una columna tuya con los materiales en su carro o en sus caravanas.'
     : d! > puerta ? `Acerca tu columna a la obra: está a ${n0(d!)} y se entrega a ${puerta} o menos (un clic en la obra la lleva).` : '';
-  return `<p class="asent-lado-nota">${o.terminaEn !== undefined ? `Levantándose: termina en ${e(textoEnTiempoReal(o.terminaEn - p.instante))}.`
-      : `Pide ${e(listaRecursos(o.requerido))}. Entregado: ${e(listaRecursos(o.entregado) || 'nada')}.${Object.keys(falta).length ? ` Faltan ${e(listaRecursos(falta))}.` : ''}`}</p>
+  return `${o.terminaEn !== undefined ? `<div class="obra-entrega levantando"><div class="obra-entrega-total"><span>🔨 Levantándose</span><b>⏳ ${e(textoEnTiempoReal(o.terminaEn - p.instante))}</b></div>${barraAvance(null)}</div>`
+      : htmlMaterialesDeObra(o, mi?.suministro, e)}
     ${o.propia && o.terminaEn === undefined ? `<div class="mapa-seleccion-acciones"><button class="btn-primary" type="button" data-obra-entregar="${e(o.id)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>Entregar materiales</button></div>
       ${motivo ? `<p class="asent-lado-nota">${e(motivo)}</p>` : '<p class="asent-lado-nota">Se entrega lo que falta de lo que lleve tu columna: primero el carro, luego las caravanas enganchadas.</p>'}
       <p class="faction-error" data-obra-error role="alert"></p>` : ''}`;

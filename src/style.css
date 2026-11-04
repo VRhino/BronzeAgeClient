@@ -5434,3 +5434,63 @@ button.carro-hueco:hover, .carro-hueco.activo { border-color: var(--oro); box-sh
 }
 .flota-lista { position: sticky; top: 0; }
 .carro-nuevo-pie .btn-primary { width: auto; padding: 6px 22px; }
+
+/* ── 0.138.0 · El dibujo de una ruta de caravana (encargoCaravana.htmlRutaVisual) y la pestaña Rutas del Mercado ── */
+.ruta-vis { display: grid; gap: 10px; margin-top: 6px; }
+.ruta-linea { display: grid; grid-template-columns: minmax(90px, auto) 1fr minmax(90px, auto); align-items: center; gap: 10px; }
+.ruta-punta { display: grid; justify-items: center; text-align: center; gap: 1px; padding: 6px 10px; border: 1px solid var(--bronce); border-radius: 4px; background: rgba(0, 0, 0, 0.25); }
+.ruta-punta.aqui { border-color: var(--oro-claro); box-shadow: 0 0 0 1px rgba(232, 196, 120, 0.35), 0 0 12px rgba(232, 196, 120, 0.25); }
+.ruta-punta-icono { font-size: 1.25rem; line-height: 1; }
+.ruta-punta strong { color: var(--pergamino); font-size: 0.9rem; }
+.ruta-punta small { color: var(--text-muted); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.ruta-pista { position: relative; height: 34px; }
+.ruta-camino { position: absolute; left: 0; right: 0; top: 50%; border-top: 3px dashed rgba(205, 160, 90, 0.55); transform: translateY(-50%); }
+.ruta-pista.en-camino .ruta-camino { border-top-color: rgba(232, 196, 120, 0.9); }
+.ruta-carreta { position: absolute; top: 50%; transform: translate(-50%, -50%); font-size: 1.35rem; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)); transition: left 0.6s ease; }
+.ruta-carreta.vuelve { transform: translate(-50%, -50%) scaleX(-1); }
+.ruta-sentido { position: absolute; left: 50%; top: -4px; transform: translateX(-50%); font-size: 0.75rem; color: var(--text-muted); }
+.ruta-estado { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.ruta-fase { padding: 3px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 600; border: 1px solid; }
+.ruta-fase.camino { color: #9fd3ff; border-color: rgba(159, 211, 255, 0.5); background: rgba(40, 80, 120, 0.25); }
+.ruta-fase.trabajo { color: var(--oro-claro); border-color: rgba(232, 196, 120, 0.5); background: rgba(120, 90, 30, 0.25); }
+.ruta-fase.espera { color: #e8c27a; border-color: rgba(232, 194, 122, 0.45); background: rgba(90, 70, 20, 0.2); }
+.ruta-fase.cancelado { color: #e8a08f; border-color: rgba(232, 160, 143, 0.5); background: rgba(120, 40, 30, 0.2); }
+.ruta-paradas { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ruta-parada { display: grid; gap: 6px; align-content: start; padding: 8px 10px; border: 1px solid rgba(205, 160, 90, 0.35); border-radius: 4px; background: rgba(0, 0, 0, 0.2); }
+.ruta-parada.aqui { border-color: rgba(232, 196, 120, 0.8); }
+.ruta-parada-cab { color: var(--pergamino); font-size: 0.85rem; }
+.ruta-accion { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.ruta-verbo { min-width: 72px; font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; }
+.ruta-ficha { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 4px; border-radius: 3px; border: 1px solid rgba(205, 160, 90, 0.4); background: rgba(60, 44, 26, 0.6); font-size: 0.8rem; }
+.ruta-ficha i { font-style: normal; }
+.ruta-ficha b { color: var(--oro-claro); }
+.ruta-ficha small { color: var(--text-secondary); font-size: 0.72rem; }
+.ruta-nada { color: var(--text-muted); font-size: 0.78rem; font-style: italic; }
+.ruta-marca { font-size: 0.7rem; color: #e8c27a; border: 1px dashed rgba(232, 194, 122, 0.5); border-radius: 3px; padding: 1px 6px; }
+.rutas-resumen { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0 10px; }
+.rutas-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(520px, 1fr)); gap: 10px; }
+.ruta-tarjeta .caravana-seccion-cab strong { display: flex; align-items: center; gap: 8px; }
+.ruta-tarjeta .caravana-icono svg { width: 30px; height: 21px; }
+@media (max-width: 700px) {
+  .ruta-paradas { grid-template-columns: 1fr; }
+  .rutas-lista { grid-template-columns: 1fr; }
+  .ruta-linea { grid-template-columns: auto 1fr auto; gap: 6px; }
+}
+
+/* ── 0.138.0 · Materiales de una obra de mapa (pueblos.htmlMaterialesDeObra) ── */
+.obra-entrega { display: grid; gap: 6px; margin: 6px 0; padding: 8px 10px; border: 1px solid rgba(205, 160, 90, 0.4); border-radius: 4px; background: rgba(0, 0, 0, 0.22); }
+.obra-entrega-total { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.85rem; color: var(--pergamino); }
+.obra-entrega-total b { color: var(--oro-claro); font-size: 1rem; }
+.obra-entrega > .obra-barra { height: 9px; }
+.obra-entrega-filas { display: grid; gap: 5px; margin-top: 4px; }
+.obra-entrega-fila { display: grid; grid-template-columns: 22px minmax(56px, auto) 1fr auto auto; align-items: center; gap: 6px; font-size: 0.8rem; }
+.obra-entrega-icono { font-size: 1rem; text-align: center; }
+.obra-entrega-nombre { color: var(--text-secondary); white-space: nowrap; }
+.obra-entrega-cifra b { color: var(--oro-claro); }
+.obra-entrega-cifra small { color: var(--text-muted); }
+.obra-entrega-falta { display: inline-flex; align-items: center; gap: 5px; color: #e8a08f; font-size: 0.74rem; white-space: nowrap; }
+.obra-entrega-fila.lista .obra-entrega-falta { color: #8fd18a; font-size: 0.9rem; }
+.obra-entrega-fila.lista .obra-barra i { background: linear-gradient(90deg, #4f8a3c, #8fd18a); box-shadow: none; }
+.obra-entrega-lleva { padding: 0 5px; border-radius: 3px; border: 1px solid rgba(232, 160, 143, 0.4); color: #e8a08f; }
+.obra-entrega-lleva.parte { border-color: rgba(232, 194, 122, 0.5); color: #e8c27a; }
+.obra-entrega-lleva.alcanza { border-color: rgba(143, 209, 138, 0.5); color: #8fd18a; }

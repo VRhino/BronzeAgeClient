@@ -208,6 +208,7 @@ function asentamiento(a: pb.Asentamiento, ahora: number): d.Asentamiento {
     capitalDeFaccionId: a.capitalDeFaccionId,
     participacion: Object.keys(a.participacion).length ? Object.fromEntries(Object.entries(a.participacion).map(([k, v]) => [k, Number(v)])) : undefined,
     tablon: a.tablon ? tablon(a.tablon) : undefined,
+    guarnicionIds: a.guarnicionIds.length ? a.guarnicionIds : undefined,
   };
 }
 

@@ -36,7 +36,8 @@ function requisitosDeFundacion(c: Pick<ContextoPlaza, 'proyeccion' | 'asentamien
   const faltantes = costo ? Object.entries(costo).filter(([r, n]) => Math.floor(a.almacen?.[r]?.cantidad ?? 0) < n) : [];
   const nivel = a.nivelActual ?? a.nivel;
   const msCooldown = a.ultimaCaravanaCreadaEn === undefined ? 0 : Math.max(0, a.ultimaCaravanaCreadaEn + cooldownDeCaravanaMinutos(c.refrescar) * 60_000 - p.instante);
-  const propias = p.asentamientos.filter((x) => x.faccionId === a.faccionId).length;
+  // Las plazas de la Facción: la de dentro llega en `asentamientos` y las demás en `asentamientosAvistados` (antes solo contaba la de dentro).
+  const propias = new Set([...p.asentamientos, ...(p.asentamientosAvistados ?? [])].filter((x) => x.faccionId === a.faccionId).map((x) => x.id)).size;
   const vivas = p.caravanas.filter((k) => k.tipo === 'construccion' && (k.faccionId ?? a.faccionId) === a.faccionId).length;
   return [
     [reside && presente, '🏠', 'Residente presente', !reside ? 'solo la lanza quien reside en esta plaza' : 'tienes que estar en la plaza'],
