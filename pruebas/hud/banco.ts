@@ -48,6 +48,7 @@ const ventana = new URLSearchParams(location.search).get('ventana');
 const obrasMapa = (): never[] => new URLSearchParams(location.search).get('obrasMapa') ? [
   { id: 'obra-7', tipo: 'aldea', madreId: a.id, propia: true, posicion: a.posicion, requerido: { madera: 300, trigo: 200 }, entregado: { madera: 300, trigo: 40 } },
   { id: 'obra-8', tipo: 'pueblo', madreId: a.id, propia: true, posicion: a.posicion, requerido: { madera: 400 }, entregado: { madera: 400 }, terminaEn: ahoraJuego() + 26 * 60_000 },
+  { id: 'obra-9', tipo: 'avanzada', madreId: a.id, propia: true, posicion: a.posicion, requerido: { madera: 200, piedra: 100 }, entregado: { madera: 120 } },
 ] as never[] : [];
 
 const binario = new Uint8Array(await (await fetch(new URL('../ciudad3d/ciudades/ciudad.bin', import.meta.url).href)).arrayBuffer());

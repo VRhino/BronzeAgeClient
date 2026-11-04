@@ -290,10 +290,12 @@ export function htmlOcupacion(a: Asentamiento): string {
  * tocarla (Gobernador o Maestro de Obras, `puedeTocar`) ve ◀ ✕ ▶ en cada casilla; los demás, solo la cola. Vacío sin obras. */
 /** Las obras de pueblo y de aldea de la plaza que salen en «Obras» del panel izquierdo (Víctor, 2026-11-04). */
 const OBRA_MAPA: Partial<Record<ObraDeMapa['tipo'], [string, string]>> = { pueblo: ['⛏️', 'Pueblo'], aldea: ['🌾', 'Aldea agrícola'], mejoraAldea: ['⬆️', 'Mejora de aldea'] };
+/** Y las de avanzada, en su propia sección debajo (Víctor, 2026-11-04 18:48). */
+const OBRA_AVANZADA: Partial<Record<ObraDeMapa['tipo'], [string, string]>> = { avanzada: ['🗼', 'Atalaya'], mejoraAvanzada: ['⬆️', 'Mejora de avanzada'], reparacion: ['🔧', 'Reparación de avanzada'] };
 
 /** El tiempo que le queda, en tiempo real al ritmo del mundo, como en la tarjeta de Territorio (0.149.1). */
 function filaObraMapa(o: ObraDeMapa, esc: Escapar): string {
-  const [icono, nombre] = OBRA_MAPA[o.tipo] ?? ['🔨', 'Obra'];
+  const [icono, nombre] = OBRA_MAPA[o.tipo] ?? OBRA_AVANZADA[o.tipo] ?? ['🔨', 'Obra'];
   const pedido = Object.values(o.requerido).reduce((t, n) => t + n, 0);
   const hecho = Object.entries(o.requerido).reduce((t, [r, n]) => t + Math.min(n, o.entregado[r] ?? 0), 0);
   const avance = pedido > 0 ? hecho / pedido : 1;
@@ -304,13 +306,15 @@ function filaObraMapa(o: ObraDeMapa, esc: Escapar): string {
 }
 
 export function htmlObrasHud(a: Asentamiento, esc: Escapar, puedeTocar = false, obrasDeMapa: readonly ObraDeMapa[] = []): string {
-  const deMapa = obrasDeMapa.filter((o) => o.madreId === a.id && o.propia && OBRA_MAPA[o.tipo]).sort((x, y) => (x.terminaEn ?? Infinity) - (y.terminaEn ?? Infinity));
+  const porFin = (x: ObraDeMapa, y: ObraDeMapa): number => (x.terminaEn ?? Infinity) - (y.terminaEn ?? Infinity);
+  const deMapa = obrasDeMapa.filter((o) => o.madreId === a.id && o.propia && OBRA_MAPA[o.tipo]).sort(porFin);
+  const deAvanzada = obrasDeMapa.filter((o) => o.madreId === a.id && o.propia && OBRA_AVANZADA[o.tipo]).sort(porFin);
   const enMarcha = a.edificios.flatMap((e) => {
     const fin = e.mejora?.completaEn ?? (e.estado === 'en_construccion' ? e.completaEn : undefined);
     return typeof fin === 'number' ? [{ e, fin, que: e.mejora ? `Mejora a nivel ${e.mejora.nivelObjetivo}` : e.danado ? 'Reparación' : 'Obra nueva' }] : [];
   }).sort((x, y) => x.fin - y.fin);
   const esperan = a.edificios.filter((e) => e.estado === 'en_cola').sort((x, y) => (y.prioridad ?? 0) - (x.prioridad ?? 0));
-  if (!enMarcha.length && !esperan.length && !deMapa.length) return '';
+  if (!enMarcha.length && !esperan.length && !deMapa.length && !deAvanzada.length) return '';
   const filas = enMarcha.slice(0, 4).map(({ e, fin, que }) => `<div class="obras-hud-fila"><span class="obras-hud-icono">${iconoEdificio(e.tipo, 22)}</span>`
     + `<span class="obras-hud-texto"><span class="obras-hud-linea"><strong>${esc(EDIFICIO_NOMBRE[e.tipo] ?? e.tipo)}</strong><b class="obras-hud-falta">${cuentaAtras(fin)}</b></span>`
     + `<small>${que}</small>${barraAvance(avanceDeObra(a, e))}</span></div>`).join('');
@@ -322,6 +326,7 @@ export function htmlObrasHud(a: Asentamiento, esc: Escapar, puedeTocar = false, 
   return `<div class="obras-hud">${enMarcha.length || esperan.length ? `<span class="obras-hud-cab">Obras${enMarcha.length ? ` · ${enMarcha.length} en marcha` : ''}</span>` : ''}${filas}${mas}`
     + (esperan.length ? `<span class="obras-hud-cab obras-hud-cab-cola">En cola · ${esperan.length}</span><div class="obras-hud-cola">${casillas}</div>` : '')
     + (deMapa.length ? `<span class="obras-hud-cab obras-hud-cab-cola">Pueblos y aldeas · ${deMapa.length}</span>${deMapa.map((o) => filaObraMapa(o, esc)).join('')}` : '')
+    + (deAvanzada.length ? `<span class="obras-hud-cab obras-hud-cab-cola">Avanzadas · ${deAvanzada.length}</span>${deAvanzada.map((o) => filaObraMapa(o, esc)).join('')}` : '')
     + '</div>';
 }
 

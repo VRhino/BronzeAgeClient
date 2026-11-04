@@ -3,6 +3,11 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.150.0] — 2026-11-04 · Las obras de avanzada en «Obras» del panel izquierdo · sin cambio de contrato
+
+Petición de Víctor (2026-11-04, 18:48): debajo de «Pueblos y aldeas», una sección «Avanzadas» con las obras de avanzada de la plaza (atalaya
+nueva, mejora o reparación), igual: esperando materiales con el % entregado o levantándose con lo que le falta al ritmo del mundo.
+
 ## [0.149.1] — 2026-11-04 · El tiempo de las obras de pueblos y aldeas en «Obras», al ritmo del mundo · sin cambio de contrato
 
 Arreglo pedido por Víctor (2026-11-04, 17:59): «Pueblos y aldeas» del panel izquierdo contaba el tiempo de mundo (2 h 7 min) en vez del real
