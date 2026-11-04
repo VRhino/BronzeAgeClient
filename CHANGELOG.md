@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.148.0] — 2026-11-04 · Cupos de plazas por nivel en la Facción y avanzadas desde la plaza · contrato del motor 2484be46
+
+Peticiones de Víctor (2026-11-04), con el motor 2484be46 (contrato 0.14.0; hace falta partida nueva):
+
+- Facción → resumen: el cap de plazas («Plazas 2 + 1 caravana · 3/4») y, de nivel 2 a 5, las plazas que ocupan cada nivel (en él o subiendo a él)
+  frente a las que caben a la vez, con barra; debajo, lo que abre el nivel siguiente de la Facción. Datos de `Faccion.capFundacion` y
+  `Faccion.cuposDeNivel` (solo la propia); las curvas del nivel siguiente, de `/v1/datos`.
+- Avanzadas como la aldea: en Territorio → Avanzadas, el Gobernador o el Maestro de Obras residente ve «🗺 Elegir el sitio de la atalaya», elige
+  el punto en el mapa y queda la obra, a la que se llevan los materiales con una columna. Se quita «Colocar avanzada aquí» de «Lo que llevas».
+
 ## [0.147.0] — 2026-11-04 · Gobierno → Políticas, la reserva en el Almacén, la obra del mundo sin desbordar y «Lo que llevas» sin «Para enganchar» · sin cambio de contrato
 
 Petición de Víctor (2026-11-04, 15:54):

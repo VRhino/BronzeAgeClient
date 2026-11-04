@@ -130,6 +130,8 @@ function faccion(f: pb.Faccion, ahora: number): d.Faccion {
     miembros: f.miembros.length ? f.miembros.map((m) => ({ heroeId: m.heroeId, residenciaId: m.residenciaId, cargos: m.cargos, participacion: Number(m.participacion), marca: m.marca })) : undefined,
     contratos: f.contratos.length ? f.contratos.map(contrato) : undefined,
     tablon: f.tablon ? tablon(f.tablon) : undefined,
+    capFundacion: f.capFundacion ? { cap: f.capFundacion.cap, plazas: f.capFundacion.plazas, caravanas: f.capFundacion.caravanas } : undefined,
+    cuposDeNivel: f.cuposDeNivel.length ? f.cuposDeNivel.map((c) => ({ nivel: c.nivel, cupo: c.cupo, ocupadas: c.ocupadas })) : undefined,
   };
 }
 

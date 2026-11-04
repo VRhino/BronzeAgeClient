@@ -8,7 +8,6 @@ import { cablearCaravanasAdjuntas, htmlCaravanasAdjuntas } from './caravanasAdju
 import { chipLiderazgo } from './liderazgo';
 import { cablearCarro, htmlCarro, type Ejecutar } from './panelCarro';
 import { iconoEnFila } from './iconosTropa';
-import { cablearColocarAvanzada, htmlColocarAvanzada } from './pueblos';
 
 type Escapar = (valor: string) => string;
 
@@ -47,8 +46,7 @@ export function htmlColumna(p: ProyeccionJugador, e: Escapar): string {
     ${deOtros > 0 ? `<p class="asent-lado-nota">Además van ${deOtros} escuadras de los otros héroes del ejército.</p>` : ''}
     <p class="faction-error" data-campo="error-orden" role="alert"></p>
     ${htmlCarro(p, e, false)}
-    ${htmlCaravanasAdjuntas(p, e)}
-    ${htmlColocarAvanzada(p, e)}`;
+    ${htmlCaravanasAdjuntas(p, e)}`;
 }
 
 export function cablearColumna(raiz: HTMLElement, p: ProyeccionJugador, ejecutar: Ejecutar): void {
@@ -71,5 +69,4 @@ export function cablearColumna(raiz: HTMLElement, p: ProyeccionJugador, ejecutar
   );
   cablearCarro(raiz, ejecutar);
   cablearCaravanasAdjuntas(raiz, p, ejecutar);
-  cablearColocarAvanzada(raiz, p, ejecutar);
 }

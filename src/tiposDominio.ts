@@ -82,6 +82,10 @@ export interface Faccion {
   tablon?: Tablon;
   /** Solo la propia: sus contratos de mercenarios vigentes (motor 7aa44b9, Mercenarios_Por_Contrato §10). */
   contratos?: ContratoMercenario[];
+  /** Solo la propia (motor 95e8eaa4): el cap de plazas por el nivel de la Facción, sus plazas de hoy y sus Caravanas de Fundación vivas. */
+  capFundacion?: { cap: number; plazas: number; caravanas: number };
+  /** Solo la propia: niveles 2 a 5, cuántas plazas caben en cada uno a la vez y cuántas lo ocupan (en ese nivel operativo o subiendo a él). */
+  cuposDeNivel?: { nivel: number; cupo: number; ocupadas: number }[];
   // ... ignoramos otros campos que no impactan el render ...
 }
 

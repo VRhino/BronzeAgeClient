@@ -62,6 +62,35 @@ function plazasDe(p: ProyeccionJugador, faccionId: string): number {
   return [...plazasConocidas(p).values()].filter((x) => x.faccionId === faccionId).length;
 }
 
+/** El cap y los cupos de plazas en el resumen (Víctor, 2026-11-04; motor 95e8eaa4): «Plazas 2 + 0 caravanas de 4» y, de nivel 2 a 5, las que lo
+ * ocupan (en ese nivel o subiendo a él) frente a las que caben a la vez. Las cifras vienen de la Facción propia; debajo, lo que abre su nivel siguiente
+ * (curvas de /v1/datos). Sin esos datos (motor viejo), solo el número de plazas. */
+function htmlCuposFaccion(p: ProyeccionJugador, faccion: Faccion, e: (valor: string) => string): string {
+  const cap = faccion.capFundacion;
+  const cupos = faccion.cuposDeNivel ?? [];
+  if (!cap && !cupos.length) return `<div class="faccion-lateral-dato"><span>Plazas</span><strong>${plazasDe(p, faccion.id)}</strong></div>`;
+  const fila = (icono: string, nombre: string, usado: number, tope: number, nota: string, extra = ''): string => {
+    const lleno = usado >= tope;
+    const pct = tope ? Math.min(100, (usado / tope) * 100) : 0;
+    return `<div class="faccion-cupo${lleno ? ' lleno' : ''}${tope === 0 ? ' cerrado' : ''}" title="${e(nota)}"><span class="faccion-cupo-nombre"><i aria-hidden="true">${icono}</i>${nombre}${extra}</span>
+      <strong>${usado}<small>/${tope}</small></strong><span class="faccion-cupo-barra"><i style="width:${pct.toFixed(1)}%"></i></span></div>`;
+  };
+  const curvas = bloqueDeDatos<Record<string, number[]>>('CUPO_NIVEL_ASENTAMIENTO');
+  const capTabla = bloqueDeDatos<number[]>('CAP_FUNDACION_POR_NIVEL');
+  const de = (tabla: readonly number[] | undefined, nivel: number): number | undefined => (tabla?.length ? tabla[Math.min(tabla.length, Math.max(1, nivel)) - 1] : undefined);
+  const n = faccion.nivel + 1;
+  const abre = [
+    cap && capTabla && n <= capTabla.length && de(capTabla, n) !== cap.cap ? `${de(capTabla, n)} plazas` : '',
+    ...cupos.map((c) => { const t = curvas?.[`maxNivel${c.nivel}`]; const v = t && n <= t.length ? de(t, n) : undefined; return v !== undefined && v !== c.cupo ? `${v} de nivel ${c.nivel}` : ''; }),
+  ].filter(Boolean);
+  const caravanas = cap?.caravanas ? ` <small>${cap.plazas} + ${cap.caravanas} ${cap.caravanas === 1 ? 'caravana' : 'caravanas'}</small>` : '';
+  return `<div class="faccion-cupos"><span class="faction-kicker">Plazas · nivel ${faccion.nivel} de Facción${ayuda('faccion:cupos', 'Cuántas plazas puede tener tu Facción (las Caravanas de Fundación vivas cuentan: no se lanza otra si plazas más caravanas llegan al tope) y cuántas pueden estar a la vez en cada nivel: ocupan el cupo las de ese nivel y las que suben a él. Sin cupo libre no se pide la subida ni recupera ese nivel una plaza degradada. Todo crece con el nivel de la Facción.')}</span>
+      ${cap ? fila('🏛', 'Plazas', cap.plazas + cap.caravanas, cap.cap, `${cap.plazas} plaza(s)${cap.caravanas ? ` y ${cap.caravanas} Caravana(s) de Fundación` : ''} de ${cap.cap} que permite el nivel ${faccion.nivel}`, caravanas) : ''}
+      ${cupos.map((c) => fila(['', '', '②', '③', '④', '⑤'][c.nivel] ?? '·', `Nivel ${c.nivel}`, c.ocupadas, c.cupo, c.cupo === 0 ? `Tu Facción aún no puede tener plazas de nivel ${c.nivel}` : `Plazas de nivel ${c.nivel} o subiendo a él`)).join('')}
+      ${abre.length ? `<p class="legend-note">Con la Facción en nivel ${n}: ${abre.join(', ')}.</p>` : ''}
+    </div>`;
+}
+
 /** Lo de tu Facción que se ve siempre: nivel, reputación y ciudadanos, Rey y Embajador, si piden entrar y la Liga. */
 function htmlResumenFaccion(p: ProyeccionJugador, faccion: Faccion, e: (valor: string) => string): string {
   const liga = ligaDe(faccion.id, p.relaciones ?? []);
@@ -116,7 +145,7 @@ export function htmlLateralFaccion(proyeccion: ProyeccionJugador, e: (valor: str
     ${htmlExperienciaFaccion(faccion)}
     <div class="faccion-lateral-resumen">${htmlResumenFaccion(proyeccion, faccion, e)}</div>
     <div class="faccion-lateral-pie">
-      <div class="faccion-lateral-dato"><span>Plazas</span><strong>${plazasDe(proyeccion, faccion.id)}</strong></div>
+      ${htmlCuposFaccion(proyeccion, faccion, e)}
       <div class="faction-list"><span class="faction-kicker">Títulos del servidor</span>
         ${htmlTitulos(proyeccion.titulos ?? [], [...proyeccion.facciones, ...(proyeccion.directorioFacciones ?? [])], faccion.id, e)}</div>
       ${htmlDejarFaccion(proyeccion, faccion)}

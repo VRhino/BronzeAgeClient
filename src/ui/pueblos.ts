@@ -337,7 +337,7 @@ function htmlPueblos(c: ContextoPlaza): string {
     ${pueblos.length + obras.length === 0 ? '<p class="mapa-lista-vacia">Esta plaza aún no tiene pueblos.</p>'
       : `<div class="pueblo-cartas">${pueblos.map((x) => tarjetaPueblo(p, a, x, gestiona, obras, e)).join('')}${obras.map((o) => tarjetaObra(p, a, o, gestiona, e)).join('')}</div>`}
     ${gestiona ? htmlMarcar(p, a, e) : '<p class="asent-lado-nota">Los pueblos los marca, mejora y destruye el Gobernador o el Maestro de Obras, residente y dentro de la plaza.</p>'}
-    ${esDeMiFaccion(p, a) ? htmlAvanzadasDeLaPlaza(p, a, e) : ''}`;
+    ${esDeMiFaccion(p, a) ? htmlAvanzadasDeLaPlaza(p, a, gestiona, e) : ''}`;
 }
 
 const ESTADO_CARRO: Record<string, string> = { disponible: 'parado en el pueblo', en_transito: 'camino de la plaza, cargado', retornando: 'volviendo vacío al pueblo', preparando: 'cargando', adjunta: 'enganchado a una columna', aparcada: 'aparcado' };
@@ -428,6 +428,10 @@ function cablearPueblos(c: ContextoPlaza): void {
       case 'elegir-aldea':
         selectorDePunto.abrir?.('Pulsa en el mapa donde levantar la aldea agrícola: en verde, la tierra fértil de la zona donde cabe (en gris, fértil pero pegada a una plaza o un pueblo).', a.posicion, a.zonaReal,
           (punto) => c.ejecutar('marcarAldea', { asentamientoId: a.id, heroeId: p.heroeId, punto }), sitiosDeLaPlaza(p, a));
+        return;
+      case 'elegir-avanzada':
+        selectorDePunto.abrir?.('Pulsa en el mapa donde colocar la atalaya: dentro de la zona de la plaza, fuera de la ciudad y sin pisar otro pueblo, avanzada o campamento.', a.posicion, a.zonaReal,
+          (punto) => c.ejecutar('colocarAvanzada', { asentamientoId: a.id, heroeId: p.heroeId, posicion: punto }), null);
         return;
     }
   }));
@@ -826,9 +830,9 @@ export function cablearInteriorPueblo(raiz: HTMLElement, p: ProyeccionJugador, x
 }
 
 // ---------------------------------------------------------------- avanzadas: se colocan desde el mapa (decisión de Víctor, 2026-10-29)
-// La coloca el Gobernador o el Maestro de Obras de la madre, residente, con su columna EN EL SITIO, dentro de la zona de la madre (`colocarAvanzada
-// { asentamientoId, heroeId, posicion }`, motor 5E-1). Deja una obra que se levanta como la de un pueblo: se le entregan los materiales a su puerta.
-// Territorio enseña las de la plaza y el cupo; el botón está en «Lo que llevas» del mapa.
+// Desde 0.148.0, como la aldea (Víctor, 2026-11-04): el Gobernador o el Maestro de Obras de la madre, residente y dentro, elige el sitio en el mapa desde
+// Territorio (`colocarAvanzada { asentamientoId, heroeId, posicion }`), dentro de la zona de la madre. Deja una obra que se levanta como la de un pueblo:
+// se le entregan los materiales a su puerta con una columna.
 
 interface ReglasAvanzadas { nivelMadre?: Record<string, number>; cupoPorNivelDeLaMadre?: number; obras?: Record<string, { costo?: Record<string, number>; minutos?: number }> }
 const reglasAvanzadas = (): ReglasAvanzadas | null => bloqueDeDatos<ReglasAvanzadas>('AVANZADAS');
@@ -847,18 +851,12 @@ function cupoDeAvanzadas(p: ProyeccionJugador, madreId: string, nivel: number): 
   return { usados: avanzadas.length + obras.length, total: porNivel === undefined ? null : nivel * porNivel };
 }
 
-const costoAtalaya = (): string => {
-  const o = reglasAvanzadas()?.obras?.atalaya;
-  const costo = listaRecursos(o?.costo ?? {});
-  return costo ? `${costo}${o?.minutos ? `, obra de ${o.minutos >= 60 ? `${n0(o.minutos / 60)} h` : `${o.minutos} min`}` : ''}` : '';
-};
-
 const esDeMiFaccion = (p: ProyeccionJugador, a: Asentamiento): boolean => Boolean(p.faccionId) && a.faccionId === p.faccionId;
 
 const ICONO_AVANZADA: Record<number, string> = { 1: '🗼', 2: '🏯', 3: '🏰' };
 
 /** Las avanzadas en Territorio: las que tiene la plaza en tarjetas, su cupo en casillas, sus obras y cómo se coloca una (con lo que pide la atalaya). */
-function htmlAvanzadasDeLaPlaza(p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
+function htmlAvanzadasDeLaPlaza(p: ProyeccionJugador, a: Asentamiento, gestiona: boolean, e: Escapar): string {
   const { avanzadas, obras } = avanzadasDe(p, a.id);
   const { usados, total } = cupoDeAvanzadas(p, a.id, a.nivelActual ?? a.nivel);
   const nivel = reglasAvanzadas()?.nivelMadre?.atalaya;
@@ -871,44 +869,12 @@ function htmlAvanzadasDeLaPlaza(p: ProyeccionJugador, a: Asentamiento, e: Escapa
     ${avanzadas.length + obras.length === 0 ? '<p class="mapa-lista-vacia">Esta plaza aún no tiene avanzadas.</p>'
       : `<div class="pueblo-cartas">${tarjetas.join('')}${obras.map((o) => tarjetaObra(p, a, o, false, e)).join('')}</div>`}
     ${atalaya?.costo ? `<div class="avanzada-coste"><span>🗼 Atalaya</span>${costeLlano(atalaya.costo, e)}${atalaya.minutos ? `<small>⏱ ${atalaya.minutos >= 60 ? `${n0(atalaya.minutos / 60)} h` : `${atalaya.minutos} min`} de obra</small>` : ''}${nivel ? `<small>· plaza a nivel ${nivel}</small>` : ''}</div>` : ''}
-    <p class="asent-lado-nota">Se colocan en el mapa: el Gobernador o el Maestro de Obras que reside aquí para su columna en el sitio (dentro de la zona, fuera de la ciudad y sin pisar otro pueblo, avanzada o campamento) y pulsa «Colocar avanzada aquí» en «Lo que llevas». Lo que pide se entrega a su puerta.</p>`;
+    ${gestiona ? (() => {
+      // Como la aldea (Víctor, 2026-11-04): desde la plaza se elige el sitio en el mapa, ahí queda la obra y se le llevan los materiales.
+      const motivo = nivel !== undefined && (a.nivelActual ?? a.nivel) < nivel ? `La plaza tiene que estar a nivel ${nivel}.`
+        : total !== null && usados >= total ? `Cupo lleno (${usados} / ${total}): sube la plaza de nivel o destruye una.` : '';
+      return `<div class="mapa-seleccion-acciones"><button class="pueblo-boton principal" type="button" data-pueblo-accion="elegir-avanzada"${motivo ? ` disabled title="${e(motivo)}"` : ''}>🗺 Elegir el sitio de la atalaya</button></div>
+        <p class="asent-lado-nota">${motivo ? e(motivo) : 'Dentro de la zona, fuera de la ciudad y sin pisar otro pueblo, avanzada o campamento. Lo que pide se lleva a su puerta con una columna.'}</p>`;
+    })() : '<p class="asent-lado-nota">Las coloca el Gobernador o el Maestro de Obras, residente y dentro de la plaza.</p>'}`;
 }
 
-/** El botón del mapa (en «Lo que llevas»): solo para quien tiene el cargo en su plaza de residencia; si no se puede aquí, dice por qué. */
-export function htmlColocarAvanzada(p: ProyeccionJugador, e: Escapar): string {
-  const columna = miColumna(p);
-  const yo = p.facciones.find((f) => f.id === p.faccionId)?.miembros?.find((m) => m.heroeId === p.heroeId);
-  const madreId = yo?.residenciaId;
-  if (!columna || !madreId?.startsWith('as-')) return '';
-  if (!yo!.cargos.some((c) => c === `gobernador@${madreId}` || c === `maestroObras@${madreId}`)) return '';
-  const propia = p.asentamientos.find((x) => x.id === madreId);
-  const vista = p.asentamientosAvistados.find((x) => x.id === madreId);
-  const zona = propia?.zonaReal ?? vista?.zona ?? [];
-  const nivel = propia ? propia.nivelActual ?? propia.nivel : vista?.nivel ?? 0;
-  const nombre = propia?.nombre ?? vista?.nombre ?? madreId;
-  const { usados, total } = cupoDeAvanzadas(p, madreId, nivel);
-  const nivelMinimo = reglasAvanzadas()?.nivelMadre?.atalaya;
-  const motivo = zona.length < 3 || !dentro(columna.posicionActual, zona) ? `Para la columna dentro de la zona de ${nombre}.`
-    : nivelMinimo !== undefined && nivel < nivelMinimo ? `${nombre} tiene que estar a nivel ${nivelMinimo}.`
-    : total !== null && usados >= total ? `${nombre} ya tiene su cupo de avanzadas (${usados} / ${total}).`
-    : columna.liderId !== p.heroeId ? 'Solo el Líder de la columna la coloca.'
-    : '';
-  const coste = costoAtalaya();
-  return `<strong class="heroe-sub">Avanzada de ${e(nombre)}${ayuda('columna:avanzada', `Se coloca donde está tu columna: dentro de la zona, fuera de la ciudad y sin pisar otro pueblo, avanzada o campamento. Queda una obra a la que se entregan los materiales a su puerta${coste ? ` (la atalaya: ${e(coste)})` : ''}.`)}</strong>
-    <div class="mapa-seleccion-acciones"><button class="btn-secondary" type="button" data-colocar-avanzada="${e(madreId)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>Colocar avanzada aquí</button></div>
-    ${motivo ? `<p class="mapa-lista-vacia">${e(motivo)}</p>` : ''}
-    <p class="faction-error" data-campo="error-avanzada" role="alert"></p>`;
-}
-
-export function cablearColocarAvanzada(raiz: HTMLElement, p: ProyeccionJugador, ejecutar: Ejecutar): void {
-  const boton = raiz.querySelector<HTMLButtonElement>('[data-colocar-avanzada]');
-  boton?.addEventListener('click', async () => {
-    const columna = miColumna(p);
-    if (!columna) return;
-    boton.disabled = true;
-    const mensaje = await ejecutar('colocarAvanzada', { asentamientoId: boton.dataset.colocarAvanzada, heroeId: p.heroeId, posicion: columna.posicionActual });
-    const error = raiz.querySelector<HTMLElement>('[data-campo="error-avanzada"]');
-    if (error) error.textContent = mensaje ?? '';
-    if (mensaje) boton.disabled = false;
-  });
-}

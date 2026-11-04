@@ -5598,3 +5598,16 @@ button.carro-hueco:hover, .carro-hueco.activo { border-color: var(--oro); box-sh
 .encargo-quitar:hover { color: #ffb3a8; border-color: var(--obra-rojo); }
 /* 0.147.0 · La reserva de recursos del Tesorero, en la ventana del Almacén (antes en Gobierno → Tesorería) */
 .almacen-reserva { display: grid; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(169, 121, 63, 0.25); }
+/* El cupo de plazas en el resumen de la Facción (0.148.0) */
+.faccion-cupos { display: flex; flex-direction: column; gap: 5px; width: 100%; }
+.faccion-cupo { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 2px 8px; }
+.faccion-cupo-nombre { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 0.85rem; }
+.faccion-cupo-nombre i { font-style: normal; width: 1.2em; text-align: center; color: var(--oro); }
+.faccion-cupo strong { font-family: var(--fuente-titulo); color: var(--oro); font-size: 1.05rem; }
+.faccion-cupo strong small { color: var(--text-muted); font-size: 0.8rem; }
+.faccion-cupo-barra { grid-column: 1 / -1; height: 4px; border-radius: 2px; background: rgba(0, 0, 0, 0.45); overflow: hidden; }
+.faccion-cupo-barra i { display: block; height: 100%; background: var(--oro); }
+.faccion-cupo.lleno strong { color: #e9b8a4; }
+.faccion-cupo.lleno .faccion-cupo-barra i { background: var(--terracota); }
+.faccion-cupo.cerrado { opacity: 0.55; }
+.faccion-cupo-nombre small { color: var(--text-muted); font-size: 0.75rem; }

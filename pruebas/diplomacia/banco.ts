@@ -16,7 +16,7 @@ const p = {
   gameId: 'banco', instante: AHORA, version: 1, heroeId: 'heroe-1', faccionId: 'fac-1', mapaId: 'm',
   heroe: { id: 'heroe-1', displayName: 'Víctor', ubicacion: { tipo: 'asentamiento', asentamientoId: 'as-1' }, carro: {}, escuadrones: [] },
   facciones: [
-    { id: 'fac-1', nombre: 'Casa de Micenas', sigilo: sig(1), reyId: 'heroe-1', embajadorId: 'heroe-9', nivel: 3, reputacion: 14, experiencia: 420, ciudadanosIds: ['heroe-1', 'heroe-9', 'heroe-21'],
+    { id: 'fac-1', nombre: 'Casa de Micenas', sigilo: sig(1), reyId: 'heroe-1', embajadorId: 'heroe-9', nivel: 3, reputacion: 14, capFundacion: { cap: 4, plazas: 2, caravanas: 1 }, cuposDeNivel: [{ nivel: 2, cupo: 2, ocupadas: 1 }, { nivel: 3, cupo: 1, ocupadas: 1 }, { nivel: 4, cupo: 0, ocupadas: 0 }, { nivel: 5, cupo: 0, ocupadas: 0 }], experiencia: 420, ciudadanosIds: ['heroe-1', 'heroe-9', 'heroe-21'],
       miembros: [{ heroeId: 'heroe-1', residenciaId: 'as-1', cargos: ['rey'], participacion: 420 }, { heroeId: 'heroe-9', residenciaId: 'as-4', cargos: ['embajador'], participacion: 180 }] },
     { id: 'fac-2', nombre: 'Reino de Hatti', sigilo: sig(2), reyId: 'heroe-40', nivel: 4, reputacion: -3, ciudadanosIds: ['heroe-40', 'heroe-41'] },
     { id: 'fac-3', nombre: 'Señorío de Ugarit', sigilo: sig(3), reyId: 'heroe-50', nivel: 2, reputacion: 20, ciudadanosIds: ['heroe-50', 'heroe-51', 'heroe-52', 'heroe-53'], esBot: true },
