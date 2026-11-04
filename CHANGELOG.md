@@ -3,6 +3,19 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.145.0] — 2026-11-04 · Propuestas diplomáticas a la vista y encargo con botones de recurso · sin cambio de contrato
+
+Petición de Víctor (2026-11-04):
+
+- **Las propuestas diplomáticas no salían nunca**: el cliente no leía del motor las `Propuesta` (alianza o vasallaje, anexión, fusión) de
+  `FACCION`. Ahora van a `propuestasRelacion`, `propuestasAnexion` y `propuestasFusion`, y se ven en «Propuestas activas» de la Facción elegida
+  y en la vista de tu Facción (recibidas y enviadas).
+- **Encargo con botones de recurso.** En cada parada, «Recoge» enseña un botón con el icono de cada recurso que hay (en el origen, su almacén;
+  en el destino, el de esa plaza si es tuya y llega; si no, todos, y en una plaza ajena sin oro). Al pulsarlo sale su fila con la cantidad (y el
+  precio máximo en una plaza ajena). «Deja» solo ofrece lo que se recoge en la otra parada, con el tope (vacío = todo) y, en una ajena, el precio
+  mínimo. Quitar un recurso de «Recoge» lo quita también de «Deja» en la otra parada. El borrador se guarda por caravana mientras el formulario
+  está abierto.
+
 ## [0.144.0] — 2026-11-04 · Diplomacia: propuesta por botones, propuestas activas y panel derecho plegable · sin cambio de contrato
 
 Petición de Víctor (2026-11-04):

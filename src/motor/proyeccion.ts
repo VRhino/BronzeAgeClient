@@ -814,6 +814,19 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
     tarifasIntel: { mirada: { radio: 0, duracionMinutos: 0, oroBase: 0, oroPorUnidad: 0, cooldownMinutos: 0 }, informe: { oroPorNivel: 0, cooldownMinutos: 0 }, cupoMiradas: { porNivelDeTaberna: [], campamento: 0 } },
     zonasFusionadas: deAmbito('VISTA:', 'zonaFaccion').map((z) => ({ faccionId: z.faccionId, contornos: z.contornos.map((k) => k.puntos.map(punto)) })),
     relaciones: [...deAmbito('FACCION:', 'relacion'), ...deAmbito('VISTA:', 'relacion')].filter((r, i, l) => l.findIndex((x) => x.id === r.id) === i).map(relacion),
+    // Las propuestas en curso de tu Facción (alianza o vasallaje, anexión y fusión): no se proyectaban, así que la diplomacia nunca las enseñaba (0.145.0).
+    ...(() => {
+      const todas = deAmbito('', 'propuesta');
+      const base = (x: pb.Propuesta) => ({ id: x.id, propuestaPor: x.propuestaPor, creadaEn: instante(x.creadaEnMs)!, expiraEn: instante(x.expiraEnMs)! });
+      return {
+        propuestasRelacion: todas.flatMap((x): d.PropuestaRelacion[] => x.clase.case === 'relacion' ? [{
+          ...base(x), tipo: x.clase.value.tipo === pb.TipoRelacion.RELACION_VASALLAJE ? 'vasallaje' : 'alianza', faccionAId: x.clase.value.faccionAId, faccionBId: x.clase.value.faccionBId,
+          tributo: x.clase.value.tributo ? { recurso: x.clase.value.tributo.recurso, cantidadPorMinuto: mil(x.clase.value.tributo.cantidadPorMinuto) } : undefined,
+        }] : []),
+        propuestasAnexion: todas.flatMap((x): d.PropuestaAnexion[] => x.clase.case === 'anexion' ? [{ ...base(x), absorbenteId: x.clase.value.absorbenteId, absorbidaId: x.clase.value.absorbidaId }] : []),
+        propuestasFusion: todas.flatMap((x): d.PropuestaFusion[] => x.clase.case === 'fusion' ? [{ ...base(x), faccionAId: x.clase.value.faccionAId, faccionBId: x.clase.value.faccionBId, nuevoNombre: x.clase.value.nuevoNombre, nuevoReyId: x.clase.value.nuevoReyId }] : []),
+      };
+    })(),
     titulos: deAmbito('VISTA:', 'titulo').map((t) => ({ tituloId: t.tituloId, nombre: t.nombre, poseedorId: t.poseedorId, valorMetrica: mil(t.valorMetrica) })),
     trazadoPorAsentamiento,
     batallas: [],

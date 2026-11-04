@@ -5575,3 +5575,17 @@ button.carro-hueco:hover, .carro-hueco.activo { border-color: var(--oro); box-sh
 .diplo-seccion-fila .diplo-seccion { margin-top: 0; width: auto; flex: 1; min-width: 0; }
 .diplo-seccion small { margin-left: auto; font-size: 0.72rem; color: var(--text-muted); }
 .propuesta-pie .btn-primary { width: auto; min-width: 170px; padding-left: 18px; padding-right: 18px; }
+
+/* El encargo: recursos con botones de icono y una fila por recurso elegido (0.145.0) */
+.encargo-recursos { display: flex; flex-wrap: wrap; gap: 4px; }
+.encargo-recurso { display: inline-flex; align-items: center; gap: 3px; padding: 3px 7px; font: inherit; font-size: 0.95rem; color: var(--oro-claro); background: rgba(0, 0, 0, 0.3); border: 1px solid var(--bronce-osc); border-radius: 3px; cursor: pointer; }
+.encargo-recurso small { font-size: 0.68rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.encargo-recurso:hover { border-color: var(--oro); }
+.encargo-recurso.puesto { border-color: var(--oro); background: rgba(216, 184, 120, 0.18); box-shadow: inset 0 0 0 1px rgba(216, 184, 120, 0.4); }
+.encargo-fila { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(70px, 1fr) auto; gap: 4px; align-items: center; }
+.encargo-fila:has(> input + input) { grid-template-columns: minmax(0, 1.3fr) minmax(70px, 1fr) minmax(70px, 1fr) auto; }
+.encargo-fila .form-input { min-width: 0; height: 30px; padding: 0 6px; }
+.encargo-fila-recurso { display: inline-flex; align-items: center; gap: 5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.82rem; color: var(--pergamino); }
+.encargo-fila-recurso i { font-style: normal; }
+.encargo-quitar { padding: 2px 7px; font: inherit; color: var(--text-secondary); background: none; border: 1px solid var(--bronce-osc); border-radius: 3px; cursor: pointer; }
+.encargo-quitar:hover { color: #ffb3a8; border-color: var(--obra-rojo); }
