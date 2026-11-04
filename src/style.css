@@ -592,6 +592,10 @@ body {
 .jugador-panel-completo > .faccion-cuerpo:has(.faction-join-view) { flex: 1 1 auto; min-height: 0; }
 .jugador-panel-completo .faction-join-view { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto auto minmax(0, 1fr); align-items: center; column-gap: 8px; }
 .jugador-panel-completo .faction-join-view > :not(.back-button):not(.faction-kicker) { grid-column: 1 / -1; }
+.faction-buscar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.faction-buscar .form-input { flex: 1 1 240px; min-width: 0; }
+.faction-sin-bots { display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--text-secondary); cursor: pointer; white-space: nowrap; }
+.faction-sin-bots input { accent-color: var(--oro); width: 16px; height: 16px; }
 .jugador-panel-completo .faction-join-view .faction-list { align-self: stretch; min-height: 0; max-height: none; padding-right: 4px; }
 .jugador-panel-completo .faction-join-view .faction-list > * { flex-shrink: 0; }
 

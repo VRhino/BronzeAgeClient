@@ -157,7 +157,12 @@ function hayContacto(p: ProyeccionJugador, f: Faccion, plazas: Map<string, { fac
 
 /** La lista de Facciones, híbrida: las conocidas con su escudo, lo público y, a la derecha del todo, miembros y plazas; las demás, solo el nombre.
  * La usan la pestaña Facciones y «Pedir ingreso» (que filtra por `termino` y pone en cada fila el botón de `accion`). */
-export function htmlListaFacciones(p: ProyeccionJugador, e: (valor: string) => string, opciones: { termino?: string; accion?: (f: Faccion) => string } = {}): string {
+/** «Pedir ingreso» sin Facción (0.135.0, Víctor 2026-11-04): las de bots, ocultas de entrada; la casilla junto al buscador las enseña (al final). */
+export let ocultarBotsAlPedirIngreso = true;
+export function fijarOcultarBots(valor: boolean): void { ocultarBotsAlPedirIngreso = valor; }
+
+/** `botsAlFinal`: las Facciones de bots van detrás de las de jugadores en cada grupo; `sinBots`: no salen. */
+export function htmlListaFacciones(p: ProyeccionJugador, e: (valor: string) => string, opciones: { termino?: string; accion?: (f: Faccion) => string; botsAlFinal?: boolean; sinBots?: boolean } = {}): string {
   const plazas = plazasConocidas(p);
   const nombreDe = (id: string) => p.facciones.find((f) => f.id === id)?.nombre ?? id;
   const termino = (opciones.termino ?? '').trim().toLowerCase();
@@ -165,18 +170,21 @@ export function htmlListaFacciones(p: ProyeccionJugador, e: (valor: string) => s
   // El directorio ligero (motor db80cb8) trae todas las Facciones; las que también llegan completas se enseñan con su detalle.
   const directorio = new Map((p.directorioFacciones ?? []).map((x) => [x.id, x]));
   const miembros = (f: Faccion): number => f.ciudadanosIds?.length ?? directorio.get(f.id)?.ciudadanos ?? 0;
-  const lista = p.facciones.filter((f) => f.nombre.toLowerCase().includes(termino)).sort((a, b) => Number(a.derrotadaPor !== undefined) - Number(b.derrotadaPor !== undefined)
-    || miembros(b) - miembros(a) || a.nombre.localeCompare(b.nombre));
+  const esBot = (id: string): boolean => Boolean(p.facciones.find((f) => f.id === id)?.esBot || directorio.get(id)?.esBot);
+  const conBots = (id: string): boolean => !opciones.sinBots || !esBot(id);
+  const bots = (a: { id: string }, b: { id: string }): number => (opciones.botsAlFinal ? Number(esBot(a.id)) - Number(esBot(b.id)) : 0);
+  const lista = p.facciones.filter((f) => f.nombre.toLowerCase().includes(termino) && conBots(f.id)).sort((a, b) => Number(a.derrotadaPor !== undefined) - Number(b.derrotadaPor !== undefined)
+    || bots(a, b) || miembros(b) - miembros(a) || a.nombre.localeCompare(b.nombre));
   // Sin Facción, todas con su detalle: son a las que puede pedir el ingreso (el motor se las manda todas en su forma pública).
   const conocidas = p.faccionId === null ? lista : lista.filter((f) => hayContacto(p, f, plazas));
   const yaVistas = new Set(conocidas.map((f) => f.id));
   // Sin contacto: del directorio si llega (con escudo, nivel y miembros; sin las derrotadas), si no, las completas que no son conocidas.
   const lejanas: Faccion[] = p.directorioFacciones
-    ? p.directorioFacciones.filter((x) => !yaVistas.has(x.id) && !x.derrotada && x.nombre.toLowerCase().includes(termino))
-      .sort((a, b) => b.ciudadanos - a.ciudadanos || a.nombre.localeCompare(b.nombre))
+    ? p.directorioFacciones.filter((x) => !yaVistas.has(x.id) && !x.derrotada && x.nombre.toLowerCase().includes(termino) && conBots(x.id))
+      .sort((a, b) => bots(a, b) || b.ciudadanos - a.ciudadanos || a.nombre.localeCompare(b.nombre))
       .map((x) => p.facciones.find((f) => f.id === x.id) ?? { id: x.id, nombre: x.nombre, sigilo: x.sigilo, nivel: x.nivel })
     : lista.filter((f) => !yaVistas.has(f.id));
-  if (conocidas.length === 0 && lejanas.length === 0) return `<p class="mapa-lista-vacia">${termino ? 'No hay facciones que coincidan.' : 'Aún no hay Facciones en el mundo.'}</p>`;
+  if (conocidas.length === 0 && lejanas.length === 0) return `<p class="mapa-lista-vacia">${termino ? 'No hay facciones que coincidan.' : opciones.sinBots ? 'No hay Facciones de jugadores todavía. Quita «Ocultar las de bots» para ver las demás.' : 'Aún no hay Facciones en el mundo.'}</p>`;
   const fila = (f: Faccion): string => {
     const propia = f.id === p.faccionId;
     const relacion = relacionCon(p, p.faccionId, f.id);
@@ -381,7 +389,10 @@ export function renderPestanaFaccion(
     <div class="faction-form-view faction-join-view">
       <button class="back-button" id="btn-volver-faccion" type="button" aria-label="Volver a elegir facción">←</button>
       <span class="faction-kicker">Facciones del mundo</span><h2>Pedir ingreso</h2>
-      <input id="input-buscar-faccion" class="form-input" type="search" placeholder="Buscar por nombre..." autocomplete="off" />
+      <div class="faction-buscar">
+        <input id="input-buscar-faccion" class="form-input" type="search" placeholder="Buscar por nombre..." autocomplete="off" />
+        <label class="faction-sin-bots" title="Un jugador no puede entrar en una Facción de bots"><input id="check-sin-bots" type="checkbox"${ocultarBotsAlPedirIngreso ? ' checked' : ''} /> Ocultar las de bots</label>
+      </div>
       <div id="lista-facciones" class="faction-list"></div>
     </div>
   `;

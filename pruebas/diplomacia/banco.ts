@@ -17,7 +17,7 @@ const p = {
     { id: 'fac-1', nombre: 'Casa de Micenas', sigilo: sig(1), reyId: 'heroe-1', embajadorId: 'heroe-9', nivel: 3, reputacion: 14, experiencia: 420, ciudadanosIds: ['heroe-1', 'heroe-9', 'heroe-21'],
       miembros: [{ heroeId: 'heroe-1', residenciaId: 'as-1', cargos: ['rey'], participacion: 420 }, { heroeId: 'heroe-9', residenciaId: 'as-4', cargos: ['embajador'], participacion: 180 }] },
     { id: 'fac-2', nombre: 'Reino de Hatti', sigilo: sig(2), reyId: 'heroe-40', nivel: 4, reputacion: -3, ciudadanosIds: ['heroe-40', 'heroe-41'] },
-    { id: 'fac-3', nombre: 'Señorío de Ugarit', sigilo: sig(3), reyId: 'heroe-50', nivel: 2, reputacion: 20, ciudadanosIds: ['heroe-50'] },
+    { id: 'fac-3', nombre: 'Señorío de Ugarit', sigilo: sig(3), reyId: 'heroe-50', nivel: 2, reputacion: 20, ciudadanosIds: ['heroe-50', 'heroe-51', 'heroe-52', 'heroe-53'], esBot: true },
     { id: 'fac-4', nombre: 'Casa de Pilos', sigilo: sig(4), reyId: 'heroe-60', nivel: 2, reputacion: 5, ciudadanosIds: ['heroe-60'] },
   ],
   directorioFacciones: Array.from({ length: 14 }, (_, i) => ({ id: `fac-d${i}`, nombre: ['Tribu de Arzawa', 'Gente de Lukka', 'Clan de Mitanni', 'Casa de Tebas', 'Reino de Alashiya', 'Casa de Cnosos', 'Señorío de Troya'][i % 7] + (i >= 7 ? ' II' : ''), sigilo: sig(i + 10), nivel: 1 + (i % 3), ciudadanos: 1 + (i % 4), esBot: i % 3 === 0 })),
@@ -52,7 +52,12 @@ function pintar(): void {
     estadoCliente.modoPanelFaccion = 'unirse';
     panel.classList.remove('jugador-panel-faccion');
     panel.innerHTML = `<div class="faccion-cabecera"><div class="mapa-panel-jugador">Víctor</div><button class="btn-secondary" type="button">Cerrar</button></div><div class="faccion-cuerpo">${renderPestanaFaccion(p, e, 'resumen')}</div>`;
-    panel.querySelector('#lista-facciones')!.innerHTML = htmlListaFacciones(p, e, { accion: () => '<button class="btn-join-faction" type="button">Pedir ingreso</button>' });
+    // como `cablearFaccion` en main.ts: bots al final y, con la casilla marcada (de serie), ocultos
+    const lista = panel.querySelector<HTMLElement>('#lista-facciones')!;
+    const casilla = panel.querySelector<HTMLInputElement>('#check-sin-bots')!;
+    const pintarLista = (): void => { lista.innerHTML = htmlListaFacciones(p, e, { accion: (f) => (f.esBot || p.directorioFacciones?.find((x) => x.id === f.id)?.esBot ? '<span class="faccion-pedido">🤖 De bots</span>' : '<button class="btn-join-faction" type="button">Pedir ingreso</button>'), botsAlFinal: true, sinBots: casilla.checked }); };
+    casilla.addEventListener('change', pintarLista);
+    pintarLista();
     return;
   }
   elegirFaccion(new URLSearchParams(location.search).get('elegida'));

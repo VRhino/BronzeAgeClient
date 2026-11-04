@@ -60,7 +60,7 @@ import { estadoCliente, medirRitmoDeMundo, textoEnTiempoReal, TIPS_FUNDACION } f
 import { actualizarTip, clasificadorDeParcelas, parcelasAlFundar, resumenRecursosFundacion, sitiosDeAldeaAlFundar } from './ui/pestanaAsentamientos';
 import { renderPanelInteraccion } from './ui/panelInteraccion';
 import { renderPanelMapa } from './ui/panelMapa';
-import { elegirFaccion, htmlLateralFaccion, htmlListaFacciones, PESTANAS_FACCION, renderPestanaFaccion, type PestanaFaccion } from './ui/pestanaFaccion';
+import { elegirFaccion, fijarOcultarBots, htmlLateralFaccion, htmlListaFacciones, ocultarBotsAlPedirIngreso, PESTANAS_FACCION, renderPestanaFaccion, type PestanaFaccion } from './ui/pestanaFaccion';
 import { cablearAnexion } from './ui/panelAnexion';
 import { cablearFusion } from './ui/panelFusion';
 import { cablearAdmision } from './ui/panelAdmision';
@@ -312,7 +312,7 @@ function cablearFaccion(root: ParentNode, proyeccion: ProyeccionJugador, rerende
         ? '<span class="faccion-pedido">Pedido: decide su Rey</span>'
         : deBots(faccion) ? '<span class="faccion-pedido" title="Un jugador no entra en una Facción de bots">🤖 De bots</span>'
         : `<button class="btn-join-faction" type="button" data-faccion-id="${escaparHtml(faccion.id)}">Pedir ingreso</button>`;
-      lista.innerHTML = htmlListaFacciones(proyeccion, escaparHtml, { termino: busqueda.value, accion: pedir });
+      lista.innerHTML = htmlListaFacciones(proyeccion, escaparHtml, { termino: busqueda.value, accion: pedir, botsAlFinal: true, sinBots: ocultarBotsAlPedirIngreso });
       lista.querySelectorAll<HTMLButtonElement>('.btn-join-faction').forEach((boton) => boton.addEventListener('click', async () => {
         boton.disabled = true;
         boton.textContent = 'Pidiendo...';
@@ -332,6 +332,7 @@ function cablearFaccion(root: ParentNode, proyeccion: ProyeccionJugador, rerende
       }));
     };
     busqueda.addEventListener('input', pintarLista);
+    root.querySelector<HTMLInputElement>('#check-sin-bots')?.addEventListener('change', (ev) => { fijarOcultarBots((ev.target as HTMLInputElement).checked); pintarLista(); });
     pintarLista();
   }
 

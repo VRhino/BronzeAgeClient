@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.135.0] — 2026-11-04 · «Pedir ingreso»: primero las Facciones de jugadores · sin cambio de contrato
+
+Petición de Víctor (2026-11-04), en la lista de «Pedir ingreso» sin Facción:
+
+- Las Facciones de bots van detrás de las de jugadores, en cada grupo (con contacto y sin contacto).
+- Junto al buscador, la casilla «Ocultar las de bots», marcada de serie: con ella marcada no salen; al quitarla salen, al final.
+  Se recuerda mientras dura la sesión.
+
 ## [0.134.0] — 2026-11-04 · «Pedir ingreso» usa todo el alto · sin cambio de contrato
 
 Petición de Víctor (2026-11-04): sin Facción, la lista de «Pedir ingreso» se cortaba a 330 px, a media pantalla. Ahora llega hasta abajo de
