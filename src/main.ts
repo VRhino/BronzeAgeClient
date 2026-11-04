@@ -60,7 +60,7 @@ import { estadoCliente, medirRitmoDeMundo, textoEnTiempoReal, TIPS_FUNDACION } f
 import { actualizarTip, clasificadorDeParcelas, parcelasAlFundar, resumenRecursosFundacion, sitiosDeAldeaAlFundar } from './ui/pestanaAsentamientos';
 import { renderPanelInteraccion } from './ui/panelInteraccion';
 import { renderPanelMapa } from './ui/panelMapa';
-import { cablearPlazasFaccion, elegirFaccion, fijarOcultarBots, htmlLateralFaccion, htmlListaFacciones, ocultarBotsAlPedirIngreso, PESTANAS_FACCION, renderPestanaFaccion, type PestanaFaccion } from './ui/pestanaFaccion';
+import { cablearListaDiplomacia, cablearPlazasFaccion, elegirFaccion, fijarOcultarBots, htmlLateralFaccion, htmlListaFacciones, ocultarBotsAlPedirIngreso, PESTANAS_FACCION, renderPestanaFaccion, type PestanaFaccion } from './ui/pestanaFaccion';
 import { cablearAnexion } from './ui/panelAnexion';
 import { cablearFusion } from './ui/panelFusion';
 import { cablearAdmision } from './ui/panelAdmision';
@@ -1476,6 +1476,7 @@ function renderPanelJugador(forzar = false): void {
     pintar(panel, html, () => {
       cablearFaccion(panel, proyeccion, () => renderPanelJugador(true));
       cablearPlazasFaccion(panel, () => renderPanelJugador(true));
+      cablearListaDiplomacia(panel, () => renderPanelJugador(true));
       panel.querySelectorAll<HTMLButtonElement>('[data-pestana-faccion]').forEach((b) => b.addEventListener('click', () => {
         pestanaFaccion = b.dataset.pestanaFaccion as PestanaFaccion;
         renderPanelJugador(true);

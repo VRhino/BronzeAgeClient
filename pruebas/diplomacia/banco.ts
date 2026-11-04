@@ -2,9 +2,11 @@
 // estructura que pinta `renderPanelJugador` en main.ts, para mirarla a distintos tamaños de pantalla. `?sinFaccion=1`: «Pedir ingreso» sin Facción.
 import '../../src/style.css';
 import type { ProyeccionJugador } from '../../src/apiCliente';
-import { cablearPlazasFaccion, elegirFaccion, htmlLateralFaccion, htmlListaFacciones, PESTANAS_FACCION, renderPestanaFaccion } from '../../src/ui/pestanaFaccion';
+import { cablearListaDiplomacia, cablearPlazasFaccion, elegirFaccion, htmlLateralFaccion, htmlListaFacciones, PESTANAS_FACCION, renderPestanaFaccion } from '../../src/ui/pestanaFaccion';
 import { estadoCliente } from '../../src/ui/estadoCliente';
 import { htmlTecnologia } from '../../src/ui/panelTecnologia';
+import { cablearDiplomacia } from '../../src/ui/panelDiplomacia';
+import { cablearAnexion } from '../../src/ui/panelAnexion';
 
 const AHORA = Date.parse('2026-11-03T12:00:00Z');
 const H = 3_600_000;
@@ -33,6 +35,8 @@ const p = {
     { id: 'prop-1', tipo: 'vasallaje', faccionAId: 'fac-4', faccionBId: 'fac-1', expiraEn: AHORA + 40 * H, tributo: { recurso: 'trigo', cantidadPorMinuto: 6 } },
     { id: 'prop-2', tipo: 'alianza', faccionAId: 'fac-1', faccionBId: 'fac-d1', expiraEn: AHORA + 60 * H },
   ],
+  propuestasAnexion: [{ id: 'anx-1', absorbenteId: 'fac-4', absorbidaId: 'fac-1', propuestaPor: 'heroe-60', creadaEn: AHORA - H, expiraEn: AHORA + 50 * H }],
+  propuestasFusion: [],
   campamentosMercenarios: [], heroesVisibles: [], titulos: [],
   nombresDeCompaneros: { 'heroe-9': 'Agamenón', 'heroe-40': 'Hattusili', 'heroe-50': 'Niqmaddu', 'heroe-60': 'Néstor' },
   tecnologia: {
@@ -90,6 +94,13 @@ function pintar(): void {
   const cuerpo = pestana === 'plazas' ? renderPestanaFaccion(p, e, 'plazas', '', true) : pestana === 'tecnologia' ? `<section class="faccion-tecnologia">${htmlTecnologia(p, e, false)}</section>` : renderPestanaFaccion(p, e, 'diplomacia', '', true);
   panel.innerHTML = `<div class="faccion-cabecera"><div class="mapa-panel-jugador">Facción</div><button class="btn-secondary" type="button">Cerrar</button></div><div class="faccion-marco">${htmlLateralFaccion(p, e)}<div class="faccion-principal">${pestanas}<div class="faccion-cuerpo${pestana === 'diplomacia' ? ' faccion-cuerpo-diplomacia' : pestana === 'plazas' ? ' faccion-cuerpo-ancho' : ''}">${cuerpo}</div></div></div>`;
   cablearPlazasFaccion(panel, pintar);
+  cablearListaDiplomacia(panel, pintar);
+  const ejecutar = async (tipo: string, params: object): Promise<string | null> => { console.log('orden', tipo, JSON.stringify(params)); return null; };
+  cablearDiplomacia(panel, p, ejecutar, (m) => console.log('aviso', m));
+  cablearAnexion(panel, p, ejecutar, (m) => console.log('aviso', m));
+  panel.querySelectorAll<HTMLButtonElement>('[data-elegir-faccion]').forEach((b) => b.addEventListener('click', () => {
+    const u = new URL(location.href); u.searchParams.set('elegida', b.dataset.elegirFaccion!); history.replaceState(null, '', u); pintar();
+  }));
 }
 pintar();
 (window as unknown as { __banco: unknown }).__banco = { listo: true };

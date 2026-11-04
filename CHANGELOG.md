@@ -3,6 +3,20 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.144.0] — 2026-11-04 · Diplomacia: propuesta por botones, propuestas activas y panel derecho plegable · sin cambio de contrato
+
+Petición de Víctor (2026-11-04):
+
+- **Nueva propuesta** en la ficha de la Facción elegida: una barra de botones con lo que tu héroe puede proponerle ahora (Alianza, Vasallaje,
+  Anexión, Fusión y Guerra; lo que no se puede, no sale). Lo pulsado se añade a la propuesta con sus términos (tributo y cantidad por minuto en el
+  vasallaje; nombre y Rey de la nueva en la fusión) y «Proponer» la manda entera. El motor admite una cosa por propuesta: otra opción sustituye a
+  la que había. El borrador se guarda por Facción mientras dura la sesión.
+- **Propuestas activas** al elegir una Facción: todas las que hay en curso entre las dos (alianza, vasallaje, anexión y fusión), recibidas o
+  enviadas, con Aceptar, Rechazar o Retirar según quién seas.
+- **Panel derecho:** botón para ocultar o mostrar las Facciones de bots (nunca se ocultan la elegida ni las que tienen relación con la tuya), y
+  Conocidas y Sin contacto se pliegan.
+- En la vista de tu Facción, el formulario de proponer da paso a «elige una Facción en la lista».
+
 ## [0.143.0] — 2026-11-04 · Mundo 3D: los carros de las caravanas, de dos en dos · sin cambio de contrato
 
 Petición de Víctor (2026-11-04): en el mundo, los carros de una caravana (o los que arrastra una columna) iban uno detrás de otro. Ahora van en

@@ -397,10 +397,34 @@ function htmlListaDiplomacia(p: ProyeccionJugador, elegidaId: string, e: (valor:
       <span class="diplo-fila-escudo">${svgSigilo(f.sigilo, 26)}</span><span class="diplo-fila-texto"><strong>${e(f.nombre)}</strong><small>${e(sub)}</small></span></button>`;
   };
   const propia = p.faccionId ? faccionConocida(p, p.faccionId) : undefined;
-  return `${propia ? fila(propia) : ''}
-    <span class="faction-kicker">Conocidas (${conocidas.length})${ayuda('faccion:lista', 'Con contacto: las de tu Liga, con las que tienes relación y aquellas de las que conoces alguna plaza en el mapa.')}</span>
-    ${conocidas.length ? conocidas.map(fila).join('') : '<p class="legend-note">Aún no has tenido contacto con ninguna.</p>'}
-    ${lejanas.length ? `<span class="faction-kicker">Sin contacto (${lejanas.length})</span>${lejanas.map(fila).join('')}` : ''}`;
+  // Las de bots se pueden ocultar (0.144.0), salvo la elegida y las que tienen relación con la tuya.
+  const esBot = (f: Faccion): boolean => Boolean(f.esBot || directorio.get(f.id)?.esBot);
+  const seVe = (f: Faccion): boolean => !diplomaciaSinBots || !esBot(f) || f.id === elegidaId || Boolean(relacionCon(p, p.faccionId, f.id));
+  const totalBots = [...conocidas, ...lejanas].filter(esBot).length;
+  const seccion = (clave: string, titulo: string, lista: Faccion[], vacio: string, info = ''): string => {
+    const visibles = lista.filter(seVe);
+    const ocultas = lista.length - visibles.length;
+    const abierta = !seccionesPlegadas.has(clave);
+    return `<div class="diplo-seccion-fila"><button type="button" class="diplo-seccion" data-diplo-plegar="${clave}" aria-expanded="${abierta}" title="${abierta ? 'Plegar' : 'Desplegar'}"><span aria-hidden="true">${abierta ? '▾' : '▸'}</span><span class="faction-kicker">${titulo} (${visibles.length})</span>${ocultas ? `<small title="${ocultas} de bots ocultas">+${ocultas} 🤖</small>` : ''}</button>${info}</div>
+      ${abierta ? (visibles.length ? visibles.map(fila).join('') : `<p class="legend-note">${vacio}</p>`) : ''}`;
+  };
+  return `${totalBots ? `<button type="button" class="btn-secondary btn-chico diplo-bots${diplomaciaSinBots ? ' activo' : ''}" data-diplo-bots aria-pressed="${diplomaciaSinBots}" title="Las Facciones que lleva un Rey bot">🤖 ${diplomaciaSinBots ? `Mostrar las de bots (${totalBots})` : 'Ocultar las de bots'}</button>` : ''}
+    ${propia ? fila(propia) : ''}
+    ${seccion('conocidas', 'Conocidas', conocidas, diplomaciaSinBots && conocidas.length ? 'Solo de bots.' : 'Aún no has tenido contacto con ninguna.', ayuda('faccion:lista', 'Con contacto: las de tu Liga, con las que tienes relación y aquellas de las que conoces alguna plaza en el mapa.'))}
+    ${lejanas.length ? seccion('lejanas', 'Sin contacto', lejanas, 'Solo de bots.') : ''}`;
+}
+
+/** El panel derecho de Diplomacia: ocultar las de bots y plegar Conocidas y Sin contacto (0.144.0). Se recuerda mientras dura la sesión. */
+let diplomaciaSinBots = false;
+const seccionesPlegadas = new Set<string>();
+
+export function cablearListaDiplomacia(root: ParentNode, rerender: () => void): void {
+  root.querySelector<HTMLButtonElement>('[data-diplo-bots]')?.addEventListener('click', () => { diplomaciaSinBots = !diplomaciaSinBots; rerender(); });
+  root.querySelectorAll<HTMLButtonElement>('[data-diplo-plegar]').forEach((b) => b.addEventListener('click', () => {
+    const clave = b.dataset.diploPlegar!;
+    if (seccionesPlegadas.has(clave)) seccionesPlegadas.delete(clave); else seccionesPlegadas.add(clave);
+    rerender();
+  }));
 }
 
 /** `conLateral`: va con el panel fijo de la izquierda, que ya lleva el escudo, el nombre y Dejar la Facción.
