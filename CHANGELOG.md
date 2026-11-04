@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.146.0] — 2026-11-04 · Facción → Plazas: la barra sin letreros y con el almacén entero · sin cambio de contrato
+
+Petición de Víctor (2026-11-04):
+
+- La barra de cada plaza va sin los letreros (Población, Almacén, Estado, Obras y Guarnición); el detalle sigue al pasar el ratón.
+- El almacén de la barra enseña todo lo que tiene la plaza, no los recursos elegidos para la barra de arriba de la plaza (eran 5 como mucho en
+  la elección de Víctor). Al pasar el ratón, lo que hay, lo que cabe y el neto por minuto.
+
 ## [0.145.0] — 2026-11-04 · Propuestas diplomáticas a la vista y encargo con botones de recurso · sin cambio de contrato
 
 Petición de Víctor (2026-11-04):

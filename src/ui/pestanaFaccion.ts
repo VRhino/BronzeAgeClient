@@ -1,7 +1,7 @@
 import { bloqueDeDatos, type ProyeccionJugador } from '../apiCliente';
 import type { Asentamiento, Faccion, Sigilo } from '../tiposDominio';
-import { EDIFICIO_NOMBRE, RECURSO_NOMBRE } from '../paletas';
-import { grupo, htmlPieDePlaza, pieza } from './hudPlaza';
+import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
+import { grupo, htmlEstadoPie, htmlPoblacionPie, pieza } from './hudPlaza';
 import { iconoEdificio } from './iconosEdificio';
 import { iconoTropa } from './iconosTropa';
 import { ahora, barraAvance, cuentaAtras, miles } from './juegoVisual';
@@ -155,7 +155,14 @@ function htmlInteriorPlaza(p: ProyeccionJugador, a: Asentamiento, abierta: boole
   ].join('');
   const hombres = (a.guarnicion ?? []).reduce((t, g) => t + g.cantidad, 0);
   const guarnicionPieza = escuadras ? pieza('🛡', hombres ? miles(hombres) : String(escuadras), 0, 'Guarnición', [`${escuadras} escuadra(s)${hombres ? `, ${miles(hombres)} hombres` : ''}`], '', e) : '';
-  const chips = `<div class="fplaza-pie">${htmlPieDePlaza(a, e).replace(/ data-abrir-almacen role="button" tabindex="0" title="Abrir el Almacén"/, '')}${obrasPiezas ? grupo('obras', 'Obras', obrasPiezas) : ''}${guarnicionPieza ? grupo('guarnicion', 'Guarnición', guarnicionPieza) : ''}</div>`;
+  // El almacén entero, no la elección de la barra de arriba de la plaza (Víctor, 2026-11-04: «solo muestra 5 espacios»): todo lo que tiene.
+  const almacenPiezas = recursos.map(([r, x]) => {
+    const llenado = x.capacidad > 0 ? (x.cantidad / x.capacidad) * 100 : 0;
+    const neto = x.porMinuto ?? 0;
+    return pieza(RECURSO_ICONO[r] ?? '📦', miles(x.cantidad), llenado, RECURSO_NOMBRE[r] ?? r,
+      [`${miles(x.cantidad)}${x.capacidad > 0 ? ` de ${miles(x.capacidad)}` : ''}`, `${neto > 0 ? '+' : ''}${neto.toFixed(1)} por minuto`], llenado >= 90 ? 'lleno' : '', e);
+  }).join('');
+  const chips = `<div class="fplaza-pie">${htmlPoblacionPie(a, e)}${almacenPiezas ? grupo('almacen', 'Almacén', almacenPiezas) : ''}${htmlEstadoPie(a, e)}${obrasPiezas ? grupo('obras', 'Obras', obrasPiezas) : ''}${guarnicionPieza ? grupo('guarnicion', 'Guarnición', guarnicionPieza) : ''}</div>`;
   if (!abierta) return { chips, detalle: '' };
 
   const almacen = recursos.length
