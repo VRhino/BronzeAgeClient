@@ -7,6 +7,7 @@ import { periodoDeCamino, texturaDeCamino } from './caminos';
 import type { TrazoEnVista } from './estado';
 import { cinta, recorridos, tramosEnCaja } from './lineas';
 import type { NieblaDeGuerra } from './niebla';
+import type { SueloPintado } from './terreno';
 
 type Punto = { x: number; y: number };
 
@@ -25,7 +26,11 @@ export class Trazos {
   caminos: TrazoEnVista[] = [];
   claveCaminos = '';
 
-  constructor(private readonly niebla: NieblaDeGuerra, private readonly alturaU: (x: number, y: number) => number) {}
+  /** Cada cinta puesta, con lo que hace falta para rehacerla y la firma del suelo bajo ella. */
+  private puestas: { malla: THREE.Mesh; hacer: () => THREE.BufferGeometry | null; caja: [number, number, number, number]; firma: number }[] = [];
+  private version = -1;
+
+  constructor(private readonly niebla: NieblaDeGuerra, private readonly suelo: SueloPintado) {}
 
   private material(t: TrazoEnVista): THREE.Material {
     const clave = `${t.tipo}|${t.color}|${t.bajoNiebla}|${t.tenue ?? false}|${t.escalon ?? ''}`;
@@ -49,7 +54,11 @@ export class Trazos {
       const a = t.puntos[0]!, b = t.puntos[t.puntos.length - 1]!;
       return `${t.tipo}:${t.color}:${t.bajoNiebla}:${t.discontinuo ?? false}:${t.haciaDentro ?? 0}:${t.tenue ?? false}:${t.ancho}:${t.escalon ?? ''}:${t.puntos.length}:${a.x},${a.y}:${b.x},${b.y}`;
     }).join('|');
-    if (clave === this.clave && Math.hypot(cx - this.centro.x, cy - this.centro.y) < radio / 4) return;
+    if (clave === this.clave && Math.hypot(cx - this.centro.x, cy - this.centro.y) < radio / 4) {
+      if (this.suelo.version !== this.version) this.recolocar();
+      return;
+    }
+    this.version = this.suelo.version;
     if (clave !== this.clave) {
       this.caminos = trazos.filter((t) => t.tipo === 'camino');
       this.claveCaminos = clave.split('|').filter((c) => c.startsWith('camino:')).join('|');
@@ -66,16 +75,34 @@ export class Trazos {
         // un contorno va corrido medio ancho hacia dentro: donde se tocan dos zonas, cada raya queda de su lado y se ven las dos
         const desplazar = t.haciaDentro ? t.haciaDentro * (t.ancho / 2 + 0.02) : 0;
         const textura = andado ? { periodo: periodoDeCamino(t.ancho), desde: andado.get(tramo[0]!) ?? 0 } : undefined;
-        const geo = cinta(tramo, this.alturaU, t.ancho, { dy: capa.dy, trazo: t.discontinuo ? (t.recordada ? RECORDADA : DISCONTINUA) : undefined, desplazar, textura });
+        const hacer = () => cinta(tramo, (x, y) => this.suelo.alturaU(x, y), t.ancho, { dy: capa.dy, trazo: t.discontinuo ? (t.recordada ? RECORDADA : DISCONTINUA) : undefined, desplazar, textura });
+        const geo = hacer();
         if (!geo) continue;
         const malla = new THREE.Mesh(geo, this.material(t));
         malla.receiveShadow = t.tipo === 'camino';
         this.grupo.add(malla);
+        const caja = cajaDe(tramo, t.ancho / 2 + Math.abs(desplazar) + 0.5);
+        this.puestas.push({ malla, hacer, caja, firma: this.suelo.firma(...caja) });
       }
     }
   }
 
+  /** Rehace las cintas cuyo suelo cambió (otro detalle de su tesela, o la que faltaba). */
+  private recolocar(): void {
+    this.version = this.suelo.version;
+    for (const p of this.puestas) {
+      const firma = this.suelo.firma(...p.caja);
+      if (firma === p.firma) continue;
+      p.firma = firma;
+      const geo = p.hacer();
+      if (!geo) continue;
+      p.malla.geometry.dispose();
+      p.malla.geometry = geo;
+    }
+  }
+
   private vaciar(): void {
+    this.puestas = [];
     for (const m of [...this.grupo.children]) {
       this.grupo.remove(m);
       (m as THREE.Mesh).geometry.dispose();
@@ -87,4 +114,11 @@ export class Trazos {
     for (const m of this.materiales.values()) m.dispose();
     // las texturas de los caminos se quedan: son de todas las vistas y se hacen una vez
   }
+}
+
+/** La caja de unos puntos, con `margen` u de más. */
+function cajaDe(puntos: readonly Punto[], margen: number): [number, number, number, number] {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const p of puntos) { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); }
+  return [x0 - margen, y0 - margen, x1 + margen, y1 + margen];
 }

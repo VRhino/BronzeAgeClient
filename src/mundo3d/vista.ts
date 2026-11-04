@@ -26,7 +26,7 @@ import { Territorio } from './territorio';
 import { CapaDeFertilidad } from './capaFertilidad';
 import { Cielo, colorHorizonte } from './cielo';
 import { Paisaje } from './paisaje';
-import { Terreno } from './terreno';
+import { Terreno, type SueloPintado } from './terreno';
 import { Trazos } from './trazos';
 import type { MapaGenerado } from '../terreno';
 import { RECURSO_NOMBRE } from '../paletas';
@@ -155,15 +155,15 @@ export class VistaMundo3D {
     this.territorio = new Territorio();
     this.fertilidad = new CapaDeFertilidad(o.mapa);
     this.terreno = new Terreno(o.fuente, o.mapa, this.niebla, this.agua.mar, this.territorio, this.fertilidad);
-    this.paisaje = new Paisaje(o.fuente, o.mapa, this.niebla, this.alturaU, this.agua.rio);
-    this.arboles = new Arboles(o.fuente, o.mapa, this.niebla);
-    this.matas = new Matas(o.fuente, o.mapa, this.niebla);
-    this.vida = new Vida(this.niebla, this.alturaU);
-    this.maquetas = new Maquetas(this.niebla, this.alturaU);
-    this.trazos = new Trazos(this.niebla, this.alturaU);
-    this.marcas = new MarcasEnSuelo(this.alturaU);
+    this.paisaje = new Paisaje(o.fuente, o.mapa, this.niebla, this.suelo, this.agua.rio);
+    this.arboles = new Arboles(o.fuente, o.mapa, this.niebla, this.suelo);
+    this.matas = new Matas(o.fuente, o.mapa, this.niebla, this.suelo);
+    this.vida = new Vida(this.niebla, this.suelo);
+    this.maquetas = new Maquetas(this.niebla, this.suelo);
+    this.trazos = new Trazos(this.niebla, this.suelo);
+    this.marcas = new MarcasEnSuelo(this.suelo);
     this.etiquetas = new Etiquetas(contenedor, (punto) => this.o.alClicar(punto));
-    this.rejilla = new RejillaDeMovimiento(this.alturaU);
+    this.rejilla = new RejillaDeMovimiento(this.suelo);
     this.escena.add(this.terreno.grupo, this.paisaje.grupo, this.arboles.grupo, this.matas.grupo, this.vida.grupo, this.maquetas.grupo, this.trazos.grupo, this.marcas.grupo, this.lineas, this.rejilla.grupo, this.tropel.grupo);
     this.entrada = instalarEntrada(this.lienzo, this.camara, (e) => this.clic(e), () => {}); // el zoom se lee de la cámara en cada fotograma
     this.observador = new ResizeObserver(() => this.ajustar());
@@ -172,12 +172,17 @@ export class VistaMundo3D {
     this.fotograma = requestAnimationFrame((t) => this.bucle(t));
   }
 
-  /** Altura del suelo en (x, y) del mapa, en unidades de escena. */
-  /** La altura que se ve en (x, y), en u: la del suelo, o la de la lámina donde hay agua (lo que va encima y el clic se quedan en ella). */
-  readonly alturaU = (x: number, y: number): number => alturaVisible(this.o.fuente.alturaEn(x, y), this.o.fuente.aguaEn(x, y));
-  /** El suelo que se pinta, para lo que camina por él (columnas y caravanas): lejos la malla va más basta que el relieve y junto al agua baja
-   * hacia ella, y con `alturaU` las figuras flotaban o se hundían. Donde no hay tesela, `alturaU`. */
-  readonly alturaPisada = (x: number, y: number): number => this.terreno.alturaPintada(x, y) ?? this.alturaU(x, y);
+  /** La altura del relieve en (x, y), en u: la del suelo, o la de la lámina donde hay agua. */
+  private readonly alturaRelieve = (x: number, y: number): number => alturaVisible(this.o.fuente.alturaEn(x, y), this.o.fuente.aguaEn(x, y));
+  /** La altura que se ve en (x, y), en u: la del suelo tal como se pinta (lejos la malla va más basta que el relieve y junto al agua baja hacia
+   * ella) o la de la lámina donde hay agua. Todo lo que va encima se pone ahí, y el clic se queda ahí; donde aún no hay tesela, el relieve. */
+  readonly alturaU = (x: number, y: number): number => this.terreno.alturaPintada(x, y) ?? this.alturaRelieve(x, y);
+  /** El suelo pintado para lo que se pone encima: su altura y lo que firma lo de debajo, para recolocarse cuando cambia (`SueloPintado`). */
+  private readonly suelo: SueloPintado = ((v: VistaMundo3D): SueloPintado => ({
+    alturaU: v.alturaU,
+    firma: (x0, y0, x1, y1) => v.terreno.firma(x0, y0, x1, y1),
+    get version() { return v.terreno.version; },
+  }))(this);
 
   zoom(z: Zoom): void {
     this.camara.zoom = z;
@@ -323,11 +328,12 @@ export class VistaMundo3D {
     const despejes = `${this.maquetas.claveClaros}|${this.trazos.claveCaminos}`;
     this.arboles.fijarDespejes(this.maquetas.claros, this.trazos.caminos, despejes);
     this.matas.fijarDespejes(this.maquetas.claros, this.trazos.caminos, despejes);
-    if (this.hayQueMirar('paisaje', x, y, `${alcance}|${k}`)) this.faltan.paisaje = this.paisaje.actualizar(x, y, Math.min(alcance, ALCANCE.paisaje * k), hasta);
+    const suelo = this.terreno.version;
+    if (this.hayQueMirar('paisaje', x, y, `${alcance}|${k}|${suelo}`)) this.faltan.paisaje = this.paisaje.actualizar(x, y, Math.min(alcance, ALCANCE.paisaje * k), hasta);
     t = this.medir('paisaje', t);
-    if (this.hayQueMirar('arboles', x, y, `${alcance}|${k}|${despejes}`)) this.faltan.arboles = this.arboles.actualizar(x, y, Math.min(alcance, ALCANCE.arboles * k), hasta);
+    if (this.hayQueMirar('arboles', x, y, `${alcance}|${k}|${despejes}|${suelo}`)) this.faltan.arboles = this.arboles.actualizar(x, y, Math.min(alcance, ALCANCE.arboles * k), hasta);
     t = this.medir('arboles', t);
-    if (this.hayQueMirar('matas', x, y, `${alcance}|${k}|${despejes}`)) this.faltan.matas = this.matas.actualizar(x, y, Math.min(alcance, ALCANCE.matas * Math.min(1, k)), hasta);
+    if (this.hayQueMirar('matas', x, y, `${alcance}|${k}|${despejes}|${suelo}`)) this.faltan.matas = this.matas.actualizar(x, y, Math.min(alcance, ALCANCE.matas * Math.min(1, k)), hasta);
     t = this.medir('matas', t);
     this.vida.actualizar(cerca, x, y, ahora / 1000);
     t = this.medir('vida', t);
@@ -378,7 +384,7 @@ export class VistaMundo3D {
         f = { figuras: new FigurasDeColumna(jinetes, tropa, hex, carros), clave };
         this.columnas.set(id, f);
       }
-      f.figuras.mover(posicion, this.alturaPisada, this.terreno.version);
+      f.figuras.mover(posicion, this.alturaU, this.terreno.version);
     };
     for (const c of lista) poner(c.id, c.jinetes, c.tropa, c.color, c.carros, c.posicion);
     // una caravana suelta: su escolta delante y detrás sus carros, uno por animal (sin animales, uno con buey)
@@ -407,7 +413,7 @@ export class VistaMundo3D {
       vivas.add(clave);
       let r = this.rutas.get(clave);
       if (!r) { r = new RutaEnSuelo(material, this.alturaU); this.rutas.set(clave, r); this.lineas.add(r.grupo); }
-      r.fijar(pendiente);
+      r.fijar(pendiente, this.terreno.version);
     };
     let mira: Punto | null = null, destino: Punto | null = null;
     for (const c of lista) {
@@ -418,7 +424,7 @@ export class VistaMundo3D {
     for (const c of caravanas) ruta(`caravana:${c.id}`, c.ruta, c.posicion, this.matRutaCaravana);
     for (const [clave, r] of this.rutas) if (!vivas.has(clave)) { r.destruir(); this.rutas.delete(clave); }
     // la mira bajo tu columna y el aro de tu destino
-    const claveMira = mira ? `${mira.x.toFixed(1)},${mira.y.toFixed(1)}` : '';
+    const claveMira = mira ? `${mira.x.toFixed(1)},${mira.y.toFixed(1)}|${this.terreno.version}` : '';
     if (claveMira !== this.claveMira) {
       this.claveMira = claveMira;
       this.mira?.geometry.dispose();
@@ -427,7 +433,7 @@ export class VistaMundo3D {
       this.mira = g ? new THREE.Mesh(g, this.matMira) : null;
       if (this.mira) this.lineas.add(this.mira);
     }
-    const claveDestino = destino ? `${destino.x},${destino.y}` : '';
+    const claveDestino = destino ? `${destino.x},${destino.y}|${this.terreno.version}` : '';
     if (claveDestino !== this.claveDestino) {
       this.claveDestino = claveDestino;
       this.destino?.geometry.dispose();

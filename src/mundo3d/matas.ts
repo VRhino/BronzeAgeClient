@@ -9,6 +9,7 @@ import { aCauce, caucesCerca, caucesDe, enCauce, enMuestras, franjas, muestrasDe
 import { MUNDO3D } from './config';
 import { bosqueEn, fertilidadEn, type FuenteDeAltura } from './fuente';
 import type { NieblaDeGuerra } from './niebla';
+import type { SueloPintado } from './terreno';
 import { azar, manchas } from './ruido';
 import type { MapaGenerado } from '../terreno';
 
@@ -178,7 +179,7 @@ function material(niebla: NieblaDeGuerra, tiempo: { value: number }, viento: boo
   return m;
 }
 
-interface Trozo { grupo: THREE.Group; clave: string }
+interface Trozo { grupo: THREE.Group; clave: string; firma: number; recolocar: () => void }
 
 export class Matas {
   readonly grupo = new THREE.Group();
@@ -191,7 +192,7 @@ export class Matas {
   private caminos: Cauces = { rios: [] };
   private claveClaros = '';
 
-  constructor(private readonly fuente: FuenteDeAltura, private readonly mapa: MapaGenerado, niebla: NieblaDeGuerra) {
+  constructor(private readonly fuente: FuenteDeAltura, private readonly mapa: MapaGenerado, niebla: NieblaDeGuerra, private readonly suelo: SueloPintado) {
     this.mecen = material(niebla, this.tiempo, true);
     this.quietas = material(niebla, this.tiempo, false);
     this.cauces = caucesDe(mapa);
@@ -213,7 +214,7 @@ export class Matas {
   /** Pide los trozos a menos de `alcance` u de (cx, cy), los más cercanos primero, mientras quede tiempo, y suelta los lejanos. Devuelve
    * cuántos faltan. */
   actualizar(cx: number, cy: number, alcance: number, hasta: number): number {
-    const quiero = new Map<string, { x0: number; y0: number; d: number; banda: number; clave: string }>();
+    const quiero = new Map<string, { x0: number; y0: number; d: number; banda: number; clave: string; firma: number }>();
     const maxX = Math.ceil(this.fuente.ancho / TROZO) - 1, maxY = Math.ceil(this.fuente.alto / TROZO) - 1;
     for (let ty = Math.max(0, Math.floor((cy - alcance) / TROZO)); ty <= Math.min(maxY, Math.floor((cy + alcance) / TROZO)); ty++) {
       for (let tx = Math.max(0, Math.floor((cx - alcance) / TROZO)); tx <= Math.min(maxX, Math.floor((cx + alcance) / TROZO)); tx++) {
@@ -221,21 +222,23 @@ export class Matas {
         const d = Math.hypot(Math.max(x0 - cx, 0, cx - x0 - TROZO), Math.max(y0 - cy, 0, cy - y0 - TROZO));
         if (d > alcance) continue;
         const banda = BANDAS.findIndex((b) => d < b.hasta);
-        quiero.set(`${tx},${ty}`, { x0, y0, d, banda, clave: `${banda}|${this.claveClaros}` });
+        quiero.set(`${tx},${ty}`, { x0, y0, d, banda, clave: `${banda}|${this.claveClaros}`, firma: this.suelo.firma(x0, y0, x0 + TROZO - 1e-3, y0 + TROZO - 1e-3) });
       }
     }
     for (const clave of [...this.trozos.keys()]) if (!quiero.has(clave)) this.soltar(clave);
-    const pendientes = [...quiero.entries()].filter(([k, t]) => this.trozos.get(k)?.clave !== t.clave).sort((a, b) => a[1].d - b[1].d);
+    // los que cambian se rehacen; los que solo cambiaron de suelo (otro detalle de su tesela), se recolocan
+    const pendientes = [...quiero.entries()].filter(([k, t]) => { const y = this.trozos.get(k); return y?.clave !== t.clave || y.firma !== t.firma; }).sort((a, b) => a[1].d - b[1].d);
     let hechos = 0;
     for (const [k, t] of pendientes) {
       if (hechos && performance.now() > hasta) break;
-      this.poner(k, t.x0, t.y0, t.banda, t.clave);
+      const y = this.trozos.get(k);
+      if (y && y.clave === t.clave) { y.recolocar(); y.firma = t.firma; } else this.poner(k, t.x0, t.y0, t.banda, t.clave, t.firma);
       hechos++;
     }
     return pendientes.length - hechos;
   }
 
-  private poner(clave: string, x0: number, y0: number, banda: number, claveTrozo: string): void {
+  private poner(clave: string, x0: number, y0: number, banda: number, claveTrozo: string, firma: number): void {
     const { parte, crece } = BANDAS[banda]!;
     const lista = matasDelTrozo({ fuente: this.fuente, mapa: this.mapa, cauces: this.cauces, caminos: this.caminos, claros: this.claros }, x0, y0, TROZO, parte);
     this.soltar(clave);
@@ -243,26 +246,36 @@ export class Matas {
     for (let k = 0; k < n; k++) cuantos[lista[POR_MATA * k + 4]!]!++;
     const mallas = cuantos.map((c, t) => (c ? new THREE.InstancedMesh(GEO[t]!, MECEN.has(t) ? this.mecen : this.quietas, c) : null)), puestos = cuantos.map(() => 0);
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), eu = new THREE.Euler(), s = new THREE.Vector3(), p = new THREE.Vector3(), color = new THREE.Color();
-    for (let k = 0; k < n; k++) {
-      const o = POR_MATA * k, x = lista[o]!, y = lista[o + 1]!, h = lista[o + 2]!, r = lista[o + 3]!, t = lista[o + 4]!, f = lista[o + 5]!, malla = mallas[t]!;
-      const esc = TAMANO[t]! * crece * (0.7 + 0.6 * r);
-      eu.set(t === T.piedra ? (r - 0.5) * 0.4 : 0, r * 6.28 * 7, 0);
-      q.setFromEuler(eu);
-      s.set(esc, esc * (t === T.hierba ? 0.8 + 0.5 * azar(Math.round(x * 50), Math.round(y * 50), 3) : 1), esc);
-      p.set(x, h - (t === T.piedra ? 0.02 : 0.01), y);
-      m.compose(p, q, s);
-      malla.setMatrixAt(puestos[t]!, m);
-      malla.setColorAt(puestos[t]!++, colorDeMata(t, x, y, r, f, color));
-    }
+    // sobre el suelo tal como se pinta; se vuelve a llamar, sin los colores, cuando ese suelo cambia
+    const colocar = (conColor: boolean) => {
+      puestos.fill(0);
+      for (let k = 0; k < n; k++) {
+        const o = POR_MATA * k, x = lista[o]!, y = lista[o + 1]!, r = lista[o + 3]!, t = lista[o + 4]!, f = lista[o + 5]!, malla = mallas[t]!;
+        const esc = TAMANO[t]! * crece * (0.7 + 0.6 * r);
+        eu.set(t === T.piedra ? (r - 0.5) * 0.4 : 0, r * 6.28 * 7, 0);
+        q.setFromEuler(eu);
+        s.set(esc, esc * (t === T.hierba ? 0.8 + 0.5 * azar(Math.round(x * 50), Math.round(y * 50), 3) : 1), esc);
+        p.set(x, this.suelo.alturaU(x, y) - (t === T.piedra ? 0.02 : 0.01), y);
+        m.compose(p, q, s);
+        malla.setMatrixAt(puestos[t]!, m);
+        if (conColor) malla.setColorAt(puestos[t]!, colorDeMata(t, x, y, r, f, color));
+        puestos[t]!++;
+      }
+      for (const malla of mallas) {
+        if (!malla) continue;
+        malla.instanceMatrix.needsUpdate = true;
+        malla.computeBoundingSphere();
+      }
+    };
+    colocar(true);
     for (const [t, malla] of mallas.entries()) {
       if (!malla) continue;
-      malla.computeBoundingSphere();
       malla.receiveShadow = true;
       malla.castShadow = banda === 0 && t === T.mata;
       grupo.add(malla);
     }
     this.grupo.add(grupo);
-    this.trozos.set(clave, { grupo, clave: claveTrozo });
+    this.trozos.set(clave, { grupo, clave: claveTrozo, firma, recolocar: () => colocar(false) });
   }
 
   private soltar(clave: string): void {

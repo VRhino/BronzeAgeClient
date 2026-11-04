@@ -10,6 +10,7 @@ import { MUNDO3D } from './config';
 import type { FuenteDeAltura } from './fuente';
 import { cinta, recorridos, tramosEnCaja } from './lineas';
 import type { NieblaDeGuerra } from './niebla';
+import type { SueloPintado } from './terreno';
 
 type Punto = { x: number; y: number };
 
@@ -120,15 +121,20 @@ function andadoEn(puntos: readonly Punto[]): Map<Punto, number> {
   return a;
 }
 
+/** Cuánto se sale de su tesela lo que pone (u): las orillas del río ancho, a 1 u de la caja más medio río y la orilla. */
+const MARGEN = 4;
+
 export class Paisaje {
   readonly grupo = new THREE.Group();
   private readonly vado: THREE.MeshLambertMaterial;
   private readonly orilla: THREE.MeshLambertMaterial;
   private readonly roca: THREE.MeshLambertMaterial;
   private readonly rios: RioSuave[];
-  private readonly teselas = new Map<string, THREE.Group>();
+  /** Cada tesela con la firma del suelo pintado bajo ella (y un margen: las orillas y los vados se salen): si cambia, se rehace. */
+  private readonly teselas = new Map<string, { g: THREE.Group; firma: number }>();
+  private readonly alturaU = (x: number, y: number): number => this.suelo.alturaU(x, y);
 
-  constructor(private readonly fuente: FuenteDeAltura, private readonly mapa: MapaGenerado, niebla: NieblaDeGuerra, private readonly alturaU: (x: number, y: number) => number, private readonly materialRio: THREE.Material) {
+  constructor(private readonly fuente: FuenteDeAltura, private readonly mapa: MapaGenerado, niebla: NieblaDeGuerra, private readonly suelo: SueloPintado, private readonly materialRio: THREE.Material) {
     const sobre = (factor: number) => ({ polygonOffset: true, polygonOffsetFactor: factor, polygonOffsetUnits: factor });
     this.vado = niebla.aplicar(new THREE.MeshLambertMaterial({ color: COLOR.vado, ...sobre(-4) }));
     this.orilla = orillaMojada(niebla, sobre(-1));
@@ -145,20 +151,21 @@ export class Paisaje {
   /** Pide las teselas a menos de `alcance` u de (cx, cy), las más cercanas primero, mientras quede tiempo (`hasta`), y suelta las lejanas. */
   actualizar(cx: number, cy: number, alcance: number, hasta: number): number {
     const maxX = Math.ceil(this.fuente.ancho / LADO) - 1, maxY = Math.ceil(this.fuente.alto / LADO) - 1;
-    const quiero = new Map<string, { tx: number; ty: number; d: number }>();
+    const quiero = new Map<string, { tx: number; ty: number; d: number; firma: number }>();
     for (let ty = Math.max(0, Math.floor((cy - alcance) / LADO)); ty <= Math.min(maxY, Math.floor((cy + alcance) / LADO)); ty++) {
       for (let tx = Math.max(0, Math.floor((cx - alcance) / LADO)); tx <= Math.min(maxX, Math.floor((cx + alcance) / LADO)); tx++) {
         const d = Math.hypot(Math.max(tx * LADO - cx, 0, cx - (tx + 1) * LADO), Math.max(ty * LADO - cy, 0, cy - (ty + 1) * LADO));
-        if (d <= alcance) quiero.set(`${tx},${ty}`, { tx, ty, d });
+        if (d <= alcance) quiero.set(`${tx},${ty}`, { tx, ty, d, firma: this.suelo.firma(tx * LADO - MARGEN, ty * LADO - MARGEN, (tx + 1) * LADO + MARGEN, (ty + 1) * LADO + MARGEN) });
       }
     }
     for (const clave of [...this.teselas.keys()]) if (!quiero.has(clave)) this.soltar(clave);
-    const pendientes = [...quiero.entries()].filter(([k]) => !this.teselas.has(k)).sort((a, b) => a[1].d - b[1].d);
+    const pendientes = [...quiero.entries()].filter(([k, t]) => this.teselas.get(k)?.firma !== t.firma).sort((a, b) => a[1].d - b[1].d);
     let hechas = 0;
     for (const [k, t] of pendientes) {
       if (hechas && performance.now() > hasta) break;
       const g = this.tesela(t.tx, t.ty);
-      this.teselas.set(k, g);
+      this.soltar(k);
+      this.teselas.set(k, { g, firma: t.firma });
       this.grupo.add(g);
       hechas++;
     }
@@ -228,7 +235,7 @@ export class Paisaje {
   }
 
   private soltar(clave: string): void {
-    const g = this.teselas.get(clave);
+    const g = this.teselas.get(clave)?.g;
     if (!g) return;
     this.grupo.remove(g);
     for (const m of g.children) {

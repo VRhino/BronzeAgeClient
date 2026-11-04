@@ -3,6 +3,24 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.137.0] — 2026-11-04 · Mundo 3D: todo lo de encima pisa el suelo que se pinta · sin cambio de contrato
+
+Víctor probó la 0.136.1 (2026-11-04): soldados, héroes y caravanas ya iban bien, pero caminos, la línea de frontera, los nodos, los árboles y lo
+demás seguían flotando o hundidos. Era lo mismo: se ponían sobre el relieve fino, y lejos (teselas de 1 o 2 u) o junto al agua el suelo
+pintado no va ahí.
+
+- `VistaMundo3D.alturaU` es ahora la del suelo pintado (`Terreno.alturaPintada`; donde aún no hay tesela, el relieve). La usan todos: árboles,
+  matas, nodos y rocas, ríos, orillas y vados, caminos, fronteras, zonas y anillos, maquetas, humo, aros, rutas, la rejilla, los nombres, la
+  cámara y el clic.
+- Lo que se pone una vez se recoloca cuando cambia el suelo de debajo. `Terreno.firma(caja)` resume las teselas bajo una caja y cambia cuando se
+  rehace una (otro detalle) o se pone la que faltaba; el contrato es `SueloPintado` (altura, firma y versión).
+  - Árboles y matas, por trozo: solo se vuelven a asentar (las mismas mallas; no se rehacen).
+  - Ríos, orillas, vados y rocas de nodo: se rehace la tesela del paisaje.
+  - Caminos, fronteras, zonas y anillos: se rehace la cinta cuyo suelo cambió.
+  - Maquetas: se vuelven a asentar al cambiar el suelo.
+  - Rutas, aros, marcas, humo y la rejilla: se rehacen.
+- Pruebas: la firma cambia con las teselas de su caja y no con nada más; los árboles de un trozo suben con su suelo sin rehacerse.
+
 ## [0.136.2] — 2026-11-04 · Tras cerrar sesión y volver a entrar se pide otra vez la VISTA · sin cambio de contrato
 
 Caso de Víctor (2026-11-04): Víctor no veía en el mundo a Jorge, de su misma Facción, aunque pasaba a su lado; Jorge sí lo veía a él. Con una

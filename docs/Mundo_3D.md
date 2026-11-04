@@ -447,13 +447,20 @@ nodos (la casilla es la misma que en el modo mapa). La rampa es la del modo mapa
 de la aldea agrícola, verde la fértil), en una textura del raster de fertilidad que se hace una vez por mundo. El suelo la mezcla antes de la
 luz, encima del tinte del territorio. Solo sobre lo explorado (lo lee de la textura de la niebla, en el mismo sombreado) y nunca en el agua.
 
-## El suelo que se pisa (0.136.1)
+## El suelo que se pisa (0.136.1 y 0.137.0)
 
-Arreglo de lo que vio Víctor el 2026-11-04 (columnas que flotaban junto a la costa y otras hundidas). Lo que camina (columnas y caravanas) se
-pone sobre la malla tal como se pinta (`Terreno.alturaPintada`), no sobre el relieve fino: lejos la malla va cada 1 o 2 u y en terreno abrupto
-se aparta del relieve, y junto al agua la tierra baja hacia ella. Cada tesela guarda las alturas de sus vértices (la lámina donde hay agua) y
-se interpola por los mismos dos triángulos que la malla. `Terreno.version` cambia al poner o quitar una tesela, y entonces se recolocan también
-las columnas quietas. Árboles, matas, maquetas y caminos siguen sobre el relieve fino: van cerca del héroe, donde la malla es la de 0,5 u.
+Arreglo de lo que vio Víctor el 2026-11-04 (columnas que flotaban junto a la costa y otras hundidas; luego, lo mismo en caminos, fronteras,
+nodos y árboles). Todo lo que va sobre el suelo se pone sobre la malla tal como se pinta (`Terreno.alturaPintada`, que es `alturaU` de la
+vista), no sobre el relieve fino: lejos la malla va cada 1 o 2 u y en terreno abrupto se aparta del relieve, y junto al agua la tierra baja
+hacia ella. Cada tesela guarda las alturas de sus vértices (la lámina donde hay agua) y se interpola por los mismos dos triángulos que la malla.
+
+Como el detalle de una tesela cambia con la distancia al héroe, lo que se pone una vez se recoloca cuando cambia su suelo (`SueloPintado`):
+
+- `Terreno.firma(caja)` resume las teselas bajo la caja; cambia cuando una se rehace o se pone la que faltaba. `Terreno.version` sube con
+  cualquier cambio y sirve de atajo: si no subió, ninguna firma cambió.
+- Árboles y matas guardan la firma de su trozo y, si cambia, solo se vuelven a asentar. Las teselas del paisaje (ríos, orillas, vados y rocas
+  de los nodos), con 4 u de margen, se rehacen. Cada cinta de caminos y fronteras guarda la de su caja y se rehace sola. Las maquetas se
+  vuelven a asentar con cada versión. Columnas, rutas, aros, marcas, humo y la rejilla se rehacen.
 
 ## Banco de pruebas
 

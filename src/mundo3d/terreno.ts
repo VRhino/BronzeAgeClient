@@ -189,10 +189,24 @@ function materialDelSuelo(niebla: NieblaDeGuerra, territorio: Territorio, fertil
   return m;
 }
 
+/** El suelo tal como se pinta, para lo que se pone encima: su altura en u (`alturaU`) y su `firma` bajo una caja, que cambia cuando cambia el
+ * suelo de debajo (otro detalle, o la tesela que faltaba): entonces se recoloca. */
+export interface SueloPintado {
+  alturaU(x: number, y: number): number;
+  firma(x0: number, y0: number, x1: number, y1: number): number;
+  /** Sube cada vez que cambia alguna tesela: si no cambió, ninguna firma cambió. */
+  readonly version: number;
+}
+
+/** La clave numérica de la tesela (tx, ty): sin cadenas, que `alturaPintada` se pregunta miles de veces. */
+const claveDeTesela = (tx: number, ty: number): number => ty * 65536 + tx;
+
 export class Terreno {
   readonly grupo = new THREE.Group();
   private readonly material: THREE.MeshLambertMaterial;
-  private readonly teselas = new Map<string, { malla: THREE.Mesh; agua: THREE.Mesh | null; paso: number; pisada: Float32Array }>();
+  /** Por `claveDeTesela`; `id`, uno distinto cada vez que se construye una (lo que firma `firma`). */
+  private readonly teselas = new Map<number, { malla: THREE.Mesh; agua: THREE.Mesh | null; paso: number; pisada: Float32Array; id: number }>();
+  private ultimoId = 0;
   /** Sube cada vez que se pone o se quita una tesela: lo que se colocó con `alturaPintada` sabe así que el suelo de debajo pudo cambiar. */
   version = 0;
 
@@ -214,12 +228,12 @@ export class Terreno {
    * tiempo (`hasta`, en `performance.now()`), al menos una. Devuelve cuántas faltan. */
   actualizar(cx: number, cy: number, alcance: number, hasta: number): number {
     const maxX = Math.ceil(this.fuente.ancho / LADO) - 1, maxY = Math.ceil(this.fuente.alto / LADO) - 1;
-    const quiero = new Map<string, { tx: number; ty: number; d: number; paso: number }>();
+    const quiero = new Map<number, { tx: number; ty: number; d: number; paso: number }>();
     for (let ty = Math.max(0, Math.floor((cy - alcance) / LADO)); ty <= Math.min(maxY, Math.floor((cy + alcance) / LADO)); ty++) {
       for (let tx = Math.max(0, Math.floor((cx - alcance) / LADO)); tx <= Math.min(maxX, Math.floor((cx + alcance) / LADO)); tx++) {
         // distancia del centro al punto más cercano de la tesela
         const dx = Math.max(tx * LADO - cx, 0, cx - (tx + 1) * LADO), dy = Math.max(ty * LADO - cy, 0, cy - (ty + 1) * LADO), d = Math.hypot(dx, dy);
-        if (d <= alcance) quiero.set(`${tx},${ty}`, { tx, ty, d, paso: this.pasoA(d) });
+        if (d <= alcance) quiero.set(claveDeTesela(tx, ty), { tx, ty, d, paso: this.pasoA(d) });
       }
     }
     for (const [clave, t] of this.teselas) {
@@ -235,14 +249,14 @@ export class Terreno {
       this.soltar(clave);
       this.grupo.add(malla);
       if (agua) this.grupo.add(agua);
-      this.teselas.set(clave, { malla, agua, paso: t.paso, pisada });
+      this.teselas.set(clave, { malla, agua, paso: t.paso, pisada, id: ++this.ultimoId });
       this.version++;
       hechas++;
     }
     return pendientes.length - hechas;
   }
 
-  private soltar(clave: string): void {
+  private soltar(clave: number): void {
     const t = this.teselas.get(clave);
     if (!t) return;
     this.grupo.remove(t.malla);
@@ -256,7 +270,7 @@ export class Terreno {
    * tierra de junto al agua bajada hacia ella y, en el agua, la lámina. Por los mismos dos triángulos de cada cuadro que la malla. `null` si
    * esa tesela no está puesta. */
   alturaPintada(x: number, y: number): number | null {
-    const tx = Math.floor(x / LADO), ty = Math.floor(y / LADO), t = this.teselas.get(`${tx},${ty}`);
+    const tx = Math.floor(x / LADO), ty = Math.floor(y / LADO), t = this.teselas.get(claveDeTesela(tx, ty));
     if (!t) return null;
     const n = Math.round(LADO / t.paso) + 1;
     const fi = Math.min(Math.max((x - tx * LADO) / t.paso, 0), n - 1), fj = Math.min(Math.max((y - ty * LADO) / t.paso, 0), n - 1);
@@ -265,6 +279,16 @@ export class Terreno {
     if (a + b <= 1) return p[k]! + a * (p[k + 1]! - p[k]!) + b * (p[k + n]! - p[k]!);
     const d = p[k + n + 1]!;
     return d + (1 - a) * (p[k + n]! - d) + (1 - b) * (p[k + 1]! - d);
+  }
+
+  /** Lo que resume el suelo pintado bajo la caja (x0, y0)-(x1, y1): cambia cuando se rehace o se quita alguna de sus teselas, o se pone una
+   * que faltaba. Lo que se coloca sobre el suelo lo guarda y se recoloca cuando cambia. */
+  firma(x0: number, y0: number, x1: number, y1: number): number {
+    let f = 17;
+    for (let ty = Math.floor(y0 / LADO); ty <= Math.floor(y1 / LADO); ty++) {
+      for (let tx = Math.floor(x0 / LADO); tx <= Math.floor(x1 / LADO); tx++) f = (Math.imul(f, 31) + (this.teselas.get(claveDeTesela(tx, ty))?.id ?? 0)) | 0;
+    }
+    return f;
   }
 
   destruir(): void {

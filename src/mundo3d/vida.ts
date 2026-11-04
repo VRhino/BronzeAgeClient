@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import type { MundoEnVista } from './estado';
 import { MUNDO3D } from './config';
 import type { NieblaDeGuerra } from './niebla';
+import type { SueloPintado } from './terreno';
 import { azar } from './ruido';
 
 type Punto = { x: number; y: number };
@@ -76,7 +77,9 @@ export class Vida {
   private claveAves = '';
   private ultimoMundo: MundoEnVista | null = null;
 
-  constructor(niebla: NieblaDeGuerra, private readonly alturaU: (x: number, y: number) => number) {
+  private readonly alturaU = (x: number, y: number): number => this.suelo.alturaU(x, y);
+
+  constructor(niebla: NieblaDeGuerra, private readonly suelo: SueloPintado) {
     const tiempo = this.tiempo;
     this.matHumo = new THREE.MeshLambertMaterial({
       color: new THREE.Color().setRGB(0.74, 0.75, 0.76, THREE.SRGBColorSpace),
@@ -132,7 +135,7 @@ export class Vida {
   }
 
   private ponerHumo(columnas: Punto[]): void {
-    const clave = columnas.map((c) => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(';');
+    const clave = columnas.map((c) => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(';') + `|${this.suelo.version}`;
     if (clave === this.claveHumo) return;
     this.claveHumo = clave;
     this.soltar(this.humo);

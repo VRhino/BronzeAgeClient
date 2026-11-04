@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import type { ColumnaEnVista, FundacionEnVista, MiradaEnVista, SeleccionEnVista } from './estado';
 import { cinta, circulo } from './lineas';
+import type { SueloPintado } from './terreno';
 
 const COLOR = { mirada: 0x7cc4ea, caducada: 0xb4b4b4, seleccion: 0xf4ead2, fundacion: 0xf1d38b, valido: 0x46c85a, cerca: 0xa0a096, libre: 0x78dc6e, ocupada: 0xc85a46 };
 
@@ -23,7 +24,9 @@ export class MarcasEnSuelo {
   private clave = '';
   private claveSeleccion = '';
 
-  constructor(private readonly alturaU: (x: number, y: number) => number) {
+  private readonly alturaU = (x: number, y: number): number => this.suelo.alturaU(x, y);
+
+  constructor(private readonly suelo: SueloPintado) {
     this.matSeleccion = this.material(COLOR.seleccion, 1);
     this.matSeleccion.transparent = true;
     this.grupo.add(this.seleccion);
@@ -52,6 +55,7 @@ export class MarcasEnSuelo {
     const clave = [
       ...formaciones.map((c) => `F${c.id}:${f(c.posicion.x)},${f(c.posicion.y)}:${c.color}`),
       ...m.miradas.map((x) => `M${x.id}:${x.abierta}:${x.radio}`),
+      `S${this.suelo.version}`,
       fun ? `U${f(fun.centro.x)},${f(fun.centro.y)}:${fun.radio}:${fun.sitios?.validos.length ?? 0}:${fun.sitios?.cerca.length ?? 0}:${fun.parcelas.map((q) => q.estado).join('')}` : '',
     ].join('|');
     if (clave !== this.clave) {
@@ -61,7 +65,7 @@ export class MarcasEnSuelo {
       for (const x of m.miradas) this.aro(this.grupo, x.centro, x.radio, x.abierta ? 0.15 : 0.1, this.material(x.abierta ? COLOR.mirada : COLOR.caducada, x.abierta ? 1 : 0.55), !x.abierta);
       if (fun) this.fundar(fun);
     }
-    const s = m.seleccion, claveSel = s ? `${f(s.posicion.x)},${f(s.posicion.y)}:${s.radio}` : '';
+    const s = m.seleccion, claveSel = s ? `${f(s.posicion.x)},${f(s.posicion.y)}:${s.radio}:${this.suelo.version}` : '';
     if (claveSel !== this.claveSeleccion) {
       this.claveSeleccion = claveSel;
       this.vaciar(this.seleccion);

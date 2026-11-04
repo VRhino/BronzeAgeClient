@@ -7,6 +7,7 @@ import type { Claro } from './arboles';
 import { MUNDO3D } from './config';
 import type { MundoEnVista } from './estado';
 import type { NieblaDeGuerra } from './niebla';
+import type { SueloPintado } from './terreno';
 
 const COLORES = {
   muro: 0xc9b48f, adobe: 0xd2bf9a, techo: 0xa8714a, madera: 0x8a6440, lona: 0xd8cfbd, ruina: 0x7d7466, campo: 0xb59a3a, mina: 0x4a4038,
@@ -284,7 +285,11 @@ export class Maquetas {
   private clave = '';
   private readonly materiales = new Map<string, THREE.MeshLambertMaterial>();
 
-  constructor(private readonly niebla: NieblaDeGuerra, private readonly alturaU: (x: number, y: number) => number) {}
+  /** Lo puesto, para volver a asentarlo cuando cambia el suelo pintado de debajo (`SueloPintado.version`). */
+  private puestas: (() => void)[] = [];
+  private version = -1;
+
+  constructor(private readonly niebla: NieblaDeGuerra, private readonly suelo: SueloPintado) {}
 
   /** El material de un color, encima o bajo la niebla (se crean una vez). */
   private material(color: number | string, bajoNiebla: boolean): THREE.MeshLambertMaterial {
@@ -311,8 +316,12 @@ export class Maquetas {
       ...m.alijos.map((x) => `J${x.id}:${f(x.posicion.x)},${f(x.posicion.y)}`),
       ...m.batallas.map((x) => `T${x.id}:${f(x.posicion.x)},${f(x.posicion.y)}:${x.propia}`),
     ].join('|');
-    if (clave === this.clave) return false;
+    if (clave === this.clave) {
+      if (this.suelo.version !== this.version) { this.version = this.suelo.version; for (const asentar of this.puestas) asentar(); }
+      return false;
+    }
     this.clave = clave;
+    this.version = this.suelo.version;
     this.vaciar();
     const M = MUNDO3D.maqueta, encima = new Piezas(), bajo = new Piezas(), claros: Claro[] = [];
     for (const x of m.plazas) {
@@ -352,14 +361,19 @@ export class Maquetas {
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), s = new THREE.Vector3(), v = new THREE.Vector3();
     const malla = (geo: THREE.BufferGeometry, mat: THREE.Material, lista: Pieza[], escala: (x: Pieza) => [number, number, number]) => {
       const im = new THREE.InstancedMesh(geo, mat, lista.length);
-      lista.forEach((x, k) => {
-        e.set(0, -x.giro, x.inclina ?? 0);
-        q.setFromEuler(e);
-        s.set(...escala(x));
-        v.set(x.x, this.alturaU(x.x, x.y) - 0.02 + x.base, x.y);
-        im.setMatrixAt(k, m.compose(v, q, s));
-      });
-      im.computeBoundingSphere();
+      const asentar = () => {
+        lista.forEach((x, k) => {
+          e.set(0, -x.giro, x.inclina ?? 0);
+          q.setFromEuler(e);
+          s.set(...escala(x));
+          v.set(x.x, this.suelo.alturaU(x.x, x.y) - 0.02 + x.base, x.y);
+          im.setMatrixAt(k, m.compose(v, q, s));
+        });
+        im.instanceMatrix.needsUpdate = true;
+        im.computeBoundingSphere();
+      };
+      asentar();
+      this.puestas.push(asentar);
       im.castShadow = im.receiveShadow = true;
       this.grupo.add(im);
     };
@@ -371,6 +385,7 @@ export class Maquetas {
   }
 
   private vaciar(): void {
+    this.puestas = [];
     for (const im of [...this.grupo.children]) {
       this.grupo.remove(im);
       (im as THREE.InstancedMesh).dispose();

@@ -45,6 +45,7 @@ export class RutaEnSuelo {
   private readonly linea: THREE.Line;
   private readonly cabeza: THREE.Line;
   private claveCabeza = '';
+  private suelo = -1;
 
   constructor(private readonly material: THREE.LineBasicMaterial, private readonly alturaU: (x: number, y: number) => number, private readonly dy = 0.12) {
     this.linea = new THREE.Line(new THREE.BufferGeometry(), material);
@@ -53,12 +54,13 @@ export class RutaEnSuelo {
     this.grupo.add(this.linea, this.cabeza);
   }
 
-  /** `ruta`: la cabeza y lo que le queda por andar (como la da la proyección). */
-  fijar(ruta: readonly Punto[]): void {
+  /** `ruta`: la cabeza y lo que le queda por andar (como la da la proyección). `suelo` cambia cuando cambia el suelo pintado: se rehace. */
+  fijar(ruta: readonly Punto[], suelo = 0): void {
     const resto = ruta.slice(1), cabeza = ruta[0];
     if (!cabeza || !resto.length) { this.grupo.visible = false; return; }
     this.grupo.visible = true;
     let desde = this.vertices.length - resto.length;
+    if (suelo !== this.suelo) { this.suelo = suelo; this.claveCabeza = ''; desde = -1; }
     if (desde < 0 || !mismosPuntos(this.vertices, resto, desde)) {
       this.construir(resto);
       desde = 0;

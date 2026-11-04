@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { describe, expect, test } from 'vitest';
 import type { ProyeccionJugador } from '../src/apiCliente';
-import { arbolesDelTrozo, caucesDe, franjas, POR_ARBOL, type Entorno } from '../src/mundo3d/arboles';
+import { Arboles, arbolesDelTrozo, caucesDe, franjas, POR_ARBOL, type Entorno } from '../src/mundo3d/arboles';
 import { CamaraDeJuego, distanciaDeEncuadre } from '../src/mundo3d/camara';
 import { ACERCADO, encuadres, MUNDO3D } from '../src/mundo3d/config';
 import { ALFA_TERRITORIO, ANCHOS, dondeEstaLaSeleccion, estadoDesdeProyeccion, mundoDesdeProyeccion } from '../src/mundo3d/estado';
@@ -418,10 +418,39 @@ describe('lo que camina pisa el suelo que se pinta', () => {
     expect(terreno.alturaPintada(20.2, 10.3)!).toBeLessThan(relieve - 5);
   });
 
+  test('la firma de una caja cambia cuando se rehace una de sus teselas, y no por las de fuera', () => {
+    const caja = [130, 130, 140, 140] as const, fuera = [10, 10, 20, 20] as const;
+    const antes = terreno.firma(...caja), antesFuera = terreno.firma(...fuera);
+    terreno.actualizar(135, 135, 200, Number.POSITIVE_INFINITY); // la de (130, 130) pasa a 0,5 u; la de (10, 10), de 0,5 a 1 u
+    expect(terreno.firma(...caja)).not.toBe(antes);
+    expect(terreno.firma(...fuera)).not.toBe(antesFuera);
+    const ahora = terreno.firma(...caja);
+    terreno.actualizar(135, 135, 200, Number.POSITIVE_INFINITY);
+    expect(terreno.firma(...caja)).toBe(ahora); // nada cambió
+  });
+
   test('cada tesela que se pone o se quita cambia la versión del suelo', () => {
     const antes = terreno.version;
     terreno.actualizar(200, 200, 40, Number.POSITIVE_INFINITY);
     expect(terreno.version).toBeGreaterThan(antes);
     expect(terreno.alturaPintada(5, 5)).toBeNull(); // esa tesela ya no está
+  });
+});
+
+describe('lo que se pone sobre el suelo se recoloca cuando el suelo cambia', () => {
+  test('los árboles de un trozo suben con su suelo, sin rehacerse', () => {
+    const llano: FuenteDeAltura = { ancho: 64, alto: 64, paso: 0.5, alturaEn: () => 450, aguaEn: () => false };
+    const bosque = { config: { ancho: 64, alto: 64, seed: 0 }, rios: [], rasters: { densidadBosque: { columnas: 16, filas: 16, celda: 4, datos: new Uint8Array(256).fill(255) } } } as unknown as MapaGenerado;
+    let alto = 1, firma = 1;
+    const suelo = { alturaU: () => alto, firma: () => firma, get version() { return firma; } };
+    const arboles = new Arboles(llano, bosque, {} as NieblaDeGuerra, suelo);
+    arboles.actualizar(16, 16, 10, Number.POSITIVE_INFINITY);
+    const malla = () => arboles.grupo.children[0]!.children[0] as THREE.InstancedMesh;
+    const y = () => { const m = new THREE.Matrix4(); malla().getMatrixAt(0, m); return new THREE.Vector3().setFromMatrixPosition(m).y; };
+    const antes = y(), primera = malla();
+    alto = 3; firma = 2;
+    arboles.actualizar(16, 16, 10, Number.POSITIVE_INFINITY);
+    expect(malla()).toBe(primera); // la misma malla: solo se recolocó
+    expect(y() - antes).toBeCloseTo(2, 5);
   });
 });

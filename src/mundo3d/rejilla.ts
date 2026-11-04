@@ -2,6 +2,7 @@
 // relieve alrededor del héroe, para ver por dónde puede ir una columna y cuánto le cuesta: verde el llano, hacia rojo lo caro y en azul los vados.
 // Se enciende desde el menú de la esquina. Solo se pinta lo de cerca: el grafo entero son cientos de miles de aristas.
 import * as THREE from 'three';
+import type { SueloPintado } from './terreno';
 import type { GrafoNavegacion } from '../contrato/gen/bronzeage/v1/world_pb';
 
 type Punto = { x: number; y: number };
@@ -57,7 +58,10 @@ export class RejillaDeMovimiento {
   private visible = false;
   private centro: Punto | null = null;
 
-  constructor(private readonly alturaU: (x: number, y: number) => number) {}
+  private version = -1;
+  private readonly alturaU = (x: number, y: number): number => this.suelo.alturaU(x, y);
+
+  constructor(private readonly suelo: SueloPintado) {}
 
   fijar(navegacion: Navegacion | null, visible: boolean): void {
     if (navegacion !== this.navegacion || visible !== this.visible) this.centro = null;
@@ -70,8 +74,9 @@ export class RejillaDeMovimiento {
   actualizar(x: number, y: number): void {
     const nav = this.navegacion;
     if (!this.visible || !nav) return;
-    if (this.centro && Math.hypot(this.centro.x - x, this.centro.y - y) < REPINTAR) return;
+    if (this.centro && Math.hypot(this.centro.x - x, this.centro.y - y) < REPINTAR && this.version === this.suelo.version) return;
     this.centro = { x, y };
+    this.version = this.suelo.version;
     this.vaciar();
     const pos: number[] = [], col: number[] = [], c = new THREE.Color();
     const desde = Math.floor((x - RADIO) / CASILLA), hasta = Math.floor((x + RADIO) / CASILLA);

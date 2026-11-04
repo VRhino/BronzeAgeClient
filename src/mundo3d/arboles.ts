@@ -10,6 +10,7 @@ import { MUNDO3D } from './config';
 import { colorDeCopa, especieDe, geometrias, materialDeArboles } from './especies';
 import { bosqueEn, type FuenteDeAltura } from './fuente';
 import type { NieblaDeGuerra } from './niebla';
+import type { SueloPintado } from './terreno';
 import { azar as hash } from './ruido';
 
 type Punto = { x: number; y: number };
@@ -148,7 +149,7 @@ export function arbolesDelTrozo(e: Entorno, x0: number, y0: number, lado: number
 /** Las geometrías de cada especie, compartidas por todos los trozos. */
 const GEO = geometrias();
 
-interface Trozo { grupo: THREE.Group; clave: string }
+interface Trozo { grupo: THREE.Group; clave: string; firma: number; recolocar: () => void }
 
 export class Arboles {
   readonly grupo = new THREE.Group();
@@ -160,7 +161,7 @@ export class Arboles {
   private caminos: Cauces = { rios: [] };
   private claveClaros = '';
 
-  constructor(private readonly fuente: FuenteDeAltura, private readonly mapa: MapaGenerado, niebla: NieblaDeGuerra) {
+  constructor(private readonly fuente: FuenteDeAltura, private readonly mapa: MapaGenerado, niebla: NieblaDeGuerra, private readonly suelo: SueloPintado) {
     this.material = materialDeArboles((sh) => niebla.parchear(sh), this.tiempo);
     this.cauces = caucesDe(mapa);
   }
@@ -182,7 +183,7 @@ export class Arboles {
   /** Pide los trozos a menos de `alcance` u de (cx, cy), los más cercanos primero, mientras quede tiempo (`hasta`, en `performance.now()`), y
    * suelta los que quedan lejos. Un trozo se rehace al cambiar de banda o de claros. Devuelve cuántos faltan. */
   actualizar(cx: number, cy: number, alcance: number, hasta: number): number {
-    const quiero = new Map<string, { x0: number; y0: number; d: number; banda: number; clave: string }>();
+    const quiero = new Map<string, { x0: number; y0: number; d: number; banda: number; clave: string; firma: number }>();
     const maxX = Math.ceil(this.fuente.ancho / TROZO) - 1, maxY = Math.ceil(this.fuente.alto / TROZO) - 1;
     for (let ty = Math.max(0, Math.floor((cy - alcance) / TROZO)); ty <= Math.min(maxY, Math.floor((cy + alcance) / TROZO)); ty++) {
       for (let tx = Math.max(0, Math.floor((cx - alcance) / TROZO)); tx <= Math.min(maxX, Math.floor((cx + alcance) / TROZO)); tx++) {
@@ -190,21 +191,23 @@ export class Arboles {
         const d = Math.hypot(Math.max(x0 - cx, 0, cx - x0 - TROZO), Math.max(y0 - cy, 0, cy - y0 - TROZO));
         if (d > alcance) continue;
         const banda = BANDAS.findIndex((b) => d < b.hasta), k = `${tx},${ty}`;
-        quiero.set(k, { x0, y0, d, banda, clave: `${banda}|${this.claveClaros}` });
+        quiero.set(k, { x0, y0, d, banda, clave: `${banda}|${this.claveClaros}`, firma: this.suelo.firma(x0, y0, x0 + TROZO - 1e-3, y0 + TROZO - 1e-3) });
       }
     }
     for (const clave of [...this.trozos.keys()]) if (!quiero.has(clave)) this.soltar(clave);
-    const pendientes = [...quiero.entries()].filter(([k, t]) => this.trozos.get(k)?.clave !== t.clave).sort((a, b) => a[1].d - b[1].d);
+    // los que cambian se rehacen; los que solo cambiaron de suelo (otro detalle de su tesela), se recolocan
+    const pendientes = [...quiero.entries()].filter(([k, t]) => { const y = this.trozos.get(k); return y?.clave !== t.clave || y.firma !== t.firma; }).sort((a, b) => a[1].d - b[1].d);
     let hechos = 0;
     for (const [k, t] of pendientes) {
       if (hechos && performance.now() > hasta) break;
-      this.poner(k, t.x0, t.y0, t.banda, t.clave);
+      const y = this.trozos.get(k);
+      if (y && y.clave === t.clave) { y.recolocar(); y.firma = t.firma; } else this.poner(k, t.x0, t.y0, t.banda, t.clave, t.firma);
       hechos++;
     }
     return pendientes.length - hechos;
   }
 
-  private poner(clave: string, x0: number, y0: number, banda: number, claveTrozo: string): void {
+  private poner(clave: string, x0: number, y0: number, banda: number, claveTrozo: string, firma: number): void {
     const parte = BANDAS[banda]!.parte, crece = 1 / Math.sqrt(parte);
     const lista = arbolesDelTrozo({ fuente: this.fuente, mapa: this.mapa, cauces: this.cauces, caminos: this.caminos, claros: this.claros }, x0, y0, TROZO, parte);
     this.soltar(clave);
@@ -215,26 +218,36 @@ export class Arboles {
     for (let k = 0; k < n; k++) cuantos[grupoDe(lista[POR_ARBOL * k + 4]!)]!++;
     const mallas = cuantos.map((c, g) => (c ? new THREE.InstancedMesh(geos[g]!, this.material, c) : null)), puestos = cuantos.map(() => 0);
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), eu = new THREE.Euler(), s = new THREE.Vector3(), p = new THREE.Vector3(), color = new THREE.Color();
-    for (let k = 0; k < n; k++) {
-      const o = POR_ARBOL * k, x = lista[o]!, y = lista[o + 1]!, h = lista[o + 2]!, r = lista[o + 3]!, e = lista[o + 4]!, g = grupoDe(e), malla = mallas[g]!;
-      const esc = MUNDO3D.copa * crece * (0.75 + 0.5 * r), r2 = hash(Math.round(x * 64), Math.round(y * 64), 5), alto = 0.9 + 0.3 * r2;
-      const [fx, fy, fz, alza] = cerca ? [1, 1, 1, 0] : GEO.forma[e]!;
-      eu.set(0, r * 6.28, 0);
-      q.setFromEuler(eu);
-      s.set(esc * fx, esc * fy * alto, esc * fz);
-      p.set(x, h - 0.03 + esc * alto * alza, y);
-      m.compose(p, q, s);
-      malla.setMatrixAt(puestos[g]!, m);
-      malla.setColorAt(puestos[g]!++, colorDeCopa(e, r, r2, color));
-    }
+    // sobre el suelo tal como se pinta (lejos, más basto que el relieve): se vuelve a llamar, sin los colores, cuando ese suelo cambia
+    const colocar = (conColor: boolean) => {
+      puestos.fill(0);
+      for (let k = 0; k < n; k++) {
+        const o = POR_ARBOL * k, x = lista[o]!, y = lista[o + 1]!, r = lista[o + 3]!, e = lista[o + 4]!, g = grupoDe(e), malla = mallas[g]!;
+        const esc = MUNDO3D.copa * crece * (0.75 + 0.5 * r), r2 = hash(Math.round(x * 64), Math.round(y * 64), 5), alto = 0.9 + 0.3 * r2;
+        const [fx, fy, fz, alza] = cerca ? [1, 1, 1, 0] : GEO.forma[e]!;
+        eu.set(0, r * 6.28, 0);
+        q.setFromEuler(eu);
+        s.set(esc * fx, esc * fy * alto, esc * fz);
+        p.set(x, this.suelo.alturaU(x, y) - 0.03 + esc * alto * alza, y);
+        m.compose(p, q, s);
+        malla.setMatrixAt(puestos[g]!, m);
+        if (conColor) malla.setColorAt(puestos[g]!, colorDeCopa(e, r, r2, color));
+        puestos[g]!++;
+      }
+      for (const malla of mallas) {
+        if (!malla) continue;
+        malla.instanceMatrix.needsUpdate = true;
+        malla.computeBoundingSphere();
+      }
+    };
+    colocar(true);
     for (const malla of mallas) {
       if (!malla) continue;
-      malla.computeBoundingSphere();
       malla.castShadow = banda === 0;
       grupo.add(malla);
     }
     this.grupo.add(grupo);
-    this.trozos.set(clave, { grupo, clave: claveTrozo });
+    this.trozos.set(clave, { grupo, clave: claveTrozo, firma, recolocar: () => colocar(false) });
   }
 
   private soltar(clave: string): void {
