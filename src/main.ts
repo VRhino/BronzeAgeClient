@@ -71,6 +71,7 @@ import { ayuda } from './ui/ayuda';
 import { htmlInformeDeInspeccion } from './ui/interaccionAjena';
 import { cablearPanelObras, htmlConstruir, minutosDeObra } from './ui/panelObras';
 import { cablearTesoreria, htmlReservaRecursos } from './ui/panelTesoreria';
+import { montarPanelRendimiento } from './ui/panelRendimiento';
 import { cablearProduccionYRecetas, cablearVistaCiudad, edificioSeleccionado, elegirEdificio, htmlExtraccion, htmlRecetas, htmlTooltipEdificio, repintarFicha } from './ui/vistaCiudad';
 import { campamentoEnVista } from './ciudad3d/campamento';
 import { puebloEnVista } from './ciudad3d/pueblo';
@@ -3184,6 +3185,7 @@ function mostrarSesionReemplazada(): void {
 }
 
 function arrancar(): void {
+  montarPanelRendimiento(); // F3: panel de rendimiento (solo mide abierto)
   window.addEventListener('hashchange', enrutar);
   alCargarSigilos(() => { const p = estadoCliente.proyeccionUltima; if (p) void dibujarPantallaSegunModo(p); });
   alEventoTiempoReal(alEventoDelServidor);

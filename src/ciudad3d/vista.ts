@@ -3,6 +3,7 @@
 // que orbita, se desplaza y se acerca; el clic que elige un edificio y su resalte; los rótulos de las obras con su cuenta atrás.
 // Coordenadas de escena: x = x local del trazado, z = y local, y = altura; todo en ul (1 ul = 3 m).
 import * as THREE from 'three';
+import { registrarRenderer } from '../rendimiento';
 import './ciudad3d.css';
 import { Cielo, colorHorizonte } from '../mundo3d/cielo';
 import { Calzada } from './calzada';
@@ -87,6 +88,7 @@ export class VistaCiudad3D {
   constructor(private readonly contenedor: HTMLElement, private readonly o: OpcionesCiudad3D) {
     this.base = o.sueloBase ?? 0x93b26b;
     this.renderer = new THREE.WebGLRenderer({ canvas: this.lienzo, antialias: true });
+    registrarRenderer('plaza', this.renderer); // para el panel de rendimiento (F3)
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;

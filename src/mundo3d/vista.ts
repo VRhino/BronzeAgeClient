@@ -5,6 +5,7 @@
 // presupuesto de tiempo por fotograma.
 // Coordenadas de escena: x = x del mapa, z = y del mapa, y = altura en unidades (metros / 12).
 import * as THREE from 'three';
+import { registrarRenderer } from '../rendimiento';
 import './mundo3d.css';
 import { CamaraDeJuego, type Zoom } from './camara';
 import { DISTANCIA_CARGA, MUNDO3D } from './config';
@@ -131,6 +132,7 @@ export class VistaMundo3D {
   constructor(private readonly contenedor: HTMLElement, private readonly o: OpcionesVista) {
     this.sinNiebla = o.sinNiebla ?? false;
     this.renderer = new THREE.WebGLRenderer({ canvas: this.lienzo, antialias: true });
+    registrarRenderer('mundo', this.renderer); // para el panel de rendimiento (F3)
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5)); // en una pantalla retina, 2 sombrearía cada píxel cuatro veces
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;

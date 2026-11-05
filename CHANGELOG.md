@@ -3,6 +3,20 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.152.0] — 2026-11-05 · Panel de rendimiento con F3 · sin cambio de contrato
+
+Petición de Víctor (2026-11-05, hilo del motor: «visibilidad de rendimiento en cliente y servidor, que se pueda encender y apagar»):
+
+- **F3** abre y cierra un panel abajo a la derecha. Solo mide mientras está abierto (cerrado no cuesta nada):
+  - fotograma: fps y ms por fotograma (media, p95 y máximo de los últimos ~4 s);
+  - dibujo de cada vista 3D en pantalla (mundo y plaza): llamadas, triángulos, geometrías y texturas (`renderer.info`; las vistas se apuntan en
+    `src/rendimiento.ts`);
+  - memoria JS (solo en Chrome);
+  - red: ping, bytes y mensajes recibidos por segundo, lo que tarda en aplicarse cada foto o cambio, y cada orden por tipo (desde que sale hasta su
+    ResultadoOrden) con media y p95.
+  - «Copiar» deja todo en el portapapeles como JSON.
+- Los contadores de red (`src/contrato/medidas.ts`) van siempre: son sumas y colas cortas de 120 muestras. Prueba: `pruebas/medidas.test.ts`.
+
 ## [0.151.0] — 2026-11-04 · Fronteras de lo que solo se recuerda: recortadas donde chocan · sin cambio de contrato
 
 Víctor (2026-11-04): en la vista de mundo las fronteras se ven bien en lo que ves ahora, pero en la segunda capa de la niebla (lo explorado)

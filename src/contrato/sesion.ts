@@ -21,6 +21,8 @@ import {
 import { Almacen, Incoherencia } from './almacen';
 
 /** El cuerpo de una orden, sin `peticion_id` (lo pone la sesión): `{ case: 'crearHeroe', value: {...} }`. */
+import { medidas } from './medidas';
+
 export type CuerpoDeOrden = Exclude<MessageInitShape<typeof OrdenSchema>['cuerpo'], undefined>;
 
 export type EstadoSesion = 'desconectada' | 'conectando' | 'abierta' | 'reconectando' | 'cerrada';
@@ -107,6 +109,7 @@ export class Sesion {
     const peticionId = idDePeticion();
     const orden = create(OrdenSchema, { peticionId, versionEsperada, cuerpo });
     const mensaje = create(MensajeDeClienteSchema, { cuerpo: { case: 'orden', value: orden } });
+    medidas.ordenSale(peticionId, cuerpo.case ?? 'orden');
     return new Promise((resolver, rechazar) => {
       this.ordenes.set(peticionId, { resolver, rechazar });
       this.encolar(peticionId, mensaje);
@@ -170,7 +173,11 @@ export class Sesion {
     };
     // Solo cuenta lo que llega por la conexión vigente: tras `reiniciarConexion`, la vieja aún puede entregar lo que tenía en cola, y su secuencia
     // no es la de la nueva (se tomaba por un hueco y se reiniciaba otra vez, en bucle: los ámbitos se vaciaban y volvían a cada rato).
-    ws.onmessage = (ev) => { if (ws === this.ws) this.recibir(new Uint8Array(ev.data as ArrayBuffer)); };
+    ws.onmessage = (ev) => {
+      if (ws !== this.ws) return;
+      medidas.recibido((ev.data as ArrayBuffer).byteLength);
+      this.recibir(new Uint8Array(ev.data as ArrayBuffer));
+    };
     ws.onclose = () => this.alCerrarse(ws);
     ws.onerror = () => {};
   }
@@ -210,7 +217,9 @@ export class Sesion {
       case 'revocado': {
         let ambito: string | undefined;
         try {
+          const desde = performance.now();
           ambito = this.almacen.aplicar(c);
+          medidas.aplicado(performance.now() - desde);
         } catch (e) {
           if (e instanceof Incoherencia) {
             console.warn('[sesion] incoherencia, se reanuda:', e.message);
@@ -228,6 +237,7 @@ export class Sesion {
         break;
       }
       case 'resultado': {
+        medidas.ordenVuelve(c.value.peticionId);
         const p = this.ordenes.get(c.value.peticionId);
         this.ordenes.delete(c.value.peticionId);
         this.sacarDeEspera(c.value.peticionId);
@@ -244,6 +254,7 @@ export class Sesion {
       case 'pong': {
         const envio = Number(c.value.clienteEnvioMs);
         const rtt = ahoraLocal() - envio;
+        medidas.ping(rtt);
         if (c.value.reloj) this.ajustarReloj(c.value.reloj, rtt);
         break;
       }
@@ -353,6 +364,7 @@ export class Sesion {
     this.ordenes.clear();
     this.cronicas.clear();
     this.enEspera = [];
+    medidas.olvidarOrdenes();
   }
 
   private fijarEstado(e: EstadoSesion, error?: ErrorSesion): void {
