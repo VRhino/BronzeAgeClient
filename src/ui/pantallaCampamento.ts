@@ -4,7 +4,11 @@
 // tal cual en `#camp-error`. Los menús del jugador (héroe, escuadras, Facción) están en la barra superior (`barraJugador.ts`).
 import { ayuda } from './ayuda';
 import { chipLiderazgo } from './liderazgo';
-import { costoDeRefundacion, tropasReclutables, unidadesDeTropa, type ProyeccionJugador } from '../apiCliente';
+import { costoDeRefundacion, unidadesDeTropa, type ProyeccionJugador } from '../apiCliente';
+import { datosDeReclutamiento, grafoDe, htmlArbolDeLugar, montarArbolReclutamiento, nombreEdificio, ultimoDibujo, type EstadoPlaza, type EstadoTropa, type LugarDeReclutamiento } from './arbolReclutamiento';
+import { eraOrd, ultimaEraVisible, type DatosArbol } from './arbolTecnologias';
+import { iconoDeParte } from './hudInterior';
+import { iconoEdificio } from './iconosEdificio';
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { CampamentoMercenarios, Escuadron } from '../tiposDominio';
 import { confirmar } from './dialogo';
@@ -26,7 +30,6 @@ const nombreRecurso = (r: string): string => RECURSO_NOMBRE[r] ?? r;
 
 /** De dónde sale el oro de «Reclutar»: vive entre repintados, como el bien elegido del mercado. */
 let pagarConElegido: 'almacenPersonal' | 'carro' = 'almacenPersonal';
-const EDIFICIO_RECLUTA: Record<string, string> = { barracon: 'Barracón', galeriaDeTiro: 'Galería de tiro', caballerizas: 'Caballerizas' };
 
 /**
  * El carro que llevas en este campamento, como el motor (`carro_en_campamento`, e4923d4d): el de la columna en la que vas (dentro o a la puerta)
@@ -66,7 +69,7 @@ export function seccionesDeCampamento(p: ProyeccionJugador, c: Pick<CampamentoMe
 /** El ancho de la ventana de cada parte (`.asent-ventana[data-ancho]`): Mercenarios y Taberna a pantalla completa; Tropa y Mercado en una ventana
  * centrada como la de Misiones (0.129.0: al empezar la partida hay poco que poner en ellas); el resto, la normal. */
 export function anchoDeParteCampamento(parte: SeccionCampamento): 'completa' | 'centrada' | 'normal' {
-  return parte === 'mercenarios' || parte === 'taberna' ? 'completa' : parte === 'tropa' || parte === 'mercado' ? 'centrada' : 'normal';
+  return parte === 'mercenarios' || parte === 'taberna' || parte === 'tropa' ? 'completa' : parte === 'mercado' ? 'centrada' : 'normal';
 }
 
 function listaRecursos(recursos: Record<string, number>, e: Escapar): string {
@@ -115,68 +118,142 @@ function resumen(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): st
 }
 
 /**
- * RECLUTAR (backend 2026-10-02, Doc 1.9b): las tropas de los edificios militares del campamento, pagadas SOLO con oro y con la población del
- * campamento. El servidor manda, para quien reside, qué tropas hay (`mercadoCampamento.reclutamiento`), su precio por soldado ya con recargo,
- * reputación y descuento, si están desbloqueadas (las que no, no se enseñan) y los reclutas que quedan: aquí solo se multiplica por lo que falta y se compara con el oro.
+ * TROPA (Víctor, 2026-11-06): la misma interfaz que el reclutamiento de la plaza (`arbolReclutamiento.ts`), con «Campamento» donde dice Centro
+ * Urbano y, en ese carril, las tropas que presta el campamento (gratis, sin experiencia, se retiran si dejas de residir). Los demás carriles son
+ * los edificios militares del campamento (plegados si no los tiene), con lo que el servidor manda a quien reside (`mercadoCampamento.reclutamiento`):
+ * precio por soldado en oro con el equipo dentro (recargo, reputación y descuento ya aplicados), si está desbloqueada y los reclutas que quedan.
+ * Un clic abre la ficha con «Pedir prestada» o «Reclutar». Solo recluta: reponer va aparte, como en la plaza.
  */
-function reclutar(p: ProyeccionJugador, e: Escapar): string {
-  const heroe = p.heroe;
-  const oferta = p.mercadoCampamento?.reclutamiento;
-  const catalogo = tropasReclutables();
-  if (!oferta || !catalogo) return '<p class="asent-lado-nota">Cargando las tropas…</p>';
-  // Lo que el campamento aún no ha desbloqueado no se enseña.
-  const ofrecidas = oferta.tropas.flatMap((o) => { const t = o.desbloqueada && catalogo.find((x) => x.id === o.tropaId); return t ? [{ t, o }] : []; });
-  if (ofrecidas.length === 0) return `<p class="asent-lado-nota">${oferta.tropas.length === 0 ? 'Este campamento no tiene barracón, galería de tiro ni caballerizas: no ofrece tropa.' : 'Este campamento aún no ha desbloqueado ninguna tropa.'}</p>`;
-  const propias = new Map(heroe.escuadrones.filter((s) => !s.prestada).map((s) => [s.tropaId, s] as const));
-  const columna = p.ejercitos.find((x) => x.liderId === heroe.id);
-  const oroAlmacen = Math.floor(heroe.almacenPersonal?.['oro'] ?? 0);
-  const oroCarro = Math.floor(columna?.suministro?.['oro'] ?? 0);
-  if (pagarConElegido === 'carro' && !columna) pagarConElegido = 'almacenPersonal';
-  const oroOrigen = pagarConElegido === 'carro' ? oroCarro : oroAlmacen;
-  const equipo = (t: (typeof catalogo)[number]): string =>
-    [...Object.entries(t.costoEquipo).map(([r, n]) => `${n} ${nombreRecurso(r)}`), ...(t.caballos ? [`${t.caballos} caballo${t.caballos > 1 ? 's' : ''}`] : [])].join(', ') || 'sin equipo';
-  const filas = ofrecidas.map(({ t, o }) => {
-    const ya = propias.get(t.id);
-    const faltan = t.unidadesPorDefecto - (ya?.cantidad ?? 0);
-    const oro = Math.ceil(o.precioPorSoldado * Math.max(faltan, 0));
-    const motivo = faltan <= 0 ? 'Escuadra al completo.'
-        : oferta.poblacion < faltan ? `Faltan reclutas: hay ${Math.floor(oferta.poblacion)} y hacen falta ${faltan}.`
-          : oro > oroOrigen ? `No te llega el oro: ${oro} y tienes ${oroOrigen}.` : '';
-    return `<div class="mapa-lista-item con-tropa">${iconoEnFila(t.id)}<div><strong>${e(t.nombre)}</strong>
-        <span>${e(EDIFICIO_RECLUTA[t.edificio] ?? t.edificio)} · ${t.unidadesPorDefecto} hombres · escalón ${t.escalon} · equipo (ya en el precio): ${e(equipo(t))}</span>
-        <span>${ya ? `ya la tienes: ${ya.cantidad}/${t.unidadesPorDefecto}, ${dondeEstaLaEscuadra(ya, p)}` : 'aún no la tienes'}</span>
-        ${faltan > 0 ? `<div class="recl-costes"><span class="recl-coste${oro > oroOrigen ? ' falta' : ''}">🪙 ${formatoPrecio(o.precioPorSoldado)} por soldado · <strong>${oro} de oro</strong> por ${faltan}</span></div>` : ''}
-        ${motivo ? `<div><small class="asent-lado-nota">${e(motivo)}</small></div>` : ''}</div>
-      <button class="btn-secondary" type="button" data-reclutar="${e(t.id)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>${ya ? (faltan > 0 ? `Reponer ${faltan}` : 'Completa') : 'Reclutar'}</button></div>`;
-  }).join('');
-  return `
-    <p class="asent-lado-nota">Reclutas del campamento: <strong>${Math.floor(oferta.poblacion)}/${Math.floor(oferta.topePoblacion)}</strong></p>
-    <label class="mapa-lista-item"><span>Pagar con</span>
-      <select class="form-input" id="reclutar-pagar-con">
-        <option value="almacenPersonal"${pagarConElegido === 'almacenPersonal' ? ' selected' : ''}>Mi almacén personal (${oroAlmacen} de oro)</option>
-        ${columna ? `<option value="carro"${pagarConElegido === 'carro' ? ' selected' : ''}>El carro de mi columna (${oroCarro} de oro; a la puerta)</option>` : ''}
-      </select></label>
-    <div class="mapa-lista">${filas}</div>`;
+const CLAVE_ARBOL = 'campamento';
+
+function lugarCampamento(D: DatosArbol, p: ProyeccionJugador, c: CampamentoMercenarios): LugarDeReclutamiento {
+  const G = grafoDe(D);
+  const t = p.tecnologia;
+  const adoptadas = t?.propias?.adoptadas ?? p.tecnologiasAdoptadas ?? [];
+  const escuadras: Record<string, number> = {};
+  const prestadas: Record<string, Escuadron> = {};
+  for (const s of p.heroe.escuadrones) { if (s.prestada) prestadas[s.tropaId] = s; else escuadras[s.tropaId] = s.cantidad; }
+  const E: EstadoPlaza = { adoptadas, aparecidas: t?.propias?.aparecidas ?? [], eraMundo: t?.era ?? '', niveles: {}, escuadras };
+  const oferta = new Map((p.mercadoCampamento?.reclutamiento?.tropas ?? []).map((o) => [o.tropaId, o]));
+  const presta = new Set(TROPAS_PRESTAMO.map(([id]) => id));
+  const eraDe = (id: string): number => G.nodos.get(id)?.era ?? 1;
+  const mundo = t?.era ? eraOrd(D, t.era) : null;
+  // Lo que se puede hacer aquí no se esconde detrás de las Eras de tu Facción: la Era de lo que el campamento ya ofrece también se ve.
+  const eraVisible = Math.max(ultimaEraVisible(D, adoptadas), ...[...oferta.values()].filter((o) => o.desbloqueada).map((o) => eraDe(o.tropaId)), ...[...presta].map(eraDe));
+  const estado = (id: string): EstadoTropa => {
+    const tr = G.nodos.get(id)!.d;
+    if (tr.edificio === 'centroUrbano') return prestadas[id] ? 'tuya' : 'lista';
+    const o = oferta.get(id);
+    if (!o) return mundo !== null && eraDe(id) > mundo ? 'futura' : 'edificio';
+    if (!o.desbloqueada) return 'bloqueada';
+    return escuadras[id] !== undefined ? 'tuya' : 'lista';
+  };
+  const oro = (n: number): string => `<span class="ta-rec" title="Oro"><i aria-hidden="true">${RECURSO_ICONO['oro'] ?? '🪙'}</i><b>${formatoPrecio(n)}</b></span>`;
+  return {
+    clave: CLAVE_ARBOL, donde: 'este campamento', E, eraVisible, eraMundo: mundo, sinEdificios: true,
+    centro: { nombre: 'Campamento', icono: 'campamento', tropas: presta },
+    icono: (tipo, n) => (tipo === 'campamento' ? iconoDeParte('campamento', n) : iconoEdificio(tipo, n)),
+    plegado: (carril) => (carril !== 'centroUrbano' && !c.edificios.includes(carril) ? `Este campamento no tiene ${nombreEdificio(carril)}: aquí no se recluta` : null),
+    estado,
+    carta: (id, { EI }) => {
+      const tr = G.nodos.get(id)!.d, est = estado(id), o = oferta.get(id);
+      if (tr.edificio === 'centroUrbano') return est === 'tuya' ? `Prestada: <b>${prestadas[id]!.cantidad}</b> hombres` : 'Te la prestan gratis';
+      if (est === 'lista') return `Lista · ${oro(o!.precioPorSoldado)} por soldado`;
+      if (est === 'tuya') return `Tu escuadra <b>${escuadras[id]}</b>/${tr.unidadesPorDefecto}`;
+      if (est === 'edificio') return `Falta ${EI(tr.edificio, tr.nivelRequerido)} en el campamento`;
+      if (est === 'futura') return `Bloqueada: la Era ${['', 'I', 'II', 'III', 'IV', 'V'][eraDe(id)]} aún no empieza`;
+      return 'El campamento aún no la ofrece';
+    },
+    caja: (id, { EI }) => {
+      const tr = G.nodos.get(id)!.d, est = estado(id), o = oferta.get(id);
+      if (tr.edificio === 'centroUrbano') return est === 'tuya'
+        ? `<b>Te la han prestado</b> (${prestadas[id]!.cantidad} hombres, ${dondeEstaLaEscuadra(prestadas[id]!, p)}). Se retira si dejas de residir aquí.`
+        : '<b>Te la prestan gratis</b> para aprender a usar tropa antes de tener la tuya. No gana experiencia y se retira si dejas de residir en este campamento.';
+      return {
+        lista: `<b>Lista para reclutar</b> en este campamento por ${oro(o?.precioPorSoldado ?? 0)} de oro por soldado, con el equipo dentro.`,
+        tuya: `<b>Ya tienes su escuadra</b> (${escuadras[id]} de ${tr.unidadesPorDefecto} hombres). Un héroe tiene una escuadra por tropa.`,
+        edificio: `<b>El campamento tiene ${EI(tr.edificio)},</b> pero esta tropa pide ${EI(tr.edificio, tr.nivelRequerido)}.`,
+        adoptable: '',
+        bloqueada: '<b>El campamento aún no la ofrece.</b> Los campamentos ofrecen una tropa 72 h después de que la primera Facción descubra su tecnología, o cuando la adopte la mitad de las Facciones vivas.',
+        futura: `<b>Bloqueada:</b> la Era ${['', 'I', 'II', 'III', 'IV', 'V'][eraDe(id)]} aún no ha empezado en el mundo.`,
+      }[est];
+    },
+    porSoldado: (id) => {
+      const tr = G.nodos.get(id)!.d, o = oferta.get(id);
+      if (tr.edificio === 'centroUrbano') return '<h4>Préstamo</h4><ul><li>Gratis. La escuadra no gana experiencia.</li></ul>';
+      if (!o) return null;
+      return `<h4>Por soldado</h4><ul><li>${oro(o.precioPorSoldado)} con el equipo dentro (recargo, reputación y descuento ya aplicados)</li><li>1 recluta del campamento</li></ul>`;
+    },
+    leyenda: { lista: 'se recluta o te la prestan aquí', tuya: 'ya la tienes', edificio: 'el campamento no tiene el edificio a su nivel', bloqueada: 'el campamento aún no la ofrece', futura: 'bloqueada: su Era aún no empieza' },
+    ayuda: 'Pasa el ratón por una tropa para ver qué pide; haz clic para abrir su ficha y pedirla prestada o reclutarla. Arrastra el tablero para moverte.',
+  };
 }
 
+/** Lo que va bajo el tooltip de la ficha fija: pedir prestada, reclutar o por qué no. */
+function accionesCampamento(p: ProyeccionJugador, e: Escapar, id: string): string {
+  const d = ultimoDibujo(CLAVE_ARBOL);
+  const tr = d?.G.nodos.get(id)?.d;
+  if (!d || !tr) return '';
+  const nota = (txt: string): string => `<p class="ta-ficha-nota">${txt}</p>`;
+  const est = d.L.estado(id);
+  if (tr.edificio === 'centroUrbano') {
+    if (est === 'tuya') return '';
+    return `<button class="btn-primary ta-ficha-boton" type="button" data-ficha-prestamo="${e(id)}">Pedir prestada · ${unidadesDeTropa(id) ?? tr.unidadesPorDefecto} hombres, gratis</button>`;
+  }
+  if (est === 'tuya') return nota(`Ya tienes una escuadra de ${e(tr.nombre)}.`);
+  if (est !== 'lista') return '';
+  const oferta = p.mercadoCampamento?.reclutamiento;
+  const o = oferta?.tropas.find((x) => x.tropaId === id);
+  if (!oferta || !o) return '';
+  const columna = p.ejercitos.find((x) => x.liderId === p.heroe.id);
+  const oroOrigen = Math.floor(pagarConElegido === 'carro' ? columna?.suministro?.['oro'] ?? 0 : p.heroe.almacenPersonal?.['oro'] ?? 0);
+  const oro = Math.ceil(o.precioPorSoldado * tr.unidadesPorDefecto);
+  const motivo = oferta.poblacion < tr.unidadesPorDefecto ? `Faltan reclutas: hay ${Math.floor(oferta.poblacion)} y hacen falta ${tr.unidadesPorDefecto}.`
+    : oro > oroOrigen ? `No te llega el oro: ${oro} y tienes ${oroOrigen} en ${pagarConElegido === 'carro' ? 'el carro' : 'tu almacén'}.` : '';
+  return `${motivo ? nota(e(motivo)) : ''}<button class="btn-primary ta-ficha-boton" type="button" data-ficha-reclutar-camp="${e(id)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>⚔ Reclutar ${tr.unidadesPorDefecto} <span class="recl-costes"><span class="obra-coste${oro > oroOrigen ? ' falta' : ''}">${RECURSO_ICONO['oro'] ?? '🪙'}${oro}</span></span></button>`;
+}
+
+let escaparCamp: Escapar = (s) => s;
 function tropa(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): string {
   const heroe = p.heroe;
   if (!c.residentesIds.includes(heroe.id)) return '<p class="asent-lado-nota">Solo se presta o se recluta tropa en el campamento donde resides: pulsa «Residir aquí» en Resumen.</p>';
-  const prestadas = new Map(heroe.escuadrones.filter((s) => s.prestada).map((s) => [s.tropaId, s] as const));
-  return `
-    <strong class="heroe-sub">Reclutar${ayuda('camp:reclutar', 'Se paga solo con oro y con los reclutas del campamento. Solo hay una escuadra por tropa: si ya la tienes, se repone hasta el tope y se cobra lo que falta (la de una columna, con la columna a la puerta). Solo salen las tropas que el campamento ya ha desbloqueado.')}</strong>
-    ${reclutar(p, e)}
-    <strong class="heroe-sub">Tropa prestada${ayuda('camp:prestamo', 'Gratis, para aprender a usar tropa antes de tener la tuya. No gana experiencia. Se retira si dejas de residir en este campamento.')}</strong>
-    <div class="mapa-lista">${TROPAS_PRESTAMO.map(([id, nombre]) => {
-      const ya = prestadas.get(id);
-      return `<label class="mapa-lista-item con-tropa">${iconoEnFila(id)}<div><strong>${nombre}</strong><span>${ya ? `ya la tienes: ${ya.cantidad} hombres, ${dondeEstaLaEscuadra(ya, p)}` : `${unidadesDeTropa(id, () => { /* se pinta con el siguiente sondeo */ }) ?? '?'} hombres`}</span></div><input type="checkbox" data-prestamo="${id}"${ya ? ' disabled' : ''} /></label>`;
-    }).join('')}</div>
-    <div class="mapa-seleccion-acciones">
-      <button class="btn-secondary" type="button" id="btn-pedir-prestamo">Pedir</button>
-      ${prestadas.size > 0 ? '<button class="btn-secondary" type="button" id="btn-reponer-prestamo">Reponer bajas</button>' : ''}
-    </div>
-    <strong class="heroe-sub">Toda tu tropa</strong>
-    ${heroe.escuadrones.length > 0 ? `<div class="mapa-lista">${heroe.escuadrones.map((s) => filaEscuadra(s, p, e)).join('')}</div>` : '<p class="asent-lado-nota">Ninguna.</p>'}`;
+  const D = datosDeReclutamiento();
+  const oferta = p.mercadoCampamento?.reclutamiento;
+  if (!D || !oferta) return '<p class="asent-lado-nota">Cargando las tropas…</p>';
+  escaparCamp = e;
+  const columna = p.ejercitos.find((x) => x.liderId === heroe.id);
+  if (pagarConElegido === 'carro' && !columna) pagarConElegido = 'almacenPersonal';
+  const oroAlmacen = Math.floor(heroe.almacenPersonal?.['oro'] ?? 0);
+  const oroCarro = Math.floor(columna?.suministro?.['oro'] ?? 0);
+  const info = ayuda('camp:reclutar', 'Todas las tropas, en carriles por el edificio del campamento donde se reclutan; si el campamento no lo tiene, su carril se pliega. En el carril del Campamento, las que te presta gratis (no ganan experiencia y se retiran si dejas de residir aquí). Lo demás se paga solo con oro, con el equipo dentro, y con los reclutas del campamento. Un héroe tiene una escuadra por tropa.');
+  return `<div class="obra-titulo"><span class="faction-kicker">Tropa</span>
+      <span class="obra-chip" title="Reclutas del campamento">🧑 ${Math.floor(oferta.poblacion)}/${Math.floor(oferta.topePoblacion)} reclutas</span>
+      <label class="camp-pagar-con"><span>Pagar con</span>
+        <select class="form-input" id="reclutar-pagar-con">
+          <option value="almacenPersonal"${pagarConElegido === 'almacenPersonal' ? ' selected' : ''}>Mi almacén personal (${oroAlmacen} de oro)</option>
+          ${columna ? `<option value="carro"${pagarConElegido === 'carro' ? ' selected' : ''}>El carro de mi columna (${oroCarro} de oro; a la puerta)</option>` : ''}
+        </select></label>${info}</div>
+    <div class="tec-arbol recl-arbol">${htmlArbolDeLugar(D, lugarCampamento(D, p, c), e)}</div>`;
+}
+
+/** Cablea el árbol de la Tropa: la ficha pide prestada o recluta (`pedirPrestamo`, `reclutarEnCampamento`). */
+function cablearTropa(root: HTMLElement, p: ProyeccionJugador, ejecutar: Ejecutar): void {
+  const arbol = root.querySelector<HTMLElement>('.recl-arbol');
+  if (!arbol) return;
+  montarArbolReclutamiento(arbol, {
+    acciones: (id) => accionesCampamento(p, escaparCamp, id),
+    cablearAcciones: (caja) => {
+      const accion = (selector: string, tipo: string, params: (b: HTMLButtonElement) => object): void => caja.querySelectorAll<HTMLButtonElement>(selector).forEach((b) => b.addEventListener('click', async (ev) => {
+        ev.stopPropagation();
+        b.disabled = true;
+        const mensaje = await ejecutar(tipo, params(b));
+        const campo = caja.querySelector<HTMLElement>(`[data-campo="error-ficha-${CLAVE_ARBOL}"]`);
+        if (mensaje !== null) { b.disabled = false; if (campo) campo.textContent = mensaje; }
+      }));
+      accion('[data-ficha-prestamo]', 'pedirPrestamo', (b) => ({ tropaIds: [b.dataset.fichaPrestamo!] }));
+      accion('[data-ficha-reclutar-camp]', 'reclutarEnCampamento', (b) => ({ tropaId: b.dataset.fichaReclutarCamp!, pagarCon: pagarConElegido }));
+    },
+  }, CLAVE_ARBOL);
 }
 
 /** El bien elegido en el mercado, el resultado de la última compra y de dónde sale el oro: viven entre repintados (el sondeo de 3 s no los borra). */
@@ -409,8 +486,6 @@ export function cablearCampamento(root: HTMLElement, p: ProyeccionJugador, c: Ca
       })
     );
   };
-  const marcados = (atributo: string): string[] =>
-    Array.from(root.querySelectorAll<HTMLInputElement>(`input[${atributo}]:checked`)).map((i) => i.getAttribute(atributo)!);
 
   // Mudarse de residencia retira la tropa prestada por el campamento anterior (backend D45), esté donde esté: se avisa antes.
   const prestadas = p.heroe.escuadrones.filter((s) => s.prestada);
@@ -426,10 +501,8 @@ export function cablearCampamento(root: HTMLElement, p: ProyeccionJugador, c: Ca
     }, true);
   }
   conBoton('#btn-residir', 'residirEnCampamento', () => ({ heroeId, campamentoId: c.id }));
-  conBoton('#btn-pedir-prestamo', 'pedirPrestamo', () => ({ tropaIds: marcados('data-prestamo') }));
-  conBoton('#btn-reponer-prestamo', 'reponerPrestamo', () => ({}));
   root.querySelector<HTMLSelectElement>('#reclutar-pagar-con')?.addEventListener('change', (ev) => { pagarConElegido = (ev.target as HTMLSelectElement).value as typeof pagarConElegido; opciones.repintar(); });
-  conBoton('[data-reclutar]', 'reclutarEnCampamento', function () { return { tropaId: this.dataset.reclutar!, pagarCon: pagarConElegido }; });
+  cablearTropa(root, p, ejecutar);
   cablearMercado(root, c, opciones);
   cablearTablonMercenarios(root, ejecutar, (m) => { if (error) error.textContent = m; }, opciones.repintar);
   for (const tipo of ['aportarARefundacion', 'retirarDeRefundacion']) {

@@ -32,7 +32,7 @@ import { estadoCliente } from '../../src/ui/estadoCliente';
 import type { ContextoPlaza } from '../../src/ui/ganchos';
 import { iconoEdificio } from '../../src/ui/iconosEdificio';
 import type { ProyeccionJugador } from '../../src/apiCliente';
-import { anchoDeParteCampamento, htmlSeccionCampamento, seccionesDeCampamento, type SeccionCampamento } from '../../src/ui/pantallaCampamento';
+import { anchoDeParteCampamento, cablearCampamento, htmlSeccionCampamento, seccionesDeCampamento, type SeccionCampamento } from '../../src/ui/pantallaCampamento';
 import { htmlRielInterior, htmlTituloDeParte } from '../../src/ui/hudInterior';
 import type { CampamentoMercenarios } from '../../src/tiposDominio';
 import { fundacionLista } from '../../src/ui/panelFundacionDePlaza';
@@ -222,6 +222,15 @@ if (camp) {
   q.campamentosMercenarios = [c];
   q.mercadoCampamento = { precios: { trigo: 0.5, madera: 1.2, cobre: 4 }, cupoRestante: { trigo: 200, madera: 60, cobre: 10 },
     reclutamiento: { tropas: [{ tropaId: 'milicia_lanceros', precioPorSoldado: 1.5, desbloqueada: true }], poblacion: 80, topePoblacion: 120 } };
+  // `&camp=tropa`: el árbol de la Tropa (0.160.0) con un campamento de Barracón y Galería de tiro, una tropa prestada y lo que ofrece al empezar
+  if (camp === 'tropa') {
+    c.edificios = ['taberna', 'mercado', 'barracon', 'galeriaDeTiro'];
+    (q.heroe as { escuadrones: unknown[] }).escuadrones = [{ id: 's1', nombre: 'Milicia de lanceros', tropaId: 'milicia_lanceros', cantidad: 25, nivel: 1, prestada: true, contenedor: { tipo: 'campamento' } }];
+    q.tecnologia = { era: 'reinos_palaciales', capitalId: null, reveladas: [], logros: [], epicasPosibles: [], propias: qs.get('faccion') ? { adoptadas: ['leva_comunal', 'hostigamiento_tribal'], aparecidas: [] } : null };
+    (q.mercadoCampamento as { reclutamiento: unknown }).reclutamiento = { poblacion: 80, topePoblacion: 120, tropas: [
+      { tropaId: 'lanceros_mimbre', precioPorSoldado: 3.5, desbloqueada: true }, { tropaId: 'espadachines_cobre', precioPorSoldado: 4, desbloqueada: false },
+      { tropaId: 'honderos', precioPorSoldado: 3, desbloqueada: true }] };
+  }
   const secciones = seccionesDeCampamento(p, c);
   const raiz = document.querySelector<HTMLElement>('.plaza-3d')!;
   raiz.classList.add('camp-screen');
@@ -236,6 +245,9 @@ if (camp) {
     document.querySelector('.asent-cuerpo')!.insertAdjacentHTML('beforeend', `<section class="asent-ventana" data-ancho="${anchoDeParteCampamento(camp)}">
       <header class="asent-ventana-cab"><div class="asent-ventana-titulo">${htmlTituloDeParte(camp, secciones.find((x) => x.id === camp)!.etiqueta, e)}</div><button class="asent-ventana-cerrar">✕</button></header>
       <div class="asent-edif-cuerpo">${htmlSeccionCampamento(camp, p, c, e)}</div></section>`);
+    const cuerpo = document.querySelector<HTMLElement>('.asent-edif-cuerpo')!;
+    const repintar = (): void => { cuerpo.innerHTML = htmlSeccionCampamento(camp, p, c, e); cablearCampamento(cuerpo, p, c, async () => null, { ejecutarConDatos: async () => ({ error: null }), repintar }); };
+    if (camp === 'tropa') { repintar(); const vigia = setInterval(() => { if (cuerpo.querySelector('.ta-carta')) clearInterval(vigia); else repintar(); }, 300); }
   }
 }
 // El «!» de Territorio (0.136.0) con la cuenta de verdad (`fundacionLista`): se repinta cuando llegan los datos del coste.

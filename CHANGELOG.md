@@ -3,6 +3,18 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.160.0] — 2026-11-06 · La Tropa del campamento con el árbol de reclutamiento · sin cambio de contrato
+
+Petición de Víctor (2026-11-06): la Tropa del campamento de mercenarios, con la misma interfaz que el reclutamiento de la plaza (0.159.0),
+«Campamento» donde dice Centro Urbano y, en ese carril, pedir prestadas sus tropas. Ahora es el mismo árbol a ventana completa
+(`arbolReclutamiento.ts` admite un lugar: plaza o campamento). Carril «Campamento»: las tres tropas que presta (milicia de lanceros, leñadores,
+granjeros); su ficha lleva «Pedir prestada · N hombres, gratis» (`pedirPrestamo` con esa tropa) y, si ya la tienes, «Prestada: N hombres».
+Barracón, Galería de tiro y Caballerizas son los del campamento (plegados si no los tiene) con lo que el servidor ofrece a quien reside: «Lista ·
+🪙 X por soldado», «El campamento aún no la ofrece», o falta el edificio a su nivel. La ficha recluta con `reclutarEnCampamento` y el «Pagar
+con» de arriba (almacén personal o carro de la columna), deshabilitada y en rojo si no llega el oro o los reclutas. Se ven las Eras de tu
+Facción y, además, la de todo lo que el campamento ya ofrece; sin Facción, el tooltip no marca tecnologías ni la cuenta del 30 %. Como en la
+plaza, solo recluta: fuera «Reponer», «Reponer bajas» y la lista «Toda tu tropa» (está en Resumen). Banco: `pruebas/hud/?camp=tropa` (`&faccion=1`).
+
 ## [0.159.0] — 2026-11-06 · Árbol de reclutamiento en la pestaña Reclutamiento de la plaza · sin cambio de contrato
 
 Encargo de Víctor (2026-11-06, desde el hilo del árbol de tropas; prototipo https://claude.ai/artifact/WVuwAj63HGUQPnkgfKoKLZ): la pestaña

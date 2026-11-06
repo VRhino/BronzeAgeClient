@@ -5876,3 +5876,6 @@ button.carro-hueco:hover, .carro-hueco.activo { border-color: var(--oro); box-sh
 .ta-ficha-boton .recl-costes { display: inline-flex; flex-wrap: wrap; gap: 4px; }
 .ta-ficha-boton .obra-coste { display: inline-flex; align-items: center; gap: 2px; padding: 0 5px; border-radius: 2px; background: rgba(20,14,8,.78); color: var(--pergamino); font-size: 12px; letter-spacing: 0; opacity: 1; }
 .ta-ficha-boton .obra-coste.falta { color: #ff8a7c; box-shadow: inset 0 0 0 1px rgba(226,103,90,.7); }
+/* Tropa del campamento (0.160.0): «Pagar con» en la línea del título, sobre el árbol */
+.camp-pagar-con { display: inline-flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--ta-texto-2, #b9a88b); }
+.camp-pagar-con .form-input { width: auto; padding: 4px 8px; font-size: 0.8rem; margin: 0; }
