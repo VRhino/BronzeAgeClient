@@ -72,7 +72,7 @@ import { htmlInformeDeInspeccion } from './ui/interaccionAjena';
 import { cablearPanelObras, construidoAlClicar, htmlConstruidos, htmlConstruir, minutosDeObra } from './ui/panelObras';
 import { cablearTesoreria, htmlReservaRecursos } from './ui/panelTesoreria';
 import { montarPanelRendimiento } from './ui/panelRendimiento';
-import { cablearProduccionYRecetas, cablearVistaCiudad, edificioSeleccionado, elegirEdificio, htmlExtraccion, htmlRecetas, htmlTooltipEdificio, repintarFicha } from './ui/vistaCiudad';
+import { cablearProduccionYRecetas, cablearVistaCiudad, confirmarCancelarObra, edificioSeleccionado, elegirEdificio, htmlExtraccion, htmlRecetas, htmlTooltipEdificio, repintarFicha } from './ui/vistaCiudad';
 import { campamentoEnVista } from './ciudad3d/campamento';
 import { puebloEnVista } from './ciudad3d/pueblo';
 import { ciudadEnVista } from './ciudad3d/estado';
@@ -2400,6 +2400,12 @@ function cablearAccionesAsentLado(cont: HTMLElement, a: Asentamiento, cargo: 'go
   cont.querySelectorAll<HTMLButtonElement>('[data-mejorar]').forEach((b) => {
     b.addEventListener('click', () => void ejecutarAccionAsent('mejorarEdificioAhora', { asentamientoId: a.id, cargo, edificioId: b.dataset.mejorar }, b));
   });
+  // cancelar una obra o mejora en curso (motor 87f74932): no devuelve nada, se confirma
+  cont.querySelectorAll<HTMLButtonElement>('[data-obra-cancelar]').forEach((b) => b.addEventListener('click', () => {
+    const edificio = a.edificios.find((x) => x.id === b.dataset.obraCancelar);
+    if (!edificio) return;
+    void confirmarCancelarObra(edificio).then((ok) => { if (ok) void ejecutarAccionAsent('cancelarConstruccion', { asentamientoId: a.id, cargo, edificioId: edificio.id }, b); });
+  }));
   cont.querySelectorAll<HTMLButtonElement>('[data-cola-mover]').forEach((b) => {
     b.addEventListener('click', () => void ejecutarAccionAsent('moverEnCola', { asentamientoId: a.id, cargo, edificioId: b.dataset.edificio, direccion: b.dataset.colaMover }, b));
   });

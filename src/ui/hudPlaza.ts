@@ -316,7 +316,7 @@ export function htmlObrasHud(a: Asentamiento, esc: Escapar, puedeTocar = false, 
   const esperan = a.edificios.filter((e) => e.estado === 'en_cola').sort((x, y) => (y.prioridad ?? 0) - (x.prioridad ?? 0));
   if (!enMarcha.length && !esperan.length && !deMapa.length && !deAvanzada.length) return '';
   const filas = enMarcha.slice(0, 4).map(({ e, fin, que }) => `<div class="obras-hud-fila"><span class="obras-hud-icono">${iconoEdificio(e.tipo, 22)}</span>`
-    + `<span class="obras-hud-texto"><span class="obras-hud-linea"><strong>${esc(EDIFICIO_NOMBRE[e.tipo] ?? e.tipo)}</strong><b class="obras-hud-falta">${cuentaAtras(fin)}</b></span>`
+    + `<span class="obras-hud-texto"><span class="obras-hud-linea"><strong>${esc(EDIFICIO_NOMBRE[e.tipo] ?? e.tipo)}</strong><b class="obras-hud-falta">${cuentaAtras(fin)}</b>${puedeTocar ? `<button type="button" class="obras-hud-cancelar" data-obra-cancelar="${esc(e.id)}" title="${e.mejora ? 'Cancelar la mejora' : 'Cancelar la obra'} (no se devuelve nada)" aria-label="${e.mejora ? 'Cancelar la mejora' : 'Cancelar la obra'}">✕</button>` : ''}</span>`
     + `<small>${que}</small>${barraAvance(avanceDeObra(a, e))}</span></div>`).join('');
   const mas = enMarcha.length > 4 ? `<small class="obras-hud-mas">${enMarcha.length - 4} más en marcha</small>` : '';
   const casillas = esperan.map((e, i) => `<div class="obras-hud-casilla${e.danado ? ' danado' : ''}" title="${esc(`${i + 1}. ${EDIFICIO_NOMBRE[e.tipo] ?? e.tipo}${e.danado ? ' · reconstrucción' : ''}`)}">`

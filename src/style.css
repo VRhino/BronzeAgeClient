@@ -5640,3 +5640,10 @@ button.carro-hueco:hover, .carro-hueco.activo { border-color: var(--oro); box-sh
 .construido-nivel { position: absolute; top: 2px; right: 3px; font-size: 0.6rem; font-weight: 700; color: var(--oro); }
 .construido.mejorando { border-color: var(--obra-ambar); }
 .construido.danado { border-color: var(--terracota); }
+
+/* 0.155.0 · Cancelar una obra o mejora en curso (motor 87f74932): ✕ en su fila de «Obras» (solo con cargo, al pasar el ratón) y botón en la ficha */
+.obras-hud-cancelar { flex: none; margin-left: 2px; padding: 0 4px; border: 1px solid transparent; border-radius: 2px; background: none; color: var(--text-muted); font-size: 0.66rem; line-height: 1.4; cursor: pointer; opacity: 0; transition: opacity 0.12s; }
+.obras-hud-fila:hover .obras-hud-cancelar, .obras-hud-cancelar:focus-visible { opacity: 1; }
+.obras-hud-cancelar:hover, .obras-hud-cancelar:focus-visible { border-color: var(--obra-rojo); color: var(--obra-rojo); outline: none; }
+.ficha-cancelar-obra { margin-top: 6px; }
+.ficha-cancelar-obra:hover { border-color: var(--obra-rojo); color: var(--obra-rojo); }

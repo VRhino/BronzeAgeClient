@@ -18,6 +18,7 @@ import { mostrar as mostrarAviso } from './avisos';
 import { iconoEdificio } from './iconosEdificio';
 import { barraAvance, chipsDeCoste, cuentaAtras, duracion } from './juegoVisual';
 import { avanceDeObra } from './panelObras';
+import { confirmar } from './dialogo';
 
 type Escapar = (valor: string) => string;
 type Cargo = 'gobernador' | 'maestroObras' | null;
@@ -114,6 +115,10 @@ function htmlFicha(p: ProyeccionJugador, a: Asentamiento, edificio: Edificio, e:
   } else if (cargo && edificio.estado === 'en_cola') {
     acciones = `<button class="btn-secondary" type="button" data-ficha-quitar="${e(edificio.id)}">Quitar de la cola</button>`;
   }
+  // Cancelar la obra o la mejora en curso (motor 87f74932, `cancelarConstruccion`): solo con cargo y solo en marcha; no devuelve nada, se confirma.
+  if (cargo && (edificio.estado === 'en_construccion' || edificio.mejora)) {
+    acciones += `<button class="btn-secondary ficha-cancelar-obra" type="button" data-ficha-cancelar-obra="${e(edificio.id)}" title="No se devuelve nada de lo pagado">✕ ${edificio.mejora ? 'Cancelar la mejora' : 'Cancelar la obra'}</button>`;
+  }
 
   // lo que el Albergue de caravanas suma a la flota del Mercado a su nivel (motor b5e27ace); sin Mercado activo no suma nada
   const cupo = edificio.tipo === 'albergueCaravanas' ? niveles?.[String(nivel)] : undefined;
@@ -185,7 +190,19 @@ export function repintarFicha(): void {
     fichaEl!.querySelector('[data-ficha-cerrar]')?.addEventListener('click', () => { seleccion = null; alCambiar(); });
     fichaEl!.querySelector<HTMLElement>('[data-ficha-mejorar]')?.addEventListener('click', (ev) => void lanzar('mejorarEdificioAhora', { asentamientoId: a.id, cargo: cargoDe(a, p.heroeId), edificioId: edificio.id }, ev.currentTarget as HTMLElement));
     fichaEl!.querySelector<HTMLElement>('[data-ficha-quitar]')?.addEventListener('click', (ev) => void lanzar('quitarDeCola', { asentamientoId: a.id, cargo: cargoDe(a, p.heroeId), edificioId: edificio.id }, ev.currentTarget as HTMLElement));
+    fichaEl!.querySelector<HTMLElement>('[data-ficha-cancelar-obra]')?.addEventListener('click', (ev) => {
+      const boton = ev.currentTarget as HTMLElement;
+      void confirmarCancelarObra(edificio).then((ok) => { if (ok) void lanzar('cancelarConstruccion', { asentamientoId: a.id, cargo: cargoDe(a, p.heroeId), edificioId: edificio.id }, boton); });
+    });
   }, 'ficha-edificio');
+}
+
+/** La confirmación de cancelar una obra o una mejora en curso: no se devuelve nada (también la usa «Obras» del panel izquierdo). */
+export function confirmarCancelarObra(edificio: Edificio): Promise<boolean> {
+  const nombre = nombreDe(edificio.tipo);
+  return edificio.mejora
+    ? confirmar(`${nombre} se queda en su nivel y no se devuelve nada de lo pagado. La siguiente obra de la cola empieza ya.`, { titulo: '¿Cancelar la mejora?', aceptar: 'Cancelar la mejora', cancelar: 'Seguir', peligro: true })
+    : confirmar(`${nombre} desaparece con su sitio y no se devuelve nada de lo pagado. La siguiente obra de la cola empieza ya.`, { titulo: '¿Cancelar la obra?', aceptar: 'Cancelar la obra', cancelar: 'Seguir', peligro: true });
 }
 
 /** Cablea, una vez al montar la plaza, el clic sobre el lienzo, la ficha flotante y el clic en las filas de la lista de edificios. */

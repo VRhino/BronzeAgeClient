@@ -730,7 +730,10 @@ export function montarEleccionCampamento(raiz: HTMLElement, o: OpcionesEleccion)
     if (!mensaje || !vivo) return;
     botonCrear.disabled = false;
     const error = raiz.querySelector<HTMLElement>('#error-heroe');
-    if (error) error.textContent = mensaje;
+    // Nombre ya en uso (`heroe.nombre_en_uso`, motor 87f74932; sin distinguir mayúsculas): se dice y se deja el nombre marcado para escribir otro.
+    const enUso = /ya hay un héroe con ese nombre/i.test(mensaje);
+    if (error) error.textContent = enUso ? `${mensaje}. Elige otro nombre.` : mensaje;
+    if (enUso) { const input = raiz.querySelector<HTMLInputElement>('#input-nombre-heroe'); input?.focus(); input?.select(); }
   });
 
   // ─────────── arranque ───────────

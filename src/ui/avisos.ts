@@ -300,6 +300,21 @@ export function procesar(e: EventoDominio, heroeId: string, modo: Modo): void {
     anotar({ ...base, texto, clase: 'mirada', titulo: 'Unirse en campo', categoria: 'movimientos', urgente, clave: e.codigo }, modo, e.codigo !== 'columna.union_en_campo');
     return;
   }
+  if (e.codigo === 'bandidos.campamento_vencido') {
+    // Una columna (o la escolta de una caravana) que lleva caravanas vence la emboscada y el campamento cae (motor 87f74932); el oro, en milésimas.
+    const p = (e.payload ?? {}) as { nivel?: number; oro?: number };
+    const oro = Math.floor(Number(p.oro ?? 0) / 1000);
+    const texto = `Vencéis a los bandidos que os emboscaron${p.nivel ? ` (nivel ${p.nivel})` : ''}: el campamento cae${oro > 0 ? ` y os lleváis ${oro} de oro` : ''}.`;
+    anotar({ ...base, texto, clase: 'combate', titulo: 'Bandidos', categoria: 'combate', urgente: false, clave: `${e.codigo}|${e.version}` }, modo);
+    return;
+  }
+  if (e.codigo === 'construccion.obra_cancelada') {
+    // Alguien con cargo cancela una obra o mejora en curso (motor 87f74932): no se devuelve nada.
+    const p = (e.payload ?? {}) as { mejora?: number };
+    const texto = p.mejora ? 'Se ha cancelado una mejora en curso de la plaza: el edificio sigue en su nivel.' : 'Se ha cancelado una obra en curso de la plaza.';
+    anotar({ ...base, texto, clase: 'mirada', titulo: 'Obras', categoria: 'economia', urgente: false, clave: `${e.codigo}|${e.version}` }, modo);
+    return;
+  }
   if (CODIGOS_DE_ENCARGO.has(e.codigo)) {
     // Encargos de caravana (motor 2c4bca6, Comercio_Caravanas §12): narración de economía, agrupada por caravana y tipo.
     const texto = textoDeEncargo(e.codigo, (e.payload ?? {}) as Record<string, unknown>);

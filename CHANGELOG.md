@@ -3,6 +3,20 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.155.0] — 2026-11-06 · Cancelar obras en curso, nombre de héroe en uso y avisos de la tanda del motor · contrato 87f74932
+
+Lo del cliente de la tanda del motor del 2026-11-06 (main 87f74932, contrato 0.15.0):
+
+- **Cancelar una obra o una mejora en curso** (orden `cancelar_construccion`, 183). En la ficha del edificio sale «✕ Cancelar la obra»
+  o «✕ Cancelar la mejora», y en cada fila en marcha de «Obras» del panel izquierdo un ✕ que aparece al pasar el ratón. Solo lo ve quien
+  tiene el cargo (gobernador o maestro de obras) y solo en obras, reconstrucciones o mejoras en curso. Pide confirmación antes de mandarla
+  y avisa de que no se devuelve nada de lo pagado.
+- **Nombre de héroe en uso**: si `crear_heroe` responde `heroe.nombre_en_uso`, el campo del nombre dice «ya hay un héroe con ese nombre.
+  Elige otro nombre.» y queda seleccionado para escribir otro.
+- **Avisos nuevos**: `bandidos.campamento_vencido` (vencéis a los bandidos que os emboscaron, el campamento cae y os lleváis su oro) y
+  `construccion.obra_cancelada` (obra o mejora cancelada).
+- La Vía Rápida en pueblos, aldeas y avanzadas no pide nada al cliente: `completa_en` ya llega acortado.
+
 ## [0.154.0] — 2026-11-06 · Mundo 3D: carteles sobre columnas, ejércitos y caravanas · sin cambio de contrato
 
 Petición de Víctor (2026-11-06), en la vista del mundo 3D:
