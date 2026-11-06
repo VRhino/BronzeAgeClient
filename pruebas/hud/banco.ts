@@ -19,10 +19,10 @@ import { svgSigilo } from '../../src/sigilo/sigilo';
 import { htmlBarraJugador } from '../../src/ui/barraJugador';
 import { cablearEleccionBarra, htmlBlasonHud, htmlEleccionBarra, htmlObrasHud, htmlPieDePlaza, ICONO_RIEL, vigilarPieArriba } from '../../src/ui/hudPlaza';
 import { cablearProduccionYRecetas, cablearVistaCiudad, elegirEdificio, htmlExtraccion, htmlRecetas, repintarFicha } from '../../src/ui/vistaCiudad';
-import { cablearPanelObras, htmlConstruir } from '../../src/ui/panelObras';
+import { cablearPanelObras, htmlConstruidos, htmlConstruir } from '../../src/ui/panelObras';
 import { cablearCaravanas, cablearRutas, htmlCaravanas, htmlRutas } from '../../src/ui/panelMercado';
 import { SUBPESTANA_GUARNICION } from '../../src/ui/panelGuarnicion';
-import { FICHA_OBRA } from '../../src/ui/pueblos';
+import { FICHA_OBRA, SUBPESTANA_PUEBLOS } from '../../src/ui/pueblos';
 import { ahora as ahoraJuego } from '../../src/ui/juegoVisual';
 import { cablearTesoreria, htmlReservaRecursos } from '../../src/ui/panelTesoreria';
 import { htmlAutoConstruccion } from '../../src/ui/panelCentro';
@@ -64,7 +64,7 @@ let barra = '';
 try { barra = htmlBarraJugador(p, e, '<button type="button" class="jugador-boton-info">?</button>'); } catch { barra = '<header class="jugador-barra"></header>'; }
 const riel = RIEL.filter(([, , , bloq]) => !bloq).map(([id, nombre, icono], i) => `<button type="button" class="asent-riel-boton${id === ventana ? ' activo' : ''}" data-etiqueta="${nombre}">${icono}${i === 0 ? '<b class="asent-riel-insignia">2</b>' : ''}</button>`).join('');
 // el cajón de Construcción, como `htmlCajonConstruir` de main.ts
-const cajon = (): string => `<div class="cajon-construir"><div class="cajon-construir-cab"><button type="button" class="cajon-volver">← Volver</button><h2>${ICONO_RIEL.construccion}<span>Construcción</span></h2>${htmlAutoConstruccion(a)}</div><div class="cajon-construir-cuerpo">${htmlConstruir(a, 'gobernador', e)}</div></div>`;
+const cajon = (): string => `<div class="cajon-construir"><div class="cajon-construir-cab"><button type="button" class="cajon-volver">← Volver</button><h2>${ICONO_RIEL.construccion}<span>Construcción</span></h2>${htmlAutoConstruccion(a)}</div><div class="cajon-construir-cuerpo">${htmlConstruir(a, 'gobernador', e)}</div>${htmlConstruidos(a, e)}</div>`;
 document.getElementById('app')!.innerHTML = `<div class="asent-screen plaza-3d${construir ? ' construyendo' : ''}">
   ${barra}
   <div class="asent-cuerpo">
@@ -78,7 +78,7 @@ document.getElementById('app')!.innerHTML = `<div class="asent-screen plaza-3d${
     <nav class="asent-riel${construir ? ' asent-riel-cajon' : ''}">${construir ? '' : riel}</nav>
     <div class="asent-lienzo asent-minimapa"><canvas id="mapa" width="900" height="900"></canvas></div>
     <header class="asent-barra"><div class="asent-barra-acciones"><button id="btn-salir-mundo" class="btn-primary" type="button">Salir al mundo</button></div></header>
-    ${ventana ? `<section class="asent-ventana" data-ancho="${ventana === 'mercado' || ventana === 'taberna' || ventana === 'almacen' || ventana === 'caravanas' ? 'completa' : ventana === 'reclutamiento' ? 'ancha' : ''}"><header class="asent-ventana-cab"><div class="asent-ventana-titulo"><h2>${ventana}</h2></div><button class="asent-ventana-cerrar">✕</button></header><div class="asent-edif-cuerpo">${ventana === 'almacen' || ventana === 'caravanas' ? '' : '<p>Contenido de la ventana.</p>'.repeat(40)}</div></section>` : ''}
+    ${ventana ? `<section class="asent-ventana" data-ancho="${ventana === 'mercado' || ventana === 'taberna' || ventana === 'almacen' || ventana === 'caravanas' || ventana === 'territorio' ? 'completa' : ventana === 'reclutamiento' ? 'ancha' : ''}"><header class="asent-ventana-cab"><div class="asent-ventana-titulo"><h2>${ventana}</h2></div><button class="asent-ventana-cerrar">✕</button></header><div class="asent-edif-cuerpo">${ventana === 'almacen' || ventana === 'caravanas' ? '' : '<p>Contenido de la ventana.</p>'.repeat(40)}</div></section>` : ''}
   </div>
 </div>`;
 vigilarPieArriba(document.querySelector<HTMLElement>('.plaza-3d'));
@@ -248,7 +248,13 @@ function avisoFundacion(): void {
   if (lista) boton?.insertAdjacentHTML('beforeend', '<b class="asent-aviso-atencion">!</b>');
   if (ventana === 'territorio') {
     const cuerpo = document.querySelector<HTMLElement>('.asent-edif-cuerpo')!;
-    cuerpo.innerHTML = `<div class="asent-tabs asent-subtabs"><button class="asent-tab activo" type="button">Pueblos y aldeas</button><button class="asent-tab" type="button">Fundación${lista ? '<b class="asent-aviso-atencion">!</b>' : ''}</button></div><p>…</p>`;
+    // 0.153.0: la de verdad, a ventana completa (zona, pueblos y marcar a la izquierda; avanzadas a la derecha), con las obras de `?obrasMapa=1`
+    (p as unknown as { obrasDeMapa: unknown[] }).obrasDeMapa = obrasMapa();
+    a.cargos = { ...(a.cargos ?? {}), gobernadorId: 'h' } as typeof a.cargos;
+    a.faccionId = a.faccionId || 'fac-1';
+    (p as unknown as { faccionId: string }).faccionId = a.faccionId;
+    const c = { proyeccion: p, asentamiento: a, cuerpo, ejecutar: async () => null, refrescar: () => undefined, cargo: 'gobernador', resideAqui: true, escapar: e } as unknown as ContextoPlaza;
+    cuerpo.innerHTML = `<div class="asent-tabs asent-subtabs"><button class="asent-tab activo" type="button">Pueblos y aldeas</button><button class="asent-tab" type="button">Fundación${lista ? '<b class="asent-aviso-atencion">!</b>' : ''}</button></div>${SUBPESTANA_PUEBLOS.html(c)}`;
   }
 }
 avisoFundacion();

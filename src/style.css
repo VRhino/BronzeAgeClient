@@ -5313,7 +5313,7 @@ body:has(.eleccion-clic) .aviso-global { visibility: hidden; }
    Construcción como cajón del riel (0.109.0, Víctor 2026-11-03): al pulsar Construcción el riel se esconde y en su sitio sale el cajón, con
    «Volver», la auto-construcción (solo con cargo) y la rejilla de lo que se puede poner en la cola. La barra de abajo sube con él (--riel-alto).
    ===================================================================================== */
-.plaza-3d.construyendo { --riel-alto: 212px; }
+.plaza-3d.construyendo { --riel-alto: 276px; } /* 0.153.0: +64 para la barra de construidos */
 .plaza-3d .asent-riel.asent-riel-cajon {
   /* entre «Salir al mundo» (abajo a la izquierda, 0.113.0) y el minimapa */
   left: calc(16px + 210px);
@@ -5339,9 +5339,9 @@ body:has(.eleccion-clic) .aviso-global { visibility: hidden; }
 .cajon-construir-cuerpo .obra-grupos { position: sticky; top: 0; z-index: 1; background: rgba(26, 19, 12, 0.98); }
 .cajon-construir-cuerpo .obra-grupo { flex: 0 1 92px; }
 .cajon-construir-cuerpo .obra-construir-rejilla { margin-bottom: 0; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
-@media (max-height: 820px) { .plaza-3d.construyendo { --riel-alto: 184px; } }
+@media (max-height: 820px) { .plaza-3d.construyendo { --riel-alto: 248px; } }
 @media (max-width: 600px) {
-  .plaza-3d.construyendo { --riel-alto: 230px; }
+  .plaza-3d.construyendo { --riel-alto: 294px; }
   .plaza-3d .asent-riel.asent-riel-cajon { width: auto; left: 8px; right: 8px; transform: none; max-width: none; }
   .plaza-3d.construyendo .asent-barra { display: none; }
   .cajon-construir-cab { flex-wrap: wrap; gap: 6px 10px; }
@@ -5627,3 +5627,16 @@ button.carro-hueco:hover, .carro-hueco.activo { border-color: var(--oro); box-sh
 .rendimiento-grupo th { text-align: right; color: var(--text-muted); font-weight: 400; }
 .rendimiento-grupo td { text-align: right; padding: 0 0 0 6px; }
 .rendimiento-grupo th:first-child, .rendimiento-grupo td:first-child { text-align: left; padding-left: 0; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 0.153.0 · La barra de los edificios construidos, abajo del cajón de Construcción (Víctor, 2026-11-06): un cuadrito junto a otro, con scroll de lado */
+.cajon-construidos { flex: none; display: flex; align-items: center; gap: 8px; padding: 5px 10px 6px; border-top: 1px solid var(--bronce-osc); background: rgba(10, 7, 4, 0.55); min-width: 0; }
+.cajon-construidos-cab { flex: none; writing-mode: vertical-rl; transform: rotate(180deg); font-family: var(--fuente-titulo); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+.cajon-construidos-fila { flex: 1; min-width: 0; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: thin; padding-bottom: 2px; }
+.construido { position: relative; flex: none; width: 64px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 2px 3px; border: 1px solid var(--bronce-osc); border-radius: 3px; background: linear-gradient(180deg, rgba(52, 39, 23, 0.95), rgba(22, 16, 10, 0.95)); color: var(--oro-claro); cursor: pointer; --relleno: rgba(205, 160, 90, 0.25); }
+.construido:hover, .construido:focus-visible { border-color: var(--oro); outline: none; }
+.construido-icono { display: flex; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6)); }
+.construido-nombre { max-width: 100%; font-size: 0.6rem; line-height: 1.1; text-align: center; color: var(--pergamino); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.construido-n { position: absolute; top: 2px; left: 3px; font-size: 0.58rem; font-weight: 700; color: var(--pergamino); }
+.construido-nivel { position: absolute; top: 2px; right: 3px; font-size: 0.6rem; font-weight: 700; color: var(--oro); }
+.construido.mejorando { border-color: var(--obra-ambar); }
+.construido.danado { border-color: var(--terracota); }

@@ -332,12 +332,14 @@ function htmlPueblos(c: ContextoPlaza): string {
   const gestiona = c.cargo !== null && c.resideAqui;
   const { usados, total } = cupo(p, a);
   const lleno = total !== null && usados >= total;
-  return `${htmlZona(p, a, e)}
+  // A ventana completa (Víctor, 2026-11-06): la zona, los pueblos y marcar uno a la izquierda; las avanzadas a la derecha.
+  const avanzadas = esDeMiFaccion(p, a) ? htmlAvanzadasDeLaPlaza(p, a, gestiona, e) : '';
+  return `<div class="cols-completa territorio-cols"><div class="col-completa">${htmlZona(p, a, e)}
     <div class="obra-titulo"><span class="faction-kicker">Pueblos</span><span class="obra-chip${lleno ? ' lleno' : ''}" title="Cupo de pueblos por el nivel de la plaza">🏘 ${usados} / ${total ?? '—'}${total ? casillas(usados, total) : ''}</span>${ayuda('plaza:pueblos', 'Un pueblo es de la plaza: se marca aquí, una columna de tu Facción lleva sus materiales hasta la obra en el mapa y los entrega a su puerta (cualquier ciudadano de la columna), y con todo entregado se levanta. Su carro acarrea lo que produce a la plaza.')}</div>
     ${pueblos.length + obras.length === 0 ? '<p class="mapa-lista-vacia">Esta plaza aún no tiene pueblos.</p>'
       : `<div class="pueblo-cartas">${pueblos.map((x) => tarjetaPueblo(p, a, x, gestiona, obras, e)).join('')}${obras.map((o) => tarjetaObra(p, a, o, gestiona, e)).join('')}</div>`}
     ${gestiona ? htmlMarcar(p, a, e) : '<p class="asent-lado-nota">Los pueblos los marca, mejora y destruye el Gobernador o el Maestro de Obras, residente y dentro de la plaza.</p>'}
-    ${esDeMiFaccion(p, a) ? htmlAvanzadasDeLaPlaza(p, a, gestiona, e) : ''}`;
+    </div>${avanzadas ? `<div class="col-completa">${avanzadas}</div>` : ''}</div>`;
 }
 
 const ESTADO_CARRO: Record<string, string> = { disponible: 'parado en el pueblo', en_transito: 'camino de la plaza, cargado', retornando: 'volviendo vacío al pueblo', preparando: 'cargando', adjunta: 'enganchado a una columna', aparcada: 'aparcado' };

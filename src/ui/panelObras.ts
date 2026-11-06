@@ -151,6 +151,38 @@ export function htmlConstruir(a: Asentamiento, cargo: Cargo, esc: Escapar): stri
     <div class="obra-construir-rejilla">${casillas.join('') || '<p class="mapa-lista-vacia">Ahora no hay nada que se pueda construir aquí.</p>'}</div>`;
 }
 
+/** La barra de abajo del cajón de Construcción (Víctor, 2026-11-06): los edificios ya construidos de la plaza, un cuadrito por tipo junto a otro con
+ * su icono, su nombre, cuántos hay (×N) y su nivel (el más alto), en el orden de los grupos de Construir. Por tipo y no uno a uno: una plaza grande
+ * tiene cientos de viviendas. Un clic elige en la vista 3D uno de ese tipo, y el siguiente clic el siguiente (`data-construido` = sus ids). */
+export function htmlConstruidos(a: Asentamiento, esc: Escapar): string {
+  const orden = (t: string): number => { const i = GRUPOS_CONSTRUIR.findIndex((g) => g.id === grupoDe(t)); return i < 0 ? GRUPOS_CONSTRUIR.length : i; };
+  const porTipo = new Map<string, Edificio[]>();
+  for (const e of a.edificios) if (e.estado === 'activo') porTipo.set(e.tipo, [...(porTipo.get(e.tipo) ?? []), e]);
+  if (!porTipo.size) return '';
+  const tipos = [...porTipo.keys()].sort((x, y) => orden(x) - orden(y) || nombreDe(x).localeCompare(nombreDe(y), 'es'));
+  const casillas = tipos.map((t) => {
+    const lista = porTipo.get(t)!;
+    const niveles = lista.map((e) => e.nivelInterno ?? 1);
+    const max = Math.max(...niveles), min = Math.min(...niveles);
+    const mejorando = lista.filter((e) => e.mejora).length, danados = lista.filter((e) => e.danado).length;
+    const notas = [mejorando ? `${mejorando} mejorándose` : '', danados ? `${danados} dañado${danados > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ');
+    const titulo = `${nombreDe(t)}${lista.length > 1 ? ` ×${lista.length}` : ''} · nivel ${min === max ? max : `${min} a ${max}`}${notas ? ` · ${notas}` : ''}`;
+    return `<button type="button" class="construido${danados ? ' danado' : ''}${mejorando ? ' mejorando' : ''}" data-construido="${esc(lista.map((e) => e.id).join(' '))}" title="${esc(titulo)}" aria-label="${esc(titulo)}">
+      <span class="construido-icono">${iconoEdificio(t, 24)}</span><span class="construido-nombre">${esc(nombreDe(t))}</span>${lista.length > 1 ? `<b class="construido-n">×${lista.length}</b>` : ''}<b class="construido-nivel">${max}</b></button>`;
+  }).join('');
+  const total = [...porTipo.values()].reduce((n, l) => n + l.length, 0);
+  return `<div class="cajon-construidos" aria-label="Edificios construidos"><span class="cajon-construidos-cab" title="${total} edificios">Construidos</span><div class="cajon-construidos-fila">${casillas}</div></div>`;
+}
+
+/** Con varios del mismo tipo, cada clic en su cuadrito elige el siguiente. */
+const siguienteConstruido = new Map<string, number>();
+export function construidoAlClicar(ids: string): string {
+  const lista = ids.split(' ').filter(Boolean);
+  const k = siguienteConstruido.get(ids) ?? 0;
+  siguienteConstruido.set(ids, (k + 1) % lista.length);
+  return lista[k % lista.length]!;
+}
+
 /** Las pestañas de «Construir»: cambian el tipo que se ve y repintan. */
 export function cablearPanelObras(raiz: ParentNode, repintar: () => void): void {
   raiz.querySelectorAll<HTMLButtonElement>('[data-grupo-construir]').forEach((b) => b.addEventListener('click', () => { grupoConstruir = b.dataset.grupoConstruir!; repintar(); }));

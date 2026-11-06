@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.153.0] — 2026-11-06 · Construcción con la barra de construidos y Territorio a ventana completa · sin cambio de contrato
+
+Petición de Víctor (2026-11-06):
+
+- Construcción (el cajón del riel): abajo, una barra con los edificios ya construidos, un cuadrito por tipo junto a otro con su icono, su nombre,
+  cuántos hay (×N) y su nivel más alto; ámbar si alguno se está mejorando y rojo si alguno está dañado. Un clic elige uno de ese tipo en la vista
+  3D (y el siguiente clic, el siguiente). Por tipo y no uno a uno: una plaza grande tiene cientos de viviendas. El cajón crece 64 px.
+- Territorio pasa a ventana completa: la zona, los pueblos y «Marcar un pueblo nuevo» a la izquierda y las avanzadas a la derecha (en una ventana
+  de 1000 px o más; más estrecha, una debajo de otra). Banco: `pruebas/hud/?ventana=territorio&obrasMapa=1`.
+
 ## [0.152.0] — 2026-11-05 · Panel de rendimiento con F3 · sin cambio de contrato
 
 Petición de Víctor (2026-11-05, hilo del motor: «visibilidad de rendimiento en cliente y servidor, que se pueda encender y apagar»):

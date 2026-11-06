@@ -69,7 +69,7 @@ import { cablearPanelEjercito, ejercitosDeLaFaccion, htmlEjercitosFaccion, htmlF
 import { invalidar, olvidarEdicion, pintar, vaciar } from './ui/repintado';
 import { ayuda } from './ui/ayuda';
 import { htmlInformeDeInspeccion } from './ui/interaccionAjena';
-import { cablearPanelObras, htmlConstruir, minutosDeObra } from './ui/panelObras';
+import { cablearPanelObras, construidoAlClicar, htmlConstruidos, htmlConstruir, minutosDeObra } from './ui/panelObras';
 import { cablearTesoreria, htmlReservaRecursos } from './ui/panelTesoreria';
 import { montarPanelRendimiento } from './ui/panelRendimiento';
 import { cablearProduccionYRecetas, cablearVistaCiudad, edificioSeleccionado, elegirEdificio, htmlExtraccion, htmlRecetas, htmlTooltipEdificio, repintarFicha } from './ui/vistaCiudad';
@@ -2238,6 +2238,8 @@ function renderPanelEdificios(): void {
       riel.querySelector('[data-riel-volver]')?.addEventListener('click', () => abrirVentanaPlaza(null));
       cablearAccionesAsentLado(riel, a, cargo);
       cablearPanelObras(riel, renderPanelEdificios);
+      // la barra de construidos: un clic elige el edificio en la vista 3D, con su ficha
+      riel.querySelectorAll<HTMLButtonElement>('[data-construido]').forEach((b) => b.addEventListener('click', () => elegirEdificio(construidoAlClicar(b.dataset.construido!))));
     }, 'riel:construir');
   } else {
     const enMarcha = a.edificios.filter((e) => e.mejora || e.estado === 'en_construccion').length;
@@ -2251,7 +2253,8 @@ function renderPanelEdificios(): void {
   pintarVentanaPlaza(p, a, ajena);
 }
 
-/** El cajón de Construcción, en el sitio del riel: «Volver», la auto-construcción y lo que se puede poner en la cola, por tipos. Solo con cargo
+/** El cajón de Construcción, en el sitio del riel: «Volver», la auto-construcción, lo que se puede poner en la cola, por tipos, y abajo la barra de
+ * los edificios ya construidos (0.153.0). Solo con cargo
  * (sin él, el botón ni sale). */
 function htmlCajonConstruir(a: Asentamiento, cargo: 'gobernador' | 'maestroObras' | null): string {
   return `<div class="cajon-construir">
@@ -2261,6 +2264,7 @@ function htmlCajonConstruir(a: Asentamiento, cargo: 'gobernador' | 'maestroObras
         ${cargo ? htmlAutoConstruccion(a) : ''}
       </div>
       <div class="cajon-construir-cuerpo">${htmlConstruir(a, cargo, escaparHtml)}</div>
+      ${htmlConstruidos(a, escaparHtml)}
     </div>`;
 }
 
@@ -2319,7 +2323,8 @@ function contenidoDeVentana(v: VentanaPlaza, c: ContextoPlaza, ajena: boolean): 
       };
     }
     case 'defensa': return deExtras(['guarnicion', 'muralla', 'puerta']);
-    case 'territorio': return { ...deExtras(ajena ? ['pueblos'] : ['pueblos', 'fundacion'], { pueblos: 'Pueblos y aldeas' }), avisos: !ajena && fundacionListaEn(p, a) ? ['fundacion'] : [] };
+    // a ventana completa (Víctor, 2026-11-06)
+    case 'territorio': return { ...deExtras(ajena ? ['pueblos'] : ['pueblos', 'fundacion'], { pueblos: 'Pueblos y aldeas' }), ancho: 'completa', avisos: !ajena && fundacionListaEn(p, a) ? ['fundacion'] : [] };
     case 'almacen':
       // a pantalla completa: qué va en la barra de arriba, el almacén con su neto por minuto, la extracción y la reserva de recursos del Tesorero
       // a la izquierda (la reserva vino de Gobierno → Tesorería, Víctor 2026-11-04); los talleres a la derecha
