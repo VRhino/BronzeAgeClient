@@ -69,7 +69,7 @@ import { cablearPanelEjercito, ejercitosDeLaFaccion, htmlEjercitosFaccion, htmlF
 import { invalidar, olvidarEdicion, pintar, vaciar } from './ui/repintado';
 import { ayuda } from './ui/ayuda';
 import { htmlInformeDeInspeccion } from './ui/interaccionAjena';
-import { cablearPanelObras, construidoAlClicar, htmlConstruidos, htmlConstruir, minutosDeObra } from './ui/panelObras';
+import { cablearPanelObras, construidoAlClicar, cuantosConstruidos, htmlConstruidosVentana, htmlConstruir, minutosDeObra } from './ui/panelObras';
 import { cablearTesoreria, htmlReservaRecursos } from './ui/panelTesoreria';
 import { montarPanelRendimiento } from './ui/panelRendimiento';
 import { cablearProduccionYRecetas, cablearVistaCiudad, confirmarCancelarObra, edificioSeleccionado, elegirEdificio, htmlExtraccion, htmlRecetas, htmlTooltipEdificio, repintarFicha } from './ui/vistaCiudad';
@@ -2240,10 +2240,21 @@ function renderPanelEdificios(): void {
   riel.classList.toggle('asent-riel-cajon', construyendo);
   if (construyendo) {
     pintar(riel, htmlCajonConstruir(a, cargo), () => {
-      riel.querySelector('[data-riel-volver]')?.addEventListener('click', () => abrirVentanaPlaza(null));
+      riel.querySelector('[data-riel-volver]')?.addEventListener('click', () => { construidosAbiertos = false; abrirVentanaPlaza(null); });
+      // «Construidos» abre y cierra su ventana encima del cajón sin repintar nada más
+      const ventanaConstruidos = riel.querySelector<HTMLElement>('.construidos-ventana');
+      const botonConstruidos = riel.querySelector<HTMLButtonElement>('[data-cajon-construidos]');
+      const fijarConstruidos = (abierta: boolean): void => {
+        construidosAbiertos = abierta;
+        if (ventanaConstruidos) ventanaConstruidos.hidden = !abierta;
+        botonConstruidos?.classList.toggle('activo', abierta);
+        botonConstruidos?.setAttribute('aria-expanded', String(abierta));
+      };
+      botonConstruidos?.addEventListener('click', () => fijarConstruidos(!construidosAbiertos));
+      riel.querySelector('[data-construidos-cerrar]')?.addEventListener('click', () => fijarConstruidos(false));
       cablearAccionesAsentLado(riel, a, cargo);
       cablearPanelObras(riel, renderPanelEdificios);
-      // la barra de construidos: un clic elige el edificio en la vista 3D, con su ficha
+      // los construidos: un clic elige el edificio en la vista 3D, con su ficha (la ventana sigue abierta para elegir otro)
       riel.querySelectorAll<HTMLButtonElement>('[data-construido]').forEach((b) => b.addEventListener('click', () => elegirEdificio(construidoAlClicar(b.dataset.construido!))));
     }, 'riel:construir');
   } else {
@@ -2258,18 +2269,23 @@ function renderPanelEdificios(): void {
   pintarVentanaPlaza(p, a, ajena);
 }
 
-/** El cajón de Construcción, en el sitio del riel: «Volver», la auto-construcción, lo que se puede poner en la cola, por tipos, y abajo la barra de
- * los edificios ya construidos (0.153.0). Solo con cargo
- * (sin él, el botón ni sale). */
+/** ¿Está abierta la ventana «Construidos» del cajón? Vive entre repintados; «Volver» la cierra. */
+let construidosAbiertos = false;
+
+/** El cajón de Construcción, en el sitio del riel: «Volver», «Construidos», la auto-construcción y lo que se puede poner en la cola, por tipos.
+ * «Construidos» (Víctor, 2026-11-06; sustituye a la barra de abajo de 0.153.0) abre encima del cajón, con su mismo ancho, la ventana de los
+ * edificios ya construidos por tipo. Solo con cargo (sin él, el botón de Construcción ni sale). */
 function htmlCajonConstruir(a: Asentamiento, cargo: 'gobernador' | 'maestroObras' | null): string {
+  const n = cuantosConstruidos(a);
   return `<div class="cajon-construir">
+      ${n ? `<div class="construidos-ventana" role="region" aria-label="Edificios construidos"${construidosAbiertos ? '' : ' hidden'}>${htmlConstruidosVentana(a, escaparHtml)}</div>` : ''}
       <div class="cajon-construir-cab">
         <button type="button" class="cajon-volver" data-riel-volver aria-label="Volver al riel">← Volver</button>
+        ${n ? `<button type="button" class="cajon-volver cajon-construidos-boton${construidosAbiertos ? ' activo' : ''}" data-cajon-construidos aria-expanded="${construidosAbiertos}">${iconoEdificio('vivienda', 16)}<span>Construidos</span><b>${n}</b></button>` : ''}
         <h2>${ICONO_RIEL.construccion}<span>Construcción</span></h2>
         ${cargo ? htmlAutoConstruccion(a) : ''}
       </div>
       <div class="cajon-construir-cuerpo">${htmlConstruir(a, cargo, escaparHtml)}</div>
-      ${htmlConstruidos(a, escaparHtml)}
     </div>`;
 }
 

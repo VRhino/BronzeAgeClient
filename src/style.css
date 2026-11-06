@@ -5325,7 +5325,7 @@ body:has(.eleccion-clic) .aviso-global { visibility: hidden; }
    Construcción como cajón del riel (0.109.0, Víctor 2026-11-03): al pulsar Construcción el riel se esconde y en su sitio sale el cajón, con
    «Volver», la auto-construcción (solo con cargo) y la rejilla de lo que se puede poner en la cola. La barra de abajo sube con él (--riel-alto).
    ===================================================================================== */
-.plaza-3d.construyendo { --riel-alto: 276px; } /* 0.153.0: +64 para la barra de construidos */
+.plaza-3d.construyendo { --riel-alto: 212px; }
 .plaza-3d .asent-riel.asent-riel-cajon {
   /* entre «Salir al mundo» (abajo a la izquierda, 0.113.0) y el minimapa */
   left: calc(16px + 210px);
@@ -5351,9 +5351,9 @@ body:has(.eleccion-clic) .aviso-global { visibility: hidden; }
 .cajon-construir-cuerpo .obra-grupos { position: sticky; top: 0; z-index: 1; background: rgba(26, 19, 12, 0.98); }
 .cajon-construir-cuerpo .obra-grupo { flex: 0 1 92px; }
 .cajon-construir-cuerpo .obra-construir-rejilla { margin-bottom: 0; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
-@media (max-height: 820px) { .plaza-3d.construyendo { --riel-alto: 248px; } }
+@media (max-height: 820px) { .plaza-3d.construyendo { --riel-alto: 184px; } }
 @media (max-width: 600px) {
-  .plaza-3d.construyendo { --riel-alto: 294px; }
+  .plaza-3d.construyendo { --riel-alto: 230px; }
   .plaza-3d .asent-riel.asent-riel-cajon { width: auto; left: 8px; right: 8px; transform: none; max-width: none; }
   .plaza-3d.construyendo .asent-barra { display: none; }
   .cajon-construir-cab { flex-wrap: wrap; gap: 6px 10px; }
@@ -5640,10 +5640,31 @@ button.carro-hueco:hover, .carro-hueco.activo { border-color: var(--oro); box-sh
 .rendimiento-grupo td { text-align: right; padding: 0 0 0 6px; }
 .rendimiento-grupo th:first-child, .rendimiento-grupo td:first-child { text-align: left; padding-left: 0; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* 0.153.0 · La barra de los edificios construidos, abajo del cajón de Construcción (Víctor, 2026-11-06): un cuadrito junto a otro, con scroll de lado */
-.cajon-construidos { flex: none; display: flex; align-items: center; gap: 8px; padding: 5px 10px 6px; border-top: 1px solid var(--bronce-osc); background: rgba(10, 7, 4, 0.55); min-width: 0; }
-.cajon-construidos-cab { flex: none; writing-mode: vertical-rl; transform: rotate(180deg); font-family: var(--fuente-titulo); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
-.cajon-construidos-fila { flex: 1; min-width: 0; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: thin; padding-bottom: 2px; }
+/* La ventana «Construidos» del cajón de Construcción (Víctor, 2026-11-06; antes una barra abajo del cajón): sube desde el cajón con su mismo ancho,
+   con los edificios construidos agrupados como las pestañas de Construir, un cuadrito por tipo. */
+.cajon-construidos-boton { display: inline-flex; align-items: center; gap: 6px; }
+.cajon-construidos-boton .icono-edificio { width: 16px; height: 16px; }
+.cajon-construidos-boton b { font-size: 0.72rem; color: var(--pergamino); }
+.cajon-construidos-boton.activo { color: var(--oro-claro); border-color: var(--oro); background: linear-gradient(180deg, rgba(118, 86, 42, 0.96), rgba(52, 37, 18, 0.96)); }
+.construidos-ventana {
+  position: absolute; left: -1px; right: -1px; bottom: calc(100% + 8px); z-index: 6;
+  display: flex; flex-direction: column; max-height: min(62vh, calc(100vh - var(--riel-alto) - 150px)); min-height: 0;
+  border: 1px solid var(--bronce); border-radius: 4px; box-shadow: var(--placa-sutil), 0 10px 30px rgba(0, 0, 0, 0.5);
+  background: linear-gradient(180deg, rgba(38, 28, 17, 0.97), rgba(14, 10, 6, 0.97));
+}
+.construidos-ventana[hidden] { display: none; }
+.construidos-cab { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 10px; border-bottom: 1px solid var(--bronce-osc); }
+.construidos-cab h2 { margin: 0; font-family: var(--fuente-titulo); font-size: 0.95rem; letter-spacing: 0.06em; color: var(--oro-claro); }
+.construidos-cab h2 small { margin-left: 6px; font-family: inherit; font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0; }
+.construidos-cerrar { width: 26px; height: 26px; padding: 0; font: inherit; color: var(--oro); background: rgba(18, 13, 8, 0.9); border: 1px solid var(--bronce); border-radius: 3px; cursor: pointer; }
+.construidos-cerrar:hover, .construidos-cerrar:focus-visible { color: var(--oro-claro); border-color: var(--oro); outline: none; }
+.construidos-cuerpo { flex: 1; min-height: 0; overflow-y: auto; padding: 6px 10px 10px; display: flex; flex-direction: column; gap: 10px; scrollbar-width: thin; }
+.construidos-grupo h3 { display: flex; align-items: center; gap: 6px; margin: 0 0 5px; font-family: var(--fuente-titulo); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--oro); }
+.construidos-grupo h3 .icono-edificio { width: 16px; height: 16px; }
+.construidos-grupo h3 small { font-family: inherit; color: var(--text-muted); letter-spacing: 0; }
+.construidos-fila { display: flex; flex-wrap: wrap; gap: 4px; }
+.construidos-fila .construido { width: 88px; padding: 5px 3px 4px; }
+.construidos-fila .construido-nombre { font-size: 0.64rem; }
 .construido { position: relative; flex: none; width: 64px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 2px 3px; border: 1px solid var(--bronce-osc); border-radius: 3px; background: linear-gradient(180deg, rgba(52, 39, 23, 0.95), rgba(22, 16, 10, 0.95)); color: var(--oro-claro); cursor: pointer; --relleno: rgba(205, 160, 90, 0.25); }
 .construido:hover, .construido:focus-visible { border-color: var(--oro); outline: none; }
 .construido-icono { display: flex; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6)); }

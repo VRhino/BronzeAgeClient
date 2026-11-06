@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.157.0] — 2026-11-06 · «Construidos» en ventana encima del cajón de Construcción · sin cambio de contrato
+
+Petición de Víctor (2026-11-06): fuera la barra de los edificios construidos de abajo del cajón (0.153.0). En su lugar, junto a «← Volver», el botón
+«Construidos N», que abre y cierra una ventana que sube desde el cajón con su mismo ancho. Dentro, los edificios construidos agrupados como las
+pestañas de Construir (Ciudad, Recursos, Talleres, Militar, Gobierno y Otros, cada grupo con cuántos tiene), con los mismos cuadritos de la barra:
+uno por tipo, con ×N y el nivel más alto; un clic elige uno de ese tipo en la vista 3D y el siguiente clic el siguiente. La ventana sigue abierta al
+elegir; se cierra con ✕, con el mismo botón o con «Volver». El cajón vuelve a su alto de antes (212 px). Banco: `pruebas/hud/?construir=1&construidos=1`.
+
 ## [0.156.0] — 2026-11-06 · Formulario de registro de verdad y la Facción en la tarjeta de la partida · sin cambio de contrato
 
 Dos fallos que vio Víctor (2026-11-06):

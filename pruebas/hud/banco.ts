@@ -19,7 +19,7 @@ import { svgSigilo } from '../../src/sigilo/sigilo';
 import { htmlBarraJugador } from '../../src/ui/barraJugador';
 import { cablearEleccionBarra, htmlBlasonHud, htmlEleccionBarra, htmlObrasHud, htmlPieDePlaza, ICONO_RIEL, vigilarPieArriba } from '../../src/ui/hudPlaza';
 import { cablearProduccionYRecetas, cablearVistaCiudad, elegirEdificio, htmlExtraccion, htmlRecetas, repintarFicha } from '../../src/ui/vistaCiudad';
-import { cablearPanelObras, htmlConstruidos, htmlConstruir } from '../../src/ui/panelObras';
+import { cablearPanelObras, cuantosConstruidos, htmlConstruidosVentana, htmlConstruir } from '../../src/ui/panelObras';
 import { cablearCaravanas, cablearRutas, htmlCaravanas, htmlRutas } from '../../src/ui/panelMercado';
 import { SUBPESTANA_GUARNICION } from '../../src/ui/panelGuarnicion';
 import { FICHA_OBRA, SUBPESTANA_PUEBLOS } from '../../src/ui/pueblos';
@@ -64,7 +64,9 @@ let barra = '';
 try { barra = htmlBarraJugador(p, e, '<button type="button" class="jugador-boton-info">?</button>'); } catch { barra = '<header class="jugador-barra"></header>'; }
 const riel = RIEL.filter(([, , , bloq]) => !bloq).map(([id, nombre, icono], i) => `<button type="button" class="asent-riel-boton${id === ventana ? ' activo' : ''}" data-etiqueta="${nombre}">${icono}${i === 0 ? '<b class="asent-riel-insignia">2</b>' : ''}</button>`).join('');
 // el cajón de Construcción, como `htmlCajonConstruir` de main.ts
-const cajon = (): string => `<div class="cajon-construir"><div class="cajon-construir-cab"><button type="button" class="cajon-volver">← Volver</button><h2>${ICONO_RIEL.construccion}<span>Construcción</span></h2>${htmlAutoConstruccion(a)}</div><div class="cajon-construir-cuerpo">${htmlConstruir(a, 'gobernador', e)}</div>${htmlConstruidos(a, e)}</div>`;
+// `&construidos=1`: con la ventana «Construidos» abierta encima del cajón
+let construidosAbiertos = new URLSearchParams(location.search).has('construidos');
+const cajon = (): string => `<div class="cajon-construir"><div class="construidos-ventana"${construidosAbiertos ? '' : ' hidden'}>${htmlConstruidosVentana(a, e)}</div><div class="cajon-construir-cab"><button type="button" class="cajon-volver">← Volver</button><button type="button" class="cajon-volver cajon-construidos-boton${construidosAbiertos ? ' activo' : ''}" data-cajon-construidos>Construidos <b>${cuantosConstruidos(a)}</b></button><h2>${ICONO_RIEL.construccion}<span>Construcción</span></h2>${htmlAutoConstruccion(a)}</div><div class="cajon-construir-cuerpo">${htmlConstruir(a, 'gobernador', e)}</div></div>`;
 document.getElementById('app')!.innerHTML = `<div class="asent-screen plaza-3d${construir ? ' construyendo' : ''}">
   ${barra}
   <div class="asent-cuerpo">
@@ -185,6 +187,8 @@ function pintarCajon(): void {
   const nav = document.querySelector<HTMLElement>('.asent-riel')!;
   nav.innerHTML = cajon();
   cablearPanelObras(nav, pintarCajon);
+  nav.querySelector('[data-cajon-construidos]')?.addEventListener('click', () => { construidosAbiertos = !construidosAbiertos; pintarCajon(); });
+  nav.querySelector('[data-construidos-cerrar]')?.addEventListener('click', () => { construidosAbiertos = false; pintarCajon(); });
 }
 // `?ficha=…`: la ficha de verdad (`cablearVistaCiudad` + `elegirEdificio`) de un edificio mejorándose, uno activo que se puede mejorar o una obra
 const ficha = qs.get('ficha');
