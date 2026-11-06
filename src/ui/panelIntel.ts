@@ -94,7 +94,7 @@ function precioMirada(p: ProyeccionJugador, t: TabernaDisponible, centro: Point)
   return Math.ceil(oroBase + oroPorUnidad * lejos);
 }
 
-function hace(ms: number): string {
+export function hace(ms: number): string {
   const min = Math.max(0, Math.round(ms / 60_000));
   return min < 90 ? `${min} min` : min < 60 * 36 ? `${Math.round(min / 60)} h` : `${Math.round(min / 1440)} d`;
 }
@@ -134,7 +134,7 @@ function planoDeInforme(inf: InformePlaza): string {
 
 /** El Informe abierto: cabecera con el nivel en escudo, la Facción y los héroes dentro; el plano; los edificios y la guarnición como iconos con su
  * cuenta, y cada recinto de muralla con una barra de lo levantado. */
-function detalleInforme(inf: InformePlaza, p: ProyeccionJugador, e: Escapar): string {
+export function detalleInforme(inf: InformePlaza, p: ProyeccionJugador, e: Escapar): string {
   const porTipo = new Map<string, number>();
   for (const ed of inf.edificios) porTipo.set(ed.tipo, (porTipo.get(ed.tipo) ?? 0) + 1);
   const tropas = new Map<string, number>();

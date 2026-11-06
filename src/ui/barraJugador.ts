@@ -5,12 +5,11 @@ import type { ProyeccionJugador } from '../apiCliente';
 import { nombreDePueblo } from './pueblos';
 
 // Tecnología ya no tiene botón: es una pestaña de la Facción (Víctor, 2026-11-03: «las tecnologías afectan al jugador a través de la Facción»).
-export type PanelJugador = 'heroe' | 'escuadras' | 'carro' | 'faccion' | 'misiones' | 'avisos';
+// Héroe, Escuadras y Carro son desde la 0.161.0 una sola ventana, la Base personal (`basePersonal.ts`; también con la tecla B).
+export type PanelJugador = 'base' | 'faccion' | 'misiones' | 'avisos';
 
 const BOTONES: [PanelJugador, string][] = [
-  ['heroe', 'Héroe'],
-  ['escuadras', 'Escuadras'],
-  ['carro', 'Carro'],
+  ['base', 'Base'],
   ['faccion', 'Facción'],
   ['misiones', 'Misiones'],
   ['avisos', 'Avisos'],
@@ -18,12 +17,8 @@ const BOTONES: [PanelJugador, string][] = [
 
 /** El icono de cada botón (trazo en `currentColor`, 24×24). En el mundo la barra solo enseña el icono; el nombre queda en el `title`. */
 const ICONO: Record<PanelJugador | 'mapa' | 'asentamiento', string> = {
-  // yelmo corintio
-  heroe: '<path d="M5 20v-8a7 7 0 0 1 14 0v8"/><path d="M5 20h4v-6h6v6h4"/><path d="M12 5V2M9 3h6"/>',
-  // dos lanzas cruzadas sobre un escudo
-  escuadras: '<path d="M4 4l16 16M20 4L4 20"/><path d="M4 4l3 0M4 4l0 3M20 4l-3 0M20 4l0 3"/><circle cx="12" cy="12" r="4"/>',
-  // rueda de carro
-  carro: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="1.6"/><path d="M12 4v16M4 12h16M6.3 6.3l11.4 11.4M17.7 6.3L6.3 17.7"/>',
+  // yelmo corintio: la Base personal
+  base: '<path d="M5 20v-8a7 7 0 0 1 14 0v8"/><path d="M5 20h4v-6h6v6h4"/><path d="M12 5V2M9 3h6"/>',
   // estandarte
   faccion: '<path d="M6 21V3"/><path d="M6 4h12l-3 4 3 4H6"/>',
   // diana
@@ -60,7 +55,7 @@ export function htmlBarraJugador(p: ProyeccionJugador, e: (valor: string) => str
     <div class="jugador-estados" aria-label="Estados activos"></div>
     <div class="jugador-alerta" role="status" hidden></div>
     <nav class="jugador-botones" aria-label="Menús del jugador">${extra}
-      ${BOTONES.map(([id, nombre]) => `<button type="button" data-panel-jugador="${id}" title="${nombre}" aria-label="${nombre}">${icono(id)}<span class="jugador-nombre">${nombre}</span>${id === 'avisos' ? '<b class="jugador-badge" hidden></b>' : id === 'misiones' ? '<b class="jugador-badge misiones-badge" hidden title="Misiones cumplidas por reclamar"></b>' : ''}</button>`).join('')}
+      ${BOTONES.map(([id, nombre]) => `<button type="button" data-panel-jugador="${id}" title="${id === 'base' ? 'Base personal (B)' : nombre}" aria-label="${nombre}">${icono(id)}<span class="jugador-nombre">${nombre}</span>${id === 'avisos' ? '<b class="jugador-badge" hidden></b>' : id === 'misiones' ? '<b class="jugador-badge misiones-badge" hidden title="Misiones cumplidas por reclamar"></b>' : ''}</button>`).join('')}
       <button type="button" data-ver-mapa title="Mapa: la visión que tienes, con zoom libre (solo para mirar)" aria-label="Mapa">${icono('mapa')}<span class="jugador-nombre">Mapa</span></button>
     </nav>
   </header>`;

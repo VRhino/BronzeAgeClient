@@ -3,6 +3,29 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.161.0] — 2026-11-06 · Base personal · sin cambio de contrato
+
+Petición de Víctor (2026-11-06): una vista con todo lo que es del jugador, centralizado. La **Base personal** es una ventana a pantalla completa
+(`src/ui/basePersonal.ts`, con el marco de la Facción) que sustituye a los botones «Héroe», «Escuadras» y «Carro» de la barra de arriba: se abre
+con el yelmo de la barra o con la tecla **B** en cualquier pantalla, y Esc la cierra.
+- Lateral: el héroe con su nivel, experiencia, Liderazgo, los puntos sin gastar (llevan a «Héroe»), las monedas, los víveres (con cuánto aguantan
+  al paso de ahora en una columna personal, como `racion_columna` del motor, con los datos de `LOGISTICA`, `MILITAR` y `MOVIMIENTO`), dónde
+  reside (solo se ve: se cambia desde dentro, con «Ver en el mapa») y sus cargos (Rey → Facción, Embajador → Diplomacia, los locales → su plaza
+  en el mapa).
+- Tropas: todas las escuadras, estén donde estén, con su barra de hombres frente al tope, nivel, moral, Liderazgo, dónde está cada una (tu
+  campamento, tu columna, un pueblo, la guarnición de otra plaza, escolta), el orden de combate con flechas (`ordenarEscuadras`), la guarnición
+  y **reponer**, solo donde se puede: dentro de tu plaza, `reclutarTropa` con la escuadra hecha la completa con el equipo y el oro del almacén y
+  su gente libre (residiendo, las de tu campamento; las de una columna a su puerta, también como ciudadano); en tu campamento de mercenarios,
+  `reclutarEnCampamento` con oro y «Pagar con»; y las prestadas, gratis en su campamento (`reponerPrestamo`). Lo que no llega va en rojo y
+  apaga el botón. La pestaña lleva en rojo cuántas escuadras están por debajo de su tope.
+- Bienes: el carro y el almacén personal con sus movimientos de siempre (sin el almacén de la plaza, que sigue en su ventana), «Pasar a víveres»
+  si eres el Líder de la columna, y el equipo y el inventario del héroe (solo se ven: equiparse aún no es una orden del motor).
+- Loadouts y Héroe (atributos, reparto de puntos y la ficha de mercenario) son los del panel del héroe de antes.
+- Historial: campamentos de bandidos destruidos, alijos abiertos e informes de combate de la sesión. Plazas conocidas: lo que recuerdas de tu
+  plaza al salir al mundo (`plazas_recordadas`) y los informes de plaza comprados en la taberna.
+La proyección del héroe trae ahora `residenciaId`, `bandidosDestruidos`, `alijosAbiertos` y `plazasRecordadas` (ya venían en el contrato).
+Banco: `pruebas/base/` (`?pestana=…`, `?donde=plaza|camp|columna`).
+
 ## [0.160.0] — 2026-11-06 · La Tropa del campamento con el árbol de reclutamiento · sin cambio de contrato
 
 Petición de Víctor (2026-11-06): la Tropa del campamento de mercenarios, con la misma interfaz que el reclutamiento de la plaza (0.159.0),

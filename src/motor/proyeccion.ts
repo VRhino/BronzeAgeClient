@@ -414,6 +414,15 @@ function heroe(h: pb.Heroe, escuadrones: pb.Escuadron[], ahora: number): d.Heroe
     guarnicionOcupada: propias.filter((e) => e.enGuarnicion).reduce((s, e) => s + e.cantidad, 0),
     heridoHasta: instante(h.heridoHastaMs), desconectaEn: instante(h.desconectaEnMs),
     contrato: h.contrato ? contrato(h.contrato) : undefined, fichaMercenario: h.fichaMercenario ? fichaMercenario(h.fichaMercenario) : undefined, contratado: h.contratado,
+    residenciaId: h.residenciaId,
+    bandidosDestruidos: h.bandidosDestruidosEnMs.map((t) => instante(t)!),
+    alijosAbiertos: h.alijosAbiertos,
+    plazasRecordadas: Object.entries(h.plazasRecordadas).map(([asentamientoId, x]) => ({
+      asentamientoId, vistoEn: instante(x.vistoEnMs)!,
+      // la foto se lee en el instante en que se tomó: el almacén no sigue produciendo en el recuerdo
+      almacen: Object.fromEntries(Object.entries(x.almacen).map(([k, v]) => [k, valorDeRitmo(v.cantidad, Number(x.vistoEnMs))])),
+      obras: x.cola.length, guarnicion: x.guarnicionEscuadronesIds.length,
+    })),
   };
 }
 

@@ -82,8 +82,9 @@ function plazaDondeEstas(p: ProyeccionJugador): { id: string; nombre: string; fa
   };
 }
 
-/** `cabecera`: la línea con el nombre del héroe (fuera cuando el carro va dentro de otro panel, como «Lo que llevas»). */
-export function htmlCarro(p: ProyeccionJugador, e: Escapar, cabecera = true): string {
+/** `cabecera`: la línea con el nombre del héroe (fuera cuando el carro va dentro de otro panel, como «Lo que llevas»). `conPlaza`: con el almacén
+ * de la plaza donde estás (la Base personal no lo enseña: allí solo va lo tuyo, el carro y tu almacén personal). */
+export function htmlCarro(p: ProyeccionJugador, e: Escapar, cabecera = true, conPlaza = true): string {
   const columna = miColumna(p);
   const almacen = p.heroe.almacenPersonal ?? {};
   const esLider = columna?.liderId === p.heroeId;
@@ -95,7 +96,7 @@ export function htmlCarro(p: ProyeccionJugador, e: Escapar, cabecera = true): st
   const capacidad = columna ? columna.capacidadCarga : CAPACIDAD_CARRO_SALIDA;
   const libre = capacidad !== undefined ? Math.max(0, Math.floor(capacidad - Object.values(carro).reduce((t, n) => t + n, 0))) : undefined;
   const hayCarro = Object.values(carro).some((n) => n >= 1);
-  const plaza = plazaDondeEstas(p);
+  const plaza = conPlaza ? plazaDondeEstas(p) : undefined;
   const ciudadano = Boolean(plaza?.faccionId) && plaza?.faccionId === p.faccionId;
   const yo = p.facciones.find((f) => f.id === p.faccionId)?.miembros?.find((m) => m.heroeId === p.heroeId);
   const gobernador = Boolean(plaza && yo?.cargos.includes(`gobernador@${plaza.id}`));

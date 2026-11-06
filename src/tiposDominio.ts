@@ -918,6 +918,25 @@ export interface HeroeProyectado {
   fichaMercenario?: FichaMercenario;
   /** Mercenario: `temporal` o `permanente` mientras tiene contrato. */
   contratado?: string;
+  /** Dónde reside (`Heroe.residencia_id`): la plaza (`as-N`) o el campamento de mercenarios (`camp-N`). Ausente si no reside en ninguno. */
+  residenciaId?: string;
+  /** Campamentos de bandidos que ha destruido (`bandidos_destruidos_en_ms`: los instantes, en ms de época). */
+  bandidosDestruidos?: number[];
+  /** Alijos que ha abierto (los ids del artefacto). */
+  alijosAbiertos?: string[];
+  /** La foto que se llevó de su plaza al salir al mundo (`plazas_recordadas`, Niebla_De_Guerra §4.5): el almacén, las obras y la guarnición. */
+  plazasRecordadas?: PlazaRecordada[];
+}
+
+/** Lo que el héroe recuerda del interior de una plaza al salir de ella (`InteriorRecordado`). */
+export interface PlazaRecordada {
+  asentamientoId: string;
+  vistoEn: number;
+  almacen: Record<string, number>;
+  /** Edificios que no estaban activos: en cola o en obra. */
+  obras: number;
+  /** Escuadras en su guarnición. */
+  guarnicion: number;
 }
 
 /** Un héroe ajeno que se ve (Doc 5.16.7): solo su parte pública. */

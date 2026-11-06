@@ -43,7 +43,8 @@ import {
 } from './apiCliente';
 import { montarEleccionCampamento } from './ui/eleccionCampamento';
 import { pintarVentanaSalida, reiniciarVentanaSalida, type LugarDeSalida } from './ui/ventanaSalida';
-import { elegirPestanaHeroe, minutosHerido, pintarPanelHeroe } from './ui/panelHeroe';
+import { minutosHerido } from './ui/panelHeroe';
+import { baseOcupada, cablearBasePersonal, htmlBasePersonal } from './ui/basePersonal';
 import { htmlBarraJugador, type PanelJugador } from './ui/barraJugador';
 import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno, type CapasTematicas } from './render';
 import { capasDelMapa, distanciaDeCarga, type CapasDelMapa } from './mundo/capasDelMapa';
@@ -103,7 +104,6 @@ import { fundacionLista } from './ui/panelFundacionDePlaza';
 import { alCambiarAvisos, alLlegarInforme, avisarDeEventos, avisosNoLeidos, hayPeligroSinLeer, historialDeAvisos, mostrar as mostrarAviso, reiniciarAvisos } from './ui/avisos';
 import { htmlInforme, type InformeDeCombate } from './ui/informeCombate';
 import { cablearAvisos, htmlAvisos } from './ui/panelAvisos';
-import { cablearCarro, htmlCarro } from './ui/panelCarro';
 import { cablearTecnologia, htmlTecnologia } from './ui/panelTecnologia';
 import { cablearColumna, htmlColumna } from './ui/panelColumna';
 import { cablearPanelIntel, renderPanelIntel } from './ui/panelIntel';
@@ -1431,19 +1431,29 @@ function renderPanelJugador(forzar = false): void {
   barra.querySelector('[data-ver-mapa]')?.classList.toggle('activo', vistaMapaAbierta);
   pintarAlertas(barra, proyeccion);
   // La Facción va a pantalla completa; el resto, en el panel lateral.
-  if (panelJugador !== 'faccion') panel.classList.remove('jugador-panel-completo', 'jugador-panel-faccion');
+  if (panelJugador !== 'faccion' && panelJugador !== 'base') panel.classList.remove('jugador-panel-completo', 'jugador-panel-faccion');
   if (panelJugador !== 'misiones') panel.classList.remove('jugador-panel-diario');
+  if (panelJugador !== 'base') panel.classList.remove('jugador-panel-base');
   if (panelJugador === null) { panel.hidden = true; vaciar(panel); return; }
   panel.hidden = false;
   if (forzar) invalidar(panel);
-  if (panelJugador === 'carro' || panelJugador === 'avisos') {
-    const html = panelJugador === 'carro' ? htmlCarro(proyeccion, escaparHtml) : htmlAvisos(historialDeAvisos(), escaparHtml);
-    const esCarro = panelJugador === 'carro';
+  if (panelJugador === 'avisos') {
+    pintar(panel, htmlAvisos(historialDeAvisos(), escaparHtml), () => cablearAvisos(panel, () => renderPanelJugador(), mostrarInforme), panelJugador);
+    return;
+  }
+  if (panelJugador === 'base') {
+    // La Base personal (`ui/basePersonal.ts`), a pantalla completa como la Facción. Con un loadout a medio editar no se repinta sola.
+    if (!forzar && baseOcupada()) return;
+    panel.classList.add('jugador-panel-completo', 'jugador-panel-faccion', 'jugador-panel-base');
+    const repintar = (): void => renderPanelJugador(true);
     // En marcha el carro y la ración cambian con cada tick: se repinta solo si cambió, devolviendo lo que se estaba escribiendo.
-    pintar(panel, html, () => {
-      if (esCarro) cablearCarro(panel, ejecutarYRefrescar, proyeccion.heroeId);
-      else cablearAvisos(panel, () => renderPanelJugador(), mostrarInforme);
-    }, panelJugador);
+    pintar(panel, htmlBasePersonal(proyeccion, escaparHtml, repintar), () => cablearBasePersonal(panel, proyeccion, {
+      ejecutar: ejecutarYRefrescar, aplicar: aplicarYRefrescar, repintar,
+      cerrar: () => { panelJugador = null; renderPanelJugador(true); },
+      abrirInforme: mostrarInforme,
+      abrirFaccion: (x) => { pestanaFaccion = x; panelJugador = 'faccion'; renderPanelJugador(true); },
+      verEnMapa: (punto) => { panelJugador = null; renderPanelJugador(true); alternarVistaMapa(true, punto); },
+    }), 'base');
     return;
   }
   if (panelJugador === 'faccion') {
@@ -1527,7 +1537,6 @@ function renderPanelJugador(forzar = false): void {
     }, `misiones:${tablon?.viendo ? 'tablon' : 'lista'}`);
     return;
   }
-  pintarPanelHeroe(panel, proyeccion, escaparHtml, aplicarYRefrescar, forzar);
 }
 
 /** Los indicadores de peligro de la barra: quién te persigue ahora (`teSigue` de los ejércitos avistados) y los avisos sin leer (rojo si alguno es un ataque). */
@@ -1591,13 +1600,28 @@ function cablearBarraJugador(contenedor: HTMLElement): void {
       menuEsquinaAbierto = false;
       sincronizarMenuEsquina();
       panelJugador = panelJugador === id ? null : id;
-      if (id === 'escuadras') elegirPestanaHeroe('escuadras');
-      if (id === 'heroe') elegirPestanaHeroe('ficha');
       renderPanelJugador(true);
     });
   });
   contenedor.querySelector('[data-ver-mapa]')?.addEventListener('click', () => alternarVistaMapa());
 }
+
+/** Abre o cierra la Base personal (tecla B y yelmo de la barra). */
+function alternarBase(abrir = panelJugador !== 'base'): void {
+  if (!document.querySelector('.jugador-barra')) return;
+  menuEsquinaAbierto = false;
+  sincronizarMenuEsquina();
+  panelJugador = abrir ? 'base' : null;
+  renderPanelJugador(true);
+}
+// B abre o cierra la Base y Esc la cierra; nunca mientras se escribe ni con un diálogo encima.
+document.addEventListener('keydown', (ev) => {
+  const t = ev.target as HTMLElement | null;
+  if (t && (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName))) return;
+  if (ev.ctrlKey || ev.metaKey || ev.altKey || document.querySelector('.dialogo-velo, .briefing-fondo')) return;
+  if ((ev.key === 'b' || ev.key === 'B') && !ev.repeat) { ev.preventDefault(); alternarBase(); }
+  else if (ev.key === 'Escape' && panelJugador === 'base' && !document.querySelector('.ta-ficha:not([hidden])')) { ev.stopImmediatePropagation(); alternarBase(false); }
+}, true);
 
 /** Dónde está el héroe en el mundo, para centrar el mapa: su columna, o el campamento o la plaza donde está. */
 function posicionDelHeroe(p: ProyeccionJugador): { x: number; y: number } | null {

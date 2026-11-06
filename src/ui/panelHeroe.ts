@@ -1,13 +1,12 @@
-// Panel del HÉROE (docs/Features_Pendientes.md §0.2): ficha y atributos, escuadras con su guarnición, y loadouts.
-// Lo abre la barra superior del jugador (visible en el mapa, el campamento y el asentamiento). Todo lo que enseña llega calculado en `proyeccion.heroe`
+// Piezas del HÉROE (docs/Features_Pendientes.md §0.2): la ficha con sus atributos y los loadouts. Desde la 0.161.0 viven en la Base personal
+// (`basePersonal.ts`), que las pinta en sus pestañas «Héroe» y «Loadouts». Todo lo que enseñan llega calculado en `proyeccion.heroe`
 // (coste de Liderazgo de cada escuadra, lo que suma cada loadout, cupo y ocupación de la guarnición): aquí no se
 // decide ninguna regla, solo se suma el loadout que se está editando para avisar antes de guardar. Quien valida
 // es el backend (`heroe.invalido`).
-import { asignarGuarnicion, borrarLoadout, ejecutarComando, guardarLoadout, repartirPuntos, retirarGuarnicion, type ProyeccionJugador, type RespuestaComando } from '../apiCliente';
+import { borrarLoadout, ejecutarComando, guardarLoadout, repartirPuntos, type ProyeccionJugador, type RespuestaComando } from '../apiCliente';
 import type { AtributoHeroe, HeroeProyectado, Loadout } from '../tiposDominio';
 import { ayuda } from './ayuda';
 import { estadoCliente } from './estadoCliente';
-import { invalidar, pintar } from './repintado';
 import { confirmar } from './dialogo';
 import { iconoEnFila } from './iconosTropa';
 import { cablearHeroeMercenario, htmlHeroeMercenario } from './mercenarios';
@@ -15,22 +14,17 @@ import { cablearHeroeMercenario, htmlHeroeMercenario } from './mercenarios';
 /** Manda el comando, comprueba `resultado.ok` y refresca; devuelve el mensaje de error o `null`. Lo pone `main.ts`. */
 export type Aplicar = (peticion: Promise<RespuestaComando>) => Promise<string | null>;
 type Escapar = (valor: string) => string;
-type Pestana = 'ficha' | 'escuadras' | 'loadouts';
-
-const PESTANAS: [Pestana, string][] = [['ficha', 'Ficha'], ['escuadras', 'Escuadras'], ['loadouts', 'Loadouts']];
 const ATRIBUTOS: [AtributoHeroe, string][] = [['fuerza', 'Fuerza'], ['destreza', 'Destreza'], ['armadura', 'Armadura'], ['vitalidad', 'Vitalidad']];
-const DONDE = { campamento: 'Campamento', ejercito: 'En columna', escolta: 'Escoltando', pueblo: 'Guarneciendo un pueblo', plaza: 'En la guarnición de otra plaza', fuera: 'Fuera del mundo' } as const;
+export const DONDE = { campamento: 'Campamento', ejercito: 'En columna', escolta: 'Escoltando', pueblo: 'Guarneciendo un pueblo', plaza: 'En la guarnición de otra plaza', fuera: 'Fuera del mundo' } as const;
 
-let pestana: Pestana = 'ficha';
 /** El loadout que se está editando (`loadoutId` ausente = uno nuevo), o `null`. Mientras exista, el sondeo de 3 s no
- * repinta el panel: se llevaría por delante lo escrito. */
+ * repinta la ventana: se llevaría por delante lo escrito. */
 let borrador: { loadoutId?: string; displayName: string; squadIds: Set<string>; activo: boolean } | null = null;
 
-/** Lo abre la barra superior en la pestaña «Escuadras» sin que el jugador la busque. */
-export function elegirPestanaHeroe(nombre: Pestana): void {
-  pestana = nombre;
-  borrador = null;
-}
+/** ¿Hay un loadout a medio editar? La Base no se repinta sola mientras tanto. */
+export const editandoLoadout = (): boolean => borrador !== null;
+/** Suelta el loadout a medio editar (al cambiar de pestaña o cerrar la Base). */
+export function soltarBorrador(): void { borrador = null; }
 
 /** Minutos que le quedan de Herido a tu héroe (Doc 5.16.4), o `null` si está sano. */
 export function minutosHerido(proyeccion: ProyeccionJugador): number | null {
@@ -39,12 +33,12 @@ export function minutosHerido(proyeccion: ProyeccionJugador): number | null {
 }
 
 /** ¿Está el héroe dentro de su residencia? Solo ahí defiende su loadout activo (Doc 5.12.4). */
-function dentroDeSuResidencia(proyeccion: ProyeccionJugador): boolean {
+export function dentroDeSuResidencia(proyeccion: ProyeccionJugador): boolean {
   const aqui = proyeccion.asentamientos[0];
   return Boolean(aqui && [...(aqui.heroesFundadoresIds ?? []), ...(aqui.casasCompradas ?? [])].includes(proyeccion.heroeId));
 }
 
-function dondeEsta(heroe: HeroeProyectado, proyeccion: ProyeccionJugador): string {
+export function dondeEsta(heroe: HeroeProyectado, proyeccion: ProyeccionJugador): string {
   const u = heroe.ubicacion;
   if (u.tipo === 'columna') return 'en su columna';
   if (u.tipo === 'desconectado') return 'desconectado';
@@ -55,50 +49,19 @@ function dondeEsta(heroe: HeroeProyectado, proyeccion: ProyeccionJugador): strin
   return `en ${plaza?.nombre ?? u.asentamientoId}`;
 }
 
-function renderFicha(h: HeroeProyectado, proyeccion: ProyeccionJugador, e: Escapar): string {
+/** La pestaña «Héroe» de la Base: herido, los atributos con su reparto y, si es mercenario, su ficha. Nivel, Liderazgo y monedas van en el lateral. */
+export function htmlFichaHeroe(h: HeroeProyectado, proyeccion: ProyeccionJugador, e: Escapar): string {
   const puntos = h.puntosDeAtributoSinGastar;
-  const m = h.monedasHeroe;
   const herido = minutosHerido(proyeccion);
   return `
-    <p class="heroe-nota">${e(h.classDefinitionId)} · ${e(dondeEsta(h, proyeccion))}</p>
     ${herido !== null ? `<p class="heroe-herido">Herido: ${herido} min. No atacas, no persigues y tus escuadras no combaten.</p>` : ''}
-    <div class="faction-stats heroe-datos">
-      <div><span>Nivel</span><strong>${h.nivel}</strong></div>
-      <div><span>Experiencia</span><strong>${h.experienciaHaciaSiguienteNivel}</strong></div>
-      <div><span>Liderazgo</span><strong>${h.liderazgoBase}</strong></div>
-      <div class="heroe-ancho"><span>Monedas</span><strong>${m.bronce} bronce · ${m.plata} plata · ${m.oro} oro</strong></div>
-    </div>
     <strong class="heroe-sub">Atributos · ${puntos} ${puntos === 1 ? 'punto' : 'puntos'} sin gastar</strong>
     <div class="heroe-atributos">
       ${ATRIBUTOS.map(([id, nombre]) => `<label><span>${nombre}</span><strong>${h.atributosBase[id]}</strong>${puntos > 0 ? `<input type="number" min="0" max="${puntos}" value="0" data-atributo="${id}" />` : ''}</label>`).join('')}
     </div>
-    ${puntos > 0 ? '<button type="button" class="btn-secondary" data-accion="repartir">Repartir puntos</button>' : ''}`;
-}
-
-function renderEscuadras(h: HeroeProyectado, proyeccion: ProyeccionJugador, e: Escapar): string {
-  const libre = h.cupoGuarnicion - h.guarnicionOcupada;
-  const activo = h.loadouts.find((l) => l.activo);
-  // Herido, su loadout no defiende aunque esté dentro (Doc 5.16.4); la guarnición sí.
-  const dentro = dentroDeSuResidencia(proyeccion) && minutosHerido(proyeccion) === null;
-  const cabecera = `<p class="heroe-nota">Guarnición: <strong>${h.guarnicionOcupada} / ${h.cupoGuarnicion}</strong> de Liderazgo.${ayuda('jugador:heroe-escuadras', `${h.cupoGuarnicion === 0 ? 'Tu residencia no da cupo: hace falta un Barracón o una Galería de tiro. ' : ''}Del campamento solo defienden la guarnición y, mientras estás dentro, tu loadout activo.`)}</p>`;
-  if (h.escuadrones.length === 0) return `${cabecera}<p class="mapa-lista-vacia">No tienes escuadras: se reclutan en el asentamiento donde resides.</p>`;
-  return `${cabecera}<div class="mapa-lista">${h.escuadrones
-    .map((s) => {
-      const enCampamento = s.contenedor.tipo === 'campamento';
-      const defiende = enCampamento && (s.enGuarnicion || (dentro && Boolean(activo?.squadIds.includes(s.id))));
-      const boton = !enCampamento
-        ? ''
-        : s.enGuarnicion
-          ? `<button type="button" class="btn-secondary" data-accion="retirar" data-squad="${e(s.id)}">Retirar</button>`
-          : `<button type="button" class="btn-secondary" data-accion="asignar" data-squad="${e(s.id)}"${s.costeLiderazgo > libre ? ' disabled title="No cabe en el cupo de guarnición"' : ''}>A la guarnición</button>`;
-      return `<div class="mapa-lista-item heroe-fila con-tropa">${iconoEnFila(s.tropaId)}
-        <div><strong>${e(s.nombre)}</strong>
-          <span>${s.cantidad} hombres · nivel ${s.nivel} · moral ${Math.round(s.moral)} · ${s.costeLiderazgo} de Liderazgo</span>
-          <span>${DONDE[s.contenedor.tipo]}${s.enGuarnicion ? ' · en guarnición' : ''}${defiende ? ' · <em class="heroe-marca">defiende</em>' : ''}</span></div>
-        ${boton}
-      </div>`;
-    })
-    .join('')}</div>`;
+    ${puntos > 0 ? '<button type="button" class="btn-secondary" data-accion="repartir">Repartir puntos</button>' : ''}
+    ${htmlHeroeMercenario(proyeccion, e)}
+    <p class="faction-error" data-campo="error" role="alert"></p>`;
 }
 
 function sumaDelBorrador(h: HeroeProyectado): number {
@@ -120,8 +83,9 @@ function renderEditor(h: HeroeProyectado, e: Escapar): string {
     <div class="heroe-acciones"><button type="button" class="btn-secondary" data-accion="guardar">Guardar</button><button type="button" class="btn-secondary" data-accion="cancelar">Cancelar</button></div>`;
 }
 
-function renderLoadouts(h: HeroeProyectado, e: Escapar): string {
-  if (borrador) return renderEditor(h, e);
+/** La pestaña «Loadouts» de la Base: la lista, o el editor si hay uno abierto. */
+export function htmlLoadouts(h: HeroeProyectado, e: Escapar): string {
+  if (borrador) return renderEditor(h, e) + '<p class="faction-error" data-campo="error" role="alert"></p>';
   return `
     <strong class="heroe-sub">Loadouts${ayuda('jugador:heroe-loadouts', 'El loadout activo es el que defiende tu residencia mientras estás dentro. Los perks llegarán con el catálogo de Conquest.')}</strong>
     <div class="mapa-lista">${h.loadouts
@@ -134,29 +98,13 @@ function renderLoadouts(h: HeroeProyectado, e: Escapar): string {
         </div>
       </div>`)
       .join('')}</div>
-    <button type="button" class="btn-secondary" data-accion="nuevo">Nuevo loadout</button>`;
+    <button type="button" class="btn-secondary" data-accion="nuevo">Nuevo loadout</button>
+    <p class="faction-error" data-campo="error" role="alert"></p>`;
 }
 
-/** Pinta el panel del héroe en `panel`. Sin `forzar`, respeta el borrador abierto y no toca el DOM si nada cambió. */
-export function pintarPanelHeroe(panel: HTMLElement, proyeccion: ProyeccionJugador, e: Escapar, aplicar: Aplicar, forzar = false): void {
-  if (borrador && !forzar) return;
-  const h = proyeccion.heroe;
-  const cuerpo = pestana === 'ficha' ? renderFicha(h, proyeccion, e) + htmlHeroeMercenario(proyeccion, e) : pestana === 'escuadras' ? renderEscuadras(h, proyeccion, e) : renderLoadouts(h, e);
-  const html = `<div class="heroe-panel">
-    <div class="mapa-panel-jugador">${e(h.displayName)}</div>
-    <div class="asent-tabs">${PESTANAS.map(([id, nombre]) => `<button class="asent-tab${id === pestana ? ' activo' : ''}" type="button" data-pestana="${id}">${nombre}</button>`).join('')}</div>
-    ${cuerpo}
-    <p class="faction-error" data-campo="error" role="alert"></p>
-  </div>`;
-  if (forzar) invalidar(panel);
-  pintar(panel, html, () => cablear(panel, h, e, aplicar), `heroe:${pestana}`);
-}
-
-function cablear(panel: HTMLElement, h: HeroeProyectado, e: Escapar, aplicar: Aplicar): void {
+/** Cablea las pestañas «Héroe» y «Loadouts» de la Base; `repintar` la vuelve a pintar a la fuerza (con la proyección de ahora). */
+export function cablearHeroe(panel: HTMLElement, h: HeroeProyectado, aplicar: Aplicar, repintar: () => void): void {
   const gameId = estadoCliente.gameIdActivo;
-  const repintar = (): void => {
-    if (estadoCliente.proyeccionUltima) pintarPanelHeroe(panel, estadoCliente.proyeccionUltima, e, aplicar, true);
-  };
   const mostrarError = (mensaje: string | null): void => {
     const error = panel.querySelector<HTMLElement>('[data-campo="error"]');
     if (error) error.textContent = mensaje ?? '';
@@ -172,14 +120,7 @@ function cablear(panel: HTMLElement, h: HeroeProyectado, e: Escapar, aplicar: Ap
   const loadout = (id: string | undefined): Loadout | undefined => h.loadouts.find((l) => l.id === id);
   cablearHeroeMercenario(panel, async (tipo, params) => { const m = await aplicar(ejecutarComando(gameId, tipo, params)); if (!m) repintar(); return m; });
 
-  panel.querySelectorAll<HTMLButtonElement>('[data-pestana]').forEach((boton) => boton.addEventListener('click', () => {
-    pestana = boton.dataset.pestana as Pestana;
-    borrador = null;
-    repintar();
-  }));
-
   panel.querySelectorAll<HTMLButtonElement>('[data-accion]').forEach((boton) => boton.addEventListener('click', () => {
-    const squadId = boton.dataset.squad ?? '';
     const elegido = loadout(boton.dataset.loadout);
     switch (boton.dataset.accion) {
       case 'repartir': {
@@ -190,8 +131,6 @@ function cablear(panel: HTMLElement, h: HeroeProyectado, e: Escapar, aplicar: Ap
         void accion(boton, () => repartirPuntos(gameId, { atributos }));
         return;
       }
-      case 'asignar': void accion(boton, () => asignarGuarnicion(gameId, squadId)); return;
-      case 'retirar': void accion(boton, () => retirarGuarnicion(gameId, squadId)); return;
       case 'activar':
         if (elegido) void accion(boton, () => guardarLoadout(gameId, { loadoutId: elegido.id, displayName: elegido.displayName, squadIds: elegido.squadIds, perksSeleccionados: elegido.perksSeleccionados, activo: true }));
         return;

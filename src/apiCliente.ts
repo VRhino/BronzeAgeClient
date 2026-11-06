@@ -657,7 +657,7 @@ interface BalancePublico {
   cuposYNiveles?: { POLITICAS?: ReglasDePoliticas; CAP_FUNDACION_POR_NIVEL?: number[]; CIUDADANIA?: { cooldownCambioResidenciaDias?: number; cooldownCreacionFaccionDias?: number } };
   caravanas?: { CARAVANA_COOLDOWN?: { cooldownMinutos?: number }; CARRO_CATALOGO?: Record<string, CarroDelCatalogo>; ANIMAL_CATALOGO?: Record<string, AnimalDelCatalogo>; CARAVANA_PREPARACION?: { kPorCarro?: number; maxProgramacionDias?: number }; CARAVANA_ESCOLTA?: { liderazgoPorNivelMercado?: number[] } };
   politica?: { PUERTA?: { cerradaAPorDefecto?: string[] }; CAPITAL?: { cooldownDias?: number } };
-  mundoYMilitar?: { LOGISTICA?: { capacidadViveresPorHeroe?: number; radioEncuentro?: number; radioReabastecimiento?: number }; FUNDACION?: { materialesIniciales?: Record<string, number>; viviendasIniciales?: number; costoMaderaExtraCaravana?: number }; MERCENARIOS?: { refundacion?: { porcentajeCoste?: number }; radioProteccion?: number; edificiosMilitares?: string[]; nivelEdificios?: number }; MOVIMIENTO?: { radioPuerta?: number; radioInspeccion?: number }; RECLUTAMIENTO_ORO_POR_ESCALON?: Record<string, number>; ORO_POR_CABALLO?: number };
+  mundoYMilitar?: { LOGISTICA?: { capacidadViveresPorHeroe?: number; radioEncuentro?: number; radioReabastecimiento?: number; factorConsumoEnMarcha?: number; factorConsumoEstacionado?: number }; MILITAR?: { racionPorSoldadoPorMinuto?: number }; FUNDACION?: { materialesIniciales?: Record<string, number>; viviendasIniciales?: number; costoMaderaExtraCaravana?: number }; MERCENARIOS?: { refundacion?: { porcentajeCoste?: number }; radioProteccion?: number; edificiosMilitares?: string[]; nivelEdificios?: number }; MOVIMIENTO?: { radioPuerta?: number; radioInspeccion?: number; consumoPorParticipante?: number; factorConsumoMarchaForzada?: number }; RECLUTAMIENTO_ORO_POR_ESCALON?: Record<string, number>; ORO_POR_CABALLO?: number };
   tecnologia?: CatalogoTecnologia;
   internas?: { CAMPAMENTOS_BANDIDOS?: { niveles?: Record<string, NivelDeBandidos> } };
 }
@@ -796,6 +796,19 @@ export function nivelesBandidos(alCargar?: () => void): Record<string, NivelDeBa
 /** Lo que caben los víveres de un héroe (`LOGISTICA.capacidadViveresPorHeroe`); 350 mientras no llegue el balance. */
 export function capacidadDeViveres(alCargar?: () => void): number {
   return balance(alCargar)?.mundoYMilitar?.LOGISTICA?.capacidadViveresPorHeroe ?? 350;
+}
+
+/**
+ * Trigo por minuto que come una columna, como el motor (`racion::racion_columna_forzada`): `(soldados × ración + héroes × consumo por participante)`
+ * por el factor de marcha y, acampada, además por el de estacionamiento; en marcha forzada, por su factor. `null` mientras no llegue el balance.
+ */
+export function consumoDeViveres(soldados: number, participantes: number, marchando: boolean, forzada: boolean, alCargar?: () => void): number | null {
+  const b = balance(alCargar)?.mundoYMilitar;
+  const racion = b?.MILITAR?.racionPorSoldadoPorMinuto, porHeroe = b?.MOVIMIENTO?.consumoPorParticipante, marcha = b?.LOGISTICA?.factorConsumoEnMarcha;
+  if (racion === undefined || porHeroe === undefined || marcha === undefined) return null;
+  const base = (soldados * racion + participantes * porHeroe) * marcha;
+  if (!marchando) return base * (b?.LOGISTICA?.factorConsumoEstacionado ?? 1);
+  return forzada ? base * (b?.MOVIMIENTO?.factorConsumoMarchaForzada ?? 1) : base;
 }
 
 /** Los edificios militares entre los que la posición elige el de cada campamento (`MERCENARIOS.edificiosMilitares`, en su orden) y el nivel al
