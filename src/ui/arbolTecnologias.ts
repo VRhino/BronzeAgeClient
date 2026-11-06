@@ -16,6 +16,10 @@ import type { CondicionHito } from '../tiposDominio';
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import { iconoEdificio } from './iconosEdificio';
 import { iconoTropa } from './iconosTropa';
+import { fijarDibujo, htmlTablero, montarTablero, muestraLinea, type CartaTablero, type ContextoArbol } from './arbolTablero';
+
+export type { ContextoArbol };
+const CLAVE = 'tecnologia';
 
 type Escapar = (s: string) => string;
 type Tec = CatalogoTecnologia['TECNOLOGIAS'][string];
@@ -55,7 +59,7 @@ export function datosDesdeCatalogo(cat: Pick<CatalogoTecnologia, 'TECNOLOGIAS' |
 
 let datosCache: { claves: unknown[]; d: DatosArbol } | null = null;
 /** Los datos del árbol, o `null` mientras no llegue el balance. */
-function datosDelArbol(alCargar?: () => void): DatosArbol | null {
+export function datosDelArbol(alCargar?: () => void): DatosArbol | null {
   const cat = catalogoDeTecnologia(alCargar), tropas = tropasReclutables(alCargar), catalogo = bloqueDeDatos<Record<string, EntradaCatalogo>>('EDIFICIO_CATALOGO', alCargar);
   if (!cat || !tropas || !catalogo) return null;
   const claves = [cat, tropas, catalogo];
@@ -67,7 +71,7 @@ function datosDelArbol(alCargar?: () => void): DatosArbol | null {
 
 const ROMANO = ['', 'I', 'II', 'III', 'IV', 'V'];
 /** De dónde salen las materias primas fuera de las recetas (pueblos y aldeas desde el 2026-11-01). */
-const BRUTO: Record<string, { donde: string; tec?: string }> = {
+export const BRUTO: Record<string, { donde: string; tec?: string }> = {
   madera: { donde: 'Leñera' }, piedra: { donde: 'un pueblo de cantera' }, cobre: { donde: 'un pueblo de mina de cobre' },
   estano: { donde: 'un pueblo de mina de estaño' }, hierro: { donde: 'un pueblo de mina de hierro', tec: 'forja_hierro_temprana' },
   livestock: { donde: 'el rebaño de una aldea agrícola' }, trigo: { donde: 'Granja' }, oro: { donde: 'impuestos y pueblo de mina de oro' },
@@ -104,7 +108,7 @@ const CARRILES_BASE = [
 // ── Requisitos ───────────────────────────────────────────────────────────────
 
 /** Un acumulador: tecnologías (con el motivo), edificios (tipo → nivel mínimo), nivel de plaza y pueblos. */
-interface Acc { tecs: Map<string, Set<string>>; eds: Map<string, number>; plaza: number; pueblos: Set<string> }
+export interface Acc { tecs: Map<string, Set<string>>; eds: Map<string, number>; plaza: number; pueblos: Set<string> }
 const nuevoAcc = (): Acc => ({ tecs: new Map(), eds: new Map(), plaza: 1, pueblos: new Set() });
 const anotaTec = (acc: Acc, t: string | undefined, por: string): void => { if (!t) return; if (!acc.tecs.has(t)) acc.tecs.set(t, new Set()); acc.tecs.get(t)!.add(por); };
 
@@ -118,9 +122,10 @@ export interface Grafo {
 interface Nodo { id: string; d: Tec; acc: Acc; preds: { de: string; tipo: 'hito' | 'implicita' | 'logro' }[]; hijos: string[]; era: number; carril: string; col?: number; fila?: number }
 interface Carril { id: string; nombre: string; icono: string; tecs: string[]; visible?: boolean; filas?: number; fila0?: number; filaFin?: number }
 
-const eraOrd = (D: DatosArbol, id: string): number => D.eras[id]?.orden ?? 99;
+export const eraOrd = (D: DatosArbol, id: string): number => D.eras[id]?.orden ?? 99;
 
-export function construirGrafo(D: DatosArbol): Grafo {
+/** Lo que pide cada cosa del balance: un edificio a un nivel, un recurso, una tropa, una tecnología (su hito y lo que oculta su logro). */
+export function requisitos(D: DatosArbol) {
   function reqEdificio(acc: Acc, tipo: string, nivel: number, por = 'edificio'): void {
     if (tipo === 'centroUrbano') return;
     if ((acc.eds.get(tipo) ?? 0) >= nivel) return;
@@ -187,6 +192,11 @@ export function construirGrafo(D: DatosArbol): Grafo {
     return acc;
   };
 
+  return { reqEdificio, reqRecurso, reqTropa, reqTec, logroDe };
+}
+
+export function construirGrafo(D: DatosArbol): Grafo {
+  const { reqTropa, reqTec, logroDe } = requisitos(D);
   const carriles: Carril[] = CARRILES_BASE.map((c) => ({ ...c, tecs: c.tecs.filter((t) => D.tec[t]) }));
   const carrilDe = new Map<string, string>();
   carriles.forEach((c) => c.tecs.forEach((t) => carrilDe.set(t, c.id)));
@@ -235,11 +245,11 @@ export interface EstadoArbol {
 
 /** Al 30 % de adoptadas de una Era (con las de arranque, redondeando hacia arriba) aparece la siguiente (Víctor, 2026-11-06). */
 export const UMBRAL_ERA = 0.3;
-const erasOrdenadas = (D: DatosArbol): { id: string; orden: number; nombre: string; plazoSemanas: number; minimoSemanas?: number }[] =>
+export const erasOrdenadas = (D: DatosArbol): { id: string; orden: number; nombre: string; plazoSemanas: number; minimoSemanas?: number }[] =>
   Object.entries(D.eras).sort((a, b) => a[1].orden - b[1].orden).map(([id, e]) => ({ id, ...e }));
-const tecsDeEra = (D: DatosArbol, o: number): string[] => Object.keys(D.tec).filter((t) => eraOrd(D, D.tec[t]!.era) === o);
+export const tecsDeEra = (D: DatosArbol, o: number): string[] => Object.keys(D.tec).filter((t) => eraOrd(D, D.tec[t]!.era) === o);
 export const cupoEra = (D: DatosArbol, o: number): number => Math.ceil(UMBRAL_ERA * tecsDeEra(D, o).length - 1e-9);
-const adoptadasEn = (D: DatosArbol, adoptadas: string[], o: number): number => tecsDeEra(D, o).filter((t) => adoptadas.includes(t)).length;
+export const adoptadasEn = (D: DatosArbol, adoptadas: string[], o: number): number => tecsDeEra(D, o).filter((t) => adoptadas.includes(t)).length;
 /** La última Era que la Facción ve. */
 export function ultimaEraVisible(D: DatosArbol, adoptadas: string[]): number {
   const eras = erasOrdenadas(D);
@@ -339,8 +349,7 @@ function piezas(G: Grafo, e: Escapar) {
   const EI = (tipo: string, nivel?: number | string | null, nombre?: string): string => `<span class="ta-rec ta-edi" title="${e(nombre ?? EN(tipo))}${nivel ? ` nivel ${nivel}` : ''}">${iconoEdificio(tipo, 18)}${nivel ? `<b>${nivel}</b>` : ''}<span class="ta-sr">${e(nombre ?? EN(tipo))}${nivel ? ` ${nivel}` : ''}</span></span>`;
   const costeTxt = (c: Record<string, number> | undefined, almacen?: Record<string, { cantidad: number }>): string =>
     Object.entries(c ?? {}).map(([r, n]) => RI(r, n, almacen !== undefined && (almacen[r]?.cantidad ?? 0) < n)).join(' ');
-  const muestraLinea = (tipo: string, ancho = 18): string => `<svg width="${ancho}" height="8" viewBox="0 0 ${ancho} 8" aria-hidden="true"><path d="M1 4H${ancho - 1}" class="ta-arista ${tipo} muestra"/></svg>`;
-  return { TN, RI, EI, costeTxt, muestraLinea };
+  return { TN, RI, EI, costeTxt };
 }
 
 /** Lo que abre una tecnología, en iconos (tropas, edificios, niveles, recetas, bonus y canon). */
@@ -367,7 +376,7 @@ export function htmlArbol(p: ProyeccionJugador, e: Escapar, precioAeda: (id: str
   const G = grafoDe(D);
   const eraVisible = ultimaEraVisible(D, E.adoptadas);
   const lay = disponer(G, eraVisible);
-  const { TN, RI, costeTxt, muestraLinea } = piezas(G, e);
+  const { TN, RI, costeTxt } = piezas(G, e);
   const visibles = new Set([...G.nodos.values()].filter((n) => n.era <= eraVisible).map((n) => n.id));
   dibujo = { G, E, lay, e, visibles };
   const eras = erasOrdenadas(D);
@@ -376,34 +385,22 @@ export function htmlArbol(p: ProyeccionJugador, e: Escapar, precioAeda: (id: str
   const futura = (o: number): boolean => o > mundo;
 
   const carriles = lay.carriles.filter((c) => c.visible);
-  const filas = ['auto'];
-  let idx = 2;
-  for (const c of carriles) { filas.push('var(--ta-canal)'); idx++; c.fila0 = idx; for (let i = 0; i < c.filas!; i++) { filas.push('auto'); idx++; } c.filaFin = idx; }
-  filas.push('var(--ta-canal)');
-  let h = '<svg class="ta-lineas" aria-hidden="true"></svg>';
-  lay.erasVis.forEach((x, i) => { h += `<div class="ta-era-fondo${i % 2 ? ' par' : ''}${i ? ' raya' : ''}${futura(x.orden) ? ' futura' : ''}" style="grid-column:${2 + lay.baseEra[x.orden]!} / span ${lay.colsEra[x.orden]}"></div>`; });
-  carriles.forEach((c, i) => { h += `<div class="ta-carril-fondo${i % 2 ? ' par' : ''}" data-carril="${c.id}" style="grid-row:${c.fila0} / ${c.filaFin}"></div>`; });
-  h += '<div class="ta-esquina"><span>Carril · Era</span></div>';
-  for (const x of lay.erasVis) {
+  fijarDibujo(CLAVE, { nodos: G.nodos, ordenCarriles: G.carriles.map((c) => c.id), ocupa: lay.ocupa, ancla: 17, tip: (id) => tipTec(dibujo!, id, precioAeda) });
+  const eraCab = (x: (typeof lay.erasVis)[number]): string => {
     const actual = x.orden === mundo;
     const sigue = x.orden === eraVisible && x.orden < ultima;
     const llevas = adoptadasEn(D, E.adoptadas, x.orden), cupo = cupoEra(D, x.orden);
-    h += `<div class="ta-era-cab" style="grid-column:${2 + lay.baseEra[x.orden]!} / span ${lay.colsEra[x.orden]}; grid-row:1">
-      <span class="ta-era-num" aria-hidden="true">${ROMANO[x.orden] ?? x.orden}</span>
+    return `<span class="ta-era-num" aria-hidden="true">${ROMANO[x.orden] ?? x.orden}</span>
       <span class="ta-era-nombre">Era ${ROMANO[x.orden] ?? x.orden} · ${e(x.nombre)}</span>
       <span class="ta-era-sub">${x.minimoSemanas !== undefined ? `dura de ${x.minimoSemanas} a ${x.plazoSemanas} semanas` : `dura hasta ${x.plazoSemanas} semanas`}</span>
       <span class="ta-era-coste">Adoptar cada una: ${costeTxt(D.tarifa[x.id])}</span>
       ${sigue ? `<span class="ta-era-sigue"><span>La Era ${ROMANO[x.orden + 1]} aparece con ${cupo} de ${tecsDeEra(D, x.orden).length} adoptadas: llevas <b>${llevas}</b></span><span class="barra" style="--p:${Math.min(1, llevas / Math.max(1, cupo))}"></span></span>` : ''}
-      ${actual || futura(x.orden) ? `<span class="ta-era-marca${actual ? ' actual' : ' futura'}">${actual ? 'Era del mundo' : 'Bloqueada'}</span>` : ''}</div>`;
-  }
-  for (const c of carriles) {
-    const n = c.tecs.filter((t) => visibles.has(t)).length;
-    h += `<div class="ta-carril-nombre" style="grid-row:${c.fila0} / ${c.filaFin}" title="${e(c.nombre)}">${iconoEdificio(c.icono, 30)}<strong>${e(c.nombre)}</strong><small>${n} tecnología${n > 1 ? 's' : ''}</small></div>`;
-  }
-  const carrilPorId = new Map(carriles.map((c) => [c.id, c]));
+      ${actual || futura(x.orden) ? `<span class="ta-era-marca${actual ? ' actual' : ' futura'}">${actual ? 'Era del mundo' : 'Bloqueada'}</span>` : ''}`;
+  };
+  const cartas: CartaTablero[] = [];
   for (const n of G.nodos.values()) {
     if (!visibles.has(n.id)) continue;
-    const k = n.d, c = carrilPorId.get(n.carril)!, est = estadoDe(G, E, n.id);
+    const k = n.d, est = estadoDe(G, E, n.id);
     const cruces = n.preds.filter((x) => G.nodos.get(x.de)!.carril !== n.carril);
     let estado = '';
     if (!k.deArranque) {
@@ -414,12 +411,12 @@ export function htmlArbol(p: ProyeccionJugador, e: Escapar, precioAeda: (id: str
       else if (est === 'futura') estado = `Bloqueada: la Era ${ROMANO[n.era]} aún no empieza`;
       else estado = 'Falta el logro del mundo';
     }
-    h += `<button type="button" class="ta-carta ${est}" data-tec="${e(n.id)}" style="grid-column:${2 + n.col!}; grid-row:${c.fila0! + n.fila!}" aria-label="Tecnología ${e(k.nombre)}">
+    cartas.push({ carril: n.carril, col: n.col!, fila: n.fila!, html: (estilo) => `<button type="button" class="ta-carta ${est}" data-nodo="${e(n.id)}" style="${estilo}" aria-label="Tecnología ${e(k.nombre)}">
       <span class="ta-carta-cab"><span class="ta-carta-nombre">${e(k.nombre)}</span><span class="ta-medalla" aria-hidden="true">${MEDALLA[est] ?? ''}</span></span>
       <span class="ta-carta-abre">${abreDe(G, n.id, e)}</span>
       ${cruces.length ? `<span class="ta-carta-pide">${cruces.map((x) => `<span class="ta-pide">${muestraLinea(x.tipo)}Pide ${e(TN(x.de))}</span>`).join('')}</span>` : ''}
       ${k.deArranque ? '<span class="ta-arranque">De arranque</span>' : ''}
-      ${estado ? `<span class="ta-carta-estado">${estado}</span>` : ''}</button>`;
+      ${estado ? `<span class="ta-carta-estado">${estado}</span>` : ''}</button>` });
   }
   const tipos = new Set([...G.nodos.values()].filter((n) => visibles.has(n.id)).flatMap((n) => n.preds.map((x) => x.tipo)));
   const hay = new Set([...visibles].map((id) => estadoDe(G, E, id)));
@@ -431,19 +428,15 @@ export function htmlArbol(p: ProyeccionJugador, e: Escapar, precioAeda: (id: str
     sw('adoptada', 'adoptada'), sw('adoptable', 'aparecida: se puede adoptar'), sw('revelada', 'revelada por un Aeda'),
     sw('logro', 'logro del mundo cumplido'), sw('bloqueada', 'sin logro aún'), sw('futura', 'bloqueada: su Era aún no empieza'),
   ].filter(Boolean).join('');
-  return `<div class="ta-mandos"><button class="ta-btn-sec" type="button" data-ta-todas aria-pressed="${todas}"><span class="caja" aria-hidden="true">${todas ? '✓' : ''}</span>Ver todas las conexiones</button>
-      <span class="ta-ayuda">Pasa el ratón por una tecnología para ver su camino; haz clic para abrir su ficha. Arrastra el tablero para moverte.</span></div>
-    <div class="ta-leyenda">${ley}</div>
-    <div class="ta-tablero-marco"><div class="ta-tablero${todas ? ' todas' : ''}" style="grid-template-columns: var(--ta-carril) repeat(${lay.NCOL}, var(--ta-carta)); grid-template-rows: ${filas.join(' ')}">${h}</div></div>`;
+  return htmlTablero({
+    clave: CLAVE, esquina: 'Carril · Era', NCOL: lay.NCOL, e, icono: iconoEdificio, cartas, leyenda: ley,
+    ayuda: 'Pasa el ratón por una tecnología para ver su camino; haz clic para abrir su ficha. Arrastra el tablero para moverte.',
+    eras: lay.erasVis.map((x) => ({ base: lay.baseEra[x.orden]!, cols: lay.colsEra[x.orden]!, futura: futura(x.orden), cab: eraCab(x) })),
+    carriles: carriles.map((c) => { const n = c.tecs.filter((t) => visibles.has(t)).length; return { id: c.id, nombre: c.nombre, icono: c.icono, filas: c.filas!, sub: `${n} tecnología${n > 1 ? 's' : ''}` }; }),
+  });
 }
 
 // ── Tooltip y ficha ──────────────────────────────────────────────────────────
-
-/** Lo que pone la ficha fija de una carta además del tooltip: las acciones (Adoptar, Comprar a un Aeda, Empezar épica) y su línea de error. */
-export interface ContextoArbol {
-  acciones: (id: string) => string;
-  cablearAcciones: (raiz: HTMLElement) => void;
-}
 
 function hitoLi(G: Grafo, e: Escapar, c: CondicionHito): string {
   const { TN, RI, EI } = piezas(G, e);
@@ -514,223 +507,7 @@ function tipTec(d: Dibujo, id: string, precioAeda: (id: string) => number | null
   return h;
 }
 
-// ── Montaje: líneas, resaltado, tooltip, ficha y arrastre ───────────────────
+// ── Montaje ──────────────────────────────────────────────────────────────────
 
-/** Lo que sobrevive a un repintado del panel (que llega con cada cambio de la proyección). */
-let todas = false;
-let fijado: string | null = null;
-let scrollGuardado = 0;
-let ctxActual: ContextoArbol | null = null;
-let precioActual: (id: string) => number | null = () => null;
-let tip: HTMLElement | null = null;
-let vigia: ReturnType<typeof setInterval> | undefined;
-let tableroActual: HTMLElement | null = null;
-let svgActual: SVGSVGElement | null = null;
-let resaltado: string | null = null;
-let globalesPuestos = false;
-
-const ANCLA = 17;
-
-function trazar(tablero: HTMLElement, svg: SVGSVGElement): void {
-  const d = dibujo;
-  if (!d || !tablero.isConnected) return;
-  const { G, lay } = d;
-  const cartas = new Map(Array.from(tablero.querySelectorAll<HTMLElement>('.ta-carta')).map((el) => [el.dataset.tec!, el]));
-  const cs = getComputedStyle(tablero);
-  const pistas = cs.gridTemplateColumns.split(' ').map(parseFloat);
-  const hueco = parseFloat(cs.columnGap) || 0;
-  const xPista = (i: number): number => pistas.slice(0, i).reduce((s, w) => s + w + hueco, 0);
-  const xHueco = (col: number): number => xPista(col + 1) + (pistas[col + 1] ?? 0) + hueco / 2;
-  const canales = new Map<number, Map<string, number>>();
-  const canal = (col: number, clave: string): number => {
-    if (!canales.has(col)) canales.set(col, new Map());
-    const m = canales.get(col)!;
-    if (!m.has(clave)) m.set(clave, m.size);
-    const k = m.get(clave)!;
-    return xHueco(col) + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 7;
-  };
-  const alto = parseFloat(cs.getPropertyValue('--ta-canal')) || 20;
-  const bandas = Object.fromEntries(Array.from(tablero.querySelectorAll<HTMLElement>('.ta-carril-fondo')).map((el) => [el.dataset.carril!, { y: el.offsetTop, h: el.offsetHeight }]));
-  const usoCanal = new Map<string, number>();
-  const yCanal = (carril: string, arriba: boolean): number => {
-    const b = bandas[carril]!;
-    const base = arriba ? b.y - alto / 2 - 1 : b.y + b.h + alto / 2 + 1;
-    const clave = carril + (arriba ? '↑' : '↓');
-    const k = usoCanal.get(clave) ?? 0;
-    usoCanal.set(clave, k + 1);
-    return base + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 5;
-  };
-  const libreEnFila = (carril: string, fila: number, c0: number, c1: number): boolean => { for (let k = c0; k <= c1; k++) if (lay.ocupa[carril]?.[fila]?.has(k)) return false; return true; };
-  const caja = (id: string): { x: number; y: number; w: number } => { const el = cartas.get(id)!; return { x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth }; };
-  const orden = G.carriles.map((c) => c.id);
-  let s = `<defs><marker id="ta-punta" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M1.5 1L7 4L1.5 7" fill="none" style="stroke:var(--bronce)" stroke-width="1.6"/></marker>
-    <marker id="ta-punta-luz" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M1.5 1L7 4L1.5 7" fill="none" style="stroke:var(--oro-claro)" stroke-width="1.6"/></marker></defs>`;
-  for (const n of G.nodos.values()) {
-    if (!cartas.has(n.id)) continue;
-    for (const p of n.preds) {
-      if (!cartas.has(p.de)) continue;
-      const a = G.nodos.get(p.de)!, A = caja(a.id), B = caja(n.id);
-      const x1 = A.x + A.w, y1 = A.y + ANCLA, x2 = B.x - 1, y2 = B.y + ANCLA;
-      const xa = canal(a.col!, 'S' + a.id);
-      const mismo = a.carril === n.carril;
-      let dd: string;
-      if (mismo && a.fila === n.fila) dd = `M${x1} ${y1}H${x2}`;
-      else if (n.col === a.col! + 1) dd = `M${x1} ${y1}H${xa}V${y2}H${x2}`;
-      else if (mismo && libreEnFila(n.carril, n.fila!, a.col! + 1, n.col! - 1)) dd = `M${x1} ${y1}H${xa}V${y2}H${x2}`;
-      else if (mismo) dd = `M${x1} ${y1}H${canal(n.col! - 1, 'T' + n.id)}V${y2}H${x2}`;
-      else {
-        const yg = yCanal(n.carril, orden.indexOf(n.carril) > orden.indexOf(a.carril));
-        dd = `M${x1} ${y1}H${xa}V${yg}H${canal(n.col! - 1, 'T' + n.id)}V${y2}H${x2}`;
-      }
-      s += `<path class="ta-arista ${p.tipo}${mismo ? '' : ' cruce'}" data-de="${a.id}" data-a="${n.id}" d="${dd}"/>`;
-    }
-  }
-  svg.setAttribute('width', String(tablero.scrollWidth));
-  svg.setAttribute('height', String(tablero.scrollHeight));
-  svg.innerHTML = s;
-  if (resaltado) resaltar(resaltado);
-}
-
-function resaltar(id: string | null): void {
-  resaltado = id;
-  const tablero = tableroActual, d = dibujo;
-  if (!tablero || !d) return;
-  tablero.classList.toggle('activo', Boolean(id));
-  tablero.querySelectorAll('.luz,.baja,.foco').forEach((x) => x.classList.remove('luz', 'baja', 'foco'));
-  if (!id || !d.G.nodos.has(id)) return;
-  const arriba = new Set<string>(), abajo = new Set<string>();
-  const sube = (i: string): void => d.G.nodos.get(i)!.preds.forEach((p) => { if (!arriba.has(p.de)) { arriba.add(p.de); sube(p.de); } });
-  const baja = (i: string): void => d.G.nodos.get(i)!.hijos.forEach((h) => { if (!abajo.has(h)) { abajo.add(h); baja(h); } });
-  sube(id); arriba.add(id); baja(id);
-  tablero.querySelectorAll<HTMLElement>('.ta-carta').forEach((el) => {
-    const i = el.dataset.tec!;
-    if (arriba.has(i)) el.classList.add('luz'); else if (abajo.has(i)) el.classList.add('baja');
-    if (i === id) el.classList.add('foco');
-  });
-  svgActual?.querySelectorAll<SVGPathElement>('.ta-arista').forEach((x) => {
-    const de = x.dataset.de!, a = x.dataset.a!;
-    if (arriba.has(de) && arriba.has(a)) x.classList.add('luz');
-    else if (abajo.has(a) && (abajo.has(de) || de === id)) x.classList.add('baja');
-  });
-}
-
-function elTip(): HTMLElement {
-  if (tip?.isConnected) return tip;
-  tip = document.createElement('div');
-  tip.className = 'ta-tip';
-  tip.hidden = true;
-  tip.setAttribute('role', 'dialog');
-  document.body.appendChild(tip);
-  return tip;
-}
-
-function ocultarTip(): void {
-  if (tip) { tip.hidden = true; tip.classList.remove('fijo'); }
-  if (vigia) { clearInterval(vigia); vigia = undefined; }
-}
-
-function mostrar(id: string, ev?: MouseEvent | FocusEvent | null): void {
-  const d = dibujo;
-  if (!d) return;
-  const t = elTip();
-  const fijo = fijado === id;
-  t.innerHTML = tipTec(d, id, precioActual) + (fijo && ctxActual ? `<div class="ta-ficha-acciones">${ctxActual.acciones(id)}<p class="faction-error" data-campo="error-ficha-tecnologia" role="alert"></p></div>` : '');
-  t.classList.toggle('fijo', fijo);
-  t.hidden = false;
-  if (fijo && ctxActual) ctxActual.cablearAcciones(t);
-  colocar(ev ?? null, id);
-  // Si el árbol desaparece (otra pestaña, ventana cerrada) el tooltip, que vive en <body>, se va con él.
-  if (!vigia) vigia = setInterval(() => { if (!tableroActual?.isConnected) { fijado = null; ocultarTip(); } }, 400);
-}
-
-function colocar(ev: MouseEvent | FocusEvent | null, id: string): void {
-  const t = tip;
-  if (!t || t.hidden) return;
-  const r = t.getBoundingClientRect(), vw = innerWidth, vh = innerHeight;
-  let x: number, y: number;
-  if (ev && 'clientX' in ev && ev.type.startsWith('mouse')) {
-    x = ev.clientX + 16; y = ev.clientY + 16;
-    if (x + r.width > vw - 8) x = Math.max(8, ev.clientX - r.width - 16);
-  } else {
-    const b = tableroActual?.querySelector<HTMLElement>(`.ta-carta[data-tec="${CSS.escape(id)}"]`)?.getBoundingClientRect();
-    if (!b) return;
-    x = b.right + 8; y = b.top;
-    if (x + r.width > vw - 8) x = Math.max(8, b.left - r.width - 8);
-  }
-  if (x + r.width > vw - 8) x = 8;
-  if (y + r.height > vh - 8) y = Math.max(8, vh - r.height - 8);
-  t.style.left = `${x}px`;
-  t.style.top = `${y}px`;
-}
-
-function cerrarFicha(): void { fijado = null; resaltar(null); ocultarTip(); }
-
-/** Cablea el árbol recién pintado: traza las líneas (y las rehace al cambiar de tamaño), el resaltado, el tooltip, la ficha fija y el arrastre. */
-export function montarArbol(raiz: HTMLElement, ctx: ContextoArbol, precioAeda: (id: string) => number | null): void {
-  const tablero = raiz.querySelector<HTMLElement>('.ta-tablero');
-  const svg = raiz.querySelector<SVGSVGElement>('.ta-lineas');
-  ctxActual = ctx;
-  precioActual = precioAeda;
-  if (!tablero || !svg) { tableroActual = null; return; }
-  tableroActual = tablero;
-  svgActual = svg;
-  resaltado = null;
-  let pendiente = 0;
-  const retrazar = (): void => { cancelAnimationFrame(pendiente); pendiente = requestAnimationFrame(() => trazar(tablero, svg)); };
-  const ro = new ResizeObserver(retrazar);
-  ro.observe(tablero);
-  tablero.querySelectorAll('.ta-carta').forEach((el) => ro.observe(el));
-  void document.fonts?.ready.then(retrazar);
-  retrazar();
-  tablero.scrollLeft = scrollGuardado;
-  tablero.addEventListener('scroll', () => { scrollGuardado = tablero.scrollLeft; if (!fijado) ocultarTip(); else colocar(null, fijado); });
-
-  raiz.querySelector<HTMLButtonElement>('[data-ta-todas]')?.addEventListener('click', (ev) => {
-    todas = !todas;
-    const b = ev.currentTarget as HTMLButtonElement;
-    b.setAttribute('aria-pressed', String(todas));
-    b.querySelector('.caja')!.textContent = todas ? '✓' : '';
-    tablero.classList.toggle('todas', todas);
-  });
-
-  tablero.querySelectorAll<HTMLButtonElement>('.ta-carta').forEach((el) => {
-    const id = el.dataset.tec!;
-    el.addEventListener('mouseenter', (ev) => { if (fijado) return; resaltar(id); mostrar(id, ev); });
-    el.addEventListener('mousemove', (ev) => { if (!fijado) colocar(ev, id); });
-    el.addEventListener('mouseleave', () => { if (fijado) return; resaltar(null); ocultarTip(); });
-    el.addEventListener('focus', (ev) => { if (fijado) return; resaltar(id); mostrar(id, ev); });
-    el.addEventListener('blur', () => { if (fijado) return; resaltar(null); ocultarTip(); });
-    el.addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      if (fijado === id) { cerrarFicha(); return; }
-      fijado = id;
-      resaltar(id);
-      mostrar(id, ev);
-    });
-  });
-
-  // Arrastrar el tablero con el ratón, como el mapa de un juego.
-  let arrastre: { x: number; s: number } | null = null;
-  tablero.addEventListener('pointerdown', (ev) => {
-    if (ev.pointerType !== 'mouse' || ev.button !== 0 || (ev.target as HTMLElement).closest('.ta-carta')) return;
-    arrastre = { x: ev.clientX, s: tablero.scrollLeft };
-    tablero.classList.add('arrastrando');
-  });
-  tablero.addEventListener('pointermove', (ev) => { if (arrastre) tablero.scrollLeft = arrastre.s - (ev.clientX - arrastre.x); });
-  const soltar = (): void => { arrastre = null; tablero.classList.remove('arrastrando'); };
-  tablero.addEventListener('pointerup', soltar);
-  tablero.addEventListener('pointerleave', soltar);
-
-  if (!globalesPuestos) {
-    globalesPuestos = true;
-    document.addEventListener('click', (ev) => { if (fijado && tip && !tip.contains(ev.target as Node)) cerrarFicha(); });
-    document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && fijado) cerrarFicha(); });
-    addEventListener('scroll', () => { if (fijado) colocar(null, fijado); }, { passive: true, capture: true });
-  }
-
-  // Tras un repintado (llega un cambio de la proyección), la ficha que estaba abierta sigue abierta, con sus datos nuevos.
-  if (fijado) {
-    if (tablero.querySelector(`.ta-carta[data-tec="${CSS.escape(fijado)}"]`)) { const f = fijado; requestAnimationFrame(() => { if (fijado === f) { resaltar(f); mostrar(f, null); } }); }
-    else cerrarFicha();
-  } else ocultarTip();
-}
+/** Cablea el árbol recién pintado (líneas, resaltado, tooltip, ficha y arrastre: `arbolTablero.ts`). */
+export function montarArbol(raiz: HTMLElement, ctx: ContextoArbol): void { montarTablero(CLAVE, raiz, ctx); }

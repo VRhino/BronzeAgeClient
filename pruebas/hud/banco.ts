@@ -36,6 +36,7 @@ import { anchoDeParteCampamento, htmlSeccionCampamento, seccionesDeCampamento, t
 import { htmlRielInterior, htmlTituloDeParte } from '../../src/ui/hudInterior';
 import type { CampamentoMercenarios } from '../../src/tiposDominio';
 import { fundacionLista } from '../../src/ui/panelFundacionDePlaza';
+import { cablearReclutamiento, htmlReclutamiento } from '../../src/ui/reclutamiento';
 
 const e = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const RIEL: [string, string, string, boolean?][] = [
@@ -80,7 +81,7 @@ document.getElementById('app')!.innerHTML = `<div class="asent-screen plaza-3d${
     <nav class="asent-riel${construir ? ' asent-riel-cajon' : ''}">${construir ? '' : riel}</nav>
     <div class="asent-lienzo asent-minimapa"><canvas id="mapa" width="900" height="900"></canvas></div>
     <header class="asent-barra"><div class="asent-barra-acciones"><button id="btn-salir-mundo" class="btn-primary" type="button">Salir al mundo</button></div></header>
-    ${ventana ? `<section class="asent-ventana" data-ancho="${ventana === 'mercado' || ventana === 'taberna' || ventana === 'almacen' || ventana === 'caravanas' || ventana === 'territorio' ? 'completa' : ventana === 'reclutamiento' ? 'ancha' : ''}"><header class="asent-ventana-cab"><div class="asent-ventana-titulo"><h2>${ventana}</h2></div><button class="asent-ventana-cerrar">✕</button></header><div class="asent-edif-cuerpo">${ventana === 'almacen' || ventana === 'caravanas' ? '' : '<p>Contenido de la ventana.</p>'.repeat(40)}</div></section>` : ''}
+    ${ventana ? `<section class="asent-ventana" data-ancho="${ventana === 'mercado' || ventana === 'taberna' || ventana === 'almacen' || ventana === 'caravanas' || ventana === 'territorio' || ventana === 'reclutamiento' ? 'completa' : ''}"><header class="asent-ventana-cab"><div class="asent-ventana-titulo"><h2>${ventana}</h2></div><button class="asent-ventana-cerrar">✕</button></header><div class="asent-edif-cuerpo">${ventana === 'almacen' || ventana === 'caravanas' || ventana === 'reclutamiento' ? '' : '<p>Contenido de la ventana.</p>'.repeat(40)}</div></section>` : ''}
   </div>
 </div>`;
 vigilarPieArriba(document.querySelector<HTMLElement>('.plaza-3d'));
@@ -308,5 +309,33 @@ if (qs.get('obra')) {
   caja.style.cssText = sinEmpezar ? 'z-index:50' : 'position:absolute;right:20px;top:120px;width:360px;z-index:50;padding:14px';
   caja.innerHTML = FICHA_OBRA.html(p, o as never, { escapar: e } as never);
   document.body.append(caja);
+}
+// `?ventana=reclutamiento`: el árbol de reclutamiento de verdad (0.159.0) con una Facción a mitad de la Era II (la del banco de Facción → Tecnología).
+// `&plaza=barracon:2,galeriaDeTiro:2` deja esos edificios de reclutamiento a ese nivel y quita los demás (sin Caballerizas, su carril plegado);
+// `&inicio=1` con una Facción recién fundada; `&visita=1` sin residir.
+if (ventana === 'reclutamiento') {
+  const q = p as unknown as Record<string, unknown>;
+  const inicio = Boolean(qs.get('inicio'));
+  q.faccionId = a.faccionId;
+  q.tecnologia = {
+    era: inicio ? 'reinos_palaciales' : 'crisis_adaptacion', capitalId: a.id, reveladas: [], logros: [], epicasPosibles: [],
+    propias: inicio ? { adoptadas: ['leva_comunal', 'hostigamiento_tribal'], aparecidas: ['escudos_ligeros'] }
+      : { adoptadas: ['leva_comunal', 'hostigamiento_tribal', 'metalurgia_cobre', 'aleacion_bronce', 'escudos_ligeros', 'armamento_palacial', 'arqueria_palacial', 'cria_caballar', 'canteria'], aparecidas: ['carros_guerra', 'bronce_calidad_militar'] },
+  };
+  const plaza = qs.get('plaza') ?? (inicio ? '' : 'barracon:2,galeriaDeTiro:2');
+  const niveles = Object.fromEntries(plaza.split(',').filter(Boolean).map((x) => { const [t, n] = x.split(':'); return [t!, Number(n)]; }));
+  a.edificios = (a.edificios ?? []).filter((x) => !['barracon', 'galeriaDeTiro', 'caballerizas'].includes(x.tipo));
+  for (const [t, n] of Object.entries(niveles)) a.edificios.push({ id: `r-${t}`, tipo: t, estado: 'activo', nivelInterno: n } as Edificio);
+  a.heroesFundadoresIds = qs.get('visita') ? [] : ['h'];
+  a.poblacion = { pesants: 140, artesanos: 30, nobleza: 6 };
+  q.heroe = { displayName: 'Víctor', ubicacion: { tipo: 'asentamiento', asentamientoId: a.id }, loadouts: [], escuadrones: inicio ? [] : [
+    { id: 's1', nombre: 'Honderos', tropaId: 'honderos', cantidad: 30, nivel: 1, contenedor: { tipo: 'campamento' } }] };
+  const pintarRecl = (): void => {
+    const cuerpo = document.querySelector<HTMLElement>('.asent-edif-cuerpo');
+    if (!cuerpo) return;
+    cuerpo.innerHTML = htmlReclutamiento(p, a, e, pintarRecl);
+    cablearReclutamiento(cuerpo, p, a, async () => null, pintarRecl);
+  };
+  pintarRecl();
 }
 (window as unknown as { __banco: unknown }).__banco = { listo: true, p, a };

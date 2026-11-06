@@ -5835,3 +5835,44 @@ button.carro-hueco:hover, .carro-hueco.activo { border-color: var(--oro); box-sh
   .ta-carril-nombre { padding: 8px; align-items: center; }
   .ta-carril-nombre strong, .ta-carril-nombre small, .ta-esquina span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
+
+/* =====================================================================================
+   Árbol de reclutamiento (pestaña Reclutamiento de la plaza, 0.159.0; Víctor 2026-11-06): el mismo tablero que el de tecnologías
+   (`ui/arbolTablero.ts`) con cartas de tropa y carriles por edificio; el de un edificio que la plaza no tiene, plegado.
+   ===================================================================================== */
+.recl-arbol { --ta-carta: 204px; }
+.ta-carril-fondo.cerrado { background: repeating-linear-gradient(135deg, rgba(0,0,0,.25) 0 8px, transparent 8px 16px); }
+.ta-carril-vacio { grid-column: 2 / -1; z-index: 2; align-self: center; margin-block: 8px; padding: 8px 14px; font-size: 12px; color: var(--ta-texto-3); border: 1px dashed rgba(107,74,41,.7); border-radius: 3px; background: rgba(0,0,0,.25); position: sticky; left: calc(var(--ta-carril) + 12px); width: max-content; max-width: calc(100% - var(--ta-carril) - 40px); }
+.ta-carril-nombre.cerrado { color: var(--ta-texto-3); }
+.ta-carril-nombre.cerrado strong { color: var(--ta-texto-2); }
+.ta-tropa .ta-carta-cab { justify-content: flex-start; gap: 8px; }
+.ta-carta-ico { flex: none; display: inline-flex; color: var(--oro-claro); filter: drop-shadow(0 1px 1px rgba(0,0,0,.6)); margin: -2px 0 -2px -2px; }
+.ta-tropa .ta-carta-nombre { flex: 1; min-width: 0; }
+.ta-carta-datos { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 11px; color: var(--ta-texto-2); }
+.ta-carta-stats { display: flex; flex-wrap: wrap; gap: 4px; }
+.ta-carta .ta-rec { font-size: 11px; }
+.ta-carta .ta-rec i { font-size: 12px; }
+.ta-rec .ritmo, .ta-rec svg { color: var(--oro); }
+.ta-mini-tropa { display: inline-flex; vertical-align: middle; color: var(--oro-claro); }
+.ta-pide-nombre { margin-left: 2px; }
+.ta-carta.lista { border-color: var(--oro); background: linear-gradient(180deg, rgba(110,82,42,.97), rgba(48,35,19,.97)); }
+.ta-carta.lista .ta-medalla, .ta-carta.tuya .ta-medalla { background: radial-gradient(circle at 35% 30%, var(--oro-claro), var(--oro) 55%, #8a6530); color: #201509; box-shadow: 0 0 0 1px var(--tinta); }
+.ta-carta.tuya { border-color: var(--oro); }
+.ta-carta.tuya .ta-carta-estado b { color: var(--oro-claro); }
+.ta-carta.edificio { border-color: var(--obra-ambar); }
+.ta-carta.edificio .ta-carta-estado { color: var(--obra-ambar); }
+.ta-carta.bloqueada .ta-carta-ico, .ta-carta.futura .ta-carta-ico { color: rgba(190,165,125,.55); }
+.ta-carta.bloqueada .ta-rec, .ta-carta.futura .ta-rec { opacity: .6; }
+.ta-muestra.lista { border-color: var(--oro); background: rgba(110,82,42,.97); }
+.ta-muestra.tuya { border-color: var(--oro); }
+.ta-muestra.edificio { border-color: var(--obra-ambar); }
+.ta-estado-caja.lista, .ta-estado-caja.tuya { border-color: var(--oro); }
+.ta-estado-caja.edificio { border-color: var(--obra-ambar); }
+.ta-tip-cab > svg { color: var(--oro-claro); }
+.ta-tip .ap { color: var(--obra-ambar); font-weight: 700; }
+.ta-tip ul.ta-marcadas { list-style: none; padding-left: 0; }
+.ta-fichas { display: flex; flex-wrap: wrap; gap: 4px; }
+.ta-ficha-recluta { display: flex; flex-wrap: wrap; gap: 6px; }
+.ta-ficha-boton .recl-costes { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.ta-ficha-boton .obra-coste { display: inline-flex; align-items: center; gap: 2px; padding: 0 5px; border-radius: 2px; background: rgba(20,14,8,.78); color: var(--pergamino); font-size: 12px; letter-spacing: 0; opacity: 1; }
+.ta-ficha-boton .obra-coste.falta { color: #ff8a7c; box-shadow: inset 0 0 0 1px rgba(226,103,90,.7); }

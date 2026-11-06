@@ -2359,7 +2359,7 @@ function contenidoDeVentana(v: VentanaPlaza, c: ContextoPlaza, ajena: boolean): 
         },
       };
     case 'reclutamiento':
-      return { ...base, ancho: 'ancha', html: htmlReclutamiento(p, a, escaparHtml, renderPanelEdificios), cablear: () => cablearReclutamiento(cuerpo, p, a, ejecutarYRefrescar, renderPanelEdificios) };
+      return { ...base, ancho: 'completa', html: htmlReclutamiento(p, a, escaparHtml, renderPanelEdificios), cablear: () => cablearReclutamiento(cuerpo, p, a, ejecutarYRefrescar, renderPanelEdificios) };
     case 'taberna':
       return { ...base, ancho: 'completa', html: renderPanelIntel(p, escaparHtml), cablear: () => cablearPanelIntel(cuerpo, p, ejecutarYRefrescar, () => { olvidarEdicion(cuerpo); invalidar(cuerpo); renderPanelEdificios(); }) };
     case 'mercado': {

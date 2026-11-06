@@ -3,6 +3,23 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.159.0] — 2026-11-06 · Árbol de reclutamiento en la pestaña Reclutamiento de la plaza · sin cambio de contrato
+
+Encargo de Víctor (2026-11-06, desde el hilo del árbol de tropas; prototipo https://claude.ai/artifact/WVuwAj63HGUQPnkgfKoKLZ): la pestaña
+Reclutamiento de la plaza pasa a ser el árbol de reclutamiento, a ventana completa. Es hermano del de tecnologías (0.158.0): el tablero común sale
+a `src/ui/arbolTablero.ts` (rejilla, líneas, resaltado, tooltip, ficha y arrastre) y los dos árboles lo usan. Carriles por el edificio donde se
+recluta (Centro Urbano, Barracón, Galería de tiro, Caballerizas), Eras arriba con el mismo descubrimiento al 30 %. Si la plaza no tiene uno de esos
+edificios, su carril se pliega: la franja con el nombre y el número de tropas, sin cartas; si lo tiene a menos nivel, la carta se queda en ámbar con
+«Falta Barracón 3 · tu plaza: 2». Las tecnologías salen del árbol pero no del tooltip: una tropa va tras otra cuando necesita la tecnología que
+habilita a la otra (continua por el hito, a rayas por su edificio o su equipo, punteada por el logro), con una sola línea cuando una tecnología
+habilita varias. Colocación nueva: dentro de cada Era, las columnas van por el nivel del edificio que pide la tropa (nivel 1 a la izquierda) y
+una tropa siempre a la derecha de su previa; el Centro Urbano, sin niveles, en cuadro; los carriles plegados no ocupan columnas. Cada carta: la
+tropa, su edificio y nivel, escalón, escuadra, poder, velocidad, liderazgo y su estado en esta plaza (lista, ya tienes su escuadra, falta el
+edificio, falta adoptar, faltan tecnologías, Era bloqueada). Un clic abre la ficha: el tooltip entero (tecnologías marcadas ✓ ! ✗, edificios,
+coste por soldado, campaña, va tras / lleva a) y, si está lista y resides en la plaza, «Reclutar N» con el coste de la escuadra (en rojo y
+deshabilitado si no llega el almacén o la gente libre). Solo recluta: reponer se hará aparte (Víctor), y con la escuadra hecha la ficha lo dice
+sin botón. Banco: `pruebas/hud/?ventana=reclutamiento` (`&plaza=barracon:3,galeriaDeTiro:2,caballerizas:2`, `&inicio=1`, `&visita=1`).
+
 ## [0.158.0] — 2026-11-06 · Árbol de tecnologías en la pestaña Tecnología de Facción · sin cambio de contrato
 
 Encargo de Víctor (2026-11-06, desde el hilo del árbol): la pestaña Tecnología de Facción pasa de listas a un árbol de juego de estrategia,

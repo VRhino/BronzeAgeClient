@@ -135,7 +135,7 @@ export function htmlTecnologia(p: ProyeccionJugador, e: Escapar, conCabecera = t
     }
     return partes.join('');
   };
-  ficha = { acciones: fichaAcciones, precio: precioAeda };
+  ficha = { acciones: fichaAcciones };
 
   return `${cabecera}<div class="tec-panel tec-con-arbol">
     <div class="tec-arbol">${htmlArbol(p, e, precioAeda)}</div>
@@ -159,7 +159,7 @@ export function htmlTecnologia(p: ProyeccionJugador, e: Escapar, conCabecera = t
 }
 
 /** Las acciones de la ficha del árbol, de la última vez que se pintó el panel. */
-let ficha: { acciones: (id: string) => string; precio: (id: string) => number | null } | null = null;
+let ficha: { acciones: (id: string) => string } | null = null;
 
 export function cablearTecnologia(raiz: HTMLElement, ejecutar: Ejecutar): void {
   const arbol = raiz.querySelector<HTMLElement>('.tec-arbol');
@@ -180,7 +180,7 @@ export function cablearTecnologia(raiz: HTMLElement, ejecutar: Ejecutar): void {
         accion('[data-ficha-comprar]', 'comprarTecnologiaAeda', (b) => ({ asentamientoId: b.dataset.fichaComprar, tecnologiaId: b.dataset.tecId }));
         accion('[data-ficha-epica]', 'empezarEpica', (b) => ({ asentamientoId: b.dataset.plaza, aedaId: b.dataset.fichaEpica, tecnologiaId: b.dataset.tecId }));
       },
-    }, f.precio);
+    });
   }
   const elegida = (selector: string): string => raiz.querySelector<HTMLSelectElement>(selector)?.value ?? '';
   const enlazar = (atributo: string, error: string, tipo: string, params: (b: HTMLButtonElement) => object): void =>
