@@ -10,7 +10,7 @@
 //     entonces aparece la siguiente, bloqueada mientras no empiece en el mundo. Lo oculto no se nombra en ningún sitio. Regla de pantalla: el motor
 //     no cambia.
 // Todo sale del balance que ya carga el cliente (TECNOLOGIAS, ERAS, TARIFA_ADOPCION, TROPAS_RECLUTABLES, EDIFICIO_CATALOGO) y del estado de la
-// Facción (`p.tecnologia`). Los contadores de los logros en curso no viajan nunca: la carta dice «cumplido» o «falta», sin barra.
+// Facción (`p.tecnologia`). Los contadores de los logros en curso solo se pintan si el motor los manda (hoy no en la forma pública): si no, la barra del tooltip dice «? / umbral».
 import { bloqueDeDatos, catalogoDeTecnologia, tropasReclutables, type CatalogoTecnologia, type NivelDeEdificio, type ProyeccionJugador, type TropaReclutable } from '../apiCliente';
 import type { CondicionHito } from '../tiposDominio';
 import { NOMBRE_TEC_EN_PANTALLA } from '../nombresEnPantalla';
@@ -95,6 +95,7 @@ const CONTADOR: Record<string, string> = {
   'reclutados.jinetes_asirios': 'jinetes asirios reclutados', 'plazasEnNivel.2': 'plazas a la vez en nivel 2 o más (récord)', 'plazasEnNivel.3': 'plazas a la vez en nivel 3 o más (récord)',
 };
 /** El texto de un contador de logro («caravanas destruidas o capturadas»), o el id legible. */
+const mayuscula = (x: string): string => x.charAt(0).toUpperCase() + x.slice(1);
 export const textoContador = (c: string): string => CONTADOR[c] ?? c.replace(/[._]/g, ' ');
 /** Lo que el canon (Doc 6.6, 5.2 y 5.3) dice que abren y el motor aún no aplica. */
 const CANON_CORTO: Record<string, string> = { disciplina_formacion: 'Formaciones cerradas', carpinteria_militar: 'Escalas y defensas', trabajos_asedio: 'Equipo de asedio' };
@@ -251,6 +252,8 @@ export interface EstadoArbol {
   reveladas: Map<string, { cumplidas: boolean[]; hito: CondicionHito[]; descubridor: string }>;
   /** Logros del mundo cumplidos. */
   logros: { contador: string; umbral: number }[];
+  /** Lo que lleva cada contador de logro en el mundo, si el motor lo manda (hoy solo a la administración). */
+  contadores?: Record<string, number>;
   eraMundo: string;
 }
 
@@ -287,6 +290,7 @@ export function estadoDesdeProyeccion(p: ProyeccionJugador): EstadoArbol | null 
     aparecidas: t.propias.aparecidas,
     reveladas: new Map(t.reveladas.map((r) => [r.tecnologiaId, { cumplidas: r.cumplidas, hito: r.hito, descubridor: r.descubridorFaccionId }])),
     logros: t.logros,
+    contadores: t.contadores,
     eraMundo: t.era,
   };
 }
@@ -471,24 +475,32 @@ function tipTec(d: Dibujo, id: string, precioAeda: (id: string) => number | null
   else if (est === 'adoptada') t = '<b>Adoptada.</b> Todo lo que abre ya está disponible en tus plazas.';
   else if (est === 'adoptable') t = `<b>Aparecida.</b> El Rey, dentro de la capital, puede adoptarla ya por ${costeTxt(D.tarifa[k.era])}.`;
   else if (est === 'revelada') {
-    const r = E.reveladas.get(id)!, pr = precioAeda(id);
-    const hito = r.hito.length ? r.hito : k.hito;
-    t = `<b>Revelada por un Aeda</b> (la descubrió otra Facción). El logro del mundo ya está; tu hito:<ul>${hito.map((x, i) => `<li><span class="${r.cumplidas[i] ? 'ok' : 'no'}">${r.cumplidas[i] ? '✓' : '✗'}</span> ${hitoLi(G, e, x)}</li>`).join('')}</ul>${pr !== null ? `Un Aeda itinerante detenido en tu plaza te la vende por ${RI('oro', pr)} (salta el hito, no el logro).` : ''}`;
-  } else if (est === 'logro') t = '<b>El logro del mundo ya se cumplió.</b> Aparece en cuanto tu Facción cumpla el hito.';
+    const pr = precioAeda(id);
+    t = `<b>Revelada por un Aeda</b> (la descubrió otra Facción). El logro del mundo ya está; falta lo de tu Facción.${pr !== null ? ` Un Aeda itinerante detenido en tu plaza te la vende por ${RI('oro', pr)} (salta lo de tu Facción, no el logro).` : ''}`;
+  } else if (est === 'logro') t = '<b>El logro del mundo ya se cumplió.</b> Aparece en cuanto tu Facción cumpla lo suyo.';
   else if (est === 'futura') t = `<b>Bloqueada:</b> la Era ${ROMANO[n.era]} aún no ha empezado en el mundo. Ya la ves porque tu Facción tiene adoptado el 30 % de la Era anterior.`;
   else t = '<b>Aún nadie ha cumplido su logro</b> en el mundo.';
   h += `<div class="ta-estado-caja ${est}"><span class="ta-meta">En tu Facción</span><br>${t}</div>`;
   if (k.deArranque) h += '<h4>Cómo se consigue</h4><ul><li>Toda Facción la tiene adoptada desde que nace.</li></ul>';
   else {
-    h += '<h4>Para que aparezca en tu Facción</h4><ul>';
-    const ocultas = G.logroDe(id).filter((x) => visibles.has(x));
-    if (k.logro) h += `<li>Logro del mundo: <span class="ta-n">${miles(k.logro.umbral)}</span> ${e(CONTADOR[k.logro.contador] ?? k.logro.contador)}, entre todas las Facciones${ocultas.length ? `<div class="ta-nota">Antes alguien del mundo necesita ${ocultas.map((x) => `<span class="ta-tec">${e(TN(x))}</span>`).join(', ')}: lo que cuenta este logro lo pide.</div>` : ''}</li>`;
-    h += `<li>Y además, en tu Facción:<ul>${k.hito.map((x) => `<li>${hitoLi(G, e, x)}</li>`).join('') || '<li>nada más</li>'}</ul></li>`;
-    h += '<li>O sin esperar: comprarla a un Aeda itinerante, o que un Aeda residente cante su épica (no antes de que empiece su Era)</li></ul>';
+    // Requisitos (Víctor, 2026-11-06): «Servidor», el logro del mundo como barra x / y; «Facción», el hito. Sin «Adoptarla», «O sin esperar» ni «En
+    // el árbol» (lo dicen la carta, las líneas y la caja de estado).
+    h += '<h4>Requisitos</h4>';
+    if (k.logro) {
+      const u = k.logro.umbral, hecho = logroCumplido(E, k) || est === 'revelada', x = hecho ? u : E.contadores?.[k.logro.contador];
+      const pct = x === undefined ? 0 : Math.min(100, (x / u) * 100);
+      const ocultas = G.logroDe(id).filter((q) => visibles.has(q));
+      h += `<div class="ta-req">Servidor</div><div class="ta-barra${hecho ? ' hecha' : ''}"><span style="width:${pct.toFixed(1)}%"></span><b>${x === undefined ? '?' : miles(Math.min(x, u))} / ${miles(u)}</b></div>`;
+      h += `<div class="ta-barra-pie">${e(mayuscula(textoContador(k.logro.contador)))} por todas las Facciones</div>`;
+      if (ocultas.length) h += `<div class="ta-nota">Antes alguien del mundo necesita ${ocultas.map((q) => `<span class="ta-tec">${e(TN(q))}</span>`).join(', ')}: lo que cuenta este logro lo pide.</div>`;
+    }
+    const r = E.reveladas.get(id);
+    const hito = r?.hito.length ? r.hito : k.hito;
+    const marca = (i: number): string => (r ? `<span class="${r.cumplidas[i] ? 'ok' : 'no'}">${r.cumplidas[i] ? '✓' : '✗'}</span> ` : '');
+    h += `<div class="ta-req">Facción</div><ul>${hito.map((x, i) => `<li>${marca(i)}${hitoLi(G, e, x)}</li>`).join('') || '<li>nada más</li>'}</ul>`;
     const otras = [...a.tecs.keys()].filter((x) => visibles.has(x) && !k.hito.some((q) => q.tipo === 'tecnologia' && q.id === x) && [...a.tecs.get(x)!].some((m) => m !== 'logro'));
     const eds = [...a.eds.entries()].filter(([x]) => !k.hito.some((q) => q.tipo === 'edificio' && q.edificio === x));
     if (otras.length || eds.length || a.plaza > 1) h += `<div class="ta-nota">Esos edificios piden${a.plaza > 1 ? ` plaza a nivel ${a.plaza}` : ''}${eds.map(([x, nv]) => `, ${e(EN(x))} ${nv}`).join('')}${otras.length ? `, y ${otras.map((x) => e(TN(x))).join(', ')}` : ''}.</div>`;
-    h += `<h4>Adoptarla</h4><ul><li>El Rey, dentro de la capital, paga ${costeTxt(D.tarifa[k.era])} de su almacén</li></ul>`;
   }
   const tropaChip = (x: TropaReclutable): string => `<span class="ta-rec ta-edi" title="${e(x.nombre)}">${iconoTropa(x.id, 18)}<span class="ta-sr">${e(x.nombre)}</span></span>`;
   const tropas = D.tropas.filter((x) => x.tecnologia === id);
@@ -511,9 +523,6 @@ function tipTec(d: Dibujo, id: string, precioAeda: (id: string) => number | null
   if (canon[id]) lst.push(`<li><span class="ta-etq">canon, sin efecto aún</span>${canon[id]}</li>`);
   if (pide.length) lst.push(`<li>Hace falta para: ${pide.map(tropaChip).join(' ')}</li>`);
   if (lst.length) h += `<h4>Abre</h4><ul>${lst.join('')}</ul>`;
-  const chips = (ids: string[]): string => ids.map((x) => `<span class="ta-tec">${e(TN(x))}</span>`).join(', ');
-  const tras = n.preds.map((p) => p.de).filter((x) => visibles.has(x)), hijos = n.hijos.filter((x) => visibles.has(x));
-  if (tras.length || hijos.length) h += `<h4>En el árbol</h4><ul>${tras.length ? `<li>Va tras: ${chips(tras)}</li>` : ''}${hijos.length ? `<li>Lleva a: ${chips(hijos)}</li>` : ''}</ul>`;
   return h;
 }
 

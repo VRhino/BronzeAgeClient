@@ -54,6 +54,8 @@ const p = {
     },
     reveladas: [{ tecnologiaId: 'forja_hierro_temprana', descubridorFaccionId: 'fac-2', hito: [{ tipo: 'edificio', edificio: 'fundicion', nivelInterno: 2 }, { tipo: 'yacimientoEnTerritorio', recurso: 'hierro' }], cumplidas: [true, false] }],
     epicasPosibles: ['equitacion_militar'],
+    // Solo en el banco: la forma pública de `HEROE` no lleva hoy los contadores en curso.
+    contadores: { 'extraido.estano': 61250, 'reclutados.arqueros_compuesto': 40, 'fabricado.armaduraBronce': 12 },
   },
   aedasAvistados: [{ id: 'aeda-9', posicion: { x: 410, y: 300 }, enAsentamientoId: 'as-1' }],
   aedasResidentes: [{ id: 'aeda-1', nombre: 'Demódoco', asentamientoId: 'as-1' }],
@@ -68,6 +70,7 @@ if (vistaTec === 'inicio' || vistaTec === 'avanzada') {
     : { adoptadas: ['leva_comunal', 'hostigamiento_tribal', 'escudos_ligeros', 'metalurgia_cobre'], aparecidas: ['aleacion_bronce', 'cria_caballar'] };
   t.reveladas = vistaTec === 'inicio' ? [] : [{ tecnologiaId: 'arqueria_palacial', descubridorFaccionId: 'fac-2', hito: [{ tipo: 'edificio', edificio: 'galeriaDeTiro', nivelInterno: 1 }], cumplidas: [false] }];
   t.logros = [{ contador: 'extraido.cobre', umbral: 999999, en: AHORA - H }];
+  t.contadores = { 'extraido.estano': 61250 };
   t.epicasPosibles = [];
 }
 (p.asentamientos[0] as { almacen?: unknown }).almacen = { oro: { cantidad: 900, capacidad: 9999 }, madera: { cantidad: 5000, capacidad: 9999 }, piedra: { cantidad: 40, capacidad: 9999 } };

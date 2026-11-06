@@ -3,6 +3,15 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.164.0] — 2026-11-06 · Tooltip de tecnología más corto, con «Requisitos» y la barra del logro · sin cambio de contrato
+
+Petición de Víctor (2026-11-06): el tooltip del árbol de tecnologías tenía demasiado. Fuera «Adoptarla» (el coste ya va en la carta y en la caja
+de estado), «O sin esperar» y «En el árbol». «Para que aparezca en tu Facción» pasa a «Requisitos», en dos partes: «Servidor», el logro del mundo
+como una barra con «x / y» centrado y debajo qué cuenta («Estaño extraído por todas las Facciones»), y «Facción», el hito (con ✓/✗ en una
+revelada; la caja de estado ya no lo repite). La barra está llena si el logro ya se cumplió (o la tecnología está revelada); si no, pinta
+`EstadoTecnologia.contadores` cuando llegue. Hoy la forma pública de `HEROE` no lo trae (solo `ADMIN`), así que en partida dice «? / y»: el
+banco de diplomacia lleva contadores de ejemplo.
+
 ## [0.163.0] — 2026-11-06 · Árbol de tecnologías con las líneas que pidió Víctor · sin cambio de contrato
 
 Correcciones de Víctor (2026-11-06), solo de pantalla: el motor no cambia. Las líneas del árbol de tecnologías salen ahora de una lista fija

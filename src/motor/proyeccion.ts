@@ -748,6 +748,7 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
       return {
         era: est.era, eraDesde: instante(est.eraDesdeMs) ?? 0,
         logros: est.logrosCumplidos.map((l) => ({ contador: l.contador, umbral: Number(l.umbral), en: instante(l.enMs) ?? 0 })),
+        contadores: Object.keys(est.contadores ?? {}).length ? Object.fromEntries(Object.entries(est.contadores).map(([c, v]) => [c, Number(v)])) : undefined,
         propias: faccionId ? { aparecidas: tf?.aparecidas ?? [], adoptadas: tf?.adoptadas ?? [], reveladas: tf?.reveladas ?? [] } : null,
         reveladas: (tf?.detalleReveladas ?? []).map((r) => ({ tecnologiaId: r.tecnologiaId, descubridorFaccionId: r.descubridoraFaccionId, hito: [], cumplidas: r.cumplidas })),
         capitalId: (faccionId ? todasFacciones.get(faccionId)?.capitalId : undefined) ?? null,
