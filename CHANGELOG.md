@@ -3,6 +3,21 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.156.0] — 2026-11-06 · Formulario de registro de verdad y la Facción en la tarjeta de la partida · sin cambio de contrato
+
+Dos fallos que vio Víctor (2026-11-06):
+
+- **Registro**: la pantalla de acceso tiene ahora dos formularios, «Entrar» y «Crear cuenta» (`ui/pantallaAcceso.ts`), en vez de una casilla
+  «No tengo cuenta». El de alta pide nick, contraseña y repetirla, y comprueba antes de mandar lo mismo que el motor (nick de 3 a 32 caracteres
+  con letras, cifras, «_», «-» o «.»; contraseña de 8 a 128). Lo que rechaza el servidor va junto a su campo (nick repetido, código de invitación
+  que no coincide, que abre el campo del código) y lo escrito no se pierde al repintar. Si la cuenta se crea pero el login de después falla,
+  pasa a «Entrar» con el nick puesto y un aviso, en vez de volver al principio. El nick que se guarda es el del motor (en minúsculas).
+- **«Sin Facción» al entrar**: la tarjeta de la partida se pintaba en cuanto llegaba el ámbito `HEROE`, antes que el de `FACCION`. Ahora espera
+  también a la Facción del héroe (como mucho 5 s) y, si aún no está, la toma del directorio de Facciones.
+- Un fallo del propio cliente ya no dice solo «No se pudo completar la operación»: lleva su texto entre paréntesis y va entero a la consola.
+  Al cerrar sesión se desmonta la pantalla de juego en el momento, y un fallo al desmontarla ya no impide montar la siguiente (antes devolvía
+  al login).
+
 ## [0.155.0] — 2026-11-06 · Cancelar obras en curso, nombre de héroe en uso y avisos de la tanda del motor · contrato 87f74932
 
 Lo del cliente de la tanda del motor del 2026-11-06 (main 87f74932, contrato 0.15.0):

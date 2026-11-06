@@ -167,6 +167,8 @@ export interface RespuestaLogin {
   usuarioId: string;
   sesionId: string;
   expiraEn: string;
+  /** El nick tal como lo guarda el motor (recortado y en minúsculas). */
+  nick: string;
 }
 
 export interface RespuestaWhoami {
@@ -337,7 +339,7 @@ export async function loginConClave(nick: string, clave: string): Promise<Respue
     sesionIdMemoria = r.token;
     usuarioMemoria = r.nick;
     cuentaIdMemoria = r.cuentaId;
-    return { usuarioId: r.cuentaId, sesionId: r.token, expiraEn: new Date(r.expiraMs).toISOString() };
+    return { usuarioId: r.cuentaId, sesionId: r.token, expiraEn: new Date(r.expiraMs).toISOString(), nick: r.nick };
   } catch (e) {
     throw aApiError(e);
   }
@@ -361,10 +363,20 @@ export interface PartidaListada {
 
 /** El motor tiene una sola partida: la del servidor. Su tarjeta lleva el héroe si la cuenta ya tiene uno. */
 /** Si la cuenta ya tiene héroe (`Bienvenida.heroe_id`) pero su ámbito `HEROE` aún no ha llegado —la foto viene justo detrás de la
- * Bienvenida—, espera a que llegue (como mucho `ms`). Sin esto, nada más iniciar sesión se proyectaba como «sin héroe». */
+ * Bienvenida—, espera a que llegue (como mucho `ms`). Sin esto, nada más iniciar sesión se proyectaba como «sin héroe». Lo mismo con su
+ * Facción: el ámbito `FACCION` llega después del `HEROE`, y sin esperarlo la tarjeta de la partida decía «Sin Facción». */
 function esperarHeroe(s: Sesion, ms = 5000): Promise<void> {
   const id = s.bienvenida?.heroeId;
-  const llegado = (): boolean => !id || s.almacen.ambitos.has(`HEROE:${id}`);
+  const faccionDelHeroe = (): string | undefined => {
+    const e = id ? s.almacen.ambitos.get(`HEROE:${id}`)?.entidades.get(`${TipoEntidad.HEROE}:${id}`) : undefined;
+    return (e?.case === 'heroe' ? e.value.faccionId : undefined) ?? s.bienvenida?.faccionId ?? undefined;
+  };
+  const llegado = (): boolean => {
+    if (!id) return true;
+    if (!s.almacen.ambitos.has(`HEROE:${id}`)) return false;
+    const f = faccionDelHeroe();
+    return !f || s.almacen.ambitos.has(`FACCION:${f}`);
+  };
   if (llegado()) return Promise.resolve();
   return new Promise((resolver) => {
     const fin = (): void => { clearTimeout(reloj); quitar(); resolver(); };
@@ -379,8 +391,11 @@ export async function listarPartidas(): Promise<PartidaListada[]> {
   const p = proyeccionActual(s);
   const heroe = !p.sinHeroe
     ? (() => {
-        const f = p.facciones.find((x) => x.id === p.faccionId);
-        return { id: p.heroeId, nombre: p.heroe.displayName, nivel: p.heroe.nivel, faccion: f ? { id: f.id, nombre: f.nombre, emblemaId: f.sigilo.emblemaId, colorEmblemaId: f.sigilo.colorEmblemaId, sigilo: f.sigilo } : null };
+        // La propia sale de `FACCION`; si aún no ha llegado, del directorio de Facciones. Con `faccionId` y sin ficha, al menos su nombre.
+        const f = p.facciones.find((x) => x.id === p.faccionId) ?? p.directorioFacciones?.find((x) => x.id === p.faccionId);
+        const faccion = f ? { id: f.id, nombre: f.nombre, emblemaId: f.sigilo.emblemaId, colorEmblemaId: f.sigilo.colorEmblemaId, sigilo: f.sigilo }
+          : p.faccionId ? { id: p.faccionId, nombre: 'Facción', emblemaId: '', colorEmblemaId: '' } : null;
+        return { id: p.heroeId, nombre: p.heroe.displayName, nivel: p.heroe.nivel, faccion };
       })()
     : null;
   return [{ gameId: PARTIDA, nombre: 'Mundo', estado: 'activa', membresia: { jugadorId: cuentaIdMemoria ?? usuarioMemoria ?? '' }, heroe }];

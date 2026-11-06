@@ -84,6 +84,7 @@ import { iconoEdificio } from './ui/iconosEdificio';
 import { cablearPlegables } from './ui/plegable';
 import { FICHAS_MAPA_EXTRA, SELECTORES_MAPA_EXTRA, SUBPESTANAS_CENTRO_EXTRA, SUBPESTANAS_MERCADO_EXTRA, type ContextoPlaza, type SubpestanaPlaza } from './ui/ganchos';
 import { abrirEleccionClic, cerrarEleccionClic, eleccionClicAbierta, sinRepetir, type ObjetoDelClic } from './ui/eleccionClic';
+import { montarAcceso } from './ui/pantallaAcceso';
 import { montarPartidas } from './ui/pantallaPartidas';
 import { cablearCaravanas, cablearOrdenes, cablearRutas, htmlCaravanas, htmlOrdenes, htmlRutas } from './ui/panelMercado';
 import { cablearReclutamiento, htmlReclutamiento } from './ui/reclutamiento';
@@ -141,7 +142,11 @@ function escaparHtml(valor: string): string {
 }
 
 function mensajeError(error: unknown): string {
-  return error instanceof ApiError ? explicarError(error.message) : 'No se pudo completar la operación.';
+  if (error instanceof ApiError) return explicarError(error.message);
+  // Un fallo del propio cliente (no un rechazo del servidor): a la consola entero y, en pantalla, con su texto, para poder decir qué pasó.
+  console.error(error);
+  const detalle = error instanceof Error ? error.message : String(error ?? '');
+  return detalle ? `No se pudo completar la operación (${detalle}).` : 'No se pudo completar la operación.';
 }
 
 /** Un rechazo de dominio como error: el motivo concreto que da el backend (`detalleError`, p. ej. «La columna no lleva soldados con los
@@ -2786,35 +2791,22 @@ function renderizarPanelInteraccion(proyeccion: ProyeccionJugador): void {
 }
 
 function renderVistaLogin(errorMensaje?: string): void {
-  app.innerHTML = `<div class="login-container"><div class="login-card"><div class="login-header"><h1 class="login-title">Bronze Age Collapse</h1><p class="login-subtitle">Cliente de Jugador — Inicio de Sesión</p></div>${errorMensaje ? `<div class="error-banner">⚠️ ${escaparHtml(errorMensaje)}</div>` : ''}<form id="form-login"><div class="form-group"><label class="form-label" for="input-usuario">Nick</label><input type="text" id="input-usuario" class="form-input" value="${escaparHtml(estadoCliente.usuarioActivo)}" required autocomplete="username" /></div><div class="form-group"><label class="form-label" for="input-clave">Contraseña</label><input type="password" id="input-clave" class="form-input" required minlength="8" maxlength="128" autocomplete="current-password" /><small id="ayuda-registro" class="form-ayuda" hidden>Nick de 3 a 32 caracteres (letras, cifras, «_», «-» o «.»); contraseña de 8 a 128.</small></div><label class="form-check"><input type="checkbox" id="chk-registro" /> No tengo cuenta — crear una</label><div class="form-group" id="grupo-codigo" hidden><label class="form-label" for="input-codigo">Código de invitación</label><input type="text" id="input-codigo" class="form-input" autocomplete="off" /></div><button type="submit" id="btn-login-submit" class="btn-primary">Entrar</button></form></div></div>`;
-  const chkRegistro = document.querySelector<HTMLInputElement>('#chk-registro');
-  chkRegistro?.addEventListener('change', () => {
-    const grupoCodigo = document.querySelector<HTMLDivElement>('#grupo-codigo');
-    if (grupoCodigo) grupoCodigo.hidden = !chkRegistro.checked;
-    const ayuda = document.querySelector<HTMLElement>('#ayuda-registro');
-    if (ayuda) ayuda.hidden = !chkRegistro.checked;
-    const boton = document.querySelector<HTMLButtonElement>('#btn-login-submit');
-    if (boton) boton.textContent = chkRegistro.checked ? 'Crear cuenta y entrar' : 'Entrar';
-  });
-  document.querySelector<HTMLFormElement>('#form-login')?.addEventListener('submit', async (evento) => {
-    evento.preventDefault();
-    const nick = document.querySelector<HTMLInputElement>('#input-usuario')?.value.trim();
-    const clave = document.querySelector<HTMLInputElement>('#input-clave')?.value ?? '';
-    const codigo = document.querySelector<HTMLInputElement>('#input-codigo')?.value.trim() || undefined;
-    if (!nick || !clave) return;
-    try {
-      if (chkRegistro?.checked) await registrarCuenta(nick, clave, codigo);
+  montarAcceso(app, {
+    registrar: (nick, clave, codigo) => registrarCuenta(nick, clave, codigo),
+    entrar: async (nick, clave) => {
       const login = await loginConClave(nick, clave);
       // Se entra con la cuenta; la partida se elige después, en la pantalla de partidas.
-      guardarSesionLocal(login.sesionId, nick, '');
-      estadoCliente.usuarioActivo = nick;
+      guardarSesionLocal(login.sesionId, login.nick, '');
+      estadoCliente.usuarioActivo = login.nick;
       estadoCliente.gameIdActivo = '';
       estadoCliente.proyeccionUltima = null;
       estadoCliente.sinHeroe = false;
       pantallaMontada = null;
       enrutar();
-    } catch (err) { renderVistaLogin(mensajeError(err)); }
-  });
+    },
+    mensajeError,
+    escapar: escaparHtml,
+  }, { nick: estadoCliente.usuarioActivo, error: errorMensaje });
 }
 
 /** Pantalla de partidas: elegir a cuál entrar (unirse si aún no eres miembro) y cargarla como antes. */
@@ -3054,7 +3046,8 @@ function pantallaActual(): Pantalla {
 }
 
 function montar(pantalla: Pantalla): void {
-  limpiarPantalla?.();
+  // Que un fallo al desmontar la pantalla anterior no impida montar la nueva (al entrar, eso devolvía al login).
+  try { limpiarPantalla?.(); } catch (e) { console.error(e); }
   limpiarPantalla = null;
   panelJugador = null;
   vistaMapaAbierta = false;
@@ -3148,6 +3141,10 @@ function enrutar(): void {
 }
 
 async function cerrarSesionYVolverALogin(mensaje?: string): Promise<void> {
+  // Se desmonta la pantalla de juego ahora (su 3D, sus temporizadores): si se dejaba para el siguiente `montar`, lo hacía al entrar con otra
+  // cuenta, con el DOM ya cambiado.
+  try { limpiarPantalla?.(); } catch (e) { console.error(e); }
+  limpiarPantalla = null;
   await salirDelMundo();
   cerrarSesion();
   reiniciarAvisos();
