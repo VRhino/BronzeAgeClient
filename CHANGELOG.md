@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.163.0] — 2026-11-06 · Árbol de tecnologías con las líneas que pidió Víctor · sin cambio de contrato
+
+Correcciones de Víctor (2026-11-06), solo de pantalla: el motor no cambia. Las líneas del árbol de tecnologías salen ahora de una lista fija
+(`DEPENDE_DE` en `arbolTecnologias.ts`: Aleación del bronce tras Metalurgia del cobre, Panoplia de bronce tras Bronce de calidad militar y
+Armamento palacial, Arco compuesto tras Arquería palacial y Aleación del bronce, Caballería organizada tras Forja del hierro temprana y
+Equitación militar, etc.); las demás tecnologías solo llevan las líneas de las tecnologías de su hito. Todas son continuas y la leyenda queda en
+«depende de la anterior». Esas líneas ordenan las columnas, el «Pide X» de otro carril y el resaltado al pasar el ratón. El tooltip sigue
+contando los requisitos reales y añade «En el árbol» con «Va tras» y «Lleva a». La Era de cada carta y el descubrimiento al 30 % no cambian.
+`cria_caballar` se llama «Cría de caballos» en todo el cliente (`src/nombresEnPantalla.ts`, aplicado al cargar el balance).
+
 ## [0.162.0] — 2026-11-06 · Árboles sin aplastar con una sola Era y ✕ en el modo mapa · sin cambio de contrato
 
 Petición de Víctor (2026-11-06): con una Facción recién fundada el árbol de reclutamiento se veía aplastado (la cabecera de la Era I montada

@@ -13,6 +13,7 @@
 // Facción (`p.tecnologia`). Los contadores de los logros en curso no viajan nunca: la carta dice «cumplido» o «falta», sin barra.
 import { bloqueDeDatos, catalogoDeTecnologia, tropasReclutables, type CatalogoTecnologia, type NivelDeEdificio, type ProyeccionJugador, type TropaReclutable } from '../apiCliente';
 import type { CondicionHito } from '../tiposDominio';
+import { NOMBRE_TEC_EN_PANTALLA } from '../nombresEnPantalla';
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import { iconoEdificio } from './iconosEdificio';
 import { iconoTropa } from './iconosTropa';
@@ -54,7 +55,9 @@ export function datosDesdeCatalogo(cat: Pick<CatalogoTecnologia, 'TECNOLOGIAS' |
       for (const r of l.recetas ?? []) if (!recetas[r.produce]) recetas[r.produce] = { edificio: tipo, nivel: Number(n), tec: r.requiereTecnologia, consume: r.consumePorUnidad };
     }
   }
-  return { tec: cat.TECNOLOGIAS, eras: cat.ERAS, tarifa: cat.TARIFA_ADOPCION, tropas, edificios, recetas };
+  const tec = { ...cat.TECNOLOGIAS };
+  for (const [id, nombre] of Object.entries(NOMBRE_TEC_EN_PANTALLA)) if (tec[id]) tec[id] = { ...tec[id]!, nombre };
+  return { tec, eras: cat.ERAS, tarifa: cat.TARIFA_ADOPCION, tropas, edificios, recetas };
 }
 
 let datosCache: { claves: unknown[]; d: DatosArbol } | null = null;
@@ -195,6 +198,25 @@ export function requisitos(D: DatosArbol) {
   return { reqEdificio, reqRecurso, reqTropa, reqTec, logroDe };
 }
 
+/**
+ * Las líneas del árbol (Víctor, 2026-11-06): una lista fija, solo de pantalla; el motor no cambia. Lo que no está en ella va tras las tecnologías
+ * de su propio hito. De aquí salen las columnas, el «Pide X» de otro carril, el resaltado y el «Va tras» / «Lleva a» del tooltip.
+ */
+export const DEPENDE_DE: Record<string, string[]> = {
+  aleacion_bronce: ['metalurgia_cobre'],
+  bronce_calidad_militar: ['aleacion_bronce'],
+  bronce_laminado: ['bronce_calidad_militar'],
+  forja_hierro_estandarizada: ['forja_hierro_temprana'],
+  armamento_palacial: ['metalurgia_cobre'],
+  panoplia_bronce: ['bronce_calidad_militar', 'armamento_palacial'],
+  arco_compuesto: ['arqueria_palacial', 'aleacion_bronce'],
+  arqueria_especializada: ['arco_compuesto'],
+  equitacion_militar: ['cria_caballar'],
+  caballeria_organizada: ['forja_hierro_temprana', 'equitacion_militar'],
+};
+const lineasDe = (D: DatosArbol, id: string): string[] =>
+  (DEPENDE_DE[id] ?? D.tec[id]!.hito.filter((h) => h.tipo === 'tecnologia').map((h) => (h as { id: string }).id)).filter((x) => D.tec[x]);
+
 export function construirGrafo(D: DatosArbol): Grafo {
   const { reqTropa, reqTec, logroDe } = requisitos(D);
   const carriles: Carril[] = CARRILES_BASE.map((c) => ({ ...c, tecs: c.tecs.filter((t) => D.tec[t]) }));
@@ -206,22 +228,11 @@ export function construirGrafo(D: DatosArbol): Grafo {
   const nodos = new Map<string, Nodo>();
   for (const id of Object.keys(D.tec)) nodos.set(id, { id, d: D.tec[id]!, acc: reqTec(id), preds: [], hijos: [], era: 0, carril: carrilDe.get(id)! });
   const accTropa = new Map(D.tropas.map((t) => [t.id, reqTropa(t)]));
-  const antep = new Map<string, Set<string>>();
-  const antepDe = (t: string, camino = new Set<string>()): Set<string> => {
-    if (antep.has(t)) return antep.get(t)!;
-    const s = new Set<string>();
-    if (camino.has(t)) return s;
-    camino.add(t);
-    for (const p of nodos.get(t)!.acc.tecs.keys()) { s.add(p); antepDe(p, camino).forEach((x) => s.add(x)); }
-    antep.set(t, s);
-    return s;
-  };
   for (const n of nodos.values()) {
     const todas = [...n.acc.tecs.keys()];
-    const delHito = (a: string): boolean => n.d.hito.some((h) => h.tipo === 'tecnologia' && h.id === a);
-    // Se quita la arista que ya implica otra (si A pide B y B pide C, A → C sobra).
-    n.preds = todas.filter((a) => !todas.some((b) => b !== a && antepDe(b).has(a)))
-      .map((a) => ({ de: a, tipo: delHito(a) ? 'hito' : n.acc.tecs.get(a)!.has('logro') ? 'logro' : 'implicita' }));
+    // Las líneas son la lista fija de Víctor (`DEPENDE_DE`) o, si no está, las tecnologías de su hito: todas continuas. El tooltip sigue con los
+    // requisitos reales del motor.
+    n.preds = lineasDe(D, n.id).map((de) => ({ de, tipo: 'hito' as const }));
     n.era = Math.max(eraOrd(D, n.d.era), ...todas.map((t) => eraOrd(D, D.tec[t]!.era)));
   }
   for (const n of nodos.values()) for (const p of n.preds) nodos.get(p.de)!.hijos.push(n.id);
@@ -422,9 +433,7 @@ export function htmlArbol(p: ProyeccionJugador, e: Escapar, precioAeda: (id: str
   const hay = new Set([...visibles].map((id) => estadoDe(G, E, id)));
   const sw = (est: EstadoCarta, txt: string): string => (hay.has(est) ? `<span><span class="ta-muestra ${est}"></span>${txt}</span>` : '');
   const ley = [
-    tipos.has('hito') ? `<span>${muestraLinea('hito', 26)}la pide su hito</span>` : '',
-    tipos.has('implicita') ? `<span>${muestraLinea('implicita', 26)}la piden los edificios de su hito</span>` : '',
-    tipos.has('logro') ? `<span>${muestraLinea('logro', 26)}la pide su logro (dependencia oculta)</span>` : '',
+    tipos.has('hito') ? `<span>${muestraLinea('hito', 26)}depende de la anterior</span>` : '',
     sw('adoptada', 'adoptada'), sw('adoptable', 'aparecida: se puede adoptar'), sw('revelada', 'revelada por un Aeda'),
     sw('logro', 'logro del mundo cumplido'), sw('bloqueada', 'sin logro aún'), sw('futura', 'bloqueada: su Era aún no empieza'),
   ].filter(Boolean).join('');
@@ -501,9 +510,10 @@ function tipTec(d: Dibujo, id: string, precioAeda: (id: string) => number | null
   };
   if (canon[id]) lst.push(`<li><span class="ta-etq">canon, sin efecto aún</span>${canon[id]}</li>`);
   if (pide.length) lst.push(`<li>Hace falta para: ${pide.map(tropaChip).join(' ')}</li>`);
-  const hijos = n.hijos.filter((x) => visibles.has(x));
-  if (hijos.length) lst.push(`<li>Lleva a: ${hijos.map((x) => `<span class="ta-tec">${e(TN(x))}</span>`).join(', ')}</li>`);
   if (lst.length) h += `<h4>Abre</h4><ul>${lst.join('')}</ul>`;
+  const chips = (ids: string[]): string => ids.map((x) => `<span class="ta-tec">${e(TN(x))}</span>`).join(', ');
+  const tras = n.preds.map((p) => p.de).filter((x) => visibles.has(x)), hijos = n.hijos.filter((x) => visibles.has(x));
+  if (tras.length || hijos.length) h += `<h4>En el árbol</h4><ul>${tras.length ? `<li>Va tras: ${chips(tras)}</li>` : ''}${hijos.length ? `<li>Lleva a: ${chips(hijos)}</li>` : ''}</ul>`;
   return h;
 }
 

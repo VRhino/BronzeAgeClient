@@ -19,9 +19,14 @@ describe('árbol de tecnologías', () => {
     expect(ultimaEraVisible(D, ['leva_comunal', 'hostigamiento_tribal'])).toBe(1);
     expect(ultimaEraVisible(D, ['leva_comunal', 'hostigamiento_tribal', 'escudos_ligeros'])).toBe(2);
   });
-  it('las dependencias ocultas del logro van como directas y punteadas', () => {
-    const n = G.nodos.get('arqueria_especializada')!;
-    expect(n.preds).toContainEqual({ de: 'arco_compuesto', tipo: 'logro' });
+  it('las líneas son la lista fija de Víctor, todas continuas', () => {
+    const de = (id: string): string[] => G.nodos.get(id)!.preds.map((p) => p.de).sort();
+    expect(G.nodos.get('arqueria_especializada')!.preds).toEqual([{ de: 'arco_compuesto', tipo: 'hito' }]);
+    expect(de('panoplia_bronce')).toEqual(['armamento_palacial', 'bronce_calidad_militar']);
+    expect(de('arco_compuesto')).toEqual(['aleacion_bronce', 'arqueria_palacial']);
+    expect(de('equitacion_militar')).toEqual(['cria_caballar']);
+    expect([...G.nodos.values()].every((n) => n.preds.every((p) => p.tipo === 'hito'))).toBe(true);
+    expect(D.tec['cria_caballar']!.nombre).toBe('Cría de caballos');
   });
   it('el logro de reclutar jinetes asirios pide lo que pide esa tropa (reducido a lo directo)', () => {
     expect(new Set(G.logroDe('caballeria_organizada'))).toEqual(new Set(['equitacion_militar', 'cria_caballar', 'forja_hierro_temprana']));

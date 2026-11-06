@@ -6,6 +6,7 @@ import { Resultado } from './contrato/gen/bronzeage/v1/session_pb';
 import { TipoEntidad } from './contrato/gen/bronzeage/v1/common_pb';
 import type { EventoDominio as EventoPb } from './contrato/gen/bronzeage/v1/events_pb';
 import { cargarMundo } from './mundo/artefacto';
+import { NOMBRE_TEC_EN_PANTALLA } from './nombresEnPantalla';
 import type { GrafoNavegacion } from './contrato/gen/bronzeage/v1/world_pb';
 import { cargarRelieve, type Relieve } from './mundo/relieve';
 import { EPOCA_CONTRATO, instante, moverAlInstante, proyectar } from './motor/proyeccion';
@@ -686,6 +687,9 @@ function balance(alCargar?: () => void): BalancePublico | null {
       reglasDePartida = d.reglas ?? null;
       const bloques: Record<string, unknown> = {};
       for (const doc of Object.values(d.documentos)) for (const [k, v] of Object.entries(doc)) if (!(k in bloques)) bloques[k] = v;
+      // Nombres de tecnología que el cliente enseña distintos del motor (Víctor, 2026-11-06): el id y el motor no cambian.
+      const tecnologias = bloques.TECNOLOGIAS as Record<string, { nombre: string }> | undefined;
+      if (tecnologias) for (const [id, nombre] of Object.entries(NOMBRE_TEC_EN_PANTALLA)) if (tecnologias[id]) tecnologias[id] = { ...tecnologias[id]!, nombre };
       const todo = bloques as never;
       balancePublico = { catalogos: todo, cuposYNiveles: todo, caravanas: todo, politica: todo, mundoYMilitar: todo, tecnologia: todo, internas: todo };
       for (const f of oyentesDelBalance) f();
@@ -694,6 +698,7 @@ function balance(alCargar?: () => void): BalancePublico | null {
   }
   return balancePublico;
 }
+
 
 /** Radio con el que nace la zona de una plaza (`reglas.territorio.radio_inicial` de `/v1/datos`); 6, la cifra de hoy, mientras no llegue. */
 export function radioZonaInicial(alCargar?: () => void): number {
