@@ -3,6 +3,18 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.154.0] — 2026-11-06 · Mundo 3D: carteles sobre columnas, ejércitos y caravanas · sin cambio de contrato
+
+Petición de Víctor (2026-11-06), en la vista del mundo 3D:
+
+- Sobre cada columna personal, un cartel HTML con el escudo de su Facción y el nombre de su héroe, con el nombre de la Facción más pequeño
+  debajo. El héroe es el líder de la columna (o el primero que va en ella): el tuyo de tu ficha, el de otro de su ficha pública.
+- Sobre cada ejército, el escudo y el nombre de la Facción.
+- Sobre cada caravana suelta, el escudo y el nombre de la Facción (la de su plaza de origen).
+- Como los de las plazas, más pequeños, y se pulsan como la columna o la caravana. Sin Facción ni héroe conocido no hay cartel. El escudo se
+  dibuja una vez por sigilo y tamaño (`svgSigiloGuardado`), porque los carteles se rehacen en cada fotograma.
+- Banco: un ejército ajeno y los carteles de la columna propia, la ajena y las caravanas.
+
 ## [0.153.0] — 2026-11-06 · Construcción con la barra de construidos y Territorio a ventana completa · sin cambio de contrato
 
 Petición de Víctor (2026-11-06):

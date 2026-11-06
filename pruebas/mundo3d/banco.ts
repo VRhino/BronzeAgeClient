@@ -10,11 +10,12 @@ import { fromBinary } from '@bufbuild/protobuf';
 import { ArtefactoDeMundoSchema, PaqueteRelieveSchema } from '../../src/contrato/gen/bronzeage/v1/world_pb';
 import { mapaDesdeArtefacto } from '../../src/mundo/artefacto';
 import { Relieve } from '../../src/mundo/relieve';
-import { ANCHOS, mundoVacio, rellenosDeTerritorio, trazosDeFronteras, type CaravanaEnVista, type ColumnaEnVista, type EstadoVista, type EtiquetaEnVista, type FundacionEnVista, type MiradaEnVista, type MundoEnVista, type SeleccionEnVista } from '../../src/mundo3d/estado';
+import { ANCHOS, etiquetasDesdeProyeccion, mundoVacio, rellenosDeTerritorio, trazosDeFronteras, type CaravanaEnVista, type ColumnaEnVista, type EstadoVista, type EtiquetaEnVista, type FundacionEnVista, type MiradaEnVista, type MundoEnVista, type SeleccionEnVista } from '../../src/mundo3d/estado';
 import { circulo, suavizarCamino } from '../../src/mundo3d/lineas';
 import { fuenteDesdeMapa, fuenteDesdeRelieve } from '../../src/mundo3d/fuente';
 import { VistaMundo3D } from '../../src/mundo3d/vista';
 import type { NieblaProyectada } from '../../src/tiposDominio';
+import type { ProyeccionJugador } from '../../src/apiCliente';
 
 type Punto = { x: number; y: number };
 const $ = (id: string) => document.getElementById(id)!;
@@ -25,6 +26,9 @@ async function bajar(ruta: string): Promise<Uint8Array> {
   if (!r.ok) throw new Error(await r.text());
   return new Uint8Array(await r.arrayBuffer());
 }
+
+/** Las Facciones de mentira, para los carteles de columnas y caravanas. */
+const FACCIONES = { facciones: [{ id: 'f-propia', nombre: 'Casa de Príamo' }, { id: 'f-ajena', nombre: 'Atridas' }], directorioFacciones: [], asentamientosAvistados: [], asentamientosConocidos: [], campamentosMercenarios: [], campamentosBandidos: [] } as unknown as ProyeccionJugador;
 
 const VELOCIDAD = 0.5; // u por segundo (30 u/min)
 const VELOCIDAD_ACARREO = 0.4; // u por segundo (24 u/min, el buey)
@@ -111,9 +115,11 @@ async function arrancar(): Promise<void> {
     }
     const mia: ColumnaEnVista = {
       id: 'mia', mia: true, propia: true, posicion: cabeza, ruta: ruta.length ? [cabeza, ...ruta] : [], jinetes: 1, tropa: { porHeroe: [soldados ? 1 : 0], ejercito: false },
-      color: '#c0392b', carros: { carga: soldados ? 1 : 0, fundacion: !!fundacion, propio: true, animales: ['caballo'] }, formacion: false,
+      color: '#c0392b', carros: { carga: soldados ? 1 : 0, fundacion: !!fundacion, propio: true, animales: ['caballo'] }, formacion: false, faccionId: 'f-propia', heroe: 'Héctor',
     };
-    return { heroe: cabeza, radioVision: radio, columnas: [mia, ...ajenas], caravanas, niebla, mundo, miradas, etiquetas, seleccion, fundacion };
+    // los carteles de columnas, ejércitos y caravanas, como en el juego (se mueven con ellas)
+    const carteles = etiquetasDesdeProyeccion(FACCIONES, [mia, ...ajenas], [], caravanas).filter((e) => ['columna', 'ejercito', 'caravana'].includes(e.tipo));
+    return { heroe: cabeza, radioVision: radio, columnas: [mia, ...ajenas], caravanas, niebla, mundo, miradas, etiquetas: [...etiquetas, ...carteles], seleccion, fundacion };
   };
 
   const vista = new VistaMundo3D($('escena'), {
@@ -203,12 +209,13 @@ function mundoDePrueba(c: Punto, vacio: boolean): { mundo: MundoEnVista; ajenas:
   camino([...hastaPlaza, ...escalera(plaza, ajena).slice(1)], 1, [hastaPlaza.length - 1]);
   camino([plaza, en(3, 4, plaza), en(6, 5, plaza)], 0);
   // lo ajeno: una columna en formación junto a la plaza ajena, bandidos, un alijo y una batalla; caravanas propia y ajena; dos Miradas
-  ajenas.push({ id: 'ajena', mia: false, propia: false, posicion: en(-6, 4, ajena), ruta: [], jinetes: 2, tropa: { porHeroe: [0, 0], ejercito: false }, color: AJENO, carros: { carga: 0, fundacion: true }, formacion: true });
+  ajenas.push({ id: 'ajena', mia: false, propia: false, posicion: en(-6, 4, ajena), ruta: [], jinetes: 2, tropa: { porHeroe: [0, 0], ejercito: false }, color: AJENO, carros: { carga: 0, fundacion: true }, formacion: true, faccionId: 'f-ajena', heroe: 'Agamenón' });
+  ajenas.push({ id: 'ejercito', mia: false, propia: false, posicion: en(4, 5), ruta: [], jinetes: 3, tropa: { porHeroe: [2, 2, 1], ejercito: true }, color: AJENO, carros: { carga: 1, fundacion: false }, formacion: false, faccionId: 'f-ajena' });
   m.bandidos.push({ id: 'bandidos', posicion: en(-4, 12), nivel: 2 });
   m.alijos.push({ id: 'alijo', posicion: en(3, 6) });
   m.batallas.push({ id: 'batalla', posicion: en(18, -10), propia: false });
-  caravanas.push({ id: 'caravana', posicion: plaza, ruta: [plaza, ajena], fundacion: false, color: PROPIO, escolta: 2, animales: ['buey', 'camello', 'caballo', 'buey', 'camello'] });
-  caravanas.push({ id: 'caravana-ajena', posicion: en(4, -3, ajena), ruta: [], fundacion: false, color: AJENO, escolta: 1 });
+  caravanas.push({ id: 'caravana', posicion: plaza, ruta: [plaza, ajena], fundacion: false, color: PROPIO, faccionId: 'f-propia', escolta: 2, animales: ['buey', 'camello', 'caballo', 'buey', 'camello'] });
+  caravanas.push({ id: 'caravana-ajena', posicion: en(4, -3, ajena), ruta: [], fundacion: false, color: AJENO, faccionId: 'f-ajena', escolta: 1 });
   miradas.push({ id: 'abierta', centro: en(-14, -4), radio: 6, abierta: true, minutos: 37 }, { id: 'caducada', centro: en(22, 2), radio: 5, abierta: false, minutos: 12 });
   etiquetas.push(
     { id: 'plaza:propia', posicion: plaza, texto: 'Ilión', tipo: 'plaza', color: PROPIO },

@@ -476,6 +476,13 @@ como círculo entero, su zona se metía en las vecinas. El cliente la recorta co
 recordadas. Donde chocan dos zonas sale la frontera. Se pinta con el trazo de lo que se ve; vale también para el relleno del territorio y
 para el modo mapa.
 
+## Carteles de columnas, ejércitos y caravanas (0.154.0)
+
+Petición de Víctor del 2026-11-06. Sobre cada columna personal, un cartel HTML (`etiquetas.ts`, tipo `columna`) con el escudo de su Facción,
+el nombre del héroe que la lleva y el de la Facción debajo; sobre cada ejército (`ejercito`) y cada caravana suelta (`caravana`), escudo y
+Facción. Van 0,55 u sobre el suelo de la cabeza de la columna, siguen a la columna en cada fotograma y se pulsan como ella. Los datos salen
+de `estadoDesdeProyeccion`: `ColumnaEnVista.faccionId` y `heroe` (líder o primer participante; su `displayName`) y `CaravanaEnVista.faccionId`.
+
 ## Banco de pruebas
 
 `npm run mundo3d` abre `pruebas/mundo3d/` con el artefacto y el relieve que haya en `generador/salida/mundo/` del motor (el checkout hermano

@@ -72,6 +72,34 @@
   opacity: 0.8;
 }
 
+/* Sobre cada columna, ejército y caravana (Víctor, 2026-11-06): como el de la plaza, más pequeño y por debajo de él. El de una columna personal,
+   el nombre de su héroe con la Facción debajo; el de un ejército y una caravana, la Facción. */
+.mundo3d-etiqueta-columna,
+.mundo3d-etiqueta-ejercito,
+.mundo3d-etiqueta-caravana {
+  display: flex;
+  align-items: center;
+  margin-left: 10px;
+  padding: 2px 8px 2px 20px;
+  border-left-width: 1px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.mundo3d-etiqueta-columna .mundo3d-etiqueta-escudo,
+.mundo3d-etiqueta-ejercito .mundo3d-etiqueta-escudo,
+.mundo3d-etiqueta-caravana .mundo3d-etiqueta-escudo {
+  left: -14px;
+}
+
+.mundo3d-etiqueta-columna .mundo3d-etiqueta-sub {
+  font-size: 9.5px;
+}
+
+.mundo3d-etiqueta-caravana {
+  font-weight: 600;
+}
+
 .mundo3d-etiqueta-campamento {
   font-size: 12px;
   font-weight: 700;

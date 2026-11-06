@@ -1,11 +1,14 @@
 // Los nombres sobre el mundo: elementos HTML encima del lienzo, colocados en cada fotograma donde cae en pantalla su punto del mundo. Se
 // reutilizan por su id; los que quedan detrás de la cámara, fuera de la pantalla o más allá de `lejos` se esconden. Las de lo que se puede
-// seleccionar (plazas, campamentos) se pulsan como si se pulsara el elemento: `alPulsar` recibe su punto del mundo.
+// seleccionar (plazas, campamentos, columnas y caravanas) se pulsan como si se pulsara el elemento: `alPulsar` recibe su punto del mundo.
 import * as THREE from 'three';
 import type { EtiquetaEnVista } from './estado';
 
 /** Las etiquetas de algo que se selecciona con un clic. */
-const PULSABLES = new Set<EtiquetaEnVista['tipo']>(['plaza', 'campamento']);
+const PULSABLES = new Set<EtiquetaEnVista['tipo']>(['plaza', 'campamento', 'columna', 'ejercito', 'caravana']);
+/** Cuánto sube cada etiqueta sobre el suelo de su punto, en u: las de plazas y campamentos sobre la maqueta; las de columnas, ejércitos y
+ * caravanas sobre la cabeza de las figuras (a la escala `MUNDO3D.tropa`). */
+const ALTURA: Partial<Record<EtiquetaEnVista['tipo'], number>> = { plaza: 1.2, campamento: 1.1, nodo: 0.5, columna: 0.55, ejercito: 0.55, caravana: 0.55 };
 
 /** El contenido: el escudo a la izquierda (si lo hay) y el nombre con su subtexto debajo. */
 function pintar(el: HTMLElement, e: EtiquetaEnVista): void {
@@ -48,7 +51,7 @@ export class Etiquetas {
     const usadas = new Set<string>();
     for (const e of lista) {
       if (Math.hypot(e.posicion.x - cerca.x, e.posicion.y - cerca.y) > lejos) continue;
-      const v = this.v.set(e.posicion.x, alturaU(e.posicion.x, e.posicion.y) + (e.tipo === 'plaza' ? 1.2 : e.tipo === 'campamento' ? 1.1 : e.tipo === 'nodo' ? 0.5 : 0.1), e.posicion.y).project(camara);
+      const v = this.v.set(e.posicion.x, alturaU(e.posicion.x, e.posicion.y) + (ALTURA[e.tipo] ?? 0.1), e.posicion.y).project(camara);
       if (v.z > 1 || v.z < -1 || v.x < -1.1 || v.x > 1.1 || v.y < -1.1 || v.y > 1.1) continue;
       usadas.add(e.id);
       let viva = this.vivas.get(e.id);

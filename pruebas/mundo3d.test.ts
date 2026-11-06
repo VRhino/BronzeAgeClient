@@ -7,7 +7,7 @@ import type { ProyeccionJugador } from '../src/apiCliente';
 import { Arboles, arbolesDelTrozo, caucesDe, franjas, POR_ARBOL, type Entorno } from '../src/mundo3d/arboles';
 import { CamaraDeJuego, distanciaDeEncuadre } from '../src/mundo3d/camara';
 import { ACERCADO, encuadres, MUNDO3D } from '../src/mundo3d/config';
-import { ALFA_TERRITORIO, ANCHOS, dondeEstaLaSeleccion, estadoDesdeProyeccion, mundoDesdeProyeccion } from '../src/mundo3d/estado';
+import { ALFA_TERRITORIO, ANCHOS, dondeEstaLaSeleccion, estadoDesdeProyeccion, etiquetasDesdeProyeccion, mundoDesdeProyeccion } from '../src/mundo3d/estado';
 import { refuerzo, Territorio } from '../src/mundo3d/territorio';
 import { zonasDeLoRecordado } from '../src/mundo/zonasRecordadas';
 import { Terreno } from '../src/mundo3d/terreno';
@@ -73,7 +73,7 @@ describe('el estado de la vista', () => {
     expect(e.radioVision).toBe(30);
     expect(e.columnas).toEqual([{
       id: 'ej-1', mia: true, propia: true, posicion: { x: 10, y: 20 }, ruta: [{ x: 10, y: 20 }, { x: 30, y: 20 }], jinetes: 1, tropa: { porHeroe: [2], ejercito: false }, // dos escuadras de un solo héroe
-      color: e.columnas[0]!.color, carros: { carga: 0, fundacion: false }, formacion: false,
+      color: e.columnas[0]!.color, faccionId: 'f-1', carros: { carga: 0, fundacion: false }, formacion: false,
     }]);
   });
 
@@ -167,7 +167,7 @@ describe('lo ajeno, los nombres y lo seleccionado', () => {
   });
 
   test('nombres: plazas (tenue la recordada), Miradas y la tierra ajena bajo una columna propia', () => {
-    expect(e.etiquetas.map((x) => [x.id, x.texto, x.tenue ?? false])).toEqual([
+    expect(e.etiquetas.filter((x) => !['columna', 'ejercito', 'caravana'].includes(x.tipo)).map((x) => [x.id, x.texto, x.tenue ?? false])).toEqual([
       ['plaza:a-1', 'Micenas', false], ['plaza:a-2', 'Tirinto', true], ['mirada:m1', '👁 2 min', false], ['mirada:m2', '⏳ 1 min', true], ['territorio:ej-1', '⚑ Micenas', false],
     ]);
   });
@@ -488,5 +488,32 @@ describe('los carros de las caravanas', () => {
     expect(Math.abs(a!.x - b!.x)).toBeGreaterThan(0.2 * MUNDO3D.tropa); // uno a cada lado, sin tocarse
     expect(c!.x).toBeCloseTo(10, 6); // el tercero, solo y en el centro
     expect(c!.z).toBeGreaterThan(a!.z);
+  });
+});
+
+describe('los carteles sobre columnas, ejércitos y caravanas', () => {
+  const p = { facciones: [{ id: 'f-1', nombre: 'Casa de Minos' }], directorioFacciones: [{ id: 'f-2', nombre: 'Hititas' }], asentamientosAvistados: [], asentamientosConocidos: [], campamentosMercenarios: [], campamentosBandidos: [] } as unknown as ProyeccionJugador;
+  const columna = (id: string, ejercito: boolean, extra: Record<string, unknown>) => ({ id, mia: false, propia: false, posicion: { x: 1, y: 2 }, ruta: [], jinetes: 1, tropa: { porHeroe: [1], ejercito }, color: '#fff', carros: { carga: 0, fundacion: false }, ...extra });
+  const e = etiquetasDesdeProyeccion(p, [
+    columna('c', false, { faccionId: 'f-1', heroe: 'Ariadna' }),
+    columna('e', true, { faccionId: 'f-2', heroe: 'Mursili' }),
+    columna('n', false, {}),
+  ] as never, [], [{ id: 'k', posicion: { x: 5, y: 5 }, ruta: [], fundacion: false, color: '#fff', faccionId: 'f-2' }, { id: 'sin', posicion: { x: 6, y: 6 }, ruta: [], fundacion: false, color: '#fff' }]);
+  const de = (id: string) => e.find((x) => x.id === id);
+
+  test('una columna personal: escudo y el nombre de su héroe, con la Facción debajo', () => {
+    expect(de('columna:c')).toMatchObject({ tipo: 'columna', texto: 'Ariadna', subtexto: 'Casa de Minos', posicion: { x: 1, y: 2 } });
+    expect(de('columna:c')!.sigilo).toContain('<svg');
+  });
+
+  test('un ejército y una caravana: escudo y el nombre de la Facción (también de las del directorio)', () => {
+    expect(de('columna:e')).toMatchObject({ tipo: 'ejercito', texto: 'Hititas' });
+    expect(de('columna:e')!.subtexto).toBeUndefined();
+    expect(de('caravana:k')).toMatchObject({ tipo: 'caravana', texto: 'Hititas' });
+  });
+
+  test('sin Facción ni héroe conocido, sin cartel', () => {
+    expect(de('columna:n')).toBeUndefined();
+    expect(de('caravana:sin')).toBeUndefined();
   });
 });

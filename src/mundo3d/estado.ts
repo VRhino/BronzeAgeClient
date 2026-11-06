@@ -48,12 +48,15 @@ export interface ColumnaEnVista {
   /** El de su Facción: túnicas y penachos. */
   color: string;
   carros: Carros;
+  /** De quién es y, de una columna personal, quién la lleva (su héroe): su cartel encima. */
+  faccionId?: string;
+  heroe?: string;
   /** Quieta, esperando a ser tres para ser un ejército (Doc 5.14.4): lleva un anillo discontinuo. */
   formacion: boolean;
 }
 
 /** Una caravana suelta en el mapa (las enganchadas van detrás de su columna): la propia con su ruta, la avistada sin ella. */
-export interface CaravanaEnVista { id: string; posicion: Punto; ruta: Punto[]; fundacion: boolean; color: string;
+export interface CaravanaEnVista { id: string; posicion: Punto; ruta: Punto[]; fundacion: boolean; color: string; faccionId?: string;
   /** Las escuadras de su escolta, que marchan delante del carro: las cedidas de la propia (`escoltaIds`); de la avistada solo se sabe si va
    * escoltada (`escoltada`), y se pinta una. */
   escolta?: number;
@@ -73,7 +76,7 @@ export interface SeleccionEnVista { posicion: Punto; radio: number }
 /** Un nombre sobre el mundo (HTML encima del lienzo). `tenue` = lo que solo se recuerda. */
 /** Un nombre sobre el mundo. El texto va siempre en blanco; `color` (el de la Facción o el del campamento) es el filete de la izquierda. Una plaza
  * lleva además el escudo de su Facción (`sigilo`, SVG en línea) y debajo del nombre `subtexto` («Nivel n»). */
-export interface EtiquetaEnVista { id: string; posicion: Punto; texto: string; tipo: 'plaza' | 'mirada' | 'territorio' | 'nodo' | 'campamento'; color?: string; tenue?: boolean; subtexto?: string; sigilo?: string }
+export interface EtiquetaEnVista { id: string; posicion: Punto; texto: string; tipo: 'plaza' | 'mirada' | 'territorio' | 'nodo' | 'campamento' | 'columna' | 'ejercito' | 'caravana'; color?: string; tenue?: boolean; subtexto?: string; sigilo?: string }
 
 /** Una plaza: la ciudad del juego ocupa el 10 % del radio de su zona. `recordada` = se vio alguna vez y ahora no (va bajo la niebla). */
 export interface PlazaEnVista { id: string; posicion: Punto; radioCiudad: number; color: string; recordada: boolean; nivel: number }
@@ -191,6 +194,11 @@ export function estadoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVist
     return { porHeroe, ejercito: e.tipo === 'ejercito' };
   };
   const enElMapa = mia && !mia.dentroDe ? mia : undefined;
+  // el nombre del héroe que lleva una columna: el tuyo de tu ficha, el de otro de su ficha pública (si se ve)
+  const conNombre = (heroeId: string | undefined): { heroe?: string } => {
+    const nombre = heroeId === undefined ? undefined : heroeId === p.heroeId ? p.heroe?.displayName : p.heroesVisibles?.find((h) => h.heroeId === heroeId)?.displayName;
+    return nombre ? { heroe: nombre } : {};
+  };
   const columnas: ColumnaEnVista[] = [];
   // las de la Facción, con su ruta y lo que arrastran; una columna que entró en un lugar no está en el mapa
   for (const e of p.ejercitos) {
@@ -212,6 +220,8 @@ export function estadoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVist
       jinetes: Math.max(1, Math.min(MAX_JINETES, e.participantes.length)),
       tropa: tropaPropia(e),
       color: color(e.faccionId ?? p.faccionId),
+      faccionId: e.faccionId ?? p.faccionId ?? undefined,
+      ...conNombre(e.liderId ?? e.participantes[0]?.heroeId),
       carros: { carga: deCarga.length, fundacion, ...(lleno ? { propio: true as const } : {}), ...conAnimales(animales) },
       formacion: !!e.formacion,
     });
@@ -222,7 +232,8 @@ export function estadoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVist
     columnas.push({
       id: a.id, mia: false, propia: false, posicion: a.posicionActual, ruta: [], jinetes: Math.max(1, Math.min(MAX_JINETES, a.participantes)),
       tropa: { porHeroe: a.heroeIds.map(escuadrasDe), ejercito: a.tipo === 'ejercito' },
-      color: color(a.faccionId), carros: { carga: Math.min(2, a.caravanasAdjuntasIds.length), fundacion: !!a.caravanaFundacionId }, formacion: !!a.enFormacion,
+      color: color(a.faccionId), faccionId: a.faccionId, ...conNombre(a.heroeIds[0]),
+      carros: { carga: Math.min(2, a.caravanasAdjuntasIds.length), fundacion: !!a.caravanaFundacionId }, formacion: !!a.enFormacion,
     });
   }
   // las caravanas sueltas: las enganchadas (propias o ajenas) van con su columna, y las que esperan dentro (en su plaza, su pueblo o una parada)
@@ -236,11 +247,12 @@ export function estadoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVist
       return {
         id: c.id, posicion: c.posicionActual, ruta: (c.ruta?.length ?? 0) >= 2 ? c.ruta! : [], fundacion,
         color: color(p.asentamientos.find((a) => a.id === c.origenAsentamientoId)?.faccionId ?? p.faccionId),
+        faccionId: p.asentamientos.find((a) => a.id === c.origenAsentamientoId)?.faccionId ?? c.faccionId ?? p.faccionId ?? undefined,
         ...(escolta ? { escolta } : {}), ...(animales.length ? { animales } : {}),
       };
     });
   for (const c of (p.caravanasAvistadas ?? []).filter((x) => !adjuntas.has(x.id)))
-    caravanas.push({ id: c.id, posicion: c.posicionActual, ruta: [], fundacion: false, color: c.faccionId ? color(c.faccionId) : COLOR_AJENO, ...(c.escoltada ? { escolta: 1 } : {}) });
+    caravanas.push({ id: c.id, posicion: c.posicionActual, ruta: [], fundacion: false, color: c.faccionId ? color(c.faccionId) : COLOR_AJENO, ...(c.faccionId ? { faccionId: c.faccionId } : {}), ...(c.escoltada ? { escolta: 1 } : {}) });
   const miradas = (p.miradasIntel ?? []).map((m) => {
     const abierta = m.expiraEn > p.instante;
     return { id: m.id, centro: m.centro, radio: m.radio, abierta, minutos: Math.max(0, Math.ceil(((abierta ? m.expiraEn : m.libreEn) - p.instante) / 60_000)) };
@@ -254,24 +266,40 @@ export function estadoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVist
     niebla: p.exploracion ?? null,
     mundo,
     miradas,
-    etiquetas: etiquetasDesdeProyeccion(p, columnas, miradas),
+    etiquetas: etiquetasDesdeProyeccion(p, columnas, miradas, caravanas),
     seleccion: dondeEstaLaSeleccion(p, extra.seleccion ?? null, mundo),
     fundacion: extra.fundacion ?? null,
   };
 }
 
+/** El ancho (px) del escudo de los carteles de columnas, ejércitos y caravanas: más pequeño que el de las plazas. */
+const CARTEL = 26;
+
+/** El SVG de un sigilo, guardado por sigilo y ancho: los carteles se rehacen en cada fotograma y el SVG de un escudo no cambia. */
+const svgsDeSigilo = new WeakMap<object, Map<number, string>>();
+const SIN_SIGILO = {};
+function svgSigiloGuardado(sigilo: Parameters<typeof svgSigilo>[0], ancho: number): string {
+  const clave = (sigilo ?? SIN_SIGILO) as object;
+  let porAncho = svgsDeSigilo.get(clave);
+  if (!porAncho) svgsDeSigilo.set(clave, (porAncho = new Map()));
+  let svg = porAncho.get(ancho);
+  if (svg === undefined) porAncho.set(ancho, (svg = svgSigilo(sigilo, ancho)));
+  return svg;
+}
+
 /** Los nombres sobre el mundo: el de cada plaza (tenue el de la que solo se recuerda), los minutos de cada Mirada y, bajo una columna propia que
  * pisa tierra ajena, de quién es (lo dice el servidor, `territorioPorEjercito`). */
-export function etiquetasDesdeProyeccion(p: ProyeccionJugador, columnas: readonly ColumnaEnVista[], miradas: readonly MiradaEnVista[]): EtiquetaEnVista[] {
+export function etiquetasDesdeProyeccion(p: ProyeccionJugador, columnas: readonly ColumnaEnVista[], miradas: readonly MiradaEnVista[], caravanas: readonly CaravanaEnVista[] = []): EtiquetaEnVista[] {
   const out: EtiquetaEnVista[] = [];
   const color = (f: string) => faccionColor(f, p.facciones);
   // el escudo completo de la Facción dueña, de su ficha o, si no es de las que llegan enteras, del directorio
   const escudos = new Map<string, string>();
-  const escudo = (f: string): string => {
-    let svg = escudos.get(f);
+  const fichaDe = (f: string) => p.facciones.find((x) => x.id === f) ?? p.directorioFacciones?.find((x) => x.id === f);
+  const escudo = (f: string, ancho = 40): string => {
+    let svg = escudos.get(`${f}|${ancho}`);
     if (svg === undefined) {
-      svg = svgSigilo((p.facciones.find((x) => x.id === f) ?? p.directorioFacciones?.find((x) => x.id === f))?.sigilo, 40);
-      escudos.set(f, svg);
+      svg = svgSigiloGuardado(fichaDe(f)?.sigilo, ancho);
+      escudos.set(`${f}|${ancho}`, svg);
     }
     return svg;
   };
@@ -281,6 +309,19 @@ export function etiquetasDesdeProyeccion(p: ProyeccionJugador, columnas: readonl
   for (const c of p.campamentosMercenarios ?? []) out.push({ id: `mercenarios:${c.id}`, posicion: c.posicion, texto: '⛺ Mercenarios', tipo: 'campamento', color: '#9cc3ea' });
   for (const c of p.campamentosBandidos ?? []) out.push({ id: `bandidos:${c.id}`, posicion: c.posicion, texto: `☠ Bandidos · nivel ${c.nivel}`, tipo: 'campamento', color: '#e8826f' });
   for (const m of miradas) out.push({ id: `mirada:${m.id}`, posicion: m.centro, texto: `${m.abierta ? '👁' : '⏳'} ${m.minutos} min`, tipo: 'mirada', tenue: !m.abierta });
+  // Sobre cada columna, su cartel (Víctor, 2026-11-06): el escudo de su Facción y, de una personal, el nombre de su héroe con la Facción más
+  // pequeña debajo; de un ejército, el nombre de la Facción. Sobre cada caravana suelta, escudo y Facción.
+  const nombreDe = (f: string | undefined) => (f ? fichaDe(f)?.nombre : undefined);
+  for (const c of columnas) {
+    if (!c.faccionId && !c.heroe) continue;
+    const f = c.faccionId ?? '', faccion = nombreDe(f) ?? 'Sin Facción', base = { posicion: c.posicion, color: f ? color(f) : COLOR_AJENO, sigilo: escudo(f, CARTEL) };
+    if (c.tropa.ejercito) out.push({ id: `columna:${c.id}`, texto: faccion, tipo: 'ejercito', ...base });
+    else out.push({ id: `columna:${c.id}`, texto: c.heroe ?? faccion, tipo: 'columna', ...(c.heroe ? { subtexto: faccion } : {}), ...base });
+  }
+  for (const c of caravanas) {
+    if (!c.faccionId) continue;
+    out.push({ id: `caravana:${c.id}`, posicion: c.posicion, texto: nombreDe(c.faccionId) ?? 'Sin Facción', tipo: 'caravana', color: color(c.faccionId), sigilo: escudo(c.faccionId, CARTEL) });
+  }
   for (const c of columnas) {
     const duena = c.propia ? p.territorioPorEjercito?.[c.id] : undefined;
     if (duena === undefined || duena === p.faccionId) continue;
