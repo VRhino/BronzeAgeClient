@@ -147,11 +147,12 @@ export function disponerTropas(G: GrafoTropas, eraVisible: number, plegados: Set
     return c;
   };
   vis.forEach(colDe);
-  // El Centro Urbano en cuadro: tantas columnas como pida la raíz del número de tropas, sin pasar de las que ya tiene la Era.
+  // El Centro Urbano en cuadro: tantas columnas como pida la raíz del número de tropas, sin pasar de las que ya tiene la Era (y una Era tiene al
+  // menos dos en el tablero: `MIN_COLS` de arbolTablero.ts).
   for (const e of erasVis) {
     const cu = vis.filter((n) => n.era === e.orden && n.carril === 'centroUrbano' && !n.preds.length && !n.hijos.some((h) => G.nodos.get(h)!.era === e.orden));
     const usadas = new Set(vis.filter((n) => n.era === e.orden && n.carril !== 'centroUrbano').map((n) => local.get(n.id)!));
-    const ancho = Math.max(1, Math.min(Math.ceil(Math.sqrt(cu.length)), usadas.size || 1));
+    const ancho = Math.max(1, Math.min(Math.ceil(Math.sqrt(cu.length)), Math.max(2, usadas.size)));
     cu.forEach((n, i) => local.set(n.id, i % ancho));
   }
   const colsEra: Record<number, number> = {}, baseEra: Record<number, number> = {};

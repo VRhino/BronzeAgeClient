@@ -1614,13 +1614,15 @@ function alternarBase(abrir = panelJugador !== 'base'): void {
   panelJugador = abrir ? 'base' : null;
   renderPanelJugador(true);
 }
-// B abre o cierra la Base y Esc la cierra; nunca mientras se escribe ni con un diálogo encima.
+// B abre o cierra la Base y Esc la cierra (o cierra el modo mapa); nunca mientras se escribe ni con un diálogo encima.
 document.addEventListener('keydown', (ev) => {
   const t = ev.target as HTMLElement | null;
   if (t && (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName))) return;
   if (ev.ctrlKey || ev.metaKey || ev.altKey || document.querySelector('.dialogo-velo, .briefing-fondo')) return;
   if ((ev.key === 'b' || ev.key === 'B') && !ev.repeat) { ev.preventDefault(); alternarBase(); }
   else if (ev.key === 'Escape' && panelJugador === 'base' && !document.querySelector('.ta-ficha:not([hidden])')) { ev.stopImmediatePropagation(); alternarBase(false); }
+  // con el modo mapa abierto (y nada encima), Esc lo cierra como la ✕ de su esquina
+  else if (ev.key === 'Escape' && vistaMapaAbierta && panelJugador === null && !document.querySelector('.eleccion-clic, .mapa-capas-lista:not([hidden])')) { ev.stopImmediatePropagation(); alternarVistaMapa(false); }
 }, true);
 
 /** Dónde está el héroe en el mundo, para centrar el mapa: su columna, o el campamento o la plaza donde está. */
@@ -1643,7 +1645,7 @@ function alternarVistaMapa(abrir: boolean = !vistaMapaAbierta, centro?: { x: num
       <div class="mapa-lienzo"><canvas id="mapa-interior"></canvas></div>
       ${htmlCapas('mapa', reglasDeAldea().fertilidadMinima)}
       <div class="mapa-zoom"><button type="button" data-zoom="in" aria-label="Acercar">+</button><button type="button" data-zoom="out" aria-label="Alejar">−</button></div>
-      <button class="btn-secondary mapa-interior-cerrar" type="button">Volver</button>
+      <button class="asent-ventana-cerrar mapa-interior-cerrar" type="button" title="Cerrar el mapa (Esc)" aria-label="Cerrar el mapa">✕</button>
       ${eleccionEnMapa ? `<div class="mapa-eleccion" role="status"><span>${escaparHtml(eleccionEnMapa.texto)}</span><p class="faction-error" data-eleccion-error role="alert"></p></div>` : ''}
     </div>`);
     const interior = pantalla.querySelector<HTMLElement>('.mapa-interior')!;

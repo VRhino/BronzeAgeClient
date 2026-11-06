@@ -2783,7 +2783,7 @@ kbd {
   height: 100vh;
   z-index: 40;
 }
-.mapa-interior-cerrar { position: absolute; top: 14px; left: 16px; z-index: 3; }
+.mapa-interior-cerrar { position: absolute; top: 14px; right: 16px; z-index: 3; }
 
 /* Campamento: la planta ocupa el centro como el trazado de una plaza, con su leyenda debajo. */
 .camp-lienzo { background: #93c26b; }
@@ -5842,7 +5842,7 @@ button.carro-hueco:hover, .carro-hueco.activo { border-color: var(--oro); box-sh
    ===================================================================================== */
 .recl-arbol { --ta-carta: 204px; }
 .ta-carril-fondo.cerrado { background: repeating-linear-gradient(135deg, rgba(0,0,0,.25) 0 8px, transparent 8px 16px); }
-.ta-carril-vacio { grid-column: 2 / -1; z-index: 2; align-self: center; margin-block: 8px; padding: 8px 14px; font-size: 12px; color: var(--ta-texto-3); border: 1px dashed rgba(107,74,41,.7); border-radius: 3px; background: rgba(0,0,0,.25); position: sticky; left: calc(var(--ta-carril) + 12px); width: max-content; max-width: calc(100% - var(--ta-carril) - 40px); }
+.ta-carril-vacio { grid-column: 2 / -1; z-index: 2; align-self: center; margin-block: 8px; padding: 8px 14px; font-size: 12px; color: var(--ta-texto-3); border: 1px dashed rgba(107,74,41,.7); border-radius: 3px; background: rgba(0,0,0,.25); position: sticky; left: calc(var(--ta-carril) + 12px); width: max-content; max-width: max(320px, calc(100% - var(--ta-carril) - 40px)); }
 .ta-carril-nombre.cerrado { color: var(--ta-texto-3); }
 .ta-carril-nombre.cerrado strong { color: var(--ta-texto-2); }
 .ta-tropa .ta-carta-cab { justify-content: flex-start; gap: 8px; }

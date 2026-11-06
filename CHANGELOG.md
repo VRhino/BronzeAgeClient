@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.162.0] — 2026-11-06 · Árboles sin aplastar con una sola Era y ✕ en el modo mapa · sin cambio de contrato
+
+Petición de Víctor (2026-11-06): con una Facción recién fundada el árbol de reclutamiento se veía aplastado (la cabecera de la Era I montada
+sobre su título y «Esta plaza no tiene Barracón» palabra a palabra). En el tablero común (`arbolTablero.ts`) cada Era ocupa ahora al menos dos
+columnas (la sobrante, vacía; las Eras de después se corren), el Centro Urbano se reparte en cuadro aunque la Era no tenga más tropas, y el
+aviso de un carril plegado tiene sitio para una línea. El modo mapa cambia su «Volver» de arriba a la izquierda por una ✕ arriba a la derecha,
+como las demás ventanas, y Esc también lo cierra.
+
 ## [0.161.0] — 2026-11-06 · Base personal · sin cambio de contrato
 
 Petición de Víctor (2026-11-06): una vista con todo lo que es del jugador, centralizado. La **Base personal** es una ventana a pantalla completa

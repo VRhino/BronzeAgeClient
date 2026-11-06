@@ -43,25 +43,38 @@ export function htmlTablero(o: {
 }): string {
   const { e } = o;
   const todas = estado(o.clave).todas;
+  // Una Era de una sola columna aplasta su cabecera y la franja de los carriles plegados (Víctor, 2026-11-06, el árbol de una Facción recién
+  // fundada): ocupa como mínimo dos, con la segunda vacía, y las Eras de después se corren a la derecha.
+  const MIN_COLS = 2;
+  const corrimiento: number[] = [];
+  let extra = 0;
+  const eras = o.eras.map((x) => {
+    for (let c = x.base; c < x.base + x.cols; c++) corrimiento[c] = extra;
+    const y = { ...x, base: x.base + extra, cols: Math.max(MIN_COLS, x.cols) };
+    extra += y.cols - x.cols;
+    return y;
+  });
+  const NCOL = o.NCOL + extra;
+  const col = (c: number): number => c + (corrimiento[c] ?? extra);
   const filas = ['auto'];
   const fila0 = new Map<string, number>(), filaFin = new Map<string, number>();
   let idx = 2;
   for (const c of o.carriles) { filas.push('var(--ta-canal)'); idx++; fila0.set(c.id, idx); for (let i = 0; i < Math.max(1, c.filas); i++) { filas.push('auto'); idx++; } filaFin.set(c.id, idx); }
   filas.push('var(--ta-canal)');
   let h = '<svg class="ta-lineas" aria-hidden="true"></svg>';
-  o.eras.forEach((x, i) => { h += `<div class="ta-era-fondo${i % 2 ? ' par' : ''}${i ? ' raya' : ''}${x.futura ? ' futura' : ''}" style="grid-column:${2 + x.base} / span ${x.cols}"></div>`; });
+  eras.forEach((x, i) => { h += `<div class="ta-era-fondo${i % 2 ? ' par' : ''}${i ? ' raya' : ''}${x.futura ? ' futura' : ''}" style="grid-column:${2 + x.base} / span ${x.cols}"></div>`; });
   o.carriles.forEach((c, i) => { h += `<div class="ta-carril-fondo${i % 2 ? ' par' : ''}${c.vacio ? ' cerrado' : ''}" data-carril="${e(c.id)}" style="grid-row:${fila0.get(c.id)} / ${filaFin.get(c.id)}"></div>`; });
   h += `<div class="ta-esquina"><span>${e(o.esquina)}</span></div>`;
-  for (const x of o.eras) h += `<div class="ta-era-cab" style="grid-column:${2 + x.base} / span ${x.cols}; grid-row:1">${x.cab}</div>`;
+  for (const x of eras) h += `<div class="ta-era-cab" style="grid-column:${2 + x.base} / span ${x.cols}; grid-row:1">${x.cab}</div>`;
   for (const c of o.carriles) {
     if (c.vacio) h += `<div class="ta-carril-vacio" style="grid-row:${fila0.get(c.id)}">${e(c.vacio)}</div>`;
     h += `<div class="ta-carril-nombre${c.vacio ? ' cerrado' : ''}" style="grid-row:${fila0.get(c.id)} / ${filaFin.get(c.id)}" title="${e(c.nombre)}">${o.icono(c.icono, 30)}<strong>${e(c.nombre)}</strong><small>${e(c.sub)}</small></div>`;
   }
-  for (const k of o.cartas) if (fila0.has(k.carril)) h += k.html(`grid-column:${2 + k.col}; grid-row:${fila0.get(k.carril)! + k.fila}`);
+  for (const k of o.cartas) if (fila0.has(k.carril)) h += k.html(`grid-column:${2 + col(k.col)}; grid-row:${fila0.get(k.carril)! + k.fila}`);
   return `<div class="ta-mandos"><button class="ta-btn-sec" type="button" data-ta-todas aria-pressed="${todas}"><span class="caja" aria-hidden="true">${todas ? '✓' : ''}</span>Ver todas las conexiones</button>
       <span class="ta-ayuda">${o.ayuda}</span></div>
     <div class="ta-leyenda">${o.leyenda}</div>
-    <div class="ta-tablero-marco"><div class="ta-tablero${todas ? ' todas' : ''}" data-ta-clave="${e(o.clave)}" style="grid-template-columns: var(--ta-carril) repeat(${o.NCOL}, var(--ta-carta)); grid-template-rows: ${filas.join(' ')}">${h}</div></div>`;
+    <div class="ta-tablero-marco"><div class="ta-tablero${todas ? ' todas' : ''}" data-ta-clave="${e(o.clave)}" style="grid-template-columns: var(--ta-carril) repeat(${NCOL}, var(--ta-carta)); grid-template-rows: ${filas.join(' ')}">${h}</div></div>`;
 }
 
 /** La muestra de una línea (leyenda y «Pide X» / «Tras X» de las cartas). */
