@@ -1,10 +1,16 @@
 // Banco de la ventana de Diplomacia de la Facción (`/pruebas/diplomacia/?elegida=fac-2`): una partida de mentira, sin servidor, con la misma
 // estructura que pinta `renderPanelJugador` en main.ts, para mirarla a distintos tamaños de pantalla. `?sinFaccion=1`: «Pedir ingreso» sin Facción.
 import '../../src/style.css';
+import datos from '../plaza/datos.json';
+// El balance (`/v1/datos`) del banco de la plaza: el árbol de tecnologías lo necesita.
+const fetchReal = window.fetch.bind(window);
+window.fetch = ((url: RequestInfo | URL, init?: RequestInit) =>
+  String(url).endsWith('/v1/datos') ? Promise.resolve(new Response(JSON.stringify(datos), { status: 200, headers: { 'Content-Type': 'application/json' } })) : fetchReal(url, init)) as typeof fetch;
 import type { ProyeccionJugador } from '../../src/apiCliente';
 import { cablearListaDiplomacia, cablearPlazasFaccion, elegirFaccion, htmlLateralFaccion, htmlListaFacciones, PESTANAS_FACCION, renderPestanaFaccion } from '../../src/ui/pestanaFaccion';
 import { estadoCliente } from '../../src/ui/estadoCliente';
-import { htmlTecnologia } from '../../src/ui/panelTecnologia';
+import { cablearTecnologia, htmlTecnologia } from '../../src/ui/panelTecnologia';
+import { catalogoDeTecnologia } from '../../src/apiCliente';
 import { cablearDiplomacia } from '../../src/ui/panelDiplomacia';
 import { cablearAnexion } from '../../src/ui/panelAnexion';
 
@@ -40,13 +46,31 @@ const p = {
   campamentosMercenarios: [], heroesVisibles: [], titulos: [],
   nombresDeCompaneros: { 'heroe-9': 'Agamenón', 'heroe-40': 'Hattusili', 'heroe-50': 'Niqmaddu', 'heroe-60': 'Néstor' },
   tecnologia: {
-    era: 'bronce_temprano', eraDesde: AHORA - 30 * H, capitalId: 'as-1',
-    logros: [{ contador: 'plazas_fundadas', umbral: 10, en: AHORA - 20 * H }, { contador: 'batallas_libradas', umbral: 25, en: AHORA - 6 * H }],
-    propias: { aparecidas: ['leva_comunal', 'arado_de_bronce'], adoptadas: ['leva_comunal'] },
-    reveladas: [{ tecnologiaId: 'carro_de_guerra', descubridorFaccionId: 'fac-2', hito: [{ tipo: 'edificio', edificio: 'caballerizas', nivelInterno: 2 }], cumplidas: [false] }],
+    era: 'crisis_adaptacion', eraDesde: AHORA - 30 * H, capitalId: 'as-1',
+    logros: [{ contador: 'caravanas.destruidasOCapturadas', umbral: 11000, en: AHORA - 20 * H }, { contador: 'reclutados.arqueros', umbral: 400, en: AHORA - 6 * H }],
+    propias: {
+      adoptadas: ['leva_comunal', 'hostigamiento_tribal', 'metalurgia_cobre', 'aleacion_bronce', 'escudos_ligeros', 'armamento_palacial', 'arqueria_palacial', 'cria_caballar', 'canteria'],
+      aparecidas: ['carros_guerra', 'bronce_calidad_militar'],
+    },
+    reveladas: [{ tecnologiaId: 'forja_hierro_temprana', descubridorFaccionId: 'fac-2', hito: [{ tipo: 'edificio', edificio: 'fundicion', nivelInterno: 2 }, { tipo: 'yacimientoEnTerritorio', recurso: 'hierro' }], cumplidas: [true, false] }],
+    epicasPosibles: ['equitacion_militar'],
   },
-  aedasResidentes: [],
+  aedasAvistados: [{ id: 'aeda-9', posicion: { x: 410, y: 300 }, enAsentamientoId: 'as-1' }],
+  aedasResidentes: [{ id: 'aeda-1', nombre: 'Demódoco', asentamientoId: 'as-1' }],
 } as unknown as ProyeccionJugador;
+// `&vista=inicio`: una Facción recién fundada en la Era I (solo se ve la Era I); `&vista=avanzada`: 3 de 10 de la Era I, aparece la II bloqueada
+const vistaTec = new URLSearchParams(location.search).get('vista');
+if (vistaTec === 'inicio' || vistaTec === 'avanzada') {
+  const t = p.tecnologia!;
+  t.era = 'reinos_palaciales';
+  t.propias = vistaTec === 'inicio'
+    ? { adoptadas: ['leva_comunal', 'hostigamiento_tribal'], aparecidas: ['escudos_ligeros'] }
+    : { adoptadas: ['leva_comunal', 'hostigamiento_tribal', 'escudos_ligeros', 'metalurgia_cobre'], aparecidas: ['aleacion_bronce', 'cria_caballar'] };
+  t.reveladas = vistaTec === 'inicio' ? [] : [{ tecnologiaId: 'arqueria_palacial', descubridorFaccionId: 'fac-2', hito: [{ tipo: 'edificio', edificio: 'galeriaDeTiro', nivelInterno: 1 }], cumplidas: [false] }];
+  t.logros = [{ contador: 'extraido.cobre', umbral: 999999, en: AHORA - H }];
+  t.epicasPosibles = [];
+}
+(p.asentamientos[0] as { almacen?: unknown }).almacen = { oro: { cantidad: 900, capacidad: 9999 }, madera: { cantidad: 5000, capacidad: 9999 }, piedra: { cantidad: 40, capacidad: 9999 } };
 
 // `?pestana=plazas`: las plazas de tu Facción con su interior desde fuera (0.141.0, motor 5776ab69).
 const M = 60_000;
@@ -92,15 +116,18 @@ function pintar(): void {
   const pestana = new URLSearchParams(location.search).get('pestana') ?? 'diplomacia';
   const pestanas = `<nav class="faccion-pestanas" role="tablist">${PESTANAS_FACCION.map(([id, nombre]) => `<button type="button" class="faccion-pestana${id === pestana ? ' activo' : ''}">${nombre}</button>`).join('')}</nav>`;
   const cuerpo = pestana === 'plazas' ? renderPestanaFaccion(p, e, 'plazas', '', true) : pestana === 'tecnologia' ? `<section class="faccion-tecnologia">${htmlTecnologia(p, e, false)}</section>` : renderPestanaFaccion(p, e, 'diplomacia', '', true);
-  panel.innerHTML = `<div class="faccion-cabecera"><div class="mapa-panel-jugador">Facción</div><button class="btn-secondary" type="button">Cerrar</button></div><div class="faccion-marco">${htmlLateralFaccion(p, e)}<div class="faccion-principal">${pestanas}<div class="faccion-cuerpo${pestana === 'diplomacia' ? ' faccion-cuerpo-diplomacia' : pestana === 'plazas' ? ' faccion-cuerpo-ancho' : ''}">${cuerpo}</div></div></div>`;
+  panel.innerHTML = `<div class="faccion-cabecera"><div class="mapa-panel-jugador">Facción</div><button class="btn-secondary" type="button">Cerrar</button></div><div class="faccion-marco">${htmlLateralFaccion(p, e)}<div class="faccion-principal">${pestanas}<div class="faccion-cuerpo${pestana === 'diplomacia' ? ' faccion-cuerpo-diplomacia' : pestana === 'plazas' || pestana === 'tecnologia' ? ' faccion-cuerpo-ancho' : ''}">${cuerpo}</div></div></div>`;
   cablearPlazasFaccion(panel, pintar);
   cablearListaDiplomacia(panel, pintar);
   const ejecutar = async (tipo: string, params: object): Promise<string | null> => { console.log('orden', tipo, JSON.stringify(params)); return null; };
   cablearDiplomacia(panel, p, ejecutar, (m) => console.log('aviso', m));
   cablearAnexion(panel, p, ejecutar, (m) => console.log('aviso', m));
+  const tec = panel.querySelector<HTMLElement>('.faccion-tecnologia');
+  if (tec) cablearTecnologia(tec, ejecutar);
   panel.querySelectorAll<HTMLButtonElement>('[data-elegir-faccion]').forEach((b) => b.addEventListener('click', () => {
     const u = new URL(location.href); u.searchParams.set('elegida', b.dataset.elegirFaccion!); history.replaceState(null, '', u); pintar();
   }));
 }
+catalogoDeTecnologia(() => pintar());
 pintar();
 (window as unknown as { __banco: unknown }).__banco = { listo: true };

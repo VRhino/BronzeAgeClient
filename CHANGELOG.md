@@ -3,6 +3,19 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.158.0] — 2026-11-06 · Árbol de tecnologías en la pestaña Tecnología de Facción · sin cambio de contrato
+
+Encargo de Víctor (2026-11-06, desde el hilo del árbol): la pestaña Tecnología de Facción pasa de listas a un árbol de juego de estrategia,
+sacado del prototipo (`src/ui/arbolTecnologias.ts`, todo del catálogo de `/v1/datos`). Carriles por tema × columnas por Era; las líneas solo dentro
+de un carril, ortogonales, y lo que se pide de otro carril va en la carta como «Pide X». Al pasar el ratón se dibuja el camino entero hasta la carta
+y sale la misma ficha flotante del prototipo; «Ver todas las conexiones» las enseña todas. Lo que un logro pide sin decirlo (las tecnologías de la
+tropa que hay que reclutar) va como dependencia directa y punteada. Los efectos del canon que el motor aún no aplica llevan «canon, sin efecto aún».
+Iconos de edificios y tropas del cliente. Descubrimiento por Eras: de entrada solo se ve la Era en curso; la siguiente aparece, bloqueada, cuando
+la Facción ha adoptado al menos el 30 % de las de esa Era (contando las de arranque, redondeando hacia arriba). Un clic en una carta abre su ficha
+con lo que se puede hacer: Adoptar (solo el Rey, en la capital, coste en rojo si no llega el almacén), Comprar al Aeda de esa plaza (si la tiene
+revelada y está a la venta) o que un Aeda residente cante su épica. Se quedan debajo los logros del mundo cumplidos y los Aedas residentes e
+itinerantes. Banco: `pruebas/diplomacia/?pestana=tecnologia` (`&vista=inicio|avanzada`).
+
 ## [0.157.0] — 2026-11-06 · «Construidos» en ventana encima del cajón de Construcción · sin cambio de contrato
 
 Petición de Víctor (2026-11-06): fuera la barra de los edificios construidos de abajo del cajón (0.153.0). En su lugar, junto a «← Volver», el botón
