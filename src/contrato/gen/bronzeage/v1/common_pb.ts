@@ -698,7 +698,7 @@ export enum TipoEntidad {
 
   /**
    * El estado de tecnología del mundo (sistema 6, 6G), una sola entidad con id `tecnologia`: en `HEROE`, su forma pública (la Era, los logros
-   * cumplidos sin decir qué abren y los descubrimientos ya cantados); en `ADMIN`, entero, con los contadores en curso.
+   * cumplidos sin decir qué abren, los descubrimientos ya cantados y, desde el 2026-11-06, los contadores en curso); en `ADMIN`, entero, con qué tecnología abre cada logro.
    *
    * @generated from enum value: ESTADO_TECNOLOGIA = 34;
    */

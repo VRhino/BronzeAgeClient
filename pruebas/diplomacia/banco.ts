@@ -54,7 +54,7 @@ const p = {
     },
     reveladas: [{ tecnologiaId: 'forja_hierro_temprana', descubridorFaccionId: 'fac-2', hito: [{ tipo: 'edificio', edificio: 'fundicion', nivelInterno: 2 }, { tipo: 'yacimientoEnTerritorio', recurso: 'hierro' }], cumplidas: [true, false] }],
     epicasPosibles: ['equitacion_militar'],
-    // Solo en el banco: la forma pública de `HEROE` no lleva hoy los contadores en curso.
+    // Los contadores en curso del servidor (forma pública de `HEROE`, motor aa70ece6).
     contadores: { 'extraido.estano': 61250, 'reclutados.arqueros_compuesto': 40, 'fabricado.armaduraBronce': 12 },
   },
   aedasAvistados: [{ id: 'aeda-9', posicion: { x: 410, y: 300 }, enAsentamientoId: 'as-1' }],

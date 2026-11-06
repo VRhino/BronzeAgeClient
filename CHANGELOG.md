@@ -3,6 +3,12 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.164.1] — 2026-11-06 · La barra del logro con el número real · contrato regenerado desde `BronzeAge@aa70ece6` (contrato 0.15.1, solo comentarios)
+
+El motor (main aa70ece6, núcleo 0.24.0) manda ya `EstadoTecnologia.contadores` en la forma pública de `HEROE` (Víctor eligió que los jugadores
+vean cuánto llevan los logros). La proyección los pasa siempre y el tooltip pinta «x / y» con el contador real; uno que aún no ha subido cuenta
+como 0, así que la barra ya no dice «?». Hay que reiniciar el servidor; no hace falta partida nueva.
+
 ## [0.164.0] — 2026-11-06 · Tooltip de tecnología más corto, con «Requisitos» y la barra del logro · sin cambio de contrato
 
 Petición de Víctor (2026-11-06): el tooltip del árbol de tecnologías tenía demasiado. Fuera «Adoptarla» (el coste ya va en la carta y en la caja

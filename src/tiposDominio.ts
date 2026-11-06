@@ -1213,7 +1213,7 @@ export interface TecnologiaJugador {
   eraDesde: number;
   /** Logros cumplidos, por orden: qué ha pasado en el mundo (`contador` llegó a `umbral`) y cuándo. No dicen qué tecnología abren. */
   logros: { contador: string; umbral: number; en: number }[];
-  /** Lo que lleva cada contador de logro (`extraido.estano`…). La forma pública de `HEROE` no lo trae hoy: vacío o ausente. */
+  /** Lo que lleva cada contador de logro del servidor (`extraido.estano`…), en la forma pública de `HEROE` desde el motor aa70ece6. */
   contadores?: Record<string, number>;
   /** `null` sin Facción. */
   propias: { aparecidas: TecnologiaId[]; adoptadas: TecnologiaId[]; reveladas?: TecnologiaId[] } | null;

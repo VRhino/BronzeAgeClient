@@ -4881,8 +4881,8 @@ export type EstadoTecnologia = Message<"bronzeage.v1.EstadoTecnologia"> & {
 
   /**
    * 6G: los logros cumplidos como hechos del mundo (`contador` llegó a `umbral` en `en_ms`), por orden, sin decir qué tecnología abren. La forma pública
-   * (`HEROE`) solo lleva `era`, `era_desde_ms`, `logros_cumplidos`, `cantadas` y, de `primeros`, las ya cantadas; `contadores` y `logros` (por id de tecnología)
-   * solo viajan a `ADMIN` (decisión Q6 del autor).
+   * (`HEROE`) lleva `era`, `era_desde_ms`, `logros_cumplidos`, `cantadas`, de `primeros` las ya cantadas y, desde el 2026-11-06, `contadores` (los en curso,
+   * para la barra «x / y» de cada logro; se renuevan con el muestreo de la vista cuando suben); `logros` (por id de tecnología) solo viaja a `ADMIN` (decisión Q6 del autor).
    *
    * @generated from field: repeated bronzeage.v1.LogroCumplido logros_cumplidos = 7;
    */

@@ -10,7 +10,7 @@
 //     entonces aparece la siguiente, bloqueada mientras no empiece en el mundo. Lo oculto no se nombra en ningún sitio. Regla de pantalla: el motor
 //     no cambia.
 // Todo sale del balance que ya carga el cliente (TECNOLOGIAS, ERAS, TARIFA_ADOPCION, TROPAS_RECLUTABLES, EDIFICIO_CATALOGO) y del estado de la
-// Facción (`p.tecnologia`). Los contadores de los logros en curso solo se pintan si el motor los manda (hoy no en la forma pública): si no, la barra del tooltip dice «? / umbral».
+// Facción (`p.tecnologia`). Los contadores de los logros en curso llegan en la forma pública de `HEROE` desde el motor aa70ece6: la barra del tooltip es «x / umbral».
 import { bloqueDeDatos, catalogoDeTecnologia, tropasReclutables, type CatalogoTecnologia, type NivelDeEdificio, type ProyeccionJugador, type TropaReclutable } from '../apiCliente';
 import type { CondicionHito } from '../tiposDominio';
 import { NOMBRE_TEC_EN_PANTALLA } from '../nombresEnPantalla';
@@ -252,7 +252,7 @@ export interface EstadoArbol {
   reveladas: Map<string, { cumplidas: boolean[]; hito: CondicionHito[]; descubridor: string }>;
   /** Logros del mundo cumplidos. */
   logros: { contador: string; umbral: number }[];
-  /** Lo que lleva cada contador de logro en el mundo, si el motor lo manda (hoy solo a la administración). */
+  /** Lo que lleva cada contador de logro en el mundo (forma pública de `HEROE`, motor aa70ece6); el que falta va a 0. */
   contadores?: Record<string, number>;
   eraMundo: string;
 }
@@ -487,10 +487,10 @@ function tipTec(d: Dibujo, id: string, precioAeda: (id: string) => number | null
     // el árbol» (lo dicen la carta, las líneas y la caja de estado).
     h += '<h4>Requisitos</h4>';
     if (k.logro) {
-      const u = k.logro.umbral, hecho = logroCumplido(E, k) || est === 'revelada', x = hecho ? u : E.contadores?.[k.logro.contador];
-      const pct = x === undefined ? 0 : Math.min(100, (x / u) * 100);
+      const u = k.logro.umbral, hecho = logroCumplido(E, k) || est === 'revelada', x = hecho ? u : (E.contadores?.[k.logro.contador] ?? 0);
+      const pct = Math.min(100, (x / u) * 100);
       const ocultas = G.logroDe(id).filter((q) => visibles.has(q));
-      h += `<div class="ta-req">Servidor</div><div class="ta-barra${hecho ? ' hecha' : ''}"><span style="width:${pct.toFixed(1)}%"></span><b>${x === undefined ? '?' : miles(Math.min(x, u))} / ${miles(u)}</b></div>`;
+      h += `<div class="ta-req">Servidor</div><div class="ta-barra${hecho ? ' hecha' : ''}"><span style="width:${pct.toFixed(1)}%"></span><b>${miles(Math.min(x, u))} / ${miles(u)}</b></div>`;
       h += `<div class="ta-barra-pie">${e(mayuscula(textoContador(k.logro.contador)))} por todas las Facciones</div>`;
       if (ocultas.length) h += `<div class="ta-nota">Antes alguien del mundo necesita ${ocultas.map((q) => `<span class="ta-tec">${e(TN(q))}</span>`).join(', ')}: lo que cuenta este logro lo pide.</div>`;
     }
