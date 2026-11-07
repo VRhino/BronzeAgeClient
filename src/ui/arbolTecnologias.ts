@@ -424,7 +424,8 @@ export function htmlArbol(p: ProyeccionJugador, e: Escapar, precioAeda: (id: str
       else if (est === 'revelada') { const r = E.reveladas.get(n.id)!; const pr = precioAeda(n.id); estado = `Revelada · hito ${r.cumplidas.filter(Boolean).length}/${r.cumplidas.length}${pr !== null ? ` · Aeda ${RI('oro', pr)}` : ''}`; }
       else if (est === 'logro') estado = 'Logro del mundo ✓ · falta tu hito';
       else if (est === 'futura') estado = `Bloqueada: la Era ${ROMANO[n.era]} aún no empieza`;
-      else estado = 'Falta el logro del mundo';
+      // Sin texto: la barra del logro con «x / y» dentro; la explicación está en el tooltip (Víctor, 2026-11-07).
+      else estado = k.logro ? barraLogro(k.logro, E.contadores?.[k.logro.contador] ?? 0, false, 'ta-barra-carta') : 'Falta el logro del mundo';
     }
     cartas.push({ carril: n.carril, col: n.col!, fila: n.fila!, html: (estilo) => `<button type="button" class="ta-carta ${est}" data-nodo="${e(n.id)}" style="${estilo}" aria-label="Tecnología ${e(k.nombre)}">
       <span class="ta-carta-cab"><span class="ta-carta-nombre">${e(k.nombre)}</span><span class="ta-medalla" aria-hidden="true">${MEDALLA[est] ?? ''}</span></span>
@@ -447,6 +448,12 @@ export function htmlArbol(p: ProyeccionJugador, e: Escapar, precioAeda: (id: str
     eras: lay.erasVis.map((x) => ({ base: lay.baseEra[x.orden]!, cols: lay.colsEra[x.orden]!, futura: futura(x.orden), cab: eraCab(x) })),
     carriles: carriles.map((c) => { const n = c.tecs.filter((t) => visibles.has(t)).length; return { id: c.id, nombre: c.nombre, icono: c.icono, filas: c.filas!, sub: `${n} tecnología${n > 1 ? 's' : ''}` }; }),
   });
+}
+
+/** La barra de un logro del mundo con «x / umbral» centrado (en la carta y en el tooltip). Cumplido, llena. */
+function barraLogro(l: { umbral: number }, cuenta: number, hecho: boolean, clase = ''): string {
+  const x = hecho ? l.umbral : Math.min(cuenta, l.umbral);
+  return `<span class="ta-barra${hecho ? ' hecha' : ''}${clase ? ` ${clase}` : ''}"><span style="width:${Math.min(100, (x / l.umbral) * 100).toFixed(1)}%"></span><b>${miles(x)} / ${miles(l.umbral)}</b></span>`;
 }
 
 // ── Tooltip y ficha ──────────────────────────────────────────────────────────
@@ -487,10 +494,9 @@ function tipTec(d: Dibujo, id: string, precioAeda: (id: string) => number | null
     // el árbol» (lo dicen la carta, las líneas y la caja de estado).
     h += '<h4>Requisitos</h4>';
     if (k.logro) {
-      const u = k.logro.umbral, hecho = logroCumplido(E, k) || est === 'revelada', x = hecho ? u : (E.contadores?.[k.logro.contador] ?? 0);
-      const pct = Math.min(100, (x / u) * 100);
+      const hecho = logroCumplido(E, k) || est === 'revelada';
       const ocultas = G.logroDe(id).filter((q) => visibles.has(q));
-      h += `<div class="ta-req">Servidor</div><div class="ta-barra${hecho ? ' hecha' : ''}"><span style="width:${pct.toFixed(1)}%"></span><b>${miles(Math.min(x, u))} / ${miles(u)}</b></div>`;
+      h += `<div class="ta-req">Servidor</div>${barraLogro(k.logro, E.contadores?.[k.logro.contador] ?? 0, hecho)}`;
       h += `<div class="ta-barra-pie">${e(mayuscula(textoContador(k.logro.contador)))} por todas las Facciones</div>`;
       if (ocultas.length) h += `<div class="ta-nota">Antes alguien del mundo necesita ${ocultas.map((q) => `<span class="ta-tec">${e(TN(q))}</span>`).join(', ')}: lo que cuenta este logro lo pide.</div>`;
     }

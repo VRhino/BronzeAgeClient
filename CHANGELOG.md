@@ -3,6 +3,12 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.167.0] — 2026-11-07 · La carta de tecnología enseña la barra de su logro · sin cambio de contrato
+
+Petición de Víctor (2026-11-07): en el árbol de tecnologías, la carta que decía «Falta el logro del mundo» lleva ahora la barra de ese logro con
+«x / y» dentro y sin texto; la explicación queda en el tooltip. Carta y tooltip comparten la barra (`barraLogro`). La «y» sale todavía del
+umbral fijo del catálogo; cuando el motor mande el umbral de cada logro (plazas vivas del mundo), se pintará el suyo.
+
 ## [0.166.0] — 2026-11-07 · Cupos de plazas de la Facción en una sola fila · sin cambio de contrato
 
 Petición de Víctor (2026-11-07): en el panel izquierdo de la ventana de Facción, los cupos ocupaban cinco renglones con su barra. Ahora son una
