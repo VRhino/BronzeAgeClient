@@ -3615,14 +3615,17 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .merc-tropa { display: flex; flex-wrap: wrap; gap: 6px; font-size: 0.8rem; }
 .merc-tropa span { display: inline-flex; align-items: center; gap: 3px; background: rgba(0, 0, 0, 0.3); border-radius: 4px; padding: 1px 6px 1px 2px; }
 .merc-seccion { font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--bronce); margin-top: 2px; }
-.merc-tarifas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
-.merc-tarifa { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 4px 2px; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--bronce-osc); border-radius: 6px; color: var(--text-secondary); cursor: pointer; font-size: 0.7rem; }
+.merc-tarifas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.merc-tarifa.fija { cursor: default; }
+.merc-tarifa { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 4px 2px; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--bronce-osc); border-radius: 6px; color: var(--text-secondary); cursor: pointer; font-size: 0.7rem; }
 .merc-tarifa strong { color: var(--oro-claro); font-size: 0.82rem; }
 .merc-tarifa.activo { border-color: var(--oro); background: rgba(216, 184, 120, 0.16); color: var(--oro-claro); box-shadow: 0 0 0 1px var(--oro) inset; }
 .merc-tarifa.caro strong { color: var(--terracota); }
-.merc-trabajos, .merc-ordenes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.merc-trabajos, .merc-ordenes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+/* En el tablón solo van los trabajos que se pueden firmar: de uno a cinco, y si no caben, a dos filas en vez de salirse de la carta. */
+.merc-trabajos { grid-template-columns: repeat(auto-fit, minmax(62px, 1fr)); }
 .merc-ordenes { grid-template-columns: repeat(4, 1fr); }
-.merc-trabajo, .merc-orden { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 5px 2px; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--bronce-osc); border-radius: 6px; color: var(--text-secondary); font-size: 0.68rem; cursor: pointer; }
+.merc-trabajo, .merc-orden { min-width: 0; overflow-wrap: anywhere; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 5px 2px; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--bronce-osc); border-radius: 6px; color: var(--text-secondary); font-size: 0.68rem; cursor: pointer; }
 .merc-trabajo span, .merc-orden span { font-size: 1.15rem; line-height: 1; filter: sepia(0.5) saturate(1.4); }
 .merc-trabajo.activo, .merc-orden.activo { color: var(--oro-claro); border-color: var(--oro); background: rgba(216, 184, 120, 0.16); box-shadow: 0 0 0 1px var(--oro) inset; }
 .merc-trabajo:disabled, .merc-orden:disabled { opacity: 0.32; cursor: not-allowed; }

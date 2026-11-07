@@ -215,11 +215,22 @@ if (camp) {
   const q = p as unknown as Record<string, unknown>;
   const c: CampamentoMercenarios = { id: 'mc-1', posicion: a.posicion, origen: 0, edificios: ['taberna', 'mercado', 'barracon'], residentesIds: ['h'], eligieronComoInicial: 3,
     mercado: { trigo: 400, madera: 120, cobre: 30 }, fondos: {},
-    tablon: qs.get('tablon') ? [{ heroeId: 'bot07', tropa: [{ tropaId: 'milicia_lanceros', cantidad: 40, nivel: 1 }], tarifas: [{ plazoDias: 1, oro: 30 }, { plazoDias: 3, oro: 80 }, { oro: 600 }] }] : [] };
+    tablon: qs.get('tablon') ? ['bot07', 'bot08', 'bot09'].map((heroeId, i) => ({ heroeId, tropa: [{ tropaId: 'milicia_lanceros', cantidad: 24 + i, nivel: 1 }, { tropaId: 'milicia_lanceros', cantidad: 28 + i, nivel: 1 }],
+      tarifas: [{ plazoDias: 1, oro: 220 + 13 * i }, { plazoDias: 3, oro: 514 + 29 * i }, { plazoDias: 7, oro: 1027 + 58 * i }, { oro: 7330 + 420 * i }] })) : [] };
   q.faccionId = qs.get('faccion') ? 'f1' : null;
   q.heroe = { id: 'h', displayName: 'Víctor', ubicacion: { tipo: 'mercenarios', campamentoId: c.id }, escuadrones: [], loadouts: [], almacenPersonal: { oro: 120, trigo: 40 } };
-  q.ejercitos = []; q.caravanas = []; q.heroesVisibles = [{ id: 'bot07', displayName: 'Perdicas' }]; q.asentamientos = []; q.asentamientosAvistados = []; q.asentamientosConocidos = [];
+  q.ejercitos = []; q.caravanas = []; q.heroesVisibles = [{ id: 'bot07', displayName: 'Perdicas' }]; q.campamentosBandidos = []; q.ejercitosAvistados = []; q.nombresDeCompaneros = { bot07: 'Suppiluliuma II', bot08: 'Telipinu', bot09: 'Thariyelli' }; q.asentamientos = []; q.asentamientosAvistados = []; q.asentamientosConocidos = [];
   q.campamentosMercenarios = [c];
+  // `&rey=1`: con Facción y siendo su Rey, con una plaza, una caravana, una columna y bandidos a la vista: los cinco trabajos del tablón se pueden firmar.
+  if (qs.get('rey')) {
+    const pos = (dx: number) => ({ x: a.posicion.x + dx, y: a.posicion.y });
+    q.faccionId = 'f1'; q.heroeId = 'h';
+    q.facciones = [{ id: 'f1', nombre: 'Casa de Micenas', reyId: 'h', miembros: [{ heroeId: 'h', cargos: ['rey'] }] }];
+    q.asentamientos = [{ id: 'as-1', nombre: 'Micenas', faccionId: 'f1', posicion: pos(60) }];
+    q.caravanas = [{ id: 'car-1', nombre: 'Ánfora', faccionId: 'f1', origenAsentamientoId: 'as-1', posicionActual: pos(70), estado: 'disponible' }];
+    q.ejercitos = [{ id: 'ej-1', faccionId: 'f1', tipo: 'ejercito', liderId: 'h', posicionActual: pos(5), participantes: [{ heroeId: 'h' }], estado: 'estacionado' }];
+    q.campamentosBandidos = [{ id: 'bd-1', posicion: pos(-80) }];
+  }
   q.mercadoCampamento = { precios: { trigo: 0.5, madera: 1.2, cobre: 4 }, cupoRestante: { trigo: 200, madera: 60, cobre: 10 },
     reclutamiento: { tropas: [{ tropaId: 'milicia_lanceros', precioPorSoldado: 1.5, desbloqueada: true }], poblacion: 80, topePoblacion: 120 } };
   // `&camp=tropa`: el árbol de la Tropa (0.160.0) con un campamento de Barracón y Galería de tiro, una tropa prestada y lo que ofrece al empezar

@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.165.0] — 2026-11-07 · El tablón de mercenarios cabe en su carta y solo enseña lo que se puede firmar · sin cambio de contrato
+
+Petición de Víctor (2026-11-07): en el campamento de mercenarios las cartas del tablón se desbordaban (la fila de los cinco trabajos era más
+ancha que la carta). Con la regla de mostrar solo lo que se puede hacer, cada oferta enseña los trabajos que alguno de tus cargos puede firmar
+sobre algo a la vista; si no cabe en una fila pasa a dos. Sin Facción, herido o sin ningún trabajo posible, la carta deja el precio a la vista y
+quita trabajo, objetivo y botón: la línea de abajo dice por qué. El plazo «Permanente» solo se elige si su trabajo se puede firmar. Banco
+`pruebas/hud/?camp=mercenarios&tablon=1` arreglado (tres ofertas) y `&rey=1` con los cinco trabajos.
+
 ## [0.164.1] — 2026-11-06 · La barra del logro con el número real · contrato regenerado desde `BronzeAge@aa70ece6` (contrato 0.15.1, solo comentarios)
 
 El motor (main aa70ece6, núcleo 0.24.0) manda ya `EstadoTecnologia.contadores` en la forma pública de `HEROE` (Víctor eligió que los jugadores

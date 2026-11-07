@@ -329,12 +329,6 @@ function htmlOferta(p: ProyeccionJugador, o: OfertaMercenario, yo: Puestos, fuen
     ? `<div class="merc-tropa">${o.tropa.map((s) => `<span title="${e(nombreTropa(s.tropaId))}, nivel ${s.nivel}">${iconoMini(s.tropaId)}${s.cantidad}</span>`).join('')}</div>`
     : '<small class="asent-lado-nota">Sin tropa propia</small>';
   const precio = (plazo?: number) => o.tarifas.find((t) => t.plazoDias === plazo)?.oro;
-  const fichas = [...PLAZOS.map((d) => ({ valor: String(d), texto: dias(d), oro: precio(d) })), { valor: 'perm', texto: 'Permanente', oro: precio(undefined) }]
-    .map((f) => {
-      const elegida = el.trabajo === 'permanente' ? f.valor === 'perm' : f.valor === String(el.plazo);
-      const falta = f.oro !== undefined && f.oro > carro;
-      return `<button type="button" class="merc-tarifa${elegida ? ' activo' : ''}${falta ? ' caro' : ''}" data-merc-tarifa="${f.valor}"${falta ? ` title="Te faltan ${oro(f.oro! - carro)} de oro en ${e(en)}"` : ''}><span>${f.texto}</span><strong>${f.oro !== undefined ? `${oro(f.oro)} 🪙` : '—'}</strong></button>`;
-    }).join('');
   const propios = objetivosPropios(p);
   const candidatos: Record<string, Opcion[]> = {
     defender: [...propios.plazas, ...propios.pueblos, ...propios.avanzadas],
@@ -345,18 +339,31 @@ function htmlOferta(p: ProyeccionJugador, o: OfertaMercenario, yo: Puestos, fuen
   };
   // Solo los objetivos que alguno de tus cargos alcanza; el permanente, solo con Rey o Embajador.
   const alcanzables: Record<string, Opcion[]> = Object.fromEntries(TRABAJOS.map((t) => [t, porCercania(p, candidatos[t]!.filter((x) => puestoParaFirmar(p, yo, t, x)))]));
-  const trabajos = TRABAJOS.map((t) => {
-    const n = alcanzables[t]!.length;
-    const porque = n ? '' : t === 'permanente' ? ' Solo lo firman el Rey o el Embajador.' : ' No tienes a la vista nada que tus cargos alcancen.';
-    return `<button type="button" class="merc-trabajo${t === el.trabajo ? ' activo' : ''}" data-merc-trabajo="${t}"${n ? '' : ' disabled'} title="${e(TRABAJO[t]!.texto + porque)}"><span>${TRABAJO[t]!.icono}</span>${TRABAJO[t]!.nombre}</button>`;
-  }).join('');
-  const objetivos = TRABAJOS.map((t) => `<label data-merc-para="${t}"${t === el.trabajo ? '' : ' hidden'}><span>${t === 'permanente' ? 'Residirá en' : 'Objetivo'}</span>${htmlSelect(`data-merc-objetivo="${t}"`, alcanzables[t]!, e, t === 'permanente' ? 'Tu Facción no tiene plaza' : 'Ninguno a tu alcance')}</label>`).join('');
-  const primero = alcanzables[el.trabajo]?.[0];
-  const firma = primero ? puestoParaFirmar(p, yo, el.trabajo, primero) : null;
-  const elegido = el.trabajo === 'permanente' ? precio(undefined) : precio(el.plazo);
+  // Solo se muestra lo que se puede hacer (regla de Víctor): los trabajos que alguno de tus cargos alcanza. Sin Facción, herido o sin ninguno, ni
+  // trabajos ni objetivo ni botón: la línea de abajo dice por qué. Si lo elegido ya no se puede, vale el primero que sí.
+  const disponibles = TRABAJOS.filter((t) => alcanzables[t]!.length);
+  const trabajo = (disponibles as string[]).includes(el.trabajo) ? el.trabajo : disponibles[0] ?? el.trabajo;
+  const puede = p.faccionId !== null && !herido && disponibles.length > 0;
+  const fichas = [...PLAZOS.map((d) => ({ valor: String(d), texto: dias(d), oro: precio(d) })), { valor: 'perm', texto: 'Permanente', oro: precio(undefined) }]
+    .map((f) => {
+      const elegida = puede && (trabajo === 'permanente' ? f.valor === 'perm' : f.valor === String(el.plazo));
+      const falta = f.oro !== undefined && f.oro > carro;
+      const cifra = `<span>${f.texto}</span><strong>${f.oro !== undefined ? `${oro(f.oro)} 🪙` : '—'}</strong>`;
+      // El precio se ve siempre; se elige solo si ese plazo se puede firmar (el permanente, con su trabajo disponible).
+      const elegible = puede && (f.valor !== 'perm' ? disponibles.some((t) => t !== 'permanente') : disponibles.includes('permanente'));
+      return elegible
+        ? `<button type="button" class="merc-tarifa${elegida ? ' activo' : ''}${falta ? ' caro' : ''}" data-merc-tarifa="${f.valor}"${falta ? ` title="Te faltan ${oro(f.oro! - carro)} de oro en ${e(en)}"` : ''}>${cifra}</button>`
+        : `<div class="merc-tarifa fija${falta ? ' caro' : ''}">${cifra}</div>`;
+    }).join('');
+  const trabajos = disponibles.map((t) =>
+    `<button type="button" class="merc-trabajo${t === trabajo ? ' activo' : ''}" data-merc-trabajo="${t}" title="${e(TRABAJO[t]!.texto)}"><span>${TRABAJO[t]!.icono}</span>${TRABAJO[t]!.nombre}</button>`).join('');
+  const objetivos = disponibles.map((t) => `<label data-merc-para="${t}"${t === trabajo ? '' : ' hidden'}><span>${t === 'permanente' ? 'Residirá en' : 'Objetivo'}</span>${htmlSelect(`data-merc-objetivo="${t}"`, alcanzables[t]!, e, '')}</label>`).join('');
+  const primero = alcanzables[trabajo]?.[0];
+  const firma = primero ? puestoParaFirmar(p, yo, trabajo, primero) : null;
+  const elegido = trabajo === 'permanente' ? precio(undefined) : precio(el.plazo);
   const motivo = p.faccionId === null ? 'Necesitas una Facción para contratar.'
     : herido ? 'Está herido: espera a que sane.'
-      : !firma ? 'Ninguno de tus cargos puede firmar este trabajo sobre algo que tengas a la vista.'
+      : !puede ? 'Ninguno de tus cargos puede firmarle un trabajo sobre algo que tengas a la vista.'
         : !fuente ? SIN_PAGO
           : elegido !== undefined && elegido > carro ? `Te faltan ${oro(elegido - carro)} de oro en ${en}.` : '';
   return `<article class="merc-oferta${herido ? ' herido' : ''}" data-merc-oferta="${id}" data-faccion="${e(p.faccionId ?? '')}">
@@ -368,13 +375,13 @@ function htmlOferta(p: ProyeccionJugador, o: OfertaMercenario, yo: Puestos, fuen
     ${tropa}
     <div class="merc-seccion">Plazo y precio</div>
     <div class="merc-tarifas">${fichas}</div>
-    <div class="merc-seccion">Trabajo</div>
+    ${puede ? `<div class="merc-seccion">Trabajo</div>
     <div class="merc-trabajos">${trabajos}</div>
     <div class="merc-contratar">${objetivos}</div>
     <footer class="merc-oferta-pie">
       <small>${firma ? `Firmarás como <strong>${e(firma)}</strong>` : ''}</small>
-      <button class="btn-primary" type="button" data-merc-contratar="${id}" data-merc-pagar-con="${fuente?.pagarCon ?? ''}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>Contratar${elegido !== undefined ? ` · ${oro(elegido)} 🪙` : ''}</button>
-    </footer>
+      <button class="btn-primary" type="button" data-merc-contratar="${id}" data-merc-trabajo-elegido="${trabajo}" data-merc-pagar-con="${fuente?.pagarCon ?? ''}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>Contratar${elegido !== undefined ? ` · ${oro(elegido)} 🪙` : ''}</button>
+    </footer>` : ''}
     ${motivo ? `<small class="merc-motivo">${e(motivo)}</small>` : ''}
   </article>`;
 }
@@ -411,12 +418,13 @@ export function cablearTablonMercenarios(raiz: HTMLElement, ejecutar: Ejecutar, 
     caja.querySelectorAll<HTMLButtonElement>('[data-merc-tarifa]').forEach((b) => b.addEventListener('click', () => {
       const v = b.dataset.mercTarifa!;
       // «Permanente» es a la vez plazo y trabajo; un plazo devuelve a uno temporal si se venía del permanente.
-      eleccion.set(id, v === 'perm' ? { ...el(), trabajo: 'permanente' } : { trabajo: el().trabajo === 'permanente' ? 'defender' : el().trabajo, plazo: Number(v) });
+      eleccion.set(id, v === 'perm' ? { ...el(), trabajo: 'permanente' } : { trabajo: el().trabajo === 'permanente' ? (caja.querySelector<HTMLElement>('[data-merc-trabajo]:not([data-merc-trabajo="permanente"])')?.dataset.mercTrabajo ?? 'defender') : el().trabajo, plazo: Number(v) });
       repintar();
     }));
     const boton = caja.querySelector<HTMLButtonElement>('[data-merc-contratar]');
     boton?.addEventListener('click', async () => {
-      const { trabajo, plazo } = el();
+      const { plazo } = el();
+      const trabajo = boton.dataset.mercTrabajoElegido ?? el().trabajo;
       const elegido = objetivoDe(caja.querySelector<HTMLSelectElement>(`[data-merc-objetivo="${trabajo}"]`)?.value);
       if (!elegido) { error(trabajo === 'permanente' ? 'El permanente necesita una plaza de tu Facción donde residir.' : 'Elige a qué apunta el contrato.'); return; }
       boton.disabled = true;
