@@ -3,6 +3,17 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.172.0] — 2026-11-07 · «Tu carga» en el Almacén de la plaza · sin cambio de contrato (motor `8feafd4`)
+
+Víctor (2026-11-07) no encontraba cómo pasar del carro o del almacén personal al almacén de la plaza: se perdió en 0.161.0, cuando la Base
+personal se quedó con el carro sin la plaza (`htmlCarro(..., conPlaza = false)`) y dentro de la plaza no quedó otro sitio.
+- La ventana del **Almacén** de la plaza (clic en la placa del Almacén) tiene ahora dos subpestañas: «Almacén», lo de antes, y **«Tu carga»**:
+  a la izquierda tu carro y tu almacén personal, a la derecha el almacén de la plaza, con «A la plaza» y «Al carro» en cada recurso
+  (`dejarEnPlaza`, `cargarDePlaza`) y el cierre del almacén para el Gobernador.
+- **Del almacén personal a la plaza**, «A la plaza» en cada recurso: el motor no tiene orden directa, así que el cliente pasa por el carro
+  (`sacarDelAlmacenPersonal` y `dejarEnPlaza`), hasta lo que quepa en él.
+- Banco: `pruebas/hud/?ventana=almacen&carga=1`.
+
 ## [0.171.0] — 2026-11-07 · La Población se entiende sin leer · sin cambio de contrato (motor `8feafd4`)
 
 Petición de Víctor (2026-11-07): en la placa de Población no se veía que hacían falta Viviendas para que llegue gente y poder subir.

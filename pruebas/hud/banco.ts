@@ -38,6 +38,7 @@ import type { CampamentoMercenarios } from '../../src/tiposDominio';
 import { fundacionLista } from '../../src/ui/panelFundacionDePlaza';
 import { cablearReclutamiento, htmlReclutamiento } from '../../src/ui/reclutamiento';
 import { cablearVentanaAedas, htmlVentanaAedas } from '../../src/ui/ventanaAedas';
+import { htmlCarro } from '../../src/ui/panelCarro';
 import { catalogoDeTecnologia } from '../../src/apiCliente';
 
 const e = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -115,6 +116,16 @@ function pintarAlmacen(): void {
     a.cargos = { ...(a.cargos ?? {}), tesoreroId: 'h' } as typeof a.cargos;
     (p.heroe as { ubicacion: unknown }).ubicacion = { tipo: 'asentamiento', asentamientoId: a.id };
     a.reservaManual = { madera: 200, trigo: 300 };
+  }
+  // `&carga=1`: la subpestaña «Tu carga» (0.172.0): residente en la plaza, con el carro cargado y el almacén personal
+  if (qs.get('carga')) {
+    const q = p as unknown as Record<string, unknown>;
+    q.faccionId = a.faccionId; q.facciones = [{ id: a.faccionId, nombre: 'Casa de Micenas', reyId: 'h', miembros: [{ heroeId: 'h', cargos: [`gobernador@${a.id}`] }] }];
+    q.ejercitos = []; q.asentamientosAvistados = []; q.campamentosMercenarios = [];
+    a.heroesFundadoresIds = ['h'];
+    q.heroe = { ...(p.heroe as object), ubicacion: { tipo: 'asentamiento', asentamientoId: a.id }, carro: { madera: 120, trigo: 60 }, almacenPersonal: { oro: 300, cobre: 40 }, capacidadAlmacenPersonal: 2000 };
+    cuerpo.innerHTML = `<div class="asent-tabs asent-subtabs"><button class="asent-tab" type="button">Almacén</button><button class="asent-tab activo" type="button">Tu carga</button></div><div class="asent-lado-cuerpo"><div class="almacen-carga">${htmlCarro(p, e, false, true, true)}</div></div>`;
+    return;
   }
   cuerpo.innerHTML = `<div class="cols-completa"><div class="col-completa">${htmlEleccionBarra(a, e)}${htmlExtraccion(c)}<div class="almacen-reserva">${htmlReservaRecursos(c)}</div></div><div class="col-completa">${htmlRecetas(c)}</div></div>`;
   cablearEleccionBarra(cuerpo, a, pintarAlmacen, (m) => alert(m));

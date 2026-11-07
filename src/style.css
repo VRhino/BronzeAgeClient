@@ -6008,3 +6008,7 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
 .obra-construir.destaca { border-color: #ffb020; box-shadow: 0 0 0 1px #ffb020, 0 0 12px rgba(255, 176, 32, 0.55); }
 .obra-grupo.destaca { position: relative; }
 .obra-construir .asent-aviso-atencion { top: -6px; right: -6px; }
+/* «Tu carga» en la ventana del Almacén de la plaza (0.172.0) */
+.almacen-carga { width: 100%; max-width: 1200px; margin: 0 auto; }
+.carga-columnas { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 12px 28px; align-items: start; }
+.carga-mia, .carga-plaza { display: flex; flex-direction: column; gap: 6px; min-width: 0; }

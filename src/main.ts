@@ -107,6 +107,7 @@ import { htmlInforme, type InformeDeCombate } from './ui/informeCombate';
 import { cablearAvisos, htmlAvisos } from './ui/panelAvisos';
 import { cablearTecnologia, htmlTecnologia } from './ui/panelTecnologia';
 import { cablearColumna, htmlColumna } from './ui/panelColumna';
+import { cablearCarro, htmlCarro } from './ui/panelCarro';
 import { cablearPanelIntel, renderPanelIntel } from './ui/panelIntel';
 import { cablearMercadoDePlaza, htmlMercadoDePlaza } from './ui/mercadoDePlaza';
 import { svgPlanoBandidos } from './ui/planoBandidos';
@@ -2388,8 +2389,18 @@ function contenidoDeVentana(v: VentanaPlaza, c: ContextoPlaza, ajena: boolean): 
     case 'almacen':
       // a pantalla completa: qué va en la barra de arriba, el almacén con su neto por minuto, la extracción y la reserva de recursos del Tesorero
       // a la izquierda (la reserva vino de Gobierno → Tesorería, Víctor 2026-11-04); los talleres a la derecha
+      // «Tu carga» (Víctor, 2026-11-07: se perdió al hacer la Base personal en 0.161.0): el carro y el almacén personal con el de la plaza, para
+      // pasar de uno a otro (`htmlCarro` con la plaza)
+      const subsAlmacen: [string, string][] = [['almacen', 'Almacén'], ['carga', 'Tu carga']];
+      if (elegir(subsAlmacen) === 'carga') {
+        return {
+          titulo: 'Almacén', icono: iconoEdificio('almacen', 28), subs: subsAlmacen, sub: 'carga', ancho: 'completa',
+          html: `<div class="almacen-carga">${htmlCarro(p, escaparHtml, false, true, true)}</div>`,
+          cablear: () => cablearCarro(cuerpo, ejecutarYRefrescar, p.heroeId),
+        };
+      }
       return {
-        titulo: 'Almacén', icono: iconoEdificio('almacen', 28), subs: [], sub: '', ancho: 'completa',
+        titulo: 'Almacén', icono: iconoEdificio('almacen', 28), subs: subsAlmacen, sub: 'almacen', ancho: 'completa',
         html: `<div class="cols-completa"><div class="col-completa">${htmlEleccionBarra(a, escaparHtml)}${htmlExtraccion(c)}<div class="almacen-reserva">${htmlReservaRecursos(c)}</div></div><div class="col-completa">${htmlRecetas(c)}</div></div>`,
         cablear: () => {
           cablearEleccionBarra(cuerpo, a, () => { renderPieDePlaza(); renderPanelEdificios(); }, (m) => mostrarAviso(m, true));

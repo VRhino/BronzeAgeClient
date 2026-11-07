@@ -50,7 +50,7 @@ function miColumna(p: ProyeccionJugador) {
 }
 
 /** Un botón de una fila: qué orden lanza (`accion`), su texto y, si está apagado, por qué. */
-interface AccionDeFila { accion: 'guardar' | 'sacar' | 'aPlaza' | 'dePlaza'; etiqueta: string; motivo?: string | null; tope?: number }
+interface AccionDeFila { accion: 'guardar' | 'sacar' | 'aPlaza' | 'dePlaza' | 'personalAPlaza'; etiqueta: string; motivo?: string | null; tope?: number }
 
 /** Las filas de un montón con su cantidad y sus botones; `clave` separa los campos de cantidad de cada montón (un mismo recurso sale en varios). */
 function filas(recursos: Record<string, number>, clave: string, acciones: AccionDeFila[], e: Escapar, plazaId = ''): string {
@@ -84,7 +84,7 @@ function plazaDondeEstas(p: ProyeccionJugador): { id: string; nombre: string; fa
 
 /** `cabecera`: la línea con el nombre del héroe (fuera cuando el carro va dentro de otro panel, como «Lo que llevas»). `conPlaza`: con el almacén
  * de la plaza donde estás (la Base personal no lo enseña: allí solo va lo tuyo, el carro y tu almacén personal). */
-export function htmlCarro(p: ProyeccionJugador, e: Escapar, cabecera = true, conPlaza = true): string {
+export function htmlCarro(p: ProyeccionJugador, e: Escapar, cabecera = true, conPlaza = true, dosColumnas = false): string {
   const columna = miColumna(p);
   const almacen = p.heroe.almacenPersonal ?? {};
   const esLider = columna?.liderId === p.heroeId;
@@ -121,16 +121,24 @@ export function htmlCarro(p: ProyeccionJugador, e: Escapar, cabecera = true, con
     : plaza && !ciudadano ? '<p class="asent-lado-nota">El almacén de esta plaza solo lo usan sus ciudadanos; si es de una Facción aliada o vasalla puedes dejarle lo del carro.</p>' : '';
   const cierre = plaza && gobernador
     ? `<label class="asent-toggle"><input type="checkbox" data-almacen-cerrar="${e(plaza.id)}"${plaza.cerrado ? ' checked' : ''} /> Cerrar el almacén a los ciudadanos (no sacan al carro)</label>` : '';
-  return `
-    ${cabecera ? `<div class="mapa-panel-jugador">${e(p.heroe.displayName)} · carro y almacén</div>` : ''}
-    <strong class="heroe-sub">Carga${ayuda('jugador:carro', e(nota))}</strong>
+  const mio = `<strong class="heroe-sub">Carga${ayuda('jugador:carro', e(nota))}</strong>
     ${ocupacion(columna ? 'Carro de tu columna' : 'Tu carro', carro, capacidad)}${filas(carro, 'carro', hayCarro ? accionesCarro : [], e, plaza?.id)}
     ${!columna && hayCarro && aMano ? '<button class="btn-secondary" type="button" data-vaciar-carro>Todo al almacén personal</button>' : ''}
     ${aparcadas.map((c) => `<strong class="heroe-sub">Resto del carro, aparcado en la puerta</strong>${filas(c.suministro ?? {}, 'aparcado', [], e)}`).join('')}
-    ${almacenPlaza}${cierre}
     ${aMano
-      ? `${ocupacion('Almacén personal', almacen, p.heroe.capacidadAlmacenPersonal)}${filas(almacen, 'personal', [{ accion: 'sacar', etiqueta: 'Al carro', motivo: motivoLider, tope: libre }], e)}`
-      : '<p class="asent-lado-nota">El almacén personal está en tu residencia: se usa dentro o con tu columna a su puerta.</p>'}
+      ? `${ocupacion('Almacén personal', almacen, p.heroe.capacidadAlmacenPersonal)}${filas(almacen, 'personal', [
+        { accion: 'sacar', etiqueta: 'Al carro', motivo: motivoLider, tope: libre },
+        // del almacén personal a la plaza: el motor no tiene orden directa, así que pasa por el carro (sacar y dejar), hasta lo que cabe en él
+        ...(plaza ? [{ accion: 'personalAPlaza' as const, etiqueta: 'A la plaza', motivo: motivoLider ?? (libre === 0 ? 'El carro está lleno: pasa por él.' : null), tope: libre }] : []),
+      ], e, plaza?.id)}`
+      : '<p class="asent-lado-nota">El almacén personal está en tu residencia: se usa dentro o con tu columna a su puerta.</p>'}`;
+  // `dosColumnas` (la ventana del Almacén de la plaza): lo tuyo a la izquierda y el almacén de la plaza a la derecha
+  if (dosColumnas) return `<div class="carga-columnas"><div class="carga-mia">${mio}</div><div class="carga-plaza">${almacenPlaza}${cierre}</div></div>
+    <p class="faction-error" data-campo="error-carro" role="alert"></p>`;
+  return `
+    ${cabecera ? `<div class="mapa-panel-jugador">${e(p.heroe.displayName)} · carro y almacén</div>` : ''}
+    ${mio}
+    ${almacenPlaza}${cierre}
     <p class="faction-error" data-campo="error-carro" role="alert"></p>`;
 }
 
@@ -150,6 +158,14 @@ export function cablearCarro(raiz: HTMLElement, ejecutar: Ejecutar, heroeId?: st
       const cantidad = Number(raiz.querySelector<HTMLInputElement>(`input[data-carro-cantidad="${clave}:${recurso}"]`)?.value ?? 0);
       if (!(cantidad >= 1)) { if (error) error.textContent = 'Pon una cantidad de 1 o más.'; return; }
       boton.disabled = true;
+      if (accion === 'personalAPlaza') {
+        // dos pasos: al carro y del carro a la plaza; si el segundo falla, lo sacado se queda en el carro
+        const primero = await ejecutar('sacarDelAlmacenPersonal', { recurso, cantidad });
+        const mensaje = primero ?? await ejecutar('dejarEnPlaza', { asentamientoId: plaza, recurso, cantidad });
+        boton.disabled = false;
+        if (error) error.textContent = mensaje ? (primero ? mensaje : `Pasó al carro, pero no a la plaza: ${mensaje}`) : '';
+        return;
+      }
       const mensaje = await ejecutar(ORDEN[accion!]!, { ...(plaza && (accion === 'aPlaza' || accion === 'dePlaza') ? { asentamientoId: plaza } : {}), recurso, cantidad });
       boton.disabled = false;
       if (error) error.textContent = mensaje ?? '';
