@@ -55,7 +55,8 @@ const p = {
     reveladas: [{ tecnologiaId: 'forja_hierro_temprana', descubridorFaccionId: 'fac-2', hito: [{ tipo: 'edificio', edificio: 'fundicion', nivelInterno: 2 }, { tipo: 'yacimientoEnTerritorio', recurso: 'hierro' }], cumplidas: [true, false] }],
     epicasPosibles: ['equitacion_militar'],
     // Los contadores en curso del servidor (forma pública de `HEROE`, motor aa70ece6).
-    contadores: { 'extraido.estano': 61250, 'reclutados.arqueros_compuesto': 40, 'fabricado.armaduraBronce': 12 },
+    contadores: { 'extraido.estano': 61250, 'extraido.cobre': 9000, 'reclutados.arqueros_compuesto': 40, 'fabricado.armaduraBronce': 12 },
+    plazas: 12, // N de los umbrales por plaza (motor 8feafd4); sin `logrosPendientes`, lo cumplido sale de `logros`
   },
   aedasAvistados: [{ id: 'aeda-9', posicion: { x: 410, y: 300 }, enAsentamientoId: 'as-1' }],
   aedasResidentes: [{ id: 'aeda-1', nombre: 'Demódoco', asentamientoId: 'as-1' }],
@@ -70,7 +71,7 @@ if (vistaTec === 'inicio' || vistaTec === 'avanzada') {
     : { adoptadas: ['leva_comunal', 'hostigamiento_tribal', 'escudos_ligeros', 'metalurgia_cobre'], aparecidas: ['aleacion_bronce', 'cria_caballar'] };
   t.reveladas = vistaTec === 'inicio' ? [] : [{ tecnologiaId: 'arqueria_palacial', descubridorFaccionId: 'fac-2', hito: [{ tipo: 'edificio', edificio: 'galeriaDeTiro', nivelInterno: 1 }], cumplidas: [false] }];
   t.logros = [{ contador: 'extraido.cobre', umbral: 999999, en: AHORA - H }];
-  t.contadores = { 'extraido.estano': 61250 };
+  t.contadores = { 'extraido.estano': 3000, 'extraido.cobre': 9000, 'bandidos.campamentosDestruidos': 70 };
   t.epicasPosibles = [];
 }
 (p.asentamientos[0] as { almacen?: unknown }).almacen = { oro: { cantidad: 900, capacidad: 9999 }, madera: { cantidad: 5000, capacidad: 9999 }, piedra: { cantidad: 40, capacidad: 9999 } };

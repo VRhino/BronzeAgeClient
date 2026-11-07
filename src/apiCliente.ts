@@ -664,8 +664,11 @@ interface BalancePublico {
 }
 import type { CondicionHito } from './tiposDominio';
 /** El grupo `tecnologia` del balance (Doc 6): catálogo de tecnologías, Eras, tarifas de adopción, Aedas y épicas. */
+/** Una parte del logro de una tecnología: umbral fijo o `porPlaza` (× las plazas vivas del mundo, mínimo 1; motor 8feafd4). */
+export interface ParteLogro { contador: string; umbral?: number; porPlaza?: number }
+
 export interface CatalogoTecnologia {
-  TECNOLOGIAS: Record<string, { nombre: string; era: string; deArranque?: boolean; logro?: { contador: string; umbral: number }; hito: CondicionHito[]; bonusProduccion?: { recurso: string; factor: number } }>;
+  TECNOLOGIAS: Record<string, { nombre: string; era: string; deArranque?: boolean; logro?: ParteLogro & { ademas?: ParteLogro }; hito: CondicionHito[]; bonusProduccion?: { recurso: string; factor: number } }>;
   ERAS: Record<string, { orden: number; nombre: string; plazoSemanas: number }>;
   TARIFA_ADOPCION: Record<string, Record<string, number>>;
   AEDAS: { epica: { enfriamientoMinutos: number }; venta: { factorOro: number; ordenEraMaximo: number } };

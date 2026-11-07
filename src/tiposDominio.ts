@@ -1215,6 +1215,9 @@ export interface TecnologiaJugador {
   logros: { contador: string; umbral: number; en: number }[];
   /** Lo que lleva cada contador de logro del servidor (`extraido.estano`…), en la forma pública de `HEROE` desde el motor aa70ece6. */
   contadores?: Record<string, number>;
+  /** Plazas vivas del mundo ahora (la N de los umbrales `porPlaza`) y cada parte de logro aún pendiente con su umbral de ahora (motor 8feafd4). */
+  plazas?: number;
+  logrosPendientes?: { contador: string; umbral: number }[];
   /** `null` sin Facción. */
   propias: { aparecidas: TecnologiaId[]; adoptadas: TecnologiaId[]; reveladas?: TecnologiaId[] } | null;
   /** Lo que un Aeda le ha revelado y aún no le ha aparecido: quién la desbloqueó y el hito completo (sin progreso). */

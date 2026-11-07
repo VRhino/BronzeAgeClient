@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.168.0] — 2026-11-07 · Umbrales de logro por plaza viva y la Aleación del bronce con dos barras · contrato regenerado desde `BronzeAge@8feafd47` (contrato 0.16.0)
+
+El motor (main 8feafd4, núcleo 0.25.0) hace que cuatro logros escalen con las plazas vivas del mundo (N): Escudos ligeros 20×N campamentos de
+bandidos, Metalurgia del cobre 1.000×N cobre, Cría de caballos 5×N animales comprados y Aleación del bronce 2.000×N cobre y 1.000×N estaño a la
+vez. El catálogo trae `porPlaza` (y `ademas` para la segunda parte) y `EstadoTecnologia` trae `plazas` y `logros_pendientes`. La barra de la
+carta y la del tooltip pintan la «y» de ahora (`porPlaza × max(N, 1)`), una por parte: la Aleación lleva dos (cobre y estaño). Una parte está
+cumplida si ya no sale entre las pendientes. Banco de diplomacia con N = 12. Hace falta partida nueva y reiniciar el servidor.
+
 ## [0.167.0] — 2026-11-07 · La carta de tecnología enseña la barra de su logro · sin cambio de contrato
 
 Petición de Víctor (2026-11-07): en el árbol de tecnologías, la carta que decía «Falta el logro del mundo» lleva ahora la barra de ese logro con

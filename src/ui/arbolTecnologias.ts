@@ -11,7 +11,7 @@
 //     no cambia.
 // Todo sale del balance que ya carga el cliente (TECNOLOGIAS, ERAS, TARIFA_ADOPCION, TROPAS_RECLUTABLES, EDIFICIO_CATALOGO) y del estado de la
 // Facción (`p.tecnologia`). Los contadores de los logros en curso llegan en la forma pública de `HEROE` desde el motor aa70ece6: la barra del tooltip es «x / umbral».
-import { bloqueDeDatos, catalogoDeTecnologia, tropasReclutables, type CatalogoTecnologia, type NivelDeEdificio, type ProyeccionJugador, type TropaReclutable } from '../apiCliente';
+import { bloqueDeDatos, catalogoDeTecnologia, type ParteLogro, tropasReclutables, type CatalogoTecnologia, type NivelDeEdificio, type ProyeccionJugador, type TropaReclutable } from '../apiCliente';
 import type { CondicionHito } from '../tiposDominio';
 import { NOMBRE_TEC_EN_PANTALLA } from '../nombresEnPantalla';
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
@@ -254,6 +254,9 @@ export interface EstadoArbol {
   logros: { contador: string; umbral: number }[];
   /** Lo que lleva cada contador de logro en el mundo (forma pública de `HEROE`, motor aa70ece6); el que falta va a 0. */
   contadores?: Record<string, number>;
+  /** N, las plazas vivas del mundo, y las partes de logro aún pendientes con su umbral de ahora (motor 8feafd4). */
+  plazas?: number;
+  pendientes?: { contador: string; umbral: number }[];
   eraMundo: string;
 }
 
@@ -272,7 +275,17 @@ export function ultimaEraVisible(D: DatosArbol, adoptadas: string[]): number {
   return u;
 }
 
-const logroCumplido = (E: EstadoArbol, t: Tec): boolean => Boolean(t.logro && E.logros.some((l) => l.contador === t.logro!.contador && l.umbral >= t.logro!.umbral));
+/** Las partes del logro de una tecnología (la Aleación del bronce lleva dos: cobre y estaño). */
+export const partesLogro = (t: Tec): ParteLogro[] => (t.logro ? [t.logro, ...(t.logro.ademas ? [t.logro.ademas] : [])] : []);
+/** El umbral de ahora de una parte: el fijo, o `porPlaza × max(N, 1)` con N las plazas vivas del mundo. */
+export const umbralDe = (E: Pick<EstadoArbol, 'plazas'>, x: ParteLogro): number => x.umbral ?? (x.porPlaza ?? 0) * Math.max(1, E.plazas ?? 1);
+/** ¿Está cumplida esta parte? Con el motor 8feafd4, la que no sale entre las pendientes con su umbral de ahora; antes, un logro cumplido igual o mayor. */
+export function parteCumplida(E: EstadoArbol, x: ParteLogro): boolean {
+  const u = umbralDe(E, x);
+  if (E.pendientes) return !E.pendientes.some((l) => l.contador === x.contador && l.umbral === u);
+  return E.logros.some((l) => l.contador === x.contador && l.umbral >= u);
+}
+const logroCumplido = (E: EstadoArbol, t: Tec): boolean => partesLogro(t).length > 0 && partesLogro(t).every((x) => parteCumplida(E, x));
 export function estadoDe(G: Grafo, E: EstadoArbol, id: string): EstadoCarta {
   if (E.adoptadas.includes(id)) return 'adoptada';
   if (E.aparecidas.includes(id)) return 'adoptable';
@@ -291,6 +304,8 @@ export function estadoDesdeProyeccion(p: ProyeccionJugador): EstadoArbol | null 
     reveladas: new Map(t.reveladas.map((r) => [r.tecnologiaId, { cumplidas: r.cumplidas, hito: r.hito, descubridor: r.descubridorFaccionId }])),
     logros: t.logros,
     contadores: t.contadores,
+    plazas: t.plazas,
+    pendientes: t.logrosPendientes,
     eraMundo: t.era,
   };
 }
@@ -425,7 +440,7 @@ export function htmlArbol(p: ProyeccionJugador, e: Escapar, precioAeda: (id: str
       else if (est === 'logro') estado = 'Logro del mundo ✓ · falta tu hito';
       else if (est === 'futura') estado = `Bloqueada: la Era ${ROMANO[n.era]} aún no empieza`;
       // Sin texto: la barra del logro con «x / y» dentro; la explicación está en el tooltip (Víctor, 2026-11-07).
-      else estado = k.logro ? barraLogro(k.logro, E.contadores?.[k.logro.contador] ?? 0, false, 'ta-barra-carta') : 'Falta el logro del mundo';
+      else estado = k.logro ? partesLogro(k).map((x) => barraLogro(E, x, parteCumplida(E, x), 'ta-barra-carta')).join('') : 'Falta el logro del mundo';
     }
     cartas.push({ carril: n.carril, col: n.col!, fila: n.fila!, html: (estilo) => `<button type="button" class="ta-carta ${est}" data-nodo="${e(n.id)}" style="${estilo}" aria-label="Tecnología ${e(k.nombre)}">
       <span class="ta-carta-cab"><span class="ta-carta-nombre">${e(k.nombre)}</span><span class="ta-medalla" aria-hidden="true">${MEDALLA[est] ?? ''}</span></span>
@@ -450,10 +465,10 @@ export function htmlArbol(p: ProyeccionJugador, e: Escapar, precioAeda: (id: str
   });
 }
 
-/** La barra de un logro del mundo con «x / umbral» centrado (en la carta y en el tooltip). Cumplido, llena. */
-function barraLogro(l: { umbral: number }, cuenta: number, hecho: boolean, clase = ''): string {
-  const x = hecho ? l.umbral : Math.min(cuenta, l.umbral);
-  return `<span class="ta-barra${hecho ? ' hecha' : ''}${clase ? ` ${clase}` : ''}"><span style="width:${Math.min(100, (x / l.umbral) * 100).toFixed(1)}%"></span><b>${miles(x)} / ${miles(l.umbral)}</b></span>`;
+/** La barra de una parte de logro del mundo con «x / umbral de ahora» centrado (en la carta y en el tooltip). Cumplida, llena. */
+function barraLogro(E: EstadoArbol, parte: ParteLogro, hecho: boolean, clase = ''): string {
+  const u = umbralDe(E, parte), x = hecho ? u : Math.min(E.contadores?.[parte.contador] ?? 0, u);
+  return `<span class="ta-barra${hecho ? ' hecha' : ''}${clase ? ` ${clase}` : ''}" title="${mayuscula(textoContador(parte.contador))}"><span style="width:${Math.min(100, (x / Math.max(1, u)) * 100).toFixed(1)}%"></span><b>${miles(x)} / ${miles(u)}</b></span>`;
 }
 
 // ── Tooltip y ficha ──────────────────────────────────────────────────────────
@@ -494,10 +509,11 @@ function tipTec(d: Dibujo, id: string, precioAeda: (id: string) => number | null
     // el árbol» (lo dicen la carta, las líneas y la caja de estado).
     h += '<h4>Requisitos</h4>';
     if (k.logro) {
-      const hecho = logroCumplido(E, k) || est === 'revelada';
+      const todo = est === 'revelada';
       const ocultas = G.logroDe(id).filter((q) => visibles.has(q));
-      h += `<div class="ta-req">Servidor</div>${barraLogro(k.logro, E.contadores?.[k.logro.contador] ?? 0, hecho)}`;
-      h += `<div class="ta-barra-pie">${e(mayuscula(textoContador(k.logro.contador)))} por todas las Facciones</div>`;
+      h += '<div class="ta-req">Servidor</div>';
+      // Una barra por parte (la Aleación del bronce: cobre y estaño a la vez); con `porPlaza`, la «y» crece con las plazas vivas del mundo.
+      for (const x of partesLogro(k)) h += `${barraLogro(E, x, todo || parteCumplida(E, x))}<div class="ta-barra-pie">${e(mayuscula(textoContador(x.contador)))} por todas las Facciones${x.porPlaza ? ` (${miles(x.porPlaza)} por cada una de las ${miles(Math.max(1, E.plazas ?? 1))} plazas del mundo)` : ''}</div>`;
       if (ocultas.length) h += `<div class="ta-nota">Antes alguien del mundo necesita ${ocultas.map((q) => `<span class="ta-tec">${e(TN(q))}</span>`).join(', ')}: lo que cuenta este logro lo pide.</div>`;
     }
     const r = E.reveladas.get(id);
