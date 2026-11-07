@@ -748,6 +748,16 @@ export interface AvanzadaDeMapa {
   enRuinas: boolean;
   batallaId?: string;
   propia: boolean;
+  /** En ruinas: hasta cuándo no se la puede atacar (instante de mundo). */
+  invulnerableHasta?: number;
+  /** Solo la propia (FACCION/ASENTAMIENTO): lo que guarda de cada recurso y su tope (fuerte y ciudadela; la atalaya no tiene almacén). */
+  almacen?: Record<string, number>;
+  capacidad?: Record<string, number>;
+  /** Solo la propia: las escuadras de serie (IA, fuera de cupo) y las de jugadores dejadas con `guarnecerAvanzada`. */
+  guarnicionSerieIds?: string[];
+  guarnicionJugadoresIds?: string[];
+  /** Solo la propia: la tropa elegida por escalón (2, 3 o 4); el que falta va con la de por defecto. */
+  tropaPorEscalon?: Record<number, string>;
 }
 
 /** Un pueblo activo (Economia_Construccion §14): un extractor sobre su nodo o una aldea agrícola en su punto (motor 7086ebc). `propio` = de tu
@@ -834,8 +844,9 @@ export interface Escuadron {
   moral: number;
   /** Dónde está: en el campamento de tu residencia, en una columna o escoltando una caravana. */
   /** `pueblo`: en la guarnición de un pueblo o una aldea (`guarnecerPueblo`), fuera de su campamento y de su columna. */
+  /** `avanzada`: en la guarnición de una avanzada de la plaza madre donde resides (`guarnecerAvanzada`), dentro de tu cupo de Liderazgo. */
   /** `plaza`: dejada de visita en la guarnición de una plaza de tu Facción donde no resides (motor 7a6a0c48): fuera de tu columna, se recoge desde dentro. */
-  contenedor: { tipo: 'campamento' } | { tipo: 'ejercito'; ejercitoId: string } | { tipo: 'escolta'; caravanaId: string } | { tipo: 'pueblo'; puebloId: string } | { tipo: 'plaza'; asentamientoId: string } | { tipo: 'fuera' };
+  contenedor: { tipo: 'campamento' } | { tipo: 'ejercito'; ejercitoId: string } | { tipo: 'escolta'; caravanaId: string } | { tipo: 'pueblo'; puebloId: string } | { tipo: 'plaza'; asentamientoId: string } | { tipo: 'avanzada'; avanzadaId: string } | { tipo: 'fuera' };
   /** Prestada por un campamento de mercenarios (Doc 1.9b): gratis, sin experiencia. */
   prestada?: { campamentoId: string };
   /** En la guarnición de tu residencia (`asignarGuarnicion`). Solo con `contenedor: campamento`. */

@@ -6012,3 +6012,35 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
 .almacen-carga { width: 100%; max-width: 1200px; margin: 0 auto; }
 .carga-columnas { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 12px 28px; align-items: start; }
 .carga-mia, .carga-plaza { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+
+/* =====================================================================================
+   AVANZADA POR DENTRO (`.avanzada-screen.plaza-3d`, Víctor 2026-11-07): el esqueleto del pueblo; el blasón con su emblema, el minimapa y, sin 3D,
+   su planta en 2D. Y sus piezas en la ventana, en la ficha del mapa y en Territorio.
+   ===================================================================================== */
+.avanzada-screen .asent-blason { padding-left: 8px; }
+.avanzada-screen .asent-pie-titulo { white-space: nowrap; }
+.pueblo-emblema.avanzada { color: var(--oro); --relleno: rgba(216, 184, 120, 0.22); display: inline-flex; }
+.avanzada-mini { background: #93c26b; cursor: pointer; }
+.avanzada-mini svg, .avanzada-plano-2d svg { display: block; width: 100%; height: 100%; }
+.avanzada-plano { width: 100%; height: 100%; }
+.avanzada-plano-2d { width: min(70vh, 80vw); height: min(70vh, 80vw); background: #93c26b; border: 1px solid var(--bronce); }
+.plano-avanzada .plano-camino { fill: #c9b48a; }
+.plano-avanzada .plano-calle { fill: #b79e72; }
+.plano-avanzada .plano-muro { fill: #8a7556; stroke: #3c2f20; stroke-width: 0.3; }
+.plano-avanzada .plano-muro.torre { fill: #6f5a3e; }
+.plano-avanzada .plano-muro.puerta { fill: #c9b48a; }
+.plano-avanzada .plano-muro.caido { fill: rgba(111, 101, 90, 0.45); stroke-dasharray: 0.6 0.6; }
+.plano-avanzada .plano-edificio { fill: #d8c29b; stroke: #3c2f20; stroke-width: 0.4; }
+.plano-avanzada .plano-edificio.caido { fill: #6f655a; }
+.avanzada-cifras { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.avanzada-estado { margin: 6px 0; padding: 6px 8px; border-left: 3px solid var(--bronce); background: rgba(169, 121, 63, 0.12); font-size: 0.85rem; }
+.avanzada-estado.ruinas { border-color: #8a7f72; }
+.avanzada-estado.atacada { border-color: #b5553a; background: rgba(181, 85, 58, 0.15); }
+.avanzada-recurso { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: center; margin: 4px 0 8px; }
+.avanzada-recurso .carro-barra { grid-column: 1 / -1; }
+.avanzada-tropa { margin-top: 6px; }
+.avanzada-tropa .mapa-lista-item select { width: 100%; margin-top: 2px; }
+.avanzada-carga { flex-wrap: nowrap; }
+.avanzada-carga span { white-space: nowrap; }
+.carro-fila.avanzada-carga { gap: 6px; }
+.carro-fila.avanzada-carga .form-input { width: 54px; padding: 4px 6px; }

@@ -31,6 +31,7 @@ import { confirmar } from './dialogo';
 import { iconoEnFila } from './iconosTropa';
 import { ICONO_CARRETA, barraAvance, chipsDeCoste, medallonNivel } from './juegoVisual';
 import { mostrar as mostrarAviso } from './avisos';
+import { cablearAvanzada, claveDeEtapa, iconoDeAvanzada, htmlAvanzadaALaPuerta, htmlEleccionDeTropa, nombreDeEtapa, reglasDeObra as reglasDeObraDeAvanzada } from './avanzadas';
 
 type Escapar = (valor: string) => string;
 
@@ -268,7 +269,8 @@ function tarjetaObra(p: ProyeccionJugador, a: Asentamiento, o: ObraDeMapa, gesti
     const hay = Math.min(n, o.entregado[r] ?? 0);
     return `<span class="pacto-linea${hay >= n ? ' entregada' : ''}" title="${e(`${RECURSO_NOMBRE[r] ?? r}: entregado ${n0(hay)} de ${n}`)}"><i>${RECURSO_ICONO[r] ?? '📦'}</i><b>${n0(hay)}<small>/${n}</small></b>${barraAvance(n ? hay / n : 1)}</span>`;
   }).join('');
-  const cancelar = gestiona && o.tipo !== 'mejoraAldea' ? `<div class="anillo-acciones"><button class="anillo-abandonar" type="button" data-pueblo-accion="destruir" data-pueblo="${e(puebloDeObra(o.id))}" title="Cancela la obra: no devuelve lo entregado.">✕ Cancelar</button></div>` : '';
+  const deAvanzada = o.tipo === 'avanzada' || o.tipo === 'mejoraAvanzada' || o.tipo === 'reparacion';
+  const cancelar = gestiona && o.tipo !== 'mejoraAldea' ? `<div class="anillo-acciones"><button class="anillo-abandonar" type="button" ${deAvanzada ? `data-pueblo-accion="cancelar-obra" data-obra="${e(o.id)}"` : `data-pueblo-accion="destruir" data-pueblo="${e(puebloDeObra(o.id))}"`} title="Cancela la obra: no devuelve lo entregado.">✕ Cancelar</button></div>` : '';
   return `<div class="obra-mapa ${estado}">
     <div class="anillo-cab"><span class="pueblo-emblema" aria-hidden="true">${ICONO_OBRA[o.tipo]}</span>
       <span class="anillo-titulo"><strong>${e(NOMBRE_OBRA[o.tipo])}</strong><small>${e(sub)}</small></span>
@@ -333,7 +335,7 @@ function htmlPueblos(c: ContextoPlaza): string {
   const { usados, total } = cupo(p, a);
   const lleno = total !== null && usados >= total;
   // A ventana completa (Víctor, 2026-11-06): la zona, los pueblos y marcar uno a la izquierda; las avanzadas a la derecha.
-  const avanzadas = esDeMiFaccion(p, a) ? htmlAvanzadasDeLaPlaza(p, a, gestiona, e) : '';
+  const avanzadas = esDeMiFaccion(p, a) ? htmlAvanzadasDeLaPlaza(p, a, gestiona, c.cargo === 'gobernador' && c.resideAqui, e) : '';
   return `<div class="cols-completa territorio-cols"><div class="col-completa">${htmlZona(p, a, e)}
     <div class="obra-titulo"><span class="faction-kicker">Pueblos</span><span class="obra-chip${lleno ? ' lleno' : ''}" title="Cupo de pueblos por el nivel de la plaza">🏘 ${usados} / ${total ?? '—'}${total ? casillas(usados, total) : ''}</span>${ayuda('plaza:pueblos', 'Un pueblo es de la plaza: se marca aquí, una columna de tu Facción lleva sus materiales hasta la obra en el mapa y los entrega a su puerta (cualquier ciudadano de la columna), y con todo entregado se levanta. Su carro acarrea lo que produce a la plaza.')}</div>
     ${pueblos.length + obras.length === 0 ? '<p class="mapa-lista-vacia">Esta plaza aún no tiene pueblos.</p>'
@@ -409,6 +411,15 @@ function cablearPueblos(c: ContextoPlaza): void {
     b.disabled = false;
     if (mensaje) mostrarAviso(mensaje, true);
   };
+  cuerpo.querySelectorAll<HTMLSelectElement>('[data-avanzada-tropa]').forEach((sel) => sel.addEventListener('change', () => {
+    const avanzadaId = sel.closest<HTMLElement>('[data-avanzada-tarjeta]')?.dataset.avanzadaTarjeta;
+    if (!avanzadaId) return;
+    sel.disabled = true;
+    void c.ejecutar('elegirTropaDeAvanzada', { heroeId: p.heroeId, avanzadaId, tropaId: sel.value }).then((mensaje) => {
+      sel.disabled = false;
+      if (mensaje) mostrarAviso(mensaje, true);
+    });
+  }));
   cuerpo.querySelectorAll<HTMLInputElement>('[data-pueblo-nodo]').forEach((r) => r.addEventListener('change', () => { if (r.checked) nodoElegido = r.value; }));
   cuerpo.querySelectorAll<HTMLButtonElement>('[data-pueblo-accion]').forEach((b) => b.addEventListener('click', () => {
     const puebloId = b.dataset.pueblo ?? '';
@@ -430,6 +441,16 @@ function cablearPueblos(c: ContextoPlaza): void {
       case 'elegir-aldea':
         selectorDePunto.abrir?.('Pulsa en el mapa donde levantar la aldea agrícola: en verde, la tierra fértil de la zona donde cabe (en gris, fértil pero pegada a una plaza o un pueblo).', a.posicion, a.zonaReal,
           (punto) => c.ejecutar('marcarAldea', { asentamientoId: a.id, heroeId: p.heroeId, punto }), sitiosDeLaPlaza(p, a));
+        return;
+      case 'mejorar-avanzada': return void enviar(b, 'mejorarAvanzada', { heroeId: p.heroeId, avanzadaId: b.dataset.avanzada });
+      case 'reparar-avanzada': return void enviar(b, 'repararAvanzada', { heroeId: p.heroeId, avanzadaId: b.dataset.avanzada });
+      case 'destruir-avanzada':
+        void confirmar('Se pierde lo que guarda su almacén, y las escuadras de su guarnición vuelven a los campamentos de sus héroes.', { titulo: '¿Destruir la avanzada?', aceptar: 'Destruir', cancelar: 'Volver', peligro: true })
+          .then((ok) => { if (ok) void enviar(b, 'destruirAvanzada', { heroeId: p.heroeId, avanzadaId: b.dataset.avanzada }); });
+        return;
+      case 'cancelar-obra':
+        void confirmar('Lo entregado no se devuelve.', { titulo: '¿Cancelar la obra?', aceptar: 'Cancelar la obra', cancelar: 'Volver', peligro: true })
+          .then((ok) => { if (ok) void enviar(b, 'cancelarObra', { heroeId: p.heroeId, obraId: b.dataset.obra }); });
         return;
       case 'elegir-avanzada':
         selectorDePunto.abrir?.('Pulsa en el mapa donde colocar la atalaya: dentro de la zona de la plaza, fuera de la ciudad y sin pisar otro pueblo, avanzada o campamento.', a.posicion, a.zonaReal,
@@ -501,8 +522,10 @@ export const FICHA_AVANZADA: FichaMapaExtra = {
     const e = c.escapar;
     return `<span class="faction-kicker">${x.propia ? 'Avanzada de tu Facción' : 'Avanzada ajena'}</span>
       <h3>${e(ETAPA_AVANZADA[x.etapa] ?? 'Avanzada')}</h3>
-      <p class="asent-lado-nota">De ${e(nombrePlaza(p, x.madreId))}.${x.enRuinas ? ' En ruinas.' : ''}${x.batallaId ? ' <strong>La están atacando.</strong>' : ''}</p>`;
+      <p class="asent-lado-nota">De ${e(nombrePlaza(p, x.madreId))}.${x.enRuinas ? ' En ruinas.' : ''}${x.batallaId ? ' <strong>La están atacando.</strong>' : ''}</p>
+      ${htmlAvanzadaALaPuerta(p, x, e)}`;
   },
+  cablear: (cont, p, x: AvanzadaDeMapa, c) => cablearAvanzada(cont, p, x, c.ejecutar),
 };
 
 export const FICHA_PUEBLO: FichaMapaExtra = {
@@ -855,21 +878,50 @@ function cupoDeAvanzadas(p: ProyeccionJugador, madreId: string, nivel: number): 
 
 const esDeMiFaccion = (p: ProyeccionJugador, a: Asentamiento): boolean => Boolean(p.faccionId) && a.faccionId === p.faccionId;
 
-const ICONO_AVANZADA: Record<number, string> = { 1: '🗼', 2: '🏯', 3: '🏰' };
+
+/** Una avanzada de la plaza en Territorio: qué es y cómo está, su guarnición y su almacén y, para quien gestiona (Gobernador o Maestro de Obras,
+ * residente y dentro), «⬆» a la etapa siguiente, «🔧 Reparar» en ruinas y «✕ Destruir»; el Gobernador elige además su tropa de serie. Su obra
+ * en marcha (mejora o reparación) va debajo, como las demás obras. */
+function tarjetaAvanzada(p: ProyeccionJugador, a: Asentamiento, x: AvanzadaDeMapa, gestiona: boolean, gobernador: boolean, e: Escapar): string {
+  const r = reglasDeObraDeAvanzada();
+  const obra = (p.obrasDeMapa ?? []).find((o) => (o.tipo === 'mejoraAvanzada' || o.tipo === 'reparacion') && o.destinoId === x.id);
+  const siguiente = x.etapa < 3 ? claveDeEtapa(x.etapa + 1) : null;
+  const nivelPide = siguiente ? r?.nivelMadre?.[siguiente] : undefined;
+  const nivel = a.nivelActual ?? a.nivel;
+  const costoMejora = siguiente ? r?.obras?.[siguiente]?.costo : undefined;
+  const costoObra = r?.obras?.[claveDeEtapa(x.etapa)]?.costo;
+  const fraccion = r?.fraccionReparacion ?? 0.5;
+  const costoReparar = costoObra ? Object.fromEntries(Object.entries(costoObra).map(([k, n]) => [k, Math.ceil(n * fraccion)])) : undefined;
+  const serie = x.guarnicionSerieIds?.length ?? 0;
+  const jugadores = x.guarnicionJugadoresIds?.length ?? 0;
+  const guardado = Object.values(x.almacen ?? {}).reduce((t, n) => t + n, 0);
+  const conAlmacen = Object.values(x.capacidad ?? {}).some((n) => n > 0);
+  const motivoMejora = nivelPide !== undefined && nivel < nivelPide ? `La plaza tiene que estar a nivel ${nivelPide}.` : '';
+  const acciones = !gestiona ? '' : `<div class="anillo-acciones pueblo-acciones">
+      ${siguiente && !x.enRuinas && !obra ? `<button class="anillo-mejorar" type="button" data-pueblo-accion="mejorar-avanzada" data-avanzada="${e(x.id)}"${motivoMejora ? ` disabled title="${e(motivoMejora)}"` : ` title="${e(`A ${nombreDeEtapa(x.etapa + 1).toLowerCase()}: lo que pide se lleva a su puerta como una obra.`)}"`}>⬆ ${e(nombreDeEtapa(x.etapa + 1))}${costoMejora ? ` <span class="pueblo-boton-coste">${costeLlano(costoMejora, e)}</span>` : ''}</button>` : ''}
+      ${x.enRuinas && !obra ? `<button class="anillo-mejorar" type="button" data-pueblo-accion="reparar-avanzada" data-avanzada="${e(x.id)}" title="La deja operativa: lo que pide se lleva a su puerta como una obra.">🔧 Reparar${costoReparar ? ` <span class="pueblo-boton-coste">${costeLlano(costoReparar, e)}</span>` : ''}</button>` : ''}
+      <button class="anillo-abandonar" type="button" data-pueblo-accion="destruir-avanzada" data-avanzada="${e(x.id)}">✕ Destruir</button></div>`;
+  const tropa = gobernador && !x.enRuinas ? htmlEleccionDeTropa(p, x, true, e) : '';
+  return `<div class="pueblo-tarjeta avanzada${x.enRuinas ? ' ruinas' : ''}${x.batallaId ? ' atacado' : ''}" data-avanzada-tarjeta="${e(x.id)}">
+      <div class="anillo-cab"><span class="pueblo-emblema avanzada" aria-hidden="true">${iconoDeAvanzada(x.etapa, 26)}</span>
+        <span class="anillo-titulo"><strong>${e(nombreDeEtapa(x.etapa))}</strong><small>a ${n0(distancia(x.posicion, a.posicion))} u de la plaza</small></span>
+        ${x.batallaId ? '<span class="pueblo-alerta">⚔ ¡Atacada!</span>' : x.enRuinas ? '<span class="pueblo-alerta ruinas">🏚 En ruinas</span>' : obra ? `<span class="anillo-estado">${obra.tipo === 'reparacion' ? '🔧 En reparación' : '⬆ Mejorando'}</span>` : ''}</div>
+      <div class="avanzada-cifras"><span class="obra-chip" title="Escuadras de serie y de jugadores en su guarnición">⚔ ${serie} de serie${jugadores ? ` · 🛡 ${jugadores} de jugadores` : ''}</span>${conAlmacen ? `<span class="obra-chip" title="Lo que guarda su almacén">📦 ${n0(guardado)}</span>` : ''}</div>
+      ${tropa ? `<div class="avanzada-tropa"><small class="asent-lado-nota">Tropa de serie</small>${tropa}</div>` : ''}
+      ${acciones}
+    </div>${obra ? tarjetaObra(p, a, obra, gestiona, e) : ''}`;
+}
 
 /** Las avanzadas en Territorio: las que tiene la plaza en tarjetas, su cupo en casillas, sus obras y cómo se coloca una (con lo que pide la atalaya). */
-function htmlAvanzadasDeLaPlaza(p: ProyeccionJugador, a: Asentamiento, gestiona: boolean, e: Escapar): string {
+function htmlAvanzadasDeLaPlaza(p: ProyeccionJugador, a: Asentamiento, gestiona: boolean, gobernador: boolean, e: Escapar): string {
   const { avanzadas, obras } = avanzadasDe(p, a.id);
   const { usados, total } = cupoDeAvanzadas(p, a.id, a.nivelActual ?? a.nivel);
   const nivel = reglasAvanzadas()?.nivelMadre?.atalaya;
   const atalaya = reglasAvanzadas()?.obras?.atalaya;
-  const tarjetas = avanzadas.map((x) => `<div class="pueblo-tarjeta avanzada${x.enRuinas ? ' ruinas' : ''}${x.batallaId ? ' atacado' : ''}">
-      <div class="anillo-cab"><span class="pueblo-emblema" aria-hidden="true">${ICONO_AVANZADA[x.etapa] ?? '🗼'}</span>
-        <span class="anillo-titulo"><strong>${e(ETAPA_AVANZADA[x.etapa] ?? 'Avanzada')}</strong><small>a ${n0(distancia(x.posicion, a.posicion))} u de la plaza</small></span>
-        ${x.batallaId ? '<span class="pueblo-alerta">⚔ ¡Atacada!</span>' : x.enRuinas ? '<span class="pueblo-alerta ruinas">🏚 En ruinas</span>' : ''}</div></div>`);
+  const tarjetas = avanzadas.map((x) => tarjetaAvanzada(p, a, x, gestiona, gobernador, e));
   return `<div class="obra-titulo"><span class="faction-kicker">Avanzadas</span>${total !== null ? `<span class="obra-chip${usados >= total ? ' lleno' : ''}" title="Cupo de avanzadas por el nivel de la plaza">🗼 ${usados} / ${total}${total ? casillas(usados, total) : ''}</span>` : ''}${ayuda('plaza:avanzadas', 'Un puesto fortificado de la plaza en su zona: atalaya, fuerte y ciudadela. Ve a lo lejos, guarda un almacén y tiene guarnición propia.')}</div>
     ${avanzadas.length + obras.length === 0 ? '<p class="mapa-lista-vacia">Esta plaza aún no tiene avanzadas.</p>'
-      : `<div class="pueblo-cartas">${tarjetas.join('')}${obras.map((o) => tarjetaObra(p, a, o, false, e)).join('')}</div>`}
+      : `<div class="pueblo-cartas">${tarjetas.join('')}${obras.map((o) => tarjetaObra(p, a, o, gestiona, e)).join('')}</div>`}
     ${atalaya?.costo ? `<div class="avanzada-coste"><span>🗼 Atalaya</span>${costeLlano(atalaya.costo, e)}${atalaya.minutos ? `<small>⏱ ${atalaya.minutos >= 60 ? `${n0(atalaya.minutos / 60)} h` : `${atalaya.minutos} min`} de obra</small>` : ''}${nivel ? `<small>· plaza a nivel ${nivel}</small>` : ''}</div>` : ''}
     ${gestiona ? (() => {
       // Como la aldea (Víctor, 2026-11-04): desde la plaza se elige el sitio en el mapa, ahí queda la obra y se le llevan los materiales.

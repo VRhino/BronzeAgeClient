@@ -87,6 +87,7 @@ function dondeEstaLaEscuadra(s: Escuadron, p: ProyeccionJugador): string {
   if (c.tipo === 'fuera') return 'fuera del mundo';
   if (c.tipo === 'pueblo') return 'guarneciendo un pueblo';
   if (c.tipo === 'plaza') return 'en la guarnición de otra plaza';
+  if (c.tipo === 'avanzada') return 'guarneciendo una avanzada';
   const columna = p.ejercitos.find((x) => x.id === c.ejercitoId);
   return columna?.estado === 'estacionado' ? 'en tu columna, aparcada en la puerta' : 'en tu columna';
 }

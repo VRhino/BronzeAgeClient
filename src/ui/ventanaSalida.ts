@@ -5,11 +5,13 @@
 //   campamento   el de mercenarios: `salirDelCampamento`; si resides, tropa y carga de tu almacén personal; si no, sales con tu columna
 //   plazaAjena   `salirDeAsentamiento`: retomas la columna aparcada tal cual
 //   pueblo       `salirDePueblo`: vuelves a la puerta con la columna con la que entraste
+//   avanzada     `salirDeAvanzada`: igual, a la puerta de la atalaya, el fuerte o la ciudadela
 // Donde se elige tropa, sale cargado el loadout activo (o todo, si ese loadout no tiene escuadras); se puede cambiar de loadout, quitar y añadir escuadras y,
 // con «Guardar loadout», dejar el cambio en el loadout elegido. Sin guardarlo vale solo para esta salida. De visita no hay nada que elegir: los espacios
 // enseñan lo que lleva la columna. Con un ejército en preparación se reparte igual: integrantes a la izquierda, tu carro a la derecha y tu tropa abajo.
 import type { ProyeccionJugador } from '../apiCliente';
-import type { Asentamiento, CampamentoMercenarios, Escuadron, PuebloDeMapa } from '../tiposDominio';
+import type { Asentamiento, AvanzadaDeMapa, CampamentoMercenarios, Escuadron, PuebloDeMapa } from '../tiposDominio';
+import { nombreDeEtapa } from './avanzadas';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import { ayuda } from './ayuda';
 import { chipLiderazgo } from './liderazgo';
@@ -30,7 +32,8 @@ export type LugarDeSalida =
   | { tipo: 'residencia'; asentamiento: Asentamiento }
   | { tipo: 'plazaAjena'; asentamiento: Asentamiento }
   | { tipo: 'campamento'; campamento: CampamentoMercenarios }
-  | { tipo: 'pueblo'; pueblo: PuebloDeMapa };
+  | { tipo: 'pueblo'; pueblo: PuebloDeMapa }
+  | { tipo: 'avanzada'; avanzada: AvanzadaDeMapa };
 
 /** Espacios de tropa a la vista; crecen si el Liderazgo da para más. */
 const ESPACIOS = 5;
@@ -39,9 +42,9 @@ const ESPACIOS = 5;
 let eleccion: { clave: string; ids: string[]; loadoutId: string | null; eligiendo: boolean } | null = null;
 
 const claveDe = (l: LugarDeSalida): string =>
-  `${l.tipo}:${l.tipo === 'campamento' ? l.campamento.id : l.tipo === 'pueblo' ? l.pueblo.id : l.asentamiento.id}`;
+  `${l.tipo}:${l.tipo === 'campamento' ? l.campamento.id : l.tipo === 'pueblo' ? l.pueblo.id : l.tipo === 'avanzada' ? l.avanzada.id : l.asentamiento.id}`;
 const nombreDe = (l: LugarDeSalida): string =>
-  l.tipo === 'campamento' ? `campamento ${l.campamento.id}` : l.tipo === 'pueblo' ? 'el pueblo' : l.asentamiento.nombre ?? l.asentamiento.id;
+  l.tipo === 'campamento' ? `campamento ${l.campamento.id}` : l.tipo === 'pueblo' ? 'el pueblo' : l.tipo === 'avanzada' ? `la ${nombreDeEtapa(l.avanzada.etapa).toLowerCase()}` : l.asentamiento.nombre ?? l.asentamiento.id;
 const resideEnCampamento = (p: ProyeccionJugador, l: LugarDeSalida): boolean => l.tipo === 'campamento' && l.campamento.residentesIds.includes(p.heroeId);
 /** Donde se elige la tropa (tu residencia o tu campamento); en el resto se sale con la columna tal cual. */
 const seElige = (p: ProyeccionJugador, l: LugarDeSalida): boolean => l.tipo === 'residencia' || resideEnCampamento(p, l);
@@ -184,6 +187,7 @@ function htmlModo(p: ProyeccionJugador, l: LugarDeSalida, e: Escapar): string {
   const viveres = Math.floor(p.heroe.viveres ?? 0);
   const donde = l.tipo === 'pueblo'
     ? 'Vuelves a la puerta del pueblo con todo lo que trajiste; tu guarnición se queda.'
+    : l.tipo === 'avanzada' ? `Vuelves a la puerta de la ${nombreDeEtapa(l.avanzada.etapa).toLowerCase()} con todo lo que trajiste; tu guarnición se queda.`
     : l.tipo === 'plazaAjena' ? 'No resides aquí: retomas tu columna, aparcada a la puerta, con su tropa y su carro.'
     : l.tipo === 'campamento' && !resideEnCampamento(p, l) ? 'No resides aquí: sales con la columna con la que entraste.'
     : 'Sales al mapa por la puerta. Tus víveres van siempre contigo.';
@@ -193,7 +197,7 @@ function htmlModo(p: ProyeccionJugador, l: LugarDeSalida, e: Escapar): string {
 }
 
 /** El botón principal según el sitio. */
-const textoSalir = (l: LugarDeSalida): string => (l.tipo === 'pueblo' ? 'Salir al mapa' : l.tipo === 'plazaAjena' ? 'Salir y retomar mi columna' : 'Salir');
+const textoSalir = (l: LugarDeSalida): string => (l.tipo === 'pueblo' || l.tipo === 'avanzada' ? 'Salir al mapa' : l.tipo === 'plazaAjena' ? 'Salir y retomar mi columna' : 'Salir');
 
 /**
  * Pinta la ventana en `raiz` (el contenedor `.salida-ventana`). `cerrar` la quita; `repintar` la vuelve a pintar con la proyección de ese momento.
@@ -275,6 +279,7 @@ export function pintarVentanaSalida(raiz: HTMLElement, p: ProyeccionJugador, l: 
         l.tipo === 'residencia' ? ['salirAlMundo', { asentamientoId: l.asentamiento.id, heroeId: p.heroeId, escuadronIds, carga }]
         : l.tipo === 'campamento' ? ['salirDelCampamento', { campamentoId: l.campamento.id, heroeId: p.heroeId, escuadronIds, carga }]
         : l.tipo === 'plazaAjena' ? ['salirDeAsentamiento', { asentamientoId: l.asentamiento.id, heroeId: p.heroeId }]
+        : l.tipo === 'avanzada' ? ['salirDeAvanzada', { heroeId: p.heroeId, avanzadaId: l.avanzada.id }]
         : ['salirDePueblo', { heroeId: p.heroeId, puebloId: l.pueblo.id }];
       ir.disabled = true;
       const mensaje = await ejecutar(tipo, params);

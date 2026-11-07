@@ -3,6 +3,7 @@
 // Aquí solo está el HTML y la lista de paneles; quien pinta cada panel y cablea los botones es `main.ts`.
 import type { ProyeccionJugador } from '../apiCliente';
 import { nombreDePueblo } from './pueblos';
+import { avanzadaActual, madreDe, nombreDeEtapa } from './avanzadas';
 
 // Tecnología ya no tiene botón: es una pestaña de la Facción (Víctor, 2026-11-03: «las tecnologías afectan al jugador a través de la Facción»).
 // Héroe, Escuadras y Carro son desde la 0.161.0 una sola ventana, la Base personal (`basePersonal.ts`; también con la tecla B).
@@ -43,7 +44,7 @@ function dondeEstas(p: ProyeccionJugador): string {
   if (u.tipo === 'asentamiento') return `Dentro de ${p.asentamientos[0]?.nombre ?? u.asentamientoId}`;
   if (u.tipo === 'columna') return 'En el mapa, con tu columna';
   if (u.tipo === 'pueblo') { const x = (p.pueblos ?? []).find((q) => q.id === u.puebloId); return `Dentro de ${x ? nombreDePueblo(x) : 'un pueblo'}`; }
-  if (u.tipo === 'avanzada') return 'Dentro de una avanzada';
+  if (u.tipo === 'avanzada') { const x = avanzadaActual(p); return x ? `Dentro de la ${nombreDeEtapa(x.etapa).toLowerCase()} de ${madreDe(p, x).nombre}` : 'Dentro de una avanzada'; }
   return 'Desconectado';
 }
 

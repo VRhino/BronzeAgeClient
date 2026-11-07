@@ -1345,10 +1345,62 @@ function terminado(m: Marco, tipo: string, estilo: number): void {
     case 'minaEstano':
     case 'minaHierro': return bocamina(m, tipo, estilo);
     case 'cantera': return cantera(m, estilo);
+    case 'torreVigia': return torreVigia(m);
+    case 'torreHomenaje': return torreHomenaje(m, estilo);
     default: {
       bloque(m, estilo, 0, 0, m.L - 0.6, m.S - 0.6, { frente: 1 });
     }
   }
+}
+
+/** La torre de vigía de una atalaya: cuatro pies de madera arriostrados, la plataforma con su baranda, un tejadillo de paja y la escala. */
+function torreVigia(m: Marco): void {
+  const a = Math.min(2.6, Math.min(m.L, m.S) - 0.8) / 2, h = 4.2;
+  for (const [i, j] of [[-1, -1], [1, -1], [1, 1], [-1, 1]] as const) m.poste(COLOR.madera, i * a, j * a, h + 1.1, 0.16);
+  // las riostras en aspa de cada cara, a dos alturas
+  for (const y of [1.2, 2.8]) {
+    m.viga(COLOR.maderaOscura, -a, -a, a, -a, y, 0.08);
+    m.viga(COLOR.maderaOscura, -a, a, a, a, y, 0.08);
+    m.viga(COLOR.maderaOscura, -a, -a, -a, a, y, 0.08);
+    m.viga(COLOR.maderaOscura, a, -a, a, a, y, 0.08);
+  }
+  m.losa(COLOR.madera, 0, 0, a * 2 + 0.5, a * 2 + 0.5, 0.12, h);
+  for (const [u0, v0, u1, v1] of [[-a, -a, a, -a], [a, -a, a, a], [a, a, -a, a], [-a, a, -a, -a]] as const) m.viga(COLOR.madera, u0, v0, u1, v1, h + 0.6, 0.07);
+  m.forma('cuatroAguas', COLOR.paja, 0, 0, a * 2 + 0.7, a * 2 + 0.7, 0.9, h + 1.1);
+  // la escala, pegada a una cara
+  for (const k of [-0.22, 0.22]) m.poste(COLOR.madera, k, a + 0.22, h, 0.06);
+  for (let i = 1; i < 10; i++) m.viga(COLOR.madera, -0.22, a + 0.22, 0.22, a + 0.22, (h * i) / 10, 0.05);
+  m.forma('cilindro', COLOR.fuego, 0, 0, 0.25, 0.25, 0.25, h + 0.12);
+}
+
+/** La torre del homenaje de un fuerte o una ciudadela: de adobe sobre zócalo de piedra (hasta el estilo 3) o de piedra, alta, con almenas y su puerta.
+ * En una huella grande (la ciudadela) la torre queda en medio de su patio, cercado por un muro bajo con su portillo y torrecillas en las esquinas. */
+function torreHomenaje(m: Marco, estilo: number): void {
+  const lado = Math.min(m.L, m.S) - 0.7, piedra = estilo >= 4, muro = piedra ? COLOR.piedra : COLOR.adobe;
+  const patio = lado > 7;
+  const l = patio ? lado * 0.55 : lado, h = Math.max(4.2, l * 0.95);
+  if (patio) {
+    const a = lado / 2;
+    m.losa(COLOR.tierra, 0, 0, lado, lado, 0.03);
+    for (const [u0, v0, u1, v1] of [[-a, -a, a, -a], [a, -a, a, a], [-a, -a, -a, a]] as const) tapia(m, u0, v0, u1, v1, muro, 1.3, 0.35);
+    tapia(m, -a, a, -0.8, a, muro, 1.3, 0.35);
+    tapia(m, 0.8, a, a, a, muro, 1.3, 0.35);
+    for (const [i, j] of [[-1, -1], [1, -1], [1, 1], [-1, 1]] as const) m.caja(muro, i * (a - 0.3), j * (a - 0.3), 0.9, 0.9, 1.9);
+  }
+  m.caja(COLOR.piedraOscura, 0, 0, l + 0.2, l + 0.2, 0.6);
+  m.caja(muro, 0, 0, l, l, h - 0.6, 0.6);
+  if (piedra) for (let k = 1; k < 4; k++) m.caja(COLOR.piedraClara, 0, 0, l + 0.04, l + 0.04, 0.08, 0.6 + ((h - 0.6) * k) / 4);
+  // almenas en el borde de arriba
+  const n = Math.max(3, Math.round(l / 0.55));
+  for (let i = 0; i < n; i += 2) {
+    const t = -l / 2 + (l * (i + 0.5)) / n;
+    for (const [u, v] of [[t, -l / 2 + 0.12], [t, l / 2 - 0.12], [-l / 2 + 0.12, t], [l / 2 - 0.12, t]] as const) m.caja(muro, u, v, 0.28, 0.28, 0.4, h);
+  }
+  m.losa(piedra ? COLOR.losa : COLOR.barro, 0, 0, l - 0.3, l - 0.3, 0.05, h - 0.02);
+  m.caja(COLOR.hueco, 0, l / 2 + 0.01, 0.6, 0.06, 1.0, 0.6);
+  for (const y of [h * 0.45, h * 0.72]) for (const k of [-1, 1]) m.caja(COLOR.hueco, k * l * 0.25, l / 2 + 0.01, 0.16, 0.05, 0.4, y);
+  m.poste(COLOR.madera, l * 0.3, -l * 0.3, 1.6, 0.06, h);
+  m.caja(COLOR.rojo, l * 0.3 + 0.3, -l * 0.3, 0.6, 0.03, 0.4, h + 1.1);
 }
 
 /** Monta un edificio de la plaza en `p`, según su tipo, su estilo y su estado. */

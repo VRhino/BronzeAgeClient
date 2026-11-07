@@ -3,6 +3,28 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.174.0] — 2026-11-07 · Se entra en las avanzadas · sin cambio de contrato (motor `8feafd4`)
+
+Víctor (2026-11-07): «a las atalayas y avanzadas en general se debería poder entrar así como se puede en los campamentos, plaza, pueblos y aldeas».
+- **Entrar**: en la ficha del mapa de una avanzada operativa de tu Facción (o de una aliada o en vasallaje), con tu columna a su puerta, el botón
+  «Entrar» (`entrarEnAvanzada`; con ejército, solo el Líder). Se entra con todo, como en un pueblo, y se sale por la ventana común «Salir al
+  mundo» (`salirDeAvanzada`).
+- **Por dentro** (`ui/avanzadas.ts`, pantalla `avanzada` en main.ts): el esqueleto de la plaza con la avanzada en 3D detrás
+  (`ciudad3d/avanzada.ts`: el recinto y lo de dentro salen de su etapa), el blasón con su icono, su almacén abajo (fuerte y ciudadela), el
+  minimapa y el riel: **Resumen** (de qué plaza, en ruinas o atacada, cupo y almacén), **Guarnición** (la de serie por escalón, mermada o no, y
+  la tuya con tu cupo), **Almacén** (cada recurso frente a su tope) y **Tropa de serie**. Modelos nuevos: la torre de vigía y la torre del
+  homenaje (`modelos.ts`).
+- **A la puerta, desde la ficha del mapa** (lo que el motor ya acepta): dejar y retirar escuadras de tu guarnición (quien reside en la madre,
+  hasta su cupo), dejar lo del carro en su almacén y llenar los víveres de su trigo (`guarnecerAvanzada`, `retirarDeAvanzada`,
+  `depositarEnAvanzada`, `repostar`).
+- **Desde dentro**, esas mismas órdenes y elegir la tropa esperan al motor (pedido el 2026-11-07); el cliente las tiene listas detrás de
+  `ORDENES_DESDE_DENTRO` y hasta entonces dentro solo se mira.
+- **Territorio** de la madre: cada avanzada con su guarnición y su almacén; «⬆» a la etapa siguiente, «🔧 Reparar», «✕ Destruir» y cancelar su
+  obra (Gobernador o Maestro de Obras) y la tropa de serie de cada escalón (Gobernador).
+- Proyección: la avanzada propia trae almacén, guarnición, tropa elegida e invulnerabilidad; una escuadra en la guarnición de una avanzada ya no
+  sale como «en el campamento».
+- Banco: `pruebas/avanzadas/` (`?etapa=1|2|3`, `&ruinas=1`, `&parte=resumen|guarnicion|almacen|tropa`, `&gobernador=1`, `&ficha=1`, `&territorio=1`).
+
 ## [0.173.0] — 2026-11-07 · Las maquetas de plaza, en manzanas alrededor de su plaza · sin cambio de contrato (motor `8feafd4`)
 
 Víctor (2026-11-07), con la plaza de nivel 2 del mundo 3D: «es un espiral sin sentido, dale más forma de plaza y que no se monten».

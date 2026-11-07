@@ -49,8 +49,8 @@ import { htmlBarraJugador, type PanelJugador } from './ui/barraJugador';
 import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno, type CapasTematicas } from './render';
 import { capasDelMapa, distanciaDeCarga, type CapasDelMapa } from './mundo/capasDelMapa';
 import { cablearCapas, htmlCapas } from './ui/capasMapa';
-import { RECURSO_NOMBRE } from './paletas';
-import type { Alijo, Asentamiento, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, EscenaCampamento, Faccion, ParamsCrearHeroe, PuebloDeMapa, Sigilo } from './tiposDominio';
+import { EDIFICIO_NOMBRE, RECURSO_NOMBRE } from './paletas';
+import type { Alijo, Asentamiento, AvanzadaDeMapa, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, EscenaCampamento, Faccion, ParamsCrearHeroe, PuebloDeMapa, Sigilo } from './tiposDominio';
 import { svgSigilo } from './sigilo/sigilo';
 import { alCargarSigilos } from './sigilo/lienzo';
 import { anchoDeParteCampamento, cablearCampamento, campamentoActual, htmlSeccionCampamento, seccionesDeCampamento, type SeccionCampamento } from './ui/pantallaCampamento';
@@ -76,6 +76,8 @@ import { montarPanelRendimiento } from './ui/panelRendimiento';
 import { cablearProduccionYRecetas, cablearVistaCiudad, confirmarCancelarObra, edificioSeleccionado, elegirEdificio, htmlExtraccion, htmlRecetas, htmlTooltipEdificio, repintarFicha } from './ui/vistaCiudad';
 import { campamentoEnVista } from './ciudad3d/campamento';
 import { puebloEnVista } from './ciudad3d/pueblo';
+import { avanzadaEnVista, svgPlanoAvanzada } from './ciudad3d/avanzada';
+import { almacenDelPie, avanzadaActual, cablearAvanzada, htmlParteAvanzada, iconoDeAvanzada, madreDe, nombreDeEtapa, partesDeAvanzada, type ParteAvanzada } from './ui/avanzadas';
 import { ciudadEnVista } from './ciudad3d/estado';
 import { encuadreDeSvg, Minimapa } from './ciudad3d/minimapa';
 import { VistaCiudad3D, type MurallaElegida } from './ciudad3d/vista';
@@ -736,6 +738,189 @@ function pintarPueblo(p: ProyeccionJugador): void {
   ventana.dataset.ancho = 'normal';
   pintar(titulo, htmlTituloDeParte(abierta, partes.find(([id]) => id === abierta)?.[1] ?? abierta, escaparHtml), undefined, 'titulo-pueblo');
   pintar(lado, htmlCuerpoPueblo(p, pueblo, abierta, escaparHtml), () => cablearInteriorPueblo(lado, p, pueblo, ejecutarYRefrescar, repintar), `pueblo-${abierta}`);
+}
+
+// --- PANTALLA DE DENTRO DE UNA AVANZADA (Víctor, 2026-11-07) ---------------------------------------------------------------------
+// Como el pueblo: el esqueleto común (`.plaza-3d`), con la avanzada en 3D detrás (su recinto y lo de dentro salen de su etapa, `ciudad3d/avanzada.ts`;
+// sin WebGL, su planta en 2D), el blasón, su almacén abajo (fuerte y ciudadela), el riel con sus partes (`ui/avanzadas.ts`) y el minimapa.
+
+let ventanaAvanzada: ParteAvanzada | null = null;
+let avanzada3d: { vista: VistaCiudad3D; minimapa: Minimapa; clave: string; suelo: boolean } | null = null;
+let avanzada3dSinWebgl = false;
+
+const NOMBRE_PIEZA_AVANZADA: Record<string, string> = { torreVigia: 'Torre de vigía', torreHomenaje: 'Torre del homenaje' };
+const nombreDePiezaAvanzada = (tipo: string): string => NOMBRE_PIEZA_AVANZADA[tipo] ?? EDIFICIO_NOMBRE[tipo] ?? tipo;
+
+function montarAvanzada(): void {
+  const proyeccion = estadoCliente.proyeccionUltima;
+  const x = proyeccion && avanzadaActual(proyeccion);
+  if (!proyeccion || !x) { montar('cargando'); return; }
+  menuEsquinaAbierto = false;
+  ventanaAvanzada = null;
+  ventanaPlaza = null;
+  popBlason = null;
+  app.innerHTML = `<div class="asent-screen avanzada-screen plaza-3d">
+    ${htmlBarraJugador(proyeccion, escaparHtml)}
+    <div class="asent-cuerpo">
+      <div class="asent-centro">
+        <div class="asent-mapa avanzada-mapa">
+          <div class="ciudad3d-escena" hidden></div>
+          <div class="asent-lienzo avanzada-lienzo"></div>
+        </div>
+      </div>
+      <aside class="asent-izq"><div class="asent-blason"></div></aside>
+      <aside class="asent-der"></aside>
+      <p class="pueblo-aviso-batalla" hidden>La están atacando: si sigues dentro, defiendes.</p>
+      <div class="asent-pie avanzada-almacen" hidden></div>
+      <nav class="asent-riel" aria-label="Partes de la avanzada"></nav>
+      <div class="asent-lienzo asent-minimapa avanzada-mini" title="Minimapa: un clic lleva la vista ahí" hidden><div class="avanzada-plano"></div></div>
+      <header class="asent-barra">
+        <div class="asent-barra-acciones"><button id="btn-salir-mundo" class="btn-primary" type="button">Salir al mundo</button></div>
+      </header>
+      <section class="asent-ventana" role="dialog" aria-label="Avanzada" hidden>
+        <header class="asent-ventana-cab"><div class="asent-ventana-titulo"></div><button class="asent-ventana-cerrar" type="button" data-ventana-cerrar title="Cerrar (Esc)" aria-label="Cerrar">✕</button></header>
+        <div class="asent-edif-cuerpo avanzada-lado"></div>
+      </section>
+    </div>
+    <div class="asent-tooltip" hidden></div>
+    ${HTML_VELO_SALIDA}
+    <aside class="jugador-panel" hidden></aside>
+    ${menuEsquinaHtml()}
+  </div>`;
+  vigilarPieArriba(app.querySelector<HTMLElement>('.plaza-3d'));
+  const contenedor = app.querySelector<HTMLElement>('.asent-screen')!;
+  cablearMenuEsquina(contenedor);
+  cablearBarraJugador(contenedor);
+  contenedor.querySelector('#btn-salir-mundo')?.addEventListener('click', abrirVentanaSalida);
+  contenedor.querySelector('[data-ventana-cerrar]')?.addEventListener('click', () => abrirParteAvanzada(null));
+  let sondeando = false;
+  const sondeo = setInterval(() => {
+    if (sondeando || !document.querySelector('.avanzada-screen') || !hayQueSondear()) return;
+    sondeando = true;
+    void refrescarDatosJuego().catch(() => {}).finally(() => { sondeando = false; });
+  }, 3000);
+  limpiarPantalla = () => { clearInterval(sondeo); desmontarAvanzada3D(); };
+}
+
+function abrirParteAvanzada(parte: ParteAvanzada | null): void {
+  ventanaAvanzada = parte;
+  const p = estadoCliente.proyeccionUltima;
+  if (p) pintarAvanzada(p);
+}
+
+document.addEventListener('keydown', (ev) => {
+  if (ev.key !== 'Escape' || ventanaSalidaAbierta || document.querySelector('.dialogo-velo, .eleccion-clic')) return;
+  if (ventanaAvanzada && document.querySelector('.avanzada-screen')) abrirParteAvanzada(null);
+});
+
+function montarAvanzada3D(mapa: HTMLElement): boolean {
+  if (avanzada3d) return true;
+  const escena = mapa.querySelector<HTMLElement>('.ciudad3d-escena');
+  const plano = app.querySelector<HTMLElement>('.avanzada-plano');
+  const tooltip = app.querySelector<HTMLElement>('.asent-tooltip');
+  if (avanzada3dSinWebgl || !escena || !plano) return false;
+  const minimapa = new Minimapa(plano);
+  try {
+    const vista: VistaCiudad3D = new VistaCiudad3D(escena, {
+      alElegir: (id) => {
+        const pieza = id ? vista.ciudadActual()?.edificios.find((e) => e.id === id) : undefined;
+        vista.seleccionar(pieza ? { id: pieza.id, tipo: pieza.tipo } : null);
+      },
+      alPasar: (id, evento) => {
+        const pieza = id ? vista.ciudadActual()?.edificios.find((e) => e.id === id) : undefined;
+        if (!tooltip) return;
+        if (!pieza || !evento) { tooltip.hidden = true; return; }
+        tooltip.innerHTML = `<strong>${escaparHtml(nombreDePiezaAvanzada(pieza.tipo))}</strong>`;
+        tooltip.hidden = false;
+        tooltip.style.left = `${Math.min(window.innerWidth - tooltip.offsetWidth - 8, evento.clientX + 14)}px`;
+        tooltip.style.top = `${Math.min(window.innerHeight - tooltip.offsetHeight - 8, evento.clientY + 14)}px`;
+      },
+      alMover: (huella) => minimapa.fijarHuella(huella),
+    });
+    plano.parentElement?.addEventListener('click', (evento) => vista.centrar(minimapa.puntoLocal(evento)));
+    avanzada3d = { vista, minimapa, clave: '', suelo: false };
+    return true;
+  } catch (error) {
+    console.warn('Sin WebGL para la avanzada en 3D; queda su planta en 2D.', error);
+    minimapa.destruir();
+    avanzada3dSinWebgl = true;
+    return false;
+  }
+}
+
+function desmontarAvanzada3D(): void {
+  avanzada3d?.vista.destruir();
+  avanzada3d?.minimapa.destruir();
+  avanzada3d = null;
+}
+
+function pintarCentroAvanzada(p: ProyeccionJugador, x: AvanzadaDeMapa): void {
+  const mapa = app.querySelector<HTMLElement>('.avanzada-mapa');
+  const lienzo = mapa?.querySelector<HTMLElement>('.avanzada-lienzo');
+  const escenaEl = mapa?.querySelector<HTMLElement>('.ciudad3d-escena');
+  const mini = app.querySelector<HTMLElement>('.avanzada-mini');
+  const planoEl = mini?.querySelector<HTMLElement>('.avanzada-plano');
+  const aviso = app.querySelector<HTMLElement>('.avanzada-screen .pueblo-aviso-batalla');
+  if (!mapa || !lienzo || !escenaEl || !mini || !planoEl) return;
+  const ciudad = avanzadaEnVista(x, { instante: p.instante });
+  const plano = ciudad ? svgPlanoAvanzada(ciudad, nombreDePiezaAvanzada) : '';
+  const en3d = Boolean(ciudad) && montarAvanzada3D(mapa);
+  mapa.classList.toggle('asent-mapa-3d', en3d);
+  app.querySelector('.avanzada-screen')?.classList.toggle('sin-3d', !en3d);
+  escenaEl.hidden = !en3d;
+  mini.hidden = !en3d;
+  lienzo.hidden = en3d;
+  if (aviso) aviso.hidden = !x.batallaId;
+  if (!en3d || !ciudad || !avanzada3d) { pintar(lienzo, `<div class="avanzada-plano-2d">${plano}</div>`, undefined, `avanzada-plano:${x.etapa}:${x.enRuinas}`); return; }
+  const c3 = avanzada3d;
+  const clave = `${x.id}:${x.etapa}:${x.enRuinas}`;
+  if (c3.clave !== clave) {
+    c3.clave = clave;
+    planoEl.innerHTML = plano;
+    c3.vista.fijar(ciudad);
+    const encuadre = encuadreDeSvg(planoEl.querySelector('svg'));
+    if (encuadre) c3.minimapa.fijarEncuadre(encuadre);
+  }
+  if (!c3.suelo) {
+    c3.suelo = true;
+    void sincronizarMapa(p.mapaId).then((m) => {
+      const suelo = colorDelSueloEn(m, x.posicion);
+      if (suelo && avanzada3d === c3) c3.vista.fijarSuelo((suelo[0] << 16) | (suelo[1] << 8) | suelo[2]);
+    }).catch(() => {});
+  }
+}
+
+function pintarAvanzada(p: ProyeccionJugador): void {
+  const x = avanzadaActual(p);
+  const almacen = app.querySelector<HTMLElement>('.avanzada-almacen');
+  const lado = app.querySelector<HTMLElement>('.avanzada-lado');
+  const ventana = app.querySelector<HTMLElement>('.avanzada-screen .asent-ventana');
+  const titulo = ventana?.querySelector<HTMLElement>('.asent-ventana-titulo');
+  const blason = app.querySelector<HTMLElement>('.avanzada-screen .asent-blason');
+  const riel = app.querySelector<HTMLElement>('.avanzada-screen .asent-riel');
+  if (!x || !almacen || !lado || !ventana || !titulo || !blason || !riel) return;
+  pintarCentroAvanzada(p, x);
+  const madre = madreDe(p, x);
+  pintar(blason, htmlBlasonInterior({
+    icono: iconoDeAvanzada(x.etapa, 46), nombre: nombreDeEtapa(x.etapa),
+    lineas: [`De ${madre.nombre}`, x.enRuinas ? 'En ruinas' : x.propia ? 'De tu Facción' : 'De visita'],
+  }, escaparHtml), undefined, 'blason-avanzada');
+  const pie = almacenDelPie(x);
+  almacen.hidden = !pie;
+  if (pie) pintar(almacen, htmlPlacaDeRecursos('almacen', 'Almacén', pie.recursos, escaparHtml, pie.capacidad), undefined, 'avanzada-almacen');
+  const partes = partesDeAvanzada(x);
+  if (ventanaAvanzada && !partes.some(([id]) => id === ventanaAvanzada)) ventanaAvanzada = null;
+  pintar(riel, htmlRielInterior(partes.map(([id, t]) => ({ id, titulo: t })), ventanaAvanzada, escaparHtml),
+    () => riel.querySelectorAll<HTMLButtonElement>('[data-parte]').forEach((b) => b.addEventListener('click', () => {
+      const parte = b.dataset.parte as ParteAvanzada;
+      abrirParteAvanzada(ventanaAvanzada === parte ? null : parte);
+    })), 'riel-avanzada');
+  const abierta = ventanaAvanzada;
+  if (!abierta) { ventana.hidden = true; vaciar(lado); return; }
+  ventana.hidden = false;
+  ventana.dataset.ancho = 'normal';
+  pintar(titulo, htmlTituloDeParte(abierta, partes.find(([id]) => id === abierta)?.[1] ?? abierta, escaparHtml), undefined, 'titulo-avanzada');
+  pintar(lado, htmlParteAvanzada(p, x, abierta, escaparHtml), () => cablearAvanzada(lado, p, x, ejecutarYRefrescar), `avanzada-${abierta}`);
 }
 
 /** Vuelca la proyección en la pantalla Campamento (en cada refresco). No toca el DOM de lo que no cambió, para no llevarse lo que se escribe. */
@@ -2056,6 +2241,7 @@ let ventanaSalidaAbierta = false;
 function lugarDeSalida(p: ProyeccionJugador): LugarDeSalida | null {
   if (pantallaMontada === 'campamento') { const c = campamentoActual(p); return c ? { tipo: 'campamento', campamento: c } : null; }
   if (pantallaMontada === 'pueblo') { const x = puebloActual(p); return x ? { tipo: 'pueblo', pueblo: x } : null; }
+  if (pantallaMontada === 'avanzada') { const x = avanzadaActual(p); return x ? { tipo: 'avanzada', avanzada: x } : null; }
   const a = pantallaMontada === 'asentamiento' ? p.asentamientos[0] : undefined;
   if (!a) return null;
   return resideEnLaPlaza(p, a) ? { tipo: 'residencia', asentamiento: a } : { tipo: 'plazaAjena', asentamiento: a };
@@ -3090,7 +3276,7 @@ async function refrescarDatosJuego(): Promise<void> {
 // `twinkly-greeting-peacock.md`): no hay "última pantalla" guardada, así que recargar devuelve al jugador a
 // donde estaba. `#/legacy` es la válvula de escape a la interfaz anterior, intacta, y solo se llega
 // escribiéndola en la URL.
-type Pantalla = 'login' | 'partidas' | 'cargando' | 'heroe' | 'campamento' | 'mapa' | 'asentamiento' | 'pueblo' | 'legacy';
+type Pantalla = 'login' | 'partidas' | 'cargando' | 'heroe' | 'campamento' | 'mapa' | 'asentamiento' | 'pueblo' | 'avanzada' | 'legacy';
 
 let pantallaMontada: Pantalla | null = null;
 /** Limpieza de la pantalla saliente (listeners globales, etc.). La fija quien monta una pantalla que los
@@ -3114,6 +3300,8 @@ function pantallaActual(): Pantalla {
   if (proyeccion.heroe.ubicacion.tipo === 'mercenarios') return campamentoActual(proyeccion) ? 'campamento' : 'cargando';
   // Dentro de un pueblo o una aldea: su pantalla, si ya llegó su ficha (la de un pueblo ajeno puede no llegar: se ve el mapa).
   if (proyeccion.heroe.ubicacion.tipo === 'pueblo' && puebloActual(proyeccion)) return 'pueblo';
+  // Dentro de una avanzada: la suya, cuando llega su ficha (la de una ajena puede no llegar con lo de dentro: se ve el mapa).
+  if (proyeccion.heroe.ubicacion.tipo === 'avanzada' && avanzadaActual(proyeccion)) return 'avanzada';
   if (proyeccion.asentamientos.length > 0) return 'asentamiento';
   return 'mapa';
 }
@@ -3137,6 +3325,7 @@ function montar(pantalla: Pantalla): void {
     case 'mapa': montarMapa(); break;
     case 'asentamiento': montarAsentamiento(); break;
     case 'pueblo': montarPueblo(); break;
+    case 'avanzada': montarAvanzada(); break;
   }
 }
 
@@ -3146,15 +3335,16 @@ function montar(pantalla: Pantalla): void {
 function refrescarPantalla(pantalla: Pantalla): void {
   const proyeccion = estadoCliente.proyeccionUltima;
   if (!proyeccion) return;
-  if (pantalla === 'mapa' || pantalla === 'campamento' || pantalla === 'asentamiento' || pantalla === 'pueblo') {
+  if (pantalla === 'mapa' || pantalla === 'campamento' || pantalla === 'asentamiento' || pantalla === 'pueblo' || pantalla === 'avanzada') {
     renderPanelJugador();
     pintarRastreador(proyeccion, abrirMisiones, escaparHtml);
     if (vistaMapaAbierta) void pintarVistaMapa();
   }
   if (pantalla === 'mapa') { pintarComida(proyeccion); renderSeleccionMapa(); renderPanelRiel(); return; }
-  if (pantalla === 'campamento' || pantalla === 'pueblo' || pantalla === 'asentamiento') renderVentanaSalida();
+  if (pantalla === 'campamento' || pantalla === 'pueblo' || pantalla === 'avanzada' || pantalla === 'asentamiento') renderVentanaSalida();
   if (pantalla === 'campamento') { const c = campamentoActual(proyeccion); if (c) pintarCampamento(proyeccion, c); return; }
   if (pantalla === 'pueblo') { pintarPueblo(proyeccion); return; }
+  if (pantalla === 'avanzada') { pintarAvanzada(proyeccion); return; }
   if (pantalla === 'asentamiento') { renderPanelEdificios(); renderPieDePlaza(); renderPanelAsent(); programarDibujoPlaza(proyeccion); return; }
   if (pantalla !== 'legacy') return;
   renderizarPanelInteraccion(proyeccion);
@@ -3167,8 +3357,8 @@ function refrescarPantalla(pantalla: Pantalla): void {
 
 // --- PANTALLAS DE CARGA ---------------------------------------------------------------------------
 // Entre el mundo y las vistas de dentro (plaza, campamento, pueblo) y al entrar en la partida (Víctor, 2026-11-02; `ui/pantallaCarga.ts`).
-const EN_PARTIDA = new Set<Pantalla>(['mapa', 'asentamiento', 'campamento', 'pueblo']);
-const VISTA_DE_PANTALLA: Partial<Record<Pantalla, VistaDeCarga>> = { mapa: 'mundo', asentamiento: 'asentamiento', campamento: 'campamento', pueblo: 'pueblo' };
+const EN_PARTIDA = new Set<Pantalla>(['mapa', 'asentamiento', 'campamento', 'pueblo', 'avanzada']);
+const VISTA_DE_PANTALLA: Partial<Record<Pantalla, VistaDeCarga>> = { mapa: 'mundo', asentamiento: 'asentamiento', campamento: 'campamento', pueblo: 'pueblo', avanzada: 'pueblo' };
 /** La promesa de la vista que se acaba de montar, si pinta algo que tarda (el mundo en 3D baja el relieve y arma el terreno). */
 let listoDeLaVista: Promise<unknown> | null = null;
 
@@ -3185,6 +3375,7 @@ function tituloDeCarga(hacia: Pantalla): string {
     case 'asentamiento': return `Entrando en ${p?.asentamientos[0]?.nombre ?? 'la plaza'}`;
     case 'campamento': return 'Entrando en el campamento';
     case 'pueblo': { const x = p && puebloActual(p); return x ? `Entrando en ${nombreDePueblo(x)}` : 'Entrando en el pueblo'; }
+    case 'avanzada': { const x = p && avanzadaActual(p); return x ? `Entrando en la ${nombreDeEtapa(x.etapa).toLowerCase()}` : 'Entrando en la avanzada'; }
     default: return 'Cargando la partida';
   }
 }

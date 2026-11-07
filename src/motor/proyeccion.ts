@@ -364,7 +364,7 @@ function recompensasMision(rs: pb.RecompensaMision[]): d.RecompensaMision[] {
 function escuadron(e: pb.Escuadron, ahora: number): d.Escuadron {
   const c = e.contenedor?.donde;
   const contenedor: d.Escuadron['contenedor'] =
-    c?.case === 'ejercitoId' ? { tipo: 'ejercito', ejercitoId: c.value } : c?.case === 'caravanaId' ? { tipo: 'escolta', caravanaId: c.value } : c?.case === 'puebloId' ? { tipo: 'pueblo', puebloId: c.value } : c?.case === 'asentamientoId' ? { tipo: 'plaza', asentamientoId: c.value } : c?.case === 'fuera' ? { tipo: 'fuera' } : { tipo: 'campamento' };
+    c?.case === 'ejercitoId' ? { tipo: 'ejercito', ejercitoId: c.value } : c?.case === 'caravanaId' ? { tipo: 'escolta', caravanaId: c.value } : c?.case === 'puebloId' ? { tipo: 'pueblo', puebloId: c.value } : c?.case === 'asentamientoId' ? { tipo: 'plaza', asentamientoId: c.value } : c?.case === 'avanzadaId' ? { tipo: 'avanzada', avanzadaId: c.value } : c?.case === 'fuera' ? { tipo: 'fuera' } : { tipo: 'campamento' };
   return {
     id: e.id, nombre: e.nombre, heroeId: e.heroeId, tropaId: e.tropaId, origen: e.origen as d.Escuadron['origen'], cantidad: e.cantidad, nivel: e.nivel,
     experiencia: mil(e.experiencia), moral: valorDeRitmo(e.moral, ahora), contenedor,
@@ -821,7 +821,13 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
       const propias = new Map([...deAmbito('FACCION:', 'avanzada'), ...deAmbito('ASENTAMIENTO:', 'avanzada')].map((x) => [x.id, x]));
       const de = (x: pb.Avanzada, propia: boolean): d.AvanzadaDeMapa => ({
         id: x.id, madreId: x.asentamientoMadreId, etapa: x.etapa, posicion: punto(x.posicion), enRuinas: x.estado === pb.EstadoAvanzada.AVANZADA_EN_RUINAS,
-        batallaId: opcional(x.batallaId), propia,
+        batallaId: opcional(x.batallaId), propia, invulnerableHasta: instante(x.invulnerableHastaMs),
+        ...(propia ? {
+          almacen: Object.fromEntries(Object.entries(x.almacenPorRecurso).map(([r, e]) => [r, valorDeRitmo(e.cantidad, ahora)])),
+          capacidad: Object.fromEntries(Object.entries(x.almacenPorRecurso).map(([r, e]) => [r, mil(e.capacidad)])),
+          guarnicionSerieIds: x.guarnicionSerieIds, guarnicionJugadoresIds: x.guarnicionJugadoresIds,
+          tropaPorEscalon: Object.fromEntries(Object.entries(x.tropaElegidaPorEscalon).map(([k, t]) => [Number(k), t])),
+        } : {}),
       });
       return [...[...propias.values()].map((x) => de(x, true)), ...deAmbito('VISTA:', 'avanzada').filter((x) => !propias.has(x.id)).map((x) => de(x, false))];
     })(),

@@ -312,6 +312,12 @@ La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, es
 > aldea, almacén y rebaño en barras, carro de acarreo con su escolta, «⬆ Nivel N», «🛒 Reponer carro», «✕ Destruir»), cada obra con lo entregado
 > en fichas con barra, marcar en dos cartas (aldea y extractor, con los nodos libres como casillas) y las avanzadas en tarjetas. Todos los
 > rechazos salen flotando.
+>
+> **Avanzadas en Territorio** (0.174.0, `ui/pueblos.ts`, `tarjetaAvanzada`): cada una con su icono de etapa, la guarnición (de serie y de
+> jugadores) y lo que guarda; para el Gobernador o el Maestro de Obras residente y dentro, «⬆ Fuerte / Ciudadela» con su coste (`mejorarAvanzada`),
+> «🔧 Reparar» en ruinas (`repararAvanzada`, la mitad del coste de su etapa) y «✕ Destruir» (`destruirAvanzada`); su obra de mejora o reparación
+> debajo, con «✕ Cancelar» (`cancelarObra`). El Gobernador elige además la tropa de serie de cada escalón (`elegirTropaDeAvanzada`) entre las que
+> la madre recluta.
 
 1. **Resumen** ✅ (repartido en 0.98.0: pie, blasón, Construcción) — nivel/nivel operativo, población
    (pesants/artesanos/nobleza + total), medidores de mantenimiento y nutrición, aviso de ocupación, toggle

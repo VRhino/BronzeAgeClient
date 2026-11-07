@@ -42,7 +42,7 @@ function dentroDe(x: number, y: number, anillo: { x: number; y: number }[]): boo
  * Lo que llena las celdas libres de un campamento: dentro de la empalizada, el suelo despejado y pisado, todo él (algún árbol que se dejó,
  * leña, heno, algún horno; ni huertos, ni patios, ni rediles); fuera, el campo de siempre.
  */
-function rellenoDeCampamento(c: CiudadEnVista, T: number): Relleno[] {
+export function rellenoDeCampamento(c: CiudadEnVista, T: number): Relleno[] {
   const anillos = c.recintos.map((r) => r.celdas).filter((a) => a.length > 2);
   const dentro = (x: number, y: number): boolean => anillos.some((a) => dentroDe(x, y, a));
   const clave = (x: number, y: number): string => `${Math.round(x / T)},${Math.round(y / T)}`;

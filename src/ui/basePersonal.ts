@@ -23,7 +23,7 @@ import { estadoCliente } from './estadoCliente';
 import { cablearCarro, htmlCarro, type Ejecutar } from './panelCarro';
 import { cablearHeroe, dentroDeSuResidencia, dondeEsta, editandoLoadout, htmlFichaHeroe, htmlLoadouts, minutosHerido, soltarBorrador, type Aplicar } from './panelHeroe';
 import { detalleInforme, hace } from './panelIntel';
-import { nombreDePueblo } from './pueblos';
+import { nombreDeAvanzada, nombreDePueblo } from './pueblos';
 
 type Escapar = (valor: string) => string;
 
@@ -94,6 +94,7 @@ function dondeEstaLaEscuadra(p: ProyeccionJugador, s: Escuadron): string {
     case 'escolta': return 'Escoltando una caravana';
     case 'pueblo': { const x = (p.pueblos ?? []).find((q) => q.id === c.puebloId); return `De guarnición en ${x ? nombreDePueblo(x) : 'un pueblo'}`; }
     case 'plaza': return `De guarnición en ${nombrePlaza(p, c.asentamientoId)}`;
+    case 'avanzada': { const x = (p.avanzadas ?? []).find((q) => q.id === c.avanzadaId); return `De guarnición en ${x ? `la ${nombreDeAvanzada(x.etapa).toLowerCase()} de ${nombrePlaza(p, x.madreId)}` : 'una avanzada'}`; }
     default: return 'Fuera del mundo';
   }
 }

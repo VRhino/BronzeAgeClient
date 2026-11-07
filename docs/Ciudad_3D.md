@@ -148,6 +148,22 @@ y, en la aldea, sus granjas y corrales, cada uno con su centro y sus lados, más
   arriba lo dice.
 - **Sin planta** (fuera de él, o un motor anterior) **o sin WebGL**: el anillo de huecos de siempre.
 
+## Avanzadas (atalaya, fuerte y ciudadela)
+
+Desde 0.174.0 se entra en una avanzada como en un pueblo (`entrarEnAvanzada`) y el centro de la pantalla es la misma vista 3D. El motor no
+manda planta de una avanzada: el recinto y lo de dentro salen de su etapa (`ciudad3d/avanzada.ts`), iguales en todas las de la misma etapa,
+con la planta en SVG como minimapa (`svgPlanoAvanzada`).
+
+- **Atalaya**: empalizada cuadrada de 6 × 6 celdas con torres de madera en las esquinas, la torre de vigía en medio (`torreVigia` en
+  `modelos.ts`: cuatro pies arriostrados, la plataforma con baranda, tejadillo de paja, la escala y el fuego), un pozo y la leñera.
+- **Fuerte**: muro de adobe de 10 × 10 celdas; la torre del homenaje (`torreHomenaje`: adobe sobre zócalo de piedra, almenas y bandera), el
+  barracón, el almacén, la leñera y el pozo.
+- **Ciudadela**: muro ciclópeo redondo de radio 9 celdas con torres; la torre del homenaje de piedra en su patio cercado, el barracón, el
+  almacén, el granero, el patio de armas y el pozo.
+- **En ruinas**: los edificios son escombro y la muralla queda en pie solo en parte.
+- La calle va de la puerta (abajo, dos celdas) a la torre, y el camino sale de la puerta hacia fuera. Sin WebGL, la planta en 2D.
+- Banco: `pruebas/avanzadas/` (`?etapa=1|2|3`, `&ruinas=1`, `&parte=…`). Prueba: nada pisa la muralla ni la calle (`pruebas/avanzadas.test.ts`).
+
 ## Manejo
 
 - **Ratón**:

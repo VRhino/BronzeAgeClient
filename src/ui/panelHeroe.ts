@@ -15,7 +15,7 @@ import { cablearHeroeMercenario, htmlHeroeMercenario } from './mercenarios';
 export type Aplicar = (peticion: Promise<RespuestaComando>) => Promise<string | null>;
 type Escapar = (valor: string) => string;
 const ATRIBUTOS: [AtributoHeroe, string][] = [['fuerza', 'Fuerza'], ['destreza', 'Destreza'], ['armadura', 'Armadura'], ['vitalidad', 'Vitalidad']];
-export const DONDE = { campamento: 'Campamento', ejercito: 'En columna', escolta: 'Escoltando', pueblo: 'Guarneciendo un pueblo', plaza: 'En la guarnición de otra plaza', fuera: 'Fuera del mundo' } as const;
+export const DONDE = { campamento: 'Campamento', ejercito: 'En columna', escolta: 'Escoltando', pueblo: 'Guarneciendo un pueblo', plaza: 'En la guarnición de otra plaza', avanzada: 'Guarneciendo una avanzada', fuera: 'Fuera del mundo' } as const;
 
 /** El loadout que se está editando (`loadoutId` ausente = uno nuevo), o `null`. Mientras exista, el sondeo de 3 s no
  * repinta la ventana: se llevaría por delante lo escrito. */
