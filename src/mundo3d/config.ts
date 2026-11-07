@@ -14,8 +14,9 @@ export const MUNDO3D = {
   camaraSuave: { seguir: 9, zoom: 7, subir: 14, bajar: 3, corte: 60 },
   /** Copa de los árboles (diámetro). */
   copa: 0.5,
-  /** Escala de las maquetas de plazas, pueblos, avanzadas y campamentos: ×1 = la del juego. */
-  maqueta: 1,
+  /** Escala de todas las maquetas (plazas, pueblos, aldeas, avanzadas, obras, campamentos, bandidos y alijos): ×1 = la del juego. A 0,8
+   * (Víctor, 2026-11-07: «dejar las maquetas en general a un 0,8 de su tamaño»); los factores de abajo van encima de este. */
+  maqueta: 0.8,
   /** Los campamentos (de mercenarios y de bandidos), al doble de la maqueta: a ×1 casi no se veían (Víctor, 2026-10-31). */
   campamento: 2,
   /** Los alijos, al doble de la maqueta (Víctor, 2026-10-31). */

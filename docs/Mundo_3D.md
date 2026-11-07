@@ -24,7 +24,8 @@ escalas y la cámara se decidieron con la mesa de escalas 3D del motor (`Conside
 | | Valor |
 |---|---|
 | Copa de árbol | 0,3 u |
-| Plazas (maquetas) | ×1: la ciudad es la del juego, al 10 % del radio de su zona; todo ×1,7 de alto (`altoPlaza`) |
+| Maquetas en general (`maqueta`) | ×0,8 (Víctor, 2026-11-07); los factores de abajo van encima |
+| Plazas (maquetas) | la ciudad, al 10 % del radio de su zona; todo ×1,7 de alto (`altoPlaza`) |
 | Pueblos, aldeas y avanzadas | ×1,6 (`pueblo`, `avanzada`) |
 | Rocas de los nodos | ×0,5 (`nodo`) |
 | Héroes y tropa | ×2 (soldado de 3,3 m de Unity, 1 u = 12 m) |
@@ -142,7 +143,7 @@ suelo, luego el paisaje, los árboles y la vegetación baja. Lo que se aleja se 
   plana a la altura del punto más bajo de su corte, con el agua de los ríos (ver «El agua») y 1,2 u de tierra mojada a cada lado que se
   desvanece hacia fuera. Los vados son un paso de grava de orilla a orilla. Los nodos son rocas: grises las de
   piedra y del color de su metal los afloramientos. Todo bajo la niebla.
-- **Maquetas** (`maquetas.ts`). Las piezas de la mesa a ×1. La ciudad tiene muralla al 10 % del radio de su zona (el del contorno si se
+- **Maquetas** (`maquetas.ts`). Las piezas de la mesa a ×0,8 (0.176.0). La ciudad tiene muralla al 10 % del radio de su zona (el del contorno si se
   ve, el recordado si no) y casas dentro, compactas (0.175.0): solares justos, calles estrechas y casas que los llenan, de la plaza hacia
   fuera hasta lo que ocupa (el caserío, el 62 % del radio; el poblado, el 80 %; las amuralladas, hasta el pie de la muralla). En una plaza
   de más de 2 u de radio lo de dentro crece con ella. Todo sube ×1,7. El pueblo es una empalizada con casas: la aldea agrícola lleva sus campos y el

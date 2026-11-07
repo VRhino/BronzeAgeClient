@@ -174,7 +174,7 @@ describe('lo ajeno, los nombres y lo seleccionado', () => {
 
   test('lo seleccionado: un aro a la medida de la ciudad, de una batalla o de una columna por su id', () => {
     expect(e.seleccion?.posicion).toEqual({ x: 100, y: 100 });
-    expect(e.seleccion?.radio).toBeCloseTo(0.92, 6); // ciudad de 1 u (zona de 10), nivel 2 (lo que ocupa: 0,8) y la holgura del aro (0,12)
+    expect(e.seleccion?.radio).toBeCloseTo(0.76, 6); // ciudad de 1 u (zona de 10) a la escala de las maquetas (0,8), nivel 2 (lo que ocupa: 0,8) y la holgura del aro (0,12)
     const m = e.mundo;
     expect(dondeEstaLaSeleccion(p, { tipo: 'batalla', id: 'b1' }, m)?.radio).toBeCloseTo(0.77, 6);
     expect(dondeEstaLaSeleccion(p, { tipo: 'formacion', id: 'av-1' }, m)).toEqual({ posicion: { x: 40, y: 40 }, radio: 0.7 });

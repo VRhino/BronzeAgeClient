@@ -3,6 +3,13 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.176.0] — 2026-11-07 · Las maquetas, al 0,8 · sin cambio de contrato (motor `8feafd4`)
+
+Víctor (2026-11-07): «vamos a dejar las maquetas en general a un 0,8x de su tamaño actual».
+- `MUNDO3D.maqueta` pasa de 1 a 0,8: plazas, pueblos, aldeas, avanzadas, obras, campamentos de mercenarios y de bandidos y alijos, al 0,8 de
+  lo que eran en 0.175.0, en planta y en alto. Con ellas encogen su aro, su zona de clic, su claro y lo sólido. Las rocas de los nodos, las
+  figuras de las columnas y la marca de batalla no cambian.
+
 ## [0.175.0] — 2026-11-07 · Maquetas más compactas, aro a su medida y lo sólido en el mapa · sin cambio de contrato (motor `8feafd4`)
 
 Víctor (2026-11-07): «las maquetas de plazas más compactas y más grandes», «el círculo alrededor de la maqueta es demasiado grande», «los

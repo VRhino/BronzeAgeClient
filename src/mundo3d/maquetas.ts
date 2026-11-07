@@ -1,5 +1,5 @@
 // Las maquetas de plazas, pueblos, avanzadas, obras y campamentos (de mercenarios y de bandidos), alijos y batallas, a la escala del juego
-// (`MUNDO3D.maqueta`, ×1): las piezas de la mesa de escalas 3D (muralla, casas, empalizada, torre, tiendas) y una bandera del color de su
+// (`MUNDO3D.maqueta`, ×0,8): las piezas de la mesa de escalas 3D (muralla, casas, empalizada, torre, tiendas) y una bandera del color de su
 // Facción. Todas las de un material van en una sola malla instanciada. Las plazas que solo se recuerdan van bajo la niebla (oscurecidas, como
 // en `render.ts`); lo demás, encima: lo propio y lo que se ve ahora.
 import * as THREE from 'three';

@@ -28,7 +28,7 @@ export const radioDeAvanzada = (etapa: number): number => (etapa <= 1 ? 0.3 : 0.
 export const radioDeObra = (): number => 0.4 * M();
 export const radioDeCampamento = (): number => 0.63 * M() * MUNDO3D.campamento;
 export const radioDeBandidos = (): number => 0.48 * M() * MUNDO3D.campamento;
-export const radioDeAlijo = (): number => 0.14 * MUNDO3D.alijo;
+export const radioDeAlijo = (): number => 0.14 * M() * MUNDO3D.alijo;
 export const radioDeBatalla = (): number => 0.65;
 
 /** Lo que el aro de lo seleccionado deja de holgura alrededor de la maqueta. */
