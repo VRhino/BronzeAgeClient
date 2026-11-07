@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.180.0] — 2026-11-07 · Salir de una plaza de tu Facción: cambiar entre el carro y su almacén · sin cambio de contrato (motor `0e283fb`)
+
+Víctor (2026-11-07): siendo Rey, en una plaza de su Facción, la ventana de salida no dejaba pasar recursos entre su carro y la plaza.
+- Fallaba porque la VISTA no manda lo que cabe en el carro de la columna (`capacidadCarga` llegaba siempre vacío) y 0.178.0 lo exigía. Ahora se
+  calcula como el motor: un carro por héroe (`LOGISTICA.capacidadCarroPorJugador`, 500), sin contar las caravanas adjuntas (`capacidadDeCarga`).
+  También arregla la barra del carro de tu columna en «Lo que llevas» y en la ventana del Almacén.
+- En una plaza de tu Facción en la que no resides, la ventana de salida enseña a la derecha el carro de tu columna y el almacén de la plaza, con
+  «Al carro» y «A la plaza» al momento (`cargarDePlaza` / `dejarEnPlaza`), como la ventana del Almacén. Sustituye a la carga al salir de 0.178.0.
+- Mover entre el carro y la plaza ya no pide ser el Líder de la columna (el motor no lo pide); sacar sigue cerrado si el Gobernador lo cierra.
+
 ## [0.179.0] — 2026-11-07 · Avanzadas desde dentro, muralla y Mercado desde fuera · contrato 0.17.0 (motor `0e283fb`)
 
 Lo que el motor ya acepta (aviso del 2026-11-07, pedido por Víctor):

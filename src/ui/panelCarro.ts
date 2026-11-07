@@ -6,13 +6,13 @@
 //   salirDelCampamento { carga } carga el carro desde el almacén; lo que ya traías en el carro sale contigo
 //   cargarDePlaza / dejarEnPlaza { asentamientoId, recurso, cantidad }  dentro de una plaza (motor 1dad4ab, Movimiento_Ejercitos §9.1): sacar al carro
 //     cualquier ciudadano de la Facción dueña, salvo que su Gobernador lo cierre (`cerrarAlmacenACiudadanos`); dejar, la Facción y sus aliadas o vasallas
-// Ambos exigen ser el LÍDER de la columna (el carro es común) y estar en ella. El tope del almacén personal (`heroe.capacidadAlmacenPersonal`) y
-// lo que cabe en el carro (`ejercitos[].capacidadCarga`) los manda el backend ya calculados; si falta sitio, el rechazo es suyo.
+// Los del almacén personal exigen ser el LÍDER de la columna (el carro es común); los de la plaza, solo estar dentro con ella (`a_mano.rs`). El tope del
+// almacén personal (`heroe.capacidadAlmacenPersonal`) lo manda el backend; lo que cabe en el carro, `capacidadDeCarga` (un carro por héroe).
 import type { ProyeccionJugador } from '../apiCliente';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import { ayuda } from './ayuda';
 import { CAPACIDAD_CARRO_SALIDA } from './cargaDeSalida';
-import { radioDePuerta } from '../apiCliente';
+import { capacidadDeCarga, radioDePuerta } from '../apiCliente';
 import type { Point } from '../terreno';
 
 type Escapar = (valor: string) => string;
@@ -83,8 +83,9 @@ function plazaDondeEstas(p: ProyeccionJugador): { id: string; nombre: string; fa
 }
 
 /** `cabecera`: la línea con el nombre del héroe (fuera cuando el carro va dentro de otro panel, como «Lo que llevas»). `conPlaza`: con el almacén
- * de la plaza donde estás (la Base personal no lo enseña: allí solo va lo tuyo, el carro y tu almacén personal). */
-export function htmlCarro(p: ProyeccionJugador, e: Escapar, cabecera = true, conPlaza = true, dosColumnas = false): string {
+ * de la plaza donde estás (la Base personal no lo enseña: allí solo va lo tuyo, el carro y tu almacén personal). `conPersonal`: con el almacén
+ * personal (la ventana de salida de una plaza de tu Facción solo cambia entre el carro y la plaza). */
+export function htmlCarro(p: ProyeccionJugador, e: Escapar, cabecera = true, conPlaza = true, dosColumnas = false, conPersonal = true): string {
   const columna = miColumna(p);
   const almacen = p.heroe.almacenPersonal ?? {};
   const esLider = columna?.liderId === p.heroeId;
@@ -93,7 +94,7 @@ export function htmlCarro(p: ProyeccionJugador, e: Escapar, cabecera = true, con
   const aparcadas = p.ejercitos.filter((c) => c !== columna && c.liderId === p.heroeId && Object.values(c.suministro ?? {}).some((n) => n >= 1));
   // Dentro de tu residencia el carro sigue contigo (`heroe.carro`): entrar no lo vacía. De visita en una plaza, el carro es el de la columna con la que entraste.
   const carro = columna ? (columna.suministro ?? {}) : (p.heroe.carro ?? {});
-  const capacidad = columna ? columna.capacidadCarga : CAPACIDAD_CARRO_SALIDA;
+  const capacidad = columna ? capacidadDeCarga(columna) : CAPACIDAD_CARRO_SALIDA;
   const libre = capacidad !== undefined ? Math.max(0, Math.floor(capacidad - Object.values(carro).reduce((t, n) => t + n, 0))) : undefined;
   const hayCarro = Object.values(carro).some((n) => n >= 1);
   const plaza = conPlaza ? plazaDondeEstas(p) : undefined;
@@ -104,15 +105,15 @@ export function htmlCarro(p: ProyeccionJugador, e: Escapar, cabecera = true, con
 
   const accionesCarro: AccionDeFila[] = [];
   if (aMano) accionesCarro.push({ accion: 'guardar', etiqueta: 'Al almacén personal', motivo: motivoLider });
-  if (plaza) accionesCarro.push({ accion: 'aPlaza', etiqueta: 'A la plaza', motivo: motivoLider });
-  const motivoSacar = motivoLider ?? (plaza?.cerrado && !gobernador ? 'El Gobernador ha cerrado el almacén a los ciudadanos.' : libre === 0 ? 'El carro está lleno.' : null);
+  if (plaza) accionesCarro.push({ accion: 'aPlaza', etiqueta: 'A la plaza' });
+  const motivoSacar = (plaza?.cerrado && !gobernador ? 'El Gobernador ha cerrado el almacén a los ciudadanos.' : libre === 0 ? 'El carro está lleno.' : null);
 
   const nota = !columna
     ? 'Dentro de tu residencia el carro sigue contigo: entrar no lo vacía. Pásalo a tu almacén personal o al de la plaza recurso a recurso, o todo de una vez con «Todo al almacén personal». Al salir, lo que haya en el carro sale contigo y en la ventana de salida eliges qué más cargas.'
-    : !esLider
-      ? 'Solo el Líder de la columna mueve lo del carro: el carro es común a todos los que van en ella.'
-      : plaza
-        ? 'Dentro de una plaza de tu Facción sacas de su almacén al carro (salvo que su Gobernador lo cierre) y le dejas lo que lleves; en una aliada o vasalla solo puedes dejar.'
+    : plaza
+      ? 'Dentro de una plaza de tu Facción sacas de su almacén al carro (salvo que su Gobernador lo cierre) y le dejas lo que lleves; en una aliada o vasalla solo puedes dejar.'
+      : !esLider
+        ? 'Solo el Líder de la columna mueve lo del carro: el carro es común a todos los que van en ella.'
         : 'Guarda en tu almacén personal lo que quieras conservar. Al entrar en tu campamento se guarda solo. El carro es solo carga: la columna come de tus víveres (barra de abajo del mapa), y de aquí se les pasa trigo.';
   const almacenPlaza = plaza && ciudadano && plaza.almacen
     ? `${ocupacion(`Almacén de ${e(plaza.nombre)}`, {}, undefined)}
@@ -125,7 +126,7 @@ export function htmlCarro(p: ProyeccionJugador, e: Escapar, cabecera = true, con
     ${ocupacion(columna ? 'Carro de tu columna' : 'Tu carro', carro, capacidad)}${filas(carro, 'carro', hayCarro ? accionesCarro : [], e, plaza?.id)}
     ${!columna && hayCarro && aMano ? '<button class="btn-secondary" type="button" data-vaciar-carro>Todo al almacén personal</button>' : ''}
     ${aparcadas.map((c) => `<strong class="heroe-sub">Resto del carro, aparcado en la puerta</strong>${filas(c.suministro ?? {}, 'aparcado', [], e)}`).join('')}
-    ${aMano
+    ${!conPersonal ? '' : aMano
       ? `${ocupacion('Almacén personal', almacen, p.heroe.capacidadAlmacenPersonal)}${filas(almacen, 'personal', [
         { accion: 'sacar', etiqueta: 'Al carro', motivo: motivoLider, tope: libre },
         // del almacén personal a la plaza: el motor no tiene orden directa, así que pasa por el carro (sacar y dejar), hasta lo que cabe en él

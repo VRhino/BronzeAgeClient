@@ -681,7 +681,7 @@ interface BalancePublico {
   cuposYNiveles?: { POLITICAS?: ReglasDePoliticas; CAP_FUNDACION_POR_NIVEL?: number[]; CIUDADANIA?: { cooldownCambioResidenciaDias?: number; cooldownCreacionFaccionDias?: number } };
   caravanas?: { CARAVANA_COOLDOWN?: { cooldownMinutos?: number }; CARRO_CATALOGO?: Record<string, CarroDelCatalogo>; ANIMAL_CATALOGO?: Record<string, AnimalDelCatalogo>; CARAVANA_PREPARACION?: { kPorCarro?: number; maxProgramacionDias?: number }; CARAVANA_ESCOLTA?: { liderazgoPorNivelMercado?: number[] } };
   politica?: { PUERTA?: { cerradaAPorDefecto?: string[] }; CAPITAL?: { cooldownDias?: number } };
-  mundoYMilitar?: { LOGISTICA?: { capacidadViveresPorHeroe?: number; radioEncuentro?: number; radioReabastecimiento?: number; factorConsumoEnMarcha?: number; factorConsumoEstacionado?: number }; MILITAR?: { racionPorSoldadoPorMinuto?: number }; FUNDACION?: { materialesIniciales?: Record<string, number>; viviendasIniciales?: number; costoMaderaExtraCaravana?: number }; MERCENARIOS?: { refundacion?: { porcentajeCoste?: number }; radioProteccion?: number; edificiosMilitares?: string[]; nivelEdificios?: number }; MOVIMIENTO?: { radioPuerta?: number; radioInspeccion?: number; consumoPorParticipante?: number; factorConsumoMarchaForzada?: number }; RECLUTAMIENTO_ORO_POR_ESCALON?: Record<string, number>; ORO_POR_CABALLO?: number };
+  mundoYMilitar?: { LOGISTICA?: { capacidadViveresPorHeroe?: number; capacidadCarroPorJugador?: number; radioEncuentro?: number; radioReabastecimiento?: number; factorConsumoEnMarcha?: number; factorConsumoEstacionado?: number }; MILITAR?: { racionPorSoldadoPorMinuto?: number }; FUNDACION?: { materialesIniciales?: Record<string, number>; viviendasIniciales?: number; costoMaderaExtraCaravana?: number }; MERCENARIOS?: { refundacion?: { porcentajeCoste?: number }; radioProteccion?: number; edificiosMilitares?: string[]; nivelEdificios?: number }; MOVIMIENTO?: { radioPuerta?: number; radioInspeccion?: number; consumoPorParticipante?: number; factorConsumoMarchaForzada?: number }; RECLUTAMIENTO_ORO_POR_ESCALON?: Record<string, number>; ORO_POR_CABALLO?: number };
   tecnologia?: CatalogoTecnologia;
   internas?: { CAMPAMENTOS_BANDIDOS?: { niveles?: Record<string, NivelDeBandidos> } };
 }
@@ -825,6 +825,13 @@ export interface NivelDeBandidos { poder: number; unidades: number; oroPorHeroe:
 /** Los niveles de bandidos si ya se leyeron; la primera vez los pide al backend en segundo plano y avisa con `alCargar`. */
 export function nivelesBandidos(alCargar?: () => void): Record<string, NivelDeBandidos> | null {
   return balance(alCargar)?.internas?.CAMPAMENTOS_BANDIDOS?.niveles ?? null;
+}
+
+/** Lo que cabe en el carro de una columna: un carro por héroe (`LOGISTICA.capacidadCarroPorJugador`, 500 mientras no llegue el balance), como
+ * `Columna::capacidad_de_carga` del motor. La VISTA no lo manda; las caravanas adjuntas suman más, que aquí no se cuenta (el motor carga hasta
+ * lo que quepa de verdad). */
+export function capacidadDeCarga(c: { capacidadCarga?: number; participantes: unknown[] }): number {
+  return c.capacidadCarga ?? Math.max(1, c.participantes.length) * (balance()?.mundoYMilitar?.LOGISTICA?.capacidadCarroPorJugador ?? 500);
 }
 
 /** Lo que caben los víveres de un héroe (`LOGISTICA.capacidadViveresPorHeroe`); 350 mientras no llegue el balance. */
