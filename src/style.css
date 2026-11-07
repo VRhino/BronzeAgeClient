@@ -5985,3 +5985,26 @@ button.carro-hueco:hover, .carro-hueco.activo { border-color: var(--oro); box-sh
 .aedas-residente > small { color: var(--text-muted); font-size: 0.74rem; padding: 0 2px; }
 .aedas-residente .aedas-lista { padding-left: 14px; }
 .aedas-residente .aedas-fila .aedas-fila { border: none; }
+
+/* Población que se entiende sin leer (0.171.0): raya de lo que cabe, rombo de la meta, tramo rojo de lo que falta, «+» de Vivienda y flecha */
+.asent-recurso.pob-pieza { padding-bottom: 10px; }
+.pob-barra { height: 4px; overflow: visible; }
+.pob-barra::before { background: #9fb7c9 !important; }
+.asent-recurso.lleno .pob-barra::before { background: var(--terracota) !important; }
+.pob-barra > i { position: absolute; display: block; font-style: normal; }
+.pob-sitio { top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: #f3ead2; box-shadow: 0 0 3px rgba(0, 0, 0, 0.8); z-index: 2; }
+.pob-meta { top: 50%; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; background: var(--oro); border: 1px solid #2a1606; transform: rotate(45deg); z-index: 3; }
+.pob-falta { top: 0; bottom: 0; background: repeating-linear-gradient(135deg, rgba(226, 103, 90, 0.95) 0 3px, rgba(226, 103, 90, 0.25) 3px 6px); z-index: 1; }
+.pob-cerrado { top: 0; bottom: 0; right: 0; background: repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.75) 0 2px, rgba(120, 100, 70, 0.35) 2px 4px); z-index: 1; }
+.pob-flecha { font-style: normal; font-size: 0.62rem; line-height: 1; margin-left: -1px; }
+.pob-flecha.sube { color: var(--obra-verde, #7fc46a); }
+.pob-flecha.baja { color: #e2675a; }
+.pob-flecha.parada { width: 7px; height: 9px; border-left: 2px solid #b8ad96; border-right: 2px solid #b8ad96; box-sizing: border-box; margin: 0 1px; }
+.pob-vivienda { position: relative; display: inline-flex; align-items: center; margin-left: 2px; padding: 0 2px; border: 1px solid var(--terracota); border-radius: 3px; background: rgba(226, 103, 90, 0.18); color: var(--oro-claro); --relleno: rgba(226, 103, 90, 0.35); animation: pob-late 1.3s ease-in-out infinite; }
+.pob-vivienda b { position: absolute; right: -5px; top: -6px; width: 11px; height: 11px; display: grid; place-items: center; border-radius: 50%; background: #ffb020; color: #2a1606; font-size: 0.6rem; font-weight: 800; line-height: 1; }
+button.pob-vivienda { font: inherit; cursor: pointer; }
+button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176, 32, 0.25); }
+@keyframes pob-late { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 176, 32, 0); } 50% { box-shadow: 0 0 8px 1px rgba(255, 176, 32, 0.7); } }
+.obra-construir.destaca { border-color: #ffb020; box-shadow: 0 0 0 1px #ffb020, 0 0 12px rgba(255, 176, 32, 0.55); }
+.obra-grupo.destaca { position: relative; }
+.obra-construir .asent-aviso-atencion { top: -6px; right: -6px; }

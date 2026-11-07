@@ -131,7 +131,8 @@ export function ascensoPosible(p: ProyeccionJugador, a: Asentamiento, alCargar?:
 // ---------------------------------------------------------------- Población y auto-construcción
 
 /** Una clase de la población: cuántos hay, cuántos caben (viviendas o palacio; `null` sin el catálogo) y lo que pide el nivel siguiente. */
-export interface ClaseDePoblacion { icono: string; nombre: string; tiene: number; sitio: number | null; meta?: number }
+/** `vivienda`: vive en Viviendas (pesants y artesanos; la nobleza, en el Palacio). */
+export interface ClaseDePoblacion { icono: string; nombre: string; tiene: number; sitio: number | null; meta?: number; vivienda?: true }
 
 /** La población de la plaza para la barra de arriba: el total con el techo del nivel y las clases con su sitio. */
 export interface PoblacionDePlaza { total: number; techo?: number; nivelMeta: number; clases: ClaseDePoblacion[] }
@@ -149,8 +150,8 @@ export function poblacionDePlaza(a: Asentamiento, alCargar?: () => void): Poblac
   const palacio = a.edificios.find((x) => x.tipo === 'palacio' && x.estado === 'activo');
   const meta = reqs?.requisitos?.[String(a.nivel + 1)];
   const clases: ClaseDePoblacion[] = [
-    { icono: '🌾', nombre: 'Pesants', tiene: pob.pesants, sitio: cat?.vivienda?.capacidadPesants !== undefined ? viviendas * cat.vivienda.capacidadPesants : null, meta: meta?.pesants || undefined },
-    { icono: '⚒️', nombre: 'Artesanos', tiene: pob.artesanos, sitio: cat?.vivienda?.capacidadArtesanos !== undefined ? viviendas * cat.vivienda.capacidadArtesanos : null, meta: meta?.artesanos || undefined },
+    { icono: '🌾', nombre: 'Pesants', tiene: pob.pesants, sitio: cat?.vivienda?.capacidadPesants !== undefined ? viviendas * cat.vivienda.capacidadPesants : null, meta: meta?.pesants || undefined, vivienda: true },
+    { icono: '⚒️', nombre: 'Artesanos', tiene: pob.artesanos, sitio: cat?.vivienda?.capacidadArtesanos !== undefined ? viviendas * cat.vivienda.capacidadArtesanos : null, meta: meta?.artesanos || undefined, vivienda: true },
   ];
   if (pob.nobleza > 0 || palacio) clases.push({ icono: '👑', nombre: 'Nobleza', tiene: pob.nobleza, sitio: cat ? (palacio ? cat.palacio?.niveles?.[String(palacio.nivelInterno ?? 1)]?.capacidadNobles ?? 0 : 0) : null });
   return { total: pob.pesants + pob.artesanos + pob.nobleza, techo: reqs?.techoPoblacion?.[String(a.nivel)], nivelMeta: a.nivel + 1, clases };

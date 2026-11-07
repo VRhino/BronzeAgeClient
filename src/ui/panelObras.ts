@@ -113,7 +113,11 @@ const hayGranja = (a: Asentamiento): boolean => (a.edificios ?? []).some((x) => 
 
 /** Construir: pestañas por tipo (ciudad, recursos, talleres, militar, gobierno) con cuántos se pueden levantar ya, y una casilla por edificio
  * con su icono y su coste. Solo los que se pueden pedir: los que el cliente sabe que no (`motivoParaConstruir`) no salen. Vacío sin cargo. */
-export function htmlConstruir(a: Asentamiento, cargo: Cargo, esc: Escapar): string {
+/** Abre la pestaña de «Construir» donde está ese tipo (el «+» de la Vivienda en la barra de Población, 0.171.0). */
+export function elegirGrupoDe(tipo: string): void { grupoConstruir = grupoDe(tipo); }
+
+/** `destacar`: un tipo que hace falta (la Vivienda, cuando ya no cabe más gente): su casilla y su pestaña llevan el «!». */
+export function htmlConstruir(a: Asentamiento, cargo: Cargo, esc: Escapar, destacar?: string): string {
   if (!cargo) return '';
   const cat = catalogo();
   const tipos = cat
@@ -132,8 +136,9 @@ export function htmlConstruir(a: Asentamiento, cargo: Cargo, esc: Escapar): stri
   const listos = (id: string): number => info.filter((x) => x.grupo === id && !x.motivo && !x.caro).length;
   const pestana = (id: string, nombre: string, icono: string): string => {
     const n = listos(id);
-    return `<button class="obra-grupo${grupoConstruir === id ? ' activo' : ''}" type="button" data-grupo-construir="${esc(id)}" title="${esc(`${nombre}: ${n} para construir ya`)}" aria-pressed="${grupoConstruir === id}">
-      <span class="obra-grupo-icono">${icono}</span><span class="obra-grupo-nombre">${esc(nombre)}</span>${n ? `<span class="obra-grupo-n">${n}</span>` : ''}
+    const falta = destacar !== undefined && grupoDe(destacar) === id && info.some((x) => x.t === destacar);
+    return `<button class="obra-grupo${grupoConstruir === id ? ' activo' : ''}${falta ? ' destaca' : ''}" type="button" data-grupo-construir="${esc(id)}" title="${esc(`${nombre}: ${n} para construir ya`)}" aria-pressed="${grupoConstruir === id}">
+      <span class="obra-grupo-icono">${icono}</span><span class="obra-grupo-nombre">${esc(nombre)}</span>${n ? `<span class="obra-grupo-n">${n}</span>` : ''}${falta ? '<b class="asent-aviso-atencion" aria-hidden="true">!</b>' : ''}
     </button>`;
   };
   const pestanas = `<div class="obra-grupos" role="tablist">${grupos.map((g) => pestana(g.id, g.nombre, iconoEdificio(g.icono, 20))).join('')}</div>`;
@@ -141,8 +146,8 @@ export function htmlConstruir(a: Asentamiento, cargo: Cargo, esc: Escapar): stri
     const tiempo = def.tiempoConstruccionMinutos ? ` · ${duracion(Math.round(def.tiempoConstruccionMinutos * factorDePoliticas(a, 'factorTiempoConstruccion')))}` : '';
     const costeTexto = Object.entries(coste).map(([r, n]) => `${n} ${RECURSO_NOMBRE[r] ?? r}`).join(', ');
     const titulo = `${nombreDe(t)}${costeTexto ? ` · ${costeTexto}` : ''}${tiempo}${caro ? ' · No hay bastante en el almacén' : ''}`;
-    return `<button class="obra-construir${caro ? ' caro' : ''}" type="button" data-construir="${esc(t)}" title="${esc(titulo)}" aria-label="${esc(titulo)}">
-      <span class="obra-construir-icono">${iconoEdificio(t, 30)}</span>
+    return `<button class="obra-construir${caro ? ' caro' : ''}${t === destacar ? ' destaca' : ''}" type="button" data-construir="${esc(t)}" title="${esc(titulo)}" aria-label="${esc(titulo)}">
+      ${t === destacar ? '<b class="asent-aviso-atencion" aria-hidden="true">!</b>' : ''}<span class="obra-construir-icono">${iconoEdificio(t, 30)}</span>
       <span class="obra-construir-nombre">${esc(nombreDe(t))}</span>
       <span class="obra-construir-coste">${chipsDeCoste(a, coste, esc, 2)}</span>
     </button>`;

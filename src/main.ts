@@ -70,7 +70,7 @@ import { cablearPanelEjercito, ejercitosDeLaFaccion, htmlEjercitosFaccion, htmlF
 import { invalidar, olvidarEdicion, pintar, vaciar } from './ui/repintado';
 import { ayuda } from './ui/ayuda';
 import { htmlInformeDeInspeccion } from './ui/interaccionAjena';
-import { cablearPanelObras, construidoAlClicar, cuantosConstruidos, htmlConstruidosVentana, htmlConstruir, minutosDeObra } from './ui/panelObras';
+import { cablearPanelObras, construidoAlClicar, cuantosConstruidos, elegirGrupoDe, htmlConstruidosVentana, htmlConstruir, minutosDeObra } from './ui/panelObras';
 import { cablearTesoreria, htmlReservaRecursos } from './ui/panelTesoreria';
 import { montarPanelRendimiento } from './ui/panelRendimiento';
 import { cablearProduccionYRecetas, cablearVistaCiudad, confirmarCancelarObra, edificioSeleccionado, elegirEdificio, htmlExtraccion, htmlRecetas, htmlTooltipEdificio, repintarFicha } from './ui/vistaCiudad';
@@ -119,7 +119,7 @@ import { pintarSitiosDeAldea, type SitiosDeAldea } from './mundo/fertilidad';
 import { htmlMiembrosFaccion, htmlResidentesPlaza } from './ui/participacion';
 import { ascensoPosible, cablearCargosPlaza, htmlAscensoPlaza, htmlAutoConstruccion, htmlCargosPlaza } from './ui/panelCentro';
 import { cablearVentanaAedas, hayAedasEnPlaza, htmlVentanaAedas } from './ui/ventanaAedas';
-import { cablearBlasonHud, cablearEleccionBarra, htmlBlasonHud, htmlEleccionBarra, htmlObrasHud, htmlOcupacion, htmlPieDePlaza, ICONO_RIEL, vigilarPieArriba, type BlasonHud } from './ui/hudPlaza';
+import { cablearBlasonHud, cablearEleccionBarra, htmlBlasonHud, htmlEleccionBarra, htmlObrasHud, htmlOcupacion, htmlPieDePlaza, ICONO_RIEL, faltaVivienda, olvidarFlechasPob, vigilarPieArriba, type BlasonHud } from './ui/hudPlaza';
 import { htmlBlasonInterior, htmlPlacaDeRecursos, htmlRielInterior, htmlTituloDeParte, iconoDePueblo, ICONO_CAMPAMENTO } from './ui/hudInterior';
 import { columnaQuePaga } from './ui/columnaQuePaga';
 import { cablearResidencia, htmlCapital, htmlResidencia } from './ui/panelResidencia';
@@ -2297,7 +2297,9 @@ function renderPanelEdificios(): void {
   } else {
     const enMarcha = a.edificios.filter((e) => e.mejora || e.estado === 'en_construccion').length;
     const botones = RIEL.filter((v) => ventanaDisponible(v.id, p, a)).map((v) => {
-      const insignia = v.id === 'construccion' && enMarcha ? `<b class="asent-riel-insignia">${enMarcha}</b>`
+      // sin sitio para más gente, Construcción lleva el «!» (Víctor, 2026-11-07): hace falta una Vivienda
+      const insignia = v.id === 'construccion' && faltaVivienda(a) ? '<b class="asent-aviso-atencion" title="No cabe más gente: hace falta una Vivienda">!</b>'
+        : v.id === 'construccion' && enMarcha ? `<b class="asent-riel-insignia">${enMarcha}</b>`
         : v.id === 'territorio' && !ajena && fundacionListaEn(p, a) ? '<b class="asent-aviso-atencion" title="Ya puedes lanzar una Caravana de Fundación">!</b>' : '';
       return `<button type="button" class="asent-riel-boton${v.id === ventanaPlaza ? ' activo' : ''}" data-ventana-plaza="${v.id}" data-etiqueta="${escaparHtml(v.titulo)}" aria-label="${escaparHtml(v.titulo)}" aria-pressed="${v.id === ventanaPlaza}">${v.icono}${insignia}</button>`;
     }).join('');
@@ -2322,7 +2324,7 @@ function htmlCajonConstruir(a: Asentamiento, cargo: 'gobernador' | 'maestroObras
         <h2>${ICONO_RIEL.construccion}<span>Construcción</span></h2>
         ${cargo ? htmlAutoConstruccion(a) : ''}
       </div>
-      <div class="cajon-construir-cuerpo">${htmlConstruir(a, cargo, escaparHtml)}</div>
+      <div class="cajon-construir-cuerpo">${htmlConstruir(a, cargo, escaparHtml, faltaVivienda(a) ? 'vivienda' : undefined)}</div>
     </div>`;
 }
 
@@ -2478,10 +2480,13 @@ function cablearAccionesAsentLado(cont: HTMLElement, a: Asentamiento, cargo: 'go
 function renderPieDePlaza(): void {
   const pie = document.querySelector<HTMLElement>('.asent-pie');
   if (!pie) return;
-  const a = estadoCliente.proyeccionUltima?.asentamientos[0];
-  const html = a ? htmlPieDePlaza(a, escaparHtml, renderPieDePlaza) : '';
+  const p = estadoCliente.proyeccionUltima, a = p?.asentamientos[0];
+  // el «+» de la Vivienda se pulsa si puedes poner obras aquí: abre Construcción en su pestaña, con la Vivienda marcada
+  const construir = Boolean(p && a && !esPlazaAjena(p, a) && cargoConstructor(a, p.heroeId));
+  const html = a ? htmlPieDePlaza(a, escaparHtml, renderPieDePlaza, { construir }) : '';
   pie.hidden = !html;
   pintar(pie, html, () => {
+    pie.querySelectorAll('[data-pedir-vivienda]').forEach((b) => b.addEventListener('click', (ev) => { ev.stopPropagation(); elegirGrupoDe('vivienda'); abrirVentanaPlaza('construccion'); }));
     const almacen = pie.querySelector<HTMLElement>('[data-abrir-almacen]');
     almacen?.addEventListener('click', () => alternarVentanaPlaza('almacen'));
     almacen?.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); alternarVentanaPlaza('almacen'); } });
@@ -2892,6 +2897,7 @@ async function volverALasPartidas(): Promise<void> {
   cerrarPresencia();
   reiniciarAvisos();
   reiniciarCronica();
+  olvidarFlechasPob();
   recordarPartida('');
   estadoCliente.gameIdActivo = '';
   estadoCliente.proyeccionUltima = null;

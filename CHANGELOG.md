@@ -3,6 +3,19 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.171.0] — 2026-11-07 · La Población se entiende sin leer · sin cambio de contrato (motor `8feafd4`)
+
+Petición de Víctor (2026-11-07): en la placa de Población no se veía que hacían falta Viviendas para que llegue gente y poder subir.
+- **Barritas con marcas** (`hudPlaza.ts`, `barraPob`): en pesants y artesanos, una raya clara donde se llena el sitio de las Viviendas (la
+  nobleza, el del Palacio) y un rombo dorado con lo que pide el nivel siguiente; si la raya queda antes que el rombo, el tramo entre los dos
+  va rayado en rojo. La escala es la mayor de las tres cifras.
+- **👥 contra lo que cabe ahora**: la raya es el menor del sitio total y el techo del nivel; de ahí al techo, rayado oscuro.
+- **Vivienda con «+»** latiendo junto a la cifra de una clase sin sitio; con cargo de Gobernador o Maestro de Obras se pulsa y abre
+  Construcción en la pestaña Ciudad. Construcción lleva entonces el «!» en el riel, y su pestaña y la casilla de la Vivienda también.
+- **Flecha** junto a cada clase: ▲ si llegó gente hace menos de 5 min, ▼ si se fue, y dos barras grises (pausa) si está parada por falta de
+  sitio. El motor no manda el ritmo: se compara de una proyección a otra (`flechaPob`).
+- Banco: `pruebas/hud/?pob=llena|crece|baja` (`&construir=1`, el cajón con la Vivienda marcada).
+
 ## [0.170.0] — 2026-11-07 · Los Aedas, en una ventana del riel de la plaza · sin cambio de contrato (motor `8feafd4`)
 
 Petición de Víctor (2026-11-07): «los Aedas son de plaza, no de Facción».

@@ -118,21 +118,77 @@ export function alternarRecursoDeLaBarra(a: Asentamiento, recurso: string): bool
   return true;
 }
 
-/** Población: el total contra el techo del nivel y, tras una raya, cada clase contra el sitio que tiene (en rojo si ya no cabe nadie más). */
-export function htmlPoblacionPie(a: Asentamiento, esc: Escapar, alCargar?: () => void): string {
+// Población con lo que se ve sin leer (Víctor, 2026-11-07: «no se logra interpretar que necesito construir viviendas»). Cada barrita lleva:
+//   relleno        la gente que hay
+//   raya clara     hasta dónde cabe ahora (las Viviendas para pesants y artesanos, el Palacio para la nobleza; en 👥, el menor del sitio y el techo)
+//   rombo dorado   lo que pide el nivel siguiente; si la raya queda antes que el rombo, el tramo entre los dos va rayado en rojo
+//   tramo oscuro   en 👥, del límite de ahora al techo del nivel: lo que el nivel deja y no cabe
+// Sin sitio, la Vivienda con un «+» late junto a la cifra (un clic abre Construcción con ella marcada) y una flecha dice si la gente llega (▲),
+// se va (▼) o está parada por falta de sitio (⏸). El ritmo no lo manda el motor: se mira de una proyección a otra.
+
+/** Lo último que se vio de cada clase de cada plaza, para la flecha: el valor, hacia dónde cambió la última vez y cuándo. */
+const vistoPob = new Map<string, { valor: number; dir: 1 | -1 | 0; en: number }>();
+/** Olvida lo visto (al cambiar de partida; los bancos, para empezar de cero). */
+export function olvidarFlechasPob(): void { vistoPob.clear(); }
+/** Cuánto dura la flecha tras un cambio (la gente llega a ratos). */
+const FLECHA_MS = 5 * 60_000;
+
+function flechaPob(clave: string, valor: number, parado: boolean): string {
+  const ahoraMs = Date.now();
+  const antes = vistoPob.get(clave);
+  if (!antes) vistoPob.set(clave, { valor, dir: 0, en: ahoraMs });
+  else if (valor !== antes.valor) vistoPob.set(clave, { valor, dir: valor > antes.valor ? 1 : -1, en: ahoraMs });
+  const v = vistoPob.get(clave)!;
+  if (v.dir === -1 && ahoraMs - v.en < FLECHA_MS) return '<i class="pob-flecha baja" aria-hidden="true">▼</i>';
+  if (parado) return '<i class="pob-flecha parada" aria-hidden="true"></i>';
+  if (v.dir === 1 && ahoraMs - v.en < FLECHA_MS) return '<i class="pob-flecha sube" aria-hidden="true">▲</i>';
+  return '';
+}
+
+/** La barrita de una pieza de población. Todo en % de `escala`. */
+function barraPob(tiene: number, escala: number, sitio: number | null, meta: number | undefined, cerrado = false): string {
+  const pct = (x: number): number => Math.max(0, Math.min(100, escala > 0 ? (x / escala) * 100 : 0));
+  const partes: string[] = [];
+  if (sitio !== null && cerrado && pct(sitio) < 100) partes.push(`<i class="pob-cerrado" style="left:${pct(sitio).toFixed(1)}%"></i>`);
+  if (sitio !== null && meta !== undefined && sitio < meta) partes.push(`<i class="pob-falta" style="left:${pct(sitio).toFixed(1)}%;width:${(pct(meta) - pct(sitio)).toFixed(1)}%"></i>`);
+  if (sitio !== null) partes.push(`<i class="pob-sitio" style="left:${pct(sitio).toFixed(1)}%"></i>`);
+  if (meta !== undefined) partes.push(`<i class="pob-meta" style="left:${pct(meta).toFixed(1)}%"></i>`);
+  return `<span class="asent-recurso-barra pob-barra" style="--llenado:${pct(tiene).toFixed(1)}%">${partes.join('')}</span>`;
+}
+
+/** ¿Ya no cabe más gente de una clase que vive en Viviendas? Lo que enciende el «+» de la Vivienda y el «!» de Construcción. */
+export function faltaVivienda(a: Asentamiento): boolean {
+  const pob = poblacionDePlaza(a);
+  return Boolean(pob?.clases.some((c) => c.vivienda && c.sitio !== null && c.tiene >= c.sitio * 0.95));
+}
+
+/** Población: el total contra lo que cabe ahora y el techo del nivel y, tras una raya, cada clase contra su sitio y lo que pide el nivel
+ * siguiente. `construir`: quien mira puede poner obras (el «+» de la Vivienda se pulsa). */
+export function htmlPoblacionPie(a: Asentamiento, esc: Escapar, alCargar?: () => void, o: { construir?: boolean } = {}): string {
   const pob = poblacionDePlaza(a, alCargar);
   if (!pob) return '';
   const { techo } = pob;
-  const total = pieza('👥', miles(pob.total), techo ? (pob.total / techo) * 100 : 0, 'Población',
-    [techo ? `${miles(pob.total)} de ${miles(techo)}, el techo del nivel ${a.nivel}` : `${miles(pob.total)} en total`],
-    techo && pob.total >= techo * 0.95 ? 'lleno' : '', esc);
+  const sitioTotal = pob.clases.every((c) => c.sitio !== null) ? pob.clases.reduce((t, c) => t + (c.sitio ?? 0), 0) : null;
+  const limite = sitioTotal === null ? techo ?? null : techo ? Math.min(techo, sitioTotal) : sitioTotal;
+  const lleno = limite !== null && pob.total >= limite * 0.95;
+  const escala = Math.max(techo ?? 0, limite ?? 0, pob.total, 1);
+  const total = `<span class="asent-recurso pob-pieza${lleno ? ' lleno' : ''}" data-nombre="Población" data-detalle="${[
+    limite !== null ? `${miles(pob.total)} de ${miles(limite)} que caben ahora` : `${miles(pob.total)} en total`,
+    ...(techo ? [`Techo del nivel ${a.nivel}: ${miles(techo)}`] : []),
+  ].map(esc).join('&#10;')}"><span class="asent-recurso-icono" aria-hidden="true">👥</span>${miles(pob.total)}${barraPob(pob.total, escala, limite, undefined, true)}</span>`;
   const clases = pob.clases.map((c) => {
-    const lleno = c.sitio !== null && c.sitio > 0 && c.tiene >= c.sitio * 0.95;
-    return pieza(c.icono, miles(c.tiene), c.sitio ? (c.tiene / c.sitio) * 100 : 0, c.nombre, [
+    const sinSitio = c.sitio !== null && (c.vivienda ? c.tiene >= c.sitio * 0.95 : c.sitio > 0 && c.tiene >= c.sitio * 0.95);
+    const escalaC = Math.max(c.tiene, c.sitio ?? 0, c.meta ?? 0, 1);
+    const flecha = flechaPob(`${a.id}:${c.nombre}`, c.tiene, sinSitio);
+    const mas = sinSitio && c.vivienda
+      ? (o.construir
+        ? `<button type="button" class="pob-vivienda" data-pedir-vivienda aria-label="Construir una Vivienda">${iconoEdificio('vivienda', 16)}<b>+</b></button>`
+        : `<span class="pob-vivienda" aria-hidden="true">${iconoEdificio('vivienda', 16)}<b>+</b></span>`)
+      : '';
+    return `<span class="asent-recurso pob-pieza${sinSitio ? ' lleno' : ''}" data-nombre="${esc(c.nombre)}" data-detalle="${[
       c.sitio !== null ? `${miles(c.tiene)} de ${miles(c.sitio)} que caben` : miles(c.tiene),
       ...(c.meta ? [`El nivel ${pob.nivelMeta} pide ${miles(c.meta)}`] : []),
-      ...(lleno ? ['Sin sitio: hacen falta más Viviendas'] : []),
-    ], lleno ? 'lleno' : '', esc);
+    ].map(esc).join('&#10;')}"><span class="asent-recurso-icono" aria-hidden="true">${c.icono}</span>${miles(c.tiene)}${flecha}${mas}${barraPob(c.tiene, escalaC, c.sitio, c.meta)}</span>`;
   });
   return grupo('poblacion', 'Población', `${total}<span class="asent-pie-raya" aria-hidden="true"></span>${clases.join('')}`);
 }
@@ -208,8 +264,8 @@ export function htmlEstadoPie(a: Asentamiento, esc: Escapar): string {
 }
 
 /** Las tres placas, cada una solo si tiene algo (de una plaza ajena no llegan ni la población ni los medidores ni el almacén). */
-export function htmlPieDePlaza(a: Asentamiento, esc: Escapar, alCargar?: () => void): string {
-  return htmlPoblacionPie(a, esc, alCargar) + htmlAlmacenPie(a, esc) + htmlEstadoPie(a, esc);
+export function htmlPieDePlaza(a: Asentamiento, esc: Escapar, alCargar?: () => void, o: { construir?: boolean } = {}): string {
+  return htmlPoblacionPie(a, esc, alCargar, o) + htmlAlmacenPie(a, esc) + htmlEstadoPie(a, esc);
 }
 
 // ---------------------------------------------------------------- el blasón

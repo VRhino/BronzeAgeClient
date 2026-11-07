@@ -17,7 +17,7 @@ import { plazaDeContrato } from '../../src/motor/proyeccion';
 import { pintarAsentamiento } from '../../src/render';
 import { svgSigilo } from '../../src/sigilo/sigilo';
 import { htmlBarraJugador } from '../../src/ui/barraJugador';
-import { cablearEleccionBarra, htmlBlasonHud, htmlEleccionBarra, htmlObrasHud, htmlPieDePlaza, ICONO_RIEL, vigilarPieArriba } from '../../src/ui/hudPlaza';
+import { olvidarFlechasPob, cablearEleccionBarra, htmlBlasonHud, htmlEleccionBarra, htmlObrasHud, htmlPieDePlaza, ICONO_RIEL, vigilarPieArriba } from '../../src/ui/hudPlaza';
 import { cablearProduccionYRecetas, cablearVistaCiudad, elegirEdificio, htmlExtraccion, htmlRecetas, repintarFicha } from '../../src/ui/vistaCiudad';
 import { cablearPanelObras, cuantosConstruidos, htmlConstruidosVentana, htmlConstruir } from '../../src/ui/panelObras';
 import { cablearCaravanas, cablearRutas, htmlCaravanas, htmlRutas } from '../../src/ui/panelMercado';
@@ -48,6 +48,7 @@ const RIEL: [string, string, string, boolean?][] = [
   ['aedas', 'Aedas', ICONO_RIEL.aedas, new URLSearchParams(location.search).get('ventana') !== 'aedas'],
 ];
 const ventana = new URLSearchParams(location.search).get('ventana');
+const qs0 = new URLSearchParams(location.search);
 // `?obrasMapa=1`: «Obras» del panel izquierdo con una aldea esperando materiales y un pueblo levantándose (0.149.0).
 const obrasMapa = (): never[] => new URLSearchParams(location.search).get('obrasMapa') ? [
   { id: 'obra-7', tipo: 'aldea', madreId: a.id, propia: true, posicion: a.posicion, requerido: { madera: 300, trigo: 200 }, entregado: { madera: 300, trigo: 40 } },
@@ -70,7 +71,7 @@ const riel = RIEL.filter(([, , , bloq]) => !bloq).map(([id, nombre, icono], i) =
 // el cajón de Construcción, como `htmlCajonConstruir` de main.ts
 // `&construidos=1`: con la ventana «Construidos» abierta encima del cajón
 let construidosAbiertos = new URLSearchParams(location.search).has('construidos');
-const cajon = (): string => `<div class="cajon-construir"><div class="construidos-ventana"${construidosAbiertos ? '' : ' hidden'}>${htmlConstruidosVentana(a, e)}</div><div class="cajon-construir-cab"><button type="button" class="cajon-volver">← Volver</button><button type="button" class="cajon-volver cajon-construidos-boton${construidosAbiertos ? ' activo' : ''}" data-cajon-construidos>Construidos <b>${cuantosConstruidos(a)}</b></button><h2>${ICONO_RIEL.construccion}<span>Construcción</span></h2>${htmlAutoConstruccion(a)}</div><div class="cajon-construir-cuerpo">${htmlConstruir(a, 'gobernador', e)}</div></div>`;
+const cajon = (): string => `<div class="cajon-construir"><div class="construidos-ventana"${construidosAbiertos ? '' : ' hidden'}>${htmlConstruidosVentana(a, e)}</div><div class="cajon-construir-cab"><button type="button" class="cajon-volver">← Volver</button><button type="button" class="cajon-volver cajon-construidos-boton${construidosAbiertos ? ' activo' : ''}" data-cajon-construidos>Construidos <b>${cuantosConstruidos(a)}</b></button><h2>${ICONO_RIEL.construccion}<span>Construcción</span></h2>${htmlAutoConstruccion(a)}</div><div class="cajon-construir-cuerpo">${htmlConstruir(a, 'gobernador', e, qs0.get('pob') === 'llena' ? 'vivienda' : undefined)}</div></div>`;
 document.getElementById('app')!.innerHTML = `<div class="asent-screen plaza-3d${construir ? ' construyendo' : ''}">
   ${barra}
   <div class="asent-cuerpo">
@@ -390,5 +391,29 @@ if (ventana === 'aedas') {
   };
   pintarAedas();
   catalogoDeTecnologia(pintarAedas);
+}
+// `?pob=llena|crece|baja`: la placa de Población de 0.171.0. `llena`: los pesants llenan sus Viviendas y no llegan a lo que pide el nivel
+// siguiente (tramo rojo, «+» de Vivienda que se pulsa, ⏸); los artesanos crecen (▲). `crece`: hay sitio y crecen. `baja`: se van (▼).
+// Con `&construir=1`, el cajón con la Vivienda marcada.
+if (qs.get('pob')) {
+  const modo = qs.get('pob');
+  // una plaza de nivel 1 con dos Viviendas, para ver la meta del nivel 2
+  let n = 0;
+  a.nivel = 1;
+  a.edificios = (a.edificios ?? []).filter((x) => x.tipo !== 'vivienda' || x.estado !== 'activo' || n++ < 2);
+  const pintarPob = (): void => {
+    const cat = bloqueDeDatos<Record<string, { capacidadPesants?: number; capacidadArtesanos?: number }>>('EDIFICIO_CATALOGO', pintarPob);
+    if (!cat) return;
+    const viv = (a.edificios ?? []).filter((x) => x.tipo === 'vivienda' && x.estado === 'activo').length;
+    const capP = viv * (cat['vivienda']?.capacidadPesants ?? 0), capA = viv * (cat['vivienda']?.capacidadArtesanos ?? 0);
+    const pie = document.querySelector<HTMLElement>('.asent-pie')!;
+    olvidarFlechasPob();
+    const fijar = (pes: number, art: number): void => { a.poblacion = { pesants: pes, artesanos: art, nobleza: a.poblacion?.nobleza ?? 4 }; pie.innerHTML = htmlPieDePlaza(a, e, undefined, { construir: true }); };
+    if (modo === 'llena') { fijar(capP, Math.round(capA * 0.5)); fijar(capP, Math.round(capA * 0.55)); }
+    else if (modo === 'crece') { fijar(Math.round(capP * 0.6), Math.round(capA * 0.4)); fijar(Math.round(capP * 0.62), Math.round(capA * 0.42)); }
+    else { fijar(Math.round(capP * 0.7), Math.round(capA * 0.5)); fijar(Math.round(capP * 0.66), Math.round(capA * 0.5)); }
+    console.log('viviendas', viv, capP, capA, a.nivel);
+  };
+  pintarPob();
 }
 (window as unknown as { __banco: unknown }).__banco = { listo: true, p, a };
