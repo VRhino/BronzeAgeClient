@@ -3,6 +3,12 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.166.0] — 2026-11-07 · Cupos de plazas de la Facción en una sola fila · sin cambio de contrato
+
+Petición de Víctor (2026-11-07): en el panel izquierdo de la ventana de Facción, los cupos ocupaban cinco renglones con su barra. Ahora son una
+sola fila de cinco casillas (🏛 plazas y los niveles ② a ⑤), cada una con su «usadas/tope» y una raya de lo lleno; llena en terracota, sin cupo
+atenuada. El detalle (caravanas de fundación, qué cuenta) va en el título de cada casilla y en la ayuda.
+
 ## [0.165.0] — 2026-11-07 · El tablón de mercenarios cabe en su carta y solo enseña lo que se puede firmar · sin cambio de contrato
 
 Petición de Víctor (2026-11-07): en el campamento de mercenarios las cartas del tablón se desbordaban (la fila de los cinco trabajos era más

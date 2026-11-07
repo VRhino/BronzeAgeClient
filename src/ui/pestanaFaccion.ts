@@ -69,10 +69,10 @@ function htmlCuposFaccion(p: ProyeccionJugador, faccion: Faccion, e: (valor: str
   const cap = faccion.capFundacion;
   const cupos = faccion.cuposDeNivel ?? [];
   if (!cap && !cupos.length) return `<div class="faccion-lateral-dato"><span>Plazas</span><strong>${plazasDe(p, faccion.id)}</strong></div>`;
-  const fila = (icono: string, nombre: string, usado: number, tope: number, nota: string, extra = ''): string => {
-    const lleno = usado >= tope;
+  // Una sola fila de cinco casillas (Víctor, 2026-11-07): Plazas y los niveles 2 a 5, cada una con su «usadas/tope» y una raya de lo lleno debajo.
+  const casilla = (icono: string, nombre: string, usado: number, tope: number, nota: string): string => {
     const pct = tope ? Math.min(100, (usado / tope) * 100) : 0;
-    return `<div class="faccion-cupo${lleno ? ' lleno' : ''}${tope === 0 ? ' cerrado' : ''}" title="${e(nota)}"><span class="faccion-cupo-nombre"><i aria-hidden="true">${icono}</i>${nombre}${extra}</span>
+    return `<div class="faccion-cupo${usado >= tope ? ' lleno' : ''}${tope === 0 ? ' cerrado' : ''}" title="${e(`${nombre}: ${nota}`)}"><span class="faccion-cupo-nombre" aria-label="${e(nombre)}">${icono}</span>
       <strong>${usado}<small>/${tope}</small></strong><span class="faccion-cupo-barra"><i style="width:${pct.toFixed(1)}%"></i></span></div>`;
   };
   const curvas = bloqueDeDatos<Record<string, number[]>>('CUPO_NIVEL_ASENTAMIENTO');
@@ -83,10 +83,11 @@ function htmlCuposFaccion(p: ProyeccionJugador, faccion: Faccion, e: (valor: str
     cap && capTabla && n <= capTabla.length && de(capTabla, n) !== cap.cap ? `${de(capTabla, n)} plazas` : '',
     ...cupos.map((c) => { const t = curvas?.[`maxNivel${c.nivel}`]; const v = t && n <= t.length ? de(t, n) : undefined; return v !== undefined && v !== c.cupo ? `${v} de nivel ${c.nivel}` : ''; }),
   ].filter(Boolean);
-  const caravanas = cap?.caravanas ? ` <small>${cap.plazas} + ${cap.caravanas} ${cap.caravanas === 1 ? 'caravana' : 'caravanas'}</small>` : '';
-  return `<div class="faccion-cupos"><span class="faction-kicker">Plazas · nivel ${faccion.nivel} de Facción${ayuda('faccion:cupos', 'Cuántas plazas puede tener tu Facción (las Caravanas de Fundación vivas cuentan: no se lanza otra si plazas más caravanas llegan al tope) y cuántas pueden estar a la vez en cada nivel: ocupan el cupo las de ese nivel y las que suben a él. Sin cupo libre no se pide la subida ni recupera ese nivel una plaza degradada. Todo crece con el nivel de la Facción.')}</span>
-      ${cap ? fila('🏛', 'Plazas', cap.plazas + cap.caravanas, cap.cap, `${cap.plazas} plaza(s)${cap.caravanas ? ` y ${cap.caravanas} Caravana(s) de Fundación` : ''} de ${cap.cap} que permite el nivel ${faccion.nivel}`, caravanas) : ''}
-      ${cupos.map((c) => fila(['', '', '②', '③', '④', '⑤'][c.nivel] ?? '·', `Nivel ${c.nivel}`, c.ocupadas, c.cupo, c.cupo === 0 ? `Tu Facción aún no puede tener plazas de nivel ${c.nivel}` : `Plazas de nivel ${c.nivel} o subiendo a él`)).join('')}
+  return `<div class="faccion-cupos"><span class="faction-kicker">Plazas · nivel ${faccion.nivel} de Facción${ayuda('faccion:cupos', 'Cuántas plazas puede tener tu Facción (🏛; las Caravanas de Fundación vivas cuentan: no se lanza otra si plazas más caravanas llegan al tope) y cuántas pueden estar a la vez en cada nivel (② a ⑤): ocupan el cupo las de ese nivel y las que suben a él. Sin cupo libre no se pide la subida ni recupera ese nivel una plaza degradada. Todo crece con el nivel de la Facción.')}</span>
+      <div class="faccion-cupos-fila">
+      ${cap ? casilla('🏛', 'Plazas', cap.plazas + cap.caravanas, cap.cap, `${cap.plazas} plaza(s)${cap.caravanas ? ` y ${cap.caravanas} Caravana(s) de Fundación` : ''} de ${cap.cap} que permite el nivel ${faccion.nivel}`) : ''}
+      ${cupos.map((c) => casilla(['', '', '②', '③', '④', '⑤'][c.nivel] ?? '·', `Nivel ${c.nivel}`, c.ocupadas, c.cupo, c.cupo === 0 ? `tu Facción aún no puede tener plazas de nivel ${c.nivel}` : `plazas de nivel ${c.nivel} o subiendo a él`)).join('')}
+      </div>
       ${abre.length ? `<p class="legend-note">Con la Facción en nivel ${n}: ${abre.join(', ')}.</p>` : ''}
     </div>`;
 }
