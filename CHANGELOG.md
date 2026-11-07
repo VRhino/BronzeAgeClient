@@ -3,6 +3,12 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.177.0] — 2026-11-07 · Fuera el colisionador de las maquetas · sin cambio de contrato (motor `8feafd4`)
+
+Víctor (2026-11-07): «vamos a quitar el collider, al parecer evita que se pueda entrar a la plaza por la distancia del tamaño de la maqueta».
+- Se quita lo sólido de 0.175.0: la marcha a una plaza, un pueblo, una aldea o una avanzada vuelve a ir a su centro, y columnas, caravanas y
+  Aedas se pintan donde los pone el servidor. Se quedan el aro a la medida de la maqueta, la zona de clic y el claro (`huellas.ts`).
+
 ## [0.176.0] — 2026-11-07 · Las maquetas, al 0,8 · sin cambio de contrato (motor `8feafd4`)
 
 Víctor (2026-11-07): «vamos a dejar las maquetas en general a un 0,8x de su tamaño actual».

@@ -21,7 +21,7 @@ import { Matas } from './matas';
 import { Vida } from './vida';
 import { aro, cinta, circulo, rutaPendiente, RutaEnSuelo } from './lineas';
 import { Maquetas } from './maquetas';
-import { Colisionador, fueraDeSolidos, HOLGURA_ARO, radioDeAlijo, radioDeAvanzada, radioDeBandidos, radioDeBatalla, radioDeCampamento, radioDeCampos, radioDeObra, radioDePlaza, radioDePueblo, rutaQueRodea, solidosDelMundo, type Solido } from './huellas';
+import { HOLGURA_ARO, radioDeAlijo, radioDeAvanzada, radioDeBandidos, radioDeBatalla, radioDeCampamento, radioDeCampos, radioDeObra, radioDePlaza, radioDePueblo } from './huellas';
 import { MarcasEnSuelo } from './marcas';
 import { NieblaDeGuerra } from './niebla';
 import { Territorio } from './territorio';
@@ -117,9 +117,6 @@ export class VistaMundo3D {
   private pausada = false;
   /** El último estado pintado: con él se decide sobre qué cae un clic. */
   private ultimo: EstadoVista | null = null;
-  /** Lo sólido cerca del héroe (`huellas.ts`) y de qué mundo y sitio se sacó; lo que se mueve se pinta por fuera (`Colisionador`). */
-  private solidos: { mundo: MundoEnVista | null; x: number; y: number; lista: Solido[] } = { mundo: null, x: 0, y: 0, lista: [] };
-  private readonly colision = new Colisionador();
   private sinNiebla: boolean;
   /** Lo que tarda cada parte del fotograma (ms, media móvil), para la pasada de rendimiento: `rendimiento()`. */
   private readonly tiempos: Record<string, number> = {};
@@ -291,60 +288,6 @@ export class VistaMundo3D {
       .map(({ c }) => ({ x: c.posicion.x, y: c.posicion.y }));
   }
 
-  /** Lo sólido a menos de la distancia de carga del héroe; se rehace al cambiar el mundo o al moverse el héroe 8 u. */
-  private solidosCerca(e: EstadoVista): Solido[] {
-    const h = e.heroe!, s = this.solidos;
-    if (s.mundo !== e.mundo || Math.hypot(h.x - s.x, h.y - s.y) > 8) {
-      const lejos = this.distanciaCarga + 10;
-      this.solidos = { mundo: e.mundo, x: h.x, y: h.y, lista: solidosDelMundo(e.mundo).filter((q) => Math.hypot(q.x - h.x, q.y - h.y) < lejos + q.r) };
-    }
-    return this.solidos.lista;
-  }
-
-  /** El estado con lo que se mueve fuera de lo sólido (columnas, caravanas y Aedas, sus rutas, sus carteles, su aro y la cámara): solo se
-   * pinta así, el servidor sigue con su sitio. */
-  private colisionar(e: EstadoVista): EstadoVista {
-    const sol = this.solidosCerca(e);
-    if (!sol.length) return e;
-    this.colision.empezar();
-    const movidos: { de: Punto; a: Punto; cartel: string }[] = [];
-    const mover = (clave: string, cartel: string, p: Punto): Punto => {
-      const q = this.colision.mover(clave, p, sol);
-      if (q !== p) movidos.push({ de: p, a: q, cartel });
-      return q;
-    };
-    const ruta = (r: Punto[], de: Punto, a: Punto): Punto[] => {
-      if (r.length < 2) return r;
-      const out = rutaQueRodea(r, sol);
-      if (r[0]!.x === de.x && r[0]!.y === de.y) out[0] = a;
-      return out;
-    };
-    let heroe = e.heroe;
-    const columnas = e.columnas.map((c) => {
-      const q = mover(`c:${c.id}`, `columna:${c.id}`, c.posicion);
-      if (c.mia && heroe && heroe.x === c.posicion.x && heroe.y === c.posicion.y) heroe = q;
-      return { ...c, posicion: q, ruta: ruta(c.ruta, c.posicion, q) };
-    });
-    const caravanas = e.caravanas.map((c) => {
-      const q = mover(`v:${c.id}`, `caravana:${c.id}`, c.posicion);
-      return { ...c, posicion: q, ruta: ruta(c.ruta, c.posicion, q) };
-    });
-    const aedas = e.aedas?.map((a) => ({ ...a, posicion: mover(`a:${a.id}`, `aeda:${a.id}`, a.posicion) }));
-    if (!movidos.length) return { ...e, columnas, caravanas, aedas };
-    const porCartel = new Map(movidos.map((m) => [m.cartel, m.a]));
-    const etiquetas = e.etiquetas.map((x) => { const a = porCartel.get(x.id); return a ? { ...x, posicion: a } : x; });
-    const sel = e.seleccion, deSel = sel && movidos.find((m) => m.de.x === sel.posicion.x && m.de.y === sel.posicion.y);
-    return { ...e, heroe, columnas, caravanas, aedas, etiquetas, seleccion: deSel ? { ...sel, posicion: deSel.a } : sel };
-  }
-
-  /** Adónde se marcha de verdad al pulsar `p` (Víctor, 2026-11-07: «al darle clic y moverse se queden al borde»): si cae dentro de una plaza,
-   * un pueblo, una aldea o una avanzada, a su borde por el lado de la columna; si no, `p`. */
-  destinoAlBorde(p: Punto): Punto {
-    const e = this.ultimo;
-    if (!e?.heroe) return p;
-    return fueraDeSolidos(p, solidosDelMundo(e.mundo), e.heroe);
-  }
-
   private ajustar(): void {
     const w = this.contenedor.clientWidth, h = this.contenedor.clientHeight;
     if (w && h) this.renderer.setSize(w, h, false);
@@ -357,11 +300,9 @@ export class VistaMundo3D {
     if (this.pausada) return;
     let t = performance.now();
     const inicio = t;
-    const crudo = this.o.estado();
+    const estado = this.o.estado();
     t = this.medir('estado', t);
-    if (!crudo?.heroe) return;
-    const estado = this.colisionar(crudo);
-    if (!estado.heroe) return;
+    if (!estado?.heroe) return;
     this.ultimo = estado;
     this.entrada.teclas(dt);
     this.niebla.actualizar(estado.niebla, this.sinNiebla);

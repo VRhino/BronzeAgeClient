@@ -117,12 +117,9 @@ y la tesela va con zstd. La semilla 42 ocupa 8,6 MB.
 - **Clic.** Un rayo desde la cámara avanza hasta tocar el relieve. La vista da el centro de todo lo que tiene ese punto en su zona de clic (lo
   que ocupa su maqueta, y como poco 26 px de pantalla); `main.ts` busca qué hay en cada centro (`objetosBajoElClic`) y lo junta. Nada: se
   marcha allí; una cosa: se selecciona y se marcha hacia ella; dos o más: la lista para elegir.
-- **Lo que ocupa cada maqueta y lo sólido** (`huellas.ts`, 0.175.0). De un solo sitio salen el aro de lo seleccionado (lo que ocupa la
-  maqueta y 0,12 u), la zona de clic, el claro sin árboles y el colisionador. Plazas, pueblos, aldeas (su empalizada, sin los campos) y
-  avanzadas son sólidas, solo en el cliente: una marcha a ellas o a un punto de dentro va a su borde por el lado de la columna
-  (`destinoAlBorde`, en `marcharAObjetivo`), y lo que el servidor pone dentro (columnas, caravanas, Aedas) se pinta por el borde
-  (`Colisionador`: sigue el lado por donde está, sin saltos, a no más de 4,5 veces lo que anda), con su ruta, su cartel, su aro y la
-  cámara. El servidor sigue andando su línea; vista, puerta y encuentros son los de su sitio.
+- **Lo que ocupa cada maqueta** (`huellas.ts`, 0.175.0). De un solo sitio salen el aro de lo seleccionado (lo que ocupa la maqueta y
+  0,12 u), la zona de clic y el claro sin árboles. El colisionador de cliente de 0.175.0 (la marcha parada al borde de plazas, pueblos y
+  avanzadas) se quitó en 0.177.0: con la columna parada al borde no llegaba a la puerta para entrar.
 
 ## Cómo se pinta (fase 3)
 

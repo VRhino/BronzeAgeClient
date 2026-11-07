@@ -139,14 +139,13 @@ async function arrancar(): Promise<void> {
     estado,
     alClicar: (p) => {
       const cerca = seleccionables().filter((x) => Math.hypot(x.posicion.x - p.x, x.posicion.y - p.y) < Math.max(1.2, x.radio)).sort((a, b) => Math.hypot(a.posicion.x - p.x, a.posicion.y - p.y) - Math.hypot(b.posicion.x - p.x, b.posicion.y - p.y))[0];
-      // como en el juego: lo pulsado se selecciona y la columna va hacia ello; a una plaza, un pueblo o una avanzada, hasta su borde
-      if (cerca) { seleccion = cerca; ruta = [vista.destinoAlBorde(cerca.posicion)]; }
-      else { seleccion = null; ruta = [vista.destinoAlBorde(p)]; }
+      if (cerca) seleccion = cerca;
+      else { seleccion = null; ruta = [p]; }
     },
   });
   // `?carga=N`: la distancia de carga del jugador (u)
   if (parametros.has('carga')) vista.fijarDistanciaDeCarga(Number(parametros.get('carga')));
-  const irA = (x: number, y: number, alBorde = true) => { ruta = [alBorde ? vista.destinoAlBorde({ x, y }) : { x, y }]; };
+  const irA = (x: number, y: number) => { ruta = [{ x, y }]; };
   $('cerca').addEventListener('click', () => vista.zoom('cerca'));
   $('normal').addEventListener('click', () => vista.zoom('normal'));
   $('alejado').addEventListener('click', () => vista.zoom('alejado'));

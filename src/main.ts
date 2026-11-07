@@ -1087,12 +1087,6 @@ async function marcharAObjetivo(objetivo: Objetivo): Promise<void> {
   const mia = miColumna(proyeccion);
   const impide = mia?.formacion ? 'Una formación espera a ser un ejército (hacen falta 3 héroes): no se mueve.' : mia?.tipo === 'ejercito' && mia.liderId !== proyeccion.heroeId ? 'Solo el Líder decide a dónde va el ejército.' : '';
   if (impide) { if (seleccionMapa === null) avisoMapa(impide); return; }
-  // Plazas, pueblos, aldeas y avanzadas son sólidas en el cliente (Víctor, 2026-11-07): a ellas o a un punto de dentro se marcha hasta su
-  // borde, por el lado de la columna (`VistaMundo3D.destinoAlBorde`). El servidor anda hasta ese punto; la puerta (`radioPuerta`) llega de sobra.
-  if (vista3dActiva) {
-    const o = objetivo, centro = o.tipo === 'punto' ? o.punto : asentamientosDelMapa(proyeccion).find((a) => a.id === o.id)?.posicion;
-    if (centro) objetivo = { tipo: 'punto', punto: vista3dActiva.destinoAlBorde(centro) };
-  }
   try {
     const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'marcharA', { heroeId: proyeccion.heroeId, objetivo });
     if (!respuesta.resultado.ok) throw errorDeRechazo(respuesta.resultado, 'El servidor rechazó la marcha.');
