@@ -12,6 +12,7 @@ const AYUDA_CATEGORIA: Record<CategoriaAviso, string> = {
   movimientos: 'Ejércitos en preparación y uniones en campo. Pedir unirse a tu ejército es urgente; lo demás se agrupa aquí sin avisar.',
   inteligencia: 'Quién te ha observado o ha pedido el plano de una plaza. Se agrupa por tipo y origen y no avisa: solo suma a la insignia.',
   economia: 'Tropa prestada que te retiran y otros cambios de recursos. Se agrupa sin avisar.',
+  aedas: 'Lo que los Aedas revelan, venden o cantan a tu Facción: tecnologías reveladas, residentes que llegan o se van y las épicas. Lo que te da una tecnología sale arriba.',
 };
 const ALMACEN = 'bac_avisos_plegadas';
 const plegadas = new Set<string>(leerPlegadas());

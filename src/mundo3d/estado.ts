@@ -12,6 +12,7 @@ import type { TropaDeColumna } from './figuras';
 import { circulo, sentidoDe, suavizarCamino } from './lineas';
 import { partirFronteras, type ZonaDeFaccion } from '../mundo/fronteras';
 import { zonasDeLoRecordado } from '../mundo/zonasRecordadas';
+import { COLOR_AEDA, nombreDeAeda } from '../mundo/aedas';
 import type { RellenoDeTerritorio } from './territorio';
 
 type Punto = { x: number; y: number };
@@ -62,6 +63,8 @@ export interface CaravanaEnVista { id: string; posicion: Punto; ruta: Punto[]; f
   escolta?: number;
   /** Lo que tira de cada uno de sus carros (`carros[].animal`, solo en las comerciales propias): un carro por animal. Sin él, un carro con buey. */
   animales?: AnimalDeTiro[] }
+/** Un Aeda itinerante de camino: él a pie y su burro (`figurasDeAeda`). */
+export interface AedaEnVista { id: string; posicion: Punto }
 /** Una Mirada de taberna (Doc 5.12.10): abierta, su círculo; caducada, un anillo discontinuo mientras la zona sigue vedada. */
 export interface MiradaEnVista { id: string; centro: Punto; radio: number; abierta: boolean; minutos: number }
 /** La vista previa de fundar alrededor de la columna: la zona con que nacería, dónde cabría una aldea y las parcelas de bosque. */
@@ -76,7 +79,7 @@ export interface SeleccionEnVista { posicion: Punto; radio: number }
 /** Un nombre sobre el mundo (HTML encima del lienzo). `tenue` = lo que solo se recuerda. */
 /** Un nombre sobre el mundo. El texto va siempre en blanco; `color` (el de la Facción o el del campamento) es el filete de la izquierda. Una plaza
  * lleva además el escudo de su Facción (`sigilo`, SVG en línea) y debajo del nombre `subtexto` («Nivel n»). */
-export interface EtiquetaEnVista { id: string; posicion: Punto; texto: string; tipo: 'plaza' | 'mirada' | 'territorio' | 'nodo' | 'campamento' | 'columna' | 'ejercito' | 'caravana'; color?: string; tenue?: boolean; subtexto?: string; sigilo?: string }
+export interface EtiquetaEnVista { id: string; posicion: Punto; texto: string; tipo: 'plaza' | 'mirada' | 'territorio' | 'nodo' | 'campamento' | 'columna' | 'ejercito' | 'caravana' | 'aeda'; color?: string; tenue?: boolean; subtexto?: string; sigilo?: string }
 
 /** Una plaza: la ciudad del juego ocupa el 10 % del radio de su zona. `recordada` = se vio alguna vez y ahora no (va bajo la niebla). */
 export interface PlazaEnVista { id: string; posicion: Punto; radioCiudad: number; color: string; recordada: boolean; nivel: number }
@@ -123,6 +126,8 @@ export interface EstadoVista {
   radioVision: number;
   columnas: ColumnaEnVista[];
   caravanas: CaravanaEnVista[];
+  /** Los Aedas itinerantes que van de camino (los parados en una plaza no andan por ella: se dicen en su cartel). */
+  aedas?: AedaEnVista[];
   niebla: NieblaProyectada | null;
   mundo: MundoEnVista;
   miradas: MiradaEnVista[];
@@ -175,7 +180,8 @@ export function algoSeMueve(p: ProyeccionJugador): boolean {
   return p.ejercitos.some((e) => e.estado !== 'estacionado' && (e.ruta?.length ?? 0) >= 2)
     || (p.caravanas ?? []).some((c) => (c.ruta?.length ?? 0) >= 2)
     || (p.ejercitosAvistados ?? []).some((e) => e.enMarcha)
-    || (p.caravanasAvistadas ?? []).some((c) => c.enMarcha);
+    || (p.caravanasAvistadas ?? []).some((c) => c.enMarcha)
+    || (p.aedasAvistados ?? []).some((a) => a.enMarcha);
 }
 
 export function estadoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVista, dondeEsta: Punto | null, extra: ExtraDeVista = {}): EstadoVista {
@@ -258,11 +264,13 @@ export function estadoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVist
     return { id: m.id, centro: m.centro, radio: m.radio, abierta, minutos: Math.max(0, Math.ceil(((abierta ? m.expiraEn : m.libreEn) - p.instante) / 60_000)) };
   });
   const mundo = mundoDesdeProyeccion(p, reglas);
+  const aedas = (p.aedasAvistados ?? []).filter((a) => !a.enAsentamientoId).map((a) => ({ id: a.id, posicion: a.posicion }));
   return {
     heroe: enElMapa?.posicionActual ?? dondeEsta,
     radioVision: mia && mia.escuadronIds.length > 0 ? radios.ejercito : radios.solo,
     columnas,
     caravanas,
+    aedas,
     niebla: p.exploracion ?? null,
     mundo,
     miradas,
@@ -303,7 +311,9 @@ export function etiquetasDesdeProyeccion(p: ProyeccionJugador, columnas: readonl
     }
     return svg;
   };
-  for (const a of p.asentamientosAvistados ?? []) out.push({ id: `plaza:${a.id}`, posicion: a.posicion, texto: a.nombre || a.id, tipo: 'plaza', color: color(a.faccionId), subtexto: `Nivel ${a.nivel}`, sigilo: escudo(a.faccionId) });
+  // Un Aeda parado en una plaza no anda por ella: lo dice el cartel de la plaza.
+  const conAeda = new Set((p.aedasAvistados ?? []).map((a) => a.enAsentamientoId).filter(Boolean));
+  for (const a of p.asentamientosAvistados ?? []) out.push({ id: `plaza:${a.id}`, posicion: a.posicion, texto: a.nombre || a.id, tipo: 'plaza', color: color(a.faccionId), subtexto: `Nivel ${a.nivel}${conAeda.has(a.id) ? ' · 📜 Aeda' : ''}`, sigilo: escudo(a.faccionId) });
   for (const c of p.asentamientosConocidos ?? []) out.push({ id: `plaza:${c.asentamientoId}`, posicion: c.posicion, texto: c.nombre || c.asentamientoId, tipo: 'plaza', color: color(c.faccionId), tenue: true, subtexto: `Nivel ${c.nivel}`, sigilo: escudo(c.faccionId) });
   // Los campamentos con su cartel, como las plazas: los de mercenarios (siempre a la vista) y los de bandidos que se ven ahora.
   for (const c of p.campamentosMercenarios ?? []) out.push({ id: `mercenarios:${c.id}`, posicion: c.posicion, texto: '⛺ Mercenarios', tipo: 'campamento', color: '#9cc3ea' });
@@ -318,6 +328,8 @@ export function etiquetasDesdeProyeccion(p: ProyeccionJugador, columnas: readonl
     if (c.tropa.ejercito) out.push({ id: `columna:${c.id}`, texto: faccion, tipo: 'ejercito', ...base });
     else out.push({ id: `columna:${c.id}`, texto: c.heroe ?? faccion, tipo: 'columna', ...(c.heroe ? { subtexto: faccion } : {}), ...base });
   }
+  // Sobre cada Aeda de camino, su nombre (el que le pone el cliente).
+  for (const a of p.aedasAvistados ?? []) if (!a.enAsentamientoId) out.push({ id: `aeda:${a.id}`, posicion: a.posicion, texto: `📜 ${nombreDeAeda(a.id)}`, tipo: 'aeda', subtexto: 'Aeda', color: COLOR_AEDA });
   for (const c of caravanas) {
     if (!c.faccionId) continue;
     out.push({ id: `caravana:${c.id}`, posicion: c.posicion, texto: nombreDe(c.faccionId) ?? 'Sin Facción', tipo: 'caravana', color: color(c.faccionId), sigilo: escudo(c.faccionId, CARTEL) });
@@ -350,6 +362,11 @@ export function dondeEstaLaSeleccion(p: ProyeccionJugador, sel: { tipo: string; 
     }
     case 'avanzadaMapa': return en(p.avanzadas?.find((x) => x.id === sel.id)?.posicion, 0.7 * M);
     case 'obraMapa': return en(p.obrasDeMapa?.find((x) => x.id === sel.id)?.posicion, 0.6 * M);
+  }
+  if (sel.tipo === 'aeda') {
+    const a = p.aedasAvistados?.find((x) => x.id === sel.id);
+    const plaza = a?.enAsentamientoId ? mundo.plazas.find((x) => x.id === a.enAsentamientoId) : undefined;
+    return plaza ? { posicion: plaza.posicion, radio: plaza.radioCiudad * M + 0.5 } : en(a?.posicion, 0.5);
   }
   // columnas (de la Facción, en formación o avistadas) y caravanas: por su id
   const c = [...p.ejercitos, ...(p.ejercitosAvistados ?? []), ...(p.caravanas ?? []), ...(p.caravanasAvistadas ?? [])].find((x) => x.id === sel.id);

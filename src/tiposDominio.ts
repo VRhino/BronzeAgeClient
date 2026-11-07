@@ -1254,4 +1254,6 @@ export interface AedaAvistado {
   id: string;
   posicion: Point;
   enAsentamientoId?: string;
+  /** Aún anda el tramo visible de su plan: la vista lo recoloca en cada fotograma. */
+  enMarcha?: true;
 }

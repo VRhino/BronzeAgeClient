@@ -16,6 +16,7 @@ import { SUBPESTANA_TRUEQUES } from './panelTrueques';
 import { SUBPESTANA_MISIONES } from './misiones';
 import { FICHA_AVANZADA, FICHA_OBRA, FICHA_PUEBLO, SUBPESTANA_PUEBLOS, pueblosYObrasBajoElClic } from './pueblos';
 import { FICHA_CARAVANA_AJENA, FICHA_COLUMNA_AJENA, ajenosBajoElClic } from './interaccionAjena';
+import { FICHA_AEDA, aedasBajoElClic } from './aedas';
 
 type Escapar = (valor: string) => string;
 
@@ -112,6 +113,9 @@ export const FICHAS_MAPA_EXTRA: FichaMapaExtra[] = [
   FICHA_PUEBLO,
   FICHA_AVANZADA,
   FICHA_OBRA,
+
+  // --- hueco Aedas (los itinerantes que se ven)
+  FICHA_AEDA,
 ];
 
 /** Qué hay bajo un clic del mapa: lo que devuelven estos selectores entra con lo de `main.ts` (`objetosBajoElClic`), que lo ordena; con dos
@@ -127,4 +131,7 @@ export const SELECTORES_MAPA_EXTRA: ((p: ProyeccionJugador, punto: { x: number; 
 
   // --- hueco pueblos
   pueblosYObrasBajoElClic,
+
+  // --- hueco Aedas
+  aedasBajoElClic,
 ];

@@ -255,6 +255,7 @@ async function sesionAbierta(): Promise<Sesion> {
     const evento = eventoDeDominio(e);
     guardarEvento(evento);
     oyenteDeEventos?.(evento);
+    if (e.codigo === 'cronica.entrada') { const x = entradaDeCronica(e); for (const cb of oyentesCronica) cb(x); }
   });
   s.alEstado((estado, error) => {
     if (estado === 'cerrada' && error?.codigo === 'token_invalido') cerrarSesion();
@@ -616,7 +617,29 @@ export function textosDeMisiones(alCargar?: () => void): TextosDeMisiones | null
   return textosMisiones;
 }
 
-/** La crónica de la partida va por páginas en la sesión (`pedirCronica`); los avisos de siempre llegan por `alEventoTiempoReal`. */
+/** Una entrada de la crónica (`cronica.entrada`, Tecnologia_Aedas §8): la versión que la produjo, su instante de mundo, de qué hecho sale
+ * (`tipo`, el código del hecho) y sus datos (`faccionIds`, `asentamientoId`, `nivel`, `titulo`, `contador`, `umbral`, `era`, `orden`,
+ * `tecnologia`…). El contrato no lleva texto: la frase la compone el cliente (`ui/cronica.ts`). */
+export interface EntradaCronica { version: number; en: number; tipo: string; datos: Record<string, unknown> }
+function entradaDeCronica(e: EventoPb): EntradaCronica {
+  const datos = (e.payload ?? {}) as Record<string, unknown>;
+  return { version: Number(e.version), en: instante(e.enMs) ?? 0, tipo: String(datos.tipo ?? ''), datos };
+}
+const oyentesCronica = new Set<(e: EntradaCronica) => void>();
+/** Avisa de cada entrada de la crónica que llega en vivo (en las `Delta`). Devuelve con qué dejar de oír. */
+export function alEntrarEnCronica(cb: (e: EntradaCronica) => void): () => void {
+  oyentesCronica.add(cb);
+  return () => { oyentesCronica.delete(cb); };
+}
+/** Una página de la crónica guardada (`PedirCronica`), hacia atrás: las últimas o, con `hastaVersion`, las de esa versión y anteriores. Es la
+ * misma para todos. Un servidor sin persistencia contesta vacío. */
+export async function paginaDeCronica(hastaVersion?: number, limite = 200): Promise<{ entradas: EntradaCronica[]; masAntiguas: boolean }> {
+  const s = await sesionAbierta();
+  const c = await s.pedirCronica({ ...(hastaVersion !== undefined ? { hastaVersion: BigInt(Math.max(0, hastaVersion)) } : {}), limite });
+  return { entradas: c.entradas.map(entradaDeCronica), masAntiguas: c.masAntiguas };
+}
+
+/** La crónica de la partida va por páginas en la sesión (`paginaDeCronica`); los avisos de siempre llegan por `alEventoTiempoReal`. */
 /** Los eventos llegados por la sesión desde la última consulta. El motor no tiene un cursor de eventos como el REST (`GET .../eventos?desde=`):
  * llegan en las `Delta` y se guardan al llegar (`guardarEvento`). Antes esto devolvía siempre nada y no salía ningún aviso ni informe. */
 export async function consultarEventos(_gameId: string, _desde: number): Promise<EventoDominio[]> {
@@ -671,7 +694,10 @@ export interface CatalogoTecnologia {
   TECNOLOGIAS: Record<string, { nombre: string; era: string; deArranque?: boolean; logro?: ParteLogro & { ademas?: ParteLogro }; hito: CondicionHito[]; bonusProduccion?: { recurso: string; factor: number } }>;
   ERAS: Record<string, { orden: number; nombre: string; plazoSemanas: number }>;
   TARIFA_ADOPCION: Record<string, Record<string, number>>;
-  AEDAS: { epica: { enfriamientoMinutos: number }; venta: { factorOro: number; ordenEraMaximo: number } };
+  AEDAS: { epica: { enfriamientoMinutos: number }; venta: { factorOro: number; ordenEraMaximo: number };
+    /** Cuántos residentes caben por nivel de la plaza (con Palacio y nobleza), cada cuánto llega uno y lo que da cada uno (fracciones). */
+    residentes?: { cupoPorNivel?: Record<string, number>; llegadaMinutos?: number; bonoFelicidad?: number; bonoNobleza?: number; umbralReputacionBaja?: number; factorLlegadaReputacionBaja?: number };
+    itinerantes?: { estanciaMinutos?: number } };
   EPICAS: Record<string, { nombre: string; capitulos: { hecho: string; cantidad: number; edificio?: string }[] }>;
   TITULO_CAPITULO: Record<string, string>;
 }

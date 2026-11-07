@@ -180,6 +180,9 @@ suelo, luego el paisaje, los árboles y la vegetación baja. Lo que se aleja se 
   ruta, tenue; las avistadas, no. El 2D no pintaba las avistadas aunque se podían seleccionar. De las propias solo están en el mapa las que van
   de camino o están aparcadas en el campo (`caravanaEnElMapa`, 0.105.0): el carro de acarreo que carga dentro de su pueblo, la caravana
   disponible en su plaza o la que espera en una parada no se ven (Víctor, 2026-11-03: el acarreo, hasta que sale lleno). Igual en el modo mapa.
+- **Aedas itinerantes** (0.169.0): el que va de camino, a pie (manto claro con banda ocre, la capucha a la espalda, bastón y lira de bronce)
+  con su burro de alforjas al lado (`figurasDeAeda`), y encima su cartel «📜 nombre» (el nombre lo pone el cliente, `mundo/aedas.ts`). Andan su
+  plan como una columna ajena. El parado en una plaza no se pinta dentro: el cartel de la plaza dice «· 📜 Aeda». En el modo mapa, una lira.
 - **Bandidos, alijos y batallas** son maquetas, encima de la niebla:
   - bandidos: tiendas oscuras en corro, más cuanto más nivel, con su hoguera y su bandera roja;
   - alijo: fardos y un cofre con el oro;

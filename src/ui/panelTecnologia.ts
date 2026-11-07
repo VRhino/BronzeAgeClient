@@ -13,6 +13,7 @@ import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import { textoEnTiempoReal } from './estadoCliente';
 import { ayuda } from './ayuda';
 import { htmlArbol, montarArbol, textoContador } from './arbolTecnologias';
+import { nombreDeAeda } from '../mundo/aedas';
 
 type Escapar = (valor: string) => string;
 export type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
@@ -91,12 +92,20 @@ export function htmlTecnologia(p: ProyeccionJugador, e: Escapar, conCabecera = t
     const motivo = motivoPlaza(plaza, true);
     const oro = Math.floor(plaza.almacen?.['oro']?.cantidad ?? 0);
     const venta = reveladas.filter((r) => precioAeda(r.tecnologiaId) !== null);
-    return `<li class="tec-fila"><span><strong>Aeda itinerante</strong> <small>detenido en ${e(nombrePlaza(plaza))} · almacén: ${oro} de oro</small></span>
+    const quienes = detenidos.filter((a) => a.enAsentamientoId === id).map((a) => nombreDeAeda(a.id)).join(' y ');
+    return `<li class="tec-fila"><span><strong>📜 ${e(quienes || 'Aeda itinerante')}</strong> <small>Aeda itinerante detenido en ${e(nombrePlaza(plaza))} · almacén: ${oro} de oro</small></span>
       ${venta.length === 0 ? '<small>No tienes tecnologías reveladas que comprar.</small>' : `<select class="form-input" data-tec-compra-en="${e(id)}" aria-label="Tecnología a comprar">${venta.map((r) => `<option value="${e(r.tecnologiaId)}">${e(`${nombreTec(r.tecnologiaId)} · ${cifra(precioAeda(r.tecnologiaId)!)} de oro`)}</option>`).join('')}</select>
       <button class="btn-primary" type="button" data-tec-comprar="${e(id)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>Comprar</button>`}</li>`;
   };
   const itinerantes = [...new Set(detenidos.map((a) => a.enAsentamientoId!))];
   const enfriamientoTexto = enfriamientoMs !== null ? `uno cada ${e(textoEnTiempoReal(enfriamientoMs))} de mundo como mucho` : 'con un enfriamiento entre uno y otro';
+  // Lo que da un residente y cuántos caben (Economia_Construccion §9.1, Tecnologia_Aedas §7): del balance, si llegó.
+  const res = cat?.AEDAS.residentes;
+  const cupos = res?.cupoPorNivel ? Object.entries(res.cupoPorNivel).sort(([a], [b]) => Number(a) - Number(b)).map(([n, c]) => `${c} en nivel ${n}`).join(', ') : '';
+  const pct = (x: number | undefined): string => (x === undefined ? '' : `${Math.round(x * 100)} %`);
+  const residentesTexto = res
+    ? `Cada Aeda residente da +${pct(res.bonoFelicidad)} de felicidad a su plaza (crece más su población) y +${pct(res.bonoNobleza)} al crecimiento de la nobleza. Viven en plazas con Palacio activo y algo de nobleza: caben ${e(cupos)}. Con sitio libre llega uno cada ${e(textoEnTiempoReal((res.llegadaMinutos ?? 0) * 60_000))}${res.factorLlegadaReputacionBaja && res.umbralReputacionBaja !== undefined ? ` (${res.factorLlegadaReputacionBaja} veces más lento si la reputación de tu Facción está en ${res.umbralReputacionBaja} o menos)` : ''}. Cuentan para el título «Mecenas de los Aedas»: épicas cumplidas × 10 más residentes.`
+    : 'Un Aeda residente da felicidad y crecimiento de nobleza a su plaza. Viven en plazas con Palacio activo y nobleza, y cuentan para el título «Mecenas de los Aedas».';
   const ventaTexto = cat ? `un Aeda cobra ${cat.AEDAS.venta.factorOro} veces el oro de la tarifa de la Era (hasta la Era ${cat.AEDAS.venta.ordenEraMaximo}), del almacén de la plaza` : 'cobra oro del almacén de la plaza';
 
   // La ficha de una carta del árbol: lo que quien mira puede hacer con esa tecnología ahora. Lo que no puede hacer no sale; lo que no puede pagar,
@@ -147,6 +156,7 @@ export function htmlTecnologia(p: ProyeccionJugador, e: Escapar, conCabecera = t
       </section>
       <section class="tec-extra">
         <strong class="heroe-sub">Aedas residentes de tus plazas${ayuda('jugador:tec-residentes', `Una épica sustituye al hito de la Facción (no al logro del mundo), no cuesta oro y avanza con hechos de la plaza o de la Facción, ${enfriamientoTexto}. Al cumplirla la tecnología aparece, y se adopta como siempre. Solo se ofrecen las tecnologías con logro cumplido, Era alcanzada y que ningún Aeda tuyo canta ya.`)}</strong>
+        <p class="asent-lado-nota">${residentesTexto}</p>
         ${residentes.length ? `<ul class="tec-lista">${residentes.map(filaResidente).join('')}</ul>` : '<p class="asent-lado-nota">Ninguna plaza tuya tiene un Aeda residente (piden Palacio y nobleza).</p>'}
       </section>
       <section class="tec-extra">

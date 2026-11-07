@@ -286,7 +286,7 @@ Solo tienen efecto si el backend declara `SERVIDORES_BATALLA` (en Render, hoy no
 Sin ninguna interfaz. La proyección trae `tecnologia` (era, logros y `propias`: `aparecidas`, `adoptadas`, `reveladas`); hoy solo se lee `adoptadas` para filtrar el reclutamiento.
 
 - [x] `adoptarTecnologia` — `{ faccionId, tecnologiaId }` · panel «Tecnología» (`src/ui/panelTecnologia.ts`)
-- [x] `comprarTecnologiaAeda` — `{ asentamientoId, tecnologiaId }` · ídem
+- [x] `comprarTecnologiaAeda` — `{ asentamientoId, tecnologiaId }` · ídem, y desde la ficha del Aeda en el mapa (`src/ui/aedas.ts`, 0.169.0)
 - [x] `empezarEpica` — `{ asentamientoId, aedaId, tecnologiaId }` · ídem, ahora solo con `epicasPosibles`
 - [x] `abandonarEpica` — `{ asentamientoId, aedaId }` · ídem
 

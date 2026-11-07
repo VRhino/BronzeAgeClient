@@ -3,6 +3,24 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.169.0] — 2026-11-07 · Los Aedas en el mundo, sus avisos y la Crónica · sin cambio de contrato (motor `8feafd4`)
+
+Petición de Víctor (2026-11-07), tras revisar qué usaba el cliente de los Aedas (solo el panel de Tecnología):
+- **En el mapa.** Los Aedas itinerantes que se ven (`aedasAvistados`, que la VISTA manda como una columna ajena) andan su plan como las
+  columnas ajenas (`enMarcha`, `moverAlInstante`). En el mundo 3D, el que va de camino es una figura a pie (manto claro con banda ocre, bastón
+  y lira) con su burro (`figurasDeAeda`) y su cartel «📜 nombre»; el parado en una plaza no anda por ella: el cartel de la plaza dice
+  «· 📜 Aeda». En el modo mapa, una lira (`dibujarAedasEnMapa`). El motor no los nombra (`aeda-N`): el cliente les da un nombre fijo por su N
+  (`mundo/aedas.ts`).
+- **Ficha del Aeda** (clic en él o en la plaza donde está parado): dónde está, cuánto se queda y qué hace; parado en una plaza de tu Facción,
+  lo que os vende, con «Comprar» solo si eres el Rey o el Gobernador y estás dentro (`ui/aedas.ts`, `FICHA_AEDA`).
+- **Avisos** en una categoría nueva, «Aedas y tecnología»: lo que un Aeda revela, la compra, los residentes que llegan o se van y las épicas
+  (empieza, capítulo, cumplida, abandonada y por qué). Lo que da una tecnología o quita una épica por conquista sale arriba.
+- **Crónica del mundo**, botón nuevo en la barra: la crónica guardada del motor (`PedirCronica`, por páginas, «Más antiguas») y lo nuevo en
+  vivo; la frase la compone el cliente (`ui/cronica.ts`), con lo de tu Facción marcado.
+- **Tecnología**: los itinerantes con su nombre, y qué da un residente (felicidad, nobleza, cupo por nivel, cada cuánto llega, el título
+  «Mecenas de los Aedas»), con las cifras del balance.
+Banco nuevo `pruebas/aedas/` (ficha, avisos, crónica y lira; `?ficha=camino`) y un Aeda de mentira en el banco del mundo 3D.
+
 ## [0.168.0] — 2026-11-07 · Umbrales de logro por plaza viva y la Aleación del bronce con dos barras · contrato regenerado desde `BronzeAge@8feafd47` (contrato 0.16.0)
 
 El motor (main 8feafd4, núcleo 0.25.0) hace que cuatro logros escalen con las plazas vivas del mundo (N): Escudos ligeros 20×N campamentos de

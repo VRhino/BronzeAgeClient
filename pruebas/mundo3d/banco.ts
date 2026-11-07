@@ -72,6 +72,9 @@ async function arrancar(): Promise<void> {
   const acarreos = carrosDeAcarreo(cabeza, Number(parametros.get('acarreo') ?? 0));
   caravanas.push(...acarreos.map((a) => a.caravana));
   let seleccion: SeleccionEnVista | null = null, fundacion: FundacionEnVista | null = null;
+  // un Aeda itinerante de mentira (0.169.0): va y viene junto al arranque, a pie con su burro y su cartel
+  const aedaA = { x: cabeza.x - 2.5, y: cabeza.y + 2.2 }, aedaB = { x: cabeza.x + 2.5, y: cabeza.y + 2.8 };
+  const sinAeda = parametros.has('sinMaquetas');
   // lo que se puede seleccionar con un clic, con el radio de su aro
   const seleccionables = (): SeleccionEnVista[] => [
     ...mundo.plazas.map((x) => ({ posicion: x.posicion, radio: x.radioCiudad + 0.5 })),
@@ -119,7 +122,10 @@ async function arrancar(): Promise<void> {
     };
     // los carteles de columnas, ejércitos y caravanas, como en el juego (se mueven con ellas)
     const carteles = etiquetasDesdeProyeccion(FACCIONES, [mia, ...ajenas], [], caravanas).filter((e) => ['columna', 'ejercito', 'caravana'].includes(e.tipo));
-    return { heroe: cabeza, radioVision: radio, columnas: [mia, ...ajenas], caravanas, niebla, mundo, miradas, etiquetas: [...etiquetas, ...carteles], seleccion, fundacion };
+    const vaiven = Math.abs(((ahora / 60000) % 2) - 1);
+    const aedas = sinAeda ? [] : [{ id: 'aeda-1', posicion: { x: aedaA.x + (aedaB.x - aedaA.x) * vaiven, y: aedaA.y + (aedaB.y - aedaA.y) * vaiven } }];
+    const deAedas = aedas.map((a) => ({ id: `aeda:${a.id}`, posicion: a.posicion, texto: '📜 Demódoco', subtexto: 'Aeda', tipo: 'aeda' as const, color: '#e9d8a6' }));
+    return { heroe: cabeza, radioVision: radio, columnas: [mia, ...ajenas], caravanas, aedas, niebla, mundo, miradas, etiquetas: [...etiquetas, ...carteles, ...deAedas], seleccion, fundacion };
   };
 
   const vista = new VistaMundo3D($('escena'), {

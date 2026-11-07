@@ -70,7 +70,7 @@ function enPlan(plan: pb.Ejercito['plan'], posicion: Punto | undefined, ahora: n
  * entonces llega otra `p`. */
 export function moverAlInstante(p: ProyeccionJugador, a: Almacen, ahora: number): ProyeccionJugador {
   const planes = new Map<string, { plan?: pb.Ejercito['plan']; posicion?: Punto }>();
-  for (const amb of a.ambitos.values()) for (const e of amb.entidades.values()) if (e.case === 'ejercito' || e.case === 'caravana') planes.set(e.value.id, e.value);
+  for (const amb of a.ambitos.values()) for (const e of amb.entidades.values()) if (e.case === 'ejercito' || e.case === 'caravana' || e.case === 'aedaItinerante') planes.set(e.value.id, e.value);
   const propia = <T extends { id: string; posicionActual: d.Point; ruta?: d.Point[] }>(x: T): T => {
     const raw = planes.get(x.id);
     if (!raw || (x.ruta?.length ?? 0) < 2) return x;
@@ -92,6 +92,12 @@ export function moverAlInstante(p: ProyeccionJugador, a: Almacen, ahora: number)
     caravanas: p.caravanas.map(propia),
     ejercitosAvistados: p.ejercitosAvistados.map(ajena),
     caravanasAvistadas: p.caravanasAvistadas?.map(ajena),
+    aedasAvistados: p.aedasAvistados?.map((x) => {
+      const raw = planes.get(x.id);
+      if (!raw || !x.enMarcha) return x;
+      const { posicionActual, enMarcha } = enPlan(raw.plan, raw.posicion, ahora);
+      return { id: x.id, posicion: posicionActual, ...(x.enAsentamientoId ? { enAsentamientoId: x.enAsentamientoId } : {}), ...(enMarcha ? { enMarcha } : {}) };
+    }),
   };
 }
 
@@ -764,7 +770,11 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
         hechos: x.epica.hechos, hechosNecesarios: x.epica.hechosNecesarios, ultimoHechoEn: instante(x.epica.ultimoHechoEnMs),
       } : undefined,
     })),
-    aedasAvistados: deAmbito('VISTA:', 'aedaItinerante').map((x) => ({ id: x.id, posicion: evaluarPlan(x.plan, x.posicion, ahora).posicion, enAsentamientoId: opcional(x.enAsentamientoId) })),
+    aedasAvistados: deAmbito('VISTA:', 'aedaItinerante').map((x) => {
+      // Como una columna ajena: dónde va ahora y, si aún anda su tramo, `enMarcha` (la vista lo recoloca en cada fotograma, `moverAlInstante`).
+      const { posicionActual, enMarcha } = enPlan(x.plan, x.posicion, ahora);
+      return { id: x.id, posicion: posicionActual, enAsentamientoId: opcional(x.enAsentamientoId), ...(enMarcha ? { enMarcha } : {}) };
+    }),
     // Los tramos ya fundidos (paridad P7); un servidor anterior solo manda las aristas sueltas.
     caminos: !red ? [] : red.tramos.length
       ? red.tramos.map((t) => ({ id: t.id, escalon: Math.min(2, t.escalon) as 0 | 1 | 2, puntos: t.puntos.map(punto) }))

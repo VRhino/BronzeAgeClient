@@ -4,6 +4,7 @@
 // busca `main.ts` (`objetosBajoElClic`).
 import type { ProyeccionJugador } from '../apiCliente';
 import { nombreDeHeroe } from './nombres';
+import { nombreDeAeda } from '../mundo/aedas';
 import { nombreDeAvanzada, nombreDeObra, nombreDePueblo } from './pueblos';
 
 /** Lo que hay bajo el clic: qué se selecciona y adónde se marcha (opcional). */
@@ -61,6 +62,10 @@ export function rotuloDe(p: ProyeccionJugador, sel: { tipo: string; id: string }
     case 'obraMapa': {
       const o = (p.obrasDeMapa ?? []).find((y) => y.id === sel.id);
       return { icono: '⚒', titulo: o ? nombreDeObra(o) : 'Obra', detalle: o ? junta(`De ${nombreDePlaza(p, o.madreId)}`, o.terminaEn !== undefined ? 'en marcha' : 'esperando materiales') : '' };
+    }
+    case 'aeda': {
+      const a = (p.aedasAvistados ?? []).find((x) => x.id === sel.id);
+      return { icono: '📜', titulo: `Aeda ${nombreDeAeda(sel.id)}`, detalle: a?.enAsentamientoId ? `Parado en ${nombreDePlaza(p, a.enAsentamientoId)}` : 'De camino' };
     }
     case 'alijo': return { icono: '✦', titulo: 'Alijo', detalle: 'Recursos sueltos en el suelo' };
     case 'mercenarios': return { icono: '⛺', titulo: 'Campamento de mercenarios', detalle: '' };

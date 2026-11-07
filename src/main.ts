@@ -101,6 +101,7 @@ import { VistaMundo3D } from './mundo3d/vista';
 import { navegacionDesdeGrafo, type Navegacion } from './mundo3d/rejilla';
 import { guardarVistaMapa, leerVistaMapa } from './ui/vistaMapaGuardada';
 import { fundacionLista } from './ui/panelFundacionDePlaza';
+import { cablearCronica, htmlCronica, reiniciarCronica, soltarCronica } from './ui/cronica';
 import { alCambiarAvisos, alLlegarInforme, avisarDeEventos, avisosNoLeidos, hayPeligroSinLeer, historialDeAvisos, mostrar as mostrarAviso, reiniciarAvisos } from './ui/avisos';
 import { htmlInforme, type InformeDeCombate } from './ui/informeCombate';
 import { cablearAvisos, htmlAvisos } from './ui/panelAvisos';
@@ -1437,6 +1438,12 @@ function renderPanelJugador(forzar = false): void {
   if (panelJugador === null) { panel.hidden = true; vaciar(panel); return; }
   panel.hidden = false;
   if (forzar) invalidar(panel);
+  if (panelJugador !== 'cronica') soltarCronica();
+  if (panelJugador === 'cronica') {
+    // La crónica del mundo (`ui/cronica.ts`): se pide al abrirla y lo nuevo llega en vivo.
+    pintar(panel, htmlCronica(proyeccion, escaparHtml), () => cablearCronica(panel, () => { if (panelJugador === 'cronica') renderPanelJugador(true); }), 'cronica');
+    return;
+  }
   if (panelJugador === 'avisos') {
     pintar(panel, htmlAvisos(historialDeAvisos(), escaparHtml), () => cablearAvisos(panel, () => renderPanelJugador(), mostrarInforme), panelJugador);
     return;
@@ -2878,6 +2885,7 @@ async function volverALasPartidas(): Promise<void> {
   await salirDelMundo();
   cerrarPresencia();
   reiniciarAvisos();
+  reiniciarCronica();
   recordarPartida('');
   estadoCliente.gameIdActivo = '';
   estadoCliente.proyeccionUltima = null;
@@ -3190,6 +3198,7 @@ async function cerrarSesionYVolverALogin(mensaje?: string): Promise<void> {
   await salirDelMundo();
   cerrarSesion();
   reiniciarAvisos();
+  reiniciarCronica();
   estadoCliente.usuarioActivo = '';
   estadoCliente.proyeccionUltima = null;
   estadoCliente.sinHeroe = false;

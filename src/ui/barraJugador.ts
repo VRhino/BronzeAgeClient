@@ -6,13 +6,14 @@ import { nombreDePueblo } from './pueblos';
 
 // Tecnología ya no tiene botón: es una pestaña de la Facción (Víctor, 2026-11-03: «las tecnologías afectan al jugador a través de la Facción»).
 // Héroe, Escuadras y Carro son desde la 0.161.0 una sola ventana, la Base personal (`basePersonal.ts`; también con la tecla B).
-export type PanelJugador = 'base' | 'faccion' | 'misiones' | 'avisos';
+export type PanelJugador = 'base' | 'faccion' | 'misiones' | 'avisos' | 'cronica';
 
 const BOTONES: [PanelJugador, string][] = [
   ['base', 'Base'],
   ['faccion', 'Facción'],
   ['misiones', 'Misiones'],
   ['avisos', 'Avisos'],
+  ['cronica', 'Crónica'],
 ];
 
 /** El icono de cada botón (trazo en `currentColor`, 24×24). En el mundo la barra solo enseña el icono; el nombre queda en el `title`. */
@@ -25,6 +26,8 @@ const ICONO: Record<PanelJugador | 'mapa' | 'asentamiento', string> = {
   misiones: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.8"/>',
   // campana
   avisos: '<path d="M6 17V11a6 6 0 0 1 12 0v6l2 2H4z"/><path d="M10 21h4"/>',
+  // rollo de papiro: la crónica del mundo que cantan los Aedas
+  cronica: '<path d="M7 4h11a2 2 0 0 1 0 4H7"/><path d="M7 4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h11a2 2 0 0 0 0-4H7"/><path d="M7 4a2 2 0 0 1 0 4M9 11h7M9 13.5h5"/>',
   // mapa plegado
   mapa: '<path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/>',
   // muralla con su torre y su puerta (la ventana de la plaza)

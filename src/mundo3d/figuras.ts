@@ -56,6 +56,20 @@ const PIEZAS = (() => {
     fardos: caja(0.056, 0.026, 0.065, 0, 0.08, -0.004),
     varas: [caja(0.006, 0.006, 0.09, -0.026, 0.045, 0.085), caja(0.006, 0.006, 0.09, 0.026, 0.045, 0.085)],
     ruedita: (() => { const g = new THREE.CylinderGeometry(0.028, 0.028, 0.01, 10); g.rotateZ(Math.PI / 2); return g; })(),
+    // el Aeda: a pie, con el manto largo hasta los pies, el bastón y la lira colgada al costado; detrás, su burro con las alforjas
+    manto: caja(0.056, 0.11, 0.046, 0, 0.055, 0),
+    banda: caja(0.058, 0.014, 0.048, 0, 0.078, 0),
+    cabezaAeda: caja(0.034, 0.034, 0.034, 0, 0.127, 0.002),
+    capucha: caja(0.042, 0.036, 0.016, 0, 0.13, -0.022),
+    baston: caja(0.007, 0.21, 0.007, 0.038, 0.105, 0.014),
+    liraBrazos: [caja(0.007, 0.07, 0.007, -0.05, 0.085, -0.016), caja(0.007, 0.07, 0.007, -0.05, 0.085, 0.016)],
+    liraYugo: caja(0.007, 0.007, 0.046, -0.05, 0.12, 0),
+    liraCaja: caja(0.012, 0.016, 0.036, -0.05, 0.05, 0),
+    burro: caja(0.036, 0.04, 0.09, 0, 0.055, 0),
+    patasBurro: caja(0.03, 0.04, 0.075, 0, 0.02, 0),
+    cabezaBurro: (() => { const g = new THREE.BoxGeometry(0.022, 0.045, 0.03); g.rotateX(-0.5); g.translate(0, 0.088, 0.055); return g; })(),
+    orejas: caja(0.026, 0.02, 0.006, 0, 0.118, 0.06),
+    alforjas: caja(0.058, 0.028, 0.045, 0, 0.068, -0.008),
     pelaje: m(0x6b4a2e),
     blanco: m(0xd8cfbd),
     buey_: m(0x8c7a64),
@@ -64,6 +78,9 @@ const PIEZAS = (() => {
     bronce: m(0xc08a3e),
     piel: m(0xc89a78),
     madera: m(0x8a6440),
+    lana: m(0xe9dcc0),
+    ocre: m(0xa4452c),
+    ceniza: m(0x8f877a),
   };
 })();
 
@@ -84,6 +101,21 @@ function soldado(color: number, abanderado: boolean): THREE.Group {
   const p = PIEZAS, g = new THREE.Group();
   g.add(new THREE.Mesh(p.cuerpo, tunica(color)), new THREE.Mesh(p.cabeza, p.piel), new THREE.Mesh(p.lanza, p.madera), new THREE.Mesh(p.escudo, p.bronce));
   if (abanderado) g.add(new THREE.Mesh(p.bandera, tunica(color)));
+  return g;
+}
+
+/** El Aeda itinerante, a pie: manto claro de lana con banda ocre, la capucha caída a la espalda, bastón y lira de bronce al costado. */
+function aeda(): THREE.Group {
+  const p = PIEZAS, g = new THREE.Group();
+  g.add(new THREE.Mesh(p.manto, p.lana), new THREE.Mesh(p.banda, p.ocre), new THREE.Mesh(p.cabezaAeda, p.piel), new THREE.Mesh(p.capucha, p.ocre),
+    new THREE.Mesh(p.baston, p.madera), ...p.liraBrazos.map((b) => new THREE.Mesh(b, p.bronce)), new THREE.Mesh(p.liraYugo, p.bronce), new THREE.Mesh(p.liraCaja, p.madera));
+  return g;
+}
+
+/** Su burro, con las alforjas. */
+function burro(): THREE.Group {
+  const p = PIEZAS, g = new THREE.Group();
+  g.add(new THREE.Mesh(p.burro, p.ceniza), new THREE.Mesh(p.patasBurro, p.ceniza), new THREE.Mesh(p.cabezaBurro, p.ceniza), new THREE.Mesh(p.orejas, p.ceniza), new THREE.Mesh(p.alforjas, p.arpillera));
   return g;
 }
 
@@ -199,6 +231,9 @@ export class Tropel {
   }
 }
 
+/** Las figuras de un Aeda itinerante (`FigurasDeColumna` con él y su burro). */
+export const figurasDeAeda = (): FigurasDeColumna => new FigurasDeColumna(0, { porHeroe: [], ejercito: false }, 0, { carga: 0, fundacion: false }, true);
+
 export class FigurasDeColumna {
   /** Cada figura, con sus piezas como hijas: no van a la escena, las pinta `Tropel`. */
   readonly figuras: THREE.Group[] = [];
@@ -212,13 +247,15 @@ export class FigurasDeColumna {
 
   /** `jinetes`: héroes de la columna (al frente, a caballo); `tropa`: las escuadras detrás, por bloques (`bloquesDeTropa`; la primera figura
    * lleva el estandarte; en una caravana, su escolta); `carros`: lo que arrastra al final. */
-  constructor(readonly jinetes: number, tropa: TropaDeColumna, color: number, readonly carros: Carros = { carga: 0, fundacion: false }) {
+  constructor(readonly jinetes: number, tropa: TropaDeColumna, color: number, readonly carros: Carros = { carga: 0, fundacion: false }, deAeda = false) {
     const poner = (f: THREE.Group, atras: number, lado: number, escala = 1) => {
       f.scale.setScalar(MUNDO3D.tropa * escala);
       for (const o of f.children) o.updateMatrix();
       this.figuras.push(f);
       this.sitios.push({ atras, lado });
     };
+    // un Aeda itinerante: él delante y su burro a su lado, un paso por detrás
+    if (deAeda) { poner(aeda(), 0, 0); poner(burro(), 0.1, 0.9); return; }
     for (let k = 0; k < jinetes; k++) poner(heroe(color), k * 0.15, 0);
     // entre filas de un bloque, el paso de siempre; entre un bloque y el siguiente, un poco más
     let ultima = jinetes * 0.15 - 0.15, fila = jinetes, soldados = 0;

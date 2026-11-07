@@ -15,6 +15,7 @@ import { imagenDeSigilo } from './sigilo/lienzo';
 import { pintarSitiosDeAldea, type SitiosDeAldea } from './mundo/fertilidad';
 import { colorDelSueloEn, esDeCerca, hayArtefacto, pintarArbolesDelArtefacto, pintarSueloDelArtefacto, vistaDelLienzo } from './mundo/pintarArtefacto';
 import { dibujarPueblosYObras } from './ui/pueblos';
+import { dibujarAedasEnMapa } from './ui/aedas';
 import { partirFronteras, type ZonaDeFaccion } from './mundo/fronteras';
 import { zonasDeLoRecordado } from './mundo/zonasRecordadas';
 import { exploradoDe, pixelesDeFertilidad, RADIO_PARCELA, type Explorado } from './mundo/capasDelMapa';
@@ -934,6 +935,8 @@ export function pintarTerreno(
 
   // 13b. PUEBLOS Y OBRAS DE MAPA (extractores, aldeas agrícolas y sus obras): `ui/pueblos.ts`.
   dibujarPueblosYObras(ctx, proyeccion, escalaCanvas, k);
+  // 13c. AEDAS ITINERANTES (una lira): `ui/aedas.ts`.
+  dibujarAedasEnMapa(ctx, proyeccion, escalaCanvas, k);
 
   // 14. CARAVANAS (Triángulos identificables por color de origen). Las enganchadas a un ejército van pegadas detrás de él (16); la de
   // fundación suelta, con su carromato. Las que esperan dentro de su plaza, su pueblo o una parada no están en el mapa (`caravanaEnElMapa`).

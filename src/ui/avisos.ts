@@ -21,15 +21,17 @@ import { informeDeEvento, type InformeDeCombate } from './informeCombate';
 import { plazo } from './panelDiplomacia';
 import { textoDeMision } from './misiones';
 import { RECURSO_NOMBRE } from '../paletas';
+import { textoDeHechoAeda } from './aedas';
 
 /** Los eventos de «alguien te ha mirado»: el backend los emite sin decir quién. */
 const CODIGOS_DE_AVISO = new Set(['asentamiento.observado', 'columna.observada', 'caravana.observada', 'asentamiento.informe_pedido']);
 const MAX_HISTORIAL = 80;
 
-export type CategoriaAviso = 'combate' | 'diplomacia' | 'movimientos' | 'inteligencia' | 'economia';
+export type CategoriaAviso = 'combate' | 'diplomacia' | 'movimientos' | 'inteligencia' | 'economia' | 'aedas';
 /** Orden y nombre de las categorías en el panel. */
 export const CATEGORIAS: readonly (readonly [CategoriaAviso, string])[] = [
   ['combate', 'Combate'], ['diplomacia', 'Diplomacia'], ['movimientos', 'Movimientos'], ['inteligencia', 'Inteligencia'], ['economia', 'Economía y tropas'],
+  ['aedas', 'Aedas y tecnología'],
 ];
 
 export interface EntradaAviso {
@@ -332,6 +334,13 @@ export function procesar(e: EventoDominio, heroeId: string, modo: Modo): void {
     const p = e.payload as { mercenario?: number } | undefined;
     const importante = e.codigo === 'mercenarios.terminado' || e.codigo === 'mercenarios.orden_caducada' || e.codigo === 'mercenarios.rango_subido';
     anotar({ ...base, texto, clase: importante ? 'baja' : 'mirada', titulo: 'Mercenarios', categoria: 'diplomacia', urgente: importante, clave: `${e.codigo}|${p?.mercenario ?? ''}|${e.version}` }, modo);
+    return;
+  }
+  if (e.codigo.startsWith('aedas.')) {
+    // Los Aedas (Tecnologia_Aedas §6-7): lo que le revelan, le venden o le cantan a tu Facción. Lo que hace aparecer una tecnología, urgente.
+    const h = textoDeHechoAeda(e, estadoCliente.proyeccionUltima);
+    if (!h) return;
+    anotar({ ...base, texto: h.texto, clase: h.importante ? 'baja' : 'mirada', titulo: h.titulo, categoria: 'aedas', urgente: h.importante, clave: `${e.codigo}|${e.version}|${(e.payload as { tecnologia?: string } | undefined)?.tecnologia ?? ''}` }, modo);
     return;
   }
   if (e.codigo === 'mercenarios.prestamo_retirado') {

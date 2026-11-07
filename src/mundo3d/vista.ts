@@ -10,10 +10,10 @@ import './mundo3d.css';
 import { CamaraDeJuego, type Zoom } from './camara';
 import { DISTANCIA_CARGA, MUNDO3D } from './config';
 import { instalarEntrada, type Entrada } from './entrada';
-import type { CaravanaEnVista, Carros, ColumnaEnVista, EstadoVista, EtiquetaEnVista, MundoEnVista } from './estado';
+import type { AedaEnVista, CaravanaEnVista, Carros, ColumnaEnVista, EstadoVista, EtiquetaEnVista, MundoEnVista } from './estado';
 import { Etiquetas } from './etiquetas';
 import { RejillaDeMovimiento, type Navegacion } from './rejilla';
-import { FigurasDeColumna, Tropel, type TropaDeColumna } from './figuras';
+import { FigurasDeColumna, Tropel, figurasDeAeda, type TropaDeColumna } from './figuras';
 import type { FuenteDeAltura } from './fuente';
 import { Agua, alturaVisible } from './agua';
 import { Arboles } from './arboles';
@@ -277,6 +277,7 @@ export class VistaMundo3D {
       ...m.batallas.map((x) => ({ posicion: x.posicion, radio: 1 })),
       ...e.columnas.filter((c) => !c.mia).map((c) => ({ posicion: c.posicion, radio: 0.8 })),
       ...e.caravanas.map((c) => ({ posicion: c.posicion, radio: 0.7 })),
+      ...(e.aedas ?? []).map((a) => ({ posicion: a.posicion, radio: 0.5 })),
     ];
     return candidatos
       .map((c) => ({ c, d: Math.hypot(c.posicion.x - p.x, c.posicion.y - p.y) }))
@@ -341,7 +342,7 @@ export class VistaMundo3D {
     t = this.medir('vida', t);
     const dentro = (p: Punto) => Math.hypot(p.x - x, p.y - y) <= carga;
     const columnas = estado.columnas.filter((c) => c.mia || dentro(c.posicion)), caravanas = estado.caravanas.filter((c) => dentro(c.posicion));
-    this.ponerColumnas(columnas, caravanas);
+    this.ponerColumnas(columnas, caravanas, (estado.aedas ?? []).filter((a) => dentro(a.posicion)));
     this.ponerLineas(columnas, caravanas, estado.heroe, hastaTrazos);
     this.marcas.actualizar(estado, ahora);
     this.rejilla.actualizar(x, y);
@@ -375,7 +376,7 @@ export class VistaMundo3D {
   }
 
   /** Las figuras de cada columna (de la Facción y avistadas) y de cada caravana suelta; se rehacen si cambia lo que llevan o su color. */
-  private ponerColumnas(lista: readonly ColumnaEnVista[], caravanas: readonly CaravanaEnVista[]): void {
+  private ponerColumnas(lista: readonly ColumnaEnVista[], caravanas: readonly CaravanaEnVista[], aedas: readonly AedaEnVista[] = []): void {
     const vivas = new Set<string>();
     const poner = (id: string, jinetes: number, tropa: TropaDeColumna, color: string, carros: Carros, posicion: Punto) => {
       vivas.add(id);
@@ -394,6 +395,14 @@ export class VistaMundo3D {
       const tropa = c.escolta ? { porHeroe: [c.escolta], ejercito: false } : SIN_TROPA;
       const carros: Carros = c.fundacion ? { carga: 0, fundacion: true } : { carga: Math.max(1, c.animales?.length ?? 0), fundacion: false, ...(c.animales ? { animales: c.animales } : {}) };
       poner(`caravana:${c.id}`, 0, tropa, c.color, carros, c.posicion);
+    }
+    // un Aeda de camino: él a pie y su burro detrás
+    for (const a of aedas) {
+      const id = `aeda:${a.id}`;
+      vivas.add(id);
+      let f = this.columnas.get(id);
+      if (!f) this.columnas.set(id, (f = { figuras: figurasDeAeda(), clave: 'aeda' }));
+      f.figuras.mover(a.posicion, this.alturaU, this.terreno.version);
     }
     for (const id of this.columnas.keys()) if (!vivas.has(id)) this.columnas.delete(id);
     this.figurasPuestas.length = 0;
