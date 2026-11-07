@@ -27,8 +27,8 @@ export function chimeneas(m: MundoEnVista): Punto[] {
     }
   };
   for (const p of m.plazas) if (!p.recordada) alrededor(p.posicion, Math.min(4, 1 + p.nivel), p.radioCiudad * MUNDO3D.maqueta * 0.2, p.radioCiudad * MUNDO3D.maqueta * 0.6);
-  for (const p of m.pueblos) alrededor(p.posicion, 1, 0.3, 0.8);
-  for (const a of m.avanzadas) if (!a.ruinas && a.etapa >= 2) alrededor(a.posicion, 1, 0.2, 0.5);
+  for (const p of m.pueblos) alrededor(p.posicion, 1, 0.15 * MUNDO3D.pueblo, 0.4 * MUNDO3D.pueblo);
+  for (const a of m.avanzadas) if (!a.ruinas && a.etapa >= 2) alrededor(a.posicion, 1, 0.15 * MUNDO3D.avanzada, 0.3 * MUNDO3D.avanzada);
   for (const c of m.campamentos) out.push(c.posicion);
   for (const b of m.bandidos) out.push(b.posicion);
   return out;

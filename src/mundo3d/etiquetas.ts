@@ -8,7 +8,7 @@ import type { EtiquetaEnVista } from './estado';
 const PULSABLES = new Set<EtiquetaEnVista['tipo']>(['plaza', 'campamento', 'columna', 'ejercito', 'caravana', 'aeda']);
 /** Cuánto sube cada etiqueta sobre el suelo de su punto, en u: las de plazas y campamentos sobre la maqueta; las de columnas, ejércitos y
  * caravanas sobre la cabeza de las figuras (a la escala `MUNDO3D.tropa`). */
-const ALTURA: Partial<Record<EtiquetaEnVista['tipo'], number>> = { plaza: 1.2, campamento: 1.1, nodo: 0.5, columna: 0.55, ejercito: 0.55, caravana: 0.55, aeda: 0.4 };
+const ALTURA: Partial<Record<EtiquetaEnVista['tipo'], number>> = { plaza: 1.5, campamento: 1.1, nodo: 0.35, columna: 0.55, ejercito: 0.55, caravana: 0.55, aeda: 0.4 };
 
 /** El contenido: el escudo a la izquierda (si lo hay) y el nombre con su subtexto debajo. */
 function pintar(el: HTMLElement, e: EtiquetaEnVista): void {

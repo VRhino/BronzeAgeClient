@@ -7,7 +7,7 @@ import type { SitiosDeAldea } from '../mundo/fertilidad';
 import { faccionColor } from '../paletas';
 import { svgSigilo } from '../sigilo/sigilo';
 import type { NieblaProyectada } from '../tiposDominio';
-import { MUNDO3D } from './config';
+import { HOLGURA_ARO, radioDeAlijo, radioDeAvanzada, radioDeBandidos, radioDeBatalla, radioDeCampamento, radioDeObra, radioDePlaza, radioDePueblo } from './huellas';
 import type { TropaDeColumna } from './figuras';
 import { circulo, sentidoDe, suavizarCamino } from './lineas';
 import { partirFronteras, type ZonaDeFaccion } from '../mundo/fronteras';
@@ -346,27 +346,31 @@ export function etiquetasDesdeProyeccion(p: ProyeccionJugador, columnas: readonl
 export function dondeEstaLaSeleccion(p: ProyeccionJugador, sel: { tipo: string; id: string } | null, mundo: MundoEnVista): SeleccionEnVista | null {
   if (!sel) return null;
   const en = (posicion: Punto | undefined, radio: number): SeleccionEnVista | null => (posicion ? { posicion, radio } : null);
-  const M = MUNDO3D.maqueta;
+  // el aro, del tamaño de la maqueta (`huellas.ts`; Víctor 2026-11-07: «el círculo alrededor es demasiado grande»)
+  const aro = (r: number) => r + HOLGURA_ARO;
   switch (sel.tipo) {
     case 'asentamiento': {
       const plaza = mundo.plazas.find((x) => x.id === sel.id);
-      return plaza ? { posicion: plaza.posicion, radio: plaza.radioCiudad * M + 0.5 } : null;
+      return plaza ? { posicion: plaza.posicion, radio: aro(radioDePlaza(plaza.radioCiudad, plaza.nivel)) } : null;
     }
-    case 'campamento': return en(p.campamentosBandidos?.find((x) => x.id === sel.id)?.posicion, 1 * M * MUNDO3D.campamento);
-    case 'mercenarios': return en(p.campamentosMercenarios?.find((x) => x.id === sel.id)?.posicion, 1.1 * M * MUNDO3D.campamento);
-    case 'alijo': return en(p.alijos?.find((x) => x.id === sel.id)?.posicion, 0.5 * MUNDO3D.alijo);
-    case 'batalla': return en(p.batallas?.find((x) => x.battleId === sel.id)?.punto, 1);
+    case 'campamento': return en(p.campamentosBandidos?.find((x) => x.id === sel.id)?.posicion, aro(radioDeBandidos()));
+    case 'mercenarios': return en(p.campamentosMercenarios?.find((x) => x.id === sel.id)?.posicion, aro(radioDeCampamento()));
+    case 'alijo': return en(p.alijos?.find((x) => x.id === sel.id)?.posicion, aro(radioDeAlijo()));
+    case 'batalla': return en(p.batallas?.find((x) => x.battleId === sel.id)?.punto, aro(radioDeBatalla()));
     case 'puebloMapa': {
       const x = mundo.pueblos.find((y) => y.id === sel.id);
-      return en(x?.posicion, (x?.aldea ? 1.5 : 0.9) * M);
+      return en(x?.posicion, aro(radioDePueblo(!!x?.aldea)));
     }
-    case 'avanzadaMapa': return en(p.avanzadas?.find((x) => x.id === sel.id)?.posicion, 0.7 * M);
-    case 'obraMapa': return en(p.obrasDeMapa?.find((x) => x.id === sel.id)?.posicion, 0.6 * M);
+    case 'avanzadaMapa': {
+      const x = mundo.avanzadas.find((y) => y.id === sel.id);
+      return en(x?.posicion ?? p.avanzadas?.find((y) => y.id === sel.id)?.posicion, aro(radioDeAvanzada(x?.etapa ?? 1)));
+    }
+    case 'obraMapa': return en(p.obrasDeMapa?.find((x) => x.id === sel.id)?.posicion, aro(radioDeObra()));
   }
   if (sel.tipo === 'aeda') {
     const a = p.aedasAvistados?.find((x) => x.id === sel.id);
     const plaza = a?.enAsentamientoId ? mundo.plazas.find((x) => x.id === a.enAsentamientoId) : undefined;
-    return plaza ? { posicion: plaza.posicion, radio: plaza.radioCiudad * M + 0.5 } : en(a?.posicion, 0.5);
+    return plaza ? { posicion: plaza.posicion, radio: aro(radioDePlaza(plaza.radioCiudad, plaza.nivel)) } : en(a?.posicion, 0.5);
   }
   // columnas (de la Facción, en formación o avistadas) y caravanas: por su id
   const c = [...p.ejercitos, ...(p.ejercitosAvistados ?? []), ...(p.caravanas ?? []), ...(p.caravanasAvistadas ?? [])].find((x) => x.id === sel.id);

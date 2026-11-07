@@ -215,8 +215,9 @@ export class Paisaje {
       for (const n of nodos) {
         const piedra = n.tipo === 'piedra', cuantas = piedra ? 5 : 3, color = colorDeNodo(n.tipo);
         for (let k = 0; k < cuantas; k++) {
-          const a = azar(n.posicion.x + k, 1) * Math.PI * 2, dist = (piedra ? 1 : 0.6) * Math.sqrt(azar(n.posicion.y + k, 2));
-          piezas.push({ x: n.posicion.x + Math.cos(a) * dist, y: n.posicion.y + Math.sin(a) * dist, r: (piedra ? 0.15 : 0.12) + (piedra ? 0.3 : 0.18) * azar(n.posicion.x, 3 + k), giro: a, color });
+          // a la escala `MUNDO3D.nodo` (la mitad: Víctor, 2026-11-07), el montón y cada roca
+          const N = MUNDO3D.nodo, a = azar(n.posicion.x + k, 1) * Math.PI * 2, dist = N * (piedra ? 1 : 0.6) * Math.sqrt(azar(n.posicion.y + k, 2));
+          piezas.push({ x: n.posicion.x + Math.cos(a) * dist, y: n.posicion.y + Math.sin(a) * dist, r: N * ((piedra ? 0.15 : 0.12) + (piedra ? 0.3 : 0.18) * azar(n.posicion.x, 3 + k)), giro: a, color });
         }
       }
       const rocas = new THREE.InstancedMesh(ROCA, this.roca, piezas.length), m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();

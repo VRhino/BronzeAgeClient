@@ -8,6 +8,7 @@ import { MUNDO3D } from './config';
 import type { MundoEnVista } from './estado';
 import type { NieblaDeGuerra } from './niebla';
 import type { SueloPintado } from './terreno';
+import { radioDeAvanzada, radioDeBandidos, radioDeCampamento, radioDeObra, radioDePlaza, radioDePueblo } from './huellas';
 
 const COLORES = {
   muro: 0xc9b48f, adobe: 0xd2bf9a, techo: 0xa8714a, madera: 0x8a6440, lona: 0xd8cfbd, ruina: 0x7d7466, campo: 0xb59a3a, mina: 0x4a4038,
@@ -104,9 +105,10 @@ interface Hueco { x: number; y: number; r: number }
  * (el cuadrado de medio lado `desde`). Se llenan antes los solares cerca de la plaza, con algo de azar, hasta `n` o hasta el borde `hasta`.
  */
 function casas(p: Piezas, x: number, y: number, n: number, desde: number, hasta: number, tam: number, sem: number, techo: number, giro = 0, huecos: Hueco[] = []): void {
-  // el solar crece si hay pocas casas para tanto sitio (una plaza grande con el tope de casas): huertos entre ellas, no un hueco en el borde
+  // compactas (0.175.0, Víctor 2026-11-07: «más compactas y más grandes»): solares justos, casas que casi los llenan y calles estrechas; el
+  // solar solo crece un poco si hay pocas casas para tanto sitio
   const area = Math.PI * hasta * hasta - 4 * desde * desde;
-  const L = Math.max(0.27 * tam, Math.min(0.36 * tam, Math.sqrt(Math.max(0, area) * 0.7 / Math.max(1, n)))), calle = 0.09 * tam, cg = Math.cos(giro), sg = Math.sin(giro);
+  const L = Math.max(0.25 * tam, Math.min(0.29 * tam, Math.sqrt(Math.max(0, area) * 0.8 / Math.max(1, n)))), calle = 0.06 * tam, cg = Math.cos(giro), sg = Math.sin(giro);
   const solares: { u: number; v: number; orden: number; i: number; j: number }[] = [];
   const max = Math.ceil(hasta / L) + 1;
   for (let i = -max; i < max; i++) for (let j = -max; j < max; j++) {
@@ -122,8 +124,8 @@ function casas(p: Piezas, x: number, y: number, n: number, desde: number, hasta:
   solares.sort((a, b) => a.orden - b.orden);
   for (const s of solares.slice(0, n)) {
     const k = s.i * 131 + s.j;
-    const ancho = (0.12 + 0.07 * azar(sem, k, 3)) * tam, fondo = (0.11 + 0.06 * azar(sem, k, 4)) * tam;
-    const holgura = Math.max(0, L - Math.max(ancho, fondo)) * 0.7;
+    const ancho = (0.16 + 0.06 * azar(sem, k, 3)) * tam, fondo = (0.15 + 0.05 * azar(sem, k, 4)) * tam;
+    const holgura = Math.max(0, L - Math.max(ancho, fondo)) * 0.6;
     const u = s.u + (azar(sem, k, 8) - 0.5) * holgura, v = s.v + (azar(sem, k, 9) - 0.5) * holgura;
     p.caja(azar(sem, k, 6) < techo ? 'techo' : 'adobe', x + u * cg - v * sg, y + u * sg + v * cg, ancho, fondo, (0.07 + 0.06 * azar(sem, k, 5)) * tam, giro + (azar(sem, k, 10) - 0.5) * 0.12);
   }
@@ -138,10 +140,21 @@ function casas(p: Piezas, x: number, y: number, n: number, desde: number, hasta:
  *  5. doble muralla con torres, ciudadela interior y zigurat escalonado.
  */
 function ciudad(p: Piezas, x: number, y: number, rc: number, nivel: number, color: string, sem: number): void {
-  const M = MUNDO3D.maqueta, r = rc * M, n = Math.max(1, Math.min(5, Math.round(nivel)));
-  const lleno = [0.35, 0.6, 0.8, 1, 1.15][n - 1]!;
-  const cuantas = Math.max(5, Math.min(170, Math.round(26 * rc * rc * lleno)));
-  const borde = Math.max(0.3 * M, r - 0.3 * M);
+  // más altas sin ocupar más suelo (0.175.0, Víctor 2026-11-07): todo sube `MUNDO3D.altoPlaza` (la tela de la bandera, no)
+  const antes = new Map([...p.por].map(([mat, l]) => [mat, l.length])), banderas = new Map([...p.banderas].map(([c, l]) => [c, l.length]));
+  ciudadPlana(p, x, y, rc, nivel, color, sem);
+  const H = MUNDO3D.altoPlaza;
+  for (const [mat, l] of p.por) for (let k = antes.get(mat) ?? 0; k < l.length; k++) { l[k]!.alto *= H; l[k]!.base *= H; }
+  for (const [c, l] of p.banderas) for (let k = banderas.get(c) ?? 0; k < l.length; k++) l[k]!.base *= H;
+}
+
+function ciudadPlana(p: Piezas, x: number, y: number, rc: number, nivel: number, color: string, sem: number): void {
+  // en una plaza grande todo lo de dentro (casas, palacio, templos, muralla) crece con ella: más grande, no más casas sin fin
+  const r = rc * MUNDO3D.maqueta, M = MUNDO3D.maqueta * Math.max(1, rc / 2), n = Math.max(1, Math.min(5, Math.round(nivel)));
+  // compacta: las casas llenan, de la plaza hacia fuera, hasta lo que ocupa la ciudad (`radioDePlaza`: el caserío y el poblado, menos que la
+  // muralla de las amuralladas)
+  const cuantas = 400;
+  const borde = Math.max(0.3 * M, radioDePlaza(rc, n) - 0.05 * M);
   // la cuadrícula de la plaza, girada por plaza; lo del centro, girado con ella
   const giro = azar(sem, 0, 11) * Math.PI / 2, cg = Math.cos(giro), sg = Math.sin(giro);
   const en = (u: number, v: number): [number, number] => [x + u * M * cg - v * M * sg, y + u * M * sg + v * M * cg];
@@ -151,7 +164,7 @@ function ciudad(p: Piezas, x: number, y: number, rc: number, nivel: number, colo
     p.caja('techo', jx, jy, 0.2 * M, 0.14 * M, 0.11 * M, giro);
     p.caja('muro', px, py, 0.05 * M, 0.05 * M, 0.035 * M, giro);
     p.anillo(cx, cy, 0.12 * M, 0.04 * M, 0.015 * M, 'madera', -1);
-    casas(p, x, y, cuantas, 0.3 * M, borde * 0.8, M * 0.85, sem, 0.15, giro, [{ x: cx, y: cy, r: 0.13 * M }]);
+    casas(p, x, y, cuantas, 0.3 * M, borde, M * 0.85, sem, 0.15, giro, [{ x: cx, y: cy, r: 0.13 * M }]);
     const [bx, by] = en(0.1, -0.14);
     p.bandera(bx, by, 0.4 * M, color);
     return;
@@ -165,7 +178,7 @@ function ciudad(p: Piezas, x: number, y: number, rc: number, nivel: number, colo
     p.caja('madera', gx, gy, 0.12 * M, 0.12 * M, 0.14 * M, giro);
     p.caja('techo', gx, gy, 0.14 * M, 0.14 * M, 0.025 * M, giro, 0.14 * M);
     p.caja('muro', px, py, 0.05 * M, 0.05 * M, 0.035 * M, giro);
-    casas(p, x, y, cuantas, 0.48 * M, borde * 0.9, M, sem, 0.3, giro);
+    casas(p, x, y, cuantas, 0.48 * M, borde, M, sem, 0.3, giro);
     const [bx, by] = en(0.14, -0.2);
     p.bandera(bx, by, 0.5 * M, color);
     return;
@@ -203,17 +216,18 @@ function ciudad(p: Piezas, x: number, y: number, rc: number, nivel: number, colo
     for (const dx of [-0.09, 0.09]) for (const dy of [-0.13, -0.045, 0.045, 0.13]) p.caja('filo', tx + dx * M, ty + dy * M, 0.025 * M, 0.025 * M, 0.15 * M, 0, 0.03 * M);
     p.caja('techo', tx, ty, 0.26 * M, 0.34 * M, 0.045 * M, 0, 0.18 * M);
   }
-  const desde = n === 5 ? Math.min(0.75 * M, r * 0.45) + 0.1 * M : 0.3 * M;
-  // lo grande del centro (palacio y templo, o la ciudadela) y la puerta quedan libres
+  // lo grande del centro (palacio y templo, o la ciudadela, redonda) queda libre; las casas, hasta el pie de la muralla
+  const ri = Math.min(0.75 * M, r * 0.45);
   const huecos: Hueco[] = n === 3 ? [{ x: x + 0.32 * M, y: y - 0.12 * M, r: 0.16 * M }] : n === 4 ? [{ x: x + 0.38 * M, y: y - 0.12 * M, r: 0.22 * M }]
-    : [{ x: x + Math.min(0.75 * M, r * 0.45) + 0.35 * M, y: y + 0.2 * M, r: 0.24 * M }];
-  casas(p, x, y, cuantas, desde, borde - 0.08 * M, M, sem, 0.25 + 0.1 * (n - 3), 0, huecos);
+    : [{ x, y, r: ri + 0.04 * M }, { x: x + ri + 0.35 * M, y: y + 0.2 * M, r: 0.24 * M }];
+  casas(p, x, y, cuantas, n === 5 ? 0 : 0.3 * M, r - grueso - 0.05 * M, M, sem, 0.25 + 0.1 * (n - 3), 0, huecos);
   p.bandera(x + 0.12 * M, y + 0.1 * M, (n === 5 ? 0.7 : 0.55) * M, color, n === 5 ? 0.36 * M : n === 4 ? 0.32 * M : 0.22 * M);
 }
 
 /** Un pueblo: empalizada y casas; la aldea agrícola con sus campos alrededor, el extractor con su bocamina. */
 function pueblo(p: Piezas, x: number, y: number, aldea: boolean, color: string, sem: number): void {
-  const M = MUNDO3D.maqueta;
+  // más grande que la maqueta (`MUNDO3D.pueblo`, Víctor 2026-11-07)
+  const M = MUNDO3D.maqueta * MUNDO3D.pueblo;
   p.anillo(x, y, 0.55 * M, 0.06 * M, 0.03 * M, 'madera');
   for (let k = 0; k < (aldea ? 8 : 5); k++) {
     const a = hash(sem, k, 1) * 2 * Math.PI, d = (0.12 + 0.33 * Math.sqrt(hash(sem, k, 2))) * M;
@@ -236,7 +250,8 @@ function pueblo(p: Piezas, x: number, y: number, aldea: boolean, color: string, 
  * su torre mayor, cuartel y almacén. En ruinas, baja y gris, sin bandera.
  */
 function avanzada(p: Piezas, x: number, y: number, etapa: number, ruinas: boolean, color: string): void {
-  const M = MUNDO3D.maqueta, e = Math.max(1, Math.min(3, etapa)), b = ruinas ? 0.4 : 1;
+  // más grande que la maqueta (`MUNDO3D.avanzada`, Víctor 2026-11-07)
+  const M = MUNDO3D.maqueta * MUNDO3D.avanzada, e = Math.max(1, Math.min(3, etapa)), b = ruinas ? 0.4 : 1;
   const mat = (m: Material): Material => (ruinas ? 'ruina' : m);
   let cima: number;
   if (e === 1) {
@@ -374,27 +389,27 @@ export class Maquetas {
     const M = MUNDO3D.maqueta, encima = new Piezas(), bajo = new Piezas(), claros: Claro[] = [];
     for (const x of m.plazas) {
       ciudad(x.recordada ? bajo : encima, x.posicion.x, x.posicion.y, x.radioCiudad, x.nivel, x.color, semilla(x.posicion.x, x.posicion.y));
-      claros.push({ x: x.posicion.x, y: x.posicion.y, r: x.radioCiudad * M + 0.4 });
+      claros.push({ x: x.posicion.x, y: x.posicion.y, r: radioDePlaza(x.radioCiudad, x.nivel) + 0.3 });
     }
     for (const x of m.pueblos) {
       pueblo(encima, x.posicion.x, x.posicion.y, x.aldea, x.color, semilla(x.posicion.x, x.posicion.y));
-      claros.push({ x: x.posicion.x, y: x.posicion.y, r: (x.aldea ? 1.4 : 0.9) * M });
+      claros.push({ x: x.posicion.x, y: x.posicion.y, r: x.aldea ? 1.45 * MUNDO3D.pueblo * M : radioDePueblo(false) + 0.3 });
     }
     for (const x of m.avanzadas) {
       avanzada(encima, x.posicion.x, x.posicion.y, x.etapa, x.ruinas, x.color);
-      claros.push({ x: x.posicion.x, y: x.posicion.y, r: 0.7 * M });
+      claros.push({ x: x.posicion.x, y: x.posicion.y, r: radioDeAvanzada(x.etapa) + 0.3 });
     }
     for (const x of m.obras) {
       obra(encima, x.posicion.x, x.posicion.y, x.arrancada, x.color);
-      claros.push({ x: x.posicion.x, y: x.posicion.y, r: 0.6 * M });
+      claros.push({ x: x.posicion.x, y: x.posicion.y, r: radioDeObra() + 0.25 });
     }
     for (const x of m.campamentos) {
       campamento(encima, x.posicion.x, x.posicion.y, semilla(x.posicion.x, x.posicion.y));
-      claros.push({ x: x.posicion.x, y: x.posicion.y, r: 0.9 * M * MUNDO3D.campamento });
+      claros.push({ x: x.posicion.x, y: x.posicion.y, r: radioDeCampamento() + 0.3 });
     }
     for (const x of m.bandidos) {
       bandidos(encima, x.posicion.x, x.posicion.y, x.nivel, semilla(x.posicion.x, x.posicion.y));
-      claros.push({ x: x.posicion.x, y: x.posicion.y, r: 0.6 * M * MUNDO3D.campamento });
+      claros.push({ x: x.posicion.x, y: x.posicion.y, r: radioDeBandidos() + 0.25 });
     }
     for (const x of m.alijos) alijo(encima, x.posicion.x, x.posicion.y);
     for (const x of m.batallas) batalla(encima, x.posicion.x, x.posicion.y, x.propia);

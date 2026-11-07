@@ -20,6 +20,13 @@ export const MUNDO3D = {
   campamento: 2,
   /** Los alijos, al doble de la maqueta (Víctor, 2026-10-31). */
   alijo: 2,
+  /** Pueblos y aldeas, y avanzadas, más grandes que la maqueta (Víctor, 2026-11-07: «hacerlos más grandes en general»). */
+  pueblo: 1.6,
+  avanzada: 1.6,
+  /** Las plazas, más altas sin ocupar más suelo (Víctor, 2026-11-07): lo que suben casas, murallas, torres, palacios y templos. */
+  altoPlaza: 1.7,
+  /** Las rocas de los nodos de recursos (piedra y metales), a la mitad (Víctor, 2026-11-07). */
+  nodo: 0.5,
   /** Escala de héroes y tropa (soldado de 0,136 u a ×1). */
   tropa: 2,
   /** Lado de las teselas de terreno, el de las del paquete de relieve. */

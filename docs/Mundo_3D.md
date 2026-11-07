@@ -24,7 +24,9 @@ escalas y la cámara se decidieron con la mesa de escalas 3D del motor (`Conside
 | | Valor |
 |---|---|
 | Copa de árbol | 0,3 u |
-| Plazas (maquetas) | ×1: la ciudad es la del juego, al 10 % del radio de su zona |
+| Plazas (maquetas) | ×1: la ciudad es la del juego, al 10 % del radio de su zona; todo ×1,7 de alto (`altoPlaza`) |
+| Pueblos, aldeas y avanzadas | ×1,6 (`pueblo`, `avanzada`) |
+| Rocas de los nodos | ×0,5 (`nodo`) |
 | Héroes y tropa | ×2 (soldado de 3,3 m de Unity, 1 u = 12 m) |
 | Apertura de la cámara | 35° |
 | Inclinación | libre, de 10° a 90°; arranca a 30° |
@@ -114,6 +116,12 @@ y la tesela va con zstd. La semilla 42 ocupa 8,6 MB.
 - **Clic.** Un rayo desde la cámara avanza hasta tocar el relieve. La vista da el centro de todo lo que tiene ese punto en su zona de clic (lo
   que ocupa su maqueta, y como poco 26 px de pantalla); `main.ts` busca qué hay en cada centro (`objetosBajoElClic`) y lo junta. Nada: se
   marcha allí; una cosa: se selecciona y se marcha hacia ella; dos o más: la lista para elegir.
+- **Lo que ocupa cada maqueta y lo sólido** (`huellas.ts`, 0.175.0). De un solo sitio salen el aro de lo seleccionado (lo que ocupa la
+  maqueta y 0,12 u), la zona de clic, el claro sin árboles y el colisionador. Plazas, pueblos, aldeas (su empalizada, sin los campos) y
+  avanzadas son sólidas, solo en el cliente: una marcha a ellas o a un punto de dentro va a su borde por el lado de la columna
+  (`destinoAlBorde`, en `marcharAObjetivo`), y lo que el servidor pone dentro (columnas, caravanas, Aedas) se pinta por el borde
+  (`Colisionador`: sigue el lado por donde está, sin saltos, a no más de 4,5 veces lo que anda), con su ruta, su cartel, su aro y la
+  cámara. El servidor sigue andando su línea; vista, puerta y encuentros son los de su sitio.
 
 ## Cómo se pinta (fase 3)
 
@@ -135,7 +143,9 @@ suelo, luego el paisaje, los árboles y la vegetación baja. Lo que se aleja se 
   desvanece hacia fuera. Los vados son un paso de grava de orilla a orilla. Los nodos son rocas: grises las de
   piedra y del color de su metal los afloramientos. Todo bajo la niebla.
 - **Maquetas** (`maquetas.ts`). Las piezas de la mesa a ×1. La ciudad tiene muralla al 10 % del radio de su zona (el del contorno si se
-  ve, el recordado si no) y casas dentro, más cuanto mayor. El pueblo es una empalizada con casas: la aldea agrícola lleva sus campos y el
+  ve, el recordado si no) y casas dentro, compactas (0.175.0): solares justos, calles estrechas y casas que los llenan, de la plaza hacia
+  fuera hasta lo que ocupa (el caserío, el 62 % del radio; el poblado, el 80 %; las amuralladas, hasta el pie de la muralla). En una plaza
+  de más de 2 u de radio lo de dentro crece con ella. Todo sube ×1,7. El pueblo es una empalizada con casas: la aldea agrícola lleva sus campos y el
   extractor su bocamina. La avanzada es empalizada y torre, más alta en cada etapa, de piedra desde el fuerte, baja y gris en ruinas. La
   obra es un andamio con su montón de material, con muros a media altura cuando ya arrancó. El campamento de mercenarios son tiendas en corro.
   Cada una lleva una bandera del color de su Facción. Una malla instanciada por material. Las plazas recordadas van bajo la niebla; lo

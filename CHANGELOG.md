@@ -3,6 +3,21 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.175.0] — 2026-11-07 · Maquetas más compactas, aro a su medida y lo sólido en el mapa · sin cambio de contrato (motor `8feafd4`)
+
+Víctor (2026-11-07): «las maquetas de plazas más compactas y más grandes», «el círculo alrededor de la maqueta es demasiado grande», «los
+nodos a la mitad», «aldeas, pueblos y avanzadas más grandes y las plazas más altas, no más grandes» y «que tengan como un collider: lo que se
+mueve no puede atravesarlos, al darle clic se queda al borde; solo de cliente».
+- **Plazas**: casas más grandes en solares justos y calles estrechas, llenando de la plaza hacia fuera; el caserío y el poblado, más
+  recogidos; la ciudad de nivel 5 ya tiene casas entre la ciudadela y la muralla. Todo ×1,7 de alto sin ocupar más suelo. En una plaza
+  grande lo de dentro crece con ella en vez de sumar casas sin fin.
+- **Pueblos, aldeas y avanzadas**, ×1,6. **Rocas de los nodos** de piedra y metales, a la mitad.
+- **Lo que ocupa cada maqueta** (`mundo3d/huellas.ts`), de un solo sitio: el aro de lo seleccionado (antes hasta el doble de grande), la zona
+  de clic y el claro sin árboles.
+- **Lo sólido, solo en el cliente**: una marcha a una plaza, un pueblo, una aldea o una avanzada, o a un punto de dentro, se queda en su borde
+  por el lado de la columna. Lo que el servidor pone dentro (columnas, caravanas, Aedas) se pinta rodeando por el borde, con su ruta, su
+  cartel y la cámara. El servidor no cambia: sigue andando su línea.
+
 ## [0.174.0] — 2026-11-07 · Se entra en las avanzadas · sin cambio de contrato (motor `8feafd4`)
 
 Víctor (2026-11-07): «a las atalayas y avanzadas en general se debería poder entrar así como se puede en los campamentos, plaza, pueblos y aldeas».

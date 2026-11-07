@@ -14,6 +14,7 @@ import { ANCHOS, etiquetasDesdeProyeccion, mundoVacio, rellenosDeTerritorio, tra
 import { circulo, suavizarCamino } from '../../src/mundo3d/lineas';
 import { fuenteDesdeMapa, fuenteDesdeRelieve } from '../../src/mundo3d/fuente';
 import { VistaMundo3D } from '../../src/mundo3d/vista';
+import { HOLGURA_ARO, radioDeAlijo, radioDeAvanzada, radioDeBandidos, radioDeBatalla, radioDeCampamento, radioDeObra, radioDePlaza, radioDePueblo } from '../../src/mundo3d/huellas';
 import type { NieblaProyectada } from '../../src/tiposDominio';
 import type { ProyeccionJugador } from '../../src/apiCliente';
 
@@ -77,11 +78,15 @@ async function arrancar(): Promise<void> {
   const sinAeda = parametros.has('sinMaquetas');
   // lo que se puede seleccionar con un clic, con el radio de su aro
   const seleccionables = (): SeleccionEnVista[] => [
-    ...mundo.plazas.map((x) => ({ posicion: x.posicion, radio: x.radioCiudad + 0.5 })),
-    ...mundo.pueblos.map((x) => ({ posicion: x.posicion, radio: x.aldea ? 1.5 : 0.9 })),
-    ...[...mundo.avanzadas, ...mundo.obras, ...mundo.alijos].map((x) => ({ posicion: x.posicion, radio: 0.7 })),
-    ...[...mundo.bandidos, ...mundo.batallas].map((x) => ({ posicion: x.posicion, radio: 1 })),
-    ...mundo.campamentos.map((x) => ({ posicion: x.posicion, radio: 1.1 })),
+    // el aro, del tamaño de la maqueta, como en el juego (`huellas.ts`)
+    ...mundo.plazas.map((x) => ({ posicion: x.posicion, radio: radioDePlaza(x.radioCiudad, x.nivel) + HOLGURA_ARO })),
+    ...mundo.pueblos.map((x) => ({ posicion: x.posicion, radio: radioDePueblo(x.aldea) + HOLGURA_ARO })),
+    ...mundo.avanzadas.map((x) => ({ posicion: x.posicion, radio: radioDeAvanzada(x.etapa) + HOLGURA_ARO })),
+    ...mundo.obras.map((x) => ({ posicion: x.posicion, radio: radioDeObra() + HOLGURA_ARO })),
+    ...mundo.alijos.map((x) => ({ posicion: x.posicion, radio: radioDeAlijo() + HOLGURA_ARO })),
+    ...mundo.bandidos.map((x) => ({ posicion: x.posicion, radio: radioDeBandidos() + HOLGURA_ARO })),
+    ...mundo.batallas.map((x) => ({ posicion: x.posicion, radio: radioDeBatalla() + HOLGURA_ARO })),
+    ...mundo.campamentos.map((x) => ({ posicion: x.posicion, radio: radioDeCampamento() + HOLGURA_ARO })),
     ...[...ajenas, ...caravanas].map((x) => ({ posicion: x.posicion, radio: 0.7 })),
   ];
   for (const c of artefacto.campamentos) {
@@ -134,13 +139,14 @@ async function arrancar(): Promise<void> {
     estado,
     alClicar: (p) => {
       const cerca = seleccionables().filter((x) => Math.hypot(x.posicion.x - p.x, x.posicion.y - p.y) < Math.max(1.2, x.radio)).sort((a, b) => Math.hypot(a.posicion.x - p.x, a.posicion.y - p.y) - Math.hypot(b.posicion.x - p.x, b.posicion.y - p.y))[0];
-      if (cerca) seleccion = cerca;
-      else { seleccion = null; ruta = [p]; }
+      // como en el juego: lo pulsado se selecciona y la columna va hacia ello; a una plaza, un pueblo o una avanzada, hasta su borde
+      if (cerca) { seleccion = cerca; ruta = [vista.destinoAlBorde(cerca.posicion)]; }
+      else { seleccion = null; ruta = [vista.destinoAlBorde(p)]; }
     },
   });
   // `?carga=N`: la distancia de carga del jugador (u)
   if (parametros.has('carga')) vista.fijarDistanciaDeCarga(Number(parametros.get('carga')));
-  const irA = (x: number, y: number) => { ruta = [{ x, y }]; };
+  const irA = (x: number, y: number, alBorde = true) => { ruta = [alBorde ? vista.destinoAlBorde({ x, y }) : { x, y }]; };
   $('cerca').addEventListener('click', () => vista.zoom('cerca'));
   $('normal').addEventListener('click', () => vista.zoom('normal'));
   $('alejado').addEventListener('click', () => vista.zoom('alejado'));
