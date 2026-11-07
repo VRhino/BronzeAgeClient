@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.178.0] — 2026-11-07 · Plazas plegadas, cargar al salir de una plaza de tu Facción y la interfaz del mundo · sin cambio de contrato (motor `8feafd4`)
+
+Víctor (2026-11-07), «unos pequeños cambios del cliente»:
+- **Facción → Plazas**: todas plegadas al abrir; sin el botón «Detalle»: la fila de la plaza se pulsa (o Intro) para desplegarla o plegarla.
+- **Salir al mundo desde una plaza de tu Facción en la que no resides**: si puedes sacar de su almacén (el Gobernador no lo cerró a los
+  ciudadanos, o eres él) y eres el Líder de tu columna, la ventana deja elegir carga del almacén, hasta lo que cabe en el carro de la columna.
+  Al salir, cada recurso pasa antes al carro (`cargarDePlaza`) y luego `salirDeAsentamiento`; si uno falla, no se sale y se dice por qué.
+- **Interfaz del mundo**: sin el riel de la izquierda ni los botones de zoom (la rueda del ratón sigue). El riel va en fila, centrado encima
+  de la barra de víveres; su panel se abre arriba a la izquierda y el botón de capas pasa abajo a la izquierda. El modo mapa (2D) no cambia.
+
 ## [0.177.0] — 2026-11-07 · Fuera el colisionador de las maquetas · sin cambio de contrato (motor `8feafd4`)
 
 Víctor (2026-11-07): «vamos a quitar el collider, al parecer evita que se pueda entrar a la plaza por la distancia del tamaño de la maqueta».

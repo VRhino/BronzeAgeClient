@@ -155,8 +155,8 @@ export function htmlLateralFaccion(proyeccion: ProyeccionJugador, e: (valor: str
 }
 
 /** Las plazas desplegadas en la pestaña Plazas: sobreviven a los repintados. La capital, de entrada. */
+/** Las plazas desplegadas: todas plegadas al abrir (Víctor, 2026-11-07); se despliega una pulsando su fila. */
 const plazasAbiertas = new Set<string>();
-let plazasTocadas = false;
 
 /** Lo de dentro de una plaza propia vista desde fuera (motor 5776ab69): chips de estado arriba y, desplegado, almacén por minuto, obras y guarnición. */
 function htmlInteriorPlaza(p: ProyeccionJugador, a: Asentamiento, abierta: boolean, e: (v: string) => string): { chips: string; detalle: string } {
@@ -250,7 +250,6 @@ function htmlPlazasFaccion(p: ProyeccionJugador, faccion: Faccion, e: (valor: st
   for (const a of interiores.values()) if (!plazas.has(a.id)) plazas.set(a.id, { nombre: a.nombre ?? a.id, nivel: a.nivel, posicion: a.posicion, recordada: false });
   if (plazas.size === 0) return '<p class="mapa-lista-vacia">Tu Facción aún no tiene plazas.</p>';
   const capitalId = faccion.capitalId ?? p.tecnologia?.capitalId ?? undefined;
-  if (!plazasTocadas) { plazasAbiertas.clear(); plazasAbiertas.add(capitalId && interiores.has(capitalId) ? capitalId : [...interiores.keys()][0] ?? ''); }
   const residentes = (id: string) => (faccion.miembros ?? []).filter((m) => m.residenciaId === id).length;
   const lista = [...plazas.entries()].sort(([ia, a], [ib, b]) => Number(ib === capitalId) - Number(ia === capitalId) || b.nivel - a.nivel || a.nombre.localeCompare(b.nombre));
   return `<div class="faction-list faction-list-libre"><span class="faction-kicker">Plazas de tu Facción (${plazas.size})</span>
@@ -259,12 +258,11 @@ function htmlPlazasFaccion(p: ProyeccionJugador, faccion: Faccion, e: (valor: st
       const abierta = Boolean(dentro) && plazasAbiertas.has(id);
       const interior = dentro ? htmlInteriorPlaza(p, dentro, abierta, e) : null;
       return `<div class="faccion-plaza${id === capitalId ? ' capital' : ''}${interior ? ' con-interior' : ''}${abierta ? ' abierta' : ''}">
-      <div class="faccion-plaza-fila">
-        <div class="faccion-plaza-info"><strong>${e(a.nombre)}${id === capitalId ? ' <span class="faccion-publica-relacion">Capital</span>' : ''}</strong>
+      <div class="faccion-plaza-fila"${interior ? ` role="button" tabindex="0" data-plaza-detalle="${e(id)}" aria-expanded="${abierta}" title="${abierta ? 'Plegar' : 'Desplegar'}"` : ''}>
+        <div class="faccion-plaza-info"><strong>${interior ? `<span class="faccion-plaza-flecha" aria-hidden="true">${abierta ? '▾' : '▸'}</span> ` : ''}${e(a.nombre)}${id === capitalId ? ' <span class="faccion-publica-relacion">Capital</span>' : ''}</strong>
           <span>Nivel ${a.nivel}${dentro?.nivelActual !== undefined && dentro.nivelActual < a.nivel ? ` <span class="falta">(rinde como ${dentro.nivelActual})</span>` : ''} · (${Math.round(a.posicion.x)}, ${Math.round(a.posicion.y)})${a.recordada ? ' · recordada' : ''}</span>
 </div>
         <div class="faccion-publica-cifras"><div><strong>${residentes(id)}</strong><span>Residentes</span></div></div>
-        ${interior ? `<button class="btn-secondary" type="button" data-plaza-detalle="${e(id)}" aria-expanded="${abierta}">${abierta ? 'Ocultar ▴' : 'Detalle ▾'}</button>` : ''}
         <button class="btn-secondary" type="button" data-centrar-x="${a.posicion.x}" data-centrar-y="${a.posicion.y}">Ver en el mapa</button>
       </div>
       ${interior?.chips ?? ''}
@@ -273,14 +271,17 @@ function htmlPlazasFaccion(p: ProyeccionJugador, faccion: Faccion, e: (valor: st
     }).join('')}</div>`;
 }
 
-/** «Detalle» de la pestaña Plazas: despliega o pliega la ficha de esa plaza. */
+/** La pestaña Plazas: pulsar la fila de una plaza (o Intro/espacio en ella) la despliega o la pliega; sus botones («Ver en el mapa») van aparte. */
 export function cablearPlazasFaccion(root: ParentNode, rerender: () => void): void {
-  root.querySelectorAll<HTMLButtonElement>('[data-plaza-detalle]').forEach((b) => b.addEventListener('click', () => {
-    const id = b.dataset.plazaDetalle!;
-    plazasTocadas = true;
-    if (plazasAbiertas.has(id)) plazasAbiertas.delete(id); else plazasAbiertas.add(id);
-    rerender();
-  }));
+  root.querySelectorAll<HTMLElement>('[data-plaza-detalle]').forEach((fila) => {
+    const alternar = () => {
+      const id = fila.dataset.plazaDetalle!;
+      if (plazasAbiertas.has(id)) plazasAbiertas.delete(id); else plazasAbiertas.add(id);
+      rerender();
+    };
+    fila.addEventListener('click', (ev) => { if (!(ev.target as HTMLElement).closest('button, a, input, select')) alternar(); });
+    fila.addEventListener('keydown', (ev) => { if ((ev.key === 'Enter' || ev.key === ' ') && ev.target === fila) { ev.preventDefault(); alternar(); } });
+  });
 }
 
 const RELACION: Record<string, string> = { alianza: 'Aliada', guerra: 'En guerra', vasallaje: 'Vasallaje' };

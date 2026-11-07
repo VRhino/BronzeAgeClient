@@ -6044,3 +6044,25 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
 .avanzada-carga span { white-space: nowrap; }
 .carro-fila.avanzada-carga { gap: 6px; }
 .carro-fila.avanzada-carga .form-input { width: 54px; padding: 4px 6px; }
+
+/* Facción → Plazas (0.178.0): la fila de una plaza con interior se pulsa para desplegarla */
+.faccion-plaza-fila[data-plaza-detalle] { cursor: pointer; border-radius: 6px; }
+.faccion-plaza-fila[data-plaza-detalle]:hover { background: rgba(169, 121, 63, 0.08); }
+.faccion-plaza-fila[data-plaza-detalle]:focus-visible { outline: 1px solid var(--acento); }
+.faccion-plaza-flecha { display: inline-block; width: 1em; color: var(--acento); }
+
+/* Interfaz del mundo (0.178.0, Víctor 2026-11-07): sin riel a la izquierda ni botones de zoom. El riel va en fila, centrado encima de la barra
+   de víveres; el botón de capas, abajo a la izquierda; el panel del riel se abre arriba a la izquierda. */
+.mapa-abajo {
+  position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 3;
+  display: flex; flex-direction: column; align-items: center; gap: 8px; max-width: calc(100vw - 32px); pointer-events: none;
+}
+.mapa-abajo > * { pointer-events: auto; }
+.mapa-abajo .mapa-riel { position: static; transform: none; flex-direction: row; }
+.mapa-abajo .mapa-riel button { border-bottom: none; border-right: 1px solid var(--bronce-osc); }
+.mapa-abajo .mapa-riel button:last-child { border-right: none; }
+.mapa-abajo .mapa-riel button.destaca { box-shadow: inset 0 -3px 0 var(--oro), inset 0 0 16px rgba(216, 184, 120, 0.22); }
+.mapa-abajo .mapa-comida { position: static; transform: none; }
+.mapa-screen .mapa-panel { left: 16px; }
+.mapa-screen > .mapa-capas { left: 16px; right: auto; bottom: 16px; }
+.mapa-screen > .mapa-capas .mapa-capas-lista { left: 48px; right: auto; }

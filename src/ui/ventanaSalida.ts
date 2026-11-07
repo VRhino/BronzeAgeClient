@@ -3,7 +3,8 @@
 // con un «+» para añadir escuadras.
 //   residencia   tu plaza: `salirAlMundo`, tropa de tu campamento (sin la de guarnición) y carga del almacén de la plaza
 //   campamento   el de mercenarios: `salirDelCampamento`; si resides, tropa y carga de tu almacén personal; si no, sales con tu columna
-//   plazaAjena   `salirDeAsentamiento`: retomas la columna aparcada tal cual
+//   plazaAjena   `salirDeAsentamiento`: retomas la columna aparcada; si la plaza es de tu Facción y puedes sacar de su almacén (el Gobernador no
+//                lo cerró, o eres él; y eres el Líder de la columna), lo que cargues pasa antes a su carro con `cargarDePlaza` (Víctor, 2026-11-07)
 //   pueblo       `salirDePueblo`: vuelves a la puerta con la columna con la que entraste
 //   avanzada     `salirDeAvanzada`: igual, a la puerta de la atalaya, el fuerte o la ciudadela
 // Donde se elige tropa, sale cargado el loadout activo (o todo, si ese loadout no tiene escuadras); se puede cambiar de loadout, quitar y añadir escuadras y,
@@ -169,8 +170,27 @@ function cambiado(p: ProyeccionJugador, l: LugarDeSalida): boolean {
   return delLoadout.length !== ahora.length || delLoadout.some((id, i) => id !== ahora[i]);
 }
 
+/** En una plaza de tu Facción en la que no resides: si puedes sacar de su almacén al carro de tu columna (`cargarDePlaza`), qué hay, lo que
+ * ya lleva el carro y lo que cabe. Como el motor: ciudadano de la Facción dueña, salvo que su Gobernador lo cierre; lo del carro, su Líder. */
+function cargaDeVisita(p: ProyeccionJugador, l: LugarDeSalida): { almacen: Record<string, number>; carro: Record<string, number>; capacidad: number } | null {
+  if (l.tipo !== 'plazaAjena' || !p.faccionId || l.asentamiento.faccionId !== p.faccionId || !l.asentamiento.almacen) return null;
+  const yo = p.facciones.find((f) => f.id === p.faccionId)?.miembros?.find((m) => m.heroeId === p.heroeId);
+  if (l.asentamiento.almacenCerradoACiudadanos && !yo?.cargos.includes(`gobernador@${l.asentamiento.id}`)) return null;
+  const columna = miColumna(p);
+  if (!columna || columna.liderId !== p.heroeId || !columna.capacidadCarga) return null;
+  return {
+    almacen: Object.fromEntries(Object.entries(l.asentamiento.almacen).map(([r, v]) => [r, v.cantidad])),
+    carro: columna.suministro ?? {},
+    capacidad: columna.capacidadCarga,
+  };
+}
+/** ¿Se elige carga en esta salida? Tu residencia, tu campamento o una plaza de tu Facción con su almacén abierto para ti. */
+const seCarga = (p: ProyeccionJugador, l: LugarDeSalida): boolean => seElige(p, l) || cargaDeVisita(p, l) !== null;
+
 /** El carro: lo que cargas (donde se elige) o lo que lleva la columna (de visita). */
 function htmlCarga(p: ProyeccionJugador, l: LugarDeSalida, valores: Record<string, number>, e: Escapar): string {
+  const visita = cargaDeVisita(p, l);
+  if (visita) return htmlCargaDeSalida(visita.almacen, 'el almacén de la plaza', e, visita.carro, valores, visita.capacidad);
   if (l.tipo === 'residencia') {
     const almacen = Object.fromEntries(Object.entries(l.asentamiento.almacen ?? {}).map(([r, v]) => [r, v.cantidad]));
     return htmlCargaDeSalida(almacen, 'el almacén de la plaza', e, p.heroe.carro, valores);
@@ -188,7 +208,7 @@ function htmlModo(p: ProyeccionJugador, l: LugarDeSalida, e: Escapar): string {
   const donde = l.tipo === 'pueblo'
     ? 'Vuelves a la puerta del pueblo con todo lo que trajiste; tu guarnición se queda.'
     : l.tipo === 'avanzada' ? `Vuelves a la puerta de la ${nombreDeEtapa(l.avanzada.etapa).toLowerCase()} con todo lo que trajiste; tu guarnición se queda.`
-    : l.tipo === 'plazaAjena' ? 'No resides aquí: retomas tu columna, aparcada a la puerta, con su tropa y su carro.'
+    : l.tipo === 'plazaAjena' ? (cargaDeVisita(p, l) ? 'No resides aquí: retomas tu columna, aparcada a la puerta, con su tropa y su carro. Es una plaza de tu Facción: puedes cargar en el carro de su almacén.' : 'No resides aquí: retomas tu columna, aparcada a la puerta, con su tropa y su carro.')
     : l.tipo === 'campamento' && !resideEnCampamento(p, l) ? 'No resides aquí: sales con la columna con la que entraste.'
     : 'Sales al mapa por la puerta. Tus víveres van siempre contigo.';
   return `<p class="diario-texto">${e(donde)}</p>
@@ -228,11 +248,11 @@ export function pintarVentanaSalida(raiz: HTMLElement, p: ProyeccionJugador, l: 
     </footer>
   </div>`;
   const elegidas = (): string[] => (seElige(p, l) ? prepararEleccion(p, l).ids : []);
-  const leerSeleccion = () => ({ escuadronIds: elegidas(), carga: seElige(p, l) ? leerCarga(raiz) : {} });
+  const leerSeleccion = () => ({ escuadronIds: elegidas(), carga: seCarga(p, l) ? leerCarga(raiz) : {} });
   const bloqueo = (): string | null => { const usado = excesoDeLiderazgo(p, l); return usado === null ? null : avisoExceso(usado, p.heroe.liderazgoBase); };
   pintar(raiz, html, () => {
     raiz.querySelector('[data-salida-cerrar]')?.addEventListener('click', cerrar);
-    if (seElige(p, l)) cablearCargaDeSalida(raiz);
+    if (seCarga(p, l)) cablearCargaDeSalida(raiz);
     const sel = seElige(p, l) ? prepararEleccion(p, l) : null;
     raiz.querySelector('[data-salida-mas]')?.addEventListener('click', () => { if (sel) { sel.eligiendo = !sel.eligiendo; repintar(); } });
     raiz.querySelectorAll<HTMLButtonElement>('[data-salida-anadir]').forEach((b) => b.addEventListener('click', () => {
@@ -282,6 +302,13 @@ export function pintarVentanaSalida(raiz: HTMLElement, p: ProyeccionJugador, l: 
         : l.tipo === 'avanzada' ? ['salirDeAvanzada', { heroeId: p.heroeId, avanzadaId: l.avanzada.id }]
         : ['salirDePueblo', { heroeId: p.heroeId, puebloId: l.pueblo.id }];
       ir.disabled = true;
+      // De una plaza de tu Facción, lo elegido pasa antes del almacén al carro de tu columna, recurso a recurso; si algo falla, no se sale
+      if (cargaDeVisita(p, l)) {
+        for (const [recurso, cantidad] of Object.entries(carga)) {
+          const fallo = await ejecutar('cargarDePlaza', { asentamientoId: l.tipo === 'plazaAjena' ? l.asentamiento.id : '', recurso, cantidad });
+          if (fallo) { ir.disabled = false; avisar(`${RECURSO_NOMBRE[recurso] ?? recurso}: ${fallo}`); return; }
+        }
+      }
       const mensaje = await ejecutar(tipo, params);
       if (mensaje) { ir.disabled = false; avisar(mensaje); return; }
       eleccion = null;

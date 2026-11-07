@@ -2129,19 +2129,20 @@ function montarMapa(): void {
   app.innerHTML = `<div class="mapa-screen">
     <div class="mapa-lienzo"><p class="mapa-cargando">Cargando el mundo…</p></div>
     ${htmlBarraJugador(proyeccion, escaparHtml)}
-    <nav class="mapa-riel" aria-label="Paneles del mapa">
-      <button type="button" data-panel="columna" title="Lo que llevas: tropa y carro" aria-label="Lo que llevas: tropa y carro">⚔</button>
-      <button type="button" data-panel="ejercito" title="Ejército: quién va, su tropa, la carga y las caravanas" aria-label="Ejército">⚑</button>
-      <button type="button" data-panel="cosas" title="Mis cosas" aria-label="Mis cosas">📍</button>
-      <button type="button" data-panel="fundar" title="Fundar asentamiento" aria-label="Fundar asentamiento" hidden>⌂</button>
-    </nav>
     <aside class="mapa-panel" hidden></aside>
     <aside class="jugador-panel" hidden></aside>
     <aside class="mapa-seleccion" hidden></aside>
     <p class="mapa-aviso" role="status" hidden></p>
-    <div class="mapa-comida" role="status" hidden></div>
+    <div class="mapa-abajo">
+      <nav class="mapa-riel" aria-label="Paneles del mapa">
+        <button type="button" data-panel="columna" title="Lo que llevas: tropa y carro" aria-label="Lo que llevas: tropa y carro">⚔</button>
+        <button type="button" data-panel="ejercito" title="Ejército: quién va, su tropa, la carga y las caravanas" aria-label="Ejército">⚑</button>
+        <button type="button" data-panel="cosas" title="Mis cosas" aria-label="Mis cosas">📍</button>
+        <button type="button" data-panel="fundar" title="Fundar asentamiento" aria-label="Fundar asentamiento" hidden>⌂</button>
+      </nav>
+      <div class="mapa-comida" role="status" hidden></div>
+    </div>
     ${htmlCapas('mundo', reglasDeAldea().fertilidadMinima)}
-    <div class="mapa-zoom"><button type="button" data-zoom="in" aria-label="Acercar">+</button><button type="button" data-zoom="out" aria-label="Alejar">−</button></div>
     ${menuEsquinaHtml()}
   </div>`;
   const contenedor = document.querySelector<HTMLElement>('.mapa-screen')!;
@@ -2219,9 +2220,6 @@ function montarMapa(): void {
     estadoCliente.posicionFundacion = null;
   };
 
-  contenedor.querySelectorAll<HTMLButtonElement>('[data-zoom]').forEach((boton) => {
-    boton.addEventListener('click', () => vista3d?.pasoDeZoom(boton.dataset.zoom === 'in' ? -1 : 1));
-  });
   contenedor.querySelectorAll<HTMLButtonElement>('.mapa-riel [data-panel]').forEach((boton) => {
     boton.addEventListener('click', () => abrirPanelRiel(boton.dataset.panel as PanelRiel));
   });

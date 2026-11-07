@@ -103,8 +103,8 @@ remata cabeceras y paneles con la moldura clásica. `opacity: .5` para que sea s
   90 %+. Icono y nombre salen de `RECURSO_ICONO` / `RECURSO_NOMBRE` (`src/paletas.ts`).
 - **Avatar** (`.mapa-avatar`) — moneda: `radial-gradient` oro, borde `#6b4a29`, iniciales en serif.
   Abre el menú de esquina (Refrescar · Ver proyección · Interfaz anterior · Cerrar sesión).
-- **Botón de capas** (`.mapa-capas`, 0.109.0) — cuadrado de bronce de 40 px con el icono de tres hojas apiladas, encima del zoom.
-  Abre a su izquierda una placa con el kicker «Capas» y una casilla por capa (`accent-color: --oro`); la que tiene leyenda la enseña
+- **Botón de capas** (`.mapa-capas`, 0.109.0) — cuadrado de bronce de 40 px con el icono de tres hojas apiladas. En el mundo, abajo a la
+  izquierda (0.178.0), y la placa se abre a su derecha; en el modo mapa, encima del zoom. Abre a su lado una placa con el kicker «Capas» y una casilla por capa (`accent-color: --oro`); la que tiene leyenda la enseña
   debajo mientras está marcada (rampa con su corte, o muestras redondas de color). Se cierra con Esc o con un clic fuera.
 - **Lienzo del mapa** (`.mapa-lienzo`, `.asent-lienzo`) — marco `--placa` + `inset` oscuro (viñeta),
   esquinas casi rectas. El canvas lo llena al 100 %.
@@ -113,8 +113,9 @@ remata cabeceras y paneles con la moldura clásica. `opacity: .5` para que sea s
 
 - **Fondo**: siempre `position: fixed; inset: 0`, warm-dark con viñeta radial. El mapa a pantalla
   completa (mundo y plaza en 3D) o centrado (campamento y pueblo).
-- **Chrome flotante**: riel de iconos en un borde, menú de esquina (avatar) arriba-derecha, zoom
-  abajo-derecha con el botón de capas encima, paneles que se despliegan junto a su disparador.
+- **Chrome flotante**: menú de esquina (avatar) arriba-derecha y paneles que se despliegan junto a su disparador. En el mundo (0.178.0,
+  Víctor 2026-11-07): el riel en fila, centrado encima de la barra de víveres (`.mapa-abajo`), su panel arriba a la izquierda, el botón de
+  capas abajo a la izquierda y sin botones de zoom (la rueda). En el modo mapa, el zoom abajo-derecha con el botón de capas encima.
 - **Avisos y elecciones, arriba al centro**: bajo la barra salen los avisos (`.aviso-global`) y, en el mundo y en el modo
   mapa, la lista de qué hay bajo un clic cuando son dos o más cosas (`.eleccion-clic`, 0.93.0): una placa de bronce con una
   fila por cosa (símbolo en un medallón, qué es y un detalle). Mientras está abierta, el aviso que hubiera espera debajo.
