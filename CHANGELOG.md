@@ -3,6 +3,13 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.181.0] — 2026-11-07 · Reclutamiento: solo lo que se puede reclutar · sin cambio de contrato (motor `0e283fb`)
+
+Víctor (2026-11-07): «ocultar aquellas tropas de las cuales no se puedan reclutar, en todas las interfaces de reclutamiento».
+- El árbol de Reclutamiento de la plaza y el de Tropa del campamento de mercenarios enseñan solo las tropas listas para reclutar (o pedir
+  prestadas) y las que ya tienes. Las que piden tecnología, edificio o nivel, o una Era que aún no empieza, no salen; tampoco los carriles
+  sin ninguna tropa que reclutar (el edificio que no hay) ni las Eras vacías. Sin nada que reclutar, una línea lo dice.
+
 ## [0.180.0] — 2026-11-07 · Salir de una plaza de tu Facción: cambiar entre el carro y su almacén · sin cambio de contrato (motor `0e283fb`)
 
 Víctor (2026-11-07): siendo Rey, en una plaza de su Facción, la ventana de salida no dejaba pasar recursos entre su carro y la plaza.

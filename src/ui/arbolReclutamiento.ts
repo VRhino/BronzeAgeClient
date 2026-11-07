@@ -6,6 +6,8 @@
 //     si es por el hito de su tecnología, a rayas si la piden su edificio o su equipo, punteada si solo la pide el logro (dependencia oculta).
 //     Cuando una tecnología habilita varias tropas, se dibuja una sola línea (la que cuenta el logro, si no la del carril, si no la primera).
 //   - Solo recluta: reponer va aparte (Víctor, 2026-11-06). Con la escuadra ya hecha, la carta lo dice y no hay botón (una por tropa y héroe).
+//   - Solo sale lo que se puede reclutar aquí (Víctor, 2026-11-07; 0.181.0): las tropas listas y las que ya tienes. Las que piden tecnología,
+//     edificio, nivel o una Era que aún no empieza no salen, ni los carriles sin tropa que reclutar ni las Eras sin ninguna.
 import { bloqueDeDatos, oroPorSoldado, type ProyeccionJugador, type TropaReclutable } from '../apiCliente';
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { Asentamiento } from '../tiposDominio';
@@ -312,9 +314,13 @@ export function htmlArbolReclutamiento(p: ProyeccionJugador, a: Asentamiento, e:
 export function htmlArbolDeLugar(D: DatosArbol, L: LugarDeReclutamiento, e: Escapar): string {
   escapar = e;
   const G = grafoDe(D);
-  const eraVisible = L.eraVisible;
-  const ocultas = new Set(L.centro.tropas ? [...G.nodos.values()].filter((n) => n.carril === 'centroUrbano' && !L.centro.tropas!.has(n.id)).map((n) => n.id) : []);
   const plegados = new Set(G.carriles.filter((c) => L.plegado(c.id) !== null).map((c) => c.id));
+  // lo que no se puede reclutar aquí no se enseña: ni la tropa, ni su carril, ni su Era
+  const ocultas = new Set([...G.nodos.values()].filter((n) => (n.carril === 'centroUrbano' && L.centro.tropas && !L.centro.tropas.has(n.id))
+    || plegados.has(n.carril) || n.era > L.eraVisible || !SE_RECLUTA.has(L.estado(n.id))).map((n) => n.id));
+  const quedan = [...G.nodos.values()].filter((n) => !ocultas.has(n.id));
+  if (!quedan.length) return `<p class="mapa-lista-vacia">Aún no puedes reclutar ninguna tropa en ${e(L.donde)}.</p>`;
+  const eraVisible = Math.max(...quedan.map((n) => n.era));
   const lay = disponerTropas(G, eraVisible, plegados, ocultas);
   const visibles = new Set([...G.nodos.values()].filter((n) => n.era <= eraVisible && !ocultas.has(n.id)).map((n) => n.id));
   const d: Dibujo = { G, L, visibles };
@@ -375,6 +381,9 @@ export function htmlArbolDeLugar(D: DatosArbol, L: LugarDeReclutamiento, e: Esca
     }),
   });
 }
+
+/** Lo que se enseña: lo que se recluta aquí y lo que ya tienes. */
+const SE_RECLUTA = new Set<EstadoTropa>(['lista', 'tuya']);
 
 const corta = (s: string, max: number): string => (s.length > max ? s.slice(0, max - 1).trimEnd() + '…' : s);
 
