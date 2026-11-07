@@ -85,11 +85,47 @@ function torresEnAnillo(p: Piezas, mat: Material, x: number, y: number, r: numbe
   }
 }
 
-/** Casas repartidas entre `desde` y `hasta` u del centro. */
-function casas(p: Piezas, x: number, y: number, n: number, desde: number, hasta: number, tam: number, sem: number, techo: number): void {
-  for (let k = 0; k < n; k++) {
-    const a = hash(sem, k, 1) * 2 * Math.PI, d = desde + (hasta - desde) * Math.sqrt(hash(sem, k, 2));
-    p.caja(hash(sem, k, 6) < techo ? 'techo' : 'adobe', x + d * Math.cos(a), y + d * Math.sin(a), (0.1 + 0.08 * hash(sem, k, 3)) * tam, (0.1 + 0.08 * hash(sem, k, 4)) * tam, (0.07 + 0.06 * hash(sem, k, 5)) * tam, a);
+/** Un número fijo entre 0 y 1 por (a, b, c), mejor mezclado que `hash` (con índices seguidos, `hash` daba espirales: Víctor, 2026-11-07). */
+function azar(a: number, b: number, c: number): number {
+  let h = (a | 0) ^ Math.imul(b | 0, 0x9e3779b1) ^ Math.imul(c | 0, 0x85ebca77);
+  for (let k = 0; k < 2; k++) {
+    h = Math.imul(h ^ (h >>> 16), 0x7feb352d);
+    h = Math.imul(h ^ (h >>> 15), 0x846ca68b);
+  }
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+/** Un círculo que las casas dejan libre (un granero, un corral, el templo). */
+interface Hueco { x: number; y: number; r: number }
+
+/**
+ * Las casas de una plaza (0.173.0, Víctor 2026-11-07: «es un espiral sin sentido, dale más forma de plaza y que no se monten»): en manzanas de
+ * una cuadrícula girada `giro`, cada casa en su solar (así nunca se montan), con dos calles que se cruzan en el centro y la plaza libre en medio
+ * (el cuadrado de medio lado `desde`). Se llenan antes los solares cerca de la plaza, con algo de azar, hasta `n` o hasta el borde `hasta`.
+ */
+function casas(p: Piezas, x: number, y: number, n: number, desde: number, hasta: number, tam: number, sem: number, techo: number, giro = 0, huecos: Hueco[] = []): void {
+  // el solar crece si hay pocas casas para tanto sitio (una plaza grande con el tope de casas): huertos entre ellas, no un hueco en el borde
+  const area = Math.PI * hasta * hasta - 4 * desde * desde;
+  const L = Math.max(0.27 * tam, Math.min(0.36 * tam, Math.sqrt(Math.max(0, area) * 0.7 / Math.max(1, n)))), calle = 0.09 * tam, cg = Math.cos(giro), sg = Math.sin(giro);
+  const solares: { u: number; v: number; orden: number; i: number; j: number }[] = [];
+  const max = Math.ceil(hasta / L) + 1;
+  for (let i = -max; i < max; i++) for (let j = -max; j < max; j++) {
+    // los solares a los lados de las dos calles del centro
+    const u = Math.sign(i + 0.5) * (calle + (Math.abs(i + 0.5) - 0.5) * L + L / 2), v = Math.sign(j + 0.5) * (calle + (Math.abs(j + 0.5) - 0.5) * L + L / 2);
+    const d = Math.hypot(u, v);
+    if (d + L * 0.45 > hasta) continue;
+    if (Math.abs(u) - L / 2 < desde && Math.abs(v) - L / 2 < desde) continue;
+    const wx = x + u * cg - v * sg, wy = y + u * sg + v * cg;
+    if (huecos.some((h) => Math.hypot(wx - h.x, wy - h.y) < h.r + L * 0.5)) continue;
+    solares.push({ u, v, i, j, orden: d / L + 1.6 * azar(sem, i * 131 + j, 7) });
+  }
+  solares.sort((a, b) => a.orden - b.orden);
+  for (const s of solares.slice(0, n)) {
+    const k = s.i * 131 + s.j;
+    const ancho = (0.12 + 0.07 * azar(sem, k, 3)) * tam, fondo = (0.11 + 0.06 * azar(sem, k, 4)) * tam;
+    const holgura = Math.max(0, L - Math.max(ancho, fondo)) * 0.7;
+    const u = s.u + (azar(sem, k, 8) - 0.5) * holgura, v = s.v + (azar(sem, k, 9) - 0.5) * holgura;
+    p.caja(azar(sem, k, 6) < techo ? 'techo' : 'adobe', x + u * cg - v * sg, y + u * sg + v * cg, ancho, fondo, (0.07 + 0.06 * azar(sem, k, 5)) * tam, giro + (azar(sem, k, 10) - 0.5) * 0.12);
   }
 }
 
@@ -106,23 +142,32 @@ function ciudad(p: Piezas, x: number, y: number, rc: number, nivel: number, colo
   const lleno = [0.35, 0.6, 0.8, 1, 1.15][n - 1]!;
   const cuantas = Math.max(5, Math.min(170, Math.round(26 * rc * rc * lleno)));
   const borde = Math.max(0.3 * M, r - 0.3 * M);
+  // la cuadrícula de la plaza, girada por plaza; lo del centro, girado con ella
+  const giro = azar(sem, 0, 11) * Math.PI / 2, cg = Math.cos(giro), sg = Math.sin(giro);
+  const en = (u: number, v: number): [number, number] => [x + u * M * cg - v * M * sg, y + u * M * sg + v * M * cg];
   if (n === 1) {
-    // la casa del jefe, chozas y un corral de madera
-    p.caja('techo', x, y, 0.2 * M, 0.16 * M, 0.11 * M);
-    casas(p, x, y, cuantas, 0.2 * M, borde * 0.7, M * 0.85, sem, 0.15);
-    p.anillo(x + 0.3 * M, y - 0.25 * M, 0.12 * M, 0.04 * M, 0.015 * M, 'madera', -1);
-    p.bandera(x + 0.12 * M, y + 0.1 * M, 0.4 * M, color);
+    // la plaza con la casa del jefe a un lado, el pozo en medio y el corral fuera de las calles; chozas alrededor
+    const [jx, jy] = en(0, -0.2), [px, py] = en(0.05, 0.05), [cx, cy] = en(-0.55, -0.55);
+    p.caja('techo', jx, jy, 0.2 * M, 0.14 * M, 0.11 * M, giro);
+    p.caja('muro', px, py, 0.05 * M, 0.05 * M, 0.035 * M, giro);
+    p.anillo(cx, cy, 0.12 * M, 0.04 * M, 0.015 * M, 'madera', -1);
+    casas(p, x, y, cuantas, 0.3 * M, borde * 0.8, M * 0.85, sem, 0.15, giro, [{ x: cx, y: cy, r: 0.13 * M }]);
+    const [bx, by] = en(0.1, -0.14);
+    p.bandera(bx, by, 0.4 * M, color);
     return;
   }
   if (n === 2) {
-    // casa grande con su patio (cuatro alas bajas), el granero y más casas
-    p.caja('adobe', x, y, 0.3 * M, 0.24 * M, 0.16 * M);
-    p.caja('techo', x, y, 0.32 * M, 0.26 * M, 0.03 * M, 0, 0.16 * M);
-    p.caja('adobe', x, y + 0.2 * M, 0.36 * M, 0.06 * M, 0.06 * M);
-    p.caja('adobe', x, y - 0.2 * M, 0.36 * M, 0.06 * M, 0.06 * M);
-    p.caja('madera', x - 0.32 * M, y + 0.05 * M, 0.12 * M, 0.12 * M, 0.14 * M);
-    casas(p, x, y, cuantas, 0.3 * M, borde * 0.85, M, sem, 0.3);
-    p.bandera(x + 0.14 * M, y + 0.1 * M, 0.5 * M, color);
+    // la plaza: la casa grande con su patio (cuatro alas bajas) a un lado, el granero y el pozo enfrente, y las casas en manzanas alrededor
+    const [hx, hy] = en(0, -0.32), [gx, gy] = en(-0.3, 0.3), [px, py] = en(0.08, 0.08);
+    p.caja('adobe', hx, hy, 0.3 * M, 0.2 * M, 0.16 * M, giro);
+    p.caja('techo', hx, hy, 0.32 * M, 0.22 * M, 0.03 * M, giro, 0.16 * M);
+    for (const dv of [-0.13, 0.13]) { const [ax, ay] = en(dv * 1.6, -0.32); p.caja('adobe', ax, ay, 0.06 * M, 0.22 * M, 0.07 * M, giro); }
+    p.caja('madera', gx, gy, 0.12 * M, 0.12 * M, 0.14 * M, giro);
+    p.caja('techo', gx, gy, 0.14 * M, 0.14 * M, 0.025 * M, giro, 0.14 * M);
+    p.caja('muro', px, py, 0.05 * M, 0.05 * M, 0.035 * M, giro);
+    casas(p, x, y, cuantas, 0.48 * M, borde * 0.9, M, sem, 0.3, giro);
+    const [bx, by] = en(0.14, -0.2);
+    p.bandera(bx, by, 0.5 * M, color);
     return;
   }
   // desde el 3, amurallada: cuanto más nivel, muralla más alta y gruesa
@@ -158,8 +203,11 @@ function ciudad(p: Piezas, x: number, y: number, rc: number, nivel: number, colo
     for (const dx of [-0.09, 0.09]) for (const dy of [-0.13, -0.045, 0.045, 0.13]) p.caja('filo', tx + dx * M, ty + dy * M, 0.025 * M, 0.025 * M, 0.15 * M, 0, 0.03 * M);
     p.caja('techo', tx, ty, 0.26 * M, 0.34 * M, 0.045 * M, 0, 0.18 * M);
   }
-  const desde = n === 5 ? Math.min(0.75 * M, r * 0.45) + 0.15 * M : 0.3 * M;
-  casas(p, x, y, cuantas, desde, borde, M, sem, 0.25 + 0.1 * (n - 3));
+  const desde = n === 5 ? Math.min(0.75 * M, r * 0.45) + 0.1 * M : 0.3 * M;
+  // lo grande del centro (palacio y templo, o la ciudadela) y la puerta quedan libres
+  const huecos: Hueco[] = n === 3 ? [{ x: x + 0.32 * M, y: y - 0.12 * M, r: 0.16 * M }] : n === 4 ? [{ x: x + 0.38 * M, y: y - 0.12 * M, r: 0.22 * M }]
+    : [{ x: x + Math.min(0.75 * M, r * 0.45) + 0.35 * M, y: y + 0.2 * M, r: 0.24 * M }];
+  casas(p, x, y, cuantas, desde, borde - 0.08 * M, M, sem, 0.25 + 0.1 * (n - 3), 0, huecos);
   p.bandera(x + 0.12 * M, y + 0.1 * M, (n === 5 ? 0.7 : 0.55) * M, color, n === 5 ? 0.36 * M : n === 4 ? 0.32 * M : 0.22 * M);
 }
 
@@ -396,4 +444,11 @@ export class Maquetas {
     this.vaciar();
     for (const m of this.materiales.values()) m.dispose();
   }
+}
+
+/** Las cajas de la maqueta de una plaza, por material (para las pruebas y los bancos: se ve desde arriba sin WebGL). */
+export function piezasDeCiudad(x: number, y: number, rc: number, nivel: number, sem: number): { mat: string; x: number; y: number; ancho: number; fondo: number; alto: number; giro: number; base: number }[] {
+  const p = new Piezas();
+  ciudad(p, x, y, rc, nivel, '#000000', sem);
+  return [...p.por].flatMap(([mat, l]) => l.map((q) => ({ mat, ...q })));
 }

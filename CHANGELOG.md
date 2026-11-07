@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.173.0] — 2026-11-07 · Las maquetas de plaza, en manzanas alrededor de su plaza · sin cambio de contrato (motor `8feafd4`)
+
+Víctor (2026-11-07), con la plaza de nivel 2 del mundo 3D: «es un espiral sin sentido, dale más forma de plaza y que no se monten».
+- Las casas de la maqueta (`mundo3d/maquetas.ts`, `casas`) van ahora en solares de una cuadrícula girada por plaza, con dos calles que se
+  cruzan en el centro y la plaza libre en medio; cada casa en su solar, así que no se montan. Se llenan antes los solares cerca de la plaza.
+  El azar se mezcla mejor (`azar`): con el de antes, los índices seguidos daban espirales.
+- Nivel 1: la casa del jefe a un lado de la plaza, el pozo en medio y el corral aparte. Nivel 2: la casa grande con su patio a un lado, el
+  granero y el pozo enfrente. Del 3 al 5, las casas dejan libres el palacio, el templo y la ciudadela.
+- Banco: `pruebas/maquetas/` (desde arriba, sin WebGL; `?rc=` el radio). Prueba: ninguna casa se monta (`pruebas/maquetas.test.ts`).
+
 ## [0.172.0] — 2026-11-07 · «Tu carga» en el Almacén de la plaza · sin cambio de contrato (motor `8feafd4`)
 
 Víctor (2026-11-07) no encontraba cómo pasar del carro o del almacén personal al almacén de la plaza: se perdió en 0.161.0, cuando la Base
