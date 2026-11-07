@@ -118,6 +118,7 @@ import { cablearInteriorPueblo, htmlCuerpoPueblo, htmlTrazadoPueblo, nombreDePue
 import { pintarSitiosDeAldea, type SitiosDeAldea } from './mundo/fertilidad';
 import { htmlMiembrosFaccion, htmlResidentesPlaza } from './ui/participacion';
 import { ascensoPosible, cablearCargosPlaza, htmlAscensoPlaza, htmlAutoConstruccion, htmlCargosPlaza } from './ui/panelCentro';
+import { cablearVentanaAedas, hayAedasEnPlaza, htmlVentanaAedas } from './ui/ventanaAedas';
 import { cablearBlasonHud, cablearEleccionBarra, htmlBlasonHud, htmlEleccionBarra, htmlObrasHud, htmlOcupacion, htmlPieDePlaza, ICONO_RIEL, vigilarPieArriba, type BlasonHud } from './ui/hudPlaza';
 import { htmlBlasonInterior, htmlPlacaDeRecursos, htmlRielInterior, htmlTituloDeParte, iconoDePueblo, ICONO_CAMPAMENTO } from './ui/hudInterior';
 import { columnaQuePaga } from './ui/columnaQuePaga';
@@ -2094,7 +2095,7 @@ function renderVentanaSalida(): void {
 
 /** Las ventanas de la plaza (Víctor, 2026-11-02, «rehacer la interfaz de asentamiento»): cada una con su icono en el riel de la izquierda, salvo la
  * subida de nivel (el medallón del blasón) e Información (el «?» de la barra). Solo hay una abierta, a media pantalla, junto al riel. */
-type VentanaPlaza = 'construccion' | 'gobierno' | 'defensa' | 'territorio' | 'reclutamiento' | 'taberna' | 'mercado' | 'ejercito' | 'ascenso' | 'informacion' | 'almacen';
+type VentanaPlaza = 'construccion' | 'gobierno' | 'defensa' | 'territorio' | 'reclutamiento' | 'taberna' | 'mercado' | 'ejercito' | 'aedas' | 'ascenso' | 'informacion' | 'almacen';
 let ventanaPlaza: VentanaPlaza | null = null;
 /** La subpestaña elegida en cada ventana que tiene varias. */
 const subDeVentana: Partial<Record<VentanaPlaza, string>> = {};
@@ -2197,6 +2198,8 @@ const RIEL: { id: VentanaPlaza; titulo: string; icono: string; requiere?: { tipo
   { id: 'mercado', titulo: 'Mercado', icono: iconoEdificio('mercado', 28), requiere: { tipo: 'mercado', nombre: 'un Mercado' }, deVisita: true },
   // unirse a un ejército de tu Facción que pasa cerca (antes, el botón «Ejércitos» de arriba): solo sale cuando hay a cuál (`ejercitosParaUnirse`)
   { id: 'ejercito', titulo: 'Unirse a un ejército', icono: ICONO_RIEL.ejercito },
+  // los Aedas de la plaza (Víctor, 2026-11-07; antes en Facción → Tecnología): solo sale con un Aeda dentro, itinerante parado o residente
+  { id: 'aedas', titulo: 'Aedas', icono: ICONO_RIEL.aedas },
 ];
 
 /** Un clic en uno de estos edificios (en pie) en la vista 3D abre su ventana, además de su ficha. */
@@ -2232,6 +2235,7 @@ function ventanaDisponible(v: VentanaPlaza, p: ProyeccionJugador, a: Asentamient
   // construir es cosa del Gobernador o del Maestro de Obras (el motor: `AlternarAutoConstruccion` y la cola, `Cargo(GOBERNADOR_O_MAESTRO)`)
   if (v === 'construccion') return !ajena && Boolean(cargoConstructor(a, p.heroeId));
   if (v === 'ejercito') return !ajena && ejercitosParaUnirse(p, a).length > 0;
+  if (v === 'aedas') return hayAedasEnPlaza(p, a);
   const def = RIEL.find((x) => x.id === v);
   if (!def || (ajena && !def.deVisita)) return false;
   return !def.requiere || a.edificios.some((e) => e.tipo === def.requiere!.tipo && e.estado === 'activo');
@@ -2428,6 +2432,8 @@ function contenidoDeVentana(v: VentanaPlaza, c: ContextoPlaza, ajena: boolean): 
       };
     case 'ejercito':
       return { ...base, ancho: 'estrecha', html: htmlUnirseDesdePlaza(p, a, escaparHtml), cablear: () => cablearUnirseDesdePlaza(cuerpo, p, a, ejecutarYRefrescar) };
+    case 'aedas':
+      return { ...base, html: htmlVentanaAedas(p, a, escaparHtml), cablear: () => { cablearPlegables(cuerpo); cablearVentanaAedas(cuerpo, a, ejecutarYRefrescar, (m) => mostrarAviso(m)); } };
     case 'informacion': {
       const s = SUBPESTANAS_CENTRO_EXTRA.find((x) => x.id === 'informacion');
       return { titulo: 'Información', icono: '<b class="asent-ventana-interrogacion">?</b>', subs: [], sub: '', html: s ? s.html(c) : '', cablear: () => { cablearPlegables(cuerpo); s?.cablear?.(c); } };

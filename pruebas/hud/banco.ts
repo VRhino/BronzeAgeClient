@@ -37,12 +37,15 @@ import { htmlRielInterior, htmlTituloDeParte } from '../../src/ui/hudInterior';
 import type { CampamentoMercenarios } from '../../src/tiposDominio';
 import { fundacionLista } from '../../src/ui/panelFundacionDePlaza';
 import { cablearReclutamiento, htmlReclutamiento } from '../../src/ui/reclutamiento';
+import { cablearVentanaAedas, htmlVentanaAedas } from '../../src/ui/ventanaAedas';
+import { catalogoDeTecnologia } from '../../src/apiCliente';
 
 const e = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const RIEL: [string, string, string, boolean?][] = [
   ['construccion', 'Construcción', ICONO_RIEL.construccion], ['gobierno', 'Gobierno', ICONO_RIEL.gobierno], ['defensa', 'Defensa', iconoEdificio('muralla', 28)],
   ['territorio', 'Territorio', ICONO_RIEL.territorio], ['reclutamiento', 'Reclutamiento', iconoEdificio('barracon', 28)],
   ['taberna', 'Taberna', iconoEdificio('taberna', 28), true], ['mercado', 'Mercado', iconoEdificio('mercado', 28)],
+  ['aedas', 'Aedas', ICONO_RIEL.aedas, new URLSearchParams(location.search).get('ventana') !== 'aedas'],
 ];
 const ventana = new URLSearchParams(location.search).get('ventana');
 // `?obrasMapa=1`: «Obras» del panel izquierdo con una aldea esperando materiales y un pueblo levantándose (0.149.0).
@@ -360,5 +363,32 @@ if (ventana === 'reclutamiento') {
     cablearReclutamiento(cuerpo, p, a, async () => null, pintarRecl);
   };
   pintarRecl();
+}
+// `?ventana=aedas`: la ventana de los Aedas de la plaza (0.170.0): un itinerante parado que vende dos reveladas y dos residentes, uno cantando su
+// épica y otro sin ella. `&sinCargo=1`: sin ser Rey ni Gobernador (se ve lo que vende, sin comprar). `&solo=itinerante|residente`: solo uno de los dos.
+if (ventana === 'aedas') {
+  const q = p as unknown as Record<string, unknown>;
+  const solo = qs.get('solo');
+  q.faccionId = a.faccionId;
+  q.facciones = [{ id: a.faccionId, nombre: 'Casa de Micenas', reyId: qs.get('sinCargo') ? 'otro' : 'h' }];
+  if (qs.get('sinCargo')) a.cargos = { ...(a.cargos ?? {}), gobernadorId: 'otro' } as typeof a.cargos;
+  a.almacen = { ...(a.almacen ?? {}), oro: { cantidad: 950 } } as typeof a.almacen;
+  q.tecnologia = { era: 'reinos_palaciales', capitalId: a.id, logros: [], epicasPosibles: ['cria_caballar', 'canteria'], propias: { adoptadas: ['leva_comunal'], aparecidas: [] },
+    reveladas: [{ tecnologiaId: 'metalurgia_cobre', descubridorFaccionId: 'f-2', hito: [], cumplidas: [false] }, { tecnologiaId: 'escudos_ligeros', descubridorFaccionId: 'f-3', hito: [], cumplidas: [false] }] };
+  q.aedasAvistados = solo === 'residente' ? [] : [{ id: 'aeda-3', posicion: a.posicion, enAsentamientoId: a.id }];
+  q.aedasResidentes = solo === 'itinerante' ? [] : [
+    { id: 'aeda-r1', nombre: 'Ión', asentamientoId: a.id, epica: { tecnologiaId: 'arqueria_palacial', nombre: 'La caza del león', capitulo: 1, capitulos: 3, tituloCapitulo: 'El arco', hechos: 2, hechosNecesarios: 5, ultimoHechoEn: p.instante - 20 * 60_000 } },
+    { id: 'aeda-r2', nombre: 'Femio', asentamientoId: a.id },
+  ];
+  const pintarAedas = (): void => {
+    const cuerpo = document.querySelector<HTMLElement>('.asent-edif-cuerpo');
+    const titulo = document.querySelector<HTMLElement>('.asent-ventana-titulo');
+    if (!cuerpo) return;
+    if (titulo) titulo.innerHTML = `<span class="asent-ventana-icono" aria-hidden="true">${ICONO_RIEL.aedas}</span><h2>Aedas</h2>`;
+    cuerpo.innerHTML = `<div class="asent-lado-cuerpo">${htmlVentanaAedas(p, a, e)}</div>`;
+    cablearVentanaAedas(cuerpo, a, async () => null, () => {});
+  };
+  pintarAedas();
+  catalogoDeTecnologia(pintarAedas);
 }
 (window as unknown as { __banco: unknown }).__banco = { listo: true, p, a };

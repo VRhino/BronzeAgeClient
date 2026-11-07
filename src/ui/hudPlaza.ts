@@ -343,4 +343,6 @@ export const ICONO_RIEL = {
   gobierno: `<svg class="icono-edificio" width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><path ${R} d="M16 4l10 4v8c0 7-5 11-10 13C11 27 6 23 6 16V8Z"/><path ${T} d="M11 19l-1-7 3 2 3-4 3 4 3-2-1 7Z"/></svg>`,
   // un estandarte con su asta: unirse a un ejército que pasa
   ejercito: `<svg class="icono-edificio" width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><path ${R} d="M10 5h15l-4 5 4 5H10Z"/><path ${T} d="M10 3v26M6 29h8M10 5h15l-4 5 4 5H10"/></svg>`,
+  // la lira de los Aedas: dos brazos curvos, el yugo arriba, la caja abajo y las cuerdas
+  aedas: `<svg class="icono-edificio" width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><path ${R} d="M10 22c0 4 12 4 12 0v-2H10Z"/><path ${T} d="M11 20C7 15 7 9 10 5M21 20c4-5 4-11 1-15M8 7h16M13 7v14M16 7v14M19 7v14"/></svg>`,
 } as const;

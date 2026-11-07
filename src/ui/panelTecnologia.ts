@@ -1,19 +1,15 @@
-// Panel de TECNOLOGÍA Y AEDAS (backend Doc 6). Se abre desde la barra del jugador. Comandos:
+// Panel de TECNOLOGÍA (backend Doc 6). Comando:
 //   adoptarTecnologia     { faccionId, tecnologiaId }                  el Rey, estando en la capital; la paga el almacén de la capital
-//   comprarTecnologiaAeda { asentamientoId, tecnologiaId }             el Rey o el Gobernador de la plaza, presente, a un Aeda itinerante detenido en ella
-//   empezarEpica          { asentamientoId, aedaId, tecnologiaId }     el Rey, el Gobernador o el Sacerdote de la plaza, presente
-//   abandonarEpica        { asentamientoId, aedaId }                   ídem; se pierde lo avanzado
-// Nombres, Eras, tarifas, venta de Aedas, épicas y enfriamiento salen del balance (`catalogoDeTecnologia`); mientras no llegue, se muestra el id legible.
+// Nombres, Eras y tarifas salen del balance (`catalogoDeTecnologia`); mientras no llegue, se muestra el id legible.
 // Desde la 0.158.0 (Víctor, 2026-11-06) la pestaña Tecnología de Facción es el árbol de tecnologías (`arbolTecnologias.ts`): arriba el árbol, y al
-// hacer clic en una carta su ficha con las acciones que puede usar quien mira (Adoptar, Comprar a un Aeda, Empezar épica); abajo, los logros del
-// mundo y los Aedas residentes e itinerantes de tus plazas, como antes.
+// hacer clic en una carta su ficha con lo que puede hacer quien mira (Adoptar); abajo, los logros del mundo. Desde la 0.170.0 (Víctor,
+// 2026-11-07: «los Aedas son de plaza, no de Facción») lo de los Aedas (comprar a un itinerante, las épicas de los residentes) está en la
+// ventana Aedas del riel de la plaza (`ventanaAedas.ts`); el árbol sigue diciendo qué tecnologías reveló un Aeda y lo que cobra por ellas.
 import { catalogoDeTecnologia, type ProyeccionJugador } from '../apiCliente';
 import type { Asentamiento } from '../tiposDominio';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
-import { textoEnTiempoReal } from './estadoCliente';
 import { ayuda } from './ayuda';
 import { htmlArbol, montarArbol, textoContador } from './arbolTecnologias';
-import { nombreDeAeda } from '../mundo/aedas';
 
 type Escapar = (valor: string) => string;
 export type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
@@ -25,11 +21,10 @@ const cifra = (n: number): string => n.toLocaleString('es');
 export function htmlTecnologia(p: ProyeccionJugador, e: Escapar, conCabecera = true): string {
   const t = p.tecnologia;
   // en la pestaña de la Facción, sin cabecera: ya está la de la ventana
-  const cabecera = conCabecera ? `<div class="mapa-panel-jugador">${e(p.heroe.displayName)} · tecnología y Aedas</div>` : '';
+  const cabecera = conCabecera ? `<div class="mapa-panel-jugador">${e(p.heroe.displayName)} · tecnología</div>` : '';
   if (!t) return `${cabecera}<p class="asent-lado-nota">Este servidor no envía el estado de la tecnología.</p>`;
   // El panel se repinta con el sondeo, así que no hace falta avisar cuando llegue el balance.
   const cat = catalogoDeTecnologia(() => {});
-  const nombreTec = (id: string): string => cat?.TECNOLOGIAS[id]?.nombre ?? legible(id);
   const nombreEra = (id: string): string => cat?.ERAS[id]?.nombre ?? legible(id);
   const eraDeTec = (id: string): string | undefined => t.eraDe?.[id] ?? cat?.TECNOLOGIAS[id]?.era;
   /** Lo que cobraría un Aeda itinerante por la tecnología (el doble del oro de la tarifa de su Era), o `null` si no las vende (Era demasiado alta) o no se sabe. */
@@ -38,7 +33,6 @@ export function htmlTecnologia(p: ProyeccionJugador, e: Escapar, conCabecera = t
     if (!cat || !era || (cat.ERAS[era]?.orden ?? 99) > cat.AEDAS.venta.ordenEraMaximo) return null;
     return (cat.TARIFA_ADOPCION[era]?.['oro'] ?? 0) * cat.AEDAS.venta.factorOro;
   };
-  const enfriamientoMs = cat ? cat.AEDAS.epica.enfriamientoMinutos * 60_000 : null;
   const faccion = p.facciones.find((f) => f.id === p.faccionId);
   const soyRey = faccion?.reyId === p.heroeId;
   const propias = t.propias;
@@ -49,13 +43,6 @@ export function htmlTecnologia(p: ProyeccionJugador, e: Escapar, conCabecera = t
   const ubic = p.heroe.ubicacion;
   const dondeEstoy = ubic.tipo === 'asentamiento' ? ubic.asentamientoId : null;
   const nombrePlaza = (a: Asentamiento): string => a.nombre ?? a.id;
-  /** Por qué no puedo dirigir a los Aedas de una plaza (Rey, Gobernador o Sacerdote, presente), o `null` si puedo. `compra`: solo Rey o Gobernador. */
-  const motivoPlaza = (a: Asentamiento, compra: boolean): string | null => {
-    const cargo = soyRey || a.cargos?.gobernadorId === p.heroeId || (!compra && a.cargos?.sacerdoteId === p.heroeId);
-    if (!cargo) return compra ? 'Solo el Rey o el Gobernador de la plaza.' : 'Solo el Rey, el Gobernador o el Sacerdote de la plaza.';
-    return dondeEstoy === a.id ? null : `Tienes que estar en ${nombrePlaza(a)}.`;
-  };
-  const reveladas = t.reveladas;
 
   const logros = t.logros.length === 0
     ? '<p class="asent-lado-nota">Aún no se ha cumplido ningún logro del mundo.</p>'
@@ -64,50 +51,6 @@ export function htmlTecnologia(p: ProyeccionJugador, e: Escapar, conCabecera = t
   const capital = plazas.find((a) => a.id === t.capitalId);
   const motivoAdoptar = !propias ? 'Necesitas una Facción.' : !soyRey ? 'Solo la adopta el Rey de la Facción, estando en la capital.'
     : !t.capitalId ? 'Tu Facción aún no tiene capital.' : dondeEstoy !== t.capitalId ? `Tienes que estar en la capital${capital ? `, ${nombrePlaza(capital)}` : ''}.` : null;
-  const residentes = p.aedasResidentes ?? [];
-  const posibles = t.epicasPosibles ?? [];
-  const filaResidente = (a: NonNullable<typeof p.aedasResidentes>[number]): string => {
-    const plaza = plazas.find((x) => x.id === a.asentamientoId);
-    const motivo = plaza ? motivoPlaza(plaza, false) : 'La plaza ya no es tuya.';
-    const nombre = `<strong>${e(a.nombre)}</strong> <small>en ${e(plaza ? nombrePlaza(plaza) : a.asentamientoId)}</small>`;
-    const ep = a.epica;
-    if (ep) {
-      const sinEnfriar = ep.ultimoHechoEn !== undefined && enfriamientoMs !== null ? enfriamientoMs - (p.instante - ep.ultimoHechoEn) : 0;
-      const hecho = cat?.EPICAS[ep.tecnologiaId]?.capitulos[ep.capitulo]?.hecho;
-      const titulo = (hecho && cat?.TITULO_CAPITULO[hecho]) || ep.tituloCapitulo;
-      return `<li class="tec-fila"><span>${nombre}<br>${e(cat?.EPICAS[ep.tecnologiaId]?.nombre ?? ep.nombre)} <small>(${e(nombreTec(ep.tecnologiaId))})</small>
-        <br><small>Capítulo ${ep.capitulo + 1} de ${ep.capitulos}: ${e(titulo)} · ${ep.hechos} / ${ep.hechosNecesarios} hechos${sinEnfriar > 0 ? ` · otro hecho cuenta en ${e(textoEnTiempoReal(sinEnfriar))}` : ep.ultimoHechoEn === undefined ? '' : ' · ya puede contar otro hecho'}</small></span>
-        <button class="btn-secondary" type="button" data-tec-abandonar="${e(a.id)}" data-plaza="${e(a.asentamientoId)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>Abandonar</button></li>`;
-    }
-    const opciones = posibles.map((id) => `<option value="${e(id)}">${e(cat?.EPICAS[id]?.nombre ? `${cat.EPICAS[id]!.nombre} (${nombreTec(id)})` : nombreTec(id))}</option>`).join('');
-    return `<li class="tec-fila"><span>${nombre}<br><small>Sin épica en curso.${posibles.length === 0 ? ' Ninguna tecnología tiene ahora una épica posible.' : ''}</small></span>
-      ${posibles.length === 0 ? '' : `<select class="form-input" data-tec-epica-de="${e(a.id)}" aria-label="Tecnología de la épica">${opciones}</select>
-      <button class="btn-primary" type="button" data-tec-empezar="${e(a.id)}" data-plaza="${e(a.asentamientoId)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>Empezar épica</button>`}</li>`;
-  };
-
-  // Aedas itinerantes detenidos en una plaza mía: se les compra una tecnología revelada (la conocen, por eso se reveló).
-  const detenidos = (p.aedasAvistados ?? []).filter((a) => a.enAsentamientoId && plazas.some((x) => x.id === a.enAsentamientoId));
-  const filaItinerante = (id: string): string => {
-    const plaza = plazas.find((x) => x.id === id)!;
-    const motivo = motivoPlaza(plaza, true);
-    const oro = Math.floor(plaza.almacen?.['oro']?.cantidad ?? 0);
-    const venta = reveladas.filter((r) => precioAeda(r.tecnologiaId) !== null);
-    const quienes = detenidos.filter((a) => a.enAsentamientoId === id).map((a) => nombreDeAeda(a.id)).join(' y ');
-    return `<li class="tec-fila"><span><strong>📜 ${e(quienes || 'Aeda itinerante')}</strong> <small>Aeda itinerante detenido en ${e(nombrePlaza(plaza))} · almacén: ${oro} de oro</small></span>
-      ${venta.length === 0 ? '<small>No tienes tecnologías reveladas que comprar.</small>' : `<select class="form-input" data-tec-compra-en="${e(id)}" aria-label="Tecnología a comprar">${venta.map((r) => `<option value="${e(r.tecnologiaId)}">${e(`${nombreTec(r.tecnologiaId)} · ${cifra(precioAeda(r.tecnologiaId)!)} de oro`)}</option>`).join('')}</select>
-      <button class="btn-primary" type="button" data-tec-comprar="${e(id)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>Comprar</button>`}</li>`;
-  };
-  const itinerantes = [...new Set(detenidos.map((a) => a.enAsentamientoId!))];
-  const enfriamientoTexto = enfriamientoMs !== null ? `uno cada ${e(textoEnTiempoReal(enfriamientoMs))} de mundo como mucho` : 'con un enfriamiento entre uno y otro';
-  // Lo que da un residente y cuántos caben (Economia_Construccion §9.1, Tecnologia_Aedas §7): del balance, si llegó.
-  const res = cat?.AEDAS.residentes;
-  const cupos = res?.cupoPorNivel ? Object.entries(res.cupoPorNivel).sort(([a], [b]) => Number(a) - Number(b)).map(([n, c]) => `${c} en nivel ${n}`).join(', ') : '';
-  const pct = (x: number | undefined): string => (x === undefined ? '' : `${Math.round(x * 100)} %`);
-  const residentesTexto = res
-    ? `Cada Aeda residente da +${pct(res.bonoFelicidad)} de felicidad a su plaza (crece más su población) y +${pct(res.bonoNobleza)} al crecimiento de la nobleza. Viven en plazas con Palacio activo y algo de nobleza: caben ${e(cupos)}. Con sitio libre llega uno cada ${e(textoEnTiempoReal((res.llegadaMinutos ?? 0) * 60_000))}${res.factorLlegadaReputacionBaja && res.umbralReputacionBaja !== undefined ? ` (${res.factorLlegadaReputacionBaja} veces más lento si la reputación de tu Facción está en ${res.umbralReputacionBaja} o menos)` : ''}. Cuentan para el título «Mecenas de los Aedas»: épicas cumplidas × 10 más residentes.`
-    : 'Un Aeda residente da felicidad y crecimiento de nobleza a su plaza. Viven en plazas con Palacio activo y nobleza, y cuentan para el título «Mecenas de los Aedas».';
-  const ventaTexto = cat ? `un Aeda cobra ${cat.AEDAS.venta.factorOro} veces el oro de la tarifa de la Era (hasta la Era ${cat.AEDAS.venta.ordenEraMaximo}), del almacén de la plaza` : 'cobra oro del almacén de la plaza';
-
   // La ficha de una carta del árbol: lo que quien mira puede hacer con esa tecnología ahora. Lo que no puede hacer no sale; lo que no puede pagar,
   // en rojo y sin pulsar.
   const fichaAcciones = (id: string): string => {
@@ -125,23 +68,6 @@ export function htmlTecnologia(p: ProyeccionJugador, e: Escapar, conCabecera = t
         partes.push(`<button class="btn-primary ta-ficha-boton" type="button" data-ficha-adoptar="${e(id)}" data-faccion="${e(p.faccionId ?? '')}"${sinPagar ? ' disabled title="El almacén de la capital no tiene bastante"' : ''}>Adoptar ${chips(tarifa, alm)}</button>`);
       }
     }
-    const precio = precioAeda(id);
-    if (precio !== null && reveladas.some((r) => r.tecnologiaId === id)) {
-      for (const plazaId of itinerantes) {
-        const plaza = plazas.find((x) => x.id === plazaId)!;
-        if (motivoPlaza(plaza, true)) continue;
-        const coste = { oro: precio };
-        partes.push(`<button class="btn-primary ta-ficha-boton" type="button" data-ficha-comprar="${e(plazaId)}" data-tec-id="${e(id)}"${falta(coste, plaza.almacen) ? ` disabled title="El almacén de ${e(nombrePlaza(plaza))} no tiene bastante oro"` : ''}>Comprar al Aeda en ${e(nombrePlaza(plaza))} ${chips(coste, plaza.almacen)}</button>`);
-      }
-    }
-    if (posibles.includes(id)) {
-      for (const a of residentes) {
-        if (a.epica) continue;
-        const plaza = plazas.find((x) => x.id === a.asentamientoId);
-        if (!plaza || motivoPlaza(plaza, false)) continue;
-        partes.push(`<button class="btn-secondary ta-ficha-boton" type="button" data-ficha-epica="${e(a.id)}" data-plaza="${e(a.asentamientoId)}" data-tec-id="${e(id)}">Que ${e(a.nombre)} cante su épica${cat?.EPICAS[id]?.nombre ? ` · ${e(cat.EPICAS[id]!.nombre)}` : ''}</button>`);
-      }
-    }
     return partes.join('');
   };
   ficha = { acciones: fichaAcciones };
@@ -154,17 +80,7 @@ export function htmlTecnologia(p: ProyeccionJugador, e: Escapar, conCabecera = t
         <strong class="heroe-sub">Logros del mundo cumplidos${ayuda('jugador:tec-era', `Lo que ha pasado entre todas las Facciones; no dicen qué tecnología abren. Era del mundo: ${e(nombreEra(t.era))}.`)}</strong>
         ${logros}
       </section>
-      <section class="tec-extra">
-        <strong class="heroe-sub">Aedas residentes de tus plazas${ayuda('jugador:tec-residentes', `Una épica sustituye al hito de la Facción (no al logro del mundo), no cuesta oro y avanza con hechos de la plaza o de la Facción, ${enfriamientoTexto}. Al cumplirla la tecnología aparece, y se adopta como siempre. Solo se ofrecen las tecnologías con logro cumplido, Era alcanzada y que ningún Aeda tuyo canta ya.`)}</strong>
-        <p class="asent-lado-nota">${residentesTexto}</p>
-        ${residentes.length ? `<ul class="tec-lista">${residentes.map(filaResidente).join('')}</ul>` : '<p class="asent-lado-nota">Ninguna plaza tuya tiene un Aeda residente (piden Palacio y nobleza).</p>'}
-      </section>
-      <section class="tec-extra">
-        <strong class="heroe-sub">Aedas itinerantes en tus plazas${ayuda('jugador:tec-itinerantes', `Compra de una tecnología revelada: ${e(ventaTexto)}. Te salta el hito, no el logro; luego hay que adoptarla.`)}</strong>
-        ${itinerantes.length ? `<ul class="tec-lista">${itinerantes.map(filaItinerante).join('')}</ul>` : '<p class="asent-lado-nota">Ningún Aeda itinerante detenido en una plaza tuya ahora mismo.</p>'}
-      </section>
     </div>
-    <p class="faction-error" data-campo="error-tecnologia-aedas" role="alert"></p>
   </div>`;
 }
 
@@ -187,12 +103,9 @@ export function cablearTecnologia(raiz: HTMLElement, ejecutar: Ejecutar): void {
           if (campo) campo.textContent = mensaje ?? '';
         }));
         accion('[data-ficha-adoptar]', 'adoptarTecnologia', (b) => ({ faccionId: b.dataset.faccion, tecnologiaId: b.dataset.fichaAdoptar }));
-        accion('[data-ficha-comprar]', 'comprarTecnologiaAeda', (b) => ({ asentamientoId: b.dataset.fichaComprar, tecnologiaId: b.dataset.tecId }));
-        accion('[data-ficha-epica]', 'empezarEpica', (b) => ({ asentamientoId: b.dataset.plaza, aedaId: b.dataset.fichaEpica, tecnologiaId: b.dataset.tecId }));
       },
     });
   }
-  const elegida = (selector: string): string => raiz.querySelector<HTMLSelectElement>(selector)?.value ?? '';
   const enlazar = (atributo: string, error: string, tipo: string, params: (b: HTMLButtonElement) => object): void =>
     raiz.querySelectorAll<HTMLButtonElement>(`[${atributo}]`).forEach((b) => b.addEventListener('click', async () => {
       b.disabled = true;
@@ -202,7 +115,4 @@ export function cablearTecnologia(raiz: HTMLElement, ejecutar: Ejecutar): void {
       if (campo) campo.textContent = mensaje ?? '';
     }));
   enlazar('data-tec-adoptar', 'error-tecnologia', 'adoptarTecnologia', (b) => ({ faccionId: b.dataset.faccion, tecnologiaId: b.dataset.tecAdoptar }));
-  enlazar('data-tec-abandonar', 'error-tecnologia-aedas', 'abandonarEpica', (b) => ({ asentamientoId: b.dataset.plaza, aedaId: b.dataset.tecAbandonar }));
-  enlazar('data-tec-empezar', 'error-tecnologia-aedas', 'empezarEpica', (b) => ({ asentamientoId: b.dataset.plaza, aedaId: b.dataset.tecEmpezar, tecnologiaId: elegida(`[data-tec-epica-de="${b.dataset.tecEmpezar}"]`) }));
-  enlazar('data-tec-comprar', 'error-tecnologia-aedas', 'comprarTecnologiaAeda', (b) => ({ asentamientoId: b.dataset.tecComprar, tecnologiaId: elegida(`[data-tec-compra-en="${b.dataset.tecComprar}"]`) }));
 }

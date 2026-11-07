@@ -240,6 +240,11 @@ La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, es
 > Almacén y Estado va a su lado, a su tamaño y centrada hasta los botones del jugador. «Ejércitos» desaparece: unirse a un ejército es un icono
 > del riel que solo sale cuando se puede. «Salir al mundo» va abajo a la izquierda.
 >
+> **Aedas desde 0.170.0** (Víctor, 2026-11-07: «los Aedas son de plaza, no de Facción»): icono de la lira en el riel, solo en una plaza de tu
+> Facción con un Aeda dentro (itinerante parado o residente). La ventana (`ui/ventanaAedas.ts`) dice lo que vende el itinerante, con «Comprar»
+> para el Rey o el Gobernador, y lo que da cada residente y su épica: en curso, con su capítulo y «Abandonar»; sin ella, las que puede cantar
+> (Rey, Gobernador o Sacerdote). Facción → Tecnología se queda con el árbol y los logros.
+>
 > **Desde 0.125.0** la placa del Almacén va sola mientras el jugador no elija (lo que tiene la plaza, hasta 8, sin echar a nadie); al elegir en
 > la ventana del Almacén manda su elección, y «Que vaya sola» la devuelve. Con la subida lista, el medallón del blasón parpadea con un «!»
 > (solo para el Gobernador).

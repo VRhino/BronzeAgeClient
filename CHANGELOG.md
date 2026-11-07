@@ -3,6 +3,18 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.170.0] — 2026-11-07 · Los Aedas, en una ventana del riel de la plaza · sin cambio de contrato (motor `8feafd4`)
+
+Petición de Víctor (2026-11-07): «los Aedas son de plaza, no de Facción».
+- **Ventana «Aedas»** en el riel de la plaza (icono de la lira, `ICONO_RIEL.aedas`), que solo sale en una plaza de tu Facción con un Aeda
+  dentro, itinerante parado o residente (`ui/ventanaAedas.ts`). Itinerante: quién es, cuánto se queda y lo que os vende con su precio en
+  oro; «Comprar» solo para el Rey o el Gobernador. Residentes: lo que dan a la plaza, su épica en curso con barra de avance, capítulo, hechos
+  y enfriamiento, y «Abandonar» (con confirmación); sin épica, cada épica posible con «Que la cante». Las épicas, para el Rey, el Gobernador
+  o el Sacerdote.
+- **Facción → Tecnología** pierde las secciones de Aedas residentes e itinerantes y los botones de comprar y de épica de la ficha de la
+  carta: queda el árbol (que sigue marcando lo revelado por un Aeda y su precio) y los logros del mundo.
+- Banco: `pruebas/hud/?ventana=aedas` (`&sinCargo=1`, `&solo=itinerante|residente`).
+
 ## [0.169.0] — 2026-11-07 · Los Aedas en el mundo, sus avisos y la Crónica · sin cambio de contrato (motor `8feafd4`)
 
 Petición de Víctor (2026-11-07), tras revisar qué usaba el cliente de los Aedas (solo el panel de Tecnología):

@@ -5970,3 +5970,18 @@ button.carro-hueco:hover, .carro-hueco.activo { border-color: var(--oro); box-sh
 .base-viveres .form-input { padding: 4px 8px; }
 .base-viveres > span { flex-basis: 100%; }
 .tec-extra .form-input { max-width: 100%; min-width: 0; box-sizing: border-box; }
+
+/* La ventana Aedas del riel de la plaza (0.170.0) */
+.aedas-ventana { display: flex; flex-direction: column; gap: 14px; }
+.aedas-seccion { padding: 10px 12px; border: 1px solid var(--bronce-osc); border-radius: 3px; background: rgba(0,0,0,.18); display: flex; flex-direction: column; gap: 8px; }
+.aedas-seccion h3.heroe-sub { margin: 0; font-size: 1rem; }
+.aedas-seccion h3 small { color: var(--text-muted); font-weight: 400; font-size: 0.78rem; margin-left: 4px; }
+.aedas-lista { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.aedas-fila { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border: 1px solid rgba(166, 124, 70, 0.35); border-radius: 3px; background: rgba(28, 21, 13, 0.6); }
+.aedas-fila > span:first-child { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.aedas-fila small { color: var(--text-muted); font-size: 0.74rem; }
+.aedas-fila > .btn-primary, .aedas-fila > .btn-secondary { width: auto; flex: 0 0 auto; padding: 5px 14px; min-height: 0; }
+.aedas-residente { display: flex; flex-direction: column; gap: 5px; }
+.aedas-residente > small { color: var(--text-muted); font-size: 0.74rem; padding: 0 2px; }
+.aedas-residente .aedas-lista { padding-left: 14px; }
+.aedas-residente .aedas-fila .aedas-fila { border: none; }
