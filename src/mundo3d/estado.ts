@@ -81,8 +81,9 @@ export interface SeleccionEnVista { posicion: Punto; radio: number }
  * lleva además el escudo de su Facción (`sigilo`, SVG en línea) y debajo del nombre `subtexto` («Nivel n»). */
 export interface EtiquetaEnVista { id: string; posicion: Punto; texto: string; tipo: 'plaza' | 'mirada' | 'territorio' | 'nodo' | 'campamento' | 'columna' | 'ejercito' | 'caravana' | 'aeda'; color?: string; tenue?: boolean; subtexto?: string; sigilo?: string }
 
-/** Una plaza: la ciudad del juego ocupa el 10 % del radio de su zona. `recordada` = se vio alguna vez y ahora no (va bajo la niebla). */
-export interface PlazaEnVista { id: string; posicion: Punto; radioCiudad: number; color: string; recordada: boolean; nivel: number }
+/** Una plaza: la ciudad del juego ocupa el 10 % del radio de su zona. `recordada` = se vio alguna vez y ahora no (va bajo la niebla).
+ * `muralla`: si tiene muralla (una empezada cuenta), lo que se sabe desde fuera; sin saberlo (recordada), lo de su nivel. */
+export interface PlazaEnVista { id: string; posicion: Punto; radioCiudad: number; color: string; recordada: boolean; nivel: number; muralla?: boolean }
 /** Un pueblo: extractor sobre su nodo o aldea agrícola. */
 export interface PuebloEnVista { id: string; posicion: Punto; aldea: boolean; color: string }
 /** Una avanzada: 1 atalaya, 2 fuerte, 3 ciudadela. */
@@ -465,7 +466,7 @@ export function mundoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVista
   const zonas: (ZonaDeFaccion & { recordada: boolean; color: string })[] = [];
   for (const a of p.asentamientosAvistados ?? []) {
     const zona = a.zona ?? [], radioZona = zona.length >= 3 ? radioDelContorno(a.posicion, zona) : reglas.radioZonaInicial;
-    plazas.push({ id: a.id, posicion: a.posicion, radioCiudad: radioZona * FRACCION_CIUDAD, color: color(a.faccionId), recordada: false, nivel: a.nivel ?? 1 });
+    plazas.push({ id: a.id, posicion: a.posicion, radioCiudad: radioZona * FRACCION_CIUDAD, color: color(a.faccionId), recordada: false, nivel: a.nivel ?? 1, muralla: a.tieneMuralla });
     if (zona.length >= 3) zonas.push({ faccionId: a.faccionId || `sin-${a.id}`, contorno: zona, recordada: false, color: color(a.faccionId) });
   }
   // lo que solo se recuerda: el disco de su radio recortado por los de otras Facciones que se conocen, como lo recorta el motor

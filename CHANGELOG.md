@@ -3,6 +3,18 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.179.0] — 2026-11-07 · Avanzadas desde dentro, muralla y Mercado desde fuera · contrato 0.17.0 (motor `0e283fb`)
+
+Lo que el motor ya acepta (aviso del 2026-11-07, pedido por Víctor):
+- **Avanzadas desde dentro**: dentro de la avanzada, con la columna con la que entraste, se deja y se retira guarnición, se deja lo del carro
+  en su almacén y se llenan los víveres; el Gobernador de la madre elige la tropa de serie también desde dentro de la avanzada. A la puerta,
+  como antes.
+- **Muralla desde fuera** (`tieneMuralla`): la maqueta del mundo dibuja la muralla solo si la plaza la tiene (una empezada cuenta). Sin ella,
+  la de nivel 3 o más no lleva muro y sus casas llegan al borde; el caserío o el poblado con muralla llevan una empalizada. La plaza
+  recordada, sin saberlo, sigue con la de su nivel.
+- **Mercado desde fuera** (`mercadoActivo`): la ficha de fuera ya no trae edificios; la orden de Mercado a una plaza ajena mira ese dato.
+- La ficha de una plaza avistada en el mundo dice **Muralla** y **Mercado** (Sí / No): lo único que se sabe de dentro desde fuera.
+
 ## [0.178.0] — 2026-11-07 · Plazas plegadas, cargar al salir de una plaza de tu Facción y la interfaz del mundo · sin cambio de contrato (motor `8feafd4`)
 
 Víctor (2026-11-07), «unos pequeños cambios del cliente»:

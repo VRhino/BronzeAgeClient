@@ -5,9 +5,9 @@
 //   guarnicion  la de serie (IA, por escalón) y la de los jugadores, con tu cupo de Liderazgo; dejar y retirar escuadras de tu columna
 //   almacen     fuerte y ciudadela: lo que guarda de cada recurso; dejar lo de tu carro y llenar los víveres (repostar)
 //   tropa       la tropa de serie de cada escalón; la elige el Gobernador de la plaza madre
-// Las órdenes de dentro esperan al motor (pedido el 2026-11-07): hoy guarnecer, retirar, depositar y repostar piden la columna a la puerta, en el
-// mapa, y elegir la tropa pide estar dentro de la madre. Hasta que el motor las acepte desde dentro (`ORDENES_DESDE_DENTRO`), dentro solo se mira y
-// se hacen desde la ficha del mapa, a la puerta. Mejorar, reparar, destruir y cancelar su obra son de la madre: Territorio, tarjeta de la avanzada.
+// Guarnecer, retirar, depositar y repostar se hacen dentro, con la columna con la que se entró, o a la puerta, desde la ficha del mapa; elegir la
+// tropa, el Gobernador de la madre dentro de ella o de la avanzada (motor 0e283fb, cliente 0.179.0). Mejorar, reparar, destruir y cancelar su obra
+// son de la madre: Territorio, tarjeta de la avanzada.
 import { bloqueDeDatos, radioDePuerta, tropasReclutables, type ProyeccionJugador, type TropaReclutable } from '../apiCliente';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { Asentamiento, AvanzadaDeMapa, Escuadron } from '../tiposDominio';
@@ -20,9 +20,6 @@ import type { Ejecutar } from './panelCarro';
 import { textoEnTiempoReal } from './estadoCliente';
 
 type Escapar = (valor: string) => string;
-
-/** El motor ya acepta guarnecer, retirar, depositar, repostar y elegir tropa con el héroe dentro de la avanzada. */
-export const ORDENES_DESDE_DENTRO = false;
 
 const ETAPA: Record<number, string> = { 1: 'Atalaya', 2: 'Fuerte', 3: 'Ciudadela' };
 const CLAVE: Record<number, string> = { 1: 'atalaya', 2: 'fuerte', 3: 'ciudadela' };
@@ -230,7 +227,7 @@ function htmlGuarnicion(p: ProyeccionJugador, x: AvanzadaDeMapa, e: Escapar): st
   const tuyas = tuyasEn(p, x).length;
   const otros = Math.max(0, (x.guarnicionJugadoresIds?.length ?? 0) - tuyas);
   const jugadores = x.propia ? `<p class="asent-lado-nota">${otros ? `${otros} escuadra${otros === 1 ? '' : 's'} de otros héroes de guarnición.` : 'Ningún otro héroe ha dejado escuadras.'}</p>` : '';
-  return `${deSerie}${htmlGuarnicionTuya(p, x, ORDENES_DESDE_DENTRO, e)}${jugadores}`;
+  return `${deSerie}${htmlGuarnicionTuya(p, x, true, e)}${jugadores}`;
 }
 
 function htmlAlmacen(p: ProyeccionJugador, x: AvanzadaDeMapa, e: Escapar): string {
@@ -238,12 +235,12 @@ function htmlAlmacen(p: ProyeccionJugador, x: AvanzadaDeMapa, e: Escapar): strin
     const n = x.almacen?.[r] ?? 0;
     return `<div class="avanzada-recurso"><span>${RECURSO_ICONO[r] ?? '📦'} ${e(RECURSO_NOMBRE[r] ?? r)}</span><strong>${n0(n)} / ${n0(c)}</strong>${barra(n, c)}</div>`;
   });
-  return `${filas.join('') || '<p class="asent-lado-nota">Vacío.</p>'}${htmlCargaAlAlmacen(p, x, ORDENES_DESDE_DENTRO, e)}`;
+  return `${filas.join('') || '<p class="asent-lado-nota">Vacío.</p>'}${htmlCargaAlAlmacen(p, x, true, e)}`;
 }
 
 /** La tropa de serie de cada escalón; el Gobernador de la madre la cambia entre las que la madre recluta (tecnología de la Facción y edificio). */
 function htmlTropa(p: ProyeccionJugador, x: AvanzadaDeMapa, e: Escapar): string {
-  return htmlEleccionDeTropa(p, x, ORDENES_DESDE_DENTRO, e);
+  return htmlEleccionDeTropa(p, x, true, e);
 }
 
 /** La elección de tropa de serie: de lectura o, con `acciones` y siendo el Gobernador de la madre, con su desplegable por escalón. */

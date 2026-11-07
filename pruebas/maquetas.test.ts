@@ -29,4 +29,18 @@ describe('maquetas de plaza', () => {
       expect(casas.length).toBeGreaterThan(5);
     });
   }
+
+  // la muralla, la que dice la VISTA desde fuera (`tieneMuralla`, 0.179.0); sin saberlo, la de su nivel
+  const lejos = (c: Caja, r: number): boolean => Math.hypot(c.x, c.y) > r;
+  test('nivel 1 con muralla: empalizada; sin ella, ninguna', () => {
+    const madera = (m?: boolean): number => piezasDeCiudad(0, 0, 2.5, 1, 4242, m).filter((c) => c.mat === 'madera' && lejos(c, 0.8)).length;
+    expect(madera(true)).toBeGreaterThan(madera(false));
+    expect(madera(undefined)).toBe(madera(false));
+  });
+  test('nivel 3 sin muralla: no hay muro en el borde', () => {
+    const muro = (m?: boolean): number => piezasDeCiudad(0, 0, 2.5, 3, 4242, m).filter((c) => c.mat === 'muro' && lejos(c, 1)).length;
+    expect(muro(false)).toBe(0);
+    expect(muro(true)).toBeGreaterThan(0);
+    expect(muro(undefined)).toBe(muro(true));
+  });
 });

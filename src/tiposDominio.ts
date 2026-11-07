@@ -508,8 +508,13 @@ export interface AsentamientoAvistado {
    * la niebla, así que del contorno solo se llega a ver el tramo que cae en tierra explorada — que es
    * exactamente lo que verías: la parte de la frontera por delante de la que has pasado. */
   zona: Point[];
-  /** Sus edificios ACTIVOS (el servidor filtra los demás): con ellos se sabe, p. ej., si tiene Mercado. */
+  /** Sus edificios ACTIVOS: solo de las de tu Facción (FACCION). Desde fuera, de una ajena, ya no llegan (motor 0e283fb, Víctor 2026-11-07):
+   * solo `mercadoActivo` y `tieneMuralla`. */
   edificios?: Edificio[];
+  /** Tiene algún Mercado activo (motor 0e283fb): lo único de sus edificios que se sabe desde fuera. */
+  mercadoActivo?: boolean;
+  /** Tiene muralla (algún recinto, uno empezado cuenta; motor 0e283fb): sin tipo, nivel ni avance. */
+  tieneMuralla?: boolean;
   /** Solo de una plaza PROPIA con una columna tuya a su puerta (`radioPuerta`): su almacén. Ausente en el resto. */
   almacen?: Record<string, { cantidad: number; capacidad: number }>;
 }

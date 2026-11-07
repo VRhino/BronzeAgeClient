@@ -676,7 +676,8 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
     plazasPropias: propias.filter((p) => p.versionInterior > 0n || p.id === interior?.id).map((p) => asentamiento(p, ahora)),
     asentamientosAvistados: [...ajenas, ...propias].filter((p) => p.id !== interior?.id).map((p) => ({
       id: p.id, nombre: p.nombre, faccionId: p.faccionId, posicion: punto(p.posicion), nivel: p.nivel, zona: p.zona.map(punto),
-      edificios: p.edificios.map(edificio),
+      edificios: p.edificios.length ? p.edificios.map(edificio) : undefined,
+      mercadoActivo: p.mercadoActivo, tieneMuralla: p.tieneMuralla,
       almacen: Object.keys(p.almacen).length ? Object.fromEntries(Object.entries(p.almacen).map(([k, x]) => [k, { cantidad: valorDeRitmo(x.cantidad, ahora), capacidad: mil(x.capacidad) }])) : undefined,
     })),
     asentamientosConocidos: fichas.map((f) => ({

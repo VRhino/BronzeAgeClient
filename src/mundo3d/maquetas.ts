@@ -138,17 +138,19 @@ function casas(p: Piezas, x: number, y: number, n: number, desde: number, hasta:
  *  3. ciudad amurallada: muralla de piedra con puerta, palacio y templo;
  *  4. muralla con torres, palacio de dos plantas y templo con columnas;
  *  5. doble muralla con torres, ciudadela interior y zigurat escalonado.
+ * `muralla` (lo que la VISTA dice de fuera, `tiene_muralla`; 0.179.0): sin ella, la de piedra no se dibuja aunque el nivel la tuviera; con ella
+ * en el nivel 1 o 2, una empalizada al borde. Sin saberlo (la plaza recordada), lo del nivel.
  */
-function ciudad(p: Piezas, x: number, y: number, rc: number, nivel: number, color: string, sem: number): void {
+function ciudad(p: Piezas, x: number, y: number, rc: number, nivel: number, color: string, sem: number, muralla?: boolean): void {
   // más altas sin ocupar más suelo (0.175.0, Víctor 2026-11-07): todo sube `MUNDO3D.altoPlaza` (la tela de la bandera, no)
   const antes = new Map([...p.por].map(([mat, l]) => [mat, l.length])), banderas = new Map([...p.banderas].map(([c, l]) => [c, l.length]));
-  ciudadPlana(p, x, y, rc, nivel, color, sem);
+  ciudadPlana(p, x, y, rc, nivel, color, sem, muralla);
   const H = MUNDO3D.altoPlaza;
   for (const [mat, l] of p.por) for (let k = antes.get(mat) ?? 0; k < l.length; k++) { l[k]!.alto *= H; l[k]!.base *= H; }
   for (const [c, l] of p.banderas) for (let k = banderas.get(c) ?? 0; k < l.length; k++) l[k]!.base *= H;
 }
 
-function ciudadPlana(p: Piezas, x: number, y: number, rc: number, nivel: number, color: string, sem: number): void {
+function ciudadPlana(p: Piezas, x: number, y: number, rc: number, nivel: number, color: string, sem: number, muralla?: boolean): void {
   // en una plaza grande todo lo de dentro (casas, palacio, templos, muralla) crece con ella: más grande, no más casas sin fin
   const r = rc * MUNDO3D.maqueta, M = MUNDO3D.maqueta * Math.max(1, rc / 2), n = Math.max(1, Math.min(5, Math.round(nivel)));
   // compacta: las casas llenan, de la plaza hacia fuera, hasta lo que ocupa la ciudad (`radioDePlaza`: el caserío y el poblado, menos que la
@@ -158,6 +160,8 @@ function ciudadPlana(p: Piezas, x: number, y: number, rc: number, nivel: number,
   // la cuadrícula de la plaza, girada por plaza; lo del centro, girado con ella
   const giro = azar(sem, 0, 11) * Math.PI / 2, cg = Math.cos(giro), sg = Math.sin(giro);
   const en = (u: number, v: number): [number, number] => [x + u * M * cg - v * M * sg, y + u * M * sg + v * M * cg];
+  // caserío o poblado con muralla: una empalizada al borde de lo que ocupa
+  if (n <= 2 && muralla) p.anillo(x, y, radioDePlaza(rc, n), 0.07 * M, 0.025 * M, 'madera');
   if (n === 1) {
     // la plaza con la casa del jefe a un lado, el pozo en medio y el corral fuera de las calles; chozas alrededor
     const [jx, jy] = en(0, -0.2), [px, py] = en(0.05, 0.05), [cx, cy] = en(-0.55, -0.55);
@@ -184,15 +188,18 @@ function ciudadPlana(p: Piezas, x: number, y: number, rc: number, nivel: number,
     return;
   }
   // desde el 3, amurallada: cuanto más nivel, muralla más alta y gruesa
-  const alto = [0.14, 0.18, 0.22][n - 3]! * M, grueso = [0.05, 0.065, 0.08][n - 3]! * M;
-  p.anillo(x, y, r, alto, grueso, 'muro');
-  // la puerta: dos torres a los lados del hueco (tramo 7)
-  const seg = Math.max(14, Math.round((2 * Math.PI * r) / 0.25));
-  for (const k of [7, 8]) {
-    const a = (k / seg) * 2 * Math.PI;
-    torre(p, 'muro', x + r * Math.cos(a), y + r * Math.sin(a), grueso * 2, alto * 1.35, a);
+  // (sin muralla de verdad, `muralla === false`, no se dibuja y las casas llegan hasta el borde)
+  const alto = [0.14, 0.18, 0.22][n - 3]! * M, grueso = [0.05, 0.065, 0.08][n - 3]! * M, amurallada = muralla !== false;
+  if (amurallada) {
+    p.anillo(x, y, r, alto, grueso, 'muro');
+    // la puerta: dos torres a los lados del hueco (tramo 7)
+    const seg = Math.max(14, Math.round((2 * Math.PI * r) / 0.25));
+    for (const k of [7, 8]) {
+      const a = (k / seg) * 2 * Math.PI;
+      torre(p, 'muro', x + r * Math.cos(a), y + r * Math.sin(a), grueso * 2, alto * 1.35, a);
+    }
+    if (n >= 4) torresEnAnillo(p, 'muro', x, y, r, Math.max(6, Math.round(r / (0.45 * M))), grueso * 1.9, alto * 1.3);
   }
-  if (n >= 4) torresEnAnillo(p, 'muro', x, y, r, Math.max(6, Math.round(r / (0.45 * M))), grueso * 1.9, alto * 1.3);
   if (n === 3) {
     // palacio y templo
     p.caja('muro', x, y, 0.34 * M, 0.26 * M, 0.22 * M);
@@ -220,7 +227,7 @@ function ciudadPlana(p: Piezas, x: number, y: number, rc: number, nivel: number,
   const ri = Math.min(0.75 * M, r * 0.45);
   const huecos: Hueco[] = n === 3 ? [{ x: x + 0.32 * M, y: y - 0.12 * M, r: 0.16 * M }] : n === 4 ? [{ x: x + 0.38 * M, y: y - 0.12 * M, r: 0.22 * M }]
     : [{ x, y, r: ri + 0.04 * M }, { x: x + ri + 0.35 * M, y: y + 0.2 * M, r: 0.24 * M }];
-  casas(p, x, y, cuantas, n === 5 ? 0 : 0.3 * M, r - grueso - 0.05 * M, M, sem, 0.25 + 0.1 * (n - 3), 0, huecos);
+  casas(p, x, y, cuantas, n === 5 ? 0 : 0.3 * M, r - (amurallada ? grueso : 0) - 0.05 * M, M, sem, 0.25 + 0.1 * (n - 3), 0, huecos);
   p.bandera(x + 0.12 * M, y + 0.1 * M, (n === 5 ? 0.7 : 0.55) * M, color, n === 5 ? 0.36 * M : n === 4 ? 0.32 * M : 0.22 * M);
 }
 
@@ -370,7 +377,7 @@ export class Maquetas {
   actualizar(m: MundoEnVista): boolean {
     const f = (v: number) => v.toFixed(2);
     const clave = [
-      ...m.plazas.map((x) => `P${x.id}:${f(x.posicion.x)},${f(x.posicion.y)}:${f(x.radioCiudad)}:${x.nivel}:${x.color}:${x.recordada}`),
+      ...m.plazas.map((x) => `P${x.id}:${f(x.posicion.x)},${f(x.posicion.y)}:${f(x.radioCiudad)}:${x.nivel}:${x.color}:${x.recordada}:${x.muralla}`),
       ...m.pueblos.map((x) => `U${x.id}:${f(x.posicion.x)},${f(x.posicion.y)}:${x.aldea}:${x.color}`),
       ...m.avanzadas.map((x) => `A${x.id}:${f(x.posicion.x)},${f(x.posicion.y)}:${x.etapa}:${x.ruinas}:${x.color}`),
       ...m.obras.map((x) => `O${x.id}:${f(x.posicion.x)},${f(x.posicion.y)}:${x.arrancada}:${x.color}`),
@@ -388,7 +395,7 @@ export class Maquetas {
     this.vaciar();
     const M = MUNDO3D.maqueta, encima = new Piezas(), bajo = new Piezas(), claros: Claro[] = [];
     for (const x of m.plazas) {
-      ciudad(x.recordada ? bajo : encima, x.posicion.x, x.posicion.y, x.radioCiudad, x.nivel, x.color, semilla(x.posicion.x, x.posicion.y));
+      ciudad(x.recordada ? bajo : encima, x.posicion.x, x.posicion.y, x.radioCiudad, x.nivel, x.color, semilla(x.posicion.x, x.posicion.y), x.muralla);
       claros.push({ x: x.posicion.x, y: x.posicion.y, r: radioDePlaza(x.radioCiudad, x.nivel) + 0.3 });
     }
     for (const x of m.pueblos) {
@@ -462,8 +469,8 @@ export class Maquetas {
 }
 
 /** Las cajas de la maqueta de una plaza, por material (para las pruebas y los bancos: se ve desde arriba sin WebGL). */
-export function piezasDeCiudad(x: number, y: number, rc: number, nivel: number, sem: number): { mat: string; x: number; y: number; ancho: number; fondo: number; alto: number; giro: number; base: number }[] {
+export function piezasDeCiudad(x: number, y: number, rc: number, nivel: number, sem: number, muralla?: boolean): { mat: string; x: number; y: number; ancho: number; fondo: number; alto: number; giro: number; base: number }[] {
   const p = new Piezas();
-  ciudad(p, x, y, rc, nivel, '#000000', sem);
+  ciudad(p, x, y, rc, nivel, '#000000', sem, muralla);
   return [...p.por].flatMap(([mat, l]) => l.map((q) => ({ mat, ...q })));
 }

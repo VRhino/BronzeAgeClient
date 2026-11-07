@@ -140,8 +140,9 @@ suelo, luego el paisaje, los árboles y la vegetación baja. Lo que se aleja se 
   plana a la altura del punto más bajo de su corte, con el agua de los ríos (ver «El agua») y 1,2 u de tierra mojada a cada lado que se
   desvanece hacia fuera. Los vados son un paso de grava de orilla a orilla. Los nodos son rocas: grises las de
   piedra y del color de su metal los afloramientos. Todo bajo la niebla.
-- **Maquetas** (`maquetas.ts`). Las piezas de la mesa a ×0,8 (0.176.0). La ciudad tiene muralla al 10 % del radio de su zona (el del contorno si se
-  ve, el recordado si no) y casas dentro, compactas (0.175.0): solares justos, calles estrechas y casas que los llenan, de la plaza hacia
+- **Maquetas** (`maquetas.ts`). Las piezas de la mesa a ×0,8 (0.176.0). La ciudad ocupa el 10 % del radio de su zona (el del contorno si se
+  ve, el recordado si no). La muralla, la que dice la VISTA desde fuera (`tieneMuralla`, 0.179.0): de piedra, con puerta y torres, desde el
+  nivel 3 si la tiene; una empalizada al borde en el nivel 1 o 2 si la tiene; nada si no. La recordada, sin saberlo, la de su nivel. Casas dentro, compactas (0.175.0): solares justos, calles estrechas y casas que los llenan, de la plaza hacia
   fuera hasta lo que ocupa (el caserío, el 62 % del radio; el poblado, el 80 %; las amuralladas, hasta el pie de la muralla). En una plaza
   de más de 2 u de radio lo de dentro crece con ella. Todo sube ×1,7. El pueblo es una empalizada con casas: la aldea agrícola lleva sus campos y el
   extractor su bocamina. La avanzada es empalizada y torre, más alta en cada etapa, de piedra desde el fuerte, baja y gris en ruinas. La

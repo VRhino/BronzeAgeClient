@@ -1002,13 +1002,16 @@ interface AsentamientoEnMapa {
   posicion: { x: number; y: number };
   /** Instante en que se vio por última vez, o `null` si se está viendo ahora. */
   recordado: number | null;
+  /** Lo único que se sabe de dentro desde fuera (Víctor, 2026-11-07; motor 0e283fb): si tiene muralla y un Mercado activo. Solo en las avistadas. */
+  tieneMuralla?: boolean;
+  mercadoActivo?: boolean;
 }
 
 /** Los asentamientos que hay en la proyección con posición en el mapa: los avistados (en vivo) y los
  * recordados (última foto). Los propios llegan por una de esas dos listas cuando no se está dentro. */
 function asentamientosDelMapa(proyeccion: ProyeccionJugador): AsentamientoEnMapa[] {
   return [
-    ...proyeccion.asentamientosAvistados.map((a) => ({ id: a.id, nombre: a.nombre, faccionId: a.faccionId, nivel: a.nivel, posicion: a.posicion, recordado: null })),
+    ...proyeccion.asentamientosAvistados.map((a) => ({ id: a.id, nombre: a.nombre, faccionId: a.faccionId, nivel: a.nivel, posicion: a.posicion, recordado: null, tieneMuralla: a.tieneMuralla, mercadoActivo: a.mercadoActivo })),
     ...proyeccion.asentamientosConocidos.map((a) => ({ id: a.asentamientoId, nombre: a.nombre, faccionId: a.faccionId, nivel: a.nivel, posicion: a.posicion, recordado: a.conocidoEn })),
   ];
 }
@@ -1208,6 +1211,8 @@ function renderSeleccionMapaCuerpo(): void {
     <div class="mapa-seleccion-datos">
       <div><span>Facción</span><strong>${escaparHtml(faccion?.nombre ?? asentamiento.faccionId)}</strong></div>
       <div><span>Nivel</span><strong>${asentamiento.nivel}</strong></div>
+      ${asentamiento.tieneMuralla !== undefined ? `<div><span>Muralla</span><strong>${asentamiento.tieneMuralla ? 'Sí' : 'No'}</strong></div>` : ''}
+      ${asentamiento.mercadoActivo !== undefined ? `<div><span>Mercado</span><strong>${asentamiento.mercadoActivo ? 'Sí' : 'No'}</strong></div>` : ''}
       ${asentamiento.recordado !== null ? `<div><span>Visto</span><strong>${escaparHtml(fechaDeMundo(asentamiento.recordado))}</strong></div>` : ''}
       ${ataque?.distancia != null ? `<div><span>Distancia</span><strong>${ataque.distancia}</strong></div>` : ''}
       ${((t) => t ? `<div><span>Tiempo hasta allí</span><strong>${escaparHtml(t)}</strong></div>` : '')(textoTiempoHasta(proyeccion, asentamiento.posicion))}

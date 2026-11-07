@@ -53,7 +53,7 @@ Doc 5.12.3 (tabla de interacciones) y 5.14: no se persigue a aliados (dos column
 |---|---|
 | Estado de la puerta, vetos y capital no viajan (A1) | **Sí viajan**: la plaza donde estás va entera (`asentamientos: [dentroDe]`, objeto de dominio completo con `puertaCerradaA`, `vetadosIds`, `capitalDeFaccionId`); `facciones` pasa tal cual (`capitalDesignadaEn`). Solo faltan las constantes de A1. |
 | Enfriamiento de residencia no viaja (A1) | **Ya está en el balance** (`cuposYNiveles.CIUDADANIA`): fallo del cliente, se lee de ahí. |
-| Si una plaza ajena tiene Mercado activo (D3) | **Ya viaja**: las avistadas llevan `edificios` activos; el cliente puede comprobarlo. |
+| Si una plaza ajena tiene Mercado activo (D3) | **Ya viaja**: desde el motor 0e283fb las avistadas llevan `mercado_activo` (y `tiene_muralla`), sin `edificios`. |
 | Lista de plazas de la Facción (2.1.7) | Probablemente **ya resuelto**: las plazas propias son ojos de la Facción y salen siempre como avistadas (`seVeAhora`); falta confirmarlo en vivo. |
 | Capacidad de cada caravana como campo | Se cubre con A1 (publicar `CARRO_CATALOGO` y `ANIMAL_CATALOGO`): el cliente la deriva, no hace falta un campo. |
 | Trazado de bandidos (§10.4 antiguo) | No existe en el canon (decisión del autor): se descarta. |
@@ -62,6 +62,6 @@ Doc 5.12.3 (tabla de interacciones) y 5.14: no se persigue a aliados (dos column
 
 ## D. Trabajo de cliente que sale de este contraste
 - **Leer `CIUDADANIA.cooldownCambioResidenciaDias` del balance** y mostrarlo en la pestaña Residencia (hoy el aviso es genérico).
-- **Usar `edificios` de la plaza avistada** para avisar de «sin Mercado» en la ficha de orden ajena (D3).
+- **Usar `mercadoActivo` de la plaza avistada** para avisar de «sin Mercado» en la ficha de orden ajena (D3; 0.179.0).
 - **Cupo de la flota** (nuevo canon, `1e5351c`, 2026-10-09): el Mercado limita cuántas caravanas (`cupoCaravanas` 2/4/6) y **cuántos carros en total** (`cupoCarros` 3/9/18, Doc 3.13.2) puede tener la plaza. Ya está en `EDIFICIO_CATALOGO.mercado.niveles` del balance: mostrarlo en Mercado › Caravanas («carros 4/9») y apagar «＋ Carro» con el motivo cuando la flota esté llena.
 - **Eventos de tiempo real** (`9ab4e62`): ahora dicen de qué partida son; filtrar por `gameId` en `alEventoTiempoReal` por si hay más de una partida abierta.
