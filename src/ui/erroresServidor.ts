@@ -182,7 +182,7 @@ const MENSAJES: Record<string, string> = {
   'encargo.no_tiene': 'Esa caravana no tiene encargo.',
   'caravana.salida_invalida': 'La hora de salida no vale: una ruta sale ya, y un envío solo se programa dentro del plazo.',
   'caravana.no_es_comercial': 'Solo una caravana comercial de la flota admite eso.',
-  'caravana.no_disponible': 'La caravana tiene que estar parada en su origen.',
+  'caravana.no_disponible': 'No hay una caravana libre para eso: tiene que estar parada en su origen (y, para tomar una orden a distancia, con sitio para lo pedido).',
   'caravana.sin_capacidad': 'La caravana no tiene ningún carro con animal.',
   'caravana.sin_ruta': 'No hay camino por tierra hasta ese destino.',
   // Tanda 69 (motor d0326fd): monedas, prestigio, el buey del molino, el cultivo de la aldea y la taberna regional.

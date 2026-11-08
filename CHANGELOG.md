@@ -3,6 +3,20 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.188.0] — 2026-11-08 · La tanda 69, parte 4: la taberna regional · sin cambio de contrato (motor `d0326fd`)
+
+- **Informe de la región en la taberna** de una plaza propia, para el Rey, el Embajador o el Gobernador dentro: «Sus plazas» (las fichas de
+  las plazas de la región que no son tuyas ni de un enemigo) y «Sus órdenes de mercado» (las ves `INTEL.region.caducidadMinutos`), a
+  🪙 60 del almacén de la plaza cada uno (`comprarInformeRegion`). La región sale de la capa `region` del mundo con su nombre. Mientras dura el
+  enfriamiento, «Otra vez en …»; con el de órdenes vigente, «A la vista … más».
+- **Tus informes de región** en la columna de lo comprado: de qué región y tipo, si aún se ve y cuándo se puede repetir (`Faccion.informesRegion`).
+- **Mercado › Región**, solo con un informe de órdenes vigente: las órdenes activas de las plazas ajenas de esas regiones, por plaza y de la
+  más cercana a la más lejana, y «Comprarle» / «Venderle» con la cantidad (`tomarOrdenADistancia`), con los cargos de los encargos y una
+  caravana libre (la cantidad se topa con lo que cabe y, para venderle, con lo que hay en el almacén).
+- **Taberna › Mercenarios de la región**: el tablón de los campamentos de la región (`Asentamiento.mercenariosRegion`), con la distancia y el
+  📍 de cada campamento, y contratar desde la plaza pagando con el almacén de la plaza (los tres cargos) o con monedas.
+- Banco nuevo `/pruebas/taberna/` (`?ver=intel|mercenarios|mercado`, `&monedas=N`, `&sinCargo=1`).
+
 ## [0.187.0] — 2026-11-08 · La tanda 69, parte 3: pagar con monedas · sin cambio de contrato (motor `d0326fd`)
 
 - **Pagar un contrato con monedas** en el tablón del campamento: «Pagar con» ofrece, al final, «Tus monedas» si tienes alguna y estás en el

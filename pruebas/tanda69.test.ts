@@ -309,3 +309,70 @@ describe('pagar contratos con monedas', async () => {
     expect(textoDeHechoMercenario('mercenarios.prorrogado', { mercenario: 30, oro: 0, monedas: 11200 }, null)).toBe('Se prorroga el contrato de heroe-30 por 11.200 monedas.');
   });
 });
+
+describe('la taberna regional', async () => {
+  const { traducirOrden } = await import('../src/motor/ordenes');
+  const { regionEn } = await import('../src/mundo/region');
+  const { compraIntelEn, htmlServicioRegion, informesDeOrdenesVigentes, ordenesDeLaRegion, fuentesDeRegion, SUBPESTANA_REGION } = await import('../src/ui/tabernaRegion');
+  const { tarifasDeIntel } = await import('../src/apiCliente');
+  const AHORA = 1_000_000_000;
+  const mapa = { rasters: { region: { columnas: 4, filas: 2, celda: 10, datos: new Uint8Array([3, 3, 5, 5, 3, 3, 5, 0]) } }, regiones: [{ id: 3, nombre: 'Llanura de Argos' }, { id: 5, nombre: 'Altiplano interior' }] } as unknown as MapaGenerado;
+  const plaza = (gobernador = 'heroe-1') => ({ id: 'as-1', faccionId: 'f-1', posicion: { x: 5, y: 5 }, cargos: { gobernadorId: gobernador }, edificios: [{ id: 't', tipo: 'taberna', estado: 'activo' }], almacen: { oro: { cantidad: 200 } } }) as unknown as Asentamiento;
+  const proy = (o: { rey?: string; dentro?: boolean; monedas?: number; informes?: unknown[]; ordenes?: unknown[] } = {}): ProyeccionJugador =>
+    ({
+      heroeId: 'heroe-1', faccionId: 'f-1', instante: AHORA,
+      heroe: { id: 'heroe-1', ubicacion: o.dentro === false ? { tipo: 'desconectado' } : { tipo: 'asentamiento', asentamientoId: 'as-1' }, monedas: o.monedas ?? 0 },
+      facciones: [{ id: 'f-1', nombre: 'Uno', reyId: o.rey ?? 'heroe-9', informesRegion: o.informes ?? [] }, { id: 'f-2', nombre: 'Dos' }],
+      asentamientos: [plaza()], asentamientosAvistados: [],
+      asentamientosConocidos: [{ asentamientoId: 'as-7', nombre: 'Tirinto', faccionId: 'f-2', posicion: { x: 30, y: 5 } }, { asentamientoId: 'as-2', nombre: 'Mía', faccionId: 'f-1', posicion: { x: 8, y: 5 } }],
+      ordenes: o.ordenes ?? [], tarifasIntel: tarifasDeIntel(),
+    }) as unknown as ProyeccionJugador;
+
+  test('la región de un punto sale de la capa del mundo, con su nombre', () => {
+    expect(regionEn(mapa, { x: 12, y: 4 })).toEqual({ id: 3, nombre: 'Llanura de Argos' });
+    expect(regionEn(mapa, { x: 25, y: 15 })).toEqual({ id: 5, nombre: 'Altiplano interior' });
+    expect(regionEn(mapa, { x: 35, y: 15 })).toBeNull(); // celda sin región
+    expect(regionEn(mapa, { x: 50, y: 5 })).toBeNull(); // fuera del mapa
+  });
+
+  test('las órdenes nuevas se traducen al contrato (la cantidad, en milésimas)', () => {
+    expect(traducirOrden('comprarInformeRegion', { asentamientoId: 'as-1', tipo: 'ordenes' })).toMatchObject({ case: 'comprarInformeRegion', value: { asentamientoId: 'as-1', tipo: 'ordenes' } });
+    expect(traducirOrden('tomarOrdenADistancia', { asentamientoId: 'as-1', ordenId: 'ord-3', cantidad: 25 })).toMatchObject({ case: 'tomarOrdenADistancia', value: { asentamientoId: 'as-1', ordenId: 'ord-3', cantidad: 25000n } });
+  });
+
+  test('el informe lo compran el Rey, el Embajador o el Gobernador, dentro de la plaza', () => {
+    expect(compraIntelEn(proy(), plaza())).toBe(true); // Gobernador
+    expect(compraIntelEn(proy(), plaza('heroe-9'))).toBe(false);
+    expect(compraIntelEn(proy({ rey: 'heroe-1' }), plaza('heroe-9'))).toBe(true);
+    expect(compraIntelEn(proy({ dentro: false }), plaza())).toBe(false);
+    expect(htmlServicioRegion(proy(), plaza('heroe-9'), 200, (t) => t)).toBe('');
+    expect(htmlServicioRegion(proy(), plaza(), 200, (t) => t)).toContain('data-region-comprar="ordenes"');
+  });
+
+  test('un informe reciente no se vuelve a comprar hasta que pasa su enfriamiento', () => {
+    estadoCliente.mapaCache = { id: 'm', mapa };
+    const informes = [{ region: 3, tipo: 'ordenes', compradoEn: AHORA - 1, caducaEn: AHORA + 60_000, libreEn: AHORA + 120_000 }];
+    const html = htmlServicioRegion(proy({ informes }), plaza(), 200, (t) => t);
+    expect(html).toContain('Llanura de Argos');
+    expect(html).toContain('data-region-comprar="plazas"');
+    expect(html).not.toContain('data-region-comprar="ordenes"');
+    expect(html).toContain('Otra vez en');
+    estadoCliente.mapaCache = null;
+  });
+
+  test('las órdenes de la región: solo las ajenas y activas; la pestaña, solo con un informe de órdenes vigente', () => {
+    const orden = (id: string, asentamientoId: string, estado = 'activa') => ({ id, asentamientoId, tipo: 'venta', recurso: 'estano', cantidad: 10, cantidadCumplida: 0, precioUnitario: 3, expiraEn: AHORA + 1, estado });
+    const ordenes = [orden('o1', 'as-7'), orden('o2', 'as-1'), orden('o3', 'as-2'), orden('o4', 'as-7', 'cumplida')];
+    const p = proy({ ordenes, informes: [{ region: 3, tipo: 'ordenes', compradoEn: AHORA - 1, caducaEn: AHORA + 60_000, libreEn: AHORA + 120_000 }] });
+    expect(ordenesDeLaRegion(p, { x: 5, y: 5 }).map((g) => [g.plaza.nombre, g.ordenes.map((o) => o.id)])).toEqual([['Tirinto', ['o1']]]);
+    const c = (q: ProyeccionJugador) => ({ proyeccion: q, asentamiento: plaza() }) as unknown as ContextoPlaza;
+    expect(informesDeOrdenesVigentes(p)).toHaveLength(1);
+    expect(SUBPESTANA_REGION.visible!(c(p))).toBe(true);
+    expect(SUBPESTANA_REGION.visible!(c(proy({ informes: [{ region: 3, tipo: 'ordenes', compradoEn: AHORA - 9, caducaEn: AHORA - 1, libreEn: AHORA + 1 }] })))).toBe(false);
+  });
+
+  test('desde la taberna se contrata con el almacén de la plaza (los tres cargos) o con monedas', () => {
+    expect(fuentesDeRegion(proy({ monedas: 500 }), plaza()).map((f) => [f.pagarCon, f.saldo])).toEqual([['almacenPlaza', 200], ['monedas', 500]]);
+    expect(fuentesDeRegion(proy(), plaza('heroe-9'))).toEqual([]);
+  });
+});

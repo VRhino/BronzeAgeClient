@@ -111,6 +111,7 @@ import { cablearTecnologia, htmlTecnologia } from './ui/panelTecnologia';
 import { cablearColumna, htmlColumna } from './ui/panelColumna';
 import { cablearCarro, htmlCarro } from './ui/panelCarro';
 import { cablearPanelIntel, renderPanelIntel } from './ui/panelIntel';
+import { cablearMercenariosDeRegion, htmlMercenariosDeRegion, tabernaActiva } from './ui/tabernaRegion';
 import { cablearMercadoDePlaza, htmlMercadoDePlaza } from './ui/mercadoDePlaza';
 import { svgPlanoBandidos } from './ui/planoBandidos';
 import { explicarError } from './ui/erroresServidor';
@@ -2599,8 +2600,15 @@ function contenidoDeVentana(v: VentanaPlaza, c: ContextoPlaza, ajena: boolean): 
       };
     case 'reclutamiento':
       return { ...base, ancho: 'completa', html: htmlReclutamiento(p, a, escaparHtml, renderPanelEdificios), cablear: () => cablearReclutamiento(cuerpo, p, a, ejecutarYRefrescar, renderPanelEdificios) };
-    case 'taberna':
-      return { ...base, ancho: 'completa', html: renderPanelIntel(p, escaparHtml), cablear: () => cablearPanelIntel(cuerpo, p, ejecutarYRefrescar, () => { olvidarEdicion(cuerpo); invalidar(cuerpo); renderPanelEdificios(); }) };
+    case 'taberna': {
+      // la taberna de una plaza propia con Taberna activa enseña además el tablón de los campamentos de su región (tanda 69)
+      const subs: [string, string][] = !ajena && tabernaActiva(a) ? [['intel', 'Intel'], ['mercenarios', 'Mercenarios de la región']] : [];
+      const repintarTaberna = (): void => { olvidarEdicion(cuerpo); invalidar(cuerpo); renderPanelEdificios(); };
+      if (elegir(subs) === 'mercenarios') {
+        return { ...base, subs, sub: 'mercenarios', ancho: 'completa', html: htmlMercenariosDeRegion(p, a, escaparHtml), cablear: () => cablearMercenariosDeRegion(cuerpo, ejecutarYRefrescar, repintarTaberna) };
+      }
+      return { ...base, subs, sub: subs.length ? 'intel' : '', ancho: 'completa', html: renderPanelIntel(p, escaparHtml), cablear: () => cablearPanelIntel(cuerpo, p, ejecutarYRefrescar, repintarTaberna) };
+    }
     case 'mercado': {
       if (ajena) {
         // las órdenes abiertas de la plaza, que se toman con el carro de tu columna (`comerciarEnPlaza`), como desde su ficha en el mapa
@@ -2611,9 +2619,10 @@ function contenidoDeVentana(v: VentanaPlaza, c: ContextoPlaza, ajena: boolean): 
           cablear: () => cablearMercadoDePlaza(cuerpo, a.id, { ejecutarConDatos: ejecutarConDatosYRefrescar, aviso: avisoMapa }, p.heroeId),
         };
       }
-      const subs: [string, string][] = [['ordenes', 'Órdenes'], ['caravanas', 'Caravanas'], ['rutas', 'Rutas'], ...SUBPESTANAS_MERCADO_EXTRA.map((s) => [s.id, s.etiqueta] as [string, string])];
+      const extras = SUBPESTANAS_MERCADO_EXTRA.filter((x) => x.visible?.(c) ?? true);
+      const subs: [string, string][] = [['ordenes', 'Órdenes'], ['caravanas', 'Caravanas'], ['rutas', 'Rutas'], ...extras.map((s) => [s.id, s.etiqueta] as [string, string])];
       const sub = elegir(subs);
-      const s = SUBPESTANAS_MERCADO_EXTRA.find((x) => x.id === sub);
+      const s = extras.find((x) => x.id === sub);
       return {
         ...base, ancho: 'completa', subs, sub,
         html: s ? s.html(c) : sub === 'caravanas' ? htmlCaravanas(p, a, escaparHtml, renderPanelEdificios) : sub === 'rutas' ? htmlRutas(p, a, escaparHtml, renderPanelEdificios) : htmlOrdenes(p, a, escaparHtml),

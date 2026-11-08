@@ -3627,6 +3627,7 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .merc-grado-0 { opacity: 0.55; }
 .merc-historial { display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.72rem; color: var(--text-secondary); }
 .merc-fiable { color: var(--oro-claro); }
+.merc-campamento { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 0.78rem; color: var(--text-secondary); }
 .merc-tropa { display: flex; flex-wrap: wrap; gap: 6px; font-size: 0.8rem; }
 .merc-tropa span { display: inline-flex; align-items: center; gap: 3px; background: rgba(0, 0, 0, 0.3); border-radius: 4px; padding: 1px 6px 1px 2px; }
 .merc-seccion { font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--bronce); margin-top: 2px; }
@@ -4303,6 +4304,34 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .orden-colocar { flex: none; padding: 7px 16px; border: 1px solid var(--tono); border-radius: 3px; background: linear-gradient(180deg, color-mix(in srgb, var(--tono) 70%, #000), color-mix(in srgb, var(--tono) 25%, #000)); color: #fff6e0; font-family: var(--fuente-titulo); font-size: 0.82rem; font-weight: 700; letter-spacing: 0.05em; cursor: pointer; box-shadow: 0 0 10px color-mix(in srgb, var(--tono) 35%, transparent); transition: transform 0.1s, box-shadow 0.15s; }
 .orden-colocar:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 0 16px color-mix(in srgb, var(--tono) 60%, transparent); }
 .orden-colocar:disabled { opacity: 0.5; cursor: default; }
+/* La taberna regional (tanda 69): el informe de la región en la taberna, lo comprado y las órdenes de la región en el Mercado */
+.intel-region { grid-column: 1 / -1; }
+.intel-region-fila { display: flex; align-items: center; gap: 8px; padding: 6px; border: 1px solid rgba(107, 74, 41, 0.5); border-radius: 3px; background: rgba(0, 0, 0, 0.25); }
+.intel-region-icono { font-size: 1.1rem; flex: none; width: 24px; text-align: center; }
+.intel-region-texto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.intel-region-texto b { font-size: 0.8rem; color: var(--pergamino); }
+.intel-region-texto small { font-size: 0.7rem; color: var(--text-secondary); }
+.intel-region-texto em { font-size: 0.7rem; font-style: normal; color: var(--obra-azul); }
+.intel-region-fila .intel-comprar { margin-top: 0; flex: none; }
+.intel-region-informes { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; }
+.intel-region-informe { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border: 1px solid rgba(107, 74, 41, 0.7); border-radius: 3px; background: rgba(18, 14, 9, 0.85); }
+.intel-region-informe.vigente { border-color: rgba(111, 182, 255, 0.6); background: linear-gradient(90deg, rgba(40, 70, 110, 0.4), rgba(18, 14, 9, 0.85)); }
+.intel-region-informe > span:last-child { display: flex; flex-direction: column; min-width: 0; }
+.intel-region-informe b { font-size: 0.8rem; color: var(--pergamino); }
+.intel-region-informe small { font-size: 0.66rem; color: var(--text-secondary); }
+.region-plaza { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+.region-plaza-cab { display: flex; align-items: baseline; gap: 8px; border-bottom: 1px solid rgba(107, 74, 41, 0.5); padding-bottom: 3px; }
+.region-plaza-cab strong { font-size: 0.86rem; color: var(--oro-claro); }
+.region-plaza-cab small { font-size: 0.72rem; color: var(--text-secondary); }
+.region-orden { --tono: var(--orden-venta); display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid rgba(107, 74, 41, 0.7); border-left: 3px solid var(--tono); border-radius: 3px; background: rgba(18, 14, 9, 0.85); }
+.region-orden.compra { --tono: var(--orden-compra); }
+.region-orden-cuerpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.region-orden-cuerpo b { font-size: 0.82rem; color: var(--pergamino); }
+.region-orden-cuerpo small { font-size: 0.7rem; color: var(--text-secondary); }
+.region-orden-tomar { display: flex; align-items: center; gap: 6px; flex: none; }
+.region-orden-tomar .form-input { width: 76px; height: 30px; padding: 0 6px; }
+.region-orden-tomar .btn-primary { padding: 5px 10px; font-size: 0.78rem; }
+.region-orden-no { font-size: 0.7rem; color: var(--text-secondary); flex: none; }
 .orden-fichas { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
 .orden-ficha { --tono: var(--orden-venta); display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid rgba(107, 74, 41, 0.7); border-left: 3px solid var(--tono); border-radius: 3px; background: rgba(18, 14, 9, 0.85); }
 .orden-ficha.compra { --tono: var(--orden-compra); }

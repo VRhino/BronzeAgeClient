@@ -851,7 +851,7 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
       compradaEn: instante(m.compradaEnMs)!, expiraEn: instante(m.expiraEnMs)!, libreEn: instante(m.libreEnMs)!,
     })),
     informesPlaza: [],
-    tarifasIntel: { mirada: { radio: 0, duracionMinutos: 0, oroBase: 0, oroPorUnidad: 0, cooldownMinutos: 0 }, informe: { oroPorNivel: 0, cooldownMinutos: 0 }, cupoMiradas: { porNivelDeTaberna: [], campamento: 0 } },
+    tarifasIntel: { mirada: { radio: 0, duracionMinutos: 0, oroBase: 0, oroPorUnidad: 0, cooldownMinutos: 0 }, informe: { oroPorNivel: 0, cooldownMinutos: 0 }, cupoMiradas: { porNivelDeTaberna: [], campamento: 0 }, region: { oro: 0, cooldownMinutos: 0, caducidadMinutos: 0 } },
     zonasFusionadas: deAmbito('VISTA:', 'zonaFaccion').map((z) => ({ faccionId: z.faccionId, contornos: z.contornos.map((k) => k.puntos.map(punto)) })),
     relaciones: [...deAmbito('FACCION:', 'relacion'), ...deAmbito('VISTA:', 'relacion')].filter((r, i, l) => l.findIndex((x) => x.id === r.id) === i).map(relacion),
     // Las propuestas en curso de tu Facción (alianza o vasallaje, anexión y fusión): no se proyectaban, así que la diplomacia nunca las enseñaba (0.145.0).

@@ -1167,6 +1167,8 @@ export interface TarifasIntel {
   informe: { oroPorNivel: number; cooldownMinutos: number };
   /** Miradas abiertas a la vez por taberna: por nivel interno de la de plaza (índice 0 = nivel 1) y la fija de un campamento. */
   cupoMiradas: { porNivelDeTaberna: number[]; campamento: number };
+  /** El informe de región (tanda 69, `INTEL.region`): oro fijo, enfriamiento por región y tipo, y lo que dura a la vista el de órdenes. */
+  region: { oro: number; cooldownMinutos: number; caducidadMinutos: number };
 }
 
 /** Dónde se compra: la taberna de una plaza propia o la de un campamento de mercenarios. */

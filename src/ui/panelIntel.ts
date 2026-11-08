@@ -10,6 +10,7 @@ import { mostrar as mostrarAviso } from './avisos';
 import { iconoEdificio } from './iconosEdificio';
 import { iconoTropa } from './iconosTropa';
 import { medallonNivel } from './juegoVisual';
+import { cablearServicioRegion, htmlInformesRegion, htmlServicioRegion } from './tabernaRegion';
 
 export type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
 type Escapar = (valor: string) => string;
@@ -183,6 +184,9 @@ export function renderPanelIntel(p: ProyeccionJugador, e: Escapar, origenId?: st
   const m = p.tarifasIntel.mirada;
   const oro = RECURSO_ICONO['oro'] ?? '🪙';
   const caro = (n: number | null): boolean => t !== undefined && n !== null && n > t.oro;
+  // El informe de región (tanda 69): solo en la taberna de una plaza propia, y solo para quien lo puede comprar.
+  const plaza = t?.origen.tipo === 'asentamiento' ? p.asentamientos.find((a) => a.id === t.origen.id) : undefined;
+  const region = plaza && t ? htmlServicioRegion(p, plaza, t.oro, e) : '';
 
   const compra = !t
     ? `<div class="intel-sin-taberna"><span aria-hidden="true">🍺</span><p>No tienes ninguna taberna a mano. ${ayuda('plaza:intel-taberna', 'La intel se compra en una <strong>taberna</strong>: la de una plaza tuya (nivel 2, la construye el Gobernador; entra en ella) o la de un campamento de mercenarios (dentro, o con tu columna a la puerta).')}</p></div>`
@@ -212,6 +216,7 @@ export function renderPanelIntel(p: ProyeccionJugador, e: Escapar, origenId?: st
               : `<select class="form-input" id="intel-plaza" aria-label="Plaza">${libres.map((a) => `<option value="${e(a.id)}">${e(a.nombre ?? a.id)} · nivel ${a.nivel} · ${p.tarifasIntel.informe.oroPorNivel * a.nivel} oro</option>`).join('')}</select>
             <button class="intel-comprar" type="button" id="intel-comprar-informe">Comprar informe</button>`}
         </section>
+        ${region}
       </div>`;
 
   const informes = p.informesPlaza;
@@ -222,7 +227,8 @@ export function renderPanelIntel(p: ProyeccionJugador, e: Escapar, origenId?: st
       <div class="obra-titulo"><span class="faction-kicker">Tus Miradas</span><span class="obra-chip">${p.miradasIntel.length}</span></div>${listaMiradas(p)}
       <div class="obra-titulo"><span class="faction-kicker">Tus Informes</span><span class="obra-chip">${informes.length}</span></div>
       ${informes.length === 0 ? '<p class="mapa-lista-vacia">Ninguno.</p>' : `<div class="intel-informes">${informes.map((i) => `<button class="intel-informe-btn${i === abierto ? ' abierto' : ''}" type="button" data-informe="${e(i.asentamientoId)}" title="${e(`${i.nombre ?? i.asentamientoId} · nivel ${i.nivel} · hace ${hace(p.instante - i.conocidoEn)}`)}">${medallonNivel(i.nivel)}<span><b>${e(i.nombre ?? i.asentamientoId)}</b><small>hace ${hace(p.instante - i.conocidoEn)}</small></span></button>`).join('')}</div>`}
-      ${abierto ? detalleInforme(abierto, p, e) : ''}</div></div>
+      ${abierto ? detalleInforme(abierto, p, e) : ''}
+      ${htmlInformesRegion(p, e)}</div></div>
     </div>`;
 }
 
@@ -272,6 +278,9 @@ export function cablearPanelIntel(root: HTMLElement, p: ProyeccionJugador, ejecu
     estadoIntel.informeAbierto = asentamientoId; // al llegar, se abre el informe recién comprado
     return { origen, asentamientoId };
   });
+  const origen = origenDe();
+  const plaza = origen?.tipo === 'asentamiento' ? p.asentamientos.find((a) => a.id === origen.id) : undefined;
+  if (plaza) cablearServicioRegion(root, plaza, ejecutar);
   root.querySelectorAll<HTMLButtonElement>('[data-informe]').forEach((boton) =>
     boton.addEventListener('click', () => {
       estadoIntel.informeAbierto = estadoIntel.informeAbierto === boton.dataset.informe ? null : boton.dataset.informe!;

@@ -324,7 +324,23 @@ const cifraDe = (n: number, enMonedas: boolean): string => (enMonedas ? `${n.toL
 /** Lo que falta para pagar, para leerse tras «Te faltan». */
 const faltaDe = (n: number, f: FuenteDeContrato | undefined): string => (f?.enMonedas ? `${n.toLocaleString('es-ES')} monedas` : `${oro(n)} de oro${f ? ` en ${f.nombre}` : ''}`);
 
-function htmlOferta(p: ProyeccionJugador, o: OfertaMercenario, yo: Puestos, fuente: FuenteDeContrato | undefined, e: Escapar): string {
+/** Desde la taberna de una plaza (tanda 69): el tablón de los campamentos de su región, pagado con el almacén de la plaza o con monedas. */
+export interface TablonDeRegion {
+  /** La plaza desde cuya taberna se contrata: las distancias a cada campamento se miden desde ella. */
+  plaza: { posicion: Point };
+  fuentes: FuenteDeContrato[];
+}
+
+const SIN_PAGO_REGION = 'Desde la taberna se paga con el oro del almacén de la plaza (firma el Rey, el Embajador o el Gobernador) o con tus monedas, y no tienes ninguna de las dos cosas.';
+
+/** De qué campamento de la región viene una oferta, a qué distancia de la plaza y el 📍 para verlo. */
+function htmlCampamentoDeOferta(p: ProyeccionJugador, o: OfertaMercenario, region: TablonDeRegion): string {
+  const pos = p.campamentosMercenarios.find((c) => c.id === o.campamentoId)?.posicion;
+  const lejos = pos ? ` · a ${Math.round(Math.hypot(pos.x - region.plaza.posicion.x, pos.y - region.plaza.posicion.y))} u` : '';
+  return `<div class="merc-campamento"><span>⛺ De un campamento de la región${lejos}</span>${botonCentrar(pos, 'Ver su campamento en el mapa')}</div>`;
+}
+
+function htmlOferta(p: ProyeccionJugador, o: OfertaMercenario, yo: Puestos, fuente: FuenteDeContrato | undefined, e: Escapar, region?: TablonDeRegion): string {
   // Lo que hay en lo que paga y en qué se cobra: con monedas, la tarifa en monedas (tanda 69).
   const carro = fuente?.saldo ?? 0, enMonedas = fuente?.enMonedas ?? false;
   const id = e(o.heroeId);
@@ -370,13 +386,14 @@ function htmlOferta(p: ProyeccionJugador, o: OfertaMercenario, yo: Puestos, fuen
   const motivo = p.faccionId === null ? 'Necesitas una Facción para contratar.'
     : herido ? 'Está herido: espera a que sane.'
       : !puede ? 'Ninguno de tus cargos puede firmarle un trabajo sobre algo que tengas a la vista.'
-        : !fuente ? SIN_PAGO
+        : !fuente ? (region ? SIN_PAGO_REGION : SIN_PAGO)
           : elegido !== undefined && elegido > carro ? `Te faltan ${faltaDe(elegido - carro, fuente)}.` : '';
   return `<article class="merc-oferta${herido ? ' herido' : ''}" data-merc-oferta="${id}" data-faccion="${e(p.faccionId ?? '')}">
     <header class="merc-oferta-cab">
       ${o.ficha ? insigniaDeRango(o.ficha.rango, 36) : ''}
       <div><strong>${e(nombreDeHeroe(p, o.heroeId))}</strong><small><span class="merc-rango-nombre">${o.ficha ? e(RANGO_MERCENARIO[o.ficha.rangoId] ?? o.ficha.rangoId) : ''}</span>${publico ? ` · ${e(publico.classDefinitionId)} · nivel ${publico.nivel}` : ''}${herido ? ` · <span class="merc-herido">herido ${textoEnTiempoReal(o.heridoHasta! - p.instante)}</span>` : ''}</small></div>
     </header>
+    ${region ? htmlCampamentoDeOferta(p, o, region) : ''}
     ${o.ficha ? htmlFichaMercenario(o.ficha, e, true, false) : ''}
     ${tropa}
     <div class="merc-seccion">Plazo y precio</div>
@@ -392,11 +409,14 @@ function htmlOferta(p: ProyeccionJugador, o: OfertaMercenario, yo: Puestos, fuen
   </article>`;
 }
 
-/** La subpestaña «Mercenarios» del campamento `c`: su tablón, con contratar. */
-export function htmlTablonMercenarios(p: ProyeccionJugador, tablon: OfertaMercenario[] | undefined, e: Escapar, c?: Pick<CampamentoMercenarios, 'id' | 'residentesIds'>): string {
-  const info = ayuda('camp:mercenarios', 'Héroes bot que se ofrecen a sueldo. Firma el Rey, el Embajador o el cargo local que alcance (el de más rango), aquí en persona (dentro o con tu columna a la puerta). La tarifa se paga con tu almacén personal, si resides aquí, o con el carro que llevas: el de tu columna o, dentro de tu residencia, el que trajiste al entrar. También con tus monedas, a la tarifa en monedas (100 por cada oro), que pasan al mercenario. Lo pagado no se devuelve nunca. Mientras dura, el mercenario es ciudadano de tu Facción con marca, y sin orden solo se defiende: se le manda desde Facción › Mercenarios.');
+/** La subpestaña «Mercenarios» del campamento `c`: su tablón, con contratar. Con `region`, el de los campamentos de la región desde la taberna de
+ * una plaza (tanda 69), con sus formas de pago. */
+export function htmlTablonMercenarios(p: ProyeccionJugador, tablon: OfertaMercenario[] | undefined, e: Escapar, c?: Pick<CampamentoMercenarios, 'id' | 'residentesIds'>, region?: TablonDeRegion): string {
+  const info = region
+    ? ayuda('plaza:mercenarios-region', 'Los mercenarios que se ofrecen en los campamentos de la región de esta plaza: se contratan desde aquí, sin ir. Se paga con el oro del almacén de la plaza (firma el Rey, el Embajador o el Gobernador) o con tus monedas (firma el cargo que alcance el trabajo). Lo pagado no se devuelve nunca. Prorrogar sigue siendo en persona.')
+    : ayuda('camp:mercenarios', 'Héroes bot que se ofrecen a sueldo. Firma el Rey, el Embajador o el cargo local que alcance (el de más rango), aquí en persona (dentro o con tu columna a la puerta). La tarifa se paga con tu almacén personal, si resides aquí, o con el carro que llevas: el de tu columna o, dentro de tu residencia, el que trajiste al entrar. También con tus monedas, a la tarifa en monedas (100 por cada oro), que pasan al mercenario. Lo pagado no se devuelve nunca. Mientras dura, el mercenario es ciudadano de tu Facción con marca, y sin orden solo se defiende: se le manda desde Facción › Mercenarios.');
   // De dónde sale el pago (`pagar_con`, motor 2b2c2a58; las monedas, tanda 69): si hay más de uno, se elige como en el mercado del campamento.
-  const fuentes = fuentesDeContrato(p, c);
+  const fuentes = region ? region.fuentes : fuentesDeContrato(p, c);
   const fuente = fuentes.find((f) => f.pagarCon === pagarConElegido) ?? fuentes[0];
   const yo = misPuestos(p);
   const renombre = (o: OfertaMercenario) => o.ficha?.renombre ?? 0;
@@ -405,15 +425,15 @@ export function htmlTablonMercenarios(p: ProyeccionJugador, tablon: OfertaMercen
   const chip = (v: typeof ordenTablon, t: string) => `<button type="button" class="merc-chip${ordenTablon === v ? ' activo' : ''}" data-merc-ordenar-tablon="${v}">${t}</button>`;
   const conMayuscula = (t: string): string => t.charAt(0).toUpperCase() + t.slice(1);
   const bolsa = !fuente
-    ? `<span class="merc-bolsa merc-bolsa-sin" title="${e(SIN_PAGO)}">🪙 sin oro a mano</span>`
+    ? `<span class="merc-bolsa merc-bolsa-sin" title="${e(region ? SIN_PAGO_REGION : SIN_PAGO)}">🪙 sin oro a mano</span>`
     : fuentes.length > 1
       ? `<label class="merc-bolsa merc-pagar"><span>Pagar con</span><select class="form-input" data-merc-pagar>${fuentes.map((f) => `<option value="${f.pagarCon}"${f === fuente ? ' selected' : ''}>${e(conMayuscula(f.nombre))} (${f.enMonedas ? `💰 ${f.saldo.toLocaleString('es-ES')}` : `🪙 ${oro(f.saldo)}`})</option>`).join('')}</select></label>`
       : fuente.enMonedas
         ? `<span class="merc-bolsa" title="Se paga con tus monedas, a la tarifa en monedas">💰 ${fuente.saldo.toLocaleString('es-ES')} monedas</span>`
         : `<span class="merc-bolsa" title="${e(`Se paga con el oro de ${fuente.nombre}`)}">🪙 ${oro(fuente.saldo)} en ${e(fuente.nombre)}</span>`;
-  return `<div class="merc-tablon-cab"><strong class="heroe-sub">Tablón de mercenarios${info}</strong>${bolsa}</div>
+  return `<div class="merc-tablon-cab"><strong class="heroe-sub">${region ? 'Mercenarios de la región' : 'Tablón de mercenarios'}${info}</strong>${bolsa}</div>
     ${lista.length > 1 ? `<div class="merc-orden-tablon">Ordenar por ${chip('renombre', 'renombre')}${chip('precio', 'precio')}</div>` : ''}
-    ${lista.length ? `<div class="merc-ofertas">${lista.map((o) => htmlOferta(p, o, yo, fuente, e)).join('')}</div>` : '<p class="mapa-lista-vacia">Nadie se ofrece ahora en este campamento.</p>'}`;
+    ${lista.length ? `<div class="merc-ofertas">${lista.map((o) => htmlOferta(p, o, yo, fuente, e, region)).join('')}</div>` : `<p class="mapa-lista-vacia">${region ? 'Nadie se ofrece ahora en los campamentos de la región.' : 'Nadie se ofrece ahora en este campamento.'}</p>`}`;
 }
 
 export function cablearTablonMercenarios(raiz: HTMLElement, ejecutar: Ejecutar, error: (m: string) => void, repintar: () => void): void {

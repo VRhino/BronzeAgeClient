@@ -308,6 +308,19 @@ function capacidadDe(c: Caravana, d: DatosCaravana | null): number | null {
   }, 0) * d.fCapacidad);
 }
 
+/**
+ * Las caravanas con las que saldría un envío a distancia (tanda 69, `tomar_orden_a_distancia`): las comerciales `disponible` de la plaza, de menor id
+ * a mayor (el motor toma la primera cuya capacidad llega a lo pedido), con lo que puede llevar cada una (`null` mientras no llega el catálogo).
+ */
+export function caravanasLibres(p: ProyeccionJugador, a: Asentamiento, alCargar?: () => void): { caravana: Caravana; capacidad: number | null }[] {
+  const d = datosDeCaravanas(a, alCargar);
+  const numero = (id: string): number => Number(id.replace(/\D+/g, '')) || 0;
+  return p.caravanas
+    .filter((c) => c.tipo === 'comercial' && c.origenAsentamientoId === a.id && (c.estado ?? 'disponible') === 'disponible')
+    .sort((x, y) => numero(x.id) - numero(y.id))
+    .map((c) => ({ caravana: c, capacidad: capacidadDe(c, d) }));
+}
+
 const cargaDe = (c: Caravana): number => Math.floor(Object.values(c.contenido ?? {}).reduce((t, n) => t + n, 0));
 
 /** Una fila de la lista de la izquierda. */

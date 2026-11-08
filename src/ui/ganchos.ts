@@ -13,6 +13,7 @@ import { cablearFundacionDePlaza, htmlFundacionDePlaza } from './panelFundacionD
 import { cablearTesoreria, htmlPoliticas } from './panelTesoreria';
 import { SUBPESTANA_INFORMACION } from './vistaCiudad';
 import { SUBPESTANA_TRUEQUES } from './panelTrueques';
+import { SUBPESTANA_REGION } from './tabernaRegion';
 import { SUBPESTANA_MISIONES } from './misiones';
 import { FICHA_AVANZADA, FICHA_OBRA, FICHA_PUEBLO, SUBPESTANA_PUEBLOS, pueblosYObrasBajoElClic } from './pueblos';
 import { FICHA_CARAVANA_AJENA, FICHA_COLUMNA_AJENA, ajenosBajoElClic } from './interaccionAjena';
@@ -77,6 +78,9 @@ export const SUBPESTANAS_CENTRO_EXTRA: SubpestanaPlaza[] = [
 export const SUBPESTANAS_MERCADO_EXTRA: SubpestanaPlaza[] = [
   // --- hueco bloque D1 (trueques)
   SUBPESTANA_TRUEQUES,
+
+  // --- la taberna regional (tanda 69): las órdenes de la región, mientras hay un informe de órdenes vigente
+  SUBPESTANA_REGION,
 
 ];
 

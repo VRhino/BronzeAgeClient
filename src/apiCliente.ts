@@ -502,17 +502,18 @@ function proyeccionActual(s: Sesion): ProyeccionJugador | PartidaSinHeroe {
 
 /** Precios, enfriamientos y cupos de la intel (`INTEL` y `cupoMiradas` de los niveles de la Taberna); a cero mientras no llegue `/v1/datos`. */
 export function tarifasDeIntel(): TarifasIntel {
-  type Intel = { mirada?: Partial<TarifasIntel['mirada']>; informe?: Partial<TarifasIntel['informe']>; campamento?: { cupoMiradas?: number } };
+  type Intel = { mirada?: Partial<TarifasIntel['mirada']>; informe?: Partial<TarifasIntel['informe']>; campamento?: { cupoMiradas?: number }; region?: Partial<TarifasIntel['region']> };
   const b = bloqueDeDatos<Intel>('INTEL');
   const niveles = nivelesDeEdificio('taberna') as Record<string, { cupoMiradas?: number }> | null;
   const porNivel = niveles ? Object.keys(niveles).map(Number).filter((n) => n > 0).sort((a, z) => a - z) : [];
   const porNivelDeTaberna: number[] = [];
   for (const n of porNivel) porNivelDeTaberna[n - 1] = niveles?.[String(n)]?.cupoMiradas ?? 0;
-  const m = b?.mirada ?? {}, i = b?.informe ?? {};
+  const m = b?.mirada ?? {}, i = b?.informe ?? {}, r = b?.region ?? {};
   return {
     mirada: { radio: m.radio ?? 0, duracionMinutos: m.duracionMinutos ?? 0, oroBase: m.oroBase ?? 0, oroPorUnidad: m.oroPorUnidad ?? 0, cooldownMinutos: m.cooldownMinutos ?? 0 },
     informe: { oroPorNivel: i.oroPorNivel ?? 0, cooldownMinutos: i.cooldownMinutos ?? 0 },
     cupoMiradas: { porNivelDeTaberna: Array.from(porNivelDeTaberna, (x) => x ?? 0), campamento: b?.campamento?.cupoMiradas ?? 0 },
+    region: { oro: r.oro ?? 0, cooldownMinutos: r.cooldownMinutos ?? 0, caducidadMinutos: r.caducidadMinutos ?? 0 },
   };
 }
 
