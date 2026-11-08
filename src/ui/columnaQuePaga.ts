@@ -47,3 +47,29 @@ export function fuentesDePago(p: ProyeccionJugador, c: Pick<CampamentoMercenario
   if (resides && dentro) return [almacen, { pagarCon: 'carro', nombre: 'tu carro', oro: p.heroe.carro?.['oro'] ?? 0 }];
   return [];
 }
+
+/** Con qué se paga un contrato (tanda 69, motor d0326fd): además del oro, las monedas del héroe que firma. */
+export type PagarContratoCon = PagarCon | 'monedas';
+
+export interface FuenteDeContrato {
+  pagarCon: PagarContratoCon;
+  /** Para leerse tras «con» o «en», como en `FuenteDePago`; las monedas, «tus monedas». */
+  nombre: string;
+  /** Lo que hay: oro en unidades o, con `enMonedas`, monedas. */
+  saldo: number;
+  /** Se paga la tarifa en monedas (`TarifaMercenario.monedas`) y no la de oro. */
+  enMonedas: boolean;
+}
+
+/**
+ * Con qué puedes pagar un contrato o una prórroga en el campamento `c`, como el motor (tanda 69, Mercenarios_Por_Contrato §5.1): el oro de
+ * `fuentesDePago` y, al final (no es lo de por defecto), tus monedas, que valen en cualquier sitio donde puedas firmar. Las monedas solo se
+ * ofrecen si tienes alguna y estás en el campamento (dentro, o con tu columna, que es cuando hay oro con que pagar).
+ */
+export function fuentesDeContrato(p: ProyeccionJugador, c: Pick<CampamentoMercenarios, 'id' | 'residentesIds'> | undefined): FuenteDeContrato[] {
+  const oro = fuentesDePago(p, c).map((f): FuenteDeContrato => ({ pagarCon: f.pagarCon, nombre: f.nombre, saldo: f.oro, enMonedas: false }));
+  const u = p.heroe.ubicacion;
+  const dentro = !!c && u.tipo === 'mercenarios' && u.campamentoId === c.id;
+  const monedas = p.heroe.monedas ?? 0;
+  return (oro.length > 0 || dentro) && monedas > 0 ? [...oro, { pagarCon: 'monedas', nombre: 'tus monedas', saldo: monedas, enMonedas: true }] : oro;
+}

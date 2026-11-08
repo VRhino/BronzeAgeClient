@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.187.0] — 2026-11-08 · La tanda 69, parte 3: pagar con monedas · sin cambio de contrato (motor `d0326fd`)
+
+- **Pagar un contrato con monedas** en el tablón del campamento: «Pagar con» ofrece, al final, «Tus monedas» si tienes alguna y estás en el
+  campamento (dentro, aunque no residas ni lleves columna, o con tu columna a la puerta). Con ellas, las tarifas se ven y se cobran en monedas
+  (`TarifaMercenario.monedas`, 100 por cada oro), «Te faltan» cuenta monedas y `contratarMercenario` lleva `pagarCon: "monedas"`.
+- **Prorrogar con monedas** en Facción › Mercenarios: si tienes monedas, junto al plazo sale «🪙 Con oro / 💰 Con monedas»
+  (`prorrogarContrato` con `pagarCon`). Sin monedas, como antes.
+- **Los hechos dicen lo pagado**: «entra a sueldo de tu Facción por 11.200 monedas» o «por 112 de oro»; la prórroga, igual.
+- Banco de mercenarios: `?monedas=N`.
+
 ## [0.186.0] — 2026-11-08 · La tanda 69, parte 2: el cultivo de las aldeas · sin cambio de contrato (motor `d0326fd`)
 
 - **Al marcar una aldea se elige su cultivo**: trigo siempre; vid desde el nivel 3 de la plaza y olivo desde el 4 (`PUEBLOS_EXTRACTORES.aldea.cultivos`).

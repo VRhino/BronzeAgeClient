@@ -103,6 +103,9 @@ function pintar(): void {
     proy.campamentosMercenarios[0]!.residentesIds = ['heroe-1'];
     proy.ejercitos = proy.ejercitos.filter((x) => x.id !== 'ej-1');
   }
+  // ?monedas=N: Víctor lleva N monedas (tanda 69): pagan contratos y prórrogas a la tarifa en monedas.
+  const monedas = new URLSearchParams(location.search).get('monedas');
+  if (monedas) proy.heroe.monedas = Number(monedas);
   if (ver === 'tablon') {
     lienzo.innerHTML = `<div class="banco-marco banco-campamento"><div class="asent-lado-cuerpo">${htmlTablonMercenarios(proy, tablon as never, e, proy.campamentosMercenarios[0])}</div><p id="camp-error" class="faction-error"></p></div>`;
     cablearTablonMercenarios(lienzo, ejecutar, (m) => { lienzo.querySelector('#camp-error')!.textContent = m; }, pintar);

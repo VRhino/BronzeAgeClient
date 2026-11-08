@@ -267,3 +267,45 @@ describe('los sitios de la aldea, con la tierra de su cultivo', () => {
     expect(sitiosDeAldea(viejo, zona, [], 0.3, 1)!.validos.length).toBeGreaterThan(0);
   });
 });
+
+describe('pagar contratos con monedas', async () => {
+  const { fuentesDeContrato } = await import('../src/ui/columnaQuePaga');
+  const { htmlTablonMercenarios, textoDeHechoMercenario } = await import('../src/ui/mercenarios');
+  const columna = { id: 'ej-1', faccionId: 'f-1', tipo: 'ejercito', liderId: 'heroe-1', estado: 'estacionado', posicionActual: { x: 0, y: 0 }, participantes: [{ heroeId: 'heroe-1', unidoEn: 0 }], suministro: { oro: 30 } };
+  const proy = (monedas: number, ubicacion: unknown = { tipo: 'columna', ejercitoId: 'ej-1' }, ejercitos: unknown[] = [columna]): ProyeccionJugador =>
+    ({
+      heroeId: 'heroe-1', faccionId: 'f-1', instante: 0,
+      heroe: { id: 'heroe-1', ubicacion, monedas, escuadrones: [] },
+      ejercitos, asentamientos: [{ id: 'as-1', nombre: 'Micenas', faccionId: 'f-1', posicion: { x: 0, y: 0 } }], asentamientosConocidos: [], asentamientosAvistados: [], caravanasAvistadas: [],
+      pueblos: [], avanzadas: [], caravanas: [], convocatorias: [], campamentosBandidos: [], heroesVisibles: [], ejercitosAvistados: [], relaciones: [], nombresDeCompaneros: {},
+      facciones: [{ id: 'f-1', nombre: 'Uno', nivel: 1, reyId: 'heroe-1' }],
+      campamentosMercenarios: [{ id: 'camp-2', residentesIds: [] }],
+    }) as unknown as ProyeccionJugador;
+  const camp = { id: 'camp-2', residentesIds: [] as string[] };
+
+  test('las monedas se ofrecen al final, solo si tienes alguna y estás en el campamento', () => {
+    expect(fuentesDeContrato(proy(4800), camp).map((f) => [f.pagarCon, f.saldo, f.enMonedas])).toEqual([['carro', 30, false], ['monedas', 4800, true]]);
+    expect(fuentesDeContrato(proy(0), camp).map((f) => f.pagarCon)).toEqual(['carro']);
+    // dentro del campamento sin columna ni residencia: no hay oro a mano, pero las monedas valen en cualquier sitio donde se firme
+    expect(fuentesDeContrato(proy(500, { tipo: 'mercenarios', campamentoId: 'camp-2' }, []), camp).map((f) => f.pagarCon)).toEqual(['monedas']);
+    // lejos del campamento, nada
+    expect(fuentesDeContrato(proy(500, { tipo: 'desconectado' }, []), camp)).toEqual([]);
+  });
+
+  test('con monedas, el tablón cobra la tarifa en monedas', () => {
+    const tablon = [{ heroeId: 'heroe-30', tropa: [], tarifas: [{ plazoDias: 1, oro: 48, monedas: 4800 }, { plazoDias: 3, oro: 112, monedas: 11200 }, { plazoDias: 7, oro: 224, monedas: 22400 }, { oro: 1600, monedas: 160000 }] }];
+    const html = htmlTablonMercenarios(proy(5000, { tipo: 'mercenarios', campamentoId: 'camp-2' }, []), tablon as never, (t) => t, camp);
+    expect(html).toContain('💰 5000 monedas');
+    expect(html).toContain('4800 💰');
+    expect(html).toContain('11.200 💰');
+    expect(html).not.toContain('48 🪙');
+    // lo elegido por defecto (3 días) y con qué se paga van en el botón
+    expect(html).toMatch(/data-merc-pagar-con="monedas"[^>]*>Contratar · 11\.200 💰/);
+  });
+
+  test('los hechos dicen con qué se pagó', () => {
+    expect(textoDeHechoMercenario('mercenarios.contratado', { mercenario: 30, oro: 0, monedas: 4800 }, null)).toBe('heroe-30 entra a sueldo de tu Facción por 4800 monedas.');
+    expect(textoDeHechoMercenario('mercenarios.contratado', { mercenario: 30, oro: 48000, monedas: 0 }, null)).toBe('heroe-30 entra a sueldo de tu Facción por 48 de oro.');
+    expect(textoDeHechoMercenario('mercenarios.prorrogado', { mercenario: 30, oro: 0, monedas: 11200 }, null)).toBe('Se prorroga el contrato de heroe-30 por 11.200 monedas.');
+  });
+});
