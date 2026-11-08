@@ -277,7 +277,7 @@ function caravana(c: pb.Caravana, ahora: number): d.Caravana {
   return {
     id: c.id, nombre: opcional(c.nombre), origenAsentamientoId: c.origenAsentamientoId, destinoAsentamientoId: c.destinoAsentamientoId, posicionActual: posicion, ruta,
     estado: ESTADO_CARAVANA[c.estado], tipo: TIPO_CARAVANA[c.tipo], origenCampamentoId: c.origenCampamentoId, faccionId: c.faccionId, titularId: c.titularId,
-    escoltaIds: c.escoltaIds, carros: c.carros.map((x) => ({ tipoCarro: x.tipoCarro as 'basico' | 'reforzado', animal: x.animal as 'buey' | 'caballo' | 'camello' | undefined })),
+    escoltaIds: c.escoltaIds, escolta: c.escolta.length ? c.escolta.map((g) => ({ tropaId: g.tropaId, cantidad: g.cantidad, heroeId: g.heroeId })) : undefined, carros: c.carros.map((x) => ({ tipoCarro: x.tipoCarro as 'basico' | 'reforzado', animal: x.animal as 'buey' | 'caballo' | 'camello' | undefined })),
     reservadaManual: c.reservadaManual, contenido: cantidades(c.contenido), caducaEn: instante(c.caducaEnMs), preparaHasta: instante(c.preparaHastaMs),
     encargo: c.encargo ? encargo(c.encargo) : undefined,
   };

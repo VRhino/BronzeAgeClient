@@ -3,6 +3,13 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.182.0] — 2026-11-08 · De quién es la escolta de una caravana · contrato 0.18.0 (motor `3827e6b`)
+
+Víctor (2026-11-07): la escolta de otro héroe salía como «Escuadra · De otro héroe».
+- Contrato regenerado: `Caravana.escolta` (27), la escolta escuadra a escuadra con tropa, soldados y héroe, en el orden de `escoltaIds`.
+- En la ventana de Caravanas, cada hueco de escolta ajena enseña su tropa, sus hombres y el nombre de su héroe, como la guarnición de la
+  plaza. En la escolta en lista (la del carro de acarreo del pueblo) salen bajo «De otros héroes». Sin el dato, como antes.
+
 ## [0.181.0] — 2026-11-07 · Reclutamiento: solo lo que se puede reclutar · sin cambio de contrato (motor `0e283fb`)
 
 Víctor (2026-11-07): «ocultar aquellas tropas de las cuales no se puedan reclutar, en todas las interfaces de reclutamiento».

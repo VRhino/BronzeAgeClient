@@ -343,6 +343,9 @@ export interface Caravana {
   titularId?: string;
   /** Escuadras cedidas como escolta (ids; backend 2026-10-08, Doc 3.13.4). */
   escoltaIds?: string[];
+  /** La escolta escuadra a escuadra, en el orden de `escoltaIds`: tropa, soldados y de qué héroe es (motor 3827e6b, `Caravana.escolta`). Solo en las
+   * propias y el carro de acarreo; si la escuadra ya no está, `tropaId` vacío y `cantidad` 0. */
+  escolta?: { tropaId: string; cantidad: number; heroeId: string }[];
   /** Liderazgo que gasta su escolta y cupo que le da el Mercado de su origen: derivado por el backend, solo en las comerciales de una plaza propia. */
   escoltaLiderazgo?: { usado: number; cupo: number };
   /** Revamp de caravanas (Doc 3.13): solo en las comerciales. Solo los carros con animal tiran. */

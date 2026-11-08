@@ -166,9 +166,10 @@ if (ventana === 'caravanas') {
     escuadra('s2', 'Arqueros', 'arqueros', 60, { tipo: 'campamento' }),
     escuadra('s3', 'Honderos', 'honderos', 30, { tipo: 'campamento' }),
   ], loadouts: [] };
+  q.nombresDeCompaneros = { ...(q.nombresDeCompaneros ?? {}), 'heroe-12': 'Ariadna' };
   q.caravanas = [
     { id: 'car-1', nombre: 'Ánfora', tipo: 'comercial', origenAsentamientoId: a.id, posicionActual: a.posicion, estado: 'disponible', reservadaManual: true,
-      carros: [{ tipoCarro: 'basico', animal: 'buey' }, { tipoCarro: 'basico', animal: 'caballo' }, { tipoCarro: 'reforzado' }], escoltaIds: ['s1', 'x-otro'], escoltaLiderazgo: { usado: 75, cupo: 200 }, contenido: {} },
+      carros: [{ tipoCarro: 'basico', animal: 'buey' }, { tipoCarro: 'basico', animal: 'caballo' }, { tipoCarro: 'reforzado' }], escoltaIds: ['s1', 'x-otro'], escolta: [{ tropaId: 'hoplitas_ciudadanos', cantidad: 40, heroeId: 'h' }, { tropaId: 'arqueros', cantidad: 55, heroeId: 'heroe-12' }], escoltaLiderazgo: { usado: 75, cupo: 200 }, contenido: {} },
     { id: 'car-2', nombre: 'Sal del Egeo', tipo: 'comercial', origenAsentamientoId: a.id, posicionActual: { x: a.posicion.x + 90, y: a.posicion.y }, estado: 'en_transito', destinoAsentamientoId: 'as-9',
       carros: [{ tipoCarro: 'basico', animal: 'buey' }, { tipoCarro: 'basico', animal: 'buey' }], contenido: { trigo: 600, madera: 200 },
       encargo: { modo: 'ruta', destinoAsentamientoId: 'as-9', vueltas: 3, paradaActual: 'destino', fase: '', cancelado: false,

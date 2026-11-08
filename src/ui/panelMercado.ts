@@ -17,7 +17,8 @@ import { mostrar as mostrarAviso } from './avisos';
 import { olvidarEdicion } from './repintado';
 import { ICONO_CARRETA } from './juegoVisual';
 import { iconoRitmo, velocidadDePiezas } from './velocidadColumna';
-import { miColumna } from './ejercitos';
+import { miColumna, nombreDeTropa } from './ejercitos';
+import { nombreDeHeroe } from './nombres';
 
 type Escapar = (valor: string) => string;
 
@@ -184,6 +185,21 @@ function barraEscolta(usado: number, cupo: number): string {
     <small class="escolta-cifras"><strong>${usado}/${cupo} pts</strong> de Liderazgo · quedan ${Math.max(0, cupo - usado)}</small>`;
 }
 
+/** Las escuadras de la escolta que no son tuyas, con su tropa, soldados y héroe si el motor lo manda (`Caravana.escolta`). */
+function escoltaAjena(c: Caravana, p: ProyeccionJugador, cedidas: Escuadron[]): { id: string; info?: { tropaId: string; cantidad: number; heroeId: string } }[] {
+  return (c.escoltaIds ?? []).map((id, i) => ({ id, info: c.escolta?.[i]?.tropaId ? c.escolta[i] : undefined }))
+    .filter((x) => !cedidas.some((s) => s.id === x.id) && x.info?.heroeId !== p.heroeId);
+}
+
+/** Una escuadra ajena de la escolta en hueco: su tropa, sus hombres y de quién es (como la guarnición); sin datos, «De otro héroe». */
+function huecoAjeno(p: ProyeccionJugador, info: { tropaId: string; cantidad: number; heroeId: string } | undefined, e: Escapar): string {
+  if (!info) return '<div class="salida-hueco lleno ajena"><span class="salida-hueco-icono escolta-ajena-icono" aria-hidden="true">⚔</span><span class="salida-hueco-nombre">Escuadra</span><small>De otro héroe</small></div>';
+  const tropa = nombreDeTropa(info.tropaId), heroe = nombreDeHeroe(p, info.heroeId);
+  return `<div class="salida-hueco lleno ajena" title="${e(`${tropa} · ${info.cantidad} hombres · de ${heroe}`)}">
+    <span class="salida-hueco-icono">${iconoTropa(info.tropaId, 34)}</span><span class="salida-hueco-nombre">${e(tropa)}</span>
+    <small>${info.cantidad} hombres · de <strong class="guarnicion-dueno">${e(heroe)}</strong></small></div>`;
+}
+
 /** Escolta de una caravana comercial de esta plaza (Doc 3.13.4): cupo, escuadras cedidas con «Retirar» y «Añadir escolta», que despliega las que puedes ceder.
  * También la del carro de acarreo de un pueblo (`ui/pueblos.ts`), que el motor escolta igual. */
 export function escolta(c: Caravana, p: ProyeccionJugador, reside: boolean, parada: boolean, escoltaPts: number | undefined, e: Escapar): string {
@@ -193,7 +209,8 @@ export function escolta(c: Caravana, p: ProyeccionJugador, reside: boolean, para
   const mias = cedidas.reduce((t, s) => t + s.costeLiderazgo, 0);
   // El motor no publica lo usado: cuentan las escuadras tuyas cedidas (su coste sale del escalón de la tropa); las de otros residentes solo se ven como ids.
   const usado = c.escoltaLiderazgo?.usado ?? mias;
-  const ajenas = (c.escoltaIds ?? []).filter((id) => !cedidas.some((s) => s.id === id)).length;
+  const deOtrosLista = escoltaAjena(c, p, cedidas);
+  const ajenas = deOtrosLista.length;
   const deOtros = c.escoltaLiderazgo ? Math.max(0, usado - mias) : 0;
   const libre = cupo - usado;
   const candidatas: Escuadron[] = p.heroe.escuadrones.filter((s) => s.contenedor.tipo === 'campamento' && !s.enGuarnicion && s.cantidad > 0);
@@ -209,14 +226,16 @@ export function escolta(c: Caravana, p: ProyeccionJugador, reside: boolean, para
     const cabe = s.costeLiderazgo <= libre;
     return `<div class="mapa-lista-item con-tropa">${iconoEnFila(s.tropaId)}<div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres${cabe ? '' : ` · no cabe: quedan ${Math.max(0, libre)} pts`}</span></div><button class="btn-secondary" type="button" data-ceder-escolta="${e(s.id)}" data-caravana="${e(c.id)}"${cabe ? '' : ' disabled'}>Ceder</button></div>`;
   }).join('');
-  const otros = deOtros > 0 ? `Otros residentes han cedido ${deOtros} pts.`
+  const conDueno = deOtrosLista.filter((x) => x.info);
+  const otrosHtml = conDueno.length ? `<small class="asent-lado-nota">De otros héroes:</small><div class="mapa-lista">${conDueno.map(({ info }) => `<div class="mapa-lista-item con-tropa">${iconoEnFila(info!.tropaId)}<div><strong>${e(nombreDeTropa(info!.tropaId))}</strong><span>${info!.cantidad} hombres · de <strong class="guarnicion-dueno">${e(nombreDeHeroe(p, info!.heroeId))}</strong></span></div></div>`).join('')}</div>` : '';
+  const otros = conDueno.length ? '' : deOtros > 0 ? `Otros residentes han cedido ${deOtros} pts.`
     : !c.escoltaLiderazgo && ajenas > 0 ? `Además van ${ajenas === 1 ? '1 escuadra' : `${ajenas} escuadras`} de otros residentes: la barra no cuenta su coste y el servidor sí.` : '';
   return `<div class="caravana-seccion-cab"><strong class="heroe-sub">Escolta</strong><button class="btn-secondary btn-chico" type="button" data-escolta-abrir="${e(c.id)}"${motivo ? ` disabled title="${e(motivo)}"` : ''}>${abierta ? '▾' : '＋'} Añadir escolta</button></div>
     ${barraEscolta(usado, cupo)}
     ${otros ? `<p class="asent-lado-nota">${otros}</p>` : ''}
     ${motivo && parada && reside ? `<small class="asent-lado-nota">${e(motivo)}</small>` : ''}
     ${motivo ? '' : `<div class="mapa-lista" data-escolta-lista="${e(c.id)}"${abierta ? '' : ' hidden'}>${libresHtml}</div>`}
-    ${cedidasHtml}`;
+    ${cedidasHtml}${otrosHtml}`;
 }
 
 /** Caravana aparcada AQUÍ por un ejército (Doc 3.13.7): sigue siendo de su origen; intercambia carga con el almacén y solo sale enganchada o enviada al origen.
@@ -401,7 +420,7 @@ function escoltaEnHuecos(c: Caravana, p: ProyeccionJugador, fuente: ReturnType<t
   const cedidas = p.heroe.escuadrones.filter((s) => s.contenedor.tipo === 'escolta' && s.contenedor.caravanaId === c.id);
   const mias = cedidas.reduce((t, s) => t + s.costeLiderazgo, 0);
   const usado = c.escoltaLiderazgo?.usado ?? mias;
-  const ajenas = (c.escoltaIds ?? []).filter((id) => !cedidas.some((s) => s.id === id));
+  const ajenas = escoltaAjena(c, p, cedidas);
   const libre = cupo - usado;
   const candidatas = fuente?.lista ?? [];
   const caben = candidatas.filter((s) => s.costeLiderazgo <= libre);
@@ -412,7 +431,7 @@ function escoltaEnHuecos(c: Caravana, p: ProyeccionJugador, fuente: ReturnType<t
         <small>Tuya · ${s.cantidad} hombres ${chipLiderazgo(s)}</small>
         ${editable ? `<button class="salida-hueco-quitar" type="button" data-quitar-escolta="${e(s.id)}" data-caravana="${e(c.id)}" title="Retirarla" aria-label="Retirar ${e(s.nombre)}">✕</button>` : ''}
       </div>`),
-    ...ajenas.map(() => `<div class="salida-hueco lleno ajena"><span class="salida-hueco-icono escolta-ajena-icono" aria-hidden="true">⚔</span><span class="salida-hueco-nombre">Escuadra</span><small>De otro héroe</small></div>`),
+    ...ajenas.map(({ info }) => huecoAjeno(p, info, e)),
   ];
   if (editable && caben.length > 0) huecos.push(`<button class="salida-hueco mas${abierta ? ' activo' : ''}" type="button" data-escolta-mas="${e(c.id)}" title="Ceder una escuadra ${fuente.de === 'columna' ? 'de tu columna' : 'de tu campamento'}" aria-label="Ceder una escuadra">+</button>`);
   const lista = abierta ? `<div class="salida-elegir">${candidatas.map((s) => {
