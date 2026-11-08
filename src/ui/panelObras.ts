@@ -25,6 +25,7 @@ const EDIFICIOS_MANUALES = [
   'vivienda', 'almacen', 'granero', 'lenera',
   'barracon', 'galeriaDeTiro', 'palacio', 'mercado', 'albergueCaravanas', 'taberna',
   'fundicion', 'granFundicion', 'curtiduria', 'armeria', 'carpinteria', 'maravilla',
+  'molino', 'horno', 'quesera', 'bodega', 'prensa',
 ] as const;
 
 interface DefEdificio {
@@ -52,6 +53,23 @@ function motivoParaConstruir(a: Asentamiento, tipo: string, def: DefEdificio, ca
   const n1 = def.niveles?.['1'], pideNivel = n1?.requiereEdificioNivel ?? 1;
   if (n1?.requiereEdificio && !(a.edificios ?? []).some((e) => e.tipo === n1.requiereEdificio && e.estado === 'activo' && (e.nivelInterno ?? 1) >= pideNivel)) {
     return `Pide un ${nombreDe(n1.requiereEdificio)} activo${pideNivel > 1 ? ` de nivel ${pideNivel}` : ''}.`;
+  }
+  // Tanda 69 (Diplomacia_Facciones §3.5b): la Maravilla pide el prestigio de la Facción, y la estatua solo va en la capital, tantas como umbrales
+  // de `PRESTIGIO.estatuas` alcance (contando las hechas y las que están en obra). Sin las reglas todavía, la estatua no sale.
+  if (tipo === 'maravilla' || tipo === 'estatua') {
+    const reglas = bloqueDeDatos<{ estatuas?: number[]; maravilla?: number }>('PRESTIGIO');
+    const faccion = p?.facciones.find((f) => f.id === p.faccionId);
+    const prestigio = faccion?.prestigio ?? 0;
+    if (tipo === 'maravilla' && reglas?.maravilla !== undefined && prestigio < reglas.maravilla) return `Pide ${reglas.maravilla} de prestigio de la Facción.`;
+    if (tipo === 'estatua') {
+      if ((faccion?.capitalId ?? p?.tecnologia?.capitalId) !== a.id) return 'Solo en la capital.';
+      const umbrales = reglas?.estatuas ?? [];
+      const caben = umbrales.filter((u) => prestigio >= u).length;
+      if ((a.edificios ?? []).filter((e) => e.tipo === 'estatua').length >= caben) {
+        const siguiente = umbrales[caben];
+        return siguiente !== undefined ? `La siguiente estatua pide ${siguiente} de prestigio.` : 'Ya tiene todas las estatuas que da el prestigio.';
+      }
+    }
   }
   if (tipo === 'granFundicion') {
     const nivelFaccion = p?.facciones.find((f) => f.id === p.faccionId)?.nivel ?? 1;
@@ -98,9 +116,11 @@ export function avanceDeObra(a: Asentamiento, e: Edificio): number | null {
 const GRUPOS_CONSTRUIR: { id: string; nombre: string; icono: string; tipos: string[] }[] = [
   { id: 'ciudad', nombre: 'Ciudad', icono: 'vivienda', tipos: ['vivienda', 'almacen', 'granero', 'pozo', 'parque', 'plaza'] },
   { id: 'recursos', nombre: 'Recursos', icono: 'granja', tipos: ['granja', 'lenera'] },
+  // los talleres de la comida de la tanda 69: pan de pesants y queso, vino y aceite de artesanos
+  { id: 'comida', nombre: 'Comida', icono: 'horno', tipos: ['molino', 'horno', 'quesera', 'bodega', 'prensa'] },
   { id: 'talleres', nombre: 'Talleres', icono: 'fundicion', tipos: ['fundicion', 'granFundicion', 'curtiduria', 'armeria', 'carpinteria', 'patioDeGremios'] },
   { id: 'militar', nombre: 'Militar', icono: 'barracon', tipos: ['barracon', 'galeriaDeTiro', 'caballerizas', 'plazaDeArmas'] },
-  { id: 'gobierno', nombre: 'Gobierno', icono: 'palacio', tipos: ['salaConsejo', 'palacio', 'taberna', 'mercado', 'albergueCaravanas', 'maravilla'] },
+  { id: 'gobierno', nombre: 'Gobierno', icono: 'palacio', tipos: ['salaConsejo', 'palacio', 'taberna', 'mercado', 'albergueCaravanas', 'maravilla', 'estatua'] },
 ];
 const grupoDe = (tipo: string): string => GRUPOS_CONSTRUIR.find((g) => g.tipos.includes(tipo))?.id ?? 'otros';
 
@@ -111,7 +131,7 @@ let grupoConstruir = '';
 /** La Granja es única en la ciudad (motor e4923d4d, `EDIFICIOS_UNICOS`): con la de la fundación en pie no se ofrece otra. */
 const hayGranja = (a: Asentamiento): boolean => (a.edificios ?? []).some((x) => x.tipo === 'granja');
 
-/** Construir: pestañas por tipo (ciudad, recursos, talleres, militar, gobierno) con cuántos se pueden levantar ya, y una casilla por edificio
+/** Construir: pestañas por tipo (ciudad, recursos, comida, talleres, militar, gobierno) con cuántos se pueden levantar ya, y una casilla por edificio
  * con su icono y su coste. Solo los que se pueden pedir: los que el cliente sabe que no (`motivoParaConstruir`) no salen. Vacío sin cargo. */
 /** Abre la pestaña de «Construir» donde está ese tipo (el «+» de la Vivienda en la barra de Población, 0.171.0). */
 export function elegirGrupoDe(tipo: string): void { grupoConstruir = grupoDe(tipo); }

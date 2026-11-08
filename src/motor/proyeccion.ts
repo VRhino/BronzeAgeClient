@@ -138,6 +138,10 @@ function faccion(f: pb.Faccion, ahora: number): d.Faccion {
     tablon: f.tablon ? tablon(f.tablon) : undefined,
     capFundacion: f.capFundacion ? { cap: f.capFundacion.cap, plazas: f.capFundacion.plazas, caravanas: f.capFundacion.caravanas } : undefined,
     cuposDeNivel: f.cuposDeNivel.length ? f.cuposDeNivel.map((c) => ({ nivel: c.nivel, cupo: c.cupo, ocupadas: c.ocupadas })) : undefined,
+    prestigio: Number(f.prestigio), topeAlianzas: f.topeAlianzas,
+    informesRegion: f.informesRegion.length
+      ? f.informesRegion.map((x) => ({ region: x.region, tipo: x.tipo === 'ordenes' ? 'ordenes' : 'plazas', compradoEn: instante(x.compradoEnMs)!, caducaEn: instante(x.caducaEnMs), libreEn: instante(x.libreEnMs)! }))
+      : undefined,
   };
 }
 
@@ -172,6 +176,7 @@ function edificio(e: pb.Edificio): d.Edificio {
     posicion: punto(e.posicion), nivelInterno: e.nivelInterno, completaEn: instante(e.completaEnMs), prioridad: e.prioridad, fuenteId: e.fuenteId,
     pausadoPorAlmacenLleno: e.pausadoPorAlmacenLleno || undefined, danado: e.danado || undefined,
     mejora: e.mejora ? { nivelObjetivo: e.mejora.nivelObjetivo, completaEn: instante(e.mejora.completaEnMs)! } : undefined,
+    buey: e.buey || undefined,
   };
 }
 
@@ -219,6 +224,7 @@ function asentamiento(a: pb.Asentamiento, ahora: number): d.Asentamiento {
     guarnicionIds: a.guarnicionIds.length ? a.guarnicionIds : undefined,
     cupoGuarnicion: a.cupoGuarnicion,
     guarnicion: a.guarnicion.length ? a.guarnicion.map((g) => ({ tropaId: g.tropaId, cantidad: g.cantidad, heroeId: g.heroeId })) : undefined,
+    mercenariosRegion: a.mercenariosRegion.length ? a.mercenariosRegion.map(ofertaMercenario) : undefined,
   };
 }
 
@@ -329,6 +335,7 @@ function pueblo(x: pb.Pueblo, propio: boolean, ahora: number): d.PuebloDeMapa {
     almacen, capacidad: mil(x.almacenLocal?.capacidad), carroId: opcional(x.carroAcarreoId), guarnicionId: opcional(x.guarnicionEscuadronId), guarnicionReponeEn: instante(x.guarnicionReponeEnMs),
     batallaId: opcional(x.batallaId), nivelAldea: x.nivelAldea, fertilidad: x.fertilidad === undefined ? undefined : mil(x.fertilidad),
     rebano: x.rebanoEspecie ? { especie: x.rebanoEspecie, cabezas: mil(x.rebanoCabezas) } : undefined,
+    cultivo: opcional(x.cultivo),
     guarnicionJugadoresIds: x.guarnicionJugadoresIds, cupoGuarnicionPorHeroe: x.cupoGuarnicionPorHeroe ? Number(x.cupoGuarnicionPorHeroe) : undefined,
   };
 }
@@ -415,7 +422,7 @@ function heroe(h: pb.Heroe, escuadrones: pb.Escuadron[], ahora: number): d.Heroe
       arma: eq?.arma ? item(eq.arma) : null, casco: eq?.casco ? item(eq.casco) : null, torso: eq?.torso ? item(eq.torso) : null,
       guantes: eq?.guantes ? item(eq.guantes) : null, pantalones: eq?.pantalones ? item(eq.pantalones) : null, botas: eq?.botas ? item(eq.botas) : null,
     },
-    monedasHeroe: { bronce: Number(h.monedasHeroe?.bronce ?? 0n), plata: Number(h.monedasHeroe?.plata ?? 0n), oro: Number(h.monedasHeroe?.oro ?? 0n) },
+    monedas: Number(h.monedas),
     cupoGuarnicion: h.cupoGuarnicion,
     guarnicionOcupada: propias.filter((e) => e.enGuarnicion).reduce((s, e) => s + e.cantidad, 0),
     heridoHasta: instante(h.heridoHastaMs), desconectaEn: instante(h.desconectaEnMs),
@@ -476,7 +483,9 @@ function ofertaMercenario(o: pb.OfertaMercenario): d.OfertaMercenario {
   return {
     heroeId: o.heroeId, desde: instante(o.desdeMs), ficha: o.ficha ? fichaMercenario(o.ficha) : undefined,
     tropa: o.tropa.map((e) => ({ tropaId: e.tropaId, cantidad: e.cantidad, nivel: e.nivel })), heridoHasta: instante(o.heridoHastaMs),
-    tarifas: o.tarifas.map((t) => ({ plazoDias: t.plazoDias, oro: mil(t.oro) })),
+    // el oro en milésimas, las monedas en unidades (tanda 69: la tarifa en oro × `monedasPorOro`)
+    tarifas: o.tarifas.map((t) => ({ plazoDias: t.plazoDias, oro: mil(t.oro), monedas: Number(t.monedas) })),
+    campamentoId: opcional(o.campamentoId),
   };
 }
 

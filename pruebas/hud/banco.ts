@@ -64,6 +64,17 @@ a.cargos = { ...(a.cargos ?? {}), gobernadorId: 'h' } as typeof a.cargos;
 const finesDeObra = (a.edificios ?? []).flatMap((x) => [x.mejora?.completaEn, x.estado === 'en_construccion' ? x.completaEn : undefined]).filter((x): x is number => typeof x === 'number');
 const p = { instante: finesDeObra.length ? Math.min(...finesDeObra) - 50 * 60_000 : Date.now(), heroe: { displayName: 'Víctor', ubicacion: { tipo: 'asentamiento', asentamientoId: a.id } }, asentamientos: [a], facciones: [], heroeId: 'h' } as unknown as ProyeccionJugador;
 estadoCliente.proyeccionUltima = p;
+// `&prestigio=N` (tanda 69): la plaza es la capital de una Facción con ese prestigio (la estatua y la Maravilla de «Construir»)
+if (qs0.get('prestigio')) {
+  const q = p as unknown as Record<string, unknown>;
+  q.faccionId = a.faccionId;
+  q.facciones = [{ id: a.faccionId, nombre: 'Casa de Micenas', nivel: 2, prestigio: Number(qs0.get('prestigio')), capitalId: a.id, reyId: 'h' }];
+}
+// `&comida=1` (tanda 69): el almacén con la comida nueva, junto al trigo
+if (qs0.get('comida')) {
+  const hay = { harina: 140, pan: 260, carne: 45, leche: 80, queso: 30, uva: 120, vino: 40, aceituna: 90, aceite: 25 };
+  for (const [r, n] of Object.entries(hay)) a.almacen = { ...a.almacen, [r]: { cantidad: n, capacidad: a.almacen?.trigo?.capacidad ?? 1000 } };
+}
 const construir = new URLSearchParams(location.search).get('construir');
 
 let barra = '';
@@ -232,7 +243,7 @@ if (camp) {
   const c: CampamentoMercenarios = { id: 'mc-1', posicion: a.posicion, origen: 0, edificios: ['taberna', 'mercado', 'barracon'], residentesIds: ['h'], eligieronComoInicial: 3,
     mercado: { trigo: 400, madera: 120, cobre: 30 }, fondos: {},
     tablon: qs.get('tablon') ? ['bot07', 'bot08', 'bot09'].map((heroeId, i) => ({ heroeId, tropa: [{ tropaId: 'milicia_lanceros', cantidad: 24 + i, nivel: 1 }, { tropaId: 'milicia_lanceros', cantidad: 28 + i, nivel: 1 }],
-      tarifas: [{ plazoDias: 1, oro: 220 + 13 * i }, { plazoDias: 3, oro: 514 + 29 * i }, { plazoDias: 7, oro: 1027 + 58 * i }, { oro: 7330 + 420 * i }] })) : [] };
+      tarifas: [{ plazoDias: 1, oro: 220 + 13 * i, monedas: (220 + 13 * i) * 100 }, { plazoDias: 3, oro: 514 + 29 * i, monedas: (514 + 29 * i) * 100 }, { plazoDias: 7, oro: 1027 + 58 * i, monedas: (1027 + 58 * i) * 100 }, { oro: 7330 + 420 * i, monedas: (7330 + 420 * i) * 100 }] })) : [] };
   q.faccionId = qs.get('faccion') ? 'f1' : null;
   q.heroe = { id: 'h', displayName: 'Víctor', ubicacion: { tipo: 'mercenarios', campamentoId: c.id }, escuadrones: [], loadouts: [], almacenPersonal: { oro: 120, trigo: 40 } };
   q.ejercitos = []; q.caravanas = []; q.heroesVisibles = [{ id: 'bot07', displayName: 'Perdicas' }]; q.campamentosBandidos = []; q.ejercitosAvistados = []; q.nombresDeCompaneros = { bot07: 'Suppiluliuma II', bot08: 'Telipinu', bot09: 'Thariyelli' }; q.asentamientos = []; q.asentamientosAvistados = []; q.asentamientosConocidos = [];

@@ -1,6 +1,6 @@
 // BASE PERSONAL (Víctor, 2026-11-06): una ventana a pantalla completa con todo lo que es del jugador, centralizado. Sustituye a los botones
 // «Héroe», «Escuadras» y «Carro» de la barra de arriba; se abre con el yelmo de la barra o con la tecla B, en cualquier pantalla.
-//  - A la izquierda, el héroe: nivel, experiencia, Liderazgo, monedas, víveres (y cuánto aguantan), dónde está, dónde reside (solo se ve:
+//  - A la izquierda, el héroe: nivel, experiencia, Liderazgo, sus monedas (un solo saldo desde la tanda 69), víveres (y cuánto aguantan), dónde está, dónde reside (solo se ve:
 //    la residencia se cambia desde dentro de la plaza o del campamento) y sus cargos, con un acceso a lo que manda cada uno.
 //  - Pestañas: Tropas (todas sus escuadras, dónde está cada una, su orden, la guarnición y **reponer** donde se pueda), Bienes (almacén personal,
 //    carro, pasar a víveres, inventario y equipo), Loadouts, Héroe (atributos), Historial y Plazas conocidas.
@@ -220,7 +220,6 @@ function htmlViveres(p: ProyeccionJugador, repintar: () => void): string {
 
 function htmlLateral(p: ProyeccionJugador, e: Escapar, repintar: () => void): string {
   const h = p.heroe;
-  const m = h.monedasHeroe;
   const herido = minutosHerido(p);
   const r = residencia(p);
   const f = p.facciones.find((x) => x.id === p.faccionId);
@@ -234,7 +233,7 @@ function htmlLateral(p: ProyeccionJugador, e: Escapar, repintar: () => void): st
       <div class="faccion-lateral-dato"><span>Experiencia</span><strong>${h.experienciaHaciaSiguienteNivel}</strong></div>
       <div class="faccion-lateral-dato"><span>Liderazgo</span><strong>${h.liderazgoBase}</strong></div>
       ${puntos > 0 ? `<button class="base-puntos" type="button" data-base-pestana="heroe">${puntos} ${puntos === 1 ? 'punto' : 'puntos'} sin gastar</button>` : ''}
-      <div class="base-monedas" title="Monedas del héroe: su economía propia, aparte del oro recurso"><span>🥉 ${m.bronce}</span><span>🥈 ${m.plata}</span><span>🥇 ${m.oro}</span></div>
+      <div class="base-monedas" title="Tus monedas: las ganas combatiendo (también contra bandidos) y pagan contratos de mercenario. Aparte del oro de las plazas: 100 monedas valen 1 de oro."><span>💰 Monedas</span><strong>${h.monedas.toLocaleString('es-ES')}</strong></div>
       ${htmlViveres(p, repintar)}
       <div class="base-residencia"><span class="base-lateral-titulo">Resides en${ayuda('base:residencia', 'La residencia se cambia o se deja desde dentro de la plaza o del campamento: en la plaza, en el blasón; en el campamento, en su Resumen.')}</span>
         ${r ? `<strong>${r.tipo === 'plaza' ? '🏠' : '🏕️'} ${e(r.nombre)}</strong>${r.posicion ? `<button class="btn-secondary" type="button" data-base-punto="${r.posicion.x},${r.posicion.y}">Ver en el mapa</button>` : ''}` : '<strong>En ningún sitio</strong>'}

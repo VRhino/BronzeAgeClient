@@ -17,7 +17,7 @@ import type { EventoDominio } from '../tiposDominio';
 import { esPeticionNueva, MINIMO_FORMACION } from './ejercitos';
 import { estadoCliente, textoEnTiempoReal } from './estadoCliente';
 import { nombreDeHeroe } from './nombres';
-import { informeDeEvento, type InformeDeCombate } from './informeCombate';
+import { informeDeEvento, textoDeBotin, type InformeDeCombate } from './informeCombate';
 import { plazo } from './panelDiplomacia';
 import { textoDeMision } from './misiones';
 import { RECURSO_NOMBRE } from '../paletas';
@@ -303,10 +303,12 @@ export function procesar(e: EventoDominio, heroeId: string, modo: Modo): void {
     return;
   }
   if (e.codigo === 'bandidos.campamento_vencido') {
-    // Una columna (o la escolta de una caravana) que lleva caravanas vence la emboscada y el campamento cae (motor 87f74932); el oro, en milésimas.
-    const p = (e.payload ?? {}) as { nivel?: number; oro?: number };
-    const oro = Math.floor(Number(p.oro ?? 0) / 1000);
-    const texto = `Vencéis a los bandidos que os emboscaron${p.nivel ? ` (nivel ${p.nivel})` : ''}: el campamento cae${oro > 0 ? ` y os lleváis ${oro} de oro` : ''}.`;
+    // Una columna (o la escolta de una caravana) que lleva caravanas vence la emboscada y el campamento cae (motor 87f74932). Desde la tanda 69 no da
+    // oro: madera, piedra y trigo (en milésimas) al carro o a la caravana, y monedas (en unidades) a los héroes.
+    const p = (e.payload ?? {}) as { nivel?: number; madera?: number; piedra?: number; trigo?: number; monedas?: number };
+    const mil = (n: number | undefined): number => Number(n ?? 0) / 1000;
+    const botin = textoDeBotin({ madera: mil(p.madera), piedra: mil(p.piedra), trigo: mil(p.trigo) }, Number(p.monedas ?? 0), 1, '');
+    const texto = `Vencéis a los bandidos que os emboscaron${p.nivel ? ` (nivel ${p.nivel})` : ''}: el campamento cae${botin ? ` y os lleváis ${botin}` : ''}.`;
     anotar({ ...base, texto, clase: 'combate', titulo: 'Bandidos', categoria: 'combate', urgente: false, clave: `${e.codigo}|${e.version}` }, modo);
     return;
   }

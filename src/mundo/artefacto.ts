@@ -47,7 +47,11 @@ function nodosConIdDelMotor(a: ArtefactoDeMundo): { n: ArtefactoDeMundo['nodos']
 /** El artefacto, en la forma que pinta el mapa. */
 export function mapaDesdeArtefacto(a: ArtefactoDeMundo): MapaGenerado {
   const tamano = punto(a.manifiesto?.tamano);
-  const rasters: RastersDeMundo = { terreno: u8(a.terreno), altura: u16(a.altura), densidadBosque: u8(a.densidadBosque), fertilidad: u8(a.fertilidad) };
+  const rasters: RastersDeMundo = {
+    terreno: u8(a.terreno), altura: u16(a.altura), densidadBosque: u8(a.densidadBosque), fertilidad: u8(a.fertilidad),
+    // tanda 69: la fertilidad de la vid y la oliva y la región del relieve (un artefacto anterior no las trae)
+    fertilidadVid: u8(a.fertilidadVid), fertilidadOliva: u8(a.fertilidadOliva), region: u8(a.region),
+  };
   return {
     version: a.manifiesto?.versionFormato ?? 0,
     config: { ancho: tamano.x, alto: tamano.y, seed: 0 },
@@ -58,6 +62,7 @@ export function mapaDesdeArtefacto(a: ArtefactoDeMundo): MapaGenerado {
     campamentos: a.campamentos.map((c) => ({ id: c.id, posicion: punto(c.posicion), origen: c.origen })),
     bandidos: a.bandidosIniciales.map((b) => ({ id: b.id, posicion: punto(b.posicion), nivel: b.nivel, ...(b.vetaId ? { vetaId: b.vetaId } : {}) })),
     rasters,
+    regiones: a.regiones.map((r) => ({ id: r.id, nombre: r.nombre })),
   };
 }
 

@@ -296,15 +296,16 @@ function payloadDelCliente(codigo: string, p: Record<string, unknown> | undefine
   if (!p) return p;
   if (codigo === 'combate.campamento_destruido' || codigo === 'combate.ataque_campamento_fallido') {
     const num = (k: string): number => Number(p[k] ?? 0) / 1000;
-    const oro = num('oro');
     return {
       ...p,
       nivelCampamento: Number(p.nivel ?? 0),
       poderCampamento: num('poderCampamento'),
       // El motor da las bajas en total, no por escuadra.
       atacante: { poder: num('poderAtacante'), heroesIds, bajas: [], bajasTotales: Number(p.bajasAtacante ?? 0) },
-      // El oro es el de toda la columna: a cada héroe que iba, el total (con un héroe solo, lo suyo).
-      oroPorHeroe: Object.fromEntries(heroesIds.map((h) => [h, Math.floor(oro / Math.max(1, heroesIds.length))])),
+      // El botín (tanda 69, motor d0326fd): la madera, la piedra y el trigo que cupieron en el carro de la columna, en milésimas, y las monedas de
+      // todos los héroes que cobraron, en unidades (van a cada héroe, no al carro).
+      botin: { madera: num('madera'), piedra: num('piedra'), trigo: num('trigo') },
+      monedas: Number(p.monedas ?? 0),
       carroPerdido: { recursos: num('carroPerdido') },
     };
   }
@@ -684,7 +685,7 @@ interface BalancePublico {
   cuposYNiveles?: { POLITICAS?: ReglasDePoliticas; CAP_FUNDACION_POR_NIVEL?: number[]; CIUDADANIA?: { cooldownCambioResidenciaDias?: number; cooldownCreacionFaccionDias?: number } };
   caravanas?: { CARAVANA_COOLDOWN?: { cooldownMinutos?: number }; CARRO_CATALOGO?: Record<string, CarroDelCatalogo>; ANIMAL_CATALOGO?: Record<string, AnimalDelCatalogo>; CARAVANA_PREPARACION?: { kPorCarro?: number; maxProgramacionDias?: number }; CARAVANA_ESCOLTA?: { liderazgoPorNivelMercado?: number[] } };
   politica?: { PUERTA?: { cerradaAPorDefecto?: string[] }; CAPITAL?: { cooldownDias?: number } };
-  mundoYMilitar?: { LOGISTICA?: { capacidadViveresPorHeroe?: number; capacidadCarroPorJugador?: number; radioEncuentro?: number; radioReabastecimiento?: number; factorConsumoEnMarcha?: number; factorConsumoEstacionado?: number }; MILITAR?: { racionPorSoldadoPorMinuto?: number }; FUNDACION?: { materialesIniciales?: Record<string, number>; viviendasIniciales?: number; costoMaderaExtraCaravana?: number }; MERCENARIOS?: { refundacion?: { porcentajeCoste?: number }; radioProteccion?: number; edificiosMilitares?: string[]; nivelEdificios?: number }; MOVIMIENTO?: { radioPuerta?: number; radioInspeccion?: number; consumoPorParticipante?: number; factorConsumoMarchaForzada?: number }; RECLUTAMIENTO_ORO_POR_ESCALON?: Record<string, number>; ORO_POR_CABALLO?: number };
+  mundoYMilitar?: { LOGISTICA?: { capacidadViveresPorHeroe?: number; capacidadCarroPorJugador?: number; radioEncuentro?: number; radioReabastecimiento?: number; factorConsumoEnMarcha?: number; factorConsumoEstacionado?: number }; MILITAR?: { racionPorSoldadoPorMinuto?: number }; FUNDACION?: { materialesIniciales?: Record<string, number>; viviendasIniciales?: number; costoMaderaExtraCaravana?: number }; MERCENARIOS?: { refundacion?: { porcentajeCoste?: number; excluir?: string[] }; radioProteccion?: number; edificiosMilitares?: string[]; nivelEdificios?: number }; MOVIMIENTO?: { radioPuerta?: number; radioInspeccion?: number; consumoPorParticipante?: number; factorConsumoMarchaForzada?: number }; RECLUTAMIENTO_ORO_POR_ESCALON?: Record<string, number>; ORO_POR_CABALLO?: number };
   tecnologia?: CatalogoTecnologia;
   internas?: { CAMPAMENTOS_BANDIDOS?: { niveles?: Record<string, NivelDeBandidos> } };
 }
@@ -822,8 +823,9 @@ export function catalogoDeCaravanas(alCargar?: () => void): { carros: Record<str
   return { carros: c.CARRO_CATALOGO, animales: c.ANIMAL_CATALOGO, preparacionKPorCarro: c.CARAVANA_PREPARACION?.kPorCarro ?? 0, escoltaPorNivelMercado: c.CARAVANA_ESCOLTA?.liderazgoPorNivelMercado ?? [], cooldownMinutos: c.CARAVANA_COOLDOWN?.cooldownMinutos ?? 0 };
 }
 
-/** Lo que fija cada nivel de bandidos: su poder, los hombres que defienden y el oro del botín por héroe. */
-export interface NivelDeBandidos { poder: number; unidades: number; oroPorHeroe: number }
+/** Lo que fija cada nivel de bandidos: su poder, los hombres que defienden y el botín por héroe (tanda 69: `botinPorHeroe` de madera, de piedra y de
+ * trigo cada uno, y `monedasPorHeroe` monedas; ya no da oro). */
+export interface NivelDeBandidos { poder: number; unidades: number; botinPorHeroe?: number; monedasPorHeroe?: number }
 
 /** Los niveles de bandidos si ya se leyeron; la primera vez los pide al backend en segundo plano y avisa con `alCargar`. */
 export function nivelesBandidos(alCargar?: () => void): Record<string, NivelDeBandidos> | null {
@@ -894,10 +896,13 @@ export function unidadesDeTropa(tropaId: string, alCargar?: () => void): number 
  * El backend no lo publica ya calculado, así que se deriva del balance; `null` mientras no llegue.
  */
 export function costoDeRefundacion(alCargar?: () => void): Record<string, number> | null {
-  const porcentaje = balance(alCargar)?.mundoYMilitar?.MERCENARIOS?.refundacion?.porcentajeCoste;
+  const refundacion = balance(alCargar)?.mundoYMilitar?.MERCENARIOS?.refundacion;
+  const porcentaje = refundacion?.porcentajeCoste;
   const base = costoCompletoDeCaravanaDeFundacion();
   if (!base || porcentaje === undefined) return null;
-  return Object.fromEntries(Object.entries(base).map(([r, n]) => [r, Math.ceil(n * porcentaje)] as const).filter(([, n]) => n > 0));
+  // Tanda 69: la refundación no pide los recursos de `excluir` (el oro), aunque la Caravana de Fundación de una plaza sí los lleve.
+  const fuera = new Set(refundacion?.excluir ?? []);
+  return Object.fromEntries(Object.entries(base).filter(([r]) => !fuera.has(r)).map(([r, n]) => [r, Math.ceil(n * porcentaje)] as const).filter(([, n]) => n > 0));
 }
 
 /** El coste COMPLETO de la Caravana de Fundación que lanza una plaza (`costoCaravanaFundacion` del backend, Doc 1.8): los materiales iniciales de una fundación +

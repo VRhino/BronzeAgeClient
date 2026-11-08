@@ -82,9 +82,9 @@ const p = (): ProyeccionJugador => ({
 } as unknown as ProyeccionJugador);
 
 const tablon = [
-  { heroeId: 'heroe-30', desde: AHORA - 5 * H, ficha: fichas.korax, tropa: [{ tropaId: 'milicia_lanceros', cantidad: 60, nivel: 4 }, { tropaId: 'arqueros', cantidad: 30, nivel: 3 }, { tropaId: 'lenadores', cantidad: 20, nivel: 1 }], tarifas: [{ plazoDias: 1, oro: 48 }, { plazoDias: 3, oro: 112 }, { plazoDias: 7, oro: 224 }, { oro: 1600 }] },
-  { heroeId: 'heroe-31', desde: AHORA - 1 * H, ficha: fichas.ita, tropa: [{ tropaId: 'milicia_lanceros', cantidad: 30, nivel: 2 }, { tropaId: 'granjeros', cantidad: 20, nivel: 1 }], tarifas: [{ plazoDias: 1, oro: 21 }, { plazoDias: 3, oro: 49 }, { plazoDias: 7, oro: 98 }, { oro: 700 }] },
-  { heroeId: 'heroe-32', desde: AHORA - 30 * 60_000, ficha: fichas.dumu, tropa: [{ tropaId: 'mineros', cantidad: 20, nivel: 1 }], heridoHasta: AHORA + 2 * H, tarifas: [{ plazoDias: 1, oro: 9 }, { plazoDias: 3, oro: 21 }, { plazoDias: 7, oro: 42 }, { oro: 300 }] },
+  { heroeId: 'heroe-30', desde: AHORA - 5 * H, ficha: fichas.korax, tropa: [{ tropaId: 'milicia_lanceros', cantidad: 60, nivel: 4 }, { tropaId: 'arqueros', cantidad: 30, nivel: 3 }, { tropaId: 'lenadores', cantidad: 20, nivel: 1 }], tarifas: [{ plazoDias: 1, oro: 48, monedas: 48 * 100 }, { plazoDias: 3, oro: 112, monedas: 112 * 100 }, { plazoDias: 7, oro: 224, monedas: 224 * 100 }, { oro: 1600, monedas: 1600 * 100 }] },
+  { heroeId: 'heroe-31', desde: AHORA - 1 * H, ficha: fichas.ita, tropa: [{ tropaId: 'milicia_lanceros', cantidad: 30, nivel: 2 }, { tropaId: 'granjeros', cantidad: 20, nivel: 1 }], tarifas: [{ plazoDias: 1, oro: 21, monedas: 21 * 100 }, { plazoDias: 3, oro: 49, monedas: 49 * 100 }, { plazoDias: 7, oro: 98, monedas: 98 * 100 }, { oro: 700, monedas: 700 * 100 }] },
+  { heroeId: 'heroe-32', desde: AHORA - 30 * 60_000, ficha: fichas.dumu, tropa: [{ tropaId: 'mineros', cantidad: 20, nivel: 1 }], heridoHasta: AHORA + 2 * H, tarifas: [{ plazoDias: 1, oro: 9, monedas: 9 * 100 }, { plazoDias: 3, oro: 21, monedas: 21 * 100 }, { plazoDias: 7, oro: 42, monedas: 42 * 100 }, { oro: 300, monedas: 300 * 100 }] },
 ];
 
 // Un contrato que acabó ayer: aparece para valorarlo.

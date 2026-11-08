@@ -33,7 +33,7 @@ const p = {
     ubicacion: enCamp ? { tipo: 'mercenarios', campamentoId: 'camp-2' } : columna ? { tipo: 'columna', ejercitoId: 'ej-1' } : { tipo: 'asentamiento', asentamientoId: 'as-1' },
     residenciaId: enCamp ? 'camp-2' : 'as-1',
     almacenPersonal: { oro: 86, trigo: 120, madera: 40, armaBronce: 3 }, capacidadAlmacenPersonal: 1000, carro: columna ? {} : { madera: 60, trigo: 30 },
-    viveres: 210, monedasHeroe: { bronce: 1450, plata: 32, oro: 2 }, cupoGuarnicion: 60, guarnicionOcupada: 13,
+    viveres: 210, monedas: 1450, cupoGuarnicion: 60, guarnicionOcupada: 13,
     escuadrones: enCamp ? [
       esc('s1', 'Leñadores', 'lenadores', 12, { tipo: 'campamento' }, { prestada: { campamentoId: 'camp-2' } }),
       esc('s2', 'Lanceros de mimbre', 'lanceros_mimbre', 9, { tipo: 'campamento' }),

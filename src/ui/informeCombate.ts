@@ -1,7 +1,7 @@
 // Informe de un combate (doc 02 §4.1b, backend 2026-10-06): lo que el servidor cuenta en el payload de sus eventos de resolución, ordenado como un
 // briefing breve —ganador, poder de cada bando y bajas por escuadra— para quien iba en uno de los dos lados.
 //   combate.resuelto                         { ganador, atacante: LadoDelInforme, defensor: LadoDelInforme, ... }   (asedios y encuentros)
-//   combate.campamento_destruido / combate.ataque_campamento_fallido   { nivelCampamento, poderCampamento, atacante: LadoDelInforme }
+//   combate.campamento_destruido / combate.ataque_campamento_fallido   { nivelCampamento, poderCampamento, atacante: LadoDelInforme, botin, monedas }
 // Los eventos sin `asentamientoId` viajan a todos los clientes: un informe solo es tuyo si tu héroe está en `heroesIds` de un lado.
 import type { ProyeccionJugador } from '../apiCliente';
 import type { EventoDominio } from '../tiposDominio';
@@ -32,8 +32,9 @@ export interface InformeDeCombate {
   rival: LadoDelInforme | null;
   /** Solo contra bandidos: el poder del campamento. */
   poderRival: number;
-  /** Contra bandidos, si cae: el oro que se carga en tu carro (backend 2026-10-07, `oroPorHeroe`). */
-  oroGanado?: number;
+  /** Contra bandidos, si cae (tanda 69): la madera, la piedra y el trigo que entraron en el carro de la columna, y las monedas de los héroes que
+   * cobraron (`heroes`: cuántos iban; con uno solo, son las tuyas). */
+  botin?: { recursos: Record<string, number>; monedas: number; heroes: number };
   /** Contra bandidos, si aguanta: lo que tu columna pierde de su carro (`carroPerdido`). */
   carroPerdido?: Record<string, number>;
 }
@@ -41,6 +42,22 @@ export interface InformeDeCombate {
 const TROPA: Record<string, string> = { milicia_lanceros: 'Milicia de lanceros', lenadores: 'Leñadores', granjeros: 'Granjeros' };
 const nombreTropa = (id: string): string => TROPA[id] ?? id.replace(/_/g, ' ');
 const redondea = (n: number): string => (Math.round(n * 10) / 10).toString();
+
+/** «a, b y c». */
+export const enumerar = (xs: string[]): string => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} y ${xs[xs.length - 1]}`);
+
+/** Lo que dejan unos bandidos al caer (tanda 69): los recursos (al carro, `destino`) y las monedas de los héroes; `null` si no dejan nada. */
+export function textoDeBotin(recursos: Record<string, number>, monedas: number, heroes: number, destino = ' al carro'): string | null {
+  const partes = Object.entries(recursos).filter(([, n]) => n >= 1).map(([r, n]) => `${Math.floor(n)} de ${(RECURSO_NOMBRE[r] ?? r).toLowerCase()}`);
+  const carro = partes.length ? `${enumerar(partes)}${destino}` : '';
+  const suyas = monedas > 0 ? `${monedas} monedas${heroes > 1 ? ` entre los ${heroes} héroes` : ''}` : '';
+  return carro || suyas ? enumerar([carro, suyas].filter(Boolean)) : null;
+}
+
+function htmlBotin(b: NonNullable<InformeDeCombate['botin']>, e: (s: string) => string): string {
+  const texto = textoDeBotin(b.recursos, b.monedas, b.heroes);
+  return `<div class="briefing-botin victoria"><span>Botín</span><strong>${texto ? `+${e(texto)}` : 'Sin botín'}</strong>${texto ? '' : '<small>Baja con cada campamento que destruyes en el día, y el de los bandidos de junto a un campamento de mercenarios es solo para quien aún no tiene plaza.</small>'}</div>`;
+}
 
 function esLado(v: unknown): v is LadoDelInforme {
   const l = v as LadoDelInforme | null;
@@ -61,7 +78,9 @@ export function informeDeEvento(e: EventoDominio, heroeId: string): InformeDeCom
       titulo: victoria ? 'Campamento de bandidos destruido' : 'Ataque fallido al campamento de bandidos',
       resumen: `${victoria ? 'Victoria' : 'Derrota'} contra ${rivalNombre.toLowerCase()} (tu poder ${redondea(p.atacante.poder)} contra ${redondea(Number(p.poderCampamento ?? 0))}).`,
       rivalNombre, propio: p.atacante, rival: null, poderRival: Number(p.poderCampamento ?? 0),
-      ...(victoria ? { oroGanado: Number((p.oroPorHeroe as Record<string, number> | undefined)?.[heroeId] ?? 0) } : { carroPerdido: (p.carroPerdido as Record<string, number> | undefined) ?? {} }),
+      ...(victoria
+        ? { botin: { recursos: (p.botin as Record<string, number> | undefined) ?? {}, monedas: Number(p.monedas ?? 0), heroes: p.atacante.heroesIds.length } }
+        : { carroPerdido: (p.carroPerdido as Record<string, number> | undefined) ?? {} }),
     };
   }
   if (e.codigo === 'combate.resuelto') {
@@ -103,6 +122,6 @@ export function htmlInforme(i: InformeDeCombate, p: ProyeccionJugador, e: (s: st
     <strong class="heroe-sub">Tus escuadras</strong>
     ${tablaBajas(i.propio, mia, e)}
     ${i.rival ? `<strong class="heroe-sub">Escuadras rivales</strong>${tablaBajas(i.rival, (b) => nombreTropa(b.tropaId), e)}` : ''}
-    ${i.oroGanado !== undefined ? `<div class="briefing-botin victoria"><span>Botín</span><strong>${i.oroGanado > 0 ? `+${i.oroGanado} de oro al carro` : 'Sin oro: has destruido demasiados campamentos hoy (el botín decrece)'}</strong></div>` : ''}
+    ${i.botin ? htmlBotin(i.botin, e) : ''}
     ${i.carroPerdido !== undefined ? `<div class="briefing-botin derrota"><span>Pierdes del carro</span><strong>${Object.entries(i.carroPerdido).filter(([, n]) => n >= 1).map(([r, n]) => `${Math.floor(n)} ${e(RECURSO_NOMBRE[r] ?? r)}`).join(', ') || 'nada: el carro iba vacío'}</strong><small>Quedas herido: no atacas ni persigues durante 2 minutos.</small></div>` : ''}`;
 }

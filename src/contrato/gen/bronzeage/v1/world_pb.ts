@@ -23,7 +23,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file bronzeage/v1/world.proto.
  */
 export const file_bronzeage_v1_world: GenFile = /*@__PURE__*/
-  fileDesc("Chhicm9uemVhZ2UvdjEvd29ybGQucHJvdG8SDGJyb256ZWFnZS52MSKMAQoGUmFzdGVyEhAKCGNvbHVtbmFzGAEgASgNEg0KBWZpbGFzGAIgASgNEhQKDHRhbWFub19jZWxkYRgDIAEoDRIuCghlbmNvZGluZxgEIAEoDjIcLmJyb256ZWFnZS52MS5FbmNvZGluZ1Jhc3RlchINCgVkYXRvcxgFIAEoDBIMCgR6c3RkGAYgASgIIoYBCgNSaW8SCgoCaWQYASABKAkSIwoGcHVudG9zGAIgAygLMhMuYnJvbnplYWdlLnYxLlB1bnRvEhcKD3Rlcm1pbmFfZW5fbGFnbxgDIAEoCBIRCgluYXZlZ2FibGUYBCABKAgSIgoFdmFkb3MYBSADKAsyEy5icm9uemVhZ2UudjEuUHVudG8irgEKBFZldGESCgoCaWQYASABKAkSIwoGY2VudHJvGAIgASgLMhMuYnJvbnplYWdlLnYxLlB1bnRvEhEKCW5vZG9zX2lkcxgDIAMoCRIjChZjYW1wYW1lbnRvX2JhbmRpZG9zX2lkGAQgASgJSACIAQESFQoIYWxpam9faWQYBSABKAlIAYgBAUIZChdfY2FtcGFtZW50b19iYW5kaWRvc19pZEILCglfYWxpam9faWQiPgoJTm9kb0dyYWZvEgoKAmlkGAEgASgNEiUKCHBvc2ljaW9uGAIgASgLMhMuYnJvbnplYWdlLnYxLlB1bnRvIkoKC0FyaXN0YUdyYWZvEgkKAWEYASABKA0SCQoBYhgCIAEoDRIXCg9jb3N0ZV9taWxlc2ltYXMYAyABKA0SDAoEdmFkbxgEIAEoCCJ8Cg9HcmFmb05hdmVnYWNpb24SJgoFbm9kb3MYASADKAsyFy5icm9uemVhZ2UudjEuTm9kb0dyYWZvEioKB2FyaXN0YXMYAiADKAsyGS5icm9uemVhZ2UudjEuQXJpc3RhR3JhZm8SFQoNZXNwYWNpYWRvX21pbhgDIAEoDSKrAQoKTWFuaWZpZXN0bxIMCgRoYXNoGAEgASgJEhcKD3ZlcnNpb25fZm9ybWF0bxgCIAEoDRIRCglnZW5lcmFkb3IYAyABKAkSIwoGdGFtYW5vGAQgASgLMhMuYnJvbnplYWdlLnYxLlB1bnRvEhQKDGZhY3Rvcl91bml0eRgFIAEoDRIoCgVjYXBhcxgGIAMoCzIZLmJyb256ZWFnZS52MS5DYXBhRGVNdW5kbyJNCgtDYXBhRGVNdW5kbxIOCgZub21icmUYASABKAkSDwoHYXJjaGl2bxgCIAEoCRIOCgZzaGEyNTYYAyABKAkSDQoFYnl0ZXMYBCABKAQinAYKEEFydGVmYWN0b0RlTXVuZG8SLAoKbWFuaWZpZXN0bxgBIAEoCzIYLmJyb256ZWFnZS52MS5NYW5pZmllc3RvEiQKBmFsdHVyYRgCIAEoCzIULmJyb256ZWFnZS52MS5SYXN0ZXISJQoHdGVycmVubxgDIAEoCzIULmJyb256ZWFnZS52MS5SYXN0ZXISKAoKZmVydGlsaWRhZBgEIAEoCzIULmJyb256ZWFnZS52MS5SYXN0ZXISJQoHaHVtZWRhZBgFIAEoCzIULmJyb256ZWFnZS52MS5SYXN0ZXISLQoPZGVuc2lkYWRfYm9zcXVlGAYgASgLMhQuYnJvbnplYWdlLnYxLlJhc3RlchIlCgdhbmlsbG9zGAcgASgLMhQuYnJvbnplYWdlLnYxLlJhc3RlchIpCgt0cmFuc2l0YWJsZRgIIAEoCzIULmJyb256ZWFnZS52MS5SYXN0ZXISHwoEcmlvcxgJIAMoCzIRLmJyb256ZWFnZS52MS5SaW8SKQoHYm9zcXVlcxgKIAMoCzIYLmJyb256ZWFnZS52MS5ab25hQm9zcXVlEigKBW5vZG9zGAsgAygLMhkuYnJvbnplYWdlLnYxLk5vZG9SZWN1cnNvEiEKBXZldGFzGAwgAygLMhIuYnJvbnplYWdlLnYxLlZldGESOAoLY2FtcGFtZW50b3MYDSADKAsyIy5icm9uemVhZ2UudjEuQ2FtcGFtZW50b01lcmNlbmFyaW9zEjwKEmJhbmRpZG9zX2luaWNpYWxlcxgOIAMoCzIgLmJyb256ZWFnZS52MS5DYW1wYW1lbnRvQmFuZGlkb3MSIwoGYWxpam9zGA8gAygLMhMuYnJvbnplYWdlLnYxLkFsaWpvEjEKCm5hdmVnYWNpb24YECABKAsyHS5icm9uemVhZ2UudjEuR3JhZm9OYXZlZ2FjaW9uEi0KCHBhcmNlbGFzGBEgAygLMhsuYnJvbnplYWdlLnYxLlBhcmNlbGFCb3NxdWUSIwoFY29zdGUYEiABKAsyFC5icm9uemVhZ2UudjEuUmFzdGVyImgKC1NlY3RvclVuaXR5EgoKAmlkGAEgASgJEiwKCnJlY3Rhbmd1bG8YAiABKAsyGC5icm9uemVhZ2UudjEuUmVjdGFuZ3VsbxIPCgdhcmNoaXZvGAMgASgJEg4KBnNoYTI1NhgEIAEoCSJxCgxQYXF1ZXRlVW5pdHkSFgoOaGFzaF9hcnRlZmFjdG8YASABKAkSDAoEaGFzaBgCIAEoCRIOCgZmYWN0b3IYAyABKA0SKwoIc2VjdG9yZXMYBCADKAsyGS5icm9uemVhZ2UudjEuU2VjdG9yVW5pdHkizgEKDlBhcXVldGVSZWxpZXZlEgwKBGhhc2gYASABKAkSFgoOaGFzaF9hcnRlZmFjdG8YAiABKAkSDAoEcGFzbxgDIAEoDRITCgtsYWRvX3Rlc2VsYRgEIAEoDRIQCghjb2x1bW5hcxgFIAEoDRINCgVmaWxhcxgGIAEoDRIRCgl0ZXNlbGFzX3gYByABKA0SEQoJdGVzZWxhc195GAggASgNEiwKB3Rlc2VsYXMYCSADKAsyGy5icm9uemVhZ2UudjEuVGVzZWxhUmVsaWV2ZSItCg1UZXNlbGFSZWxpZXZlEg4KBmFsdHVyYRgBIAEoDBIMCgRhZ3VhGAIgASgMKmcKDkVuY29kaW5nUmFzdGVyEhwKGEVOQ09ESU5HX05PX0VTUEVDSUZJQ0FETxAAEg8KC0VOQ09ESU5HX1U4EAESEwoPRU5DT0RJTkdfVTE2X0xFEAISEQoNRU5DT0RJTkdfQklUUxADKqQBCgxDbGFzZVRlcnJlbm8SIQodQ0xBU0VfVEVSUkVOT19OT19FU1BFQ0lGSUNBREEQABIQCgxURVJSRU5PX0FHVUEQARIRCg1URVJSRU5PX0NPU1RBEAISEQoNVEVSUkVOT19MTEFOTxADEhIKDlRFUlJFTk9fQ09MSU5BEAQSEwoPVEVSUkVOT19NT05UQU5BEAUSEAoMVEVSUkVOT19DSU1BEAYqXQoGQW5pbGxvEhoKFkFOSUxMT19OT19FU1BFQ0lGSUNBRE8QABIPCgtBTklMTE9fRk9DTxABEhMKD0FOSUxMT19GUk9OVEVSQRACEhEKDUFOSUxMT19MRUpBTkEQA0IYqgIVQnJvbnplQWdlLkNvbnRyYWN0LlYxYgZwcm90bzM", [file_bronzeage_v1_common, file_bronzeage_v1_entities]);
+  fileDesc("Chhicm9uemVhZ2UvdjEvd29ybGQucHJvdG8SDGJyb256ZWFnZS52MSKMAQoGUmFzdGVyEhAKCGNvbHVtbmFzGAEgASgNEg0KBWZpbGFzGAIgASgNEhQKDHRhbWFub19jZWxkYRgDIAEoDRIuCghlbmNvZGluZxgEIAEoDjIcLmJyb256ZWFnZS52MS5FbmNvZGluZ1Jhc3RlchINCgVkYXRvcxgFIAEoDBIMCgR6c3RkGAYgASgIIoYBCgNSaW8SCgoCaWQYASABKAkSIwoGcHVudG9zGAIgAygLMhMuYnJvbnplYWdlLnYxLlB1bnRvEhcKD3Rlcm1pbmFfZW5fbGFnbxgDIAEoCBIRCgluYXZlZ2FibGUYBCABKAgSIgoFdmFkb3MYBSADKAsyEy5icm9uemVhZ2UudjEuUHVudG8irgEKBFZldGESCgoCaWQYASABKAkSIwoGY2VudHJvGAIgASgLMhMuYnJvbnplYWdlLnYxLlB1bnRvEhEKCW5vZG9zX2lkcxgDIAMoCRIjChZjYW1wYW1lbnRvX2JhbmRpZG9zX2lkGAQgASgJSACIAQESFQoIYWxpam9faWQYBSABKAlIAYgBAUIZChdfY2FtcGFtZW50b19iYW5kaWRvc19pZEILCglfYWxpam9faWQiPgoJTm9kb0dyYWZvEgoKAmlkGAEgASgNEiUKCHBvc2ljaW9uGAIgASgLMhMuYnJvbnplYWdlLnYxLlB1bnRvIkoKC0FyaXN0YUdyYWZvEgkKAWEYASABKA0SCQoBYhgCIAEoDRIXCg9jb3N0ZV9taWxlc2ltYXMYAyABKA0SDAoEdmFkbxgEIAEoCCJ8Cg9HcmFmb05hdmVnYWNpb24SJgoFbm9kb3MYASADKAsyFy5icm9uemVhZ2UudjEuTm9kb0dyYWZvEioKB2FyaXN0YXMYAiADKAsyGS5icm9uemVhZ2UudjEuQXJpc3RhR3JhZm8SFQoNZXNwYWNpYWRvX21pbhgDIAEoDSKrAQoKTWFuaWZpZXN0bxIMCgRoYXNoGAEgASgJEhcKD3ZlcnNpb25fZm9ybWF0bxgCIAEoDRIRCglnZW5lcmFkb3IYAyABKAkSIwoGdGFtYW5vGAQgASgLMhMuYnJvbnplYWdlLnYxLlB1bnRvEhQKDGZhY3Rvcl91bml0eRgFIAEoDRIoCgVjYXBhcxgGIAMoCzIZLmJyb256ZWFnZS52MS5DYXBhRGVNdW5kbyJNCgtDYXBhRGVNdW5kbxIOCgZub21icmUYASABKAkSDwoHYXJjaGl2bxgCIAEoCRIOCgZzaGEyNTYYAyABKAkSDQoFYnl0ZXMYBCABKAQizwcKEEFydGVmYWN0b0RlTXVuZG8SLAoKbWFuaWZpZXN0bxgBIAEoCzIYLmJyb256ZWFnZS52MS5NYW5pZmllc3RvEiQKBmFsdHVyYRgCIAEoCzIULmJyb256ZWFnZS52MS5SYXN0ZXISJQoHdGVycmVubxgDIAEoCzIULmJyb256ZWFnZS52MS5SYXN0ZXISKAoKZmVydGlsaWRhZBgEIAEoCzIULmJyb256ZWFnZS52MS5SYXN0ZXISJQoHaHVtZWRhZBgFIAEoCzIULmJyb256ZWFnZS52MS5SYXN0ZXISLQoPZGVuc2lkYWRfYm9zcXVlGAYgASgLMhQuYnJvbnplYWdlLnYxLlJhc3RlchIlCgdhbmlsbG9zGAcgASgLMhQuYnJvbnplYWdlLnYxLlJhc3RlchIpCgt0cmFuc2l0YWJsZRgIIAEoCzIULmJyb256ZWFnZS52MS5SYXN0ZXISHwoEcmlvcxgJIAMoCzIRLmJyb256ZWFnZS52MS5SaW8SKQoHYm9zcXVlcxgKIAMoCzIYLmJyb256ZWFnZS52MS5ab25hQm9zcXVlEigKBW5vZG9zGAsgAygLMhkuYnJvbnplYWdlLnYxLk5vZG9SZWN1cnNvEiEKBXZldGFzGAwgAygLMhIuYnJvbnplYWdlLnYxLlZldGESOAoLY2FtcGFtZW50b3MYDSADKAsyIy5icm9uemVhZ2UudjEuQ2FtcGFtZW50b01lcmNlbmFyaW9zEjwKEmJhbmRpZG9zX2luaWNpYWxlcxgOIAMoCzIgLmJyb256ZWFnZS52MS5DYW1wYW1lbnRvQmFuZGlkb3MSIwoGYWxpam9zGA8gAygLMhMuYnJvbnplYWdlLnYxLkFsaWpvEjEKCm5hdmVnYWNpb24YECABKAsyHS5icm9uemVhZ2UudjEuR3JhZm9OYXZlZ2FjaW9uEi0KCHBhcmNlbGFzGBEgAygLMhsuYnJvbnplYWdlLnYxLlBhcmNlbGFCb3NxdWUSIwoFY29zdGUYEiABKAsyFC5icm9uemVhZ2UudjEuUmFzdGVyEiQKBnJlZ2lvbhgTIAEoCzIULmJyb256ZWFnZS52MS5SYXN0ZXISLAoOZmVydGlsaWRhZF92aWQYFCABKAsyFC5icm9uemVhZ2UudjEuUmFzdGVyEi4KEGZlcnRpbGlkYWRfb2xpdmEYFSABKAsyFC5icm9uemVhZ2UudjEuUmFzdGVyEi0KCHJlZ2lvbmVzGBYgAygLMhsuYnJvbnplYWdlLnYxLlJlZ2lvbkRlTXVuZG8iKwoNUmVnaW9uRGVNdW5kbxIKCgJpZBgBIAEoDRIOCgZub21icmUYAiABKAkiaAoLU2VjdG9yVW5pdHkSCgoCaWQYASABKAkSLAoKcmVjdGFuZ3VsbxgCIAEoCzIYLmJyb256ZWFnZS52MS5SZWN0YW5ndWxvEg8KB2FyY2hpdm8YAyABKAkSDgoGc2hhMjU2GAQgASgJInEKDFBhcXVldGVVbml0eRIWCg5oYXNoX2FydGVmYWN0bxgBIAEoCRIMCgRoYXNoGAIgASgJEg4KBmZhY3RvchgDIAEoDRIrCghzZWN0b3JlcxgEIAMoCzIZLmJyb256ZWFnZS52MS5TZWN0b3JVbml0eSLOAQoOUGFxdWV0ZVJlbGlldmUSDAoEaGFzaBgBIAEoCRIWCg5oYXNoX2FydGVmYWN0bxgCIAEoCRIMCgRwYXNvGAMgASgNEhMKC2xhZG9fdGVzZWxhGAQgASgNEhAKCGNvbHVtbmFzGAUgASgNEg0KBWZpbGFzGAYgASgNEhEKCXRlc2VsYXNfeBgHIAEoDRIRCgl0ZXNlbGFzX3kYCCABKA0SLAoHdGVzZWxhcxgJIAMoCzIbLmJyb256ZWFnZS52MS5UZXNlbGFSZWxpZXZlIi0KDVRlc2VsYVJlbGlldmUSDgoGYWx0dXJhGAEgASgMEgwKBGFndWEYAiABKAwqZwoORW5jb2RpbmdSYXN0ZXISHAoYRU5DT0RJTkdfTk9fRVNQRUNJRklDQURPEAASDwoLRU5DT0RJTkdfVTgQARITCg9FTkNPRElOR19VMTZfTEUQAhIRCg1FTkNPRElOR19CSVRTEAMqpAEKDENsYXNlVGVycmVubxIhCh1DTEFTRV9URVJSRU5PX05PX0VTUEVDSUZJQ0FEQRAAEhAKDFRFUlJFTk9fQUdVQRABEhEKDVRFUlJFTk9fQ09TVEEQAhIRCg1URVJSRU5PX0xMQU5PEAMSEgoOVEVSUkVOT19DT0xJTkEQBBITCg9URVJSRU5PX01PTlRBTkEQBRIQCgxURVJSRU5PX0NJTUEQBipdCgZBbmlsbG8SGgoWQU5JTExPX05PX0VTUEVDSUZJQ0FETxAAEg8KC0FOSUxMT19GT0NPEAESEwoPQU5JTExPX0ZST05URVJBEAISEQoNQU5JTExPX0xFSkFOQRADQhiqAhVCcm9uemVBZ2UuQ29udHJhY3QuVjFiBnByb3RvMw", [file_bronzeage_v1_common, file_bronzeage_v1_entities]);
 
 /**
  * @generated from message bronzeage.v1.Raster
@@ -437,6 +437,36 @@ export type ArtefactoDeMundo = Message<"bronzeage.v1.ArtefactoDeMundo"> & {
    * @generated from field: bronzeage.v1.Raster coste = 18;
    */
   coste?: Raster | undefined;
+
+  /**
+   * 0 = no transitable). Opcional: sin él, el servidor no suaviza las rutas
+   *
+   * u8: id de RegionDeMundo (la región del relieve del generador en el centro de la celda)
+   *
+   * @generated from field: bronzeage.v1.Raster region = 19;
+   */
+  region?: Raster | undefined;
+
+  /**
+   * u8
+   *
+   * @generated from field: bronzeage.v1.Raster fertilidad_vid = 20;
+   */
+  fertilidadVid?: Raster | undefined;
+
+  /**
+   * u8
+   *
+   * @generated from field: bronzeage.v1.Raster fertilidad_oliva = 21;
+   */
+  fertilidadOliva?: Raster | undefined;
+
+  /**
+   * las regiones del relieve, con su nombre
+   *
+   * @generated from field: repeated bronzeage.v1.RegionDeMundo regiones = 22;
+   */
+  regiones: RegionDeMundo[];
 };
 
 /**
@@ -445,6 +475,30 @@ export type ArtefactoDeMundo = Message<"bronzeage.v1.ArtefactoDeMundo"> & {
  */
 export const ArtefactoDeMundoSchema: GenMessage<ArtefactoDeMundo> = /*@__PURE__*/
   messageDesc(file_bronzeage_v1_world, 8);
+
+/**
+ * Una región del relieve del generador («Altiplano interior», «Estepa abierta»...).
+ *
+ * @generated from message bronzeage.v1.RegionDeMundo
+ */
+export type RegionDeMundo = Message<"bronzeage.v1.RegionDeMundo"> & {
+  /**
+   * @generated from field: uint32 id = 1;
+   */
+  id: number;
+
+  /**
+   * @generated from field: string nombre = 2;
+   */
+  nombre: string;
+};
+
+/**
+ * Describes the message bronzeage.v1.RegionDeMundo.
+ * Use `create(RegionDeMundoSchema)` to create a new message.
+ */
+export const RegionDeMundoSchema: GenMessage<RegionDeMundo> = /*@__PURE__*/
+  messageDesc(file_bronzeage_v1_world, 9);
 
 /**
  * Paquete de Unity derivado del artefacto: terreno en sectores a escala ×12.
@@ -480,7 +534,7 @@ export type SectorUnity = Message<"bronzeage.v1.SectorUnity"> & {
  * Use `create(SectorUnitySchema)` to create a new message.
  */
 export const SectorUnitySchema: GenMessage<SectorUnity> = /*@__PURE__*/
-  messageDesc(file_bronzeage_v1_world, 9);
+  messageDesc(file_bronzeage_v1_world, 10);
 
 /**
  * @generated from message bronzeage.v1.PaqueteUnity
@@ -516,7 +570,7 @@ export type PaqueteUnity = Message<"bronzeage.v1.PaqueteUnity"> & {
  * Use `create(PaqueteUnitySchema)` to create a new message.
  */
 export const PaqueteUnitySchema: GenMessage<PaqueteUnity> = /*@__PURE__*/
-  messageDesc(file_bronzeage_v1_world, 10);
+  messageDesc(file_bronzeage_v1_world, 11);
 
 /**
  * Paquete de relieve (06 §8, 2026-10-30): la altura fina de todo el mapa para los clientes 3D. Lo escribe el mismo generador que el
@@ -597,7 +651,7 @@ export type PaqueteRelieve = Message<"bronzeage.v1.PaqueteRelieve"> & {
  * Use `create(PaqueteRelieveSchema)` to create a new message.
  */
 export const PaqueteRelieveSchema: GenMessage<PaqueteRelieve> = /*@__PURE__*/
-  messageDesc(file_bronzeage_v1_world, 11);
+  messageDesc(file_bronzeage_v1_world, 12);
 
 /**
  * @generated from message bronzeage.v1.TeselaRelieve
@@ -626,7 +680,7 @@ export type TeselaRelieve = Message<"bronzeage.v1.TeselaRelieve"> & {
  * Use `create(TeselaRelieveSchema)` to create a new message.
  */
 export const TeselaRelieveSchema: GenMessage<TeselaRelieve> = /*@__PURE__*/
-  messageDesc(file_bronzeage_v1_world, 12);
+  messageDesc(file_bronzeage_v1_world, 13);
 
 /**
  * @generated from enum bronzeage.v1.EncodingRaster

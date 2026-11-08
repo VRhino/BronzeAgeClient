@@ -43,6 +43,19 @@ const DIBUJOS: Record<string, string> = {
   patioDeGremios: `<path ${R} d="M6 6h20v20H6z"/><path ${T} d="M11 11h10v10H11zM16 6v5M16 21v5M6 16h5M21 16h5"/>`,
   pozo: `<path ${R} d="M8 18h16v9H8z"/><path ${T} d="M8 18c0-2 16-2 16 0M10 18V7M22 18V7M8 7h16M16 7v6"/>`,
   parque: `<circle ${R} cx="11" cy="12" r="6"/><circle ${R} cx="21" cy="14" r="5"/><path ${T} d="M11 18v9M21 19v8M4 27h24"/>`,
+  // los talleres de la comida y la estatua (tanda 69)
+  /** La muela del molino, con su eje y la vara que mueve el buey. */
+  molino: `<circle ${R} cx="13" cy="19" r="9"/><circle ${T} cx="13" cy="19" r="2.2"/><path ${T} d="M13 19L28 8M25.5 6l3 3M8 14l2 2M18 24l-2-2"/>`,
+  /** El horno de cúpula, con su boca y el humo. */
+  horno: `<path ${R} d="M5 26c0-9 5-15 11-15s11 6 11 15Z"/><path ${T} d="M11 26v-4a5 5 0 0 1 10 0v4M3 26h26M23 9c1.5-1.5 0-3 1.5-4.5"/>`,
+  /** Una cuña de queso con sus ojos. */
+  quesera: `<path ${R} d="M4 25V17L27 9v16Z"/><path ${T} d="M4 17h23"/><circle ${T} cx="10" cy="21" r="1.5"/><circle ${T} cx="18" cy="20.5" r="2"/><circle ${T} cx="22" cy="14.5" r="1.2"/>`,
+  /** Un ánfora de vino con sus asas. */
+  bodega: `<path ${R} d="M13 5h6l-1 3c4 2 6 7 4 13l-3 6h-6l-3-6c-2-6 0-11 4-13Z"/><path ${T} d="M13.5 8.5c-3 .5-4 3.5-2 5.5M18.5 8.5c3 .5 4 3.5 2 5.5M11 18h10"/>`,
+  /** La prensa de viga: la piedra del pie, la viga y el peso que cuelga. */
+  prensa: `<path ${R} d="M6 21h12v6H6z"/><path ${T} d="M3 27h26M9 21v-3h6v3M4 11l23 5M25 16v5"/><path ${R} d="M22.5 21h5v4h-5z"/>`,
+  /** Una figura sobre su pedestal. */
+  estatua: `<path ${R} d="M10 22h12v5H10z"/><circle ${R} cx="16" cy="6.5" r="2.6"/><path ${T} d="M16 9.5v6.5M16 11.5l-4.5 3M16 11.5l4.5-2.5M16 16l-2.5 6M16 16l2.5 6M7 27h18"/>`,
 };
 
 /** El icono SVG de un tipo de edificio (uno genérico si no tiene dibujo). */

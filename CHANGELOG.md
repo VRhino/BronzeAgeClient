@@ -3,6 +3,27 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.184.0] — 2026-11-08 · La tanda 69, parte 0: la base para la partida nueva · contrato 0.19.0 (motor `d0326fd`)
+
+Aviso del motor (motor/aviso-tanda-69-2026-11-08.md). Lo que hace falta para jugar la partida nueva sin textos rotos; lo demás llega en
+las tandas siguientes.
+- **Contrato 0.19.0 regenerado**: monedas del héroe, prestigio y tope de alianzas de la Facción, informes de región, buey del molino,
+  cultivo de la aldea, tablón de mercenarios de la región, tarifas en oro y en monedas, y las capas del mundo `region`, `fertilidadVid` y
+  `fertilidadOliva` con los nombres de las regiones. Las órdenes nuevas (`asignarBuey`, `comprarInformeRegion`, `tomarOrdenADistancia`)
+  ya pasan por el traductor.
+- **La comida**: harina, pan, carne, leche, queso, uva, vino, aceituna y aceite tienen nombre, icono y color en el almacén. En «Construir»
+  hay una pestaña **Comida** con el molino y el horno desde el nivel 1, la quesera desde el 2, la bodega desde el 3 y la prensa desde el 4,
+  cada uno con su icono.
+- **La estatua y la Maravilla, por prestigio**: la Maravilla sale con 2000 de prestigio de la Facción; la estatua, solo en la capital y
+  tantas como umbrales de prestigio alcance (200, 500…), contando las que están en obra.
+- **Las monedas del héroe** (antes `monedasHeroe`) en la Base personal.
+- **Los bandidos ya no dan oro**: el informe de combate, el aviso y la ficha del campamento cuentan el botín en madera, piedra y trigo al
+  carro y en monedas para cada héroe. «Sin botín» explica por qué.
+- **La refundación ya no pide oro**: 64 de madera, 8 de piedra y 40 de trigo.
+- **Las caravanas no llevan oro**: el encargo lo explica (lo que compra o vende y los peajes van contra el oro de la capital).
+- **Rechazos nuevos con su texto**: sin monedas, prestigio insuficiente, solo en la capital, buey del molino, cultivo bloqueado, tope de
+  alianzas, informes de la taberna y mercenarios de otra región.
+
 ## [0.183.0] — 2026-11-08 · La tanda de seguridad del motor · sin cambio de contrato (motor `ef5db11`)
 
 Aviso del motor (motor/aviso-seguridad-admin-y-origenes-2026-11-08.md):

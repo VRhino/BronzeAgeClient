@@ -12,6 +12,16 @@ export const RECURSO_NOMBRE: Record<string, string> = {
   estano: 'Estaño',
   oro: 'Oro',
   livestock: 'Ganado',
+  // la comida de la tanda 69 (motor d0326fd)
+  harina: 'Harina',
+  pan: 'Pan',
+  carne: 'Carne',
+  leche: 'Leche',
+  queso: 'Queso',
+  uva: 'Uva',
+  vino: 'Vino',
+  aceituna: 'Aceituna',
+  aceite: 'Aceite',
   lingoteCobre: 'Lingote de cobre',
   lingoteEstano: 'Lingote de estaño',
   lingoteBronce: 'Lingote de bronce',
@@ -38,6 +48,8 @@ export const RECURSO_NOMBRE: Record<string, string> = {
 
 export const RECURSO_ICONO: Record<string, string> = {
   madera: '🪵', piedra: '🪨', trigo: '🌾', cobre: '🟠', estano: '⚙️', oro: '🪙', livestock: '🐄',
+  // la comida, junto al trigo y al ganado (el orden de este objeto es el del almacén)
+  harina: '🥣', pan: '🍞', carne: '🥩', leche: '🥛', queso: '🧀', uva: '🍇', vino: '🍷', aceituna: '🌿', aceite: '🏺',
   lingoteCobre: '🔶', lingoteEstano: '🔩', lingoteBronce: '🟫', cuero: '🟤', cueroCurtido: '🧵',
   cueroCalidad: '✨', armaMadera: '🏹', armaCobre: '🗡️', armaBronce: '⚔️', armaBronceCalidad: '🛡️',
   armaduraBasica: '🥋', armaduraIntermedia: '🛡️', armaduraBronce: '🛡️', armaduraBronceCalidad: '🛡️',
@@ -53,6 +65,15 @@ export const RECURSO_COLOR: Record<string, string> = {
   estano: '#2f6fd1',
   oro: '#ffd700',
   livestock: '#b5658a',
+  harina: '#e2d6b8',
+  pan: '#c8913f',
+  carne: '#a8443a',
+  leche: '#ece9dc',
+  queso: '#e3bf45',
+  uva: '#6b3a7a',
+  vino: '#7a1f3a',
+  aceituna: '#7a8a3a',
+  aceite: '#c9b23a',
   lingoteCobre: '#d98a4a',
   lingoteEstano: '#5a8fd9',
   lingoteBronce: '#a97142',
@@ -129,6 +150,12 @@ export const EDIFICIO_COLOR: Record<string, string> = {
   tallerCarpinteria: '#a87850',
   pozo: '#d8e4e8',
   parque: '#c8e0b8',
+  molino: '#c9b98a',
+  horno: '#b5651d',
+  quesera: '#e3bf45',
+  bodega: '#7a1f3a',
+  prensa: '#7a8a3a',
+  estatua: '#d8d0c0',
 };
 
 /** Nombre legible por tipo de edificio — presentación pura, mantenida a mano (copia de `cliente/`). */
@@ -167,6 +194,13 @@ export const EDIFICIO_NOMBRE: Record<string, string> = {
   patioDeGremios: 'Patio de Gremios',
   pozo: 'Pozo',
   parque: 'Parque',
+  // los talleres de la comida y la estatua de la tanda 69 (motor d0326fd)
+  molino: 'Molino',
+  horno: 'Horno',
+  quesera: 'Quesera',
+  bodega: 'Bodega',
+  prensa: 'Prensa',
+  estatua: 'Estatua',
 };
 
 /** El color de una Facción en el mapa: el primario de su sigilo; sin sigilo, uno de la paleta fija por orden. */

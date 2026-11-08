@@ -86,7 +86,23 @@ export interface Faccion {
   capFundacion?: { cap: number; plazas: number; caravanas: number };
   /** Solo la propia: niveles 2 a 5, cuántas plazas caben en cada uno a la vez y cuántas lo ocupan (en ese nivel operativo o subiendo a él). */
   cuposDeNivel?: { nivel: number; cupo: number; ocupadas: number }[];
+  /** Su prestigio (tanda 69, motor d0326fd): se acumula con victorias, conquistas, fundaciones, ascensos y comercio, y no se gasta. Público. */
+  prestigio?: number;
+  /** Cuántas alianzas puede tener activas a la vez con ese prestigio (una, y una más cada 100). Público. */
+  topeAlianzas?: number;
+  /** Solo la propia: los informes de región que compró en sus tabernas y aún no puede repetir (tanda 69 §7). */
+  informesRegion?: InformeRegion[];
   // ... ignoramos otros campos que no impactan el render ...
+}
+
+/** Un informe de región comprado en una taberna (tanda 69 §7): de qué región del relieve y de qué tipo, cuándo se compró, cuándo caduca (solo el de
+ * órdenes) y cuándo se puede volver a comprar. Instantes de MUNDO (ms). */
+export interface InformeRegion {
+  region: number;
+  tipo: 'plazas' | 'ordenes';
+  compradoEn: number;
+  caducaEn?: number;
+  libreEn: number;
 }
 
 export interface MiembroFaccion {
@@ -174,6 +190,8 @@ export interface Edificio {
   /** Mejora de nivel interno en marcha (backend 2026-09-26): sigue `activo` y produciendo con su nivel actual, ocupa
    * una cuadrilla de obra, y `nivelInterno` sube al llegar `completaEn`. Ausente = no se está mejorando. */
   mejora?: { nivelObjetivo: number; completaEn: number };
+  /** El molino tiene su buey y produce el doble (tanda 69 §10). */
+  buey?: boolean;
 }
 
 /** Celda del anillo de un `Recinto` — copia local de `CeldaMuro` (motor). Sirve solo para contar puertas en
@@ -274,6 +292,8 @@ export interface Asentamiento {
   guarnicionIds?: string[];
   /** De quién es cada escuadra de la guarnición (motor 7a6a0c48, `Asentamiento.guarnicion`): tropa, hombres y héroe, en el orden de `guarnicionIds`. */
   guarnicion?: { tropaId: string; cantidad: number; heroeId: string }[];
+  /** Solo de dentro y con una Taberna activa (tanda 69 §8): el tablón de mercenarios de los campamentos de la región de la plaza, gratis. */
+  mercenariosRegion?: OfertaMercenario[];
   /** El cupo de guarnición por héroe en esta plaza, en Liderazgo (motor `cupo_guarnicion`): el mismo para residentes y de visita. Solo desde dentro. */
   cupoGuarnicion?: number;
 }
@@ -790,6 +810,8 @@ export interface PuebloDeMapa {
   /** Fertilidad del punto de la aldea (1 = 1,0). */
   fertilidad?: number;
   rebano?: { especie: string; cabezas: number };
+  /** El cultivo de la aldea (tanda 69 §12): `trigo`, `vid` u `oliva`. Se elige al marcarla y no cambia; ausente en un extractor. */
+  cultivo?: string;
   /** Escuadrones de jugadores en su guarnición (de todos los héroes). */
   guarnicionJugadoresIds?: string[];
   /** Liderazgo que puede dejar cada héroe en su guarnición: 30 en nivel 1 y 15 más por nivel de la aldea. */
@@ -919,8 +941,9 @@ export interface HeroeProyectado {
   loadouts: Loadout[];
   inventario: ItemInstancia[];
   equipamiento: Record<SlotEquipo, ItemInstancia | null>;
-  /** Economía propia del héroe, sin relación con el oro recurso. Nace con 500 de bronce. */
-  monedasHeroe: { bronce: number; plata: number; oro: number };
+  /** Las monedas del héroe (tanda 69): un solo saldo, aparte del oro de las plazas (100 monedas valen 1 de oro en los precios que admiten las dos).
+   * Se ganan combatiendo y pagan contratos de mercenario. */
+  monedas: number;
   /** Cupo de guarnición que te da tu residencia, en Liderazgo (0 si no resides en ninguna). */
   cupoGuarnicion: number;
   /** Liderazgo de tus escuadras en guarnición: lo libre es `cupoGuarnicion - guarnicionOcupada` (puede ser negativo
@@ -1029,14 +1052,16 @@ export interface FichaMercenario {
   premios: number;
 }
 
-/** Un mercenario en el tablón de su campamento. `tarifas` en oro (unidades); `plazoDias` ausente = el permanente. */
+/** Un mercenario en el tablón de su campamento. `tarifas` en oro (unidades) y en monedas del héroe (tanda 69); `plazoDias` ausente = el permanente. */
 export interface OfertaMercenario {
   heroeId: string;
   desde?: number;
   ficha?: FichaMercenario;
   tropa: { tropaId: string; cantidad: number; nivel: number }[];
   heridoHasta?: number;
-  tarifas: { plazoDias?: number; oro: number }[];
+  tarifas: { plazoDias?: number; oro: number; monedas: number }[];
+  /** El campamento donde se ofrece (tanda 69): en el tablón de la región de una plaza vienen los de varios. */
+  campamentoId?: string;
 }
 
 /** `params` de `repartirPuntos`: puntos a sumar por atributo, enteros ≥ 0 que no pasen de `puntosDeAtributoSinGastar`. */

@@ -90,6 +90,8 @@ export interface MapaGenerado {
   bandidos?: { id: string; posicion: Point; nivel: number; vetaId?: string }[];
   /** Las capas raster del artefacto de mundo (contrato 06), en unidades estratégicas: con ellas no se recalcula nada. */
   rasters?: RastersDeMundo;
+  /** Las regiones del relieve con su nombre (tanda 69): las de la capa `rasters.region`. */
+  regiones?: { id: number; nombre: string }[];
 }
 
 /** Un raster del artefacto de mundo: `columnas × filas` celdas de `celda` unidades, por filas de norte a sur. */
@@ -113,6 +115,11 @@ export interface RastersDeMundo {
   /** 0..65535 sobre el rango del generador. */
   altura?: RasterU16;
   densidadBosque?: RasterU8;
-  /** 0..255 (255 = fertilidad 1): la que mira la aldea agrícola. */
+  /** 0..255 (255 = fertilidad 1): la que mira la aldea agrícola de trigo. */
   fertilidad?: RasterU8;
+  /** Las de la vid y la oliva (tanda 69), igual que `fertilidad`: las que miran las aldeas de esos cultivos. */
+  fertilidadVid?: RasterU8;
+  fertilidadOliva?: RasterU8;
+  /** El id de la región del relieve del generador en cada celda (`MapaGenerado.regiones`); 0 = ninguna. */
+  region?: RasterU8;
 }

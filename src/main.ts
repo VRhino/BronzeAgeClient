@@ -105,7 +105,7 @@ import { guardarVistaMapa, leerVistaMapa } from './ui/vistaMapaGuardada';
 import { fundacionLista } from './ui/panelFundacionDePlaza';
 import { cablearCronica, htmlCronica, reiniciarCronica, soltarCronica } from './ui/cronica';
 import { alCambiarAvisos, alLlegarInforme, avisarDeEventos, avisosNoLeidos, hayPeligroSinLeer, historialDeAvisos, mostrar as mostrarAviso, reiniciarAvisos } from './ui/avisos';
-import { htmlInforme, type InformeDeCombate } from './ui/informeCombate';
+import { htmlInforme, textoDeBotin, type InformeDeCombate } from './ui/informeCombate';
 import { cablearAvisos, htmlAvisos } from './ui/panelAvisos';
 import { cablearTecnologia, htmlTecnologia } from './ui/panelTecnologia';
 import { cablearColumna, htmlColumna } from './ui/panelColumna';
@@ -1313,7 +1313,7 @@ function renderSeleccionCampamento(cont: HTMLElement, proyeccion: ProyeccionJuga
     <div class="mapa-seleccion-datos">
       <div><span>Nivel</span><strong>${campamento.nivel}</strong></div>
       <div><span>Poder</span><strong>${campamento.poder}</strong></div>
-      ${nivel ? `<div><span>Defensores</span><strong>${nivel.unidades}</strong></div><div><span>Botín por héroe</span><strong>${nivel.oroPorHeroe} de oro</strong></div>` : ''}
+      ${nivel ? `<div><span>Defensores</span><strong>${nivel.unidades}</strong></div>${nivel.botinPorHeroe !== undefined || nivel.monedasPorHeroe !== undefined ? `<div><span>Botín por héroe</span><strong>${escaparHtml(textoDeBotin({ madera: nivel.botinPorHeroe ?? 0, piedra: nivel.botinPorHeroe ?? 0, trigo: nivel.botinPorHeroe ?? 0 }, nivel.monedasPorHeroe ?? 0, 1, '') ?? 'nada')}</strong></div>` : ''}` : ''}
       ${distancia !== null ? `<div><span>Distancia</span><strong>${distancia}</strong></div>` : ''}
       ${((t) => t ? `<div><span>Tiempo hasta allí</span><strong>${escaparHtml(t)}</strong></div>` : '')(textoTiempoHasta(proyeccion, campamento.posicion))}
       ${acosa ? `<div><span>Acosa</span><strong>${acosa}</strong></div>` : ''}
