@@ -1,6 +1,7 @@
 // PUEBLOS Y OBRAS DE MAPA (Economia_Construccion §14 y §14.0; motor 7086ebc). Un pueblo es de su plaza madre: un extractor sobre un nodo de piedra
-// o mineral, o una ALDEA AGRÍCOLA en un punto fértil de la zona (granjas, corrales y su rebaño; acarrea trigo y ganado). Se levanta en tres pasos:
-//   1. marcar   desde la plaza madre, su Gobernador o su Maestro de Obras, residente y dentro: `marcarPueblo { nodoId }` o `marcarAldea { punto }`;
+// o mineral, o una ALDEA AGRÍCOLA en un punto fértil de la zona para su cultivo (tanda 69: trigo, con corrales y rebaño, vid u olivo; acarrea lo
+// que da). Se levanta en tres pasos:
+//   1. marcar   desde la plaza madre, su Gobernador o su Maestro de Obras, residente y dentro: `marcarPueblo { nodoId }` o `marcarAldea { punto, cultivo }`;
 //   2. llevar   la obra queda «pendiente de materiales» en el mapa: una columna de la Facción lleva lo que pide en su carro o en sus caravanas
 //               enganchadas y, a la puerta de la obra, cualquiera de sus ciudadanos lo entrega (`entregarEnObra`);
 //   3. esperar  con todo entregado arranca la obra (4-8 h) y el pueblo queda activo.
@@ -21,7 +22,7 @@ import { ayuda } from './ayuda';
 import { agarre } from './agarre';
 import { miColumna } from './ejercitos';
 import { dibujarIconoMapa } from '../mundo/iconosMapa';
-import { sitiosDeAldea, type SitiosDeAldea } from '../mundo/fertilidad';
+import { sitiosDeAldea, type Cultivo, type SitiosDeAldea } from '../mundo/fertilidad';
 import type { ContextoPlaza, FichaMapaExtra, ObjetoBajoElClic, SubpestanaPlaza } from './ganchos';
 import { cablearEscolta, escolta, puntosDeEscolta } from './panelMercado';
 import type { Ejecutar } from './panelCarro';
@@ -44,8 +45,25 @@ interface ParamsPueblos {
     fertilidadMinima?: number;
     separacionMinima?: number;
     niveles?: Record<string, { granjas: number; corrales: number; coste: Record<string, number>; obraMinutos: number }>;
+    /** Tanda 69: lo que da cada cultivo, desde qué nivel de la plaza madre y si lleva corrales (solo el trigo). */
+    cultivos?: Partial<Record<Cultivo, { produce: string; nivelMadre: number; corrales: boolean }>>;
   };
 }
+
+/** Los cultivos de una aldea (tanda 69, Economia_Construccion §14.0), en el orden en que se ofrecen; lo que dan y su nivel salen de los datos. */
+const CULTIVOS: { id: Cultivo; nombre: string; conArticulo: string; aldea: string; granja: string; produce: string; nivelMadre: number; corrales: boolean; uso: string }[] = [
+  { id: 'trigo', nombre: 'Trigo', conArticulo: 'el trigo', aldea: 'Aldea de trigo', granja: 'Granja', produce: 'trigo', nivelMadre: 1, corrales: true, uso: 'Trigo y, con su rebaño, ganado, carne y leche.' },
+  { id: 'vid', nombre: 'Vid', conArticulo: 'la vid', aldea: 'Aldea de viñas', granja: 'Viña', produce: 'uva', nivelMadre: 3, corrales: false, uso: 'Uva para la bodega, que hace el vino. Sin corrales.' },
+  { id: 'oliva', nombre: 'Olivo', conArticulo: 'el olivo', aldea: 'Aldea de olivos', granja: 'Olivar', produce: 'aceituna', nivelMadre: 4, corrales: false, uso: 'Aceituna para la prensa, que hace el aceite. Sin corrales.' },
+];
+/** Un cultivo con lo que dicen los datos de juego (`PUEBLOS_EXTRACTORES.aldea.cultivos`) por encima de lo de serie. */
+function cultivo(id: Cultivo): (typeof CULTIVOS)[number] {
+  const base = CULTIVOS.find((c) => c.id === id) ?? CULTIVOS[0]!;
+  const datos = params()?.aldea?.cultivos?.[id];
+  return datos ? { ...base, produce: datos.produce, nivelMadre: datos.nivelMadre, corrales: datos.corrales } : base;
+}
+/** El cultivo de una aldea; sin el dato, trigo (las de antes de la tanda 69). */
+const cultivoDe = (x: PuebloDeMapa): Cultivo => (x.cultivo === 'vid' || x.cultivo === 'oliva' ? x.cultivo : 'trigo');
 interface Especie { topePorCorral: number; pieDeCriaPorCorral: number; crecimientoPorHora: number; productos: Record<string, number> }
 
 /** Los tipos de nodo que admiten un pueblo extractor (el ganado ya no: sale de las aldeas). */
@@ -69,7 +87,7 @@ const sumar = (...xs: (Record<string, number> | undefined)[]): Record<string, nu
 
 export const esAldea = (x: { tipo: string }): boolean => x.tipo === 'aldeaAgricola';
 export function nombreDePueblo(x: PuebloDeMapa): string {
-  return esAldea(x) ? `Aldea agrícola${x.nivelAldea ? ` (nivel ${x.nivelAldea})` : ''}` : EDIFICIO_NOMBRE[x.tipo] ?? x.tipo;
+  return esAldea(x) ? `${cultivo(cultivoDe(x)).aldea}${x.nivelAldea ? ` (nivel ${x.nivelAldea})` : ''}` : EDIFICIO_NOMBRE[x.tipo] ?? x.tipo;
 }
 const NOMBRE_OBRA: Record<ObraDeMapa['tipo'], string> = {
   pueblo: 'Obra de pueblo', aldea: 'Obra de aldea agrícola', mejoraAldea: 'Mejora de aldea', avanzada: 'Obra de avanzada', mejoraAvanzada: 'Mejora de avanzada', reparacion: 'Reparación de avanzada',
@@ -221,6 +239,7 @@ function carroEnTarjeta(p: ProyeccionJugador, x: PuebloDeMapa, madre: Asentamien
  */
 function tarjetaPueblo(p: ProyeccionJugador, a: Asentamiento, x: PuebloDeMapa, gestiona: boolean, obras: ObraDeMapa[], e: Escapar): string {
   const aldea = esAldea(x);
+  const cult = cultivo(cultivoDe(x));
   const niveles = params()?.aldea?.niveles ?? {};
   const nivel = x.nivelAldea ?? 1;
   const deAhora = aldea ? niveles[String(nivel)] : undefined;
@@ -236,16 +255,16 @@ function tarjetaPueblo(p: ProyeccionJugador, a: Asentamiento, x: PuebloDeMapa, g
     x.batallaId ? '<span class="pueblo-alerta">⚔ ¡Atacado!</span>' : '',
     mejorando ? `<span class="obra-chip activa" title="La mejora está en marcha: mira su obra en la lista">🔨 Subiendo a ${nivel + 1}</span>` : '',
     x.fertilidad !== undefined ? `<span class="obra-chip" title="Fertilidad del punto de la aldea">🌱 ${coma(x.fertilidad)}</span>` : '',
-    deAhora ? `<span class="obra-chip" title="Granjas de la aldea">🌾 ${deAhora.granjas} granja${deAhora.granjas === 1 ? '' : 's'}</span><span class="obra-chip" title="Corrales de la aldea">🐄 ${deAhora.corrales} corral${deAhora.corrales === 1 ? '' : 'es'}</span>` : '',
+    deAhora ? `<span class="obra-chip" title="Granjas de la aldea">${RECURSO_ICONO[cult.produce] ?? '🌾'} ${deAhora.granjas} granja${deAhora.granjas === 1 ? '' : 's'}</span>${cult.corrales ? `<span class="obra-chip" title="Corrales de la aldea">🐄 ${deAhora.corrales} corral${deAhora.corrales === 1 ? '' : 'es'}</span>` : ''}` : '',
   ].join('');
   const coste = costeCarro();
   const acciones = !gestiona ? '' : `<div class="anillo-acciones pueblo-acciones">
-      ${aldea && siguiente && !mejorando ? `<button class="anillo-mejorar" type="button" data-pueblo-accion="mejorar" data-pueblo="${e(x.id)}" title="${e(`Al nivel ${nivel + 1}: ${siguiente.granjas} granjas y ${siguiente.corrales} corrales. Lo que pide se lleva a la aldea como una obra.`)}">⬆ Nivel ${nivel + 1} <span class="pueblo-boton-coste">${costeLlano(siguiente.coste, e)}</span></button>` : ''}
+      ${aldea && siguiente && !mejorando ? `<button class="anillo-mejorar" type="button" data-pueblo-accion="mejorar" data-pueblo="${e(x.id)}" title="${e(`Al nivel ${nivel + 1}: ${siguiente.granjas} granjas${cult.corrales ? ` y ${siguiente.corrales} corrales` : ''}. Lo que pide se lleva a la aldea como una obra.`)}">⬆ Nivel ${nivel + 1} <span class="pueblo-boton-coste">${costeLlano(siguiente.coste, e)}</span></button>` : ''}
       ${x.carroId ? '' : `<button class="pueblo-boton" type="button" data-pueblo-accion="carro" data-pueblo="${e(x.id)}" title="Compra en la plaza un carro con su buey para el acarreo (si no, la plaza lo repone sola en cuanto puede pagarlo).">🛒 Reponer carro${coste ? ` <span class="pueblo-boton-coste">${chipsDeCoste(a, coste, e)}</span>` : ''}</button>`}
       <button class="anillo-abandonar" type="button" data-pueblo-accion="destruir" data-pueblo="${e(x.id)}">✕ Destruir</button></div>`;
   return `<div class="pueblo-tarjeta ${aldea ? 'aldea' : 'extractor'}${x.batallaId ? ' atacado' : ''}">
-    <div class="anillo-cab"><span class="pueblo-emblema" aria-hidden="true">${aldea ? '🌾' : iconoEdificio(x.tipo, 26)}</span>
-      <span class="anillo-titulo"><strong>${e(aldea ? 'Aldea agrícola' : nombreDePueblo(x))}</strong><small>${e(sub)}</small></span>
+    <div class="anillo-cab"><span class="pueblo-emblema" aria-hidden="true">${aldea ? RECURSO_ICONO[cult.produce] ?? '🌾' : iconoEdificio(x.tipo, 26)}</span>
+      <span class="anillo-titulo"><strong>${e(aldea ? cult.aldea : nombreDePueblo(x))}</strong><small>${e(sub)}</small></span>
       ${aldea ? medallonNivel(nivel, mejorando ? 'en-obra' : '', `Aldea de nivel ${nivel}`) : ''}</div>
     ${chips ? `<div class="anillo-chips">${chips}</div>` : ''}
     <div class="pueblo-medida${k >= 0.9 ? ' lleno' : ''}" title="Almacén del pueblo: lo acarrea su carro a la plaza; lleno, deja de producir"><span>📦 Almacén</span>${barraAvance(k)}<small>${n0(guardado)} / ${n0(x.capacidad)}</small></div>
@@ -283,6 +302,12 @@ function tarjetaObra(p: ProyeccionJugador, a: Asentamiento, o: ObraDeMapa, gesti
 
 /** El nodo marcado en «Extractor» (se recuerda entre repintados). */
 let nodoElegido = '';
+/** El cultivo elegido para la aldea nueva (se recuerda entre repintados; si la plaza no llega a su nivel, vuelve al trigo). */
+let cultivoElegido: Cultivo = 'trigo';
+
+/** Los cultivos que puede tener la siguiente aldea de esta plaza: los de su nivel (regla de interfaz: lo que no se puede no se enseña). */
+const cultivosPosibles = (a: Asentamiento): (typeof CULTIVOS)[number][] => CULTIVOS.map((c) => cultivo(c.id)).filter((c) => (a.nivelActual ?? a.nivel) >= c.nivelMadre);
+const cultivoDeLaAldeaNueva = (a: Asentamiento): (typeof CULTIVOS)[number] => cultivosPosibles(a).find((c) => c.id === cultivoElegido) ?? cultivo('trigo');
 
 /** Marcar un pueblo nuevo: dos cartas, la aldea (con su coste, su anillo y si hay tierra) y el extractor (los nodos libres como casillas). */
 function htmlMarcar(p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
@@ -298,16 +323,23 @@ function htmlMarcar(p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
   const elegido = libres.some((n) => n.id === nodoElegido) ? nodoElegido : libres[0]?.id;
   const anillo = anilloDeAldea(p, a);
   const sinAldea = nivel < nivelAldea;
+  // El cultivo (tanda 69): trigo siempre; la vid y el olivo, desde su nivel de plaza. Con uno solo posible no hay nada que elegir.
+  const posibles = cultivosPosibles(a);
+  const deLaAldea = cultivoDeLaAldeaNueva(a);
+  const cultivos = posibles.length > 1
+    ? `<div class="pueblo-cultivos" role="radiogroup" aria-label="Cultivo de la aldea">${posibles.map((c) => `<label class="pueblo-nodo pueblo-cultivo"><input type="radio" name="pueblo-cultivo" value="${c.id}" data-pueblo-cultivo${c.id === deLaAldea.id ? ' checked' : ''}><span aria-hidden="true">${RECURSO_ICONO[c.produce] ?? '🌾'}</span><b>${e(c.nombre)}</b></label>`).join('')}</div>`
+    : '';
   const sinExtractor = nivel < nivelExtractor || libres.length === 0;
   const carta = (bloqueada: boolean, cuerpo: string): string => `<div class="pueblo-opcion${bloqueada ? ' bloqueada' : ''}">${cuerpo}</div>`;
   return `${titulo}<div class="pueblo-opciones">
-    ${carta(sinAldea, `<span class="pueblo-opcion-icono" aria-hidden="true">🌾</span>
-      <strong>Aldea agrícola${ayuda('pueblos:aldea', `Granjas y corrales en un punto fértil de la zona (fertilidad ${pr?.aldea?.fertilidadMinima ?? 0.3} o más, a ${pr?.aldea?.separacionMinima ?? 3} de toda plaza y todo pueblo, con camino hasta la plaza). Acarrea trigo y ganado; su rebaño crece solo. Cada aldea va en su anillo: las dos primeras hasta el techo de la zona del nivel 1, la tercera en el anillo que añade el nivel 2, y así, para que no se junten. El nivel 2 de la plaza pide un pueblo activo: una aldea o un extractor.`)}</strong>
-      <small>Trigo y ganado; su rebaño crece solo.</small>
+    ${carta(sinAldea, `<span class="pueblo-opcion-icono" aria-hidden="true">${RECURSO_ICONO[deLaAldea.produce] ?? '🌾'}</span>
+      <strong>Aldea agrícola${ayuda('pueblos:aldea', `Granjas en un punto fértil de la zona para su cultivo (fertilidad ${pr?.aldea?.fertilidadMinima ?? 0.3} o más, a ${pr?.aldea?.separacionMinima ?? 3} de toda plaza y todo pueblo, con camino hasta la plaza). El cultivo se elige al marcarla y no cambia: trigo, que lleva corrales y un rebaño que crece solo y da ganado, carne y leche; vid (desde el nivel ${cultivo('vid').nivelMadre} de la plaza), que da uva para la bodega; u olivo (desde el nivel ${cultivo('oliva').nivelMadre}), que da aceituna para la prensa. Cada cultivo tiene su propia tierra buena. Cada aldea va en su anillo: las dos primeras hasta el techo de la zona del nivel 1, la tercera en el anillo que añade el nivel 2, y así, para que no se junten. El nivel 2 de la plaza pide un pueblo activo: una aldea o un extractor.`)}</strong>
+      ${sinAldea ? '' : cultivos}
+      <small>${e(deLaAldea.uso)}</small>
       ${sinAldea ? `<span class="anillo-opcion-pide">Desde el nivel ${nivelAldea} de la plaza</span>`
         : `${costeAldea ? `<span class="anillo-opcion-coste" title="Con el carro de acarreo y su buey; se lleva al sitio">${costeLlano(costeAldea, e)}</span>` : ''}
           <small>📍 ${anillo.desde > 0 ? `de ${n0(anillo.desde)} a ` : 'hasta '}${n0(anillo.hasta)} u de la plaza</small>
-          ${htmlSitiosDeAldea(sitiosDeLaPlaza(p, a))}`}
+          ${htmlSitiosDeAldea(sitiosDeLaPlaza(p, a, deLaAldea.id), deLaAldea.conArticulo)}`}
       <button class="pueblo-boton principal" type="button" data-pueblo-accion="elegir-aldea"${sinAldea ? ' disabled' : ''}>🗺 Elegir el sitio</button>`)}
     ${carta(sinExtractor, `<span class="pueblo-opcion-icono" aria-hidden="true">⛏️</span>
       <strong>Extractor${ayuda('pueblos:extractor', 'Una cantera o una mina sobre un nodo libre de la zona. La piedra solo sale de un pueblo de cantera (la Cantera ya no se construye en la plaza), y en el nivel 1 caben dos pueblos: la cantera y la aldea. Pide su edificio, 50 de madera y el carro de acarreo con su buey, que se llevan al sitio.')}</strong>
@@ -319,13 +351,13 @@ function htmlMarcar(p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
   </div>`;
 }
 
-/** Si la zona tiene sitio para la aldea: en verde con la mejor fertilidad, o en rojo con el porqué. */
-function htmlSitiosDeAldea(s: SitiosDeAldea | null): string {
+/** Si la zona tiene sitio para la aldea de ese cultivo (`paraQue`: «el trigo», «la vid» o «el olivo»): en verde con la mejor fertilidad, o en rojo con el porqué. */
+function htmlSitiosDeAldea(s: SitiosDeAldea | null, paraQue = 'el trigo'): string {
   if (!s) return '';
   const { fertilidadMinima, separacionMinima } = reglasDeAldea();
-  if (s.validos.length) return `<span class="fundacion-gate ok">Hay tierra fértil para la aldea en su anillo (mejor fertilidad ${coma(s.mejor)}).</span>`;
+  if (s.validos.length) return `<span class="fundacion-gate ok">Hay tierra buena para ${paraQue} en su anillo (mejor fertilidad ${coma(s.mejor)}).</span>`;
   if (s.cerca.length) return `<span class="fundacion-gate falta">La tierra fértil de la zona está a menos de ${separacionMinima} de una plaza o un pueblo. Crecerá la zona con los edificios.</span>`;
-  return `<span class="fundacion-gate falta">El anillo de la siguiente aldea no tiene tierra con fertilidad ${coma(fertilidadMinima)} o más dentro de la zona: no cabe. La zona crece con cada edificio terminado.</span>`;
+  return `<span class="fundacion-gate falta">El anillo de la siguiente aldea no tiene tierra para ${paraQue} con fertilidad ${coma(fertilidadMinima)} o más dentro de la zona: no cabe. La zona crece con cada edificio terminado.</span>`;
 }
 
 function htmlPueblos(c: ContextoPlaza): string {
@@ -392,13 +424,13 @@ export function anilloDeAldea(p: ProyeccionJugador, a: Asentamiento): { desde: n
   return { desde: nivel === 1 ? 0 : techos[nivel - 2]!, hasta: techos[nivel - 1]! };
 }
 
-/** Dónde cabe la aldea de esta plaza, con el mapa ya bajado; `null` si aún no está o no trae la capa de fertilidad. */
-function sitiosDeLaPlaza(p: ProyeccionJugador, a: Asentamiento): SitiosDeAldea | null {
+/** Dónde cabe la aldea de ese cultivo en esta plaza, con el mapa ya bajado; `null` si aún no está o no trae la capa de fertilidad del cultivo. */
+function sitiosDeLaPlaza(p: ProyeccionJugador, a: Asentamiento, cultivo: Cultivo): SitiosDeAldea | null {
   const mapa = estadoCliente.mapaCache?.mapa;
   if (!mapa) return null;
   const { fertilidadMinima, separacionMinima } = reglasDeAldea();
   const radio = Math.max(...(a.zonaReal ?? []).map((q) => Math.hypot(q.x - a.posicion.x, q.y - a.posicion.y)), 6);
-  return sitiosDeAldea(mapa, { centro: a.posicion, radio, poligono: a.zonaReal, anillo: anilloDeAldea(p, a) }, ocupadosParaAldea(p), fertilidadMinima, separacionMinima);
+  return sitiosDeAldea(mapa, { centro: a.posicion, radio, poligono: a.zonaReal, anillo: anilloDeAldea(p, a) }, ocupadosParaAldea(p), fertilidadMinima, separacionMinima, cultivo);
 }
 
 function cablearPueblos(c: ContextoPlaza): void {
@@ -421,6 +453,8 @@ function cablearPueblos(c: ContextoPlaza): void {
     });
   }));
   cuerpo.querySelectorAll<HTMLInputElement>('[data-pueblo-nodo]').forEach((r) => r.addEventListener('change', () => { if (r.checked) nodoElegido = r.value; }));
+  // el cultivo cambia lo que da y dónde cabe: se repinta la carta
+  cuerpo.querySelectorAll<HTMLInputElement>('[data-pueblo-cultivo]').forEach((r) => r.addEventListener('change', () => { if (r.checked) { cultivoElegido = r.value as Cultivo; c.refrescar(); } }));
   cuerpo.querySelectorAll<HTMLButtonElement>('[data-pueblo-accion]').forEach((b) => b.addEventListener('click', () => {
     const puebloId = b.dataset.pueblo ?? '';
     switch (b.dataset.puebloAccion) {
@@ -438,10 +472,12 @@ function cablearPueblos(c: ContextoPlaza): void {
         if (nodoId) void enviar(b, 'marcarPueblo', { asentamientoId: a.id, heroeId: p.heroeId, nodoId });
         return;
       }
-      case 'elegir-aldea':
-        selectorDePunto.abrir?.('Pulsa en el mapa donde levantar la aldea agrícola: en verde, la tierra fértil de la zona donde cabe (en gris, fértil pero pegada a una plaza o un pueblo).', a.posicion, a.zonaReal,
-          (punto) => c.ejecutar('marcarAldea', { asentamientoId: a.id, heroeId: p.heroeId, punto }), sitiosDeLaPlaza(p, a));
+      case 'elegir-aldea': {
+        const cult = cultivoDeLaAldeaNueva(a);
+        selectorDePunto.abrir?.(`Pulsa en el mapa donde levantar la ${cult.aldea.toLowerCase()}: en verde, la tierra buena para ${cult.conArticulo} de la zona donde cabe (en gris, buena pero pegada a una plaza o un pueblo).`, a.posicion, a.zonaReal,
+          (punto) => c.ejecutar('marcarAldea', { asentamientoId: a.id, heroeId: p.heroeId, punto, cultivo: cult.id }), sitiosDeLaPlaza(p, a, cult.id));
         return;
+      }
       case 'mejorar-avanzada': return void enviar(b, 'mejorarAvanzada', { heroeId: p.heroeId, avanzadaId: b.dataset.avanzada });
       case 'reparar-avanzada': return void enviar(b, 'repararAvanzada', { heroeId: p.heroeId, avanzadaId: b.dataset.avanzada });
       case 'destruir-avanzada':
@@ -651,9 +687,12 @@ function barra(valor: number, tope: number): string {
   return `<div class="carro-barra carro-barra-${pct >= 100 ? 'llena' : pct >= 80 ? 'casi' : 'ok'}"><span style="width:${pct}%"></span></div>`;
 }
 
-/** Lo que produce el pueblo (lo único que se le puede dejar): la aldea, trigo y ganado; un extractor, lo que guarda su almacén. */
-function produce(x: PuebloDeMapa): string[] {
-  return esAldea(x) ? ['trigo', 'ganado'] : Object.keys(x.almacen).filter((r) => r);
+/** Lo que produce el pueblo (lo único que se le puede dejar, `Pueblo::recursos` del motor): la aldea, lo de su cultivo y, la de trigo, lo de su
+ * rebaño (ganado, carne y leche); un extractor, lo que guarda su almacén. */
+export function produce(x: PuebloDeMapa): string[] {
+  if (!esAldea(x)) return Object.keys(x.almacen).filter((r) => r);
+  const c = cultivo(cultivoDe(x));
+  return c.corrales ? [c.produce, 'livestock', 'carne', 'leche'] : [c.produce];
 }
 
 const fila = (s: { id: string; tropaId: string; nombre: string; cantidad: number; costeLiderazgo: number }, boton: string, e: Escapar): string =>
@@ -693,7 +732,7 @@ function htmlCargaDelPueblo(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar): 
     `<div class="carro-fila"><span>${e(nombre(r))}</span><strong>${n0(n)}</strong><input class="form-input" type="number" min="1" max="${n0(n)}" value="${n0(n)}" data-pueblo-cantidad="${accion}:${e(r)}" /><button class="btn-secondary" type="button" data-pueblo-dentro="${accion}" data-recurso="${e(r)}">${etiqueta}</button></div>`;
   const cargar = Object.entries(x.almacen).filter(([r, n]) => r && n >= 1);
   const dejar = produce(x).map((r) => [r, carro[r] ?? 0] as const).filter(([, n]) => n >= 1);
-  return `<div class="carro-ocupacion"><strong class="heroe-sub">Carro de tu columna${ayuda('pueblo:carga', 'Carga lo que guarda el pueblo hasta donde quepa en el carro, o déjale lo que produce (en la aldea, trigo y ganado) hasta su capacidad. Si el almacén se llena con su carro de acarreo en casa, el carro sale hacia la plaza.')}</strong>${columna.capacidadCarga ? `<span>${enCarro} / ${Math.floor(columna.capacidadCarga)}</span>` : ''}</div>
+  return `<div class="carro-ocupacion"><strong class="heroe-sub">Carro de tu columna${ayuda('pueblo:carga', 'Carga lo que guarda el pueblo hasta donde quepa en el carro, o déjale lo que produce (en la aldea, lo de su cultivo y, en la de trigo, ganado, carne y leche) hasta su capacidad. Si el almacén se llena con su carro de acarreo en casa, el carro sale hacia la plaza.')}</strong>${columna.capacidadCarga ? `<span>${enCarro} / ${Math.floor(columna.capacidadCarga)}</span>` : ''}</div>
     ${columna.capacidadCarga ? barra(enCarro, columna.capacidadCarga) : ''}
     ${cargar.length ? `<p class="asent-lado-nota">Del almacén del pueblo al carro:</p>${cargar.map(([r, n]) => linea(r, n, 'cargar', 'Al carro')).join('')}` : '<p class="asent-lado-nota">El almacén del pueblo está vacío.</p>'}
     ${dejar.length ? `<p class="asent-lado-nota">Del carro al almacén del pueblo:</p>${dejar.map(([r, n]) => linea(r, n, 'dejar', 'Dejar')).join('')}` : ''}`;
@@ -732,9 +771,11 @@ let pestanaPueblo: PestanaPueblo = 'resumen';
 /** Un carro de acarreo, para el trazado (no es un edificio del catálogo). */
 const ICONO_CARRO = '<svg class="icono-edificio" width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><path fill="var(--relleno, rgba(205,160,90,0.25))" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M5 11h17v9H5z"/><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="23" r="3.5"/><circle cx="18" cy="23" r="3.5"/><path d="M22 15h7"/></g></svg>';
 
-/** El trazado del pueblo: el centro, el almacén, el carro de acarreo y, en una aldea, los huecos de todas sus granjas y corrales. */
+/** El trazado del pueblo: el centro, el almacén, el carro de acarreo y, en una aldea, los huecos de todas sus granjas y, en la de trigo, sus corrales
+ * (las de vid y olivo no tienen rebaño: tanda 69). */
 export function htmlTrazadoPueblo(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar): string {
   const aldea = esAldea(x);
+  const cult = cultivo(cultivoDe(x));
   const niveles = Object.entries(params()?.aldea?.niveles ?? {}).sort(([a], [b]) => Number(a) - Number(b));
   const actual = params()?.aldea?.niveles?.[String(x.nivelAldea ?? 1)];
   /** El nivel con el que llega el hueco `i` de un tipo. */
@@ -744,10 +785,10 @@ export function htmlTrazadoPueblo(p: ProyeccionJugador, x: PuebloDeMapa, e: Esca
   const anillo: string[] = [];
   if (aldea) {
     const maxGranjas = Math.max(actual?.granjas ?? 0, ...niveles.map(([, n]) => n.granjas));
-    const maxCorrales = Math.max(actual?.corrales ?? 0, ...niveles.map(([, n]) => n.corrales));
+    const maxCorrales = cult.corrales ? Math.max(actual?.corrales ?? 0, ...niveles.map(([, n]) => n.corrales)) : 0;
     for (let i = 0; i < maxGranjas; i++) {
       const lleno = i < (actual?.granjas ?? 0);
-      anillo.push(`granja|${lleno ? 1 : 0}|${lleno ? `Granja ${i + 1}` : `Granja ${i + 1}: llega con el nivel ${llegaCon(i, 'granjas') ?? '?'}`}`);
+      anillo.push(`granja|${lleno ? 1 : 0}|${lleno ? `${cult.granja} ${i + 1}` : `${cult.granja} ${i + 1}: llega con el nivel ${llegaCon(i, 'granjas') ?? '?'}`}`);
     }
     for (let i = 0; i < maxCorrales; i++) {
       const lleno = i < (actual?.corrales ?? 0);
@@ -785,6 +826,8 @@ export function htmlAlmacenPueblo(x: PuebloDeMapa, e: Escapar): string {
 
 function htmlResumenPueblo(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar): string {
   const aldea = esAldea(x);
+  const cult = cultivo(cultivoDe(x));
+  const conCorrales = (n: { granjas: number; corrales: number }): string => `${n.granjas} granjas${cult.corrales ? ` y ${n.corrales} corrales` : ''}`;
   const pr = params();
   const nivel = aldea ? pr?.aldea?.niveles?.[String(x.nivelAldea ?? 1)] : undefined;
   const siguiente = aldea && x.nivelAldea ? pr?.aldea?.niveles?.[String(x.nivelAldea + 1)] : undefined;
@@ -796,8 +839,8 @@ function htmlResumenPueblo(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar): s
   const dentro = columna ? columna.participantes.map((q) => nombreDeHeroe(p, q.heroeId)).join(', ') : '';
   return `<p class="asent-lado-nota">De ${e(nombrePlaza(p, x.madreId))}.${x.fertilidad !== undefined ? ` Fertilidad ${x.fertilidad.toFixed(2).replace('.', ',')}.` : ''}${x.batallaId ? ' <strong>Lo están atacando: si sigues dentro, defiendes.</strong>' : ''}</p>
     ${aldea ? `<strong class="heroe-sub">Aldea</strong>
-      <p class="asent-lado-nota">Nivel ${x.nivelAldea ?? 1}${nivel ? `: ${nivel.granjas} granjas y ${nivel.corrales} corrales` : ''}.${mejora ? ' Tiene una mejora en marcha: sus materiales se entregan en el mapa, a su puerta.' : ''}</p>
-      ${ciudadano && siguiente && !mejora ? `<div class="mapa-seleccion-acciones"><button class="btn-secondary" type="button" data-pueblo-dentro="mejorar" title="${e(`Al nivel ${x.nivelAldea! + 1}: ${siguiente.granjas} granjas y ${siguiente.corrales} corrales. Pide ${listaRecursos(siguiente.coste)}, que se traen como una obra.`)}">Mejorar a nivel ${x.nivelAldea! + 1}</button><small class="asent-lado-nota">El Gobernador o el Maestro de Obras de la plaza madre.</small></div>` : ''}
+      <p class="asent-lado-nota">${e(cult.aldea)}, nivel ${x.nivelAldea ?? 1}${nivel ? `: ${conCorrales(nivel)}` : ''}. ${e(cult.uso)}${mejora ? ' Tiene una mejora en marcha: sus materiales se entregan en el mapa, a su puerta.' : ''}</p>
+      ${ciudadano && siguiente && !mejora ? `<div class="mapa-seleccion-acciones"><button class="btn-secondary" type="button" data-pueblo-dentro="mejorar" title="${e(`Al nivel ${x.nivelAldea! + 1}: ${conCorrales(siguiente)}. Pide ${listaRecursos(siguiente.coste)}, que se traen como una obra.`)}">Mejorar a nivel ${x.nivelAldea! + 1}</button><small class="asent-lado-nota">El Gobernador o el Maestro de Obras de la plaza madre.</small></div>` : ''}
       ${x.rebano ? `<div class="carro-ocupacion"><strong class="heroe-sub">Rebaño ${e(ESPECIE_NOMBRE[x.rebano.especie] ?? x.rebano.especie)}</strong><span>${n0(x.rebano.cabezas)}${topeRebano ? ` / ${topeRebano}` : ''} cabezas</span></div>${topeRebano ? barra(x.rebano.cabezas, topeRebano) : ''}
         <p class="asent-lado-nota">Crece solo hasta el tope de sus corrales; lo que pasa del pie de cría entra como ganado en el almacén.</p>` : ''}` : ''}
     <strong class="heroe-sub">Dentro</strong>

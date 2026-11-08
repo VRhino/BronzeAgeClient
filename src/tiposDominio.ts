@@ -798,7 +798,7 @@ export interface PuebloDeMapa {
   tipo: string;
   nodoId?: string;
   posicion: Point;
-  /** Lo que guarda su almacén local (500 entre todo): en una aldea, trigo y ganado; en un extractor, su recurso (`recurso` vacío si no se sabe). */
+  /** Lo que guarda su almacén local (entre todo): en una aldea, lo de su cultivo y, la de trigo, ganado, carne y leche; en un extractor, su recurso (`recurso` vacío si no se sabe). */
   almacen: Record<string, number>;
   capacidad: number;
   carroId?: string;

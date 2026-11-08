@@ -1,8 +1,16 @@
 // Dónde cabe una aldea agrícola (mecánica 50): el motor la acepta en tierra firme, dentro de la zona de la plaza, a `separacionMinima` de toda
 // plaza y todo pueblo y con fertilidad de `fertilidadMinima` o más en ese punto (`pueblos.rs`, `sitio_de_aldea_sin_ruta`). Aquí se buscan esos
-// puntos con la capa `fertilidad` del artefacto, para enseñarlos al elegir el sitio y al fundar. El camino hasta la plaza no se puede saber
+// puntos con la capa de fertilidad de su cultivo (`fertilidad` el trigo, `fertilidadVid` y `fertilidadOliva` la vid y el olivo: tanda 69) del artefacto,
+// para enseñarlos al elegir el sitio y al fundar. El camino hasta la plaza no se puede saber
 // aquí (es el A* del motor): un punto válido puede salir rechazado por eso.
-import type { MapaGenerado, Point } from '../terreno';
+import type { MapaGenerado, Point, RasterU8 } from '../terreno';
+
+/** El cultivo de una aldea (tanda 69, Economia_Construccion §14.0): cada uno mira su capa de fertilidad. */
+export type Cultivo = 'trigo' | 'vid' | 'oliva';
+
+/** La capa de fertilidad de un cultivo, como la lee el motor (`Geografia::fertilidad_en(punto, cultivo)`). */
+const capaDe = (mapa: MapaGenerado, cultivo: Cultivo): RasterU8 | undefined =>
+  cultivo === 'vid' ? mapa.rasters?.fertilidadVid : cultivo === 'oliva' ? mapa.rasters?.fertilidadOliva : mapa.rasters?.fertilidad;
 
 /** Paso de la rejilla de búsqueda, en unidades (el raster tiene celdas de varias unidades: más fino no aporta). */
 const PASO = 0.5;
@@ -17,9 +25,9 @@ export interface SitiosDeAldea {
   paso: number;
 }
 
-/** La fertilidad (0..1) de la celda donde cae `p`, como la lee el motor; `null` sin la capa o fuera del mapa. */
-export function fertilidadEn(mapa: MapaGenerado, p: Point): number | null {
-  const r = mapa.rasters?.fertilidad;
+/** La fertilidad (0..1) para `cultivo` (de serie, el trigo) de la celda donde cae `p`, como la lee el motor; `null` sin la capa o fuera del mapa. */
+export function fertilidadEn(mapa: MapaGenerado, p: Point, cultivo: Cultivo = 'trigo'): number | null {
+  const r = capaDe(mapa, cultivo);
   if (!r || p.x < 0 || p.y < 0) return null;
   const c = Math.floor(p.x / r.celda);
   const f = Math.floor(p.y / r.celda);
@@ -49,7 +57,8 @@ function dentroDelPoligono(p: Point, poligono: readonly Point[]): boolean {
 
 /**
  * Los sitios de aldea de una zona: un polígono (la zona real de la plaza) o un círculo (`radio` alrededor de `centro`, la zona al fundar).
- * `ocupados` son las plazas y los pueblos (y obras de pueblo) que se conocen; los que no se ven no cuentan, y el motor sí los mira.
+ * `ocupados` son las plazas y los pueblos (y obras de pueblo) que se conocen; los que no se ven no cuentan, y el motor sí los mira. `cultivo`
+ * elige la capa de fertilidad (de serie, la del trigo).
  */
 export function sitiosDeAldea(
   mapa: MapaGenerado,
@@ -57,8 +66,9 @@ export function sitiosDeAldea(
   ocupados: readonly Point[],
   fertilidadMinima: number,
   separacionMinima: number,
+  cultivo: Cultivo = 'trigo',
 ): SitiosDeAldea | null {
-  if (!mapa.rasters?.fertilidad) return null;
+  if (!capaDe(mapa, cultivo)) return null;
   const pol = zona.poligono && zona.poligono.length > 2 ? zona.poligono : null;
   const caja = pol
     ? pol.reduce((c, q) => ({ x0: Math.min(c.x0, q.x), y0: Math.min(c.y0, q.y), x1: Math.max(c.x1, q.x), y1: Math.max(c.y1, q.y) }), { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity })
@@ -72,7 +82,7 @@ export function sitiosDeAldea(
       if (!dentro(p) || !firme(mapa, p)) continue;
       // la siguiente aldea va en su anillo, (desde, hasta] u de la plaza
       if (zona.anillo) { const d = Math.hypot(x - zona.centro.x, y - zona.centro.y); if (d <= zona.anillo.desde || d > zona.anillo.hasta) continue; }
-      const f = fertilidadEn(mapa, p) ?? 0;
+      const f = fertilidadEn(mapa, p, cultivo) ?? 0;
       if (f < fertilidadMinima) continue;
       if (ocupados.some((o) => (o.x - x) ** 2 + (o.y - y) ** 2 < s2)) { r.cerca.push(p); continue; }
       r.validos.push(p);

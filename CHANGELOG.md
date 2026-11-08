@@ -3,6 +3,18 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.186.0] — 2026-11-08 · La tanda 69, parte 2: el cultivo de las aldeas · sin cambio de contrato (motor `d0326fd`)
+
+- **Al marcar una aldea se elige su cultivo**: trigo siempre; vid desde el nivel 3 de la plaza y olivo desde el 4 (`PUEBLOS_EXTRACTORES.aldea.cultivos`).
+  Con solo el trigo posible no hay nada que elegir. La carta dice lo que da cada uno (trigo con rebaño; uva para la bodega; aceituna para la
+  prensa) y `marcarAldea` lleva el `cultivo`.
+- **Los sitios de la aldea con la tierra de su cultivo**: la carta y el mapa al elegir el sitio miran la capa de fertilidad de la vid o del
+  olivo (`fertilidadVid`, `fertilidadOliva`) en vez de la del trigo.
+- **Aldeas de trigo, de viñas y de olivos**: su nombre, su icono y lo que guardan. Las de vid y olivo no tienen corrales (ni en la tarjeta, ni
+  al subir de nivel, ni en su trazado por dentro, donde sus granjas son viñas u olivares).
+- **Lo que se le puede dejar a una aldea** es lo que produce: lo de su cultivo y, en la de trigo, ganado, carne y leche (antes pedía
+  «ganado», que el motor no conoce).
+
 ## [0.185.0] — 2026-11-08 · La tanda 69, parte 1: prestigio, alianzas y el buey del molino · sin cambio de contrato (motor `d0326fd`)
 
 - **El prestigio en la ventana de la Facción**, bajo la experiencia: el total, las alianzas activas de las que caben a la vez, las estatuas que

@@ -17,7 +17,7 @@ const p = {
   ejercitos: [{ id: 'ej-2', tipo: 'ejercito', faccionId: 'f-1', liderId: 'h-2', participantes: [{ heroeId: 'h-2', unidoEn: 0 }] }],
   ejercitosAvistados: [{ id: 'av-1', tipo: 'personal', faccionId: 'f-2', participantes: 1, heroeIds: [], enFormacion: false, caravanasAdjuntasIds: [] }],
   caravanasAvistadas: [{ id: 'cav-1', faccionId: 'f-3', escoltada: true, recursos: [] }],
-  pueblos: [{ id: 'pu-1', madreId: 'as-4', propio: true, tipo: 'aldeaAgricola', posicion: { x: 0, y: 0 } }],
+  pueblos: [{ id: 'pu-1', madreId: 'as-4', propio: true, tipo: 'aldeaAgricola', cultivo: 'trigo', posicion: { x: 0, y: 0 } }],
   avanzadas: [{ id: 'av-9', madreId: 'as-9', propia: false, etapa: 2, enRuinas: true, posicion: { x: 0, y: 0 } }],
   campamentosBandidos: [{ id: 'b-1', nivel: 3, posicion: { x: 0, y: 0 } }],
   batallas: [{ battleId: 'bt-1', punto: { x: 0, y: 0 }, ladoPropio: 'atacante' }],
@@ -32,7 +32,7 @@ describe('qué hay bajo el clic', () => {
     expect(r('ejercito', 'ej-2')).toEqual(['Ejército de tu Facción', 'Con Néstor']);
     expect(r('ejercitoAjeno', 'av-1')).toEqual(['Columna ajena', 'Troya · 1 héroe']);
     expect(r('caravanaAjena', 'cav-1')).toEqual(['Caravana ajena', 'Hatti · escoltada']);
-    expect(r('puebloMapa', 'pu-1')).toEqual(['Aldea agrícola', 'De Pesinunte']);
+    expect(r('puebloMapa', 'pu-1')).toEqual(['Aldea de trigo', 'De Pesinunte']);
     expect(r('avanzadaMapa', 'av-9')).toEqual(['Fuerte', 'De Ilión · en ruinas']);
     expect(r('campamento', 'b-1')).toEqual(['Campamento de bandidos', 'Nivel 3']);
     expect(r('batalla', 'bt-1')).toEqual(['Batalla', 'Combates en ella']);

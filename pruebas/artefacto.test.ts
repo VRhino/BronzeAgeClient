@@ -24,5 +24,12 @@ describe.skipIf(!archivo)('artefacto de mundo real', () => {
     expect(mapa.bosques.length).toBeGreaterThan(10);
     expect(mapa.nodos.every((n) => n.posicion.x >= 0 && n.posicion.x <= 2667 && n.posicion.y <= 2000)).toBe(true);
     expect(mapa.rios.length).toBeGreaterThan(0);
+    // la tanda 69 (motor d0326fd): la fertilidad de la vid y del olivo, la región de cada celda y los nombres de las regiones
+    const { fertilidadVid, fertilidadOliva, region } = mapa.rasters!;
+    for (const r of [fertilidadVid, fertilidadOliva, region]) expect(r?.datos.length).toBe(r!.columnas * r!.filas);
+    expect(fertilidadVid!.datos.some((v) => v > 0)).toBe(true);
+    expect(fertilidadOliva!.datos.some((v) => v > 0)).toBe(true);
+    expect(mapa.regiones?.length).toBeGreaterThan(1);
+    expect(new Set(region!.datos).size).toBeGreaterThan(1);
   });
 });

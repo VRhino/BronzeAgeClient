@@ -4,8 +4,9 @@
 import { beforeAll, describe, expect, test, vi } from 'vitest';
 import datos from './plaza/datos.json';
 import type { ProyeccionJugador } from '../src/apiCliente';
-import type { Asentamiento, Edificio } from '../src/tiposDominio';
+import type { Asentamiento, Edificio, PuebloDeMapa } from '../src/tiposDominio';
 import type { ContextoPlaza } from '../src/ui/ganchos';
+import type { MapaGenerado } from '../src/terreno';
 
 vi.stubGlobal('location', { protocol: 'http:', host: 'localhost' });
 vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => datos })));
@@ -20,6 +21,8 @@ const { htmlDiplomacia } = await import('../src/ui/panelDiplomacia');
 const { htmlLateralFaccion } = await import('../src/ui/pestanaFaccion');
 const { htmlBuey, htmlRecetas } = await import('../src/ui/vistaCiudad');
 const { loQueAbreElPrestigio } = await import('../src/ui/avisos');
+const { produce, SUBPESTANA_PUEBLOS } = await import('../src/ui/pueblos');
+const { sitiosDeAldea } = await import('../src/mundo/fertilidad');
 
 beforeAll(async () => {
   await new Promise<void>((listo) => { if (bloqueDeDatos('EDIFICIO_CATALOGO', listo)) listo(); });
@@ -215,5 +218,52 @@ describe('el buey del molino', () => {
     };
     expect(ritmo(false)).toBe('4');
     expect(ritmo(true)).toBe('8');
+  });
+});
+
+// ---------------------------------------------------------------- tanda 2 (0.186.0)
+
+describe('el cultivo de las aldeas', () => {
+  const aldea = (cultivo?: string): PuebloDeMapa => ({ id: 'pueblo-1', tipo: 'aldeaAgricola', madreId: 'as-1', propio: true, posicion: { x: 0, y: 0 }, almacen: {}, capacidad: 1000, ...(cultivo ? { cultivo } : {}) }) as PuebloDeMapa;
+
+  test('lo que produce (y se le puede dejar) depende del cultivo: solo la de trigo tiene rebaño', () => {
+    expect(produce(aldea('trigo'))).toEqual(['trigo', 'livestock', 'carne', 'leche']);
+    expect(produce(aldea())).toEqual(['trigo', 'livestock', 'carne', 'leche']);
+    expect(produce(aldea('vid'))).toEqual(['uva']);
+    expect(produce(aldea('oliva'))).toEqual(['aceituna']);
+  });
+
+  test('al marcar una aldea, la vid sale desde el nivel 3 de la plaza y el olivo desde el 4; con solo el trigo no hay que elegir', () => {
+    const cultivos = (nivel: number): string[] => {
+      const a = { ...plaza(nivel), posicion: { x: 50, y: 50 }, faccionId: 'f-1', cargos: { gobernadorId: 'h' } } as unknown as Asentamiento;
+      const proyeccion = { heroeId: 'h', faccionId: 'f-1', facciones: [], asentamientos: [a], asentamientosAvistados: [], pueblos: [], obrasDeMapa: [], avanzadas: [], caravanas: [] } as unknown as ProyeccionJugador;
+      const c = { proyeccion, asentamiento: a, cargo: 'gobernador', resideAqui: true, escapar: esc, refrescar: () => {} } as unknown as ContextoPlaza;
+      return [...SUBPESTANA_PUEBLOS.html(c).matchAll(/name="pueblo-cultivo" value="(\w+)"/g)].map((m) => m[1]!);
+    };
+    expect(cultivos(1)).toEqual([]);
+    expect(cultivos(3)).toEqual(['trigo', 'vid']);
+    expect(cultivos(4)).toEqual(['trigo', 'vid', 'oliva']);
+  });
+});
+
+describe('los sitios de la aldea, con la tierra de su cultivo', () => {
+  // 10×10 celdas de 1 u, todo tierra firme; el trigo no crece en ninguna, la vid en la mitad de la derecha y el olivo en ninguna.
+  const capa = (valor: (c: number) => number) => ({ columnas: 10, filas: 10, celda: 1, datos: Uint8Array.from({ length: 100 }, (_, i) => valor(i % 10)) });
+  const mapa = { rasters: { terreno: capa(() => 3), fertilidad: capa(() => 0), fertilidadVid: capa((c) => (c >= 5 ? 200 : 0)), fertilidadOliva: capa(() => 0) } } as unknown as MapaGenerado;
+  const zona = { centro: { x: 5, y: 5 }, radio: 4 };
+
+  test('cada cultivo mira su capa', () => {
+    expect(sitiosDeAldea(mapa, zona, [], 0.3, 1)!.validos).toHaveLength(0);
+    const vid = sitiosDeAldea(mapa, zona, [], 0.3, 1, 'vid')!;
+    expect(vid.validos.length).toBeGreaterThan(0);
+    expect(vid.validos.every((q) => q.x >= 5)).toBe(true);
+    expect(vid.mejor).toBeCloseTo(200 / 255);
+    expect(sitiosDeAldea(mapa, zona, [], 0.3, 1, 'oliva')!.validos).toHaveLength(0);
+  });
+
+  test('sin la capa de su cultivo (un mundo de antes) no se sabe', () => {
+    const viejo = { rasters: { terreno: capa(() => 3), fertilidad: capa(() => 255) } } as unknown as MapaGenerado;
+    expect(sitiosDeAldea(viejo, zona, [], 0.3, 1, 'vid')).toBeNull();
+    expect(sitiosDeAldea(viejo, zona, [], 0.3, 1)!.validos.length).toBeGreaterThan(0);
   });
 });

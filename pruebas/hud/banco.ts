@@ -307,11 +307,21 @@ function avisoFundacion(): void {
     const cuerpo = document.querySelector<HTMLElement>('.asent-edif-cuerpo')!;
     // 0.153.0: la de verdad, a ventana completa (zona, pueblos y marcar a la izquierda; avanzadas a la derecha), con las obras de `?obrasMapa=1`
     (p as unknown as { obrasDeMapa: unknown[] }).obrasDeMapa = obrasMapa();
+    // `&aldeas=1` (tanda 69): una aldea de trigo con su rebaño y una de viñas, sin corrales
+    if (qs.get('aldeas')) {
+      const cerca = (dx: number, dy: number) => ({ x: a.posicion.x + dx, y: a.posicion.y + dy });
+      (p as unknown as { pueblos: unknown[] }).pueblos = [
+        { id: 'pueblo-1', tipo: 'aldeaAgricola', cultivo: 'trigo', madreId: a.id, propio: true, posicion: cerca(8, 3), nivelAldea: 2, fertilidad: 0.71, almacen: { trigo: 210, livestock: 40, carne: 18, leche: 35 }, capacidad: 1000, rebano: { especie: 'vacuno', cabezas: 52 } },
+        { id: 'pueblo-2', tipo: 'aldeaAgricola', cultivo: 'vid', madreId: a.id, propio: true, posicion: cerca(-6, 9), nivelAldea: 1, fertilidad: 0.64, almacen: { uva: 120 }, capacidad: 1000 },
+      ];
+    }
     a.cargos = { ...(a.cargos ?? {}), gobernadorId: 'h' } as typeof a.cargos;
     a.faccionId = a.faccionId || 'fac-1';
     (p as unknown as { faccionId: string }).faccionId = a.faccionId;
-    const c = { proyeccion: p, asentamiento: a, cuerpo, ejecutar: async () => null, refrescar: () => undefined, cargo: 'gobernador', resideAqui: true, escapar: e } as unknown as ContextoPlaza;
+    const c = { proyeccion: p, asentamiento: a, cuerpo, ejecutar: async () => null, refrescar: avisoFundacion, cargo: 'gobernador', resideAqui: true, escapar: e } as unknown as ContextoPlaza;
     cuerpo.innerHTML = `<div class="asent-tabs asent-subtabs"><button class="asent-tab activo" type="button">Pueblos y aldeas</button><button class="asent-tab" type="button">Fundación${lista ? '<b class="asent-aviso-atencion">!</b>' : ''}</button></div>${SUBPESTANA_PUEBLOS.html(c)}`;
+    // con su cableado (tanda 69): el cultivo de la aldea nueva repinta la carta
+    SUBPESTANA_PUEBLOS.cablear?.(c);
   }
 }
 avisoFundacion();
