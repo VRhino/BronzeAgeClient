@@ -3413,7 +3413,8 @@ async function cerrarSesionYVolverALogin(mensaje?: string): Promise<void> {
   try { limpiarPantalla?.(); } catch (e) { console.error(e); }
   limpiarPantalla = null;
   await salirDelMundo();
-  cerrarSesion();
+  // el «Cerrar sesión» del jugador anula además su token en el servidor; una sesión que caducó, no
+  cerrarSesion(mensaje === undefined);
   reiniciarAvisos();
   reiniciarCronica();
   estadoCliente.usuarioActivo = '';

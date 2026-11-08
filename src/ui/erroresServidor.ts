@@ -6,6 +6,11 @@ const MENSAJES: Record<string, string> = {
   'sin membresia de jugador en esta partida': 'Tu cuenta no está dentro de esta partida (puede que no te hayas unido, o que tu acceso anterior terminara al borrarse una partida con el mismo nombre).',
   'faccion.nombre_vacio': 'La Facción necesita un nombre.',
   'faccion.nombre_duplicado': 'Ya existe una Facción con ese nombre: elige otro.',
+  // Nombres de Facción y de loadout: 32 caracteres como mucho y sin caracteres de control (motor ef5db11).
+  'faccion.nombre_largo': 'El nombre de la Facción tiene como mucho 32 caracteres.',
+  'faccion.nombre_control': 'El nombre de la Facción lleva caracteres que no valen.',
+  'loadout.nombre_largo': 'El nombre del loadout tiene como mucho 32 caracteres.',
+  'loadout.nombre_control': 'El nombre del loadout lleva caracteres que no valen.',
   'faccion.sigilo_invalido': 'El sigilo no es válido: alguna pieza no es del catálogo, o el color principal y el secundario del fondo son el mismo.',
   'faccion.sigilo_duplicado': 'Otra Facción ya lleva exactamente ese sigilo: cambia alguna pieza o color.',
   'faccion.ya_pertenece': 'Ya perteneces a una Facción: tienes que dejarla antes.',
@@ -185,6 +190,8 @@ const MENSAJES: Record<string, string> = {
   nick_repetido: 'Ese nick ya está registrado.',
   credenciales_invalidas: 'Nick o contraseña incorrectos.',
   codigo_incorrecto: 'El código de invitación no es válido.',
+  ocupado: 'El servidor está ocupado: vuelve a intentarlo en unos segundos.',
+  origen_no_permitido: 'El servidor no acepta conexiones desde esta dirección del cliente (BRONZEAGE_ORIGENES).',
 };
 
 /** El mensaje del jugador para un código del backend; si no se conoce, el propio texto. */

@@ -3,6 +3,17 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.183.0] — 2026-11-08 · La tanda de seguridad del motor · sin cambio de contrato (motor `ef5db11`)
+
+Aviso del motor (motor/aviso-seguridad-admin-y-origenes-2026-11-08.md):
+- **Cerrar sesión anula el token** en el servidor (`DELETE /v1/sesiones/actual`), sin esperar respuesta. Una sesión caducada no lo llama.
+- **Servidor ocupado** (`503 ocupado` al entrar o registrarse): se reintenta solo a los 2 y 4 s; si sigue, «El servidor está ocupado: vuelve a
+  intentarlo en unos segundos».
+- **Nombres de Facción y de loadout**: 32 caracteres como mucho (crear Facción, fusión y propuesta de Facción nueva, loadout), con los textos
+  de los rechazos nuevos (`faccion.nombre_largo`, `faccion.nombre_control`, `loadout.nombre_largo`, `loadout.nombre_control`).
+- **CORS cerrado**: en desarrollo no cambia nada. Si el servidor no contesta, el aviso recuerda que un cliente abierto por un nombre de dominio
+  o un túnel necesita ese nombre en `BRONZEAGE_ORIGENES`.
+
 ## [0.182.0] — 2026-11-08 · De quién es la escolta de una caravana · contrato 0.18.0 (motor `3827e6b`)
 
 Víctor (2026-11-07): la escolta de otro héroe salía como «Escuadra · De otro héroe».

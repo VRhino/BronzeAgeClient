@@ -549,7 +549,7 @@ export function renderPestanaFaccion(
         <span class="faction-kicker">Nueva identidad</span><h2>Crear facción${ayuda('faccion:crear', 'El nombre será visible para todos los jugadores.')}</h2>
         <form id="form-crear-faccion" class="faction-form">
           <label for="input-nombre-faccion">Nombre de la facción</label>
-          <input id="input-nombre-faccion" class="form-input" type="text" maxlength="60" required autocomplete="off" placeholder="Ej. Casa de Micenas" />
+          <input id="input-nombre-faccion" class="form-input" type="text" maxlength="32" required autocomplete="off" placeholder="Ej. Casa de Micenas" />
           ${renderSelectorSigilo()}
           <div id="error-faccion" class="faction-error" role="alert"></div>
           <button id="btn-submit-crear-faccion" class="btn-primary" type="submit">Crear facción</button>

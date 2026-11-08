@@ -24,11 +24,21 @@ export class ErrorDeAcceso extends Error {
   }
 }
 
-async function pedir<T>(base: string, ruta: string, cuerpo: unknown): Promise<T> {
+/** Un `503 ocupado` (motor ef5db11: todos sus cálculos de clave ocupados) se reintenta solo a los 2 y 4 s; si sigue, sale el error. */
+async function pedir<T>(base: string, ruta: string, cuerpo: unknown, esperas = [2000, 4000]): Promise<T> {
   const r = await fetch(`${base}${ruta}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(cuerpo) });
   const datos = (await r.json().catch(() => ({}))) as Record<string, unknown>;
+  if (r.status === 503 && datos.error === 'ocupado' && esperas.length) {
+    await new Promise((ok) => setTimeout(ok, esperas[0]));
+    return pedir<T>(base, ruta, cuerpo, esperas.slice(1));
+  }
   if (!r.ok) throw new ErrorDeAcceso(r.status, String(datos.error ?? 'desconocido'), String(datos.mensaje ?? r.statusText));
   return datos as T;
+}
+
+/** `DELETE /v1/sesiones/actual` (motor ef5db11): anula el token al cerrar sesión. Sin esperar ni quejarse: si no llega, el token caduca solo. */
+export function anularSesion(base: string, token: string): void {
+  void fetch(`${base}/v1/sesiones/actual`, { method: 'DELETE', headers: { authorization: `sesion ${token}` }, keepalive: true }).catch(() => {});
 }
 
 /** `POST /v1/registro`. El código es el de invitación (vacío si el servidor tiene el registro abierto). */

@@ -1,6 +1,7 @@
 // La superficie de red del cliente (sin lógica de negocio, solo I/O). Desde la fase 7, sobre la sesión del contrato 05 del motor en Rust.
 import type { MapaGenerado } from './terreno';
-import { entrar, ErrorDeAcceso, registrar } from './contrato/acceso';
+import { anularSesion, entrar, ErrorDeAcceso, registrar } from './contrato/acceso';
+import { explicarError } from './ui/erroresServidor';
 import { ErrorDeSesion, Sesion } from './contrato/sesion';
 import { Resultado } from './contrato/gen/bronzeage/v1/session_pb';
 import { TipoEntidad } from './contrato/gen/bronzeage/v1/common_pb';
@@ -196,7 +197,7 @@ export interface RespuestaComando {
 // Desde la fase 7 (2026-10-26) esta superficie habla con el motor en Rust y no con el REST del backend TypeScript: por debajo, una sola
 // `Sesion` del contrato 05 (`src/contrato/`) y el adaptador de `src/motor/` (lectura: el almacén a `ProyeccionJugador`; escritura: el
 // comando de siempre a una `Orden`). Los paneles no cambian. El servidor sirve en un puerto el HTTP de acceso, el artefacto de mundo y el
-// WebSocket; `VITE_API_BASE` lo apunta (por defecto, el mismo host en el puerto 7878; el CORS del motor está abierto).
+// WebSocket; `VITE_API_BASE` lo apunta (por defecto, el mismo host en el puerto 7878; el motor solo acepta páginas de su máquina, de su IP en la red local o de un nombre de `BRONZEAGE_ORIGENES`, motor ef5db11).
 const BASE = import.meta.env.VITE_API_BASE ?? `${location.protocol}//${location.hostname}:7878`;
 const URL_WS = `${BASE.replace(/^http/, 'ws')}/`;
 const STORAGE_KEY_SESION = 'bac_jugador_sesion_id';
@@ -218,9 +219,9 @@ let mapaCargado: { hash: string; mapa: MapaGenerado } | null = null;
 
 function aApiError(e: unknown): ApiError {
   if (e instanceof ApiError) return e;
-  if (e instanceof ErrorDeAcceso) return new ApiError(e.status, e.message && e.message !== e.codigo ? e.message : e.codigo);
+  if (e instanceof ErrorDeAcceso) return new ApiError(e.status, e.codigo === 'ocupado' ? explicarError('ocupado') : e.message && e.message !== e.codigo ? e.message : e.codigo);
   if (e instanceof ErrorDeSesion) return new ApiError(e.codigo === 'token_invalido' ? 401 : 403, `${e.message} (${e.codigo})`);
-  return new ApiError(0, 'No se pudo contactar con el servidor. ¿Está corriendo `bronzeage-servidor` (cargo run --release -p servicio en el motor)?');
+  return new ApiError(0, 'No se pudo contactar con el servidor. ¿Está corriendo `bronzeage-servidor` (cargo run --release -p servicio en el motor)? Si abres el cliente por un nombre de dominio o un túnel, ese nombre tiene que estar en `BRONZEAGE_ORIGENES` del servidor.');
 }
 
 /** Avisa a la interfaz de que el mundo cambió (como el `tick` del WebSocket viejo), agrupando lo que llega seguido. */
@@ -459,7 +460,9 @@ export function cerrarPresencia(): void {
   sesion = null;
 }
 
-export function cerrarSesion(): void {
+/** Cierra la sesión en el cliente; `anular` (el «Cerrar sesión» del jugador) además anula el token en el servidor. */
+export function cerrarSesion(anular = false): void {
+  if (anular && sesionIdMemoria) anularSesion(BASE, sesionIdMemoria);
   cerrarPresencia();
   sesionIdMemoria = null;
   usuarioMemoria = null;

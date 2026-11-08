@@ -72,7 +72,7 @@ function renderEditor(h: HeroeProyectado, e: Escapar): string {
   const b = borrador!;
   return `
     <strong class="heroe-sub">${b.loadoutId ? 'Editar loadout' : 'Nuevo loadout'}</strong>
-    <input class="asent-cargo-sel" type="text" data-campo="nombre" value="${e(b.displayName)}" placeholder="Nombre" autocomplete="off" />
+    <input class="asent-cargo-sel" type="text" data-campo="nombre" value="${e(b.displayName)}" placeholder="Nombre" maxlength="32" autocomplete="off" />
     <div class="mapa-lista">${
       h.escuadrones
         .map((s) => `<label class="mapa-lista-item heroe-fila con-tropa">${iconoEnFila(s.tropaId)}<div><strong>${e(s.nombre)}</strong><span>${s.cantidad} hombres · ${s.costeLiderazgo} de Liderazgo · ${DONDE[s.contenedor.tipo]}</span></div><input type="checkbox" data-squad="${e(s.id)}"${b.squadIds.has(s.id) ? ' checked' : ''} /></label>`)

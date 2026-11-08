@@ -198,7 +198,7 @@ function tarjeta(c: Clausula, i: number, e: Escapar): string {
     ? `<div class="propuesta-terminos"><label class="diplo-campo"><span>Tributo</span><select class="form-input" data-propuesta-campo="recurso" data-i="${i}">${TRIBUTOS.map((t) => `<option value="${t}"${t === c.recurso ? ' selected' : ''}>${e(RECURSO_NOMBRE[t] ?? t)}</option>`).join('')}</select></label>
         <label class="diplo-campo diplo-campo-corto"><span>Por minuto</span><input class="form-input" type="number" min="0" step="1" value="${c.cantidad}" data-propuesta-campo="cantidad" data-i="${i}" /></label></div>`
     : c.tipo === 'fusion'
-      ? `<div class="propuesta-terminos"><label class="diplo-campo"><span>Nombre de la nueva</span><input class="form-input" type="text" maxlength="40" placeholder="Nombre de la Facción nueva" value="${e(c.nombre)}" data-propuesta-campo="nombre" data-i="${i}" /></label>
+      ? `<div class="propuesta-terminos"><label class="diplo-campo"><span>Nombre de la nueva</span><input class="form-input" type="text" maxlength="32" placeholder="Nombre de la Facción nueva" value="${e(c.nombre)}" data-propuesta-campo="nombre" data-i="${i}" /></label>
         <label class="diplo-campo"><span>Rey de la nueva</span><select class="form-input" data-propuesta-campo="rey" data-i="${i}"><option value="yo"${c.rey === 'yo' ? ' selected' : ''}>Tú</option><option value="otro"${c.rey === 'otro' ? ' selected' : ''}>El de la otra Facción</option></select></label></div>`
       : '';
   return `<div class="propuesta-clausula${c.tipo === 'guerra' ? ' guerra' : ''}"><div class="propuesta-clausula-cab"><span class="propuesta-icono" aria-hidden="true">${op.icono}</span><strong>${op.nombre}</strong><small>${e(op.ayuda)}</small>${quitar}</div>${terminos}</div>`;

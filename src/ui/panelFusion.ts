@@ -24,7 +24,7 @@ export function htmlFusion(proyeccion: ProyeccionJugador, faccion: Faccion, esca
     : ''}</div>`;
   const formulario = esRey && candidatas.length > 0
     ? `<div class="faction-list-item"><select id="sel-fusion" class="form-input">${candidatas.map((f) => `<option value="${escaparHtml(f.id)}" data-rey="${escaparHtml(f.reyId ?? '')}">${escaparHtml(f.nombre)}</option>`).join('')}</select>` +
-      `<input id="nombre-fusion" class="form-input" type="text" maxlength="40" placeholder="Nombre de la Facción nueva" />` +
+      `<input id="nombre-fusion" class="form-input" type="text" maxlength="32" placeholder="Nombre de la Facción nueva" />` +
       `<select id="rey-fusion" class="form-input"><option value="yo">Rey: tú</option><option value="otro">Rey: el de la otra Facción</option></select>` +
       `<button id="btn-proponer-fusion" class="btn-secondary" type="button">Proponer fusión</button></div>`
     : '';
