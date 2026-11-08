@@ -70,6 +70,8 @@ if (qs0.get('prestigio')) {
   q.faccionId = a.faccionId;
   q.facciones = [{ id: a.faccionId, nombre: 'Casa de Micenas', nivel: 2, prestigio: Number(qs0.get('prestigio')), capitalId: a.id, reyId: 'h' }];
 }
+// `&molino=1` (tanda 69): la plaza con un molino activo; `&molino=buey`, ya con su buey. `?ficha=molino` abre su ficha.
+if (qs0.get('molino')) a.edificios = [...(a.edificios ?? []), { id: 'ed-molino', tipo: 'molino', estado: 'activo', nivelInterno: 1, posicion: a.posicion, ...(qs0.get('molino') === 'buey' ? { buey: true } : {}) } as Edificio];
 // `&comida=1` (tanda 69): el almacén con la comida nueva, junto al trigo
 if (qs0.get('comida')) {
   const hay = { harina: 140, pan: 260, carne: 45, leche: 80, queso: 30, uva: 120, vino: 40, aceituna: 90, aceite: 25 };
@@ -226,7 +228,7 @@ if (ficha) {
 const elegirParaFicha = (): void => {
   if (!ficha) return;
   const conSiguiente = (x: Edificio): boolean => Boolean(nivelesDeEdificio(x.tipo)?.[String((x.nivelInterno ?? 1) + 1)]);
-  const elegido = (a.edificios ?? []).find((x) => (ficha === 'obra' ? x.estado === 'en_construccion' : x.estado === 'activo' && !x.mejora && x.tipo !== 'centroUrbano' && conSiguiente(x)));
+  const elegido = (a.edificios ?? []).find((x) => (ficha === 'molino' ? x.tipo === 'molino' : ficha === 'obra' ? x.estado === 'en_construccion' : x.estado === 'activo' && !x.mejora && x.tipo !== 'centroUrbano' && conSiguiente(x)));
   if (!elegido) return;
   // `?ficha=mejora`: la ciudad del banco no trae mejoras en marcha; se le pone una a ese edificio, a medias
   if (ficha === 'mejora') elegido.mejora = { nivelObjetivo: (elegido.nivelInterno ?? 1) + 1, completaEn: p.instante + 35 * 60_000 };

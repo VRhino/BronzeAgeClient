@@ -6,7 +6,7 @@
 // La barra de avance de las obras es una estimación: el motor manda solo cuándo acaba la obra; la duración sale del catálogo
 // (`tiempoConstruccionMinutos`, la `obraMinutos` del nivel o `× MEJORA_EDIFICIO.multiplicadorPorNivel`), con las políticas de hoy
 // (`factorTiempoConstruccion`) y, si se reconstruye, `OCUPACION.fraccionCosteReconstruccion`.
-import { bloqueDeDatos } from '../apiCliente';
+import { bloqueDeDatos, type ReglasPrestigio } from '../apiCliente';
 import { EDIFICIO_NOMBRE, RECURSO_NOMBRE } from '../paletas';
 import type { Asentamiento, Edificio } from '../tiposDominio';
 import { estadoCliente } from './estadoCliente';
@@ -57,7 +57,7 @@ function motivoParaConstruir(a: Asentamiento, tipo: string, def: DefEdificio, ca
   // Tanda 69 (Diplomacia_Facciones §3.5b): la Maravilla pide el prestigio de la Facción, y la estatua solo va en la capital, tantas como umbrales
   // de `PRESTIGIO.estatuas` alcance (contando las hechas y las que están en obra). Sin las reglas todavía, la estatua no sale.
   if (tipo === 'maravilla' || tipo === 'estatua') {
-    const reglas = bloqueDeDatos<{ estatuas?: number[]; maravilla?: number }>('PRESTIGIO');
+    const reglas = bloqueDeDatos<ReglasPrestigio>('PRESTIGIO');
     const faccion = p?.facciones.find((f) => f.id === p.faccionId);
     const prestigio = faccion?.prestigio ?? 0;
     if (tipo === 'maravilla' && reglas?.maravilla !== undefined && prestigio < reglas.maravilla) return `Pide ${reglas.maravilla} de prestigio de la Facción.`;

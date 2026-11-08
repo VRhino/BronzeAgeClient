@@ -22,11 +22,11 @@ const p = {
   gameId: 'banco', instante: AHORA, version: 1, heroeId: 'heroe-1', faccionId: 'fac-1', mapaId: 'm',
   heroe: { id: 'heroe-1', displayName: 'Víctor', ubicacion: { tipo: 'asentamiento', asentamientoId: 'as-1' }, carro: {}, escuadrones: [] },
   facciones: [
-    { id: 'fac-1', nombre: 'Casa de Micenas', sigilo: sig(1), reyId: 'heroe-1', embajadorId: 'heroe-9', nivel: 3, reputacion: 14, capFundacion: { cap: 4, plazas: 2, caravanas: 1 }, cuposDeNivel: [{ nivel: 2, cupo: 2, ocupadas: 1 }, { nivel: 3, cupo: 1, ocupadas: 1 }, { nivel: 4, cupo: 0, ocupadas: 0 }, { nivel: 5, cupo: 0, ocupadas: 0 }], experiencia: 420, ciudadanosIds: ['heroe-1', 'heroe-9', 'heroe-21'],
+    { id: 'fac-1', nombre: 'Casa de Micenas', sigilo: sig(1), reyId: 'heroe-1', embajadorId: 'heroe-9', nivel: 3, reputacion: 14, prestigio: 340, topeAlianzas: 4, capFundacion: { cap: 4, plazas: 2, caravanas: 1 }, cuposDeNivel: [{ nivel: 2, cupo: 2, ocupadas: 1 }, { nivel: 3, cupo: 1, ocupadas: 1 }, { nivel: 4, cupo: 0, ocupadas: 0 }, { nivel: 5, cupo: 0, ocupadas: 0 }], experiencia: 420, ciudadanosIds: ['heroe-1', 'heroe-9', 'heroe-21'],
       miembros: [{ heroeId: 'heroe-1', residenciaId: 'as-1', cargos: ['rey'], participacion: 420 }, { heroeId: 'heroe-9', residenciaId: 'as-4', cargos: ['embajador'], participacion: 180 }] },
-    { id: 'fac-2', nombre: 'Reino de Hatti', sigilo: sig(2), reyId: 'heroe-40', nivel: 4, reputacion: -3, ciudadanosIds: ['heroe-40', 'heroe-41'] },
-    { id: 'fac-3', nombre: 'Señorío de Ugarit', sigilo: sig(3), reyId: 'heroe-50', nivel: 2, reputacion: 20, ciudadanosIds: ['heroe-50', 'heroe-51', 'heroe-52', 'heroe-53'], esBot: true },
-    { id: 'fac-4', nombre: 'Casa de Pilos', sigilo: sig(4), reyId: 'heroe-60', nivel: 2, reputacion: 5, ciudadanosIds: ['heroe-60'] },
+    { id: 'fac-2', nombre: 'Reino de Hatti', sigilo: sig(2), reyId: 'heroe-40', nivel: 4, reputacion: -3, prestigio: 1210, topeAlianzas: 13, ciudadanosIds: ['heroe-40', 'heroe-41'] },
+    { id: 'fac-3', nombre: 'Señorío de Ugarit', sigilo: sig(3), reyId: 'heroe-50', nivel: 2, reputacion: 20, prestigio: 95, topeAlianzas: 1, ciudadanosIds: ['heroe-50', 'heroe-51', 'heroe-52', 'heroe-53'], esBot: true },
+    { id: 'fac-4', nombre: 'Casa de Pilos', sigilo: sig(4), reyId: 'heroe-60', nivel: 2, reputacion: 5, prestigio: 40, topeAlianzas: 1, ciudadanosIds: ['heroe-60'] },
   ],
   directorioFacciones: Array.from({ length: 14 }, (_, i) => ({ id: `fac-d${i}`, nombre: ['Tribu de Arzawa', 'Gente de Lukka', 'Clan de Mitanni', 'Casa de Tebas', 'Reino de Alashiya', 'Casa de Cnosos', 'Señorío de Troya'][i % 7] + (i >= 7 ? ' II' : ''), sigilo: sig(i + 10), nivel: 1 + (i % 3), ciudadanos: 1 + (i % 4), esBot: i % 3 === 0 })),
   asentamientos: [{ id: 'as-1', nombre: 'Micenas', faccionId: 'fac-1', nivel: 3, posicion: { x: 410, y: 300 } }],
@@ -97,6 +97,11 @@ const ex = (cantidad: number, capacidad: number, producido: number, consumido: n
     edificios: [{ id: 'ed-9', tipo: 'vivienda', estado: 'activo', ambito: 'asentamiento', posicion: { x: 0, y: 0 }, danado: true }], cupoGuarnicion: 30 },
 ];
 p.asentamientosAvistados.push({ id: 'as-4', nombre: 'Tirinto', faccionId: 'fac-1', nivel: 2, posicion: { x: 380, y: 340 } } as never);
+// `&tope=1` (tanda 69): tu Facción con una sola alianza de tope (la de Ugarit) y Pilos que te propone otra: solo se puede rechazar
+if (new URLSearchParams(location.search).get('tope')) {
+  Object.assign(p.facciones[0]!, { prestigio: 60, topeAlianzas: 1 });
+  p.propuestasRelacion = [{ id: 'prop-3', tipo: 'alianza', faccionAId: 'fac-4', faccionBId: 'fac-1', expiraEn: AHORA + 40 * H } as never];
+}
 estadoCliente.proyeccionUltima = p;
 
 const panel = document.querySelector<HTMLElement>('.jugador-panel')!;

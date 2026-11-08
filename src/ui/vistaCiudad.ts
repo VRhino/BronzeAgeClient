@@ -57,6 +57,30 @@ function produccionDe(p: ProyeccionJugador, edificio: Edificio): { recurso: stri
     .map((it) => ({ recurso: it.recurso, porMinuto: it.cantidadPorMinuto / Math.max(1, it.activos), activos: it.activos }));
 }
 
+/** Cuántas veces más rinde un taller con su buey (`factorBuey` del catálogo: solo el molino lo tiene, tanda 69); 1 sin buey. */
+function factorDeBuey(e: Edificio, alCargar?: () => void): number {
+  if (!e.buey) return 1;
+  return bloqueDeDatos<Record<string, { factorBuey?: number }>>('EDIFICIO_CATALOGO', alCargar)?.[e.tipo]?.factorBuey ?? 1;
+}
+const vecesMas = (factor: number): string => (factor === 2 ? 'el doble' : `${fmt(factor)} veces más`);
+
+/** El buey del molino (tanda 69, Economia_Construccion §5.3): con él muele `factorBuey` veces más gastando el mismo trigo por saco. Se compra
+ * del almacén de la plaza con cargo, también con la obra en marcha (`asignarBuey`), y se pierde con el molino. Sin cargo solo se dice si lo tiene. */
+export function htmlBuey(a: Asentamiento, edificio: Edificio, cargo: Cargo, e: Escapar): string {
+  const factor = bloqueDeDatos<Record<string, { factorBuey?: number }>>('EDIFICIO_CATALOGO')?.[edificio.tipo]?.factorBuey;
+  if (!factor) return '';
+  if (edificio.buey) return `<p class="asent-lado-nota ficha-buey">🐂 Con su buey muele ${vecesMas(factor)}.</p>`;
+  const coste = bloqueDeDatos<Record<string, { costo?: Record<string, number> }>>('ANIMAL_CATALOGO')?.buey?.costo;
+  if (!cargo || !coste) return '';
+  const caro = Object.entries(coste).some(([r, n]) => (a.almacen?.[r]?.cantidad ?? 0) < n);
+  return `<div class="ficha-mejora ficha-buey${caro ? ' caro' : ''}">
+      <span class="faction-kicker">Buey del molino</span>
+      <p class="asent-lado-nota">Con un buey muele ${vecesMas(factor)} gastando el mismo trigo por saco. Se queda en el molino y se pierde con él.</p>
+      <div class="ficha-mejora-coste">${chipsDeCoste(a, coste, e)}</div>
+      <button class="btn-primary" type="button" data-ficha-buey="${e(edificio.id)}"${caro ? ` title="${e('No hay bastante en el almacén todavía')}"` : ''}>🐂 Comprar el buey</button>
+    </div>`;
+}
+
 const tieneRecetas = (e: Edificio): boolean => (nivelesDeEdificio(e.tipo)?.[String(e.nivelInterno ?? 1)]?.recetas.length ?? 0) > 0;
 
 /** Lo que enseña el tooltip del lienzo: nombre, nivel, estado, notas y producción. */
@@ -134,6 +158,7 @@ function htmlFicha(p: ProyeccionJugador, a: Asentamiento, edificio: Edificio, e:
     ${obra}
     ${prod ? `<span class="faction-kicker">Producción</span><ul class="asent-ficha-lista">${prod}</ul>` : ''}
     ${recetas ? `<span class="faction-kicker">Recetas de este nivel ${ayuda('plaza:ficha-recetas', 'Consumo por edificio: no lo publica el servidor.')}</span><ul class="asent-ficha-lista">${recetas}</ul>` : ''}
+    ${htmlBuey(a, edificio, cargo, e)}
     ${acciones}`;
 }
 
@@ -189,6 +214,7 @@ export function repintarFicha(): void {
     };
     fichaEl!.querySelector('[data-ficha-cerrar]')?.addEventListener('click', () => { seleccion = null; alCambiar(); });
     fichaEl!.querySelector<HTMLElement>('[data-ficha-mejorar]')?.addEventListener('click', (ev) => void lanzar('mejorarEdificioAhora', { asentamientoId: a.id, cargo: cargoDe(a, p.heroeId), edificioId: edificio.id }, ev.currentTarget as HTMLElement));
+    fichaEl!.querySelector<HTMLElement>('[data-ficha-buey]')?.addEventListener('click', (ev) => void lanzar('asignarBuey', { asentamientoId: a.id, cargo: cargoDe(a, p.heroeId), edificioId: edificio.id }, ev.currentTarget as HTMLElement));
     fichaEl!.querySelector<HTMLElement>('[data-ficha-quitar]')?.addEventListener('click', (ev) => void lanzar('quitarDeCola', { asentamientoId: a.id, cargo: cargoDe(a, p.heroeId), edificioId: edificio.id }, ev.currentTarget as HTMLElement));
     fichaEl!.querySelector<HTMLElement>('[data-ficha-cancelar-obra]')?.addEventListener('click', (ev) => {
       const boton = ev.currentTarget as HTMLElement;
@@ -263,7 +289,7 @@ function recetasDe(a: Asentamiento, alCargar: () => void): RecetaAgregada[] {
     for (const r of nivelesDeEdificio(ed.tipo, alCargar)?.[String(ed.nivelInterno ?? 1)]?.recetas ?? []) {
       const ag = porRecurso.get(r.produce) ?? { produce: r.produce, talleres: new Map(), porMinuto: 0, insumos: r.consumePorUnidad, tecnologia: r.requiereTecnologia, edificioReq: r.requiereEdificio };
       ag.talleres.set(ed.tipo, (ag.talleres.get(ed.tipo) ?? 0) + 1);
-      ag.porMinuto += r.produccionBase;
+      ag.porMinuto += r.produccionBase * factorDeBuey(ed, alCargar);
       porRecurso.set(r.produce, ag);
     }
   }

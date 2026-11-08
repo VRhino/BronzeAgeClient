@@ -12,12 +12,12 @@
 // funden en UNA línea con contador y rango de horas. La insignia cuenta líneas (grupos) sin leer, no eventos.
 // Un evento nuevo = una rama en `procesar` que llame a `anotar` con su categoría y urgencia.
 import { anotarHechoMercenario, textoDeHechoMercenario } from './mercenarios';
-import { consultarEventos, tropasReclutables } from '../apiCliente';
+import { bloqueDeDatos, consultarEventos, tropasReclutables, type ReglasPrestigio } from '../apiCliente';
 import type { EventoDominio } from '../tiposDominio';
 import { esPeticionNueva, MINIMO_FORMACION } from './ejercitos';
 import { estadoCliente, textoEnTiempoReal } from './estadoCliente';
 import { nombreDeHeroe } from './nombres';
-import { informeDeEvento, textoDeBotin, type InformeDeCombate } from './informeCombate';
+import { enumerar, informeDeEvento, textoDeBotin, type InformeDeCombate } from './informeCombate';
 import { plazo } from './panelDiplomacia';
 import { textoDeMision } from './misiones';
 import { RECURSO_NOMBRE } from '../paletas';
@@ -26,6 +26,24 @@ import { textoDeHechoAeda } from './aedas';
 /** Los eventos de «alguien te ha mirado»: el backend los emite sin decir quién. */
 const CODIGOS_DE_AVISO = new Set(['asentamiento.observado', 'columna.observada', 'caravana.observada', 'asentamiento.informe_pedido']);
 const MAX_HISTORIAL = 80;
+
+/** El `motivo` de `faccion.prestigio` (motor `prestigio.rs`). */
+const MOTIVO_DE_PRESTIGIO: Record<number, string> = {
+  1: 'una victoria contra otra Facción', 2: 'conquistar una plaza', 3: 'fundar una plaza', 4: 'subir una plaza de nivel', 5: 'comerciar con otra Facción',
+};
+
+/** Lo que abre pasar de `antes` a `ahora` de prestigio (`PRESTIGIO`): una alianza más a la vez, otra estatua en la capital, la Maravilla. */
+export function loQueAbreElPrestigio(antes: number, ahora: number): string[] {
+  const r = bloqueDeDatos<ReglasPrestigio>('PRESTIGIO');
+  if (!r) return [];
+  const cruza = (u: number): boolean => antes < u && ahora >= u;
+  const cada = r.alianzas?.unaMasCada;
+  return [
+    cada && Math.floor(ahora / cada) > Math.floor(antes / cada) ? 'una alianza más a la vez' : '',
+    (r.estatuas ?? []).some(cruza) ? 'otra estatua en la capital' : '',
+    r.maravilla !== undefined && cruza(r.maravilla) ? 'la Maravilla' : '',
+  ].filter(Boolean);
+}
 
 export type CategoriaAviso = 'combate' | 'diplomacia' | 'movimientos' | 'inteligencia' | 'economia' | 'aedas';
 /** Orden y nombre de las categorías en el panel. */
@@ -310,6 +328,23 @@ export function procesar(e: EventoDominio, heroeId: string, modo: Modo): void {
     const botin = textoDeBotin({ madera: mil(p.madera), piedra: mil(p.piedra), trigo: mil(p.trigo) }, Number(p.monedas ?? 0), 1, '');
     const texto = `Vencéis a los bandidos que os emboscaron${p.nivel ? ` (nivel ${p.nivel})` : ''}: el campamento cae${botin ? ` y os lleváis ${botin}` : ''}.`;
     anotar({ ...base, texto, clase: 'combate', titulo: 'Bandidos', categoria: 'combate', urgente: false, clave: `${e.codigo}|${e.version}` }, modo);
+    return;
+  }
+  if (e.codigo === 'construccion.buey_asignado') {
+    // El molino de la plaza tiene ya su buey (tanda 69, `asignarBuey`).
+    anotar({ ...base, texto: 'El molino de la plaza tiene ya su buey: muele el doble.', clase: 'mirada', titulo: 'Obras', categoria: 'economia', urgente: false, clave: `${e.codigo}|${e.version}` }, modo);
+    return;
+  }
+  if (e.codigo === 'faccion.prestigio') {
+    // Tu Facción gana prestigio (tanda 69, Diplomacia_Facciones §3.5b). Los de cada motivo se funden en una línea con su contador; el que cruza un
+    // umbral (una alianza más, una estatua, la Maravilla) va suelto y lo dice.
+    const p = (e.payload ?? {}) as { ganado?: number; total?: number; motivo?: number };
+    const ganado = Number(p.ganado ?? 0);
+    const total = Number(p.total ?? 0);
+    const por = MOTIVO_DE_PRESTIGIO[Number(p.motivo)];
+    const abre = loQueAbreElPrestigio(total - ganado, total);
+    const texto = `Tu Facción gana ${ganado} de prestigio${por ? ` por ${por}` : ''} y llega a ${total.toLocaleString('es-ES')}.${abre.length ? ` Ya cabe ${enumerar(abre)}.` : ''}`;
+    anotar({ ...base, texto, clase: abre.length ? 'baja' : 'mirada', titulo: 'Prestigio', categoria: 'diplomacia', urgente: false, clave: abre.length ? `${e.codigo}|${e.version}` : `${e.codigo}|${p.motivo ?? ''}` }, modo);
     return;
   }
   if (e.codigo === 'construccion.obra_cancelada') {

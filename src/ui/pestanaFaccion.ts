@@ -1,4 +1,4 @@
-import { bloqueDeDatos, type ProyeccionJugador } from '../apiCliente';
+import { bloqueDeDatos, type ProyeccionJugador, type ReglasPrestigio } from '../apiCliente';
 import type { Asentamiento, Faccion, Sigilo } from '../tiposDominio';
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import { grupo, htmlEstadoPie, htmlPoblacionPie, pieza } from './hudPlaza';
@@ -17,7 +17,7 @@ import { htmlAnexion } from './panelAnexion';
 import { htmlFusion } from './panelFusion';
 import { htmlAdmision } from './panelAdmision';
 import { htmlCargos, htmlDejarFaccion } from './panelCargos';
-import { htmlDiplomacia } from './panelDiplomacia';
+import { alianzasActivas, htmlDiplomacia } from './panelDiplomacia';
 
 /** «Nombre del Rey (Facción)» del Gran Rey de una Liga: el Gran Rey es la Facción señora, y quien la manda es su Rey. */
 function granRey(p: ProyeccionJugador, faccionId: string): string {
@@ -134,6 +134,41 @@ function htmlExperienciaFaccion(faccion: Faccion): string {
   </div>`;
 }
 
+/** El prestigio de tu Facción (tanda 69, Diplomacia_Facciones §3.5b): solo sube, y lo que abre son umbrales: las alianzas a la vez (activas de
+ * `topeAlianzas`), las estatuas de la capital y la Maravilla. Debajo, lo próximo que abre y a cuánto. */
+function htmlPrestigioFaccion(p: ProyeccionJugador, faccion: Faccion, e: (valor: string) => string): string {
+  if (faccion.prestigio === undefined) return '';
+  const r = bloqueDeDatos<ReglasPrestigio>('PRESTIGIO');
+  const n = (v: number) => Math.floor(v).toLocaleString('es-ES');
+  const prestigio = faccion.prestigio;
+  const estatuas = r?.estatuas ?? [];
+  const caben = estatuas.filter((u) => prestigio >= u).length;
+  const usos = [
+    faccion.topeAlianzas !== undefined ? `<span title="Alianzas activas de las que caben a la vez">🤝 Alianzas <b>${alianzasActivas(p, faccion.id)} de ${faccion.topeAlianzas}</b></span>` : '',
+    caben ? `<span title="Las estatuas que caben en la capital">🗿 Estatuas <b>${caben}</b></span>` : '',
+    r?.maravilla !== undefined && prestigio >= r.maravilla ? '<span title="Ya podéis levantar la Maravilla en una plaza de nivel 5">🏛 Maravilla</span>' : '',
+  ].filter(Boolean).join('');
+  // Lo próximo que abre: el umbral más cercano por encima, con todo lo que abre a la vez.
+  const proximos: [number, string][] = [];
+  const cada = r?.alianzas?.unaMasCada;
+  if (cada) proximos.push([(Math.floor(prestigio / cada) + 1) * cada, 'una alianza más']);
+  if (estatuas[caben] !== undefined) proximos.push([estatuas[caben]!, caben ? `la ${caben + 1}.ª estatua` : 'una estatua en la capital']);
+  if (r?.maravilla !== undefined && prestigio < r.maravilla) proximos.push([r.maravilla, 'la Maravilla']);
+  const umbral = Math.min(...proximos.map(([u]) => u));
+  const abre = proximos.filter(([u]) => u === umbral).map(([, que]) => que);
+  const siguiente = abre.length ? `<small>A ${n(umbral)}: ${abre.length > 1 ? `${abre.slice(0, -1).join(', ')} y ${abre[abre.length - 1]}` : abre[0]}</small>` : '';
+  const hechos = r ? [
+    r.victoria ? `las victorias contra otras Facciones (${r.victoria})` : '', r.conquista ? `las conquistas (${r.conquista})` : '', r.fundacion ? `las fundaciones (${r.fundacion})` : '',
+    r.ascensoPorNivel ? `las subidas de nivel de las plazas (${r.ascensoPorNivel} × el nivel nuevo)` : '', r.comercio ? `el comercio con otras Facciones (${r.comercio})` : '',
+  ].filter(Boolean) : [];
+  const texto = `${hechos.length ? `Sube con ${hechos.slice(0, -1).join(', ')} y ${hechos[hechos.length - 1]}. ` : ''}No se gasta ni se pierde. Da una alianza a la vez más cada ${cada ?? 100} de prestigio${estatuas.length ? `, las estatuas de la capital (a ${estatuas.map(n).join(', ')})` : ''}${r?.maravilla !== undefined ? ` y la Maravilla (a ${n(r.maravilla)})` : ''}.`;
+  return `<div class="faccion-xp faccion-prestigio">
+    <div class="faccion-xp-cab"><span>Prestigio${ayuda('faccion:prestigio', e(texto))}</span><strong>${n(prestigio)}</strong></div>
+    ${usos ? `<div class="faccion-prestigio-usos">${usos}</div>` : ''}
+    ${siguiente}
+  </div>`;
+}
+
 /** El panel fijo de la izquierda de la ventana de Facción: el escudo grande, el nombre, el resumen y, abajo, las plazas, los títulos y Dejar la Facción. */
 export function htmlLateralFaccion(proyeccion: ProyeccionJugador, e: (valor: string) => string): string {
   const faccion = faccionDelJugador(proyeccion);
@@ -144,6 +179,7 @@ export function htmlLateralFaccion(proyeccion: ProyeccionJugador, e: (valor: str
     <h2 class="faccion-lateral-nombre">${e(faccion.nombre)}</h2>
     <span class="faction-kicker">Tu facción${esGranRey ? ' · Gran Rey' : ''}</span>
     ${htmlExperienciaFaccion(faccion)}
+    ${htmlPrestigioFaccion(proyeccion, faccion, e)}
     <div class="faccion-lateral-resumen">${htmlResumenFaccion(proyeccion, faccion, e)}</div>
     <div class="faccion-lateral-pie">
       ${htmlCuposFaccion(proyeccion, faccion, e)}
@@ -342,6 +378,7 @@ export function htmlListaFacciones(p: ProyeccionJugador, e: (valor: string) => s
     const liga = f.liga ? `Liga ${f.liga.tieneVasallaje ? 'por vasallaje' : 'por alianza'}${f.liga.granReyId === f.id ? ' · Gran Rey' : f.liga.granReyId ? ` de ${nombreDe(f.liga.granReyId)}` : ''}` : '';
     const datos = [
       `Nivel ${f.nivel}`,
+      f.prestigio !== undefined ? `Prestigio ${f.prestigio.toLocaleString('es-ES')}` : '',
       `Reputación ${Math.round(f.reputacion ?? 0)}`,
       `Rey: ${f.reyId ? nombreDeHeroe(p, f.reyId) : 'sin designar'}`,
       f.embajadorId ? `Embajador: ${nombreDeHeroe(p, f.embajadorId)}` : '',
@@ -521,6 +558,7 @@ export function renderPestanaFaccion(
         <span class="faction-id">${escaparHtml(faccion.id)}</span>
       </div>`;
     return `${cabecera}
+      ${conLateral ? '' : htmlPrestigioFaccion(proyeccion, faccion, escaparHtml)}
       ${htmlResumenFaccion(proyeccion, faccion, escaparHtml)}
       <div class="faction-list">
         <span class="faction-kicker">Títulos del servidor</span>

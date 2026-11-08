@@ -4,7 +4,8 @@
 import { beforeAll, describe, expect, test, vi } from 'vitest';
 import datos from './plaza/datos.json';
 import type { ProyeccionJugador } from '../src/apiCliente';
-import type { Asentamiento } from '../src/tiposDominio';
+import type { Asentamiento, Edificio } from '../src/tiposDominio';
+import type { ContextoPlaza } from '../src/ui/ganchos';
 
 vi.stubGlobal('location', { protocol: 'http:', host: 'localhost' });
 vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => datos })));
@@ -15,6 +16,10 @@ const { estadoCliente } = await import('../src/ui/estadoCliente');
 const { textoDeBotin } = await import('../src/ui/informeCombate');
 const { explicarError } = await import('../src/ui/erroresServidor');
 const { RECURSO_NOMBRE, RECURSO_ICONO, EDIFICIO_NOMBRE } = await import('../src/paletas');
+const { htmlDiplomacia } = await import('../src/ui/panelDiplomacia');
+const { htmlLateralFaccion } = await import('../src/ui/pestanaFaccion');
+const { htmlBuey, htmlRecetas } = await import('../src/ui/vistaCiudad');
+const { loQueAbreElPrestigio } = await import('../src/ui/avisos');
 
 beforeAll(async () => {
   await new Promise<void>((listo) => { if (bloqueDeDatos('EDIFICIO_CATALOGO', listo)) listo(); });
@@ -111,5 +116,104 @@ describe('los rechazos nuevos', () => {
       'diplomacia.tope_alianzas', 'intel.sin_informe_de_ordenes', 'mercenario.fuera_de_la_region']) {
       expect(explicarError(c)).not.toBe(c);
     }
+  });
+});
+
+// ---------------------------------------------------------------- tanda 1 (0.185.0)
+
+const esc = (t: string): string => t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+/** Tu Facción (f-1, eres su Rey) y Troya (f-2), con las alianzas activas que se digan de cada una y sus topes. */
+function diplomacia(o: { mias: number; topeMio: number; suyas?: number; topeSuyo?: number; propuestaDeTroya?: boolean }): ProyeccionJugador {
+  const aliadas = (de: string, n: number, desde: number) => Array.from({ length: n }, (_, i) => ({ tipo: 'alianza', estado: 'activa', faccionAId: de, faccionBId: `f-${desde + i}` }));
+  return {
+    heroeId: 'h', faccionId: 'f-1', instante: 0, heroe: { displayName: 'Víctor' }, nombresDeCompaneros: {}, asentamientos: [], asentamientosConocidos: [], asentamientosAvistados: [], titulos: [],
+    facciones: [{ id: 'f-1', nombre: 'Micenas', nivel: 1, reyId: 'h', prestigio: 0, topeAlianzas: o.topeMio }, { id: 'f-2', nombre: 'Troya', nivel: 1, reyId: 'r2', prestigio: 0, topeAlianzas: o.topeSuyo ?? 3 }],
+    relaciones: [...aliadas('f-1', o.mias, 10), ...aliadas('f-2', o.suyas ?? 0, 20)],
+    propuestasRelacion: o.propuestaDeTroya ? [{ id: 'pr-1', tipo: 'alianza', faccionAId: 'f-2', faccionBId: 'f-1', expiraEn: 10_000_000 }] : [],
+    propuestasAnexion: [], propuestasFusion: [],
+  } as unknown as ProyeccionJugador;
+}
+const proponerAlianza = (p: ProyeccionJugador): boolean =>
+  htmlDiplomacia(p, p.facciones[0]!, esc, { id: 'f-2', nombre: 'Troya' }).includes('data-propuesta-poner="alianza"');
+
+describe('el tope de alianzas, por prestigio', () => {
+  test('«Alianza» solo se ofrece si a las dos Facciones les cabe otra', () => {
+    expect(proponerAlianza(diplomacia({ mias: 0, topeMio: 1 }))).toBe(true);
+    expect(proponerAlianza(diplomacia({ mias: 1, topeMio: 1 }))).toBe(false);
+    expect(proponerAlianza(diplomacia({ mias: 1, topeMio: 2, suyas: 3, topeSuyo: 3 }))).toBe(false);
+  });
+
+  test('una alianza que llega con el tope lleno solo se puede rechazar, y dice por qué', () => {
+    const lleno = htmlDiplomacia(diplomacia({ mias: 1, topeMio: 1, propuestaDeTroya: true }), diplomacia({ mias: 1, topeMio: 1 }).facciones[0]!, esc);
+    expect(lleno).not.toContain('data-aceptar="si"');
+    expect(lleno).toContain('data-aceptar="no"');
+    expect(lleno).toContain('todas las alianzas que le da su prestigio');
+    const conHueco = htmlDiplomacia(diplomacia({ mias: 0, topeMio: 1, propuestaDeTroya: true }), diplomacia({ mias: 0, topeMio: 1 }).facciones[0]!, esc);
+    expect(conHueco).toContain('data-aceptar="si"');
+  });
+});
+
+describe('el prestigio en la ventana de la Facción', () => {
+  const conPrestigio = (prestigio: number, tope: number, alianzas = 0): string => {
+    const p = diplomacia({ mias: alianzas, topeMio: tope });
+    (p.facciones[0] as { prestigio?: number }).prestigio = prestigio;
+    return htmlLateralFaccion(p, esc);
+  };
+
+  test('enseña el prestigio, las alianzas que caben y lo próximo que abre', () => {
+    const html = conPrestigio(340, 4, 1);
+    expect(html).toContain('Prestigio');
+    expect(html).toContain('<strong>340</strong>');
+    expect(html).toContain('Alianzas <b>1 de 4</b>');
+    expect(html).toContain('Estatuas <b>1</b>');
+    expect(html).toContain('A 400: una alianza más');
+  });
+
+  test('un umbral que abre varias cosas a la vez las nombra todas', () => {
+    expect(conPrestigio(450, 5)).toContain('A 500: una alianza más y la 2.ª estatua');
+    expect(conPrestigio(0, 1)).toContain('A 100: una alianza más');
+    expect(conPrestigio(1950, 20)).toContain('A 2000: una alianza más y la Maravilla');
+  });
+
+  test('los avisos dicen lo que abre cruzar un umbral', () => {
+    expect(loQueAbreElPrestigio(195, 200)).toEqual(['una alianza más a la vez', 'otra estatua en la capital']);
+    expect(loQueAbreElPrestigio(1990, 2010)).toEqual(['una alianza más a la vez', 'la Maravilla']);
+    expect(loQueAbreElPrestigio(201, 205)).toEqual([]);
+  });
+});
+
+describe('el buey del molino', () => {
+  const molino = (buey: boolean, estado: Edificio['estado'] = 'activo'): Edificio => ({ id: 'ed-7', tipo: 'molino', estado, nivelInterno: 1, posicion: { x: 0, y: 0 }, ...(buey ? { buey } : {}) }) as Edificio;
+  const conOro = (oro: number): Asentamiento => ({ ...plaza(1), almacen: { oro: { cantidad: oro, capacidad: 1000 } } }) as unknown as Asentamiento;
+
+  test('con cargo y sin buey se ofrece comprarlo por su precio, también con la obra en marcha', () => {
+    for (const estado of ['activo', 'en_construccion'] as const) {
+      const html = htmlBuey(conOro(50), molino(false, estado), 'gobernador', esc);
+      expect(html).toContain('data-ficha-buey="ed-7"');
+      expect(html).toContain('el doble');
+      expect(html).toContain('12');
+    }
+  });
+
+  test('sin cargo no se ofrece; con buey se dice que muele el doble', () => {
+    expect(htmlBuey(conOro(50), molino(false), null, esc)).toBe('');
+    const con = htmlBuey(conOro(50), molino(true), null, esc);
+    expect(con).not.toContain('data-ficha-buey');
+    expect(con).toContain('muele el doble');
+  });
+
+  test('otro edificio no lleva buey', () => {
+    expect(htmlBuey(conOro(50), { ...molino(false), tipo: 'horno' }, 'gobernador', esc)).toBe('');
+  });
+
+  test('en «Talleres», el molino con buey hace el doble de harina', () => {
+    const ritmo = (buey: boolean): string => {
+      const a = { ...plaza(1), edificios: [molino(buey)] } as unknown as Asentamiento;
+      const c = { proyeccion: { heroeId: 'h', facciones: [] }, asentamiento: a, cargo: null, escapar: esc, refrescar: () => {} } as unknown as ContextoPlaza;
+      return htmlRecetas(c).match(/<small>([\d.,]+)\/min<\/small>/)?.[1] ?? '';
+    };
+    expect(ritmo(false)).toBe('4');
+    expect(ritmo(true)).toBe('8');
   });
 });

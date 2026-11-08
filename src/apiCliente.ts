@@ -753,6 +753,13 @@ export function bloqueDeDatos<T>(nombre: string, alCargar?: () => void): T | nul
   return (b?.[nombre] as T | undefined) ?? null;
 }
 
+/** Las reglas del prestigio de la Facción (bloque `PRESTIGIO`, Diplomacia_Facciones §3.5b, tanda 69): lo que da cada hecho y los umbrales que abre
+ * (una alianza más cada `alianzas.unaMasCada`, las estatuas de la capital y la Maravilla). */
+export interface ReglasPrestigio {
+  victoria?: number; conquista?: number; fundacion?: number; ascensoPorNivel?: number; comercio?: number;
+  alianzas?: { base?: number; unaMasCada?: number }; estatuas?: number[]; maravilla?: number;
+}
+
 /** Una receta de transformación de un nivel de edificio: `produccionBase` por minuto con la mano de obra completa; `consumePorUnidad` = insumo por unidad producida. */
 export interface RecetaDeEdificio { produce: string; produccionBase: number; consumePorUnidad: Record<string, number>; requiereTecnologia?: string; requiereEdificio?: { tipo: string; nivel: number } }
 /** Un nivel interno de un edificio del catálogo: qué fabrica y qué pide para llegar a él. */

@@ -3412,6 +3412,10 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .faccion-xp-barra { height: 8px; border-radius: 4px; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--bronce-osc); overflow: hidden; }
 .faccion-xp-barra span { display: block; height: 100%; background: linear-gradient(90deg, var(--bronce), var(--oro)); }
 .faccion-xp small { color: var(--text-muted); font-size: 0.72rem; text-align: right; }
+/* el prestigio de la Facción (tanda 69): lo que abre en fichas y, debajo, lo próximo */
+.faccion-prestigio-usos { display: flex; flex-wrap: wrap; gap: 4px 6px; }
+.faccion-prestigio-usos span { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border: 1px solid var(--bronce-osc); border-radius: 999px; background: rgba(0, 0, 0, 0.25); font-size: 0.72rem; color: var(--text-secondary); }
+.faccion-prestigio-usos b { color: var(--pergamino); font-weight: 600; }
 
 /* Pestaña Edificios: botones con el icono de cada edificio para añadir a la cola, y el icono en la lista de construidos (`ui/iconosEdificio.ts`). */
 .asent-construir-cab { display: flex; justify-content: space-between; align-items: baseline; margin: 4px 0 6px; }

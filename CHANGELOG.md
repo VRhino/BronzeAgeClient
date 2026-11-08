@@ -3,6 +3,20 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.185.0] — 2026-11-08 · La tanda 69, parte 1: prestigio, alianzas y el buey del molino · sin cambio de contrato (motor `d0326fd`)
+
+- **El prestigio en la ventana de la Facción**, bajo la experiencia: el total, las alianzas activas de las que caben a la vez, las estatuas que
+  caben en la capital, la Maravilla si ya se alcanza y lo próximo que abre («A 400: una alianza más»). La ⓘ explica cómo sube y qué da, con
+  las cifras de `PRESTIGIO`. Las Facciones conocidas enseñan también su prestigio.
+- **El tope de alianzas en Diplomacia**: «Alianza» solo sale en el constructor de la propuesta si a las dos Facciones les cabe otra; una
+  alianza recibida con el tope lleno solo se puede rechazar, y la fila dice de quién es el tope.
+- **El buey del molino** en la ficha del molino: con el Gobernador o el Maestro de Obras, «Comprar el buey» con su precio (12 de oro del
+  almacén de la plaza, `ANIMAL_CATALOGO.buey`), también con la obra en marcha (`asignarBuey`). Con buey, la ficha lo dice y en «Talleres» la
+  harina sale a su ritmo doble.
+- **Avisos nuevos**: el buey comprado y el prestigio ganado (uno por motivo, con su contador; el que cruza un umbral dice lo que abre: una
+  alianza más, otra estatua o la Maravilla).
+- **Nutrición**: el letrero cuenta que cada clase come primero lo suyo (carne, pan, queso, vino y aceite) y que el trigo pone lo que falte.
+
 ## [0.184.0] — 2026-11-08 · La tanda 69, parte 0: la base para la partida nueva · contrato 0.19.0 (motor `d0326fd`)
 
 Aviso del motor (motor/aviso-tanda-69-2026-11-08.md). Lo que hace falta para jugar la partida nueva sin textos rotos; lo demás llega en

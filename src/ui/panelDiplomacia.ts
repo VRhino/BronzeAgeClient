@@ -13,6 +13,13 @@ import { nombreDeHeroe } from './nombres';
 const TRIBUTOS = ['trigo', 'madera', 'piedra', 'cobre', 'estano', 'oro'];
 type Escapar = (valor: string) => string;
 
+/** Las alianzas activas de una Facción, las que topa su prestigio (tanda 69, Diplomacia_Facciones §3.5b; el vasallaje no cuenta). */
+export const alianzasActivas = (p: ProyeccionJugador, faccionId: string): number =>
+  (p.relaciones ?? []).filter((r) => r.tipo === 'alianza' && r.estado === 'activa' && (r.faccionAId === faccionId || r.faccionBId === faccionId)).length;
+
+/** ¿Le cabe otra alianza a esa Facción (`topeAlianzas`)? Sin el dato, sí: lo mira el servidor. */
+const cabeAlianza = (p: ProyeccionJugador, f: Faccion | undefined): boolean => f?.topeAlianzas === undefined || alianzasActivas(p, f.id) < f.topeAlianzas;
+
 /** Lo que le queda a una propuesta: en tiempo real si el mundo va acelerado (pocos minutos); si no, en horas o días de mundo. */
 export function plazo(expiraEn: number, ahora: number): string {
   const real = textoEnTiempoReal(expiraEn - ahora);
@@ -52,11 +59,21 @@ export function htmlDiplomacia(proyeccion: ProyeccionJugador, faccion: Faccion, 
   const enviadas = propuestas.filter((p) => p.faccionAId === faccion.id);
   const esRey = faccion.reyId === proyeccion.heroeId;
   const botonResponder = (p: PropuestaRelacion, aceptar: boolean) => `<button class="btn-secondary" type="button" data-dipl-responder="${escaparHtml(p.id)}" data-tipo="${p.tipo}" data-aceptar="${aceptar ? 'si' : 'no'}">${aceptar ? 'Aceptar' : 'Rechazar'}</button>`;
-  const filaRecibida = (p: PropuestaRelacion) => `<div class="faction-list-item faction-list-item-texto"><div><strong>${nombreDe(p.faccionAId)} te propone ${p.tipo === 'alianza' ? 'una alianza' : `un vasallaje: serías su vasalla y pagarías ${tributo(p)}`}</strong><span>${plazo(p.expiraEn, proyeccion.instante)}${esRey ? '' : ' · solo tu Rey responde'}</span></div>${esRey ? botonResponder(p, true) + botonResponder(p, false) : ''}</div>`;
+  // Una alianza que a una de las dos ya no le cabe (su prestigio topa las alianzas activas, tanda 69) no se puede aceptar: solo rechazar. El texto
+  // ya va escapado (`nombreDe`).
+  const sinHueco = (p: PropuestaRelacion): string => {
+    if (p.tipo !== 'alianza') return '';
+    if (!cabeAlianza(proyeccion, faccion)) return 'Tu Facción ya tiene todas las alianzas que le da su prestigio';
+    return cabeAlianza(proyeccion, proyeccion.facciones.find((f) => f.id === p.faccionAId)) ? '' : `${nombreDe(p.faccionAId)} ya tiene todas las alianzas que le da su prestigio`;
+  };
+  const filaRecibida = (p: PropuestaRelacion) => {
+    const lleno = sinHueco(p);
+    return `<div class="faction-list-item faction-list-item-texto"><div><strong>${nombreDe(p.faccionAId)} te propone ${p.tipo === 'alianza' ? 'una alianza' : `un vasallaje: serías su vasalla y pagarías ${tributo(p)}`}</strong><span>${plazo(p.expiraEn, proyeccion.instante)}${esRey ? '' : ' · solo tu Rey responde'}${lleno ? ` · ${lleno}` : ''}</span></div>${esRey ? (lleno ? '' : botonResponder(p, true)) + botonResponder(p, false) : ''}</div>`;
+  };
   const filaEnviada = (p: PropuestaRelacion) => `<div class="faction-list-item faction-list-item-texto"><div><strong>Propones ${p.tipo === 'alianza' ? 'una alianza' : `un vasallaje (${tributo(p)})`} a ${nombreDe(p.faccionBId)}</strong><span>${plazo(p.expiraEn, proyeccion.instante)}</span></div>${conAutoridad ? boton('data-dipl-retirar', p.id, 'Retirar') : ''}</div>`;
   const bloquePropuestas = (titulo: string, lista: PropuestaRelacion[], pintarFila: (p: PropuestaRelacion) => string) => lista.length > 0 ? `<span class="faction-kicker">${titulo}</span>${lista.map(pintarFila).join('')}` : '';
 
-  const info = ayuda('faccion:diplomacia', 'Tributo por minuto, solo en vasallaje. Alianza y vasallaje son propuestas: solo nacen si el Rey de la otra Facción las acepta antes de que caduquen (3 días de mundo); mientras tanto las puedes retirar. Una Facción con reputación por debajo de −40 no puede proponer alianzas. La guerra es libre y arrastra a señor y vasallos del rival; solo se acaba con la paz de las dos. Romper una alianza sin más cuesta 12 puntos de reputación; liberar a un vasallo da 6.');
+  const info = ayuda('faccion:diplomacia', 'Tributo por minuto, solo en vasallaje. Alianza y vasallaje son propuestas: solo nacen si el Rey de la otra Facción las acepta antes de que caduquen (3 días de mundo); mientras tanto las puedes retirar. Una Facción con reputación por debajo de −40 no puede proponer alianzas, y cada una tiene las alianzas a la vez que le da su prestigio (una más cada 100). La guerra es libre y arrastra a señor y vasallos del rival; solo se acaba con la paz de las dos. Romper una alianza sin más cuesta 12 puntos de reputación; liberar a un vasallo da 6.');
 
   if (con) {
     // La ficha de otra Facción (0.144.0, Víctor 2026-11-04): las relaciones con ella, todas las propuestas en curso entre las dos (relación, anexión,
@@ -180,9 +197,13 @@ function opcionesPosibles(p: ProyeccionJugador, faccion: Faccion, otraId: string
   const entre = (a: string, b: string): boolean => (a === faccion.id && b === otraId) || (a === otraId && b === faccion.id);
   const relacion = (p.relaciones ?? []).some((r) => r.estado === 'activa' && entre(r.faccionAId, r.faccionBId));
   const pendiente = (p.propuestasRelacion ?? []).some((x) => entre(x.faccionAId, x.faccionBId));
-  if (!relacion && !pendiente) { posibles.add('alianza'); posibles.add('vasallaje'); }
-  if (!relacion) posibles.add('guerra');
   const otra = p.facciones.find((f) => f.id === otraId);
+  if (!relacion && !pendiente) {
+    // la alianza, solo si a las dos les cabe otra (el prestigio topa las alianzas activas, tanda 69)
+    if (cabeAlianza(p, faccion) && cabeAlianza(p, otra)) posibles.add('alianza');
+    posibles.add('vasallaje');
+  }
+  if (!relacion) posibles.add('guerra');
   const anexando = new Set((p.propuestasAnexion ?? []).flatMap((x) => [x.absorbenteId, x.absorbidaId]));
   if (otra && !anexando.has(otraId)) posibles.add('anexion');
   const fusionando = new Set((p.propuestasFusion ?? []).flatMap((x) => [x.faccionAId, x.faccionBId]));
