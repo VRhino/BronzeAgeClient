@@ -47,16 +47,26 @@ formas, reutilizando del mundo 3D el cielo, la luz y la manera de pintar miles d
       trigo por moler.
     - El **horno** (2 × 1) tiene dos hornos de cúpula con la brasa en la boca, la leña y la mesa con los panes.
     - La **quesera** (2 × 1) tiene el caldero de bronce al fuego, las tinajas de la leche y el estante con los quesos.
-    - La **bodega** (2 × 2) tiene el lagar con el mosto bajo una parra y las tinajas grandes del vino en filas.
-    - La **prensa** (2 × 1) es una prensa de viga: la viga metida en el muro, los capachos de aceituna sobre la piedra de prensar, la piedra
-      colgada, las tinajas del aceite y los cestos.
+    - La **bodega** (2 × 2) tiene el lagar con el mosto bajo una parra y las tinajas grandes del vino en filas, tapadas. Desde 0.191.0 pinta
+      su receta (`Edificio.receta`, `EdificioEnVista.receta`, motor `b55e90f`): la de la cerveza tiene en su lugar la era de la malta con la
+      cebada extendida, el caldero de cocer al fuego, los sacos de cebada y las tinajas abiertas con la cerveza y su espuma.
+    - La **prensa** (2 × 1) es una prensa de viga: la viga metida en el muro, los capachos sobre la piedra de prensar, la piedra
+      colgada, las tinajas del aceite y los cestos. Los capachos y los cestos son de aceituna o, en la del sésamo (desde 0.191.0), de la
+      semilla clara, con la muela de mano y un saco.
+    - Al cambiar la receta (o al comprar el buey del molino) el edificio se vuelve a montar: la clave de los edificios de `vista.ts` lleva el
+      buey, el cultivo y la receta.
     - La **estatua** (1 × 1, solo en la capital) es una figura con lanza y escudo sobre un pedestal de dos gradas, de piedra hasta el estilo 3 y
       de bronce desde el 4, con dos braseros delante.
-  - **Viñas y olivares** (desde 0.189.0): en una aldea de vid o de olivo (`Pueblo.cultivo`, que `puebloEnVista` pasa a sus granjas como
-    `EdificioEnVista.cultivo`), cada granja es una viña o un olivar.
+  - **Viñas, olivares, cebadales y campos de sésamo** (desde 0.189.0; la cebada y el sésamo desde 0.191.0): en una aldea de otro cultivo que
+    el trigo (`Pueblo.cultivo`, que `puebloEnVista` pasa a sus granjas como `EdificioEnVista.cultivo`), cada granja es una viña, un olivar,
+    un cebadal o un campo de sésamo.
     - La viña tiene hileras de cepas en su espaldera, con algún racimo, y los cestos de la vendimia.
     - El olivar tiene olivos en tresbolillo, la escalera de varear y los cestos.
-    - Las dos van con la cerca de la granja de su estilo. En la planta de minimapa y al pasar el ratón se llaman «Viña» y «Olivar».
+    - El cebadal tiene la cebada en pie en surcos, de verde que amarillea, y al fondo la parte segada con las gavillas y una hacina; con la
+      choza del campo (la casa en los altos).
+    - El campo de sésamo tiene hileras de matas altas con su flor, los haces puestos de pie a secar y la estera con la semilla y los cestos.
+    - Todas van con la cerca de la granja de su estilo. En la planta de minimapa y al pasar el ratón se llaman «Viña», «Olivar», «Cebadal» y
+      «Campo de sésamo».
   - Variedad: cada edificio tiene una semilla (de su id) que decide sus variaciones (orientación de la puerta, plantas, patio, pérgola,
     tono...), siempre las mismas para el mismo edificio.
   - **Puestos de mercado** (desde 0.117.0): en una plaza de nivel 1 son tenderetes al aire, uno por celda. Del nivel 2 en adelante son
@@ -230,10 +240,10 @@ con la planta en SVG como minimapa (`svgPlanoAvanzada`).
   lado largo más cerca del Mercado, dentro de la muralla si cabe.
 - **Tanda 69** (desde 0.189.0):
   - «Talleres de la comida y estatua: tipos × estilos» pone, de arriba abajo, el molino, el molino con buey, el horno, la quesera, la
-    bodega, la prensa y la estatua, del estilo 1 al 5.
+    bodega del vino, la de la cerveza, la prensa de la aceituna, la del sésamo y la estatua, del estilo 1 al 5.
   - «Muralla con puertas rectas» es un anillo cuadrado con las puertas de la `LAYOUT_VERSION` 7 (una de una celda al sur y otra de dos al
     norte, con dos celdas de muro recto a cada lado), del nivel del mando «Muralla».
-  - El mando «Cultivo» hace de vid o de olivo las aldeas, sin más corral que el del buey.
+  - El mando «Cultivo» hace de vid, de olivo, de cebada o de sésamo las aldeas, sin más corral que el del buey.
 - `window.banco.mirar({ x, y, distancia, giro, inclinacion })` mueve la cámara para las capturas, y `window.banco.huella(id)` dice dónde
   está un edificio.
 - La dirección pone los mandos al abrir: `?plaza=muestra-comida`, `?plaza=muestra-muralla&muralla=3` o

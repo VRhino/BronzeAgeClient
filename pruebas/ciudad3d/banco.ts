@@ -9,7 +9,8 @@
 // `window.banco` deja mover la cámara desde fuera (capturas): `banco.mirar({ x, y, distancia, giro, inclinacion })`. Y la dirección, abrir con los
 // mandos puestos (capturas): `?plaza=muestra-comida&estilo=3&muralla=2&cultivo=vid`.
 // Tanda 69: la muestra de los talleres de la comida y la estatua («muestra-comida»), la de la muralla con las puertas rectas de la
-// `LAYOUT_VERSION` 7 («muestra-muralla», con el mando «Muralla») y el cultivo de las aldeas (el mando «Cultivo»).
+// `LAYOUT_VERSION` 7 («muestra-muralla», con el mando «Muralla») y el cultivo de las aldeas (el mando «Cultivo»). Desde 0.191.0 (motor b55e90f),
+// la bodega de la cerveza y la prensa del sésamo en «muestra-comida», y la cebada y el sésamo en «Cultivo».
 import { fromBinary } from '@bufbuild/protobuf';
 import { AsentamientoSchema, CampamentoMercenariosSchema } from '../../src/contrato/gen/bronzeage/v1/entities_pb';
 import { campamentoEnVista } from '../../src/ciudad3d/campamento';
@@ -182,13 +183,16 @@ function rehacerMuestra(): void {
 }
 
 /** Los talleres de la comida y la estatua (tanda 69), cada fila un tipo y cada columna un estilo (del 1 al 5), con su calle delante. */
-const FILAS_COMIDA: { tipo: string; ancho: number; alto: number; buey?: boolean }[] = [
+const FILAS_COMIDA: { tipo: string; ancho: number; alto: number; buey?: boolean; receta?: string }[] = [
   { tipo: 'molino', ancho: 6, alto: 6 },
   { tipo: 'molino', ancho: 6, alto: 6, buey: true },
   { tipo: 'horno', ancho: 6, alto: 3 },
   { tipo: 'quesera', ancho: 6, alto: 3 },
   { tipo: 'bodega', ancho: 6, alto: 6 },
+  // la bodega de la cerveza y la prensa del sésamo (motor b55e90f: `Edificio.receta`)
+  { tipo: 'bodega', ancho: 6, alto: 6, receta: 'cebada' },
   { tipo: 'prensa', ancho: 6, alto: 3 },
+  { tipo: 'prensa', ancho: 6, alto: 3, receta: 'sesamo' },
   { tipo: 'estatua', ancho: 3, alto: 3 },
 ];
 
@@ -202,8 +206,8 @@ function rehacerComida(): void {
   FILAS_COMIDA.forEach((f, i) => {
     calles.push({ x: -24, y: y + f.alto, ancho: 48, alto: 3 });
     for (let estilo = 1; estilo <= 5; estilo++) {
-      const id = `${f.tipo}${f.buey ? '-buey' : ''}-e${estilo}-f${i}`, x = -22.5 + (estilo - 1) * 9 + (6 - f.ancho) / 2;
-      edificios.push({ id, tipo: f.tipo, estado: 'activo', posicion: { x: x + f.ancho / 2, y: y + f.alto / 2 }, buey: f.buey });
+      const id = `${f.tipo}${f.buey ? '-buey' : ''}${f.receta ? `-${f.receta}` : ''}-e${estilo}-f${i}`, x = -22.5 + (estilo - 1) * 9 + (6 - f.ancho) / 2;
+      edificios.push({ id, tipo: f.tipo, estado: 'activo', posicion: { x: x + f.ancho / 2, y: y + f.alto / 2 }, buey: f.buey, receta: f.receta });
       huellas[id] = { x, y, ancho: f.ancho, alto: f.alto };
     }
     y += f.alto + 3;
@@ -217,7 +221,7 @@ function rehacerComida(): void {
   vista.fijar(c);
   vista.seleccionar(seleccion);
   const cuentas = vista.cuentas();
-  $('lectura').textContent = `Talleres de la comida y estatua: estilo 1 a 5 de izquierda a derecha; molino, molino con buey, horno, quesera, bodega, prensa y estatua de arriba abajo\npiezas: ${cuentas.edificios} edificios · ${cuentas.relleno} relleno`;
+  $('lectura').textContent = `Talleres de la comida y estatua: estilo 1 a 5 de izquierda a derecha; molino, molino con buey, horno, quesera, bodega de vino, bodega de cerveza, prensa de aceituna, prensa de sésamo y estatua de arriba abajo\npiezas: ${cuentas.edificios} edificios · ${cuentas.relleno} relleno`;
 }
 
 /**

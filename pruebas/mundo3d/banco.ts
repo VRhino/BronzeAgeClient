@@ -5,7 +5,8 @@
 // ajena en formación, caravanas, bandidos, un alijo, una batalla y dos Miradas. Un clic cerca de algo lo selecciona (como en el juego); en el
 // suelo, la columna va allí. «Fundar aquí» enciende la vista previa de fundar alrededor del héroe.
 // `?x=…&y=…` pone el héroe en otro sitio; `?raster` usa el raster de 4 u del artefacto en vez del relieve; `?sinMaquetas` quita lo de mentira;
-// `?acarreo=N` pone N carros de acarreo en marcha (para medir el mundo con muchas caravanas andando).
+// `?acarreo=N` pone N carros de acarreo en marcha (para medir el mundo con muchas caravanas andando); `?niveles`, una plaza de cada nivel;
+// `?cultivos`, una aldea de cada cultivo (0.191.0).
 import { fromBinary } from '@bufbuild/protobuf';
 import { ArtefactoDeMundoSchema, PaqueteRelieveSchema } from '../../src/contrato/gen/bronzeage/v1/world_pb';
 import { mapaDesdeArtefacto } from '../../src/mundo/artefacto';
@@ -179,6 +180,8 @@ function mundoDePrueba(c: Punto, vacio: boolean): { mundo: MundoEnVista; ajenas:
   // `?niveles`: una fila con una plaza de cada nivel (1 a 5) al sur del héroe
   if (parametros.has('niveles')) for (let n = 1; n <= 5; n++) m.plazas.push({ id: `nivel-${n}`, posicion: en(-14 + 7 * n, -10), radioCiudad: 1.5, color: PROPIO, recordada: false, nivel: n });
   m.pueblos.push({ id: 'aldea', posicion: en(6, 5, plaza), aldea: true, color: PROPIO }, { id: 'cantera', posicion: en(-6, 6, plaza), aldea: false, color: PROPIO });
+  // `?cultivos`: una fila de aldeas, una de cada cultivo (trigo, vid, olivo, cebada y sésamo), al norte del héroe
+  if (parametros.has('cultivos')) (['trigo', 'vid', 'oliva', 'cebada', 'sesamo'] as const).forEach((cultivo, n) => m.pueblos.push({ id: `aldea-${cultivo}`, posicion: en(-10 + 5 * n, 6), aldea: true, color: PROPIO, cultivo }));
   m.avanzadas.push(
     { id: 'atalaya', posicion: en(11, -3, plaza), etapa: 1, ruinas: false, color: PROPIO },
     { id: 'fuerte', posicion: en(-3, 12, plaza), etapa: 2, ruinas: false, color: PROPIO },

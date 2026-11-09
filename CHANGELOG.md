@@ -3,6 +3,22 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.191.0] — 2026-11-09 · Cebada, sésamo y una receta por bodega y prensa, parte 2: el 3D · contrato 0.20.0 (motor `b55e90f`)
+
+- **Cebadales y campos de sésamo**: en una aldea de cebada o de sésamo (`Pueblo.cultivo`), cada granja de la vista 3D es un cebadal (la cebada
+  en pie en surcos, de verde que amarillea, la parte segada con las gavillas y una hacina, y la choza del campo) o un campo de sésamo
+  (hileras de matas altas con su flor, los haces de pie a secar y la estera con la semilla), con la cerca de su estilo y sin salir de su
+  parcela. En la planta de minimapa y al pasar el ratón se llaman «Cebadal» y «Campo de sésamo».
+- **La bodega y la prensa pintan su receta** (`Edificio.receta`): la bodega de la cerveza cambia el lagar y la parra por la era de la malta,
+  el caldero de cocer al fuego y los sacos de cebada, y sus tinajas van abiertas, con la cerveza y la espuma; la del vino sigue como estaba.
+  La prensa del sésamo lleva los capachos y los cestos de la semilla clara, la muela de mano y un saco.
+- **Se rehace al cambiar**: el edificio se vuelve a montar al elegir otra receta. Arregla de paso lo mismo con el buey del molino, que no se
+  veía hasta salir y volver a entrar (0.189.0).
+- **Las maquetas del mundo**: las aldeas de cebada llevan campos pálidos con surcos verdes y una hacina; las de sésamo, tierra con hileras de
+  matas salpicadas de flor.
+- Bancos: la muestra de los talleres de la comida (`/pruebas/ciudad3d/?plaza=muestra-comida`) añade la bodega de la cerveza y la prensa del
+  sésamo; el mando «Cultivo», la cebada y el sésamo; el del mundo 3D, `?cultivos` (una aldea de cada cultivo).
+
 ## [0.190.0] — 2026-11-09 · Cebada, sésamo y una receta por bodega y prensa, parte 1: la interfaz · contrato 0.20.0 (motor `b55e90f`)
 
 - **Contrato regenerado** desde el motor `b55e90f`: la orden `elegirReceta` (187), `Edificio.receta` (19) y `Edificio.recetaParada` (20), y las

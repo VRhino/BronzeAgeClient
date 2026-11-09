@@ -144,7 +144,8 @@ suelo, luego el paisaje, los árboles y la vegetación baja. Lo que se aleja se 
   ve, el recordado si no). La muralla, la que dice la VISTA desde fuera (`tieneMuralla`, 0.179.0): de piedra, con puerta y torres, desde el
   nivel 3 si la tiene; una empalizada al borde en el nivel 1 o 2 si la tiene; nada si no. La recordada, sin saberlo, la de su nivel. Casas dentro, compactas (0.175.0): solares justos, calles estrechas y casas que los llenan, de la plaza hacia
   fuera hasta lo que ocupa (el caserío, el 62 % del radio; el poblado, el 80 %; las amuralladas, hasta el pie de la muralla). En una plaza
-  de más de 2 u de radio lo de dentro crece con ella. Todo sube ×1,7. El pueblo es una empalizada con casas: la aldea agrícola lleva sus campos y el
+  de más de 2 u de radio lo de dentro crece con ella. Todo sube ×1,7. El pueblo es una empalizada con casas: la aldea agrícola lleva sus campos (de su cultivo: dorados de
+  trigo, hileras de cepas, olivos, cebada pálida con surcos verdes o matas de sésamo con su flor, estas dos desde 0.191.0) y el
   extractor su bocamina. La avanzada es empalizada y torre, más alta en cada etapa, de piedra desde el fuerte, baja y gris en ruinas. La
   obra es un andamio con su montón de material, con muros a media altura cuando ya arrancó. El campamento de mercenarios son tiendas en corro.
   Cada una lleva una bandera del color de su Facción. Una malla instanciada por material. Las plazas recordadas van bajo la niebla; lo

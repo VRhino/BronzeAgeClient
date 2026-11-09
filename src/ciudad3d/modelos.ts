@@ -750,50 +750,85 @@ function quesera(m: Marco, estilo: number): void {
   });
 }
 
-/** La bodega (2 × 2): la casa al fondo y en el patio el lagar donde se pisa la uva (con el mosto), las grandes tinajas del vino y una parra. */
+/**
+ * La bodega (2 × 2): la casa al fondo y en el patio, según su receta (`Edificio.receta`, motor b55e90f). La del vino: el lagar donde se pisa
+ * la uva (con el mosto), una parra encima y las grandes tinajas del vino, tapadas. La de la cerveza: la era donde la cebada mojada echa el
+ * germen (la malta), extendida, el caldero al fuego donde se cuece, los sacos de cebada y las tinajas abiertas con la cerveza y su espuma.
+ */
 function bodega(m: Marco, estilo: number): void {
+  const cerveza = m.e.receta === 'cebada';
   taller(m, estilo, (u, pv, l, s) => {
-    // el lagar: una pila baja de piedra (de enlucido en los altos) con el mosto y unos racimos al borde
     const ul = u - l * 0.22, vl = pv(0.4), ll = Math.min(1.8, l * 0.4), sl = Math.min(1.3, s * 0.45), borde = estilo >= 4 ? COLOR.enlucidoSombra : COLOR.piedra;
-    m.caja(borde, ul, vl, ll, sl, 0.32);
-    m.losa(COLOR.mosto, ul, vl, ll - 0.18, sl - 0.18, 0.02, 0.31);
-    m.caja(borde, ul + ll / 2 + 0.15, vl, 0.3, 0.26, 0.16);
-    for (let i = 0; i < 4; i++) m.forma('copa', COLOR.uva, ul - ll / 2 + 0.25 + i * 0.36, vl - sl / 2 - 0.12, 0.2, 0.2, 0.2);
-    // la parra sobre el lagar
-    if (s > 1.6) pergola(m, ul, vl, ll + 0.4, sl + 0.4, 0, 1.05, true);
-    // las tinajas grandes del vino, medio enterradas, en filas
+    if (cerveza) {
+      // la era de la malta: un enlosado bajo con su bordillo y la cebada germinada extendida en dos tonos, y el rastrillo
+      m.caja(borde, ul, vl, ll, sl, 0.08);
+      m.losa(COLOR.malta, ul, vl, ll - 0.14, sl - 0.14, 0.03, 0.08);
+      for (let i = 0; i < 3; i++) m.losa(COLOR.cebada, ul - ll / 2 + 0.3 + i * ((ll - 0.6) / 2), vl, 0.18, sl - 0.3, 0.02, 0.11);
+      m.forma('cilindro', COLOR.madera, ul + ll / 2 - 0.1, vl + sl * 0.3, 0.04, 0.04, ll - 0.3, 0.12, Math.PI / 2, Math.PI / 2);
+      // el caldero de cocer sobre su fuego, entre la era y las tinajas
+      const uc = ul + ll / 2 + 0.35, vc = pv(0.78);
+      m.caja(COLOR.fuego, uc, vc, 0.3, 0.3, 0.06);
+      for (const k of [-1, 1]) m.caja(COLOR.piedraOscura, uc + k * 0.24, vc, 0.12, 0.3, 0.2);
+      m.forma('cilindro', COLOR.bronce, uc, vc, 0.52, 0.52, 0.26, 0.2);
+      m.forma('cilindro', COLOR.cerveza, uc, vc, 0.44, 0.44, 0.02, 0.45);
+      sacos(m, ul - ll / 2 + 0.15, pv(0.85), 3, COLOR.lonaVieja);
+    } else {
+      // el lagar: una pila baja de piedra (de enlucido en los altos) con el mosto y unos racimos al borde
+      m.caja(borde, ul, vl, ll, sl, 0.32);
+      m.losa(COLOR.mosto, ul, vl, ll - 0.18, sl - 0.18, 0.02, 0.31);
+      m.caja(borde, ul + ll / 2 + 0.15, vl, 0.3, 0.26, 0.16);
+      for (let i = 0; i < 4; i++) m.forma('copa', COLOR.uva, ul - ll / 2 + 0.25 + i * 0.36, vl - sl / 2 - 0.12, 0.2, 0.2, 0.2);
+      // la parra sobre el lagar
+      if (s > 1.6) pergola(m, ul, vl, ll + 0.4, sl + 0.4, 0, 1.05, true);
+    }
+    // las tinajas grandes, medio enterradas, en filas: las del vino tapadas; las de la cerveza abiertas, con la cerveza y la espuma
     const n = Math.max(2, Math.floor((l * 0.4) / 0.42)), filas = s > 2 ? 2 : 1;
     for (let j = 0; j < filas; j++) for (let i = 0; i < n; i++) {
       const uu = u + l * 0.1 + i * 0.42, vv = pv(0.3 + j * 0.4);
       m.forma('cilindro', COLOR.barro, uu, vv, 0.36, 0.36, 0.42);
-      m.forma('cupula', COLOR.barro, uu, vv, 0.36, 0.36, 0.1, 0.42);
-      m.forma('cilindro', COLOR.ocre, uu, vv, 0.14, 0.14, 0.08, 0.5);
+      if (cerveza) {
+        m.forma('cilindro', COLOR.barro, uu, vv, 0.3, 0.3, 0.06, 0.42);
+        m.forma('cilindro', COLOR.cerveza, uu, vv, 0.24, 0.24, 0.02, 0.47);
+        m.forma('cupula', COLOR.espuma, uu, vv, 0.16, 0.16, 0.04, 0.48);
+      } else {
+        m.forma('cupula', COLOR.barro, uu, vv, 0.36, 0.36, 0.1, 0.42);
+        m.forma('cilindro', COLOR.ocre, uu, vv, 0.14, 0.14, 0.08, 0.5);
+      }
     }
   });
 }
 
 /**
  * La prensa de aceite (2 × 1): la casa al fondo y delante la prensa de viga, la de la Edad del Bronce: la viga larga metida por un extremo en
- * el muro, que aprieta los capachos de aceituna sobre la piedra de prensar, con la piedra que cuelga del otro extremo; las tinajas del
- * aceite y los cestos de aceituna.
+ * el muro, que aprieta los capachos sobre la piedra de prensar, con la piedra que cuelga del otro extremo; las tinajas del aceite y lo que se
+ * prensa, según su receta (`Edificio.receta`, motor b55e90f): la aceituna, oscura, en cestos; o el sésamo, la semilla clara, en cestos y
+ * sacos, con la muela de mano donde se tuesta y se machaca antes de prensarlo.
  */
 function prensa(m: Marco, estilo: number): void {
+  const sesamo = m.e.receta === 'sesamo', fruto = sesamo ? COLOR.sesamo : COLOR.aceituna;
   taller(m, estilo, (u, pv, l, _s, f) => {
     const vv = pv(0.45), u0 = u - l / 2 + 0.25, up = u - l * 0.12, u1 = u + l * 0.3;
     // la piedra de prensar con su canal y los capachos apilados encima
     m.forma('cilindro', COLOR.piedra, up, vv, 0.8, 0.8, 0.26);
     m.caja(COLOR.piedra, up, vv + f * 0.4, 0.14, 0.3, 0.1);
-    for (let k = 0; k < 3; k++) m.forma('cilindro', k % 2 ? COLOR.zarzo : COLOR.aceituna, up, vv, 0.6, 0.6, 0.1, 0.26 + k * 0.1);
+    for (let k = 0; k < 3; k++) m.forma('cilindro', k % 2 ? COLOR.zarzo : fruto, up, vv, 0.6, 0.6, 0.1, 0.26 + k * 0.1);
     // el poste del muro donde entra la viga, la viga y la piedra colgada de su punta
     m.caja(estilo <= 2 ? COLOR.madera : COLOR.piedraOscura, u0, vv, 0.3, 0.4, 1.0);
     m.viga(COLOR.maderaOscura, u0, vv, u1, vv, 0.68, 0.16, 0.18);
     m.poste(COLOR.cuerda, u1 - 0.05, vv, 0.4, 0.03, 0.3);
     m.caja(COLOR.piedraOscura, u1 - 0.05, vv, 0.42, 0.36, 0.3);
-    // el aceite en tinajas y la aceituna en cestos
+    // el aceite en tinajas y el fruto en cestos
     tinajas(m, u + l / 2 - 0.85, pv(0.2), 3, COLOR.ocre);
     for (let i = 0; i < 2; i++) {
       m.forma('cilindro', COLOR.zarzo, u + l / 2 - 0.7 + i * 0.32, pv(0.75), 0.28, 0.28, 0.22);
-      m.forma('copa', COLOR.aceituna, u + l / 2 - 0.7 + i * 0.32, pv(0.75), 0.24, 0.24, 0.1, 0.18);
+      m.forma('copa', fruto, u + l / 2 - 0.7 + i * 0.32, pv(0.75), 0.24, 0.24, 0.1, 0.18);
+    }
+    if (sesamo) {
+      // la muela de mano (la piedra de moler y su mano) con el sésamo machacado, y un saco
+      m.caja(COLOR.piedra, u + l * 0.1, pv(0.8), 0.5, 0.3, 0.14);
+      m.losa(COLOR.sesamo, u + l * 0.1, pv(0.8), 0.36, 0.2, 0.02, 0.14);
+      m.forma('cilindro', COLOR.piedraOscura, u + l * 0.1, pv(0.8), 0.1, 0.1, 0.3, 0.2, Math.PI / 2, Math.PI / 2);
+      sacos(m, u + l / 2 - 0.25, pv(0.5), 1, COLOR.lonaVieja);
     }
   });
 }
@@ -883,6 +918,85 @@ function olivar(m: Marco, estilo: number): void {
     m.forma('cilindro', COLOR.zarzo, eu + 0.45 + i * 0.3, ev, 0.24, 0.24, 0.2);
     m.forma('copa', COLOR.aceituna, eu + 0.45 + i * 0.3, ev, 0.2, 0.2, 0.1, 0.16);
   }
+}
+
+// ───────────────────────────── Las granjas de las aldeas de cebada y de sésamo (motor b55e90f) ─────────────────────────────
+
+/**
+ * El cebadal: la tierra labrada en surcos con la cebada en pie, densa y baja, de verde que amarillea a espiga; al fondo de +v, junto al hueco
+ * de la cerca, la parte segada con las gavillas atadas y una hacina; la cerca, la choza del campo (la casa en los altos) y la hoz en su poste.
+ */
+function cebadal(m: Marco, estilo: number): void {
+  const L = m.L - 0.3, S = m.S - 0.3;
+  m.losa(COLOR.tierra, 0, 0, L - 0.2, S - 0.2, 0.03);
+  // la cebada en pie, en surcos a lo largo; lo segado (el rastrojo) a lo largo de +v
+  const segado = Math.min(1.3, S * 0.28), largo = L - 0.6;
+  const filas = Math.max(2, Math.floor((S - segado - 0.6) / 0.42) + 1);
+  for (let i = 0; i < filas; i++) {
+    const v = -S / 2 + 0.4 + ((S - segado - 0.8) * i) / Math.max(1, filas - 1);
+    // las cañas verdes, la franja de las espigas encima y las espigas con sus barbas, de punta, a tresbolillo de surco a surco
+    m.caja(COLOR.cebadaVerde, 0, v, largo, 0.3, 0.26, 0.03);
+    m.caja(i % 2 ? COLOR.cebada : COLOR.heno, 0, v, largo - 0.04, 0.26, 0.08, 0.29);
+    const c = Math.max(3, Math.round(largo / 0.35));
+    for (let k = 0; k < c; k++) m.forma('cono', m.azar(820 + i * 40 + k) < 0.5 ? COLOR.cebada : COLOR.heno, -largo / 2 + (largo * (k + (i % 2 ? 0.25 : 0.75))) / c, v, 0.1, 0.1, 0.16, 0.37);
+  }
+  const vs = S / 2 - segado / 2 - 0.1;
+  m.losa(COLOR.rastrojo, 0, vs, largo, segado - 0.1, 0.02, 0.03);
+  // las gavillas en pie, atadas por el medio, y una hacina (las gavillas apiladas en cono)
+  const n = Math.max(2, Math.floor((largo * 0.5) / 0.5));
+  for (let i = 0; i < n; i++) {
+    const gu = -largo / 2 + 0.4 + i * 0.5, gv = vs - segado * 0.15;
+    m.forma('cilindro', COLOR.cebada, gu, gv, 0.2, 0.2, 0.42, 0.03);
+    m.forma('cilindro', COLOR.cuerda, gu, gv, 0.22, 0.22, 0.04, 0.2);
+    m.forma('cono', COLOR.cebada, gu, gv, 0.3, 0.3, 0.16, 0.45);
+  }
+  m.forma('cono', COLOR.cebada, largo / 2 - 0.55, vs, 0.8, 0.8, 0.7, 0.03);
+  if (estilo <= 2) cerco(m, 0, 0, L, S, false);
+  else cerco(m, 0, 0, L, S, true, estilo >= 4 ? COLOR.piedraClara : COLOR.piedra);
+  const ch = Math.min(0.7, S * 0.13);
+  if (estilo <= 2) choza(m, L / 2 - ch - 0.3, -S / 2 + ch + 0.3, ch, { frente: 1 });
+  else casaPlana(m, L / 2 - 0.9, -S / 2 + 0.7, 1.2, 0.9, 0.9, fabrica(m, estilo), { frente: 1 });
+}
+
+/**
+ * El campo de sésamo: hileras de matas altas y finas, de hoja verde oscura, con sus flores blancas y rosadas; al fondo de +v, los haces
+ * segados puestos de pie a secar, apoyados unos en otros (así se abren las cápsulas y suelta la semilla), y la estera con la semilla
+ * extendida y los cestos. La cerca como la de las otras granjas.
+ */
+function sesamal(m: Marco, estilo: number): void {
+  const L = m.L - 0.3, S = m.S - 0.3;
+  m.losa(COLOR.tierra, 0, 0, L - 0.2, S - 0.2, 0.03);
+  const secadero = Math.min(1.3, S * 0.3), largo = L - 0.7;
+  const filas = Math.max(2, Math.floor((S - secadero - 0.6) / 0.6) + 1);
+  for (let i = 0; i < filas; i++) {
+    const v = -S / 2 + 0.4 + ((S - secadero - 0.8) * i) / Math.max(1, filas - 1);
+    // la tierra del surco y las matas: el tallo, la hoja en dos pisos y alguna flor
+    m.losa(COLOR.tierraOscura, 0, v, largo, 0.22, 0.02, 0.03);
+    const c = Math.max(3, Math.round(largo / 0.38));
+    for (let k = 0; k < c; k++) {
+      const u = -largo / 2 + (largo * (k + 0.5)) / c, alto = 0.55 + 0.2 * m.azar(860 + i * 40 + k);
+      m.poste(COLOR.mataSesamo, u, v, alto, 0.04, 0.03);
+      m.forma('copa', COLOR.mataSesamo, u, v, 0.26, 0.22, 0.2, 0.18);
+      m.forma('copa', COLOR.hoja, u, v, 0.18, 0.16, 0.16, alto * 0.62);
+      if (m.azar(880 + i * 40 + k) < 0.55) m.forma('cupula', COLOR.florSesamo, u + 0.03, v + 0.04, 0.09, 0.09, 0.06, alto * 0.72);
+    }
+  }
+  // los haces de pie, a secar: cada uno, un cono inclinado contra los otros
+  const vs = S / 2 - secadero / 2 - 0.1, n = Math.max(2, Math.floor((largo * 0.55) / 0.75));
+  for (let i = 0; i < n; i++) {
+    const hu = -largo / 2 + 0.45 + i * 0.75;
+    for (const [dv, inc] of [[-0.08, 0.25], [0.08, -0.25]] as const) m.forma('cono', COLOR.rastrojo, hu, vs + dv, 0.22, 0.22, 0.75, 0.03, 0, inc);
+  }
+  // la estera con la semilla y los cestos
+  const ue = largo / 2 - 0.55;
+  m.losa(COLOR.zarzo, ue, vs, 0.9, Math.min(0.8, secadero - 0.2), 0.02, 0.03);
+  m.losa(COLOR.sesamo, ue, vs, 0.7, Math.min(0.6, secadero - 0.35), 0.02, 0.05);
+  for (let i = 0; i < 2; i++) {
+    m.forma('cilindro', COLOR.zarzo, ue - 0.25 + i * 0.3, vs + secadero / 2 - 0.05, 0.24, 0.24, 0.2);
+    m.forma('copa', COLOR.sesamo, ue - 0.25 + i * 0.3, vs + secadero / 2 - 0.05, 0.2, 0.2, 0.08, 0.17);
+  }
+  if (estilo <= 2) cerco(m, 0, 0, L, S, false);
+  else cerco(m, 0, 0, L, S, true, estilo >= 4 ? COLOR.piedraClara : COLOR.piedra);
 }
 
 /** Un puesto de mercado: mesa, cuatro postes y su toldo. */
@@ -1528,7 +1642,14 @@ function terminado(m: Marco, tipo: string, estilo: number): void {
     case 'maravilla': return maravilla(m, estilo);
     case 'almacen': return almacen(m, estilo);
     case 'granero': return granero(m, estilo);
-    case 'granja': return m.e.cultivo === 'vid' ? vina(m, estilo) : m.e.cultivo === 'oliva' ? olivar(m, estilo) : granja(m, estilo);
+    case 'granja':
+      switch (m.e.cultivo) {
+        case 'vid': return vina(m, estilo);
+        case 'oliva': return olivar(m, estilo);
+        case 'cebada': return cebadal(m, estilo);
+        case 'sesamo': return sesamal(m, estilo);
+        default: return granja(m, estilo);
+      }
     case 'lenera': return lenera(m, estilo);
     case 'corral': return corral(m, estilo);
     case 'caballerizas': return caballerizas(m, estilo);

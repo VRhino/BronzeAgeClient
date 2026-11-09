@@ -17,6 +17,7 @@ import { Piezas, type Pieza } from '../src/ciudad3d/piezas';
 import { AsentamientoSchema, CampamentoMercenariosSchema } from '../src/contrato/gen/bronzeage/v1/entities_pb';
 import { escenaCampamento, plazaDeContrato } from '../src/motor/proyeccion';
 import type { Asentamiento, EscenaPueblo, TrazadoAsentamiento } from '../src/tiposDominio';
+import { nombreDePiezaPueblo, svgPlanoPueblo } from '../src/ui/planoPueblo';
 
 const DIA = 24 * 3_600_000;
 const DIAS: Record<string, number> = { aldea: 3, pueblo: 8, ciudad: 16 };
@@ -448,6 +449,79 @@ describe('los talleres de la comida, la estatua y las aldeas de viñas y olivos 
     }
     expect(puebloEnVista(escena('trigo'), { instante: 0 })!.edificios.every((e) => e.cultivo === undefined)).toBe(true);
     expect(puebloEnVista(escena(), { instante: 0 })!.edificios.every((e) => e.cultivo === undefined)).toBe(true);
+  });
+});
+
+describe('cebadales, campos de sésamo, la bodega de la cerveza y la prensa del sésamo (motor b55e90f)', () => {
+  const edificio = (tipo: string, ancho: number, alto: number, estilo: number, semilla: number, extra: Partial<{ cultivo: string; receta: string }> = {}) =>
+    ({ id: `t-${semilla}`, tipo, x: 0, y: 0, ancho, alto, estado: 'activo' as const, avance: null, mejora: false, danado: false, nivel: 1, estilo, semilla, ...extra });
+  const montar = (e: ReturnType<typeof edificio>): Piezas => { const p = new Piezas(); montarEdificio(p, e); return p; };
+  const colores = (e: ReturnType<typeof edificio>) => new Set(montar(e).lista.map((q) => q.color));
+
+  test('la granja de una aldea de cebada es un cebadal y la de sésamo un campo de sésamo, sin salir de su parcela', () => {
+    let peor = { fuera: 0, que: '' };
+    for (const [ancho, alto] of [[6, 6], [6, 9], [12, 9], [18, 18]] as const) for (const cultivo of ['cebada', 'sesamo']) for (const estilo of [1, 2, 3]) for (let k = 0; k < 5; k++) {
+      const e = edificio('granja', ancho, alto, estilo, ancho * 31 + alto + k * 7919, { cultivo });
+      const p = montar(e), c = new Set(p.lista.map((q) => q.color));
+      expect(c.has(cultivo === 'cebada' ? COLOR.cebada : COLOR.florSesamo), `${cultivo} ${ancho}×${alto}`).toBe(true);
+      expect(c.has(COLOR.trigo) || c.has(COLOR.cultivo) || c.has(COLOR.vid) || c.has(COLOR.olivo)).toBe(false);
+      for (const q of p.lista) { const fuera = salida(q, e); if (fuera > peor.fuera) peor = { fuera, que: `${cultivo} ${ancho}×${alto} estilo ${estilo}: ${q.forma}` }; }
+    }
+    expect(peor.fuera, peor.que).toBeLessThanOrEqual(ALERO);
+  });
+
+  test('la bodega pinta lo que hace: el lagar y el mosto con la uva; la era de la malta y la espuma con la cebada', () => {
+    for (const receta of [undefined, 'uva']) {
+      const c = colores(edificio('bodega', 6, 6, 3, 101, receta ? { receta } : {}));
+      expect(c.has(COLOR.mosto) && c.has(COLOR.uva)).toBe(true);
+      expect(c.has(COLOR.malta) || c.has(COLOR.espuma)).toBe(false);
+    }
+    const c = colores(edificio('bodega', 6, 6, 3, 101, { receta: 'cebada' }));
+    expect(c.has(COLOR.malta) && c.has(COLOR.espuma) && c.has(COLOR.cerveza)).toBe(true);
+    expect(c.has(COLOR.mosto) || c.has(COLOR.uva)).toBe(false);
+  });
+
+  test('la prensa pinta lo que prensa: la aceituna o el sésamo', () => {
+    for (const receta of [undefined, 'aceituna']) {
+      const c = colores(edificio('prensa', 6, 3, 4, 101, receta ? { receta } : {}));
+      expect(c.has(COLOR.aceituna) && !c.has(COLOR.sesamo)).toBe(true);
+    }
+    const c = colores(edificio('prensa', 6, 3, 4, 101, { receta: 'sesamo' }));
+    expect(c.has(COLOR.sesamo) && !c.has(COLOR.aceituna)).toBe(true);
+  });
+
+  test('la bodega de la cerveza y la prensa del sésamo, en cualquier estilo y semilla, no salen de su huella más que un alero', () => {
+    let peor = { fuera: 0, que: '' };
+    for (const [tipo, ancho, alto, receta] of [['bodega', 6, 6, 'cebada'], ['prensa', 6, 3, 'sesamo'], ['prensa', 3, 6, 'sesamo']] as const) for (const estilo of [1, 2, 3, 4, 5]) for (let k = 0; k < 30; k++) {
+      const e = edificio(tipo, ancho, alto, estilo, k * 7919 + 11, { receta });
+      for (const q of montar(e).lista) { const fuera = salida(q, e); if (fuera > peor.fuera) peor = { fuera, que: `${tipo} ${ancho}×${alto} estilo ${estilo} semilla ${e.semilla}: ${q.forma}` }; }
+    }
+    expect(peor.fuera, peor.que).toBeLessThanOrEqual(ALERO);
+  });
+
+  test('la receta del motor llega a la maqueta; sin elegir, nada', () => {
+    const a = { id: 'as-1', nivel: 3, edificios: [{ id: 'b-1', tipo: 'bodega', estado: 'activo' as const, posicion: { x: 9, y: 9 }, receta: 'cebada' }, { id: 'b-2', tipo: 'bodega', estado: 'activo' as const, posicion: { x: 27, y: 9 } }], recintos: [] };
+    const c = ciudadEnVista(a, { calles: [], caminos: [], huellas: { 'b-1': { x: 0, y: 0, ancho: 6, alto: 6 }, 'b-2': { x: 18, y: 0, ancho: 6, alto: 6 } }, murallas: [], radio: 40, celda: 3 }, { instante: 0 })!;
+    expect(c.edificios.find((e) => e.id === 'b-1')!.receta).toBe('cebada');
+    expect(c.edificios.find((e) => e.id === 'b-2')!.receta).toBeUndefined();
+  });
+
+  test('en la aldea, la cebada y el sésamo del motor hacen sus granjas cebadales y campos de sésamo; en el plano, con su nombre', () => {
+    const j = JSON.parse(readFileSync(new URL('./ciudad3d/pueblos/aldea-2.json', import.meta.url), 'utf8')) as { id: string; tipoExtractor: string; planta: { id: string; tipo: string; posicion: { x: number; y: number }; ancho: number; alto: number }[]; trazado: { unidadesPorCelda: number; radioUl: number; calles: EscenaPueblo['calles']; caminos: EscenaPueblo['caminos'] } };
+    const escena = (cultivo?: string): EscenaPueblo => ({
+      puebloId: j.id, tipo: j.tipoExtractor, nivelMadre: 3, unidadesPorCelda: j.trazado.unidadesPorCelda, radio: j.trazado.radioUl, cultivo,
+      edificios: j.planta.map((p) => ({ edificioId: p.id, tipo: p.tipo, posicion: { x: p.posicion.x / 1000, y: p.posicion.y / 1000 }, ancho: p.ancho, alto: p.alto })),
+      calles: j.trazado.calles, caminos: j.trazado.caminos,
+    });
+    for (const [cultivo, nombre] of [['cebada', 'Cebadal'], ['sesamo', 'Campo de sésamo']] as const) {
+      const c = puebloEnVista(escena(cultivo), { instante: 0 })!;
+      expect(c.edificios.filter((e) => e.tipo === 'granja').every((e) => e.cultivo === cultivo)).toBe(true);
+      expect(c.edificios.filter((e) => e.tipo !== 'granja').every((e) => e.cultivo === undefined)).toBe(true);
+      expect(nombreDePiezaPueblo('granja', cultivo)).toBe(nombre);
+      expect(svgPlanoPueblo(escena(cultivo))).toContain(`<title>${nombre}</title>`);
+    }
+    expect(nombreDePiezaPueblo('corral', 'cebada')).toBe('Corral');
+    expect(nombreDePiezaPueblo('granja', 'trigo')).toBe('Granja');
   });
 });
 

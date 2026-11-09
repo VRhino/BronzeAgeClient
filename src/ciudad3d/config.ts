@@ -35,6 +35,9 @@ export const COLOR = {
   cultivo: 0x7d9443, trigo: 0xc4a24d, rastrojo: 0xa38a58,
   /** Los talleres de la comida (tanda 69): la uva y el mosto de la bodega, la aceituna y el aceite de la prensa, el queso y el pan; y la cepa. */
   uva: 0x5b2f4f, mosto: 0x6b2840, aceituna: 0x4f5a2a, aceite: 0xb59a2e, queso: 0xe3cf8e, pan: 0xb7793e, cepa: 0x6a4c34, vid: 0x5e8a3a,
+  /** La cebada en el campo (verde que amarillea) y en grano, la cerveza, y el sésamo: la mata, su flor y la semilla (motor b55e90f). */
+  cebada: 0xc8b46e, cebadaVerde: 0x9ba55a, malta: 0xa7834a, cerveza: 0x8a5a24, espuma: 0xe6dcc0,
+  sesamo: 0xe2d4a8, mataSesamo: 0x58803c, florSesamo: 0xeed6dc,
   fuego: 0xc8501c, carbon: 0x2f2a26, bronce: 0xa8783a, cuero: 0x8a5a36,
   lona: 0xd6cbb0, lonaVieja: 0xb9a888, piel: 0x987350, pielOscura: 0x6f5238,
   /** Las bestias de tiro del Albergue de caravanas: bueyes y asnos. */

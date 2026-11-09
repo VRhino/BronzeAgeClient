@@ -61,6 +61,11 @@ describe('las aldeas por su cultivo (tanda 69)', () => {
     expect(mats('oliva').has('olivo')).toBe(true);
     expect(mats('oliva').has('campo')).toBe(false);
   });
+  test('la de cebada, pálida con sus surcos verdes; la de sésamo, la tierra con sus matas y su flor (motor b55e90f)', () => {
+    expect(mats('cebada').has('cebada') && mats('cebada').has('cebadaVerde')).toBe(true);
+    expect(mats('sesamo').has('sesamo') && mats('sesamo').has('florSesamo')).toBe(true);
+    for (const c of ['cebada', 'sesamo']) expect(mats(c).has('campo') || mats(c).has('vid') || mats(c).has('olivo')).toBe(false);
+  });
   test('un extractor no tiene campos, tenga lo que tenga', () => {
     const m = new Set(piezasDePueblo(0, 0, false, 77, 'vid').map((c) => c.mat));
     expect(m.has('vid') || m.has('campo')).toBe(false);

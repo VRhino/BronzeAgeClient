@@ -15,6 +15,8 @@ const COLORES = {
   lonaOscura: 0x4a3f36, fuego: 0xd35400, oro: 0xe0b422, filo: 0xf4ead2, batallaPropia: 0x2f6b3a, batallaAjena: 0x8a3b12,
   // las aldeas de viñas y de olivos (tanda 69): la tierra labrada, las hileras de cepas y los olivos
   tierra: 0x8b6e4e, rastrojo: 0xa89064, vid: 0x4f7a2e, olivo: 0x7d8a58,
+  // las de cebada y de sésamo (motor b55e90f): la cebada pálida en surcos verdes, las matas de sésamo y su flor
+  cebada: 0xcdbb74, cebadaVerde: 0x95a256, sesamo: 0x5a8a40, florSesamo: 0xeed6dc,
 };
 type Material = keyof typeof COLORES;
 /** Color de la bandera de los campamentos de mercenarios y de los de bandidos (los del 2D). */
@@ -239,7 +241,8 @@ function ciudadPlana(p: Piezas, x: number, y: number, rc: number, nivel: number,
 
 /**
  * Un pueblo: empalizada y casas; la aldea agrícola con sus campos alrededor, el extractor con su bocamina. Los campos, según el cultivo
- * (tanda 69): de trigo, dorados; de vid, tierra con sus hileras de cepas; de olivo, tierra clara con olivos en tresbolillo.
+ * (tanda 69): de trigo, dorados; de vid, tierra con sus hileras de cepas; de olivo, tierra clara con olivos en tresbolillo. Y desde el motor
+ * b55e90f: de cebada, pálidos con surcos verdes y una hacina; de sésamo, tierra con hileras de matas altas salpicadas de flor.
  */
 function pueblo(p: Piezas, x: number, y: number, aldea: boolean, color: string, sem: number, cultivo?: string): void {
   // más grande que la maqueta (`MUNDO3D.pueblo`, Víctor 2026-11-07)
@@ -264,6 +267,18 @@ function pueblo(p: Piezas, x: number, y: number, aldea: boolean, color: string, 
           if (j === 1 && i === 3) continue;
           const [ox, oy] = en((-0.15 + i * 0.1 + (j === 1 ? 0.05 : 0)) * M, (-0.09 + j * 0.09) * M);
           p.caja('olivo', ox, oy, 0.06 * M, 0.06 * M, 0.05 * M, a + i, 0.012 * M);
+        }
+      } else if (cultivo === 'cebada') {
+        p.caja('cebada', cx, cy, 0.42 * M, 0.3 * M, 0.018 * M, a);
+        for (let i = 0; i < 4; i++) { const [rx, ry] = en(0, (-0.105 + i * 0.07) * M); p.caja('cebadaVerde', rx, ry, 0.38 * M, 0.02 * M, 0.024 * M, a); }
+        const [hx, hy] = en(0.15 * M, 0.1 * M);
+        p.caja('cebada', hx, hy, 0.05 * M, 0.05 * M, 0.05 * M, a + 0.7, 0.018 * M);
+      } else if (cultivo === 'sesamo') {
+        p.caja('tierra', cx, cy, 0.42 * M, 0.3 * M, 0.012 * M, a);
+        for (let i = 0; i < 4; i++) {
+          const [rx, ry] = en(0, (-0.105 + i * 0.07) * M);
+          p.caja('sesamo', rx, ry, 0.38 * M, 0.026 * M, 0.05 * M, a);
+          for (let k = 0; k < 3; k++) { const [fx, fy] = en((-0.12 + k * 0.12 + (i % 2) * 0.05) * M, (-0.105 + i * 0.07) * M); p.caja('florSesamo', fx, fy, 0.03 * M, 0.03 * M, 0.012 * M, a, 0.05 * M); }
         }
       } else {
         p.caja('campo', cx, cy, 0.42 * M, 0.3 * M, 0.015 * M, a);

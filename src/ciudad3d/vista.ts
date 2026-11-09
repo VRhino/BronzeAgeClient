@@ -140,7 +140,7 @@ export class VistaCiudad3D {
     if (this.primera) { this.camara.ajustar(c.radio, c.extension, true, c.nucleo); this.primera = false; }
     else this.camara.ajustar(c.radio, c.extension, false);
     const paso = (a: number | null): number => (a === null ? -1 : Math.floor(a / CIUDAD3D.pasoObra));
-    const ce = c.edificios.map((e) => `${e.id}:${e.tipo}:${e.estado}:${e.x},${e.y},${e.ancho},${e.alto}:${e.estilo}:${e.danado}:${e.mejora}:${paso(e.estado === 'en_construccion' ? e.avance : null)}`).join('|');
+    const ce = c.edificios.map((e) => `${e.id}:${e.tipo}:${e.estado}:${e.x},${e.y},${e.ancho},${e.alto}:${e.estilo}:${e.danado}:${e.mejora}:${paso(e.estado === 'en_construccion' ? e.avance : null)}:${e.buey ? 'b' : ''}${e.cultivo ?? ''}:${e.receta ?? ''}`).join('|');
     if (ce !== this.claves.edificios) {
       this.claves.edificios = ce;
       const p = new Piezas();

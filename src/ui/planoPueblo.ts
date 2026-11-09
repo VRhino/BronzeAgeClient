@@ -15,6 +15,9 @@ const COLOR: Record<string, string> = {
   // las granjas de las aldeas de viñas y de olivos (tanda 69)
   vina: '#6f7f3a',
   olivar: '#8a9466',
+  // y las de cebada y de sésamo (motor b55e90f)
+  cebadal: '#c8b46e',
+  sesamal: '#5f8a42',
 };
 const NOMBRE: Record<string, string> = {
   vivienda: 'Vivienda',
@@ -28,16 +31,21 @@ const NOMBRE: Record<string, string> = {
   minaHierro: 'Mina de hierro',
   vina: 'Viña',
   olivar: 'Olivar',
+  cebadal: 'Cebadal',
+  sesamal: 'Campo de sésamo',
 };
 const SUELO = '#93c26b';
+/** La pieza en que se pinta la granja de cada cultivo (el trigo, la granja de siempre). */
+const GRANJA_DE_CULTIVO: Record<string, string> = { vid: 'vina', oliva: 'olivar', cebada: 'cebadal', sesamo: 'sesamal' };
 
-/** El nombre de una pieza de un pueblo, para el jugador; la granja de una aldea de viñas o de olivos (`cultivo`, tanda 69) es una viña o un olivar. */
+/** El nombre de una pieza de un pueblo, para el jugador; la granja de una aldea de otro cultivo que el trigo (`cultivo`, tanda 69 y motor b55e90f)
+ * es una viña, un olivar, un cebadal o un campo de sésamo. */
 export function nombreDePiezaPueblo(tipo: string, cultivo?: string): string {
   return NOMBRE[tipoDePieza(tipo, cultivo)] ?? tipo;
 }
 
 function tipoDePieza(tipo: string, cultivo: string | undefined): string {
-  return tipo === 'granja' && cultivo === 'vid' ? 'vina' : tipo === 'granja' && cultivo === 'oliva' ? 'olivar' : tipo;
+  return tipo === 'granja' && cultivo ? (GRANJA_DE_CULTIVO[cultivo] ?? tipo) : tipo;
 }
 
 /** El SVG de la planta, en unidades locales, encuadrado sobre las piezas, las calles y los caminos con un margen del 12 %. */
