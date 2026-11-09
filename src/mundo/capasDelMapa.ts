@@ -1,10 +1,11 @@
 // Las capas del mapa que el jugador pone y quita (Víctor, 2026-11-03): los nombres de los nodos, en el modo mundo y en el modo mapa, y en el
 // modo mapa la fertilidad del suelo y las parcelas de bosque, estas dos solo sobre lo explorado alguna vez. También hasta dónde se carga el mundo
-// 3D. Se recuerdan en este navegador.
+// 3D. Se recuerdan en este navegador. La fertilidad es la de un cultivo, que se elige en la leyenda (motor b55e90f: cada cultivo tiene su capa).
 // Aquí va lo que no pinta: qué capas hay puestas, qué se ha explorado y el color de cada fertilidad. Lo pinta `render.ts`.
 import type { RasterU8 } from '../terreno';
 import { DISTANCIA_CARGA } from '../mundo3d/config';
 import type { NieblaProyectada } from '../tiposDominio';
+import { esCultivo, type Cultivo } from './fertilidad';
 
 export interface CapasDelMapa {
   /** Los nombres de los nodos de recursos (en el 3D, los cercanos; en el modo mapa, de cerca). */
@@ -41,6 +42,24 @@ export function capasDelMapa(): Readonly<CapasDelMapa> {
 export function fijarCapa(nombre: keyof CapasDelMapa, si: boolean): void {
   capas = { ...capasDelMapa(), [nombre]: si };
   try { localStorage.setItem(CLAVE, JSON.stringify(capas)); } catch { /* sin almacenamiento */ }
+}
+
+const CLAVE_CULTIVO = 'bronzeage.capas.cultivo';
+let cultivo: Cultivo | null = null;
+
+/** El cultivo cuya fertilidad pinta la capa (de serie, el trigo). */
+export function cultivoDeLaCapa(): Cultivo {
+  if (cultivo === null) {
+    let guardado: string | null = null;
+    try { guardado = localStorage.getItem(CLAVE_CULTIVO); } catch { /* sin almacenamiento */ }
+    cultivo = esCultivo(guardado) ? guardado : 'trigo';
+  }
+  return cultivo;
+}
+
+export function fijarCultivoDeLaCapa(c: Cultivo): void {
+  cultivo = c;
+  try { localStorage.setItem(CLAVE_CULTIVO, c); } catch { /* sin almacenamiento */ }
 }
 
 const CLAVE_CARGA = 'bronzeage.distanciaCarga';

@@ -1,8 +1,19 @@
 // El botón de capas del mapa (Víctor, 2026-11-03), encima del zoom: en el modo mundo, los nombres de los nodos, la fertilidad del suelo
 // (2026-11-04) y hasta dónde se carga el mundo; en el modo mapa, los nombres, la fertilidad y las parcelas de bosque, cada una con su leyenda. Lo puesto se recuerda
-// (`mundo/capasDelMapa.ts`).
-import { capasDelMapa, colorDeFertilidad, distanciaDeCarga, fijarCapa, fijarDistanciaDeCarga, type CapasDelMapa } from '../mundo/capasDelMapa';
+// (`mundo/capasDelMapa.ts`). La fertilidad, de un cultivo que se elige en su leyenda (0.190.0: cada cultivo tiene su tierra buena).
+import { capasDelMapa, colorDeFertilidad, cultivoDeLaCapa, distanciaDeCarga, fijarCapa, fijarCultivoDeLaCapa, fijarDistanciaDeCarga, type CapasDelMapa } from '../mundo/capasDelMapa';
+import { CULTIVOS_DE_ALDEA, esCultivo, type Cultivo } from '../mundo/fertilidad';
 import { DISTANCIA_CARGA } from '../mundo3d/config';
+import { RECURSO_ICONO } from '../paletas';
+
+/** Cómo se nombra cada cultivo en la leyenda, con el icono de lo que da. */
+export const NOMBRE_DE_CULTIVO: Record<Cultivo, { nombre: string; da: string }> = {
+  trigo: { nombre: 'Trigo', da: 'trigo' },
+  vid: { nombre: 'Vid', da: 'uva' },
+  oliva: { nombre: 'Olivo', da: 'aceituna' },
+  cebada: { nombre: 'Cebada', da: 'cebada' },
+  sesamo: { nombre: 'Sésamo', da: 'sesamo' },
+};
 
 const ICONO = `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
   <path d="M12 3 2.5 8 12 13l9.5-5z"/><path d="m2.5 12 9.5 5 9.5-5"/><path d="m2.5 16 9.5 5 9.5-5"/></svg>`;
@@ -17,12 +28,18 @@ function degradadoFertilidad(minima: number): string {
   return `linear-gradient(90deg, ${pasos.map((f) => `${rgb(f)} ${(Math.max(0, f) * 100).toFixed(1)}%`).join(', ')})`;
 }
 
-/** El botón y su lista. `modo` dice qué capas tiene esta pantalla; `minimaAldea`, dónde va el corte de la aldea en la leyenda. */
-export function htmlCapas(modo: 'mundo' | 'mapa', minimaAldea = 0.3): string {
+/** El botón y su lista. `modo` dice qué capas tiene esta pantalla; `minimaAldea`, dónde va el corte de la aldea en la leyenda; `cultivos`, los que
+ * tienen capa en este mundo (con uno solo no hay nada que elegir). */
+export function htmlCapas(modo: 'mundo' | 'mapa', minimaAldea = 0.3, cultivos: readonly Cultivo[] = CULTIVOS_DE_ALDEA): string {
   const c = capasDelMapa();
   const decimal = (x: number) => x.toFixed(1).replace('.', ',');
+  const elegido = cultivos.includes(cultivoDeLaCapa()) ? cultivoDeLaCapa() : 'trigo';
+  const deQue = cultivos.length > 1
+    ? `<div class="mapa-capas-cultivos" role="radiogroup" aria-label="Fertilidad para el cultivo">${cultivos.map((x) => `<label class="mapa-capas-cultivo" title="${NOMBRE_DE_CULTIVO[x].nombre}"><input type="radio" name="capa-cultivo-${modo}" value="${x}" data-capa-cultivo${x === elegido ? ' checked' : ''}><span><span aria-hidden="true">${RECURSO_ICONO[NOMBRE_DE_CULTIVO[x].da] ?? '🌾'}</span> ${NOMBRE_DE_CULTIVO[x].nombre}</span></label>`).join('')}</div>`
+    : '';
   const fertilidad = `${fila('fertilidad', 'Fertilidad del suelo', c.fertilidad)}
       <div class="mapa-capas-leyenda" data-leyenda="fertilidad"${c.fertilidad ? '' : ' hidden'}>
+        ${deQue}
         <span class="mapa-capas-rampa" style="background:${degradadoFertilidad(minimaAldea)}"><i style="left:${(minimaAldea * 100).toFixed(1)}%"></i></span>
         <span class="mapa-capas-extremos"><span>Yerma</span><span>Aldea desde ${decimal(minimaAldea)}</span><span>Fértil</span></span>
       </div>`;
@@ -69,6 +86,11 @@ export function cablearCapas(raiz: HTMLElement, alCambiar: () => void): void {
     fijarCapa(capa, casilla.checked);
     const leyenda = lista.querySelector<HTMLElement>(`[data-leyenda="${capa}"]`);
     if (leyenda) leyenda.hidden = !casilla.checked;
+    alCambiar();
+  }));
+  lista.querySelectorAll<HTMLInputElement>('[data-capa-cultivo]').forEach((r) => r.addEventListener('change', () => {
+    if (!r.checked || !esCultivo(r.value)) return;
+    fijarCultivoDeLaCapa(r.value);
     alCambiar();
   }));
   const rango = lista.querySelector<HTMLInputElement>('[data-carga]');

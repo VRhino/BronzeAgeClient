@@ -1,5 +1,6 @@
 // VISTA DE LA CIUDAD (plaza): clic en un edificio del lienzo → ficha con su info y acciones; resaltado cruzado con la lista de edificios;
-// producción en el tooltip; subpestañas «Recetas» (alternarReceta) e «Información» (glosario) de Centro urbano.
+// producción en el tooltip; subpestañas «Recetas» (alternarReceta) e «Información» (glosario) de Centro urbano. En la bodega y la prensa, la
+// receta que trabaja y si está parada, y el selector de receta (`elegirReceta`, motor b55e90f) para el Gobernador y el Maestro de Obras.
 // Qué se puede hacer con UN edificio, según el backend (Doc 4 y comandos): mejorarlo (activo, Gobernador/Maestro de Obras) y quitarlo de la cola
 // (en cola). NO hay pausa ni prioridad por edificio (la pausa existe por RECETA y la prioridad la fija el motor): no se inventan.
 import type { ProyeccionJugador } from '../apiCliente';
@@ -19,6 +20,7 @@ import { iconoEdificio } from './iconosEdificio';
 import { barraAvance, chipsDeCoste, cuentaAtras, duracion } from './juegoVisual';
 import { avanceDeObra } from './panelObras';
 import { confirmar } from './dialogo';
+import { RECETA_DE_INSUMO, esDeUnaReceta, insumoActivo, insumosDe, recetasDistintas, recetasElegibles } from './recetasUnicas';
 
 type Escapar = (valor: string) => string;
 type Cargo = 'gobernador' | 'maestroObras' | null;
@@ -49,12 +51,20 @@ function adoptadasDe(p: ProyeccionJugador): string[] | null {
 const costeTexto = (coste: Record<string, number>, e: Escapar): string =>
   Object.entries(coste).map(([r, n]) => `${RECURSO_ICONO[r] ?? '📦'} ${n} ${e(RECURSO_NOMBRE[r] ?? r)}`).join(' · ');
 
-/** La producción por minuto de UN edificio de ese tipo (la proyección la da por tipo: total y nº de activos; se reparte a partes iguales). */
+/** La producción por minuto de UN edificio de ese tipo (la proyección la da por tipo: total y nº de activos; se reparte a partes iguales). Una bodega
+ * o una prensa da solo lo de su receta, repartido entre las que trabajan esa misma, y nada si está parada (motor b55e90f). */
 function produccionDe(p: ProyeccionJugador, edificio: Edificio): { recurso: string; porMinuto: number; activos: number }[] {
-  if (edificio.estado !== 'activo') return [];
+  if (edificio.estado !== 'activo' || edificio.recetaParada) return [];
+  const activo = insumoActivo(edificio);
+  const produce = activo ? RECETA_DE_INSUMO[activo]?.produce : undefined;
+  const a = p.asentamientos[0];
+  const conLaMisma = activo && a ? internosDe(a).filter((x) => x.tipo === edificio.tipo && x.estado === 'activo' && !x.recetaParada && insumoActivo(x) === activo).length : 0;
   return (p.produccionDeAsentamiento ?? [])
-    .filter((it) => it.tipo === edificio.tipo && it.cantidadPorMinuto > 0)
-    .map((it) => ({ recurso: it.recurso, porMinuto: it.cantidadPorMinuto / Math.max(1, it.activos), activos: it.activos }));
+    .filter((it) => it.tipo === edificio.tipo && it.cantidadPorMinuto > 0 && (!produce || it.recurso === produce))
+    .map((it) => {
+      const activos = conLaMisma || it.activos;
+      return { recurso: it.recurso, porMinuto: it.cantidadPorMinuto / Math.max(1, activos), activos };
+    });
 }
 
 /** Cuántas veces más rinde un taller con su buey (`factorBuey` del catálogo: solo el molino lo tiene, tanda 69); 1 sin buey. */
@@ -81,18 +91,58 @@ export function htmlBuey(a: Asentamiento, edificio: Edificio, cargo: Cargo, e: E
     </div>`;
 }
 
+/** La receta de una bodega o una prensa (motor b55e90f): la que trabaja, si está parada y, con cargo, a cuáles se puede pasar (las que no pasan del
+ * tope de recetas distintas de la plaza; si no hay ninguna, no sale el selector y se dice por qué). Vacío en los demás edificios. */
+export function htmlRecetaUnica(a: Asentamiento, edificio: Edificio, cargo: Cargo, e: Escapar): string {
+  if (!esDeUnaReceta(edificio.tipo)) return '';
+  const activo = insumoActivo(edificio);
+  if (!activo) return '';
+  const nivel = String(edificio.nivelInterno ?? 1);
+  const porUnidad = (insumo: string): number | undefined => nivelesDeEdificio(edificio.tipo)?.[nivel]?.recetas.find((r) => insumo in r.consumePorUnidad)?.consumePorUnidad[insumo];
+  const receta = (insumo: string): string => {
+    const r = RECETA_DE_INSUMO[insumo];
+    const n = porUnidad(insumo);
+    return `${RECURSO_ICONO[r?.produce ?? ''] ?? '📦'} ${e(r?.nombre ?? RECURSO_NOMBRE[insumo] ?? insumo)}${n !== undefined ? `, con ${fmt(n)} ${RECURSO_ICONO[insumo] ?? ''} ${e((RECURSO_NOMBRE[insumo] ?? insumo).toLowerCase())} por unidad` : ''}`;
+  };
+  const tipo = nombreDe(edificio.tipo).toLowerCase();
+  const plural = edificio.tipo === 'bodega' ? 'bodegas' : 'prensas';
+  const caben = recetasDistintas(edificio.tipo, a.nivelActual ?? a.nivel);
+  const regla = edificio.tipo === 'bodega'
+    ? 'Cada bodega hace vino o cerveza, no las dos. Caben tres en una plaza y, en los niveles 3 y 4, todas hacen la misma bebida; en el 5 puede haber de las dos.'
+    : 'Cada prensa hace aceite de aceituna o de sésamo, no los dos. Caben tres en una plaza y todas sacan el aceite de la misma fuente.';
+  const parada = edificio.recetaParada
+    ? `<p class="asent-lado-nota falta">⏸ Parada: la plaza ha bajado de nivel y ya no le caben tantas recetas distintas en sus ${plural}. Vuelve a producir con el nivel o eligiéndole otra receta.</p>`
+    : '';
+  const elegibles = cargo ? recetasElegibles(a, edificio) : [];
+  const otras = insumosDe(edificio).filter((i) => i !== activo);
+  const selector = elegibles.length
+    ? `<div class="ficha-receta-elegir">${elegibles.map((i) => `<button class="btn-secondary" type="button" data-ficha-receta="${e(i)}" title="${e(`Pasar a ${(RECETA_DE_INSUMO[i]?.nombre ?? i).toLowerCase()}`)}">${RECURSO_ICONO[RECETA_DE_INSUMO[i]?.produce ?? ''] ?? '📦'} Hacer ${e((RECETA_DE_INSUMO[i]?.nombre ?? i).toLowerCase())}</button>`).join('')}</div>`
+    // Con cargo y otra receta en el catálogo que ahora no cabe, se dice por qué no hay selector (no se ofrece lo que el motor rechazaría). Con una
+    // sola receta distinta y nada parado, todas trabajan la misma: solo cambia la que está sola en la plaza.
+    : cargo && otras.length && !edificio.recetaParada && caben === 1
+      ? `<p class="asent-lado-nota">Todas las ${plural} de la plaza ${edificio.tipo === 'bodega' ? 'hacen la misma bebida' : 'sacan el aceite de la misma fuente'}: una ${tipo} solo cambia de receta si es la única${edificio.tipo === 'bodega' ? ', o con la plaza en el nivel 5' : ''}.</p>`
+      : '';
+  return `<div class="ficha-mejora ficha-receta">
+      <span class="faction-kicker">Receta${ayuda(`plaza:receta-${edificio.tipo}`, regla)}</span>
+      <p class="asent-lado-nota">${receta(activo)}.</p>
+      ${parada}${selector}
+    </div>`;
+}
+
 const tieneRecetas = (e: Edificio): boolean => (nivelesDeEdificio(e.tipo)?.[String(e.nivelInterno ?? 1)]?.recetas.length ?? 0) > 0;
 
 /** Lo que enseña el tooltip del lienzo: nombre, nivel, estado, notas y producción. */
 export function htmlTooltipEdificio(p: ProyeccionJugador, edificio: Edificio, e: Escapar): string {
   const estado = edificio.estado === 'activo' ? 'Activo' : edificio.estado === 'en_construccion' ? 'En construcción' : 'En cola';
-  const notas = [edificio.danado ? 'dañado (reconstrucción)' : null, edificio.pausadoPorAlmacenLleno ? 'parado — almacén lleno' : null].filter(Boolean).join(' · ');
+  const notas = [edificio.danado ? 'dañado (reconstrucción)' : null, edificio.pausadoPorAlmacenLleno ? 'parado — almacén lleno' : null, edificio.recetaParada ? 'receta parada por el nivel de la plaza' : null].filter(Boolean).join(' · ');
+  const activo = insumoActivo(edificio);
+  const receta = activo && RECETA_DE_INSUMO[activo] ? `<span>${RECURSO_ICONO[RECETA_DE_INSUMO[activo].produce] ?? '📦'} Hace ${e(RECETA_DE_INSUMO[activo].nombre.toLowerCase())}</span>` : '';
   const prod = produccionDe(p, edificio)
     .map((x) => `<span>${RECURSO_ICONO[x.recurso] ?? '📦'} ${e(RECURSO_NOMBRE[x.recurso] ?? x.recurso)} · ${x.activos > 1 ? '≈ ' : ''}${fmt(x.porMinuto)}/min</span>`)
     .join('');
   // Necesita Backend: consumo por edificio (la proyección solo trae la producción).
   const consumo = edificio.estado === 'activo' && tieneRecetas(edificio) ? '<span>Consumo por edificio: no lo publica el servidor</span>' : '';
-  return `<strong>${e(nombreDe(edificio.tipo))}</strong><span>Nivel ${edificio.nivelInterno ?? 1} · ${estado}</span>${notas ? `<span>${e(notas)}</span>` : ''}${prod}${consumo}`;
+  return `<strong>${e(nombreDe(edificio.tipo))}</strong><span>Nivel ${edificio.nivelInterno ?? 1} · ${estado}</span>${receta}${notas ? `<span>${e(notas)}</span>` : ''}${prod}${consumo}`;
 }
 
 function htmlFicha(p: ProyeccionJugador, a: Asentamiento, edificio: Edificio, e: Escapar): string {
@@ -104,7 +154,8 @@ function htmlFicha(p: ProyeccionJugador, a: Asentamiento, edificio: Edificio, e:
   const prod = produccionDe(p, edificio)
     .map((x) => `<li>${RECURSO_ICONO[x.recurso] ?? '📦'} ${e(RECURSO_NOMBRE[x.recurso] ?? x.recurso)} · ${x.activos > 1 ? '≈ ' : ''}${fmt(x.porMinuto)}/min</li>`)
     .join('');
-  const recetas = (niveles?.[String(nivel)]?.recetas ?? [])
+  // la bodega y la prensa enseñan su receta en su bloque (`htmlRecetaUnica`), no la lista entera
+  const recetas = (esDeUnaReceta(edificio.tipo) ? [] : niveles?.[String(nivel)]?.recetas ?? [])
     .map((r) => `<li>${e(RECURSO_NOMBRE[r.produce] ?? r.produce)}: ${costeTexto(r.consumePorUnidad, e) || 'sin insumos'} por unidad</li>`)
     .join('');
 
@@ -158,6 +209,7 @@ function htmlFicha(p: ProyeccionJugador, a: Asentamiento, edificio: Edificio, e:
     ${obra}
     ${prod ? `<span class="faction-kicker">Producción</span><ul class="asent-ficha-lista">${prod}</ul>` : ''}
     ${recetas ? `<span class="faction-kicker">Recetas de este nivel ${ayuda('plaza:ficha-recetas', 'Consumo por edificio: no lo publica el servidor.')}</span><ul class="asent-ficha-lista">${recetas}</ul>` : ''}
+    ${htmlRecetaUnica(a, edificio, cargo, e)}
     ${htmlBuey(a, edificio, cargo, e)}
     ${acciones}`;
 }
@@ -214,6 +266,7 @@ export function repintarFicha(): void {
     };
     fichaEl!.querySelector('[data-ficha-cerrar]')?.addEventListener('click', () => { seleccion = null; alCambiar(); });
     fichaEl!.querySelector<HTMLElement>('[data-ficha-mejorar]')?.addEventListener('click', (ev) => void lanzar('mejorarEdificioAhora', { asentamientoId: a.id, cargo: cargoDe(a, p.heroeId), edificioId: edificio.id }, ev.currentTarget as HTMLElement));
+    fichaEl!.querySelectorAll<HTMLElement>('[data-ficha-receta]').forEach((b) => b.addEventListener('click', (ev) => void lanzar('elegirReceta', { asentamientoId: a.id, cargo: cargoDe(a, p.heroeId), edificioId: edificio.id, insumo: b.dataset.fichaReceta }, ev.currentTarget as HTMLElement)));
     fichaEl!.querySelector<HTMLElement>('[data-ficha-buey]')?.addEventListener('click', (ev) => void lanzar('asignarBuey', { asentamientoId: a.id, cargo: cargoDe(a, p.heroeId), edificioId: edificio.id }, ev.currentTarget as HTMLElement));
     fichaEl!.querySelector<HTMLElement>('[data-ficha-quitar]')?.addEventListener('click', (ev) => void lanzar('quitarDeCola', { asentamientoId: a.id, cargo: cargoDe(a, p.heroeId), edificioId: edificio.id }, ev.currentTarget as HTMLElement));
     fichaEl!.querySelector<HTMLElement>('[data-ficha-cancelar-obra]')?.addEventListener('click', (ev) => {
@@ -281,12 +334,15 @@ interface RecetaAgregada {
   edificioReq?: { tipo: string; nivel: number };
 }
 
-/** Las recetas que fabrican los talleres activos de la plaza, una por recurso producido (la pausa es por recurso y vale para todos los talleres). */
+/** Las recetas que fabrican los talleres activos de la plaza, una por recurso producido (la pausa es por recurso y vale para todos los talleres).
+ * La bodega y la prensa cuentan solo su receta activa, y nada si está parada (motor b55e90f). */
 function recetasDe(a: Asentamiento, alCargar: () => void): RecetaAgregada[] {
   const porRecurso = new Map<string, RecetaAgregada>();
   for (const ed of internosDe(a)) {
-    if (ed.estado !== 'activo') continue;
+    if (ed.estado !== 'activo' || ed.recetaParada) continue;
+    const activo = insumoActivo(ed, alCargar);
     for (const r of nivelesDeEdificio(ed.tipo, alCargar)?.[String(ed.nivelInterno ?? 1)]?.recetas ?? []) {
+      if (activo && !(activo in r.consumePorUnidad)) continue;
       const ag = porRecurso.get(r.produce) ?? { produce: r.produce, talleres: new Map(), porMinuto: 0, insumos: r.consumePorUnidad, tecnologia: r.requiereTecnologia, edificioReq: r.requiereEdificio };
       ag.talleres.set(ed.tipo, (ag.talleres.get(ed.tipo) ?? 0) + 1);
       ag.porMinuto += r.produccionBase * factorDeBuey(ed, alCargar);

@@ -177,6 +177,7 @@ function edificio(e: pb.Edificio): d.Edificio {
     pausadoPorAlmacenLleno: e.pausadoPorAlmacenLleno || undefined, danado: e.danado || undefined,
     mejora: e.mejora ? { nivelObjetivo: e.mejora.nivelObjetivo, completaEn: instante(e.mejora.completaEnMs)! } : undefined,
     buey: e.buey || undefined,
+    receta: opcional(e.receta), recetaParada: e.recetaParada || undefined,
   };
 }
 

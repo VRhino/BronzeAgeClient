@@ -257,7 +257,7 @@ export function htmlEstadoPie(a: Asentamiento, esc: Escapar): string {
     ]) : '',
     typeof a.nutricionPoblacion === 'number' ? medida('🍞', 'Nutrición', a.nutricionPoblacion, { bien: 'Bien comidos', medio: 'Escasea', mal: 'Hambre' }, [
       'Sube con comida en el almacén y baja sin ella.',
-      'Cada clase come primero lo suyo (carne todas; pan los pesants, queso los artesanos, vino y aceite la nobleza) y el trigo pone lo que falte.',
+      'Cada clase come primero lo suyo (carne todas; pan los pesants, queso los artesanos, vino, cerveza y aceite la nobleza) y el trigo pone lo que falte.',
       'Cada bien que comen hace crecer más a su clase.',
       'Con poca, la gente crece despacio; a cero, muere.',
     ]) : '',

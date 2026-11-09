@@ -4781,6 +4781,7 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .pueblo-opcion.bloqueada .pueblo-opcion-icono { filter: grayscale(1); opacity: 0.6; }
 .pueblo-nodos { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
 .pueblo-cultivos { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; } /* el cultivo de la aldea nueva (tanda 69), como los nodos */
+.pueblo-cultivos .pueblo-nodo { min-width: 54px; padding: 4px 4px; } /* los cinco en una fila (0.190.0) */
 .pueblo-nodo { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 62px; padding: 4px 6px; border: 1px solid rgba(107, 74, 41, 0.8); border-radius: 3px; background: rgba(0, 0, 0, 0.4); cursor: pointer; }
 .pueblo-nodo input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .pueblo-nodo > span { font-size: 1.05rem; line-height: 1; }
@@ -5368,6 +5369,14 @@ body:has(.eleccion-clic) .aviso-global { visibility: hidden; }
 .mapa-capas-muestra { display: flex; align-items: center; gap: 7px; font-size: 0.74rem; }
 .mapa-capas-muestra i { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid var(--c); background: color-mix(in srgb, var(--c) 45%, transparent); }
 .mapa-capas-nota { margin: 0; font-size: 0.7rem; color: var(--text-secondary); }
+/* El cultivo de la capa de fertilidad (0.190.0): cada uno tiene su tierra buena. */
+.mapa-capas-cultivos { display: flex; flex-wrap: wrap; gap: 3px; }
+.mapa-capas-cultivo { cursor: pointer; }
+.mapa-capas-cultivo input { position: absolute; opacity: 0; pointer-events: none; }
+.mapa-capas-cultivo > span { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; font-size: 0.72rem; border: 1px solid var(--bronce-osc); border-radius: 3px; background: rgba(18, 13, 8, 0.6); }
+.mapa-capas-cultivo:hover > span { border-color: var(--bronce); }
+.mapa-capas-cultivo input:checked + span { color: var(--oro-claro); border-color: var(--oro); background: rgba(90, 64, 24, 0.55); }
+.mapa-capas-cultivo input:focus-visible + span { outline: 1px solid var(--oro); outline-offset: 1px; }
 
 /* =====================================================================================
    Construcción como cajón del riel (0.109.0, Víctor 2026-11-03): al pulsar Construcción el riel se esconde y en su sitio sale el cajón, con
@@ -5416,6 +5425,9 @@ body:has(.eleccion-clic) .aviso-global { visibility: hidden; }
 .ficha-mejora-tiempo { margin-left: auto; color: var(--pergamino); }
 .ficha-mejora .btn-primary { align-self: flex-start; }
 .ficha-mejora.caro .btn-primary { opacity: 0.8; }
+/* La receta de la bodega y la prensa (0.190.0): la que trabaja y, con cargo, a cuál pasar. */
+.ficha-receta-elegir { display: flex; flex-wrap: wrap; gap: 6px; }
+.ficha-receta .falta { color: #e8a08f; }
 .mapa-capas-rango { display: flex; flex-direction: column; gap: 4px; padding: 3px 0; }
 .mapa-capas-rango > span { display: flex; justify-content: space-between; gap: 8px; }
 .mapa-capas-rango output { color: var(--oro-claro); font-variant-numeric: tabular-nums; }

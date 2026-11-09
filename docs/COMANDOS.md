@@ -273,6 +273,8 @@ Solo tienen efecto si el backend declara `SERVIDORES_BATALLA` (en Render, hoy no
 ### Gestión local
 
 - [x] `alternarReceta` — `asentamientoId`, `recurso`, `pausada` · Centro urbano › Recetas (`ui/vistaCiudad.ts`)
+- [x] `elegirReceta` — `asentamientoId`, `cargo`, `edificioId`, `insumo` (`uva` \| `cebada` \| `aceituna` \| `sesamo`) · ficha de la bodega o la prensa, solo
+  las recetas que caben en el tope de la plaza (`ui/vistaCiudad.ts`, `ui/recetasUnicas.ts`; motor b55e90f)
 - [x] `comprarMirada` — `origen` (`{ tipo: 'asentamiento' \| 'campamento', id }`), `centro` · pestaña Taberna (Doc 5.12.10)
 - [x] `comprarInformePlaza` — `origen`, `asentamientoId` · pestaña Taberna
 

@@ -26,6 +26,7 @@ import { MarcasEnSuelo } from './marcas';
 import { NieblaDeGuerra } from './niebla';
 import { Territorio } from './territorio';
 import { CapaDeFertilidad } from './capaFertilidad';
+import type { Cultivo } from '../mundo/fertilidad';
 import { Cielo, colorHorizonte } from './cielo';
 import { Paisaje } from './paisaje';
 import { Terreno, type SueloPintado } from './terreno';
@@ -479,9 +480,9 @@ export class VistaMundo3D {
     return mundo;
   }
 
-  /** Pone o quita la capa de fertilidad del suelo (botón de capas); `minima`, la fertilidad desde la que cabe una aldea. */
-  fijarFertilidad(si: boolean, minima: number): void {
-    this.fertilidad.fijar(si, minima);
+  /** Pone o quita la capa de fertilidad del suelo (botón de capas); `minima`, la fertilidad desde la que cabe una aldea; `cultivo`, el de la capa. */
+  fijarFertilidad(si: boolean, minima: number, cultivo?: Cultivo): void {
+    this.fertilidad.fijar(si, minima, cultivo);
   }
 
   /** Pone o quita los nombres de los nodos (botón de capas). Quitados, la vista previa de fundar sigue nombrando los de su zona. */

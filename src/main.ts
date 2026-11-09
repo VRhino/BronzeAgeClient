@@ -47,7 +47,7 @@ import { minutosHerido } from './ui/panelHeroe';
 import { baseOcupada, cablearBasePersonal, htmlBasePersonal } from './ui/basePersonal';
 import { htmlBarraJugador, type PanelJugador } from './ui/barraJugador';
 import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno, type CapasTematicas } from './render';
-import { capasDelMapa, distanciaDeCarga, type CapasDelMapa } from './mundo/capasDelMapa';
+import { capasDelMapa, cultivoDeLaCapa, distanciaDeCarga, type CapasDelMapa } from './mundo/capasDelMapa';
 import { cablearCapas, htmlCapas } from './ui/capasMapa';
 import { EDIFICIO_NOMBRE, RECURSO_NOMBRE } from './paletas';
 import type { Alijo, Asentamiento, AvanzadaDeMapa, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, EscenaCampamento, Faccion, ParamsCrearHeroe, PuebloDeMapa, Sigilo } from './tiposDominio';
@@ -1902,8 +1902,10 @@ function aplicarCapas(): void {
     const leyenda = casilla.closest('.mapa-capas-lista')?.querySelector<HTMLElement>(`[data-leyenda="${capa}"]`);
     if (leyenda) leyenda.hidden = !c[capa];
   });
+  const cultivo = cultivoDeLaCapa();
+  document.querySelectorAll<HTMLInputElement>('.mapa-capas [data-capa-cultivo]').forEach((r) => { r.checked = r.value === cultivo; });
   vista3dActiva?.fijarNombresDeNodos(c.nombresDeNodos);
-  vista3dActiva?.fijarFertilidad(c.fertilidad, reglasDeAldea().fertilidadMinima);
+  vista3dActiva?.fijarFertilidad(c.fertilidad, reglasDeAldea().fertilidadMinima, cultivo);
   vista3dActiva?.fijarDistanciaDeCarga(distanciaDeCarga());
   if (vistaMapaAbierta) void pintarVistaMapa();
 }
@@ -1917,7 +1919,7 @@ function capasTematicas(): CapasTematicas {
   if (c.parcelas && base && parcelasConocidas?.de !== base) parcelasConocidas = { de: base, estadoDe: clasificadorDeParcelas(base) };
   return {
     sinNombres: !c.nombresDeNodos,
-    ...(c.fertilidad ? { fertilidad: { minimaAldea: reglasDeAldea().fertilidadMinima } } : {}),
+    ...(c.fertilidad ? { fertilidad: { minimaAldea: reglasDeAldea().fertilidadMinima, cultivo: cultivoDeLaCapa() } } : {}),
     ...(c.parcelas && parcelasConocidas ? { parcelas: { estadoDe: parcelasConocidas.estadoDe } } : {}),
   };
 }

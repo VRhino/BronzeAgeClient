@@ -3,6 +3,33 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.190.0] — 2026-11-09 · Cebada, sésamo y una receta por bodega y prensa, parte 1: la interfaz · contrato 0.20.0 (motor `b55e90f`)
+
+- **Contrato regenerado** desde el motor `b55e90f`: la orden `elegirReceta` (187), `Edificio.receta` (19) y `Edificio.recetaParada` (20), y las
+  capas `fertilidadCebada` (23) y `fertilidadSesamo` (24) del artefacto de mundo. Pide mundo y partida nuevos.
+- **Tres recursos nuevos**: cebada 🍃, cerveza 🍺 y sésamo 🌼, con su nombre, su icono y su color, en el orden del almacén junto a la uva y la
+  aceituna. `RECURSOS_POR_INDICE` (paletas.ts) lee el índice de recurso de un hecho, como el motor.
+- **Aldeas de cebada y de sésamo**: se ofrecen al marcar una aldea, junto al trigo, la vid y el olivo, con su tierra (la cebada en la húmeda alta,
+  el sésamo en la húmeda baja) y sin corrales. Su tarjeta, su nombre y lo que guardan, como las demás.
+- **El cultivo se desbloquea por la Facción**: la vid y la cebada en cuanto una plaza de la Facción ha alcanzado el nivel 3, el olivo y el sésamo
+  con el 4, sea cual sea el nivel de la madre (`nivelAlcanzadoEnLaFaccion`, el nivel alcanzado y no el operativo, de las plazas que la Facción
+  tiene ahora). Los cinco caben en una fila.
+- **La capa de fertilidad, por cultivo**: en el botón de capas, bajo «Fertilidad del suelo», se elige de qué cultivo es (trigo, vid, olivo,
+  cebada o sésamo), en el modo mapa y en el mundo 3D. Se recuerda.
+- **La receta de la bodega y la prensa** en su ficha: la que trabaja («Vino, con 2 de uva por unidad»), si está parada porque la plaza bajó de
+  nivel, y para el Gobernador y el Maestro de Obras los botones de las recetas a las que se puede pasar («Hacer cerveza»). Solo salen las que
+  el motor aceptaría: la bodega, una bebida en los niveles 3 y 4 y las dos en el 5; la prensa, siempre una fuente. Si no cabe ninguna, se dice
+  por qué. Al pasar el ratón, el edificio dice lo que hace.
+- **«Talleres» y la producción de la ficha** cuentan solo la receta activa de cada bodega y prensa, y nada de las paradas.
+- **Tres bodegas y tres prensas por plaza**: con tres (contando la cola y las obras), «Construir» ya no ofrece la cuarta.
+- **La cerveza en la nutrición**: la nobleza come vino, cerveza y aceite.
+- **Avisos y rechazos nuevos**: la receta elegida (`construccion.receta_elegida`), `obra.tope_por_plaza`, `receta.no_se_elige`,
+  `receta.desconocida`, `receta.tope_por_plaza` y `edificio.desconocido`; `pueblo.cultivo_bloqueado` habla ya de la Facción.
+- Bancos:
+  - el HUD (`/pruebas/hud/`): `&bodegas=uva,cebada`, `&prensas=…`, `&parada=N`, `&nivelActual=N`, `?ficha=bodega|bodega2|prensa`, `&grupo=<tipo>` para
+    «Construir», y en Territorio `&aldeas=humedas` y `&madre=1` (la madre en el nivel 1 con otra plaza de la Facción en el 4);
+  - nuevo `/pruebas/fertilidad/?cultivo=…`: el modo mapa con el mundo del motor y la capa de ese cultivo.
+
 ## [0.189.0] — 2026-11-09 · La tanda 69, parte 5: el 3D · sin cambio de contrato (motor `d0326fd`)
 
 - **Los seis edificios nuevos en la plaza 3D**, cada uno en su huella (la del trazado del motor) y en los cinco estilos.

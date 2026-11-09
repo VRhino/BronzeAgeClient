@@ -1,6 +1,6 @@
 // PUEBLOS Y OBRAS DE MAPA (Economia_Construccion §14 y §14.0; motor 7086ebc). Un pueblo es de su plaza madre: un extractor sobre un nodo de piedra
-// o mineral, o una ALDEA AGRÍCOLA en un punto fértil de la zona para su cultivo (tanda 69: trigo, con corrales y rebaño, vid u olivo; acarrea lo
-// que da). Se levanta en tres pasos:
+// o mineral, o una ALDEA AGRÍCOLA en un punto fértil de la zona para su cultivo (tanda 69: trigo, con corrales y rebaño, vid u olivo; motor
+// b55e90f: cebada o sésamo; acarrea lo que da). Se levanta en tres pasos:
 //   1. marcar   desde la plaza madre, su Gobernador o su Maestro de Obras, residente y dentro: `marcarPueblo { nodoId }` o `marcarAldea { punto, cultivo }`;
 //   2. llevar   la obra queda «pendiente de materiales» en el mapa: una columna de la Facción lleva lo que pide en su carro o en sus caravanas
 //               enganchadas y, a la puerta de la obra, cualquiera de sus ciudadanos lo entrega (`entregarEnObra`);
@@ -22,7 +22,7 @@ import { ayuda } from './ayuda';
 import { agarre } from './agarre';
 import { miColumna } from './ejercitos';
 import { dibujarIconoMapa } from '../mundo/iconosMapa';
-import { sitiosDeAldea, type Cultivo, type SitiosDeAldea } from '../mundo/fertilidad';
+import { esCultivo, sitiosDeAldea, type Cultivo, type SitiosDeAldea } from '../mundo/fertilidad';
 import type { ContextoPlaza, FichaMapaExtra, ObjetoBajoElClic, SubpestanaPlaza } from './ganchos';
 import { cablearEscolta, escolta, puntosDeEscolta } from './panelMercado';
 import type { Ejecutar } from './panelCarro';
@@ -45,7 +45,8 @@ interface ParamsPueblos {
     fertilidadMinima?: number;
     separacionMinima?: number;
     niveles?: Record<string, { granjas: number; corrales: number; coste: Record<string, number>; obraMinutos: number }>;
-    /** Tanda 69: lo que da cada cultivo, desde qué nivel de la plaza madre y si lleva corrales (solo el trigo). */
+    /** Tanda 69: lo que da cada cultivo, desde qué nivel y si lleva corrales (solo el trigo). El nivel (`nivelMadre`) es, desde el motor b55e90f,
+     * el que ha alcanzado alguna plaza de la Facción, no el de la madre. */
     cultivos?: Partial<Record<Cultivo, { produce: string; nivelMadre: number; corrales: boolean }>>;
   };
 }
@@ -55,6 +56,9 @@ const CULTIVOS: { id: Cultivo; nombre: string; conArticulo: string; aldea: strin
   { id: 'trigo', nombre: 'Trigo', conArticulo: 'el trigo', aldea: 'Aldea de trigo', granja: 'Granja', produce: 'trigo', nivelMadre: 1, corrales: true, uso: 'Trigo y, con su rebaño, ganado, carne y leche.' },
   { id: 'vid', nombre: 'Vid', conArticulo: 'la vid', aldea: 'Aldea de viñas', granja: 'Viña', produce: 'uva', nivelMadre: 3, corrales: false, uso: 'Uva para la bodega, que hace el vino. Sin corrales.' },
   { id: 'oliva', nombre: 'Olivo', conArticulo: 'el olivo', aldea: 'Aldea de olivos', granja: 'Olivar', produce: 'aceituna', nivelMadre: 4, corrales: false, uso: 'Aceituna para la prensa, que hace el aceite. Sin corrales.' },
+  // los de la tierra húmeda (motor b55e90f): la cebada en la alta y el sésamo en la baja
+  { id: 'cebada', nombre: 'Cebada', conArticulo: 'la cebada', aldea: 'Aldea de cebada', granja: 'Cebadal', produce: 'cebada', nivelMadre: 3, corrales: false, uso: 'Cebada para la bodega, que hace la cerveza. Sin corrales.' },
+  { id: 'sesamo', nombre: 'Sésamo', conArticulo: 'el sésamo', aldea: 'Aldea de sésamo', granja: 'Campo de sésamo', produce: 'sesamo', nivelMadre: 4, corrales: false, uso: 'Sésamo para la prensa, que hace aceite. Sin corrales.' },
 ];
 /** Un cultivo con lo que dicen los datos de juego (`PUEBLOS_EXTRACTORES.aldea.cultivos`) por encima de lo de serie. */
 function cultivo(id: Cultivo): (typeof CULTIVOS)[number] {
@@ -63,7 +67,7 @@ function cultivo(id: Cultivo): (typeof CULTIVOS)[number] {
   return datos ? { ...base, produce: datos.produce, nivelMadre: datos.nivelMadre, corrales: datos.corrales } : base;
 }
 /** El cultivo de una aldea; sin el dato, trigo (las de antes de la tanda 69). */
-const cultivoDe = (x: PuebloDeMapa): Cultivo => (x.cultivo === 'vid' || x.cultivo === 'oliva' ? x.cultivo : 'trigo');
+const cultivoDe = (x: PuebloDeMapa): Cultivo => (esCultivo(x.cultivo) ? x.cultivo : 'trigo');
 interface Especie { topePorCorral: number; pieDeCriaPorCorral: number; crecimientoPorHora: number; productos: Record<string, number> }
 
 /** Los tipos de nodo que admiten un pueblo extractor (el ganado ya no: sale de las aldeas). */
@@ -302,12 +306,24 @@ function tarjetaObra(p: ProyeccionJugador, a: Asentamiento, o: ObraDeMapa, gesti
 
 /** El nodo marcado en «Extractor» (se recuerda entre repintados). */
 let nodoElegido = '';
-/** El cultivo elegido para la aldea nueva (se recuerda entre repintados; si la plaza no llega a su nivel, vuelve al trigo). */
+/** El cultivo elegido para la aldea nueva (se recuerda entre repintados; si la Facción no llega a su nivel, vuelve al trigo). */
 let cultivoElegido: Cultivo = 'trigo';
 
-/** Los cultivos que puede tener la siguiente aldea de esta plaza: los de su nivel (regla de interfaz: lo que no se puede no se enseña). */
-const cultivosPosibles = (a: Asentamiento): (typeof CULTIVOS)[number][] => CULTIVOS.map((c) => cultivo(c.id)).filter((c) => (a.nivelActual ?? a.nivel) >= c.nivelMadre);
-const cultivoDeLaAldeaNueva = (a: Asentamiento): (typeof CULTIVOS)[number] => cultivosPosibles(a).find((c) => c.id === cultivoElegido) ?? cultivo('trigo');
+/** El mayor nivel ALCANZADO (no el operativo) entre las plazas que la Facción de `a` tiene ahora, como el motor (`nivel_maximo_de_plazas`, b55e90f):
+ * lo que desbloquea los cultivos de las aldeas. Las plazas propias llegan todas en FACCION (como avistadas, con su nivel) y la de dentro, en
+ * `asentamientos`. */
+export function nivelAlcanzadoEnLaFaccion(p: ProyeccionJugador, a: Asentamiento): number {
+  const propias = [...(p.asentamientos ?? []), ...(p.plazasPropias ?? []), ...(p.asentamientosAvistados ?? [])].filter((x) => x.faccionId === a.faccionId);
+  return Math.max(a.nivel, ...propias.map((x) => x.nivel));
+}
+
+/** Los cultivos que puede tener la siguiente aldea de esta plaza: los que ya desbloqueó su Facción, sea cual sea el nivel de la madre (motor
+ * b55e90f; regla de interfaz: lo que no se puede no se enseña). */
+const cultivosPosibles = (p: ProyeccionJugador, a: Asentamiento): (typeof CULTIVOS)[number][] => {
+  const nivel = nivelAlcanzadoEnLaFaccion(p, a);
+  return CULTIVOS.map((c) => cultivo(c.id)).filter((c) => nivel >= c.nivelMadre);
+};
+const cultivoDeLaAldeaNueva = (p: ProyeccionJugador, a: Asentamiento): (typeof CULTIVOS)[number] => cultivosPosibles(p, a).find((c) => c.id === cultivoElegido) ?? cultivo('trigo');
 
 /** Marcar un pueblo nuevo: dos cartas, la aldea (con su coste, su anillo y si hay tierra) y el extractor (los nodos libres como casillas). */
 function htmlMarcar(p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
@@ -323,9 +339,9 @@ function htmlMarcar(p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
   const elegido = libres.some((n) => n.id === nodoElegido) ? nodoElegido : libres[0]?.id;
   const anillo = anilloDeAldea(p, a);
   const sinAldea = nivel < nivelAldea;
-  // El cultivo (tanda 69): trigo siempre; la vid y el olivo, desde su nivel de plaza. Con uno solo posible no hay nada que elegir.
-  const posibles = cultivosPosibles(a);
-  const deLaAldea = cultivoDeLaAldeaNueva(a);
+  // El cultivo (tanda 69): trigo siempre; los demás, en cuanto una plaza de la Facción llega a su nivel. Con uno solo posible no hay nada que elegir.
+  const posibles = cultivosPosibles(p, a);
+  const deLaAldea = cultivoDeLaAldeaNueva(p, a);
   const cultivos = posibles.length > 1
     ? `<div class="pueblo-cultivos" role="radiogroup" aria-label="Cultivo de la aldea">${posibles.map((c) => `<label class="pueblo-nodo pueblo-cultivo"><input type="radio" name="pueblo-cultivo" value="${c.id}" data-pueblo-cultivo${c.id === deLaAldea.id ? ' checked' : ''}><span aria-hidden="true">${RECURSO_ICONO[c.produce] ?? '🌾'}</span><b>${e(c.nombre)}</b></label>`).join('')}</div>`
     : '';
@@ -333,7 +349,7 @@ function htmlMarcar(p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
   const carta = (bloqueada: boolean, cuerpo: string): string => `<div class="pueblo-opcion${bloqueada ? ' bloqueada' : ''}">${cuerpo}</div>`;
   return `${titulo}<div class="pueblo-opciones">
     ${carta(sinAldea, `<span class="pueblo-opcion-icono" aria-hidden="true">${RECURSO_ICONO[deLaAldea.produce] ?? '🌾'}</span>
-      <strong>Aldea agrícola${ayuda('pueblos:aldea', `Granjas en un punto fértil de la zona para su cultivo (fertilidad ${pr?.aldea?.fertilidadMinima ?? 0.3} o más, a ${pr?.aldea?.separacionMinima ?? 3} de toda plaza y todo pueblo, con camino hasta la plaza). El cultivo se elige al marcarla y no cambia: trigo, que lleva corrales y un rebaño que crece solo y da ganado, carne y leche; vid (desde el nivel ${cultivo('vid').nivelMadre} de la plaza), que da uva para la bodega; u olivo (desde el nivel ${cultivo('oliva').nivelMadre}), que da aceituna para la prensa. Cada cultivo tiene su propia tierra buena. Cada aldea va en su anillo: las dos primeras hasta el techo de la zona del nivel 1, la tercera en el anillo que añade el nivel 2, y así, para que no se junten. El nivel 2 de la plaza pide un pueblo activo: una aldea o un extractor.`)}</strong>
+      <strong>Aldea agrícola${ayuda('pueblos:aldea', `Granjas en un punto fértil de la zona para su cultivo (fertilidad ${pr?.aldea?.fertilidadMinima ?? 0.3} o más, a ${pr?.aldea?.separacionMinima ?? 3} de toda plaza y todo pueblo, con camino hasta la plaza). El cultivo se elige al marcarla y no cambia: trigo, que lleva corrales y un rebaño que crece solo y da ganado, carne y leche; vid o cebada, que dan uva o cebada para la bodega (el vino o la cerveza), en cuanto una plaza de tu Facción llega al nivel ${cultivo('vid').nivelMadre}; u olivo o sésamo, que dan aceituna o sésamo para la prensa (el aceite), desde que una llega al ${cultivo('oliva').nivelMadre}. La plaza que marca la aldea puede ser de cualquier nivel. Cada cultivo tiene su propia tierra buena: la cebada y el sésamo, la húmeda. Cada aldea va en su anillo: las dos primeras hasta el techo de la zona del nivel 1, la tercera en el anillo que añade el nivel 2, y así, para que no se junten. El nivel 2 de la plaza pide un pueblo activo: una aldea o un extractor.`)}</strong>
       ${sinAldea ? '' : cultivos}
       <small>${e(deLaAldea.uso)}</small>
       ${sinAldea ? `<span class="anillo-opcion-pide">Desde el nivel ${nivelAldea} de la plaza</span>`
@@ -351,7 +367,7 @@ function htmlMarcar(p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
   </div>`;
 }
 
-/** Si la zona tiene sitio para la aldea de ese cultivo (`paraQue`: «el trigo», «la vid» o «el olivo»): en verde con la mejor fertilidad, o en rojo con el porqué. */
+/** Si la zona tiene sitio para la aldea de ese cultivo (`paraQue`: «el trigo», «la vid», «la cebada»...): en verde con la mejor fertilidad, o en rojo con el porqué. */
 function htmlSitiosDeAldea(s: SitiosDeAldea | null, paraQue = 'el trigo'): string {
   if (!s) return '';
   const { fertilidadMinima, separacionMinima } = reglasDeAldea();
@@ -473,7 +489,7 @@ function cablearPueblos(c: ContextoPlaza): void {
         return;
       }
       case 'elegir-aldea': {
-        const cult = cultivoDeLaAldeaNueva(a);
+        const cult = cultivoDeLaAldeaNueva(p, a);
         selectorDePunto.abrir?.(`Pulsa en el mapa donde levantar la ${cult.aldea.toLowerCase()}: en verde, la tierra buena para ${cult.conArticulo} de la zona donde cabe (en gris, buena pero pegada a una plaza o un pueblo).`, a.posicion, a.zonaReal,
           (punto) => c.ejecutar('marcarAldea', { asentamientoId: a.id, heroeId: p.heroeId, punto, cultivo: cult.id }), sitiosDeLaPlaza(p, a, cult.id));
         return;

@@ -49,8 +49,9 @@ export function mapaDesdeArtefacto(a: ArtefactoDeMundo): MapaGenerado {
   const tamano = punto(a.manifiesto?.tamano);
   const rasters: RastersDeMundo = {
     terreno: u8(a.terreno), altura: u16(a.altura), densidadBosque: u8(a.densidadBosque), fertilidad: u8(a.fertilidad),
-    // tanda 69: la fertilidad de la vid y la oliva y la región del relieve (un artefacto anterior no las trae)
+    // tanda 69: la fertilidad de la vid y la oliva y la región del relieve; motor b55e90f: la de la cebada y el sésamo (un artefacto anterior no las trae)
     fertilidadVid: u8(a.fertilidadVid), fertilidadOliva: u8(a.fertilidadOliva), region: u8(a.region),
+    fertilidadCebada: u8(a.fertilidadCebada), fertilidadSesamo: u8(a.fertilidadSesamo),
   };
   return {
     version: a.manifiesto?.versionFormato ?? 0,

@@ -1,16 +1,32 @@
 // Dónde cabe una aldea agrícola (mecánica 50): el motor la acepta en tierra firme, dentro de la zona de la plaza, a `separacionMinima` de toda
 // plaza y todo pueblo y con fertilidad de `fertilidadMinima` o más en ese punto (`pueblos.rs`, `sitio_de_aldea_sin_ruta`). Aquí se buscan esos
-// puntos con la capa de fertilidad de su cultivo (`fertilidad` el trigo, `fertilidadVid` y `fertilidadOliva` la vid y el olivo: tanda 69) del artefacto,
+// puntos con la capa de fertilidad de su cultivo (`fertilidad` el trigo, `fertilidadVid` y `fertilidadOliva` la vid y el olivo: tanda 69;
+// `fertilidadCebada` y `fertilidadSesamo` la cebada y el sésamo: motor b55e90f) del artefacto,
 // para enseñarlos al elegir el sitio y al fundar. El camino hasta la plaza no se puede saber
 // aquí (es el A* del motor): un punto válido puede salir rechazado por eso.
 import type { MapaGenerado, Point, RasterU8 } from '../terreno';
 
-/** El cultivo de una aldea (tanda 69, Economia_Construccion §14.0): cada uno mira su capa de fertilidad. */
-export type Cultivo = 'trigo' | 'vid' | 'oliva';
+/** El cultivo de una aldea (tanda 69, Economia_Construccion §14.0; la cebada y el sésamo desde el motor b55e90f): cada uno mira su capa de
+ * fertilidad. */
+export type Cultivo = 'trigo' | 'vid' | 'oliva' | 'cebada' | 'sesamo';
 
-/** La capa de fertilidad de un cultivo, como la lee el motor (`Geografia::fertilidad_en(punto, cultivo)`). */
-const capaDe = (mapa: MapaGenerado, cultivo: Cultivo): RasterU8 | undefined =>
-  cultivo === 'vid' ? mapa.rasters?.fertilidadVid : cultivo === 'oliva' ? mapa.rasters?.fertilidadOliva : mapa.rasters?.fertilidad;
+/** Todos, en el orden en que se ofrecen. */
+export const CULTIVOS_DE_ALDEA: readonly Cultivo[] = ['trigo', 'vid', 'oliva', 'cebada', 'sesamo'];
+
+/** ¿Es el id de un cultivo de aldea? */
+export const esCultivo = (x: unknown): x is Cultivo => typeof x === 'string' && (CULTIVOS_DE_ALDEA as readonly string[]).includes(x);
+
+/** La capa de fertilidad de un cultivo, como la lee el motor (`Geografia::fertilidad_en(punto, cultivo)`); `undefined` si el artefacto no la trae. */
+export function capaDe(mapa: MapaGenerado, cultivo: Cultivo): RasterU8 | undefined {
+  const r = mapa.rasters;
+  switch (cultivo) {
+    case 'vid': return r?.fertilidadVid;
+    case 'oliva': return r?.fertilidadOliva;
+    case 'cebada': return r?.fertilidadCebada;
+    case 'sesamo': return r?.fertilidadSesamo;
+    default: return r?.fertilidad;
+  }
+}
 
 /** Paso de la rejilla de búsqueda, en unidades (el raster tiene celdas de varias unidades: más fino no aporta). */
 const PASO = 0.5;

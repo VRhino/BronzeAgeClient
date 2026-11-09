@@ -32,4 +32,17 @@ describe.skipIf(!archivo)('artefacto de mundo real', () => {
     expect(mapa.regiones?.length).toBeGreaterThan(1);
     expect(new Set(region!.datos).size).toBeGreaterThan(1);
   });
+
+  // Un artefacto de antes del motor b55e90f no las trae: entonces no se mira.
+  test.skipIf(!archivo || !fromBinary(ArtefactoDeMundoSchema, readFileSync(join(dir, archivo!))).fertilidadCebada)('trae la tierra de la cebada y la del sésamo, en la húmeda', () => {
+    const mapa = mapaDesdeArtefacto(fromBinary(ArtefactoDeMundoSchema, readFileSync(join(dir, archivo!))));
+    const { fertilidad, fertilidadCebada, fertilidadSesamo } = mapa.rasters!;
+    for (const r of [fertilidadCebada, fertilidadSesamo]) {
+      expect(r?.datos.length).toBe(r!.columnas * r!.filas);
+      expect(r!.datos.some((v) => v >= 77)).toBe(true); // hay sitio para una aldea (0,3)
+    }
+    // la del trigo en la tierra húmeda: nunca más fértil que el trigo en la misma celda
+    expect(fertilidadCebada!.datos.every((v, i) => v <= fertilidad!.datos[i]!)).toBe(true);
+    expect(fertilidadSesamo!.datos.every((v, i) => v <= fertilidad!.datos[i]!)).toBe(true);
+  });
 });

@@ -22,6 +22,10 @@ export const RECURSO_NOMBRE: Record<string, string> = {
   vino: 'Vino',
   aceituna: 'Aceituna',
   aceite: 'Aceite',
+  // los cultivos de la tierra húmeda (motor b55e90f)
+  cebada: 'Cebada',
+  cerveza: 'Cerveza',
+  sesamo: 'Sésamo',
   lingoteCobre: 'Lingote de cobre',
   lingoteEstano: 'Lingote de estaño',
   lingoteBronce: 'Lingote de bronce',
@@ -46,10 +50,20 @@ export const RECURSO_NOMBRE: Record<string, string> = {
   chatarraHierro: 'Chatarra de hierro',
 };
 
+/** Los recursos en el orden del motor (`Recurso` de `crates/asentamiento/src/recurso.rs`): un hecho que nombra un recurso por su índice
+ * (`construccion.receta_elegida`, `construccion.receta_alternada`) se lee con esta lista. */
+export const RECURSOS_POR_INDICE: readonly string[] = [
+  'madera', 'piedra', 'trigo', 'cobre', 'estano', 'oro', 'livestock', 'hierro', 'lingoteCobre', 'lingoteEstano', 'lingoteBronce', 'lingoteHierro',
+  'cuero', 'cueroCurtido', 'cueroCalidad', 'armaMadera', 'armaCobre', 'armaBronce', 'armaBronceCalidad', 'armaHierro', 'armaHierroCalidad',
+  'armaduraBasica', 'armaduraIntermedia', 'armaduraBronce', 'armaduraBronceCalidad', 'carroGuerra', 'chatarraCobre', 'chatarraBronce', 'chatarraHierro',
+  'harina', 'pan', 'carne', 'leche', 'queso', 'uva', 'aceituna', 'vino', 'aceite', 'cebada', 'cerveza', 'sesamo',
+];
+
 export const RECURSO_ICONO: Record<string, string> = {
   madera: '🪵', piedra: '🪨', trigo: '🌾', cobre: '🟠', estano: '⚙️', oro: '🪙', livestock: '🐄',
   // la comida, junto al trigo y al ganado (el orden de este objeto es el del almacén)
-  harina: '🥣', pan: '🍞', carne: '🥩', leche: '🥛', queso: '🧀', uva: '🍇', vino: '🍷', aceituna: '🌿', aceite: '🏺',
+  harina: '🥣', pan: '🍞', carne: '🥩', leche: '🥛', queso: '🧀', uva: '🍇', vino: '🍷', cebada: '🍃', cerveza: '🍺',
+  aceituna: '🌿', sesamo: '🌼', aceite: '🏺',
   lingoteCobre: '🔶', lingoteEstano: '🔩', lingoteBronce: '🟫', cuero: '🟤', cueroCurtido: '🧵',
   cueroCalidad: '✨', armaMadera: '🏹', armaCobre: '🗡️', armaBronce: '⚔️', armaBronceCalidad: '🛡️',
   armaduraBasica: '🥋', armaduraIntermedia: '🛡️', armaduraBronce: '🛡️', armaduraBronceCalidad: '🛡️',
@@ -74,6 +88,9 @@ export const RECURSO_COLOR: Record<string, string> = {
   vino: '#7a1f3a',
   aceituna: '#7a8a3a',
   aceite: '#c9b23a',
+  cebada: '#d6b45c',
+  cerveza: '#b07a26',
+  sesamo: '#e6d2a0',
   lingoteCobre: '#d98a4a',
   lingoteEstano: '#5a8fd9',
   lingoteBronce: '#a97142',

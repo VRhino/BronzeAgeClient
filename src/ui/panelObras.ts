@@ -12,6 +12,7 @@ import type { Asentamiento, Edificio } from '../tiposDominio';
 import { estadoCliente } from './estadoCliente';
 import { iconoEdificio } from './iconosEdificio';
 import { ahora, chipsDeCoste, duracion } from './juegoVisual';
+import { maximoPorPlaza, topeDeEdificiosLleno } from './recetasUnicas';
 
 type Escapar = (valor: string) => string;
 type Cargo = 'gobernador' | 'maestroObras' | null;
@@ -71,6 +72,8 @@ function motivoParaConstruir(a: Asentamiento, tipo: string, def: DefEdificio, ca
       }
     }
   }
+  // Bodegas y prensas: tres de cada por plaza, contando la cola y las obras (motor b55e90f, `TALLERES_DE_UNA_RECETA.maximoPorPlaza`).
+  if (topeDeEdificiosLleno(a, tipo)) return `Ya tiene las ${maximoPorPlaza(tipo)} que caben en una plaza.`;
   if (tipo === 'granFundicion') {
     const nivelFaccion = p?.facciones.find((f) => f.id === p.faccionId)?.nivel ?? 1;
     if (def.nivelFaccionMinimo && nivelFaccion < def.nivelFaccionMinimo) return `Pide la Facción en nivel ${def.nivelFaccionMinimo}.`;

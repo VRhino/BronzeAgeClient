@@ -120,6 +120,9 @@ export interface RastersDeMundo {
   /** Las de la vid y la oliva (tanda 69), igual que `fertilidad`: las que miran las aldeas de esos cultivos. */
   fertilidadVid?: RasterU8;
   fertilidadOliva?: RasterU8;
+  /** Las de la cebada y el sésamo (motor b55e90f): la del trigo en la tierra húmeda (alta la cebada, baja el sésamo). */
+  fertilidadCebada?: RasterU8;
+  fertilidadSesamo?: RasterU8;
   /** El id de la región del relieve del generador en cada celda (`MapaGenerado.regiones`); 0 = ninguna. */
   region?: RasterU8;
 }

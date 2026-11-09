@@ -192,6 +192,11 @@ export interface Edificio {
   mejora?: { nivelObjetivo: number; completaEn: number };
   /** El molino tiene su buey y produce el doble (tanda 69 §10). */
   buey?: boolean;
+  /** Bodega y prensa (motor b55e90f): el insumo de su única receta activa (`uva` o `cebada`; `aceituna` o `sesamo`). Ausente en los demás. */
+  receta?: string;
+  /** Su receta está parada: la plaza bajó de nivel y ya no le caben tantas recetas distintas de ese edificio (no produce hasta recuperarlo o
+   * elegirle otra). */
+  recetaParada?: boolean;
 }
 
 /** Celda del anillo de un `Recinto` — copia local de `CeldaMuro` (motor). Sirve solo para contar puertas en

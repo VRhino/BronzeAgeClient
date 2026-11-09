@@ -19,7 +19,7 @@ import { svgSigilo } from '../../src/sigilo/sigilo';
 import { htmlBarraJugador } from '../../src/ui/barraJugador';
 import { olvidarFlechasPob, cablearEleccionBarra, htmlBlasonHud, htmlEleccionBarra, htmlObrasHud, htmlPieDePlaza, ICONO_RIEL, vigilarPieArriba } from '../../src/ui/hudPlaza';
 import { cablearProduccionYRecetas, cablearVistaCiudad, elegirEdificio, htmlExtraccion, htmlRecetas, repintarFicha } from '../../src/ui/vistaCiudad';
-import { cablearPanelObras, cuantosConstruidos, htmlConstruidosVentana, htmlConstruir } from '../../src/ui/panelObras';
+import { cablearPanelObras, cuantosConstruidos, elegirGrupoDe, htmlConstruidosVentana, htmlConstruir } from '../../src/ui/panelObras';
 import { cablearCaravanas, cablearRutas, htmlCaravanas, htmlRutas } from '../../src/ui/panelMercado';
 import { SUBPESTANA_GUARNICION } from '../../src/ui/panelGuarnicion';
 import { FICHA_OBRA, SUBPESTANA_PUEBLOS } from '../../src/ui/pueblos';
@@ -72,9 +72,23 @@ if (qs0.get('prestigio')) {
 }
 // `&molino=1` (tanda 69): la plaza con un molino activo; `&molino=buey`, ya con su buey. `?ficha=molino` abre su ficha.
 if (qs0.get('molino')) a.edificios = [...(a.edificios ?? []), { id: 'ed-molino', tipo: 'molino', estado: 'activo', nivelInterno: 1, posicion: a.posicion, ...(qs0.get('molino') === 'buey' ? { buey: true } : {}) } as Edificio];
+// `&bodegas=uva,cebada` y `&prensas=sesamo,...` (0.190.0): bodegas y prensas activas con esas recetas; `&parada=N`, la N-ésima de ellas (contando
+// bodegas y luego prensas, desde 1) con la receta parada, y `&nivelActual=N`, la plaza rindiendo como de ese nivel. `?ficha=bodega|bodega2|prensa`
+// abre la ficha de la primera bodega, la segunda o la primera prensa.
+for (const [tipo, lista] of [['bodega', qs0.get('bodegas')], ['prensa', qs0.get('prensas')]] as const) {
+  for (const [i, receta] of (lista ? lista.split(',') : []).entries()) a.edificios = [...(a.edificios ?? []), { id: `ed-${tipo}-${i + 1}`, tipo, estado: 'activo', nivelInterno: 1, posicion: a.posicion, receta } as Edificio];
+}
+if (qs0.get('parada')) {
+  const deUna = (a.edificios ?? []).filter((x) => x.id.startsWith('ed-bodega-') || x.id.startsWith('ed-prensa-'));
+  const x = deUna[Number(qs0.get('parada')) - 1];
+  if (x) x.recetaParada = true;
+}
+if (qs0.get('nivelActual')) a.nivelActual = Number(qs0.get('nivelActual'));
+// `&grupo=<tipo>`: «Construir» abierto en la pestaña de ese tipo (p. ej. `bodega`, la Comida)
+if (qs0.get('grupo')) elegirGrupoDe(qs0.get('grupo')!);
 // `&comida=1` (tanda 69): el almacén con la comida nueva, junto al trigo
 if (qs0.get('comida')) {
-  const hay = { harina: 140, pan: 260, carne: 45, leche: 80, queso: 30, uva: 120, vino: 40, aceituna: 90, aceite: 25 };
+  const hay = { harina: 140, pan: 260, carne: 45, leche: 80, queso: 30, uva: 120, vino: 40, cebada: 95, cerveza: 30, aceituna: 90, sesamo: 60, aceite: 25 };
   for (const [r, n] of Object.entries(hay)) a.almacen = { ...a.almacen, [r]: { cantidad: n, capacidad: a.almacen?.trigo?.capacidad ?? 1000 } };
 }
 const construir = new URLSearchParams(location.search).get('construir');
@@ -228,7 +242,8 @@ if (ficha) {
 const elegirParaFicha = (): void => {
   if (!ficha) return;
   const conSiguiente = (x: Edificio): boolean => Boolean(nivelesDeEdificio(x.tipo)?.[String((x.nivelInterno ?? 1) + 1)]);
-  const elegido = (a.edificios ?? []).find((x) => (ficha === 'molino' ? x.tipo === 'molino' : ficha === 'obra' ? x.estado === 'en_construccion' : x.estado === 'activo' && !x.mejora && x.tipo !== 'centroUrbano' && conSiguiente(x)));
+  const porId: Record<string, string> = { bodega: 'ed-bodega-1', bodega2: 'ed-bodega-2', prensa: 'ed-prensa-1' };
+  const elegido = (a.edificios ?? []).find((x) => (porId[ficha] ? x.id === porId[ficha] : ficha === 'molino' ? x.tipo === 'molino' : ficha === 'obra' ? x.estado === 'en_construccion' : x.estado === 'activo' && !x.mejora && x.tipo !== 'centroUrbano' && conSiguiente(x)));
   if (!elegido) return;
   // `?ficha=mejora`: la ciudad del banco no trae mejoras en marcha; se le pone una a ese edificio, a medias
   if (ficha === 'mejora') elegido.mejora = { nivelObjetivo: (elegido.nivelInterno ?? 1) + 1, completaEn: p.instante + 35 * 60_000 };
@@ -307,8 +322,22 @@ function avisoFundacion(): void {
     const cuerpo = document.querySelector<HTMLElement>('.asent-edif-cuerpo')!;
     // 0.153.0: la de verdad, a ventana completa (zona, pueblos y marcar a la izquierda; avanzadas a la derecha), con las obras de `?obrasMapa=1`
     (p as unknown as { obrasDeMapa: unknown[] }).obrasDeMapa = obrasMapa();
+    // `&aldeas=humedas` (0.190.0): una aldea de cebada y una de sésamo
+    if (qs.get('aldeas') === 'humedas') {
+      const cerca = (dx: number, dy: number) => ({ x: a.posicion.x + dx, y: a.posicion.y + dy });
+      (p as unknown as { pueblos: unknown[] }).pueblos = [
+        { id: 'pueblo-1', tipo: 'aldeaAgricola', cultivo: 'cebada', madreId: a.id, propio: true, posicion: cerca(8, 3), nivelAldea: 2, fertilidad: 0.58, almacen: { cebada: 160 }, capacidad: 1000 },
+        { id: 'pueblo-2', tipo: 'aldeaAgricola', cultivo: 'sesamo', madreId: a.id, propio: true, posicion: cerca(-6, 9), nivelAldea: 1, fertilidad: 0.46, almacen: { sesamo: 75 }, capacidad: 1000 },
+      ];
+    }
+    // `&madre=1` (0.190.0): la plaza es de nivel 1 y otra de su Facción llegó al 4: se ofrecen igual los cinco cultivos
+    if (qs.get('madre')) {
+      a.nivel = 1; a.nivelActual = 1;
+      a.faccionId = a.faccionId || 'fac-1';
+      (p as unknown as { asentamientosAvistados: unknown[] }).asentamientosAvistados = [{ id: 'as-99', nombre: 'Tirinto', faccionId: a.faccionId, nivel: 4, posicion: { x: a.posicion.x + 300, y: a.posicion.y }, zona: [] }];
+    }
     // `&aldeas=1` (tanda 69): una aldea de trigo con su rebaño y una de viñas, sin corrales
-    if (qs.get('aldeas')) {
+    if (qs.get('aldeas') === '1') {
       const cerca = (dx: number, dy: number) => ({ x: a.posicion.x + dx, y: a.posicion.y + dy });
       (p as unknown as { pueblos: unknown[] }).pueblos = [
         { id: 'pueblo-1', tipo: 'aldeaAgricola', cultivo: 'trigo', madreId: a.id, propio: true, posicion: cerca(8, 3), nivelAldea: 2, fertilidad: 0.71, almacen: { trigo: 210, livestock: 40, carne: 18, leche: 35 }, capacidad: 1000, rebano: { especie: 'vacuno', cabezas: 52 } },

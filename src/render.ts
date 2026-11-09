@@ -12,7 +12,7 @@ import {
 } from './paletas';
 import { dibujarIconoMapa } from './mundo/iconosMapa';
 import { imagenDeSigilo } from './sigilo/lienzo';
-import { pintarSitiosDeAldea, type SitiosDeAldea } from './mundo/fertilidad';
+import { capaDe, pintarSitiosDeAldea, type Cultivo, type SitiosDeAldea } from './mundo/fertilidad';
 import { colorDelSueloEn, esDeCerca, hayArtefacto, pintarArbolesDelArtefacto, pintarSueloDelArtefacto, vistaDelLienzo } from './mundo/pintarArtefacto';
 import { dibujarPueblosYObras } from './ui/pueblos';
 import { dibujarAedasEnMapa } from './ui/aedas';
@@ -460,21 +460,22 @@ function rioALaVista(rio: { puntos: Point[] }, v: { x0: number; y0: number; x1: 
 export interface CapasTematicas {
   /** Sin los nombres de los nodos (de cerca). */
   sinNombres?: boolean;
-  /** La fertilidad del suelo, con el corte de la aldea agrícola. */
-  fertilidad?: { minimaAldea: number };
+  /** La fertilidad del suelo para un cultivo (de serie, el trigo), con el corte de la aldea agrícola. */
+  fertilidad?: { minimaAldea: number; cultivo?: Cultivo };
   /** Las parcelas de bosque, con lo que se sabe de cada una. */
   parcelas?: { estadoDe: (parcela: { id: string; centro: Point }) => 'libre' | 'ocupada' | 'ajena' };
 }
 
 /** La última capa de fertilidad compuesta: cambia con lo explorado, no con la cámara. */
-let ultimaFertilidad: { mapa: MapaGenerado; celdas: string; minima: number; capa: HTMLCanvasElement } | null = null;
+let ultimaFertilidad: { mapa: MapaGenerado; celdas: string; minima: number; raster: object; capa: HTMLCanvasElement } | null = null;
 
-function pintarFertilidad(ctx: CanvasRenderingContext2D, mapa: MapaGenerado, niebla: NieblaProyectada | undefined, explorado: Explorado, minima: number, escalaCanvas: number): void {
-  const f = mapa.rasters?.fertilidad;
+function pintarFertilidad(ctx: CanvasRenderingContext2D, mapa: MapaGenerado, niebla: NieblaProyectada | undefined, explorado: Explorado, minima: number, escalaCanvas: number, cultivo: Cultivo = 'trigo'): void {
+  // la capa del cultivo elegido; un artefacto sin ella (de antes de la tanda 69 o del motor b55e90f) cae en la del trigo
+  const f = capaDe(mapa, cultivo) ?? mapa.rasters?.fertilidad;
   if (!f) return;
   const celdas = niebla?.celdas ?? '*';
   let u = ultimaFertilidad;
-  if (!u || u.mapa !== mapa || u.celdas !== celdas || u.minima !== minima) {
+  if (!u || u.mapa !== mapa || u.celdas !== celdas || u.minima !== minima || u.raster !== f) {
     const capa = document.createElement('canvas');
     capa.width = f.columnas;
     capa.height = f.filas;
@@ -482,7 +483,7 @@ function pintarFertilidad(ctx: CanvasRenderingContext2D, mapa: MapaGenerado, nie
     const img = cctx.createImageData(f.columnas, f.filas);
     img.data.set(pixelesDeFertilidad(f, mapa.rasters?.terreno, explorado, minima));
     cctx.putImageData(img, 0, 0);
-    u = ultimaFertilidad = { mapa, celdas, minima, capa };
+    u = ultimaFertilidad = { mapa, celdas, minima, raster: f, capa };
   }
   ctx.save();
   ctx.imageSmoothingEnabled = true;
@@ -838,7 +839,7 @@ export function pintarTerreno(
   // ve que en lo que se recuerda, pero solo sobre lo explorado alguna vez: son geografía, y de lo no explorado no se sabe ni eso.
   if (capas.fertilidad || capas.parcelas) {
     const explorado = sinNiebla ? () => true : exploradoDe(proyeccion.exploracion);
-    if (capas.fertilidad) pintarFertilidad(ctx, mapa, proyeccion.exploracion, explorado, capas.fertilidad.minimaAldea, escalaCanvas);
+    if (capas.fertilidad) pintarFertilidad(ctx, mapa, proyeccion.exploracion, explorado, capas.fertilidad.minimaAldea, escalaCanvas, capas.fertilidad.cultivo);
     if (capas.parcelas) pintarParcelas(ctx, mapa, explorado, capas.parcelas.estadoDe, aLaVista, escalaCanvas);
   }
 

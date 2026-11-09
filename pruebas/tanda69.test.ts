@@ -233,6 +233,7 @@ describe('el cultivo de las aldeas', () => {
     expect(produce(aldea('oliva'))).toEqual(['aceituna']);
   });
 
+  // Desde el motor b55e90f, con la cebada (nivel 3) y el sésamo (nivel 4) también; el nivel que cuenta es el de la Facción (pruebas/cebadaSesamo.test.ts).
   test('al marcar una aldea, la vid sale desde el nivel 3 de la plaza y el olivo desde el 4; con solo el trigo no hay que elegir', () => {
     const cultivos = (nivel: number): string[] => {
       const a = { ...plaza(nivel), posicion: { x: 50, y: 50 }, faccionId: 'f-1', cargos: { gobernadorId: 'h' } } as unknown as Asentamiento;
@@ -241,8 +242,8 @@ describe('el cultivo de las aldeas', () => {
       return [...SUBPESTANA_PUEBLOS.html(c).matchAll(/name="pueblo-cultivo" value="(\w+)"/g)].map((m) => m[1]!);
     };
     expect(cultivos(1)).toEqual([]);
-    expect(cultivos(3)).toEqual(['trigo', 'vid']);
-    expect(cultivos(4)).toEqual(['trigo', 'vid', 'oliva']);
+    expect(cultivos(3)).toEqual(['trigo', 'vid', 'cebada']);
+    expect(cultivos(4)).toEqual(['trigo', 'vid', 'oliva', 'cebada', 'sesamo']);
   });
 });
 

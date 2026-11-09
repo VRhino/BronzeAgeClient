@@ -20,7 +20,8 @@ import { nombreDeHeroe } from './nombres';
 import { enumerar, informeDeEvento, textoDeBotin, type InformeDeCombate } from './informeCombate';
 import { plazo } from './panelDiplomacia';
 import { textoDeMision } from './misiones';
-import { RECURSO_NOMBRE } from '../paletas';
+import { RECURSOS_POR_INDICE, RECURSO_NOMBRE } from '../paletas';
+import { TEXTO_DE_RECETA } from './recetasUnicas';
 import { textoDeHechoAeda } from './aedas';
 
 /** Los eventos de «alguien te ha mirado»: el backend los emite sin decir quién. */
@@ -333,6 +334,13 @@ export function procesar(e: EventoDominio, heroeId: string, modo: Modo): void {
   if (e.codigo === 'construccion.buey_asignado') {
     // El molino de la plaza tiene ya su buey (tanda 69, `asignarBuey`).
     anotar({ ...base, texto: 'El molino de la plaza tiene ya su buey: muele el doble.', clase: 'mirada', titulo: 'Obras', categoria: 'economia', urgente: false, clave: `${e.codigo}|${e.version}` }, modo);
+    return;
+  }
+  if (e.codigo === 'construccion.receta_elegida') {
+    // Una bodega o una prensa de la plaza cambia de receta (motor b55e90f, `elegirReceta`): el insumo llega por su índice de recurso.
+    const insumo = RECURSOS_POR_INDICE[Number((e.payload as { insumo?: number } | undefined)?.insumo)];
+    const texto = insumo ? TEXTO_DE_RECETA[insumo] : undefined;
+    if (texto) anotar({ ...base, texto, clase: 'mirada', titulo: 'Obras', categoria: 'economia', urgente: false, clave: `${e.codigo}|${e.version}` }, modo);
     return;
   }
   if (e.codigo === 'faccion.prestigio') {
