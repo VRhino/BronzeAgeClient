@@ -529,6 +529,7 @@ export function escenaPueblo(x: pb.Pueblo): d.EscenaPueblo | undefined {
     edificios: x.planta.map((e) => ({ edificioId: e.id, tipo: e.tipo, posicion: punto(e.posicion), ancho: e.ancho, alto: e.alto })),
     calles: (x.trazado?.calles ?? []).map((r) => ({ x: r.x, y: r.y, ancho: r.ancho, alto: r.alto })),
     caminos: (x.trazado?.caminos ?? []).map((r) => ({ x: r.x, y: r.y, ancho: r.ancho, alto: r.alto })),
+    cultivo: opcional(x.cultivo),
   };
 }
 

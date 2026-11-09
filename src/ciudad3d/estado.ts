@@ -33,6 +33,10 @@ export interface EdificioEnVista {
    * no se sabe y la maqueta lo echa a suertes. Lo usan las tiendas del mercado para abrir su puerta y su mostrador a la calle.
    */
   frente?: 1 | -1;
+  /** El molino con su buey (tanda 69, `Edificio.buey`): la maqueta lo pone dando vueltas a la muela. */
+  buey?: boolean;
+  /** La granja de una aldea de viñas o de olivos (tanda 69, `Pueblo.cultivo`, lo pone `puebloEnVista`): `vid` u `oliva`; sin él, de trigo. */
+  cultivo?: string;
 }
 
 export type ClaseCelda = 'muro' | 'puerta' | 'torre';
@@ -194,7 +198,7 @@ export function ciudadEnVista(a: FuenteDeCiudad, t: TrazadoAsentamiento | undefi
     edificios.push({
       id: e.id, tipo: e.tipo, x: h.x, y: h.y, ancho: h.ancho, alto: h.alto, estado: e.estado, avance, completaEn: enObra ? fin : undefined,
       mejora: !!e.mejora, danado: !!e.danado, nivel: e.nivelInterno ?? 1, estilo: estiloDe(e.id, e.tipo, a.nivel, a.ascenso, o.instante),
-      semilla: Math.floor(hashTexto(e.id) * 1e9),
+      semilla: Math.floor(hashTexto(e.id) * 1e9), buey: e.buey || undefined,
     });
   }
 

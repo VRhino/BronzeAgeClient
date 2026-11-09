@@ -376,3 +376,26 @@ describe('la taberna regional', async () => {
     expect(fuentesDeRegion(proy(), plaza('heroe-9'))).toEqual([]);
   });
 });
+
+describe('las aldeas de viñas y de olivos en su plano y su vista (tanda 5)', () => {
+  test('la escena del pueblo lleva el cultivo del motor; el extractor, ninguno', async () => {
+    const { create } = await import('@bufbuild/protobuf');
+    const { PuebloSchema } = await import('../src/contrato/gen/bronzeage/v1/entities_pb');
+    const { escenaPueblo } = await import('../src/motor/proyeccion');
+    const planta = [{ id: 'g-1', tipo: 'granja', posicion: { x: 0n, y: 0n }, ancho: 6, alto: 6 }];
+    expect(escenaPueblo(create(PuebloSchema, { id: 'p-1', tipoExtractor: 'aldeaAgricola', cultivo: 'vid', planta } as never))!.cultivo).toBe('vid');
+    expect(escenaPueblo(create(PuebloSchema, { id: 'p-2', tipoExtractor: 'cantera', planta } as never))!.cultivo).toBeUndefined();
+  });
+
+  test('en el plano y al pasar el ratón, la granja de una aldea de viñas es «Viña» y la de olivos «Olivar»', async () => {
+    const { nombreDePiezaPueblo, svgPlanoPueblo } = await import('../src/ui/planoPueblo');
+    expect(nombreDePiezaPueblo('granja', 'vid')).toBe('Viña');
+    expect(nombreDePiezaPueblo('granja', 'oliva')).toBe('Olivar');
+    expect(nombreDePiezaPueblo('granja', 'trigo')).toBe('Granja');
+    expect(nombreDePiezaPueblo('corral', 'vid')).toBe('Corral');
+    const escena = (cultivo?: string) => ({ puebloId: 'p', tipo: 'aldeaAgricola', unidadesPorCelda: 3, radio: 10, cultivo, edificios: [{ edificioId: 'g', tipo: 'granja', posicion: { x: 0, y: 0 }, ancho: 6, alto: 6 }], calles: [], caminos: [] });
+    expect(svgPlanoPueblo(escena('vid'))).toContain('<title>Viña</title>');
+    expect(svgPlanoPueblo(escena('oliva'))).toContain('<title>Olivar</title>');
+    expect(svgPlanoPueblo(escena())).toContain('<title>Granja</title>');
+  });
+});

@@ -675,6 +675,216 @@ function taberna(m: Marco, estilo: number): void {
   });
 }
 
+// ───────────────────────────── Los talleres de la comida y la estatua (tanda 69) ─────────────────────────────
+
+/** Sacos de lona en fila (de harina o de grano). */
+function sacos(m: Marco, u: number, v: number, n: number, color = COLOR.lona): void {
+  for (let i = 0; i < n; i++) {
+    m.forma('cilindro', color, u + i * 0.26, v, 0.24, 0.22, 0.3);
+    m.forma('cupula', color, u + i * 0.26, v, 0.22, 0.2, 0.07, 0.3);
+  }
+}
+
+/**
+ * El molino (2 × 2 celdas): la casa al fondo y en el patio la muela de sangre, la de piedra que se mueve dando vueltas: la solera ancha, la muela
+ * de encima, el eje y la vara. Con su buey (`Edificio.buey`), el buey uncido a la vara sobre el camino que pisa; sin él, la vara apoyada y la
+ * gente la mueve a mano (no se ve). Sacos de harina y el montón de trigo por moler.
+ */
+function molino(m: Marco, estilo: number): void {
+  taller(m, estilo, (u, pv, l, s) => {
+    const cu = u - l * 0.12, cv = pv(0.5), r = Math.max(0.7, Math.min(s * 0.4, l * 0.3, 1.35));
+    // el camino redondo que pisa la bestia, la solera y la muela
+    m.forma('cilindro', COLOR.tierraOscura, cu, cv, 2 * r + 0.5, 2 * r + 0.5, 0.02);
+    m.forma('cilindro', COLOR.tierra, cu, cv, 2 * r - 0.35, 2 * r - 0.35, 0.03);
+    m.forma('cilindro', COLOR.piedra, cu, cv, 0.95, 0.95, 0.3);
+    m.forma('cilindro', COLOR.piedraOscura, cu, cv, 0.66, 0.66, 0.26, 0.3);
+    m.poste(COLOR.maderaOscura, cu, cv, 1.2, 0.11);
+    const a = m.entre(70, 0, Math.PI * 2), bu = cu + Math.cos(a) * r, bv = cv + Math.sin(a) * r;
+    if (m.e.buey) {
+      // la vara del eje al yugo y el buey de lado, mirando hacia donde anda (la tangente)
+      m.viga(COLOR.madera, cu, cv, bu, bv, 0.62, 0.08);
+      bestia(m, bu, bv, a + Math.PI / 2, false);
+    } else {
+      m.viga(COLOR.madera, cu, cv, cu + Math.cos(a) * r * 0.9, cv + Math.sin(a) * r * 0.9, 0.62, 0.08);
+    }
+    // la harina en sacos y el trigo por moler
+    sacos(m, u + l / 2 - 0.95, pv(0.22), 3);
+    m.forma('cono', COLOR.trigo, u + l / 2 - 0.6, pv(0.72), 0.8, 0.8, 0.45);
+  });
+}
+
+/** El horno de pan (2 × 1): la casa al fondo y delante dos hornos de cúpula con su boca encendida, la leña y la mesa con los panes. */
+function panaderia(m: Marco, estilo: number): void {
+  taller(m, estilo, (u, pv, l, s) => {
+    const r = Math.min(0.48, s * 0.38);
+    for (const k of [-1, 1]) {
+      // la boca (el hueco de `horno`) da a +v: la brasa, dentro
+      const uu = u + k * l * 0.3;
+      horno(m, uu, pv(0.45), r, estilo >= 3 ? COLOR.adobe : COLOR.barro);
+      m.caja(COLOR.fuego, uu, pv(0.45) + r * 0.93, r * 0.4, 0.04, r * 0.3, 0.02);
+    }
+    lena(m, u - l * 0.02, pv(0.25), 0.7, 2);
+    m.caja(COLOR.maderaOscura, u + l * 0.02, pv(0.75), 0.8, 0.26, 0.42);
+    m.caja(COLOR.madera, u + l * 0.02, pv(0.75), 0.9, 0.34, 0.06, 0.42);
+    for (const k of [-0.28, 0, 0.28]) m.forma('cupula', COLOR.pan, u + l * 0.02 + k, pv(0.75), 0.22, 0.16, 0.08, 0.48);
+  });
+}
+
+/** La quesera (2 × 1): la casa al fondo y delante el caldero al fuego, las tinajas de la leche y el estante con los quesos curándose. */
+function quesera(m: Marco, estilo: number): void {
+  taller(m, estilo, (u, pv, l, s) => {
+    const uc = u - l * 0.3, vc = pv(0.45);
+    // el caldero sobre su fuego
+    m.caja(COLOR.fuego, uc, vc, 0.3, 0.3, 0.06);
+    for (const k of [-1, 1]) m.caja(COLOR.piedraOscura, uc + k * 0.24, vc, 0.12, 0.3, 0.2);
+    m.forma('cupula', COLOR.bronce, uc, vc, 0.5, 0.5, 0.28, 0.2);
+    tinajas(m, uc + 0.45, pv(0.2), 2, COLOR.enlucido);
+    // el estante de los quesos: dos baldas con sus quesos en fila
+    const ue = u + l * 0.22, ve = pv(0.55), le = Math.min(1.5, l * 0.4), d = Math.min(0.34, s * 0.3);
+    for (const k of [-1, 1]) m.poste(COLOR.madera, ue + (k * le) / 2, ve, 0.85, 0.06);
+    for (const y of [0.3, 0.62]) {
+      m.caja(COLOR.madera, ue, ve, le, d, 0.04, y);
+      const n = Math.max(2, Math.floor(le / 0.3));
+      for (let i = 0; i < n; i++) m.forma('cilindro', COLOR.queso, ue - le / 2 + (le * (i + 0.5)) / n, ve, 0.22, 0.22, 0.12, y + 0.04);
+    }
+  });
+}
+
+/** La bodega (2 × 2): la casa al fondo y en el patio el lagar donde se pisa la uva (con el mosto), las grandes tinajas del vino y una parra. */
+function bodega(m: Marco, estilo: number): void {
+  taller(m, estilo, (u, pv, l, s) => {
+    // el lagar: una pila baja de piedra (de enlucido en los altos) con el mosto y unos racimos al borde
+    const ul = u - l * 0.22, vl = pv(0.4), ll = Math.min(1.8, l * 0.4), sl = Math.min(1.3, s * 0.45), borde = estilo >= 4 ? COLOR.enlucidoSombra : COLOR.piedra;
+    m.caja(borde, ul, vl, ll, sl, 0.32);
+    m.losa(COLOR.mosto, ul, vl, ll - 0.18, sl - 0.18, 0.02, 0.31);
+    m.caja(borde, ul + ll / 2 + 0.15, vl, 0.3, 0.26, 0.16);
+    for (let i = 0; i < 4; i++) m.forma('copa', COLOR.uva, ul - ll / 2 + 0.25 + i * 0.36, vl - sl / 2 - 0.12, 0.2, 0.2, 0.2);
+    // la parra sobre el lagar
+    if (s > 1.6) pergola(m, ul, vl, ll + 0.4, sl + 0.4, 0, 1.05, true);
+    // las tinajas grandes del vino, medio enterradas, en filas
+    const n = Math.max(2, Math.floor((l * 0.4) / 0.42)), filas = s > 2 ? 2 : 1;
+    for (let j = 0; j < filas; j++) for (let i = 0; i < n; i++) {
+      const uu = u + l * 0.1 + i * 0.42, vv = pv(0.3 + j * 0.4);
+      m.forma('cilindro', COLOR.barro, uu, vv, 0.36, 0.36, 0.42);
+      m.forma('cupula', COLOR.barro, uu, vv, 0.36, 0.36, 0.1, 0.42);
+      m.forma('cilindro', COLOR.ocre, uu, vv, 0.14, 0.14, 0.08, 0.5);
+    }
+  });
+}
+
+/**
+ * La prensa de aceite (2 × 1): la casa al fondo y delante la prensa de viga, la de la Edad del Bronce: la viga larga metida por un extremo en
+ * el muro, que aprieta los capachos de aceituna sobre la piedra de prensar, con la piedra que cuelga del otro extremo; las tinajas del
+ * aceite y los cestos de aceituna.
+ */
+function prensa(m: Marco, estilo: number): void {
+  taller(m, estilo, (u, pv, l, _s, f) => {
+    const vv = pv(0.45), u0 = u - l / 2 + 0.25, up = u - l * 0.12, u1 = u + l * 0.3;
+    // la piedra de prensar con su canal y los capachos apilados encima
+    m.forma('cilindro', COLOR.piedra, up, vv, 0.8, 0.8, 0.26);
+    m.caja(COLOR.piedra, up, vv + f * 0.4, 0.14, 0.3, 0.1);
+    for (let k = 0; k < 3; k++) m.forma('cilindro', k % 2 ? COLOR.zarzo : COLOR.aceituna, up, vv, 0.6, 0.6, 0.1, 0.26 + k * 0.1);
+    // el poste del muro donde entra la viga, la viga y la piedra colgada de su punta
+    m.caja(estilo <= 2 ? COLOR.madera : COLOR.piedraOscura, u0, vv, 0.3, 0.4, 1.0);
+    m.viga(COLOR.maderaOscura, u0, vv, u1, vv, 0.68, 0.16, 0.18);
+    m.poste(COLOR.cuerda, u1 - 0.05, vv, 0.4, 0.03, 0.3);
+    m.caja(COLOR.piedraOscura, u1 - 0.05, vv, 0.42, 0.36, 0.3);
+    // el aceite en tinajas y la aceituna en cestos
+    tinajas(m, u + l / 2 - 0.85, pv(0.2), 3, COLOR.ocre);
+    for (let i = 0; i < 2; i++) {
+      m.forma('cilindro', COLOR.zarzo, u + l / 2 - 0.7 + i * 0.32, pv(0.75), 0.28, 0.28, 0.22);
+      m.forma('copa', COLOR.aceituna, u + l / 2 - 0.7 + i * 0.32, pv(0.75), 0.24, 0.24, 0.1, 0.18);
+    }
+  });
+}
+
+/**
+ * La estatua de la capital (1 × 1): sobre un pedestal de dos gradas, una figura de pie con la lanza en alto (de piedra hasta el estilo 3; de
+ * bronce desde el 4), en un enlosado con dos braseros a los lados.
+ */
+function estatua(m: Marco, estilo: number): void {
+  const lado = Math.min(m.L, m.S) - 0.3, piedra = estilo >= 4 ? COLOR.piedraClara : COLOR.piedra, figura = estilo >= 4 ? COLOR.bronce : COLOR.rocaClara;
+  m.losa(estilo >= 3 ? COLOR.losa : COLOR.tierra, 0, 0, lado, lado, 0.04);
+  m.caja(piedra, 0, 0, 1.3, 1.3, 0.25);
+  m.caja(piedra, 0, 0, 0.95, 0.95, 0.4, 0.25);
+  if (estilo >= 5) m.caja(COLOR.rojo, 0, 0, 0.97, 0.97, 0.08, 0.5);
+  // la figura: las piernas, la túnica, el pecho, los hombros, la cabeza; un brazo con la lanza y el otro con el escudo
+  const y = 0.65;
+  for (const k of [-0.09, 0.09]) m.forma('cilindro', figura, 0, k, 0.13, 0.13, 0.5, y);
+  m.forma('cilindro', figura, 0, 0, 0.36, 0.3, 0.32, y + 0.4);
+  m.caja(figura, 0, 0, 0.22, 0.4, 0.4, y + 0.7);
+  m.caja(figura, 0, 0, 0.2, 0.54, 0.1, y + 1.04);
+  m.forma('cilindro', figura, 0, 0, 0.09, 0.09, 0.08, y + 1.14);
+  m.forma('cupula', figura, 0, 0, 0.2, 0.2, 0.24, y + 1.2);
+  m.caja(figura, 0, 0.3, 0.1, 0.1, 0.45, y + 1.0);
+  m.forma('cilindro', figura, 0.04, 0.32, 0.04, 0.04, 1.5, y + 0.55);
+  m.forma('cono', figura, 0.04, 0.32, 0.08, 0.08, 0.18, y + 2.05);
+  m.forma('cilindro', figura, 0.08, -0.38, 0.42, 0.42, 0.05, y + 0.8, 0, Math.PI / 2);
+  // los braseros, delante de la figura (que mira hacia +u)
+  for (const k of [-1, 1]) {
+    const uu = lado / 2 - 0.3, vv = k * (lado / 2 - 0.3);
+    m.poste(COLOR.bronce, uu, vv, 0.5, 0.06);
+    m.forma('cupula', COLOR.bronce, uu, vv, 0.3, 0.3, 0.12, 0.5);
+    m.forma('cono', COLOR.fuego, uu, vv, 0.16, 0.16, 0.18, 0.56);
+  }
+}
+
+// ───────────────────────────── Las granjas de las aldeas de viñas y de olivos (tanda 69) ─────────────────────────────
+
+/** La viña: la tierra labrada, las hileras de cepas en su espaldera (postes y una vara), su cerca y los cestos de la vendimia. */
+function vina(m: Marco, estilo: number): void {
+  const L = m.L - 0.3, S = m.S - 0.3;
+  m.losa(COLOR.tierra, 0, 0, L - 0.2, S - 0.2, 0.03);
+  // las hileras, a lo largo; al fondo de +v, junto al hueco de la cerca, queda sitio para los cestos
+  const filas = Math.max(2, Math.floor((S - 1.1) / 0.75) + 1), largo = L - 0.9;
+  for (let i = 0; i < filas; i++) {
+    const v = -S / 2 + 0.45 + ((S - 1.3) * i) / Math.max(1, filas - 1);
+    const n = Math.max(2, Math.round(largo / 1.2));
+    for (let k = 0; k <= n; k++) m.poste(COLOR.madera, -largo / 2 + (largo * k) / n, v, 0.6, 0.05);
+    m.viga(COLOR.madera, -largo / 2, v, largo / 2, v, 0.55, 0.03);
+    // las cepas entre poste y poste: el tronco retorcido y la hoja encima, con algún racimo
+    const c = Math.max(3, Math.round(largo / 0.4));
+    for (let k = 0; k < c; k++) {
+      const u = -largo / 2 + (largo * (k + 0.5)) / c;
+      m.poste(COLOR.cepa, u, v, 0.35, 0.06);
+      m.forma('copa', k % 3 ? COLOR.vid : COLOR.hoja, u, v, 0.42, 0.3, 0.3, 0.36);
+      if (m.azar(800 + i * 50 + k) < 0.3) m.forma('copa', COLOR.uva, u, v + 0.14, 0.1, 0.1, 0.14, 0.3);
+    }
+  }
+  if (estilo <= 2) cerco(m, 0, 0, L, S, false);
+  else cerco(m, 0, 0, L, S, true, estilo >= 4 ? COLOR.piedraClara : COLOR.piedra);
+  // los cestos de la vendimia
+  for (let i = 0; i < 3; i++) {
+    m.forma('cilindro', COLOR.zarzo, -L / 2 + 0.45 + i * 0.3, S / 2 - 0.35, 0.24, 0.24, 0.2);
+    m.forma('copa', COLOR.uva, -L / 2 + 0.45 + i * 0.3, S / 2 - 0.35, 0.2, 0.2, 0.1, 0.16);
+  }
+}
+
+/** El olivar: olivos en tresbolillo sobre la tierra clara, la cerca de piedra seca (de varas en los bajos), la escalera de varear y los cestos. */
+function olivar(m: Marco, estilo: number): void {
+  const L = m.L - 0.3, S = m.S - 0.3, paso = 1.55;
+  m.losa(COLOR.rastrojo, 0, 0, L - 0.2, S - 0.2, 0.03);
+  const nu = Math.max(1, Math.floor((L - 0.8) / paso)), nv = Math.max(1, Math.floor((S - 0.8) / (paso * 0.87)));
+  for (let j = 0; j < nv; j++) for (let i = 0; i < nu; i++) {
+    if ((j % 2) && i === nu - 1) continue;
+    const u = -((nu - 1) * paso) / 2 + i * paso + (j % 2 ? paso / 2 : 0), v = -((nv - 1) * paso * 0.87) / 2 + j * paso * 0.87;
+    const k = m.azar(900 + j * 40 + i), g = 0.85 + 0.3 * k;
+    // el tronco grueso y retorcido, la copa ancha y plateada
+    m.forma('cilindro', COLOR.tronco, u, v, 0.2 * g, 0.2 * g, 0.55 * g);
+    m.forma('copa', COLOR.olivo, u, v, 1.15 * g, 1.05 * g, 0.75 * g, 0.4 * g);
+    if (k < 0.25) m.forma('copa', COLOR.aceituna, u + 0.2, v + 0.15, 0.3, 0.3, 0.22, 0.55 * g);
+  }
+  if (estilo <= 2) cerco(m, 0, 0, L, S, false);
+  else cerco(m, 0, 0, L, S, true, estilo >= 4 ? COLOR.piedraClara : COLOR.piedra);
+  // la escalera de varear apoyada y los cestos
+  const eu = -L / 2 + 0.55, ev = S / 2 - 0.4;
+  for (const k of [-0.12, 0.12]) m.forma('cilindro', COLOR.madera, eu + k, ev, 0.04, 0.04, 1.1, 0, 0, 0.35);
+  for (let i = 0; i < 2; i++) {
+    m.forma('cilindro', COLOR.zarzo, eu + 0.45 + i * 0.3, ev, 0.24, 0.24, 0.2);
+    m.forma('copa', COLOR.aceituna, eu + 0.45 + i * 0.3, ev, 0.2, 0.2, 0.1, 0.16);
+  }
+}
+
 /** Un puesto de mercado: mesa, cuatro postes y su toldo. */
 function puesto(m: Marco, u: number, v: number, l: number, s: number, k: number): void {
   const toldo = COLOR.toldo[k % COLOR.toldo.length]!;
@@ -1214,7 +1424,7 @@ function cantera(m: Marco, estilo: number): void {
 
 /** Lo alto que llega un edificio de este tipo en este estilo (para el armazón de su obra). */
 function altoDe(tipo: string, estilo: number): number {
-  if (['granja', 'plaza', 'plazaDeArmas', 'parque', 'pozo', 'puestoMercado', 'corral', 'lenera', 'galeriaDeTiro'].includes(tipo)) return 0.9;
+  if (['granja', 'plaza', 'plazaDeArmas', 'parque', 'pozo', 'puestoMercado', 'corral', 'lenera', 'galeriaDeTiro', 'estatua'].includes(tipo)) return 0.9;
   if (['centroUrbano', 'palacio', 'maravilla', 'salaConsejo'].includes(tipo)) return estilo <= 2 ? 1.9 : 2.4;
   return estilo <= 2 ? 1.5 : 1.15;
 }
@@ -1318,7 +1528,7 @@ function terminado(m: Marco, tipo: string, estilo: number): void {
     case 'maravilla': return maravilla(m, estilo);
     case 'almacen': return almacen(m, estilo);
     case 'granero': return granero(m, estilo);
-    case 'granja': return granja(m, estilo);
+    case 'granja': return m.e.cultivo === 'vid' ? vina(m, estilo) : m.e.cultivo === 'oliva' ? olivar(m, estilo) : granja(m, estilo);
     case 'lenera': return lenera(m, estilo);
     case 'corral': return corral(m, estilo);
     case 'caballerizas': return caballerizas(m, estilo);
@@ -1331,6 +1541,12 @@ function terminado(m: Marco, tipo: string, estilo: number): void {
     case 'barracon': return barracon(m, estilo);
     case 'galeriaDeTiro': return galeriaDeTiro(m, estilo);
     case 'taberna': return taberna(m, estilo);
+    case 'molino': return molino(m, estilo);
+    case 'horno': return panaderia(m, estilo);
+    case 'quesera': return quesera(m, estilo);
+    case 'bodega': return bodega(m, estilo);
+    case 'prensa': return prensa(m, estilo);
+    case 'estatua': return estatua(m, estilo);
     case 'mercado': return mercado(m, estilo);
     case 'puestoMercado': return puestoMercado(m, estilo);
     case 'albergueCaravanas': return albergueCaravanas(m, estilo);

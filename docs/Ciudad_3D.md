@@ -41,6 +41,22 @@ formas, reutilizando del mundo 3D el cielo, la luz y la manera de pintar miles d
     granero (silos en cúpula desde el 3), granja (surcos en el suelo), leñera, corral, caballerizas, talleres con su patio (fundición, curtiduría,
     armería, carpintería, taberna), barracón, galería de tiro, mercado (estoa desde el 4), plaza, plaza de armas, patio de gremios, pozo y
     parque.
+  - **Los talleres de la comida y la estatua** (desde 0.189.0, tanda 69 del motor): talleres con su patio delante.
+    - El **molino** (2 × 2) tiene en el patio la muela de sangre: el camino redondo, la solera, la muela, el eje y la vara. Con su buey
+      (`Edificio.buey`, `EdificioEnVista.buey`) el buey va uncido a la vara; sin él, la vara está apoyada. Al lado, los sacos de harina y el
+      trigo por moler.
+    - El **horno** (2 × 1) tiene dos hornos de cúpula con la brasa en la boca, la leña y la mesa con los panes.
+    - La **quesera** (2 × 1) tiene el caldero de bronce al fuego, las tinajas de la leche y el estante con los quesos.
+    - La **bodega** (2 × 2) tiene el lagar con el mosto bajo una parra y las tinajas grandes del vino en filas.
+    - La **prensa** (2 × 1) es una prensa de viga: la viga metida en el muro, los capachos de aceituna sobre la piedra de prensar, la piedra
+      colgada, las tinajas del aceite y los cestos.
+    - La **estatua** (1 × 1, solo en la capital) es una figura con lanza y escudo sobre un pedestal de dos gradas, de piedra hasta el estilo 3 y
+      de bronce desde el 4, con dos braseros delante.
+  - **Viñas y olivares** (desde 0.189.0): en una aldea de vid o de olivo (`Pueblo.cultivo`, que `puebloEnVista` pasa a sus granjas como
+    `EdificioEnVista.cultivo`), cada granja es una viña o un olivar.
+    - La viña tiene hileras de cepas en su espaldera, con algún racimo, y los cestos de la vendimia.
+    - El olivar tiene olivos en tresbolillo, la escalera de varear y los cestos.
+    - Las dos van con la cerca de la granja de su estilo. En la planta de minimapa y al pasar el ratón se llaman «Viña» y «Olivar».
   - Variedad: cada edificio tiene una semilla (de su id) que decide sus variaciones (orientación de la puerta, plantas, patio, pérgola,
     tono...), siempre las mismas para el mismo edificio.
   - **Puestos de mercado** (desde 0.117.0): en una plaza de nivel 1 son tenderetes al aire, uno por celda. Del nivel 2 en adelante son
@@ -83,6 +99,17 @@ formas, reutilizando del mundo 3D el cielo, la luz y la manera de pintar miles d
   con jambas de piedra, dintel, hojas abiertas y el muro corrido por encima; en el nivel 3, torres macizas que suben por encima de la puerta
   de los Leones. Van alineadas con la celda, así que en una esquina del anillo tampoco salen de ella; el motor no cambia. Si el anillo salta a
   una celda que no toca el paso (un recinto a medio comprometer), ese lado va sin torre.
+- **La puerta resalta del muro** (desde 0.189.0; Víctor, 2026-11-08: «en la maqueta la puerta casi no se distingue del resto del muro»).
+  - En los tres niveles: las hojas entreabiertas hacia dentro, con sus travesaños; un pendón rojo con franja ocre en cada torre de la puerta;
+    y fuego a los lados del paso.
+  - En la empalizada: antorchas en los postes, el bucráneo en el dintel y un puente de tablas sobre el foso.
+  - En el nivel 2: el umbral enlosado, el marco enlucido de las jambas, el dintel pintado de rojo, bandas de bronce en las hojas y dos
+    braseros.
+  - En el nivel 3: las jambas y el dintel de piedra clara, más claros que el muro, y el paso enlosado. Las hojas van chapadas de bronce, con
+    dos braseros, y el triángulo de descarga lleva su relieve claro: la columna roja entre dos leones.
+  - Nada sale de las celdas de la puerta y de sus dos vecinas más que un alero.
+  - En el mundo, la maqueta de una plaza amurallada lleva un dintel de madera entre las dos torres de la puerta y una bandera de la Facción
+    en cada una.
 - **Suelo** (`suelo.ts`): una textura pintada una vez, con:
   - el color del terreno del mapa donde está la plaza;
   - la tierra pisada alrededor de lo poblado y bajo las calles y los caminos;
@@ -201,8 +228,17 @@ con la planta en SVG como minimapa (`svgPlanoAvanzada`).
   estilo del 1 al 5 de izquierda a derecha y nivel del 1 al 3 de arriba abajo, cada uno con su calle delante; y el mando «Albergue» pone
   uno del nivel elegido en la aldea, el pueblo o la ciudad (las del motor no lo tienen): en el hueco libre de 2 × 3 celdas con calle a un
   lado largo más cerca del Mercado, dentro de la muralla si cabe.
+- **Tanda 69** (desde 0.189.0):
+  - «Talleres de la comida y estatua: tipos × estilos» pone, de arriba abajo, el molino, el molino con buey, el horno, la quesera, la
+    bodega, la prensa y la estatua, del estilo 1 al 5.
+  - «Muralla con puertas rectas» es un anillo cuadrado con las puertas de la `LAYOUT_VERSION` 7 (una de una celda al sur y otra de dos al
+    norte, con dos celdas de muro recto a cada lado), del nivel del mando «Muralla».
+  - El mando «Cultivo» hace de vid o de olivo las aldeas, sin más corral que el del buey.
 - `window.banco.mirar({ x, y, distancia, giro, inclinacion })` mueve la cámara para las capturas, y `window.banco.huella(id)` dice dónde
   está un edificio.
+- La dirección pone los mandos al abrir: `?plaza=muestra-comida`, `?plaza=muestra-muralla&muralla=3` o
+  `?plaza=pueblos/aldea-3&estilo=3&cultivo=vid`. Así las capturas abren directamente una escena ligera; la ciudad de nivel 5 es demasiado para
+  el Chromium sin GPU de la nube.
 
 ## Rendimiento
 

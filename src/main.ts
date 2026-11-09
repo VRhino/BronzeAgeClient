@@ -646,7 +646,7 @@ function montarPueblo3D(mapa: HTMLElement): boolean {
         const pieza = id ? vista.ciudadActual()?.edificios.find((e) => e.id === id) : undefined;
         if (!tooltip) return;
         if (!pieza || !evento) { tooltip.hidden = true; return; }
-        tooltip.innerHTML = `<strong>${escaparHtml(nombreDePiezaPueblo(pieza.tipo))}</strong>`;
+        tooltip.innerHTML = `<strong>${escaparHtml(nombreDePiezaPueblo(pieza.tipo, pieza.cultivo))}</strong>`;
         tooltip.hidden = false;
         tooltip.style.left = `${Math.min(window.innerWidth - tooltip.offsetWidth - 8, evento.clientX + 14)}px`;
         tooltip.style.top = `${Math.min(window.innerHeight - tooltip.offsetHeight - 8, evento.clientY + 14)}px`;

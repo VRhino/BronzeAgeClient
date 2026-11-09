@@ -3,6 +3,30 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.189.0] — 2026-11-09 · La tanda 69, parte 5: el 3D · sin cambio de contrato (motor `d0326fd`)
+
+- **Los seis edificios nuevos en la plaza 3D**, cada uno en su huella (la del trazado del motor) y en los cinco estilos.
+  - El molino tiene la muela de sangre en el patio; con su buey (`Edificio.buey`), el buey va uncido a la vara.
+  - El horno tiene dos hornos de cúpula con la brasa, la leña y los panes.
+  - La quesera tiene el caldero al fuego, la leche y el estante con los quesos.
+  - La bodega tiene el lagar con el mosto bajo una parra y las tinajas del vino.
+  - La prensa es de viga, con los capachos de aceituna, la piedra colgada y el aceite.
+  - La estatua es una figura con lanza y escudo sobre un pedestal, de piedra hasta el estilo 3 y de bronce desde el 4, con dos braseros.
+  - Antes, los seis salían como un bloque cualquiera.
+- **Viñas y olivares**: en una aldea de vid o de olivo (`Pueblo.cultivo`), sus granjas son viñas en espaldera u olivares en tresbolillo.
+  - Pasa en la vista 3D de dentro, en la planta de minimapa y en el nombre al pasar el ratón («Viña», «Olivar»).
+  - En las maquetas del mundo, los campos de la aldea son hileras de cepas o olivos en vez de trigo.
+- **La puerta de la muralla resalta del muro**, en los tres niveles (nota de Víctor del 2026-11-08). El trazado no cambia.
+  - En todos: hojas entreabiertas, pendones rojos en sus torres y fuego a los lados.
+  - En la empalizada: el bucráneo y el puente sobre el foso.
+  - En el nivel 2: el umbral enlosado, el marco enlucido y el dintel rojo.
+  - En el nivel 3: las jambas y el dintel de piedra clara, y el relieve de los leones con la columna roja.
+  - En el mundo, las torres de la puerta de una plaza amurallada llevan un dintel y una bandera cada una.
+- Banco de la plaza 3D:
+  - muestras «Talleres de la comida y estatua» y «Muralla con puertas rectas» (puertas de la `LAYOUT_VERSION` 7);
+  - el mando «Cultivo» para las aldeas;
+  - la dirección pone los mandos (`?plaza=…&estilo=…&muralla=…&cultivo=…`), para capturar en la nube sin la ciudad grande.
+
 ## [0.188.0] — 2026-11-08 · La tanda 69, parte 4: la taberna regional · sin cambio de contrato (motor `d0326fd`)
 
 - **Informe de la región en la taberna** de una plaza propia, para el Rey, el Embajador o el Gobernador dentro: «Sus plazas» (las fichas de

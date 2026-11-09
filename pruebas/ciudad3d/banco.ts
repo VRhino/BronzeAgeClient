@@ -6,7 +6,10 @@
 // forma de `Pueblo.planta` y `trazado`), con el estilo de su madre (el mando «Estilo», hasta el 3).
 // Los mandos cambian lo que se dibuja sin tocar el trazado: el estilo (nivel de la plaza), el nivel de la muralla, el avance de las obras,
 // la plaza vista como ajena (sin la cola), saqueada (edificios dañados) o subiendo de nivel (las casas cambian por partes).
-// `window.banco` deja mover la cámara desde fuera (capturas): `banco.mirar({ x, y, distancia, giro, inclinacion })`.
+// `window.banco` deja mover la cámara desde fuera (capturas): `banco.mirar({ x, y, distancia, giro, inclinacion })`. Y la dirección, abrir con los
+// mandos puestos (capturas): `?plaza=muestra-comida&estilo=3&muralla=2&cultivo=vid`.
+// Tanda 69: la muestra de los talleres de la comida y la estatua («muestra-comida»), la de la muralla con las puertas rectas de la
+// `LAYOUT_VERSION` 7 («muestra-muralla», con el mando «Muralla») y el cultivo de las aldeas (el mando «Cultivo»).
 import { fromBinary } from '@bufbuild/protobuf';
 import { AsentamientoSchema, CampamentoMercenariosSchema } from '../../src/contrato/gen/bronzeage/v1/entities_pb';
 import { campamentoEnVista } from '../../src/ciudad3d/campamento';
@@ -130,11 +133,14 @@ function fijarPlano(svgTexto: string): void {
 async function rehacerPueblo(nombre: string): Promise<void> {
   const j = await cargarPueblo(nombre);
   actual = null;
-  const estilo = $<HTMLSelectElement>('nivel').value;
+  const estilo = $<HTMLSelectElement>('nivel').value, cultivo = j.tipoExtractor === 'aldeaAgricola' ? $<HTMLSelectElement>('cultivo').value || undefined : undefined;
+  // la aldea de viñas o de olivos no tiene corrales (tanda 69), salvo el del buey, el primero de la planta: las plantas del banco son de trigo
+  const corralDelBuey = j.planta.findIndex((p) => p.tipo === 'corral');
+  const planta = cultivo ? j.planta.filter((p, i) => p.tipo !== 'corral' || i === corralDelBuey) : j.planta;
   const e: EscenaPueblo = {
     puebloId: j.id, tipo: j.tipoExtractor, nivelMadre: estilo ? Number(estilo) : 2, unidadesPorCelda: j.trazado.unidadesPorCelda, radio: j.trazado.radioUl,
-    edificios: j.planta.map((p) => ({ edificioId: p.id, tipo: p.tipo, posicion: { x: p.posicion.x / 1000, y: p.posicion.y / 1000 }, ancho: p.ancho, alto: p.alto })),
-    calles: j.trazado.calles, caminos: j.trazado.caminos,
+    edificios: planta.map((p) => ({ edificioId: p.id, tipo: p.tipo, posicion: { x: p.posicion.x / 1000, y: p.posicion.y / 1000 }, ancho: p.ancho, alto: p.alto })),
+    calles: j.trazado.calles, caminos: j.trazado.caminos, cultivo,
   };
   fijarPlano(svgPlanoPueblo(e));
   const c = puebloEnVista(e, { instante: 0 });
@@ -142,7 +148,7 @@ async function rehacerPueblo(nombre: string): Promise<void> {
   vista.fijar(c);
   vista.seleccionar(seleccion);
   const cuentas = vista.cuentas();
-  $('lectura').textContent = `${nombre}: ${j.tipoExtractor}, estilo ${c?.nivel}, ${c?.edificios.length ?? 0} piezas, radio ${c?.radio} ul, ${c?.libres.length ?? 0} celdas libres\npiezas: ${cuentas.edificios} edificios · ${cuentas.relleno} relleno`;
+  $('lectura').textContent = `${nombre}: ${j.tipoExtractor}${e.cultivo ? ` de ${e.cultivo}` : ''}, estilo ${c?.nivel}, ${c?.edificios.length ?? 0} piezas, radio ${c?.radio} ul, ${c?.libres.length ?? 0} celdas libres\npiezas: ${cuentas.edificios} edificios · ${cuentas.relleno} relleno`;
 }
 
 /**
@@ -173,6 +179,74 @@ function rehacerMuestra(): void {
   vista.seleccionar(seleccion);
   const cuentas = vista.cuentas();
   $('lectura').textContent = `Albergue de caravanas: estilo 1 a 5 de izquierda a derecha, nivel 1 a 3 de arriba abajo\npiezas: ${cuentas.edificios} edificios · ${cuentas.relleno} relleno`;
+}
+
+/** Los talleres de la comida y la estatua (tanda 69), cada fila un tipo y cada columna un estilo (del 1 al 5), con su calle delante. */
+const FILAS_COMIDA: { tipo: string; ancho: number; alto: number; buey?: boolean }[] = [
+  { tipo: 'molino', ancho: 6, alto: 6 },
+  { tipo: 'molino', ancho: 6, alto: 6, buey: true },
+  { tipo: 'horno', ancho: 6, alto: 3 },
+  { tipo: 'quesera', ancho: 6, alto: 3 },
+  { tipo: 'bodega', ancho: 6, alto: 6 },
+  { tipo: 'prensa', ancho: 6, alto: 3 },
+  { tipo: 'estatua', ancho: 3, alto: 3 },
+];
+
+function rehacerComida(): void {
+  actual = null;
+  ultima = null;
+  $('mini').hidden = true;
+  $('mini-camp').hidden = true;
+  const edificios: Asentamiento['edificios'] = [], huellas: Record<string, RectanguloLocal> = {}, calles: RectanguloLocal[] = [];
+  let y = -30;
+  FILAS_COMIDA.forEach((f, i) => {
+    calles.push({ x: -24, y: y + f.alto, ancho: 48, alto: 3 });
+    for (let estilo = 1; estilo <= 5; estilo++) {
+      const id = `${f.tipo}${f.buey ? '-buey' : ''}-e${estilo}-f${i}`, x = -22.5 + (estilo - 1) * 9 + (6 - f.ancho) / 2;
+      edificios.push({ id, tipo: f.tipo, estado: 'activo', posicion: { x: x + f.ancho / 2, y: y + f.alto / 2 }, buey: f.buey });
+      huellas[id] = { x, y, ancho: f.ancho, alto: f.alto };
+    }
+    y += f.alto + 3;
+  });
+  for (let k = 0; k < 4; k++) calles.push({ x: -16.5 + k * 9, y: -30, ancho: 3, alto: y + 30 - 3 });
+  const a: FuenteDeCiudad = { id: 'muestra-comida', nivel: 3, edificios, recintos: [], ascenso: undefined };
+  const c = ciudadEnVista(a, { calles, caminos: [], huellas, murallas: [], radio: 40, celda: 3 }, { instante: 0 })!;
+  for (const e of c.edificios) e.estilo = Number(/-e(\d)-/.exec(e.id)![1]);
+  campActual = c;
+  ultima = c;
+  vista.fijar(c);
+  vista.seleccionar(seleccion);
+  const cuentas = vista.cuentas();
+  $('lectura').textContent = `Talleres de la comida y estatua: estilo 1 a 5 de izquierda a derecha; molino, molino con buey, horno, quesera, bodega, prensa y estatua de arriba abajo\npiezas: ${cuentas.edificios} edificios · ${cuentas.relleno} relleno`;
+}
+
+/**
+ * Una muralla de muestra con las puertas de la `LAYOUT_VERSION` 7 del motor (tanda 69: toda puerta con dos celdas de muro recto a cada lado):
+ * un anillo cuadrado de 11 × 11 celdas con una puerta de una celda al sur, una de dos al norte y torres en las esquinas, y la calle que lo
+ * cruza por las dos. El nivel, el del mando «Muralla» (sin él, 2).
+ */
+function rehacerMuralla(): void {
+  actual = null;
+  ultima = null;
+  $('mini').hidden = true;
+  $('mini-camp').hidden = true;
+  const h = 5, celdas: { col: number; row: number; clase: 'muro' | 'puerta' | 'torre' }[] = [];
+  const clase = (col: number, row: number): 'muro' | 'puerta' | 'torre' =>
+    (row === h && col === 0) || (row === -h && (col === 0 || col === -1)) ? 'puerta' : Math.abs(col) === h && Math.abs(row) === h ? 'torre' : 'muro';
+  for (let c = -h; c <= h; c++) celdas.push({ col: c, row: -h, clase: clase(c, -h) });
+  for (let r = -h + 1; r <= h; r++) celdas.push({ col: h, row: r, clase: clase(h, r) });
+  for (let c = h - 1; c >= -h; c--) celdas.push({ col: c, row: h, clase: clase(c, h) });
+  for (let r = h - 1; r > -h; r--) celdas.push({ col: -h, row: r, clase: clase(-h, r) });
+  const nivel = Number($<HTMLSelectElement>('muralla').value || 2);
+  const a: FuenteDeCiudad = { id: 'muestra-muralla', nivel: 3, edificios: [], recintos: [{ id: 'recinto-muestra', nivel, celdas, avance: celdas.length }], ascenso: undefined };
+  const calles: RectanguloLocal[] = [{ x: 0, y: 0, ancho: 3, alto: 3 * (h + 4) }, { x: -3, y: -3 * (h + 4), ancho: 6, alto: 3 * (h + 4) }];
+  const c = ciudadEnVista(a, { calles, caminos: [], huellas: {}, murallas: [], radio: 3 * (h + 2), celda: 3 }, { instante: 0 })!;
+  campActual = c;
+  ultima = c;
+  vista.fijar(c);
+  vista.seleccionar(seleccion);
+  const cuentas = vista.cuentas();
+  $('lectura').textContent = `Muralla de nivel ${nivel}: puertas rectas (una de una celda al sur, una de dos al norte)\npiezas: ${cuentas.murallas} muralla · ${cuentas.relleno} relleno`;
 }
 
 /**
@@ -235,6 +309,8 @@ async function rehacer(): Promise<void> {
   if (nombre.startsWith('campamento')) return rehacerCampamento(nombre);
   if (nombre.startsWith('pueblos/')) return rehacerPueblo(nombre.slice('pueblos/'.length));
   if (nombre === 'muestra-albergue') return rehacerMuestra();
+  if (nombre === 'muestra-comida') return rehacerComida();
+  if (nombre === 'muestra-muralla') return rehacerMuralla();
   campActual = null;
   $('mini').hidden = false;
   $('mini-camp').hidden = true;
@@ -269,13 +345,21 @@ async function rehacer(): Promise<void> {
   $('lectura').textContent = `${nombre}: nivel ${a.nivel}, radio ${c?.radio} ul, ${n} edificios, ${c?.recintos.length ?? 0} recintos, ${c?.libres.length ?? 0} celdas libres\npiezas: ${cuentas.edificios} edificios · ${cuentas.murallas} muralla · ${cuentas.relleno} relleno`;
 }
 
-for (const id of ['ciudad', 'nivel', 'muralla', 'albergue', 'obras', 'ajena', 'saqueo', 'ascenso']) $(id).addEventListener(id === 'obras' ? 'input' : 'change', () => void rehacer());
+for (const id of ['ciudad', 'nivel', 'muralla', 'albergue', 'cultivo', 'obras', 'ajena', 'saqueo', 'ascenso']) $(id).addEventListener(id === 'obras' ? 'input' : 'change', () => void rehacer());
 setInterval(() => {
   const r = vista.rendimiento();
   const t = $('lectura').textContent?.split('\n').slice(0, 2).join('\n') ?? '';
   $('lectura').textContent = `${t}\nms: ${Object.entries(r).map(([k, v]) => `${k} ${v}`).join(' · ')}`;
 }, 1000);
 
+// los mandos de la dirección (capturas): ?plaza=…&estilo=…&muralla=…&albergue=…&cultivo=…
+{
+  const q = new URLSearchParams(location.search);
+  for (const [k, id] of [['plaza', 'ciudad'], ['estilo', 'nivel'], ['muralla', 'muralla'], ['albergue', 'albergue'], ['cultivo', 'cultivo']] as const) {
+    const v = q.get(k);
+    if (v !== null) $<HTMLSelectElement>(id).value = v;
+  }
+}
 void rehacer();
 
 /** Para las capturas: mover la cámara desde fuera. */

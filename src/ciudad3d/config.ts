@@ -33,6 +33,8 @@ export const COLOR = {
   tierra: 0x8b6e4e, tierraOscura: 0x5e4a36, foso: 0x4c3d2c, talud: 0x8a7556, agua: 0x3e6a7a,
   hoja: 0x5f7a3c, olivo: 0x7d8a58, cipres: 0x3b5634, roble: 0x56783a, tronco: 0x5a4430, seto: 0x6a7f45, heno: 0xc9a85a,
   cultivo: 0x7d9443, trigo: 0xc4a24d, rastrojo: 0xa38a58,
+  /** Los talleres de la comida (tanda 69): la uva y el mosto de la bodega, la aceituna y el aceite de la prensa, el queso y el pan; y la cepa. */
+  uva: 0x5b2f4f, mosto: 0x6b2840, aceituna: 0x4f5a2a, aceite: 0xb59a2e, queso: 0xe3cf8e, pan: 0xb7793e, cepa: 0x6a4c34, vid: 0x5e8a3a,
   fuego: 0xc8501c, carbon: 0x2f2a26, bronce: 0xa8783a, cuero: 0x8a5a36,
   lona: 0xd6cbb0, lonaVieja: 0xb9a888, piel: 0x987350, pielOscura: 0x6f5238,
   /** Las bestias de tiro del Albergue de caravanas: bueyes y asnos. */

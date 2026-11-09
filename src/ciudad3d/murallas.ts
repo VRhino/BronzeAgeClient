@@ -8,6 +8,10 @@
 // Las torres de la puerta (Víctor, 2026-11-03: «puertas de muralla de verdad, con una torre a cada lado, incluso en la empalizada») van en las
 // celdas de muro de cada lado del paso: el motor no cambia y nada sale de sus celdas.
 // Lo comprometido y aún no levantado: la zanja marcada con estacas. Con una mejora en obra, las celdas ya mejoradas van con el nivel nuevo.
+// La puerta resalta del muro (Víctor, 2026-11-08: «en la maqueta la puerta casi no se distingue del resto del muro»): en los tres niveles, las
+// hojas entreabiertas hacia dentro (con bandas de bronce en la piedra), pendones rojos en las torres de la puerta y fuego a los lados del paso;
+// en la empalizada, además, el puente de tablas sobre el foso y el bucráneo en el dintel; en la de adobe, el umbral enlosado y el marco
+// enlucido con el dintel pintado de rojo; en la ciclópea, las jambas y el dintel de piedra clara y el relieve de los leones en el triángulo.
 import { COLOR } from './config';
 import { hash3, type CeldaDeMuro, type RecintoEnVista } from './estado';
 import { mezclar, type Piezas } from './piezas';
@@ -67,6 +71,42 @@ function puntos(tr: Tramo, h: V, paso: number, d: number): V[] {
 }
 
 const giroDe = (v: V): number => Math.atan2(v.y, v.x);
+
+// ───────────────────────────── Lo que hace resaltar la puerta ─────────────────────────────
+
+/**
+ * Una hoja de la puerta entreabierta hacia dentro: colgada en `bisagra`, cerrada iría hacia −`s`·`t` (el medio del paso) y se abre 60° hacia
+ * dentro (−`n`). De tablas, con `bandas` bandas cruzadas de `banda` (de bronce en la piedra).
+ */
+function hoja(p: Piezas, bisagra: V, t: V, n: V, s: number, largo: number, alto: number, y: number, color: number, banda: number, bandas: number): void {
+  const c = Math.cos(Math.PI / 3), si = Math.sin(Math.PI / 3);
+  const dx = -t.x * s * c - n.x * si, dy = -t.y * s * c - n.y * si, g = Math.atan2(dy, dx);
+  const x = bisagra.x + (dx * largo) / 2, z = bisagra.y + (dy * largo) / 2;
+  p.caja(color, x, z, largo, 0.09, alto, g, y);
+  for (let k = 0; k < bandas; k++) p.caja(banda, x, z, largo + 0.01, 0.12, 0.08, g, y + (alto * (k + 0.5)) / bandas - 0.04);
+}
+
+/** Un pendón rojo con su franja ocre, colgado de su vara contra la cara de fuera: centrado en `q`, de `ancho` a lo largo de `g`, de `y0` a `y1`. */
+function pendon(p: Piezas, q: V, g: number, ancho: number, y0: number, y1: number): void {
+  p.caja(COLOR.rojo, q.x, q.y, ancho, 0.04, y1 - y0, g, y0);
+  p.caja(COLOR.ocre, q.x, q.y, ancho + 0.02, 0.06, 0.14, g, y0 + 0.14);
+  p.caja(COLOR.maderaOscura, q.x, q.y, ancho + 0.18, 0.07, 0.07, g, y1);
+}
+
+/** Un brasero de bronce encendido, de pie a un lado del paso. */
+function brasero(p: Piezas, x: number, z: number, alto = 0.75): void {
+  p.poste(COLOR.bronce, x, z, alto, 0.07);
+  p.forma('cupula', COLOR.bronce, x, z, 0.34, 0.34, 0.12, 0, alto);
+  p.forma('cono', COLOR.fuego, x, z, 0.2, 0.2, 0.28, 0, alto + 0.05);
+}
+
+/** Una antorcha en su soporte, contra un poste (en `q`) y hacia fuera (`n`), a la altura `y`. */
+function antorcha(p: Piezas, q: V, n: V, y: number): void {
+  const x = q.x + n.x * 0.2, z = q.y + n.y * 0.2;
+  p.caja(COLOR.maderaOscura, (q.x + x) / 2, (q.y + z) / 2, 0.24, 0.06, 0.06, giroDe(n), y);
+  p.poste(COLOR.maderaOscura, x, z, 0.32, 0.06, y);
+  p.forma('cono', COLOR.fuego, x, z, 0.16, 0.16, 0.26, 0, y + 0.3);
+}
 
 // ───────────────────────────── Nivel 1: empalizada ─────────────────────────────
 
@@ -131,7 +171,12 @@ function empalizada(p: Piezas, tr: Tramo, paso: Tramo[] | null, flancos: readonl
   if (!puerta) est({ x: c.x + tr.n.x * 0.3, y: c.y + tr.n.y * 0.3 }, 1);
   tr.hacia.forEach((h, j) => { if (!tr.aPuerta[j]) puntos(tr, h, 0.22, 0.3).forEach((q, k) => est(q, k + 2)); });
   // la torre de la puerta, más alta y más ancha que las de vigía (si la celda ya era de torre, la de la puerta va en su lugar)
-  if (flanco) { const q = sitioDeTorre(tr, 0.1); torreDeMadera(p, q.x, q.y, 1.5, ALTO_TORRE_PUERTA, ejesDeTorre(tr).g); }
+  if (flanco) {
+    const q = sitioDeTorre(tr, 0.1), { g, n } = ejesDeTorre(tr);
+    torreDeMadera(p, q.x, q.y, 1.5, ALTO_TORRE_PUERTA, g);
+    // el pendón, colgado de la plataforma por fuera
+    pendon(p, { x: q.x + n.x * 0.8, y: q.y + n.y * 0.8 }, g, 0.62, ALTO_TORRE_PUERTA * 0.78 - 1.25, ALTO_TORRE_PUERTA * 0.78 - 0.05);
+  }
   else if (c.clase === 'torre') torreDeMadera(p, c.x - tr.n.x * 0.1, c.y - tr.n.y * 0.1, 1.2, 3.0, giroDe(tr.t));
   if (paso) {
     // una sola puerta para todo el paso (dos celdas de puerta seguidas son una puerta ancha): un poste a cada lado, las hojas, el dintel
@@ -139,14 +184,24 @@ function empalizada(p: Piezas, tr: Tramo, paso: Tramo[] | null, flancos: readonl
     const a = paso[0]!.c, b = paso[paso.length - 1]!.c, l = Math.hypot(b.x - a.x, b.y - a.y);
     const t = l > 0.01 ? { x: (b.x - a.x) / l, y: (b.y - a.y) / l } : tr.t, n = tr.n, g = giroDe(t), ancho = l + 1.6;
     const mx = (a.x + b.x) / 2 + n.x * 0.3, mz = (a.y + b.y) / 2 + n.y * 0.3;
-    const hoja = ancho / 2 - 0.1;
+    const largo = ancho / 2 - 0.12;
     for (const s of [-1, 1]) {
       const x = mx + (t.x * s * ancho) / 2, z = mz + (t.y * s * ancho) / 2;
       p.poste(COLOR.maderaOscura, x, z, 2.6, 0.26, 0.3);
-      // las hojas, colgadas de su poste y abiertas hacia dentro
-      p.caja(COLOR.madera, x - (n.x * hoja) / 2, z - (n.y * hoja) / 2, 0.08, hoja, 1.6, g, 0.42);
+      // las hojas, colgadas de su poste y entreabiertas hacia dentro, con sus travesaños; y una antorcha en cada poste
+      hoja(p, { x: x - t.x * s * 0.12, y: z - t.y * s * 0.12 }, t, n, s, largo, 1.6, 0.42, COLOR.madera, COLOR.maderaOscura, 2);
+      antorcha(p, { x, y: z }, n, 1.75);
     }
     p.caja(COLOR.maderaOscura, mx, mz, ancho + 0.1, 0.3, 0.22, g, 2.6);
+    // el bucráneo en el dintel, por fuera: la calavera del buey y sus cuernos
+    const bx = mx + n.x * 0.2, bz = mz + n.y * 0.2;
+    p.caja(COLOR.cuerno, bx, bz, 0.22, 0.1, 0.3, g, 2.36);
+    p.caja(COLOR.cuerno, bx, bz, 0.66, 0.07, 0.07, g, 2.62);
+    for (const s of [-1, 1]) p.caja(COLOR.cuerno, bx + t.x * s * 0.3, bz + t.y * s * 0.3, 0.07, 0.07, 0.24, g, 2.62);
+    // el puente de tablas sobre el foso, delante del paso
+    const fx = (a.x + b.x) / 2 + n.x * 1.15, fz = (a.y + b.y) / 2 + n.y * 1.15;
+    p.caja(COLOR.madera, fx, fz, Math.max(1.3, l + 1.2), 0.95, 0.07, g, 0.02);
+    for (const s of [-1, 1]) p.caja(COLOR.maderaOscura, fx + (t.x * s * Math.max(1.3, l + 1.2)) / 2, fz + (t.y * s * Math.max(1.3, l + 1.2)) / 2, 0.1, 1.0, 0.14, g, 0.02);
     const [fa, fb] = flancos;
     if (fa?.c.enPie && fb?.c.enPie) {
       // la pasarela de torre a torre, a la altura de sus plataformas, con su baranda por fuera
@@ -214,15 +269,21 @@ function piedraYAdobe(p: Piezas, tr: Tramo, flanco = false): void {
       p.caja(adobe, q.x + a * 0.75 * Math.cos(gt) - b * 0.88 * Math.sin(gt), q.y + a * 0.75 * Math.sin(gt) + b * 0.88 * Math.cos(gt), 0.3, 0.3, 0.32, gt, alto);
     }
     p.caja(COLOR.hueco, q.x + n.x * 1.03, q.y + n.y * 1.03, 0.18, 0.05, 0.4, gt, alto - 1.0);
+    pendon(p, { x: q.x + n.x * 1.05, y: q.y + n.y * 1.05 }, gt, 0.75, 1.0, 2.15);
   }
   if (c.clase === 'puerta') {
-    // el paso por el medio: las jambas de piedra, el dintel, las hojas abiertas hacia dentro y el muro corrido por encima, con sus almenas
+    // el paso por el medio: el umbral enlosado, las jambas de piedra con su marco enlucido por fuera, el dintel pintado de rojo, las hojas
+    // entreabiertas hacia dentro, un brasero a cada lado y el muro corrido por encima, con sus almenas
+    p.caja(COLOR.losa, c.x, c.y, 1.5, 2.9, 0.05, g);
     for (const s of [-1, 1]) {
       p.caja(COLOR.piedra, c.x + tr.t.x * s * 1.05, c.y + tr.t.y * s * 1.05, 0.6, 1.4, 2.0, g);
-      // la hoja, colgada de su jamba y abierta del todo hacia dentro (de canto contra el paso, que queda libre)
-      p.caja(COLOR.madera, c.x + tr.t.x * s * 0.7 - tr.n.x * 1.05, c.y + tr.t.y * s * 0.7 - tr.n.y * 1.05, 0.08, 0.8, 1.8, g);
+      p.caja(COLOR.enlucido, c.x + tr.t.x * s * 0.85 + tr.n.x * 0.71, c.y + tr.t.y * s * 0.85 + tr.n.y * 0.71, 0.22, 0.05, 1.96, g);
+      hoja(p, { x: c.x + tr.t.x * s * 0.73 - tr.n.x * 0.6, y: c.y + tr.t.y * s * 0.73 - tr.n.y * 0.6 }, tr.t, tr.n, s, 0.72, 1.8, 0.05, COLOR.madera, COLOR.bronce, 2);
+      brasero(p, c.x + tr.t.x * s * 1.1 + tr.n.x * 1.12, c.y + tr.t.y * s * 1.1 + tr.n.y * 1.12);
     }
     p.caja(COLOR.maderaOscura, c.x, c.y, 2.6, 1.3, 0.3, g, 1.95);
+    p.caja(COLOR.rojo, c.x + tr.n.x * 0.66, c.y + tr.n.y * 0.66, 1.92, 0.04, 0.26, g, 1.97);
+    p.caja(COLOR.enlucido, c.x + tr.n.x * 0.66, c.y + tr.n.y * 0.66, 1.92, 0.05, 0.05, g, 2.23);
     p.caja(adobe, c.x, c.y, 2.6, 1.1, H + 0.2 - 2.25, g, 2.25);
     for (const k of [-1, 0, 1]) p.caja(adobe, c.x + tr.t.x * k * 0.85 + tr.n.x * 0.42, c.y + tr.t.y * k * 0.85 + tr.n.y * 0.42, 0.28, 0.24, 0.3, g, H + 0.2);
   }
@@ -256,13 +317,26 @@ function ciclopea(p: Piezas, tr: Tramo, flanco = false): void {
     for (const [a, b] of [[-1, -1], [1, -1], [1, 1], [-1, 1], [0, -1], [0, 1], [-1, 0], [1, 0]] as const) {
       p.caja(color(21), x + (a * Math.cos(gt) - b * Math.sin(gt)) * 1.15, z + (a * Math.sin(gt) + b * Math.cos(gt)) * 1.15, 0.36, 0.36, 0.45, gt, alto);
     }
+    if (deLaPuerta) { const { n } = ejesDeTorre(tr); pendon(p, { x: x + n.x * 1.32, y: z + n.y * 1.32 }, gt, 0.9, 1.9, 3.75); }
   }
   if (c.clase === 'puerta') {
-    // la puerta de los leones: dos jambas, el dintel enorme y el triángulo de descarga encima
-    const gn = giroDe(tr.n);
-    for (const s of [-1, 1]) p.caja(color(30 + s), c.x + tr.t.x * s * 0.95, c.y + tr.t.y * s * 0.95, 2.2, 1.0, 3.2, gn);
-    p.caja(COLOR.piedraClara, c.x, c.y, 2.0, 2.2, 0.55, g, 2.6);
-    p.forma('aguas', COLOR.piedraOscura, c.x + tr.n.x * 0.95, c.y + tr.n.y * 0.95, 0.2, 1.4, 0.8, gn, 3.15);
+    // la puerta de los leones: el paso enlosado, dos jambas y el dintel enorme de piedra clara (labrada, más clara que el muro), las hojas
+    // chapadas de bronce entreabiertas, un brasero a cada lado y el triángulo de descarga encima con su relieve: la columna roja entre dos leones
+    const gn = giroDe(tr.n), en = (dt: number, dn: number): [number, number] => [c.x + tr.t.x * dt + tr.n.x * dn, c.y + tr.t.y * dt + tr.n.y * dn];
+    p.caja(COLOR.losa, c.x, c.y, 0.95, 2.95, 0.05, g);
+    for (const s of [-1, 1]) {
+      const [jx, jz] = en(s * 0.95, 0), [bx, bz] = en(s * 1.0, 1.3);
+      p.caja(COLOR.piedraClara, jx, jz, 2.2, 1.0, 3.2, gn);
+      const [hx, hz] = en(s * 0.45, -0.35);
+      hoja(p, { x: hx, y: hz }, tr.t, tr.n, s, 0.45, 2.4, 0.05, COLOR.maderaOscura, COLOR.bronce, 3);
+      brasero(p, bx, bz, 0.8);
+    }
+    p.caja(COLOR.piedraClara, c.x, c.y, 2.3, 2.2, 0.55, g, 2.6);
+    const [tx, tz] = en(0, 0.95), [kx, kz] = en(0, 1.07);
+    p.forma('aguas', COLOR.rocaClara, tx, tz, 0.2, 1.4, 0.8, gn, 3.15);
+    p.forma('cilindro', COLOR.rojo, kx, kz, 0.1, 0.1, 0.45, 0, 3.17);
+    p.caja(COLOR.negro, kx, kz, 0.18, 0.08, 0.06, g, 3.62);
+    for (const s of [-1, 1]) { const [lx, lz] = en(s * 0.24, 1.07); p.caja(COLOR.piedraOscura, lx, lz, 0.2, 0.05, 0.32, g, 3.17); }
   }
 }
 

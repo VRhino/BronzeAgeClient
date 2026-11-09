@@ -13,6 +13,8 @@ import { radioDeAvanzada, radioDeBandidos, radioDeCampamento, radioDeObra, radio
 const COLORES = {
   muro: 0xc9b48f, adobe: 0xd2bf9a, techo: 0xa8714a, madera: 0x8a6440, lona: 0xd8cfbd, ruina: 0x7d7466, campo: 0xb59a3a, mina: 0x4a4038,
   lonaOscura: 0x4a3f36, fuego: 0xd35400, oro: 0xe0b422, filo: 0xf4ead2, batallaPropia: 0x2f6b3a, batallaAjena: 0x8a3b12,
+  // las aldeas de viñas y de olivos (tanda 69): la tierra labrada, las hileras de cepas y los olivos
+  tierra: 0x8b6e4e, rastrojo: 0xa89064, vid: 0x4f7a2e, olivo: 0x7d8a58,
 };
 type Material = keyof typeof COLORES;
 /** Color de la bandera de los campamentos de mercenarios y de los de bandidos (los del 2D). */
@@ -192,12 +194,16 @@ function ciudadPlana(p: Piezas, x: number, y: number, rc: number, nivel: number,
   const alto = [0.14, 0.18, 0.22][n - 3]! * M, grueso = [0.05, 0.065, 0.08][n - 3]! * M, amurallada = muralla !== false;
   if (amurallada) {
     p.anillo(x, y, r, alto, grueso, 'muro');
-    // la puerta: dos torres a los lados del hueco (tramo 7)
+    // la puerta: dos torres a los lados del hueco (tramo 7), el dintel de madera de una a otra y, para que se distinga del muro (Víctor,
+    // 2026-11-08), una bandera de la Facción en cada torre
     const seg = Math.max(14, Math.round((2 * Math.PI * r) / 0.25));
-    for (const k of [7, 8]) {
-      const a = (k / seg) * 2 * Math.PI;
-      torre(p, 'muro', x + r * Math.cos(a), y + r * Math.sin(a), grueso * 2, alto * 1.35, a);
+    const lados = [7, 8].map((k) => { const a = (k / seg) * 2 * Math.PI; return { a, x: x + r * Math.cos(a), y: y + r * Math.sin(a) }; });
+    for (const t of lados) {
+      torre(p, 'muro', t.x, t.y, grueso * 2, alto * 1.35, t.a);
+      p.bandera(t.x, t.y, 0.2 * M, color, alto * 1.35 + grueso * 0.6);
     }
+    const [t0, t1] = lados as [typeof lados[0], typeof lados[0]];
+    p.caja('madera', (t0.x + t1.x) / 2, (t0.y + t1.y) / 2, Math.hypot(t1.x - t0.x, t1.y - t0.y), grueso * 1.1, alto * 0.22, Math.atan2(t1.y - t0.y, t1.x - t0.x), alto * 0.78);
     if (n >= 4) torresEnAnillo(p, 'muro', x, y, r, Math.max(6, Math.round(r / (0.45 * M))), grueso * 1.9, alto * 1.3);
   }
   if (n === 3) {
@@ -231,8 +237,11 @@ function ciudadPlana(p: Piezas, x: number, y: number, rc: number, nivel: number,
   p.bandera(x + 0.12 * M, y + 0.1 * M, (n === 5 ? 0.7 : 0.55) * M, color, n === 5 ? 0.36 * M : n === 4 ? 0.32 * M : 0.22 * M);
 }
 
-/** Un pueblo: empalizada y casas; la aldea agrícola con sus campos alrededor, el extractor con su bocamina. */
-function pueblo(p: Piezas, x: number, y: number, aldea: boolean, color: string, sem: number): void {
+/**
+ * Un pueblo: empalizada y casas; la aldea agrícola con sus campos alrededor, el extractor con su bocamina. Los campos, según el cultivo
+ * (tanda 69): de trigo, dorados; de vid, tierra con sus hileras de cepas; de olivo, tierra clara con olivos en tresbolillo.
+ */
+function pueblo(p: Piezas, x: number, y: number, aldea: boolean, color: string, sem: number, cultivo?: string): void {
   // más grande que la maqueta (`MUNDO3D.pueblo`, Víctor 2026-11-07)
   const M = MUNDO3D.maqueta * MUNDO3D.pueblo;
   p.anillo(x, y, 0.55 * M, 0.06 * M, 0.03 * M, 'madera');
@@ -243,7 +252,22 @@ function pueblo(p: Piezas, x: number, y: number, aldea: boolean, color: string, 
   if (aldea) {
     for (let k = 0; k < 5; k++) {
       const a = (k / 5) * 2 * Math.PI + hash(sem, k, 7), d = (0.85 + 0.3 * hash(sem, k, 8)) * M;
-      p.caja('campo', x + d * Math.cos(a), y + d * Math.sin(a), 0.42 * M, 0.3 * M, 0.015 * M, a);
+      const cx = x + d * Math.cos(a), cy = y + d * Math.sin(a), ca = Math.cos(a), sa = Math.sin(a);
+      // del marco del campo (u a lo largo, v a lo ancho) al mundo
+      const en = (u: number, v: number): [number, number] => [cx + u * ca - v * sa, cy + u * sa + v * ca];
+      if (cultivo === 'vid') {
+        p.caja('tierra', cx, cy, 0.42 * M, 0.3 * M, 0.012 * M, a);
+        for (let i = 0; i < 5; i++) { const [rx, ry] = en(0, (-0.12 + i * 0.06) * M); p.caja('vid', rx, ry, 0.38 * M, 0.022 * M, 0.035 * M, a); }
+      } else if (cultivo === 'oliva') {
+        p.caja('rastrojo', cx, cy, 0.42 * M, 0.3 * M, 0.012 * M, a);
+        for (let j = 0; j < 3; j++) for (let i = 0; i < 4; i++) {
+          if (j === 1 && i === 3) continue;
+          const [ox, oy] = en((-0.15 + i * 0.1 + (j === 1 ? 0.05 : 0)) * M, (-0.09 + j * 0.09) * M);
+          p.caja('olivo', ox, oy, 0.06 * M, 0.06 * M, 0.05 * M, a + i, 0.012 * M);
+        }
+      } else {
+        p.caja('campo', cx, cy, 0.42 * M, 0.3 * M, 0.015 * M, a);
+      }
     }
   } else {
     p.caja('mina', x + 0.2 * M, y - 0.15 * M, 0.2 * M, 0.16 * M, 0.08 * M, hash(sem, 0, 9));
@@ -378,7 +402,7 @@ export class Maquetas {
     const f = (v: number) => v.toFixed(2);
     const clave = [
       ...m.plazas.map((x) => `P${x.id}:${f(x.posicion.x)},${f(x.posicion.y)}:${f(x.radioCiudad)}:${x.nivel}:${x.color}:${x.recordada}:${x.muralla}`),
-      ...m.pueblos.map((x) => `U${x.id}:${f(x.posicion.x)},${f(x.posicion.y)}:${x.aldea}:${x.color}`),
+      ...m.pueblos.map((x) => `U${x.id}:${f(x.posicion.x)},${f(x.posicion.y)}:${x.aldea}:${x.color}:${x.cultivo ?? ''}`),
       ...m.avanzadas.map((x) => `A${x.id}:${f(x.posicion.x)},${f(x.posicion.y)}:${x.etapa}:${x.ruinas}:${x.color}`),
       ...m.obras.map((x) => `O${x.id}:${f(x.posicion.x)},${f(x.posicion.y)}:${x.arrancada}:${x.color}`),
       ...m.campamentos.map((x) => `C${x.id}:${f(x.posicion.x)},${f(x.posicion.y)}`),
@@ -399,7 +423,7 @@ export class Maquetas {
       claros.push({ x: x.posicion.x, y: x.posicion.y, r: radioDePlaza(x.radioCiudad, x.nivel) + 0.3 });
     }
     for (const x of m.pueblos) {
-      pueblo(encima, x.posicion.x, x.posicion.y, x.aldea, x.color, semilla(x.posicion.x, x.posicion.y));
+      pueblo(encima, x.posicion.x, x.posicion.y, x.aldea, x.color, semilla(x.posicion.x, x.posicion.y), x.cultivo);
       claros.push({ x: x.posicion.x, y: x.posicion.y, r: x.aldea ? 1.45 * MUNDO3D.pueblo * M : radioDePueblo(false) + 0.3 });
     }
     for (const x of m.avanzadas) {
@@ -466,6 +490,20 @@ export class Maquetas {
     this.vaciar();
     for (const m of this.materiales.values()) m.dispose();
   }
+}
+
+/** Las cajas de la maqueta de un pueblo, por material (para las pruebas): la aldea, con los campos de su cultivo. */
+export function piezasDePueblo(x: number, y: number, aldea: boolean, sem: number, cultivo?: string): { mat: string; x: number; y: number; ancho: number; fondo: number; alto: number; giro: number; base: number }[] {
+  const p = new Piezas();
+  pueblo(p, x, y, aldea, '#000000', sem, cultivo);
+  return [...p.por].flatMap(([mat, l]) => l.map((q) => ({ mat, ...q })));
+}
+
+/** Las banderas de la maqueta de una plaza (para las pruebas: las de la puerta de la muralla). */
+export function banderasDeCiudad(x: number, y: number, rc: number, nivel: number, sem: number, muralla?: boolean): number {
+  const p = new Piezas();
+  ciudad(p, x, y, rc, nivel, '#000000', sem, muralla);
+  return [...p.banderas.values()].reduce((n, l) => n + l.length, 0);
 }
 
 /** Las cajas de la maqueta de una plaza, por material (para las pruebas y los bancos: se ve desde arriba sin WebGL). */

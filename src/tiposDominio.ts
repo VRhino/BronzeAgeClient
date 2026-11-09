@@ -1208,6 +1208,8 @@ export interface EscenaPueblo {
   edificios: { edificioId: string; tipo: string; posicion: Point; ancho: number; alto: number }[];
   calles: RectanguloLocal[];
   caminos: RectanguloLocal[];
+  /** El cultivo de la aldea (tanda 69): `trigo`, `vid` u `oliva`; ausente en un extractor. */
+  cultivo?: string;
 }
 
 /** Un evento de dominio del backend tal como lo sirve `GET .../eventos`. */

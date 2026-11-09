@@ -12,6 +12,9 @@ const COLOR: Record<string, string> = {
   minaCobre: '#4f8f6f',
   minaEstano: '#4a4542',
   minaHierro: '#8e3f2a',
+  // las granjas de las aldeas de viñas y de olivos (tanda 69)
+  vina: '#6f7f3a',
+  olivar: '#8a9466',
 };
 const NOMBRE: Record<string, string> = {
   vivienda: 'Vivienda',
@@ -23,12 +26,18 @@ const NOMBRE: Record<string, string> = {
   minaCobre: 'Mina de cobre',
   minaEstano: 'Mina de estaño',
   minaHierro: 'Mina de hierro',
+  vina: 'Viña',
+  olivar: 'Olivar',
 };
 const SUELO = '#93c26b';
 
-/** El nombre de una pieza de un pueblo, para el jugador. */
-export function nombreDePiezaPueblo(tipo: string): string {
-  return NOMBRE[tipo] ?? tipo;
+/** El nombre de una pieza de un pueblo, para el jugador; la granja de una aldea de viñas o de olivos (`cultivo`, tanda 69) es una viña o un olivar. */
+export function nombreDePiezaPueblo(tipo: string, cultivo?: string): string {
+  return NOMBRE[tipoDePieza(tipo, cultivo)] ?? tipo;
+}
+
+function tipoDePieza(tipo: string, cultivo: string | undefined): string {
+  return tipo === 'granja' && cultivo === 'vid' ? 'vina' : tipo === 'granja' && cultivo === 'oliva' ? 'olivar' : tipo;
 }
 
 /** El SVG de la planta, en unidades locales, encuadrado sobre las piezas, las calles y los caminos con un margen del 12 %. */
@@ -44,7 +53,7 @@ export function svgPlanoPueblo(e: EscenaPueblo): string {
   const caminos = e.caminos.map((r) => rect(r.x, r.y, r.ancho, r.alto, 'rgba(120, 92, 58, 0.38)')).join('');
   const calles = e.calles.map((r) => rect(r.x, r.y, r.ancho, r.alto, 'rgba(120, 92, 58, 0.60)')).join('');
   const piezas = e.edificios
-    .map((p) => rect(p.posicion.x - p.ancho / 2, p.posicion.y - p.alto / 2, p.ancho, p.alto, COLOR[p.tipo] ?? '#888', nombreDePiezaPueblo(p.tipo), ` stroke="#1b1a17" stroke-width="${f(lado * 0.004)}"`))
+    .map((p) => rect(p.posicion.x - p.ancho / 2, p.posicion.y - p.alto / 2, p.ancho, p.alto, COLOR[tipoDePieza(p.tipo, e.cultivo)] ?? '#888', nombreDePiezaPueblo(p.tipo, e.cultivo), ` stroke="#1b1a17" stroke-width="${f(lado * 0.004)}"`))
     .join('');
   return `<svg class="pueblo-plano" viewBox="${f(cx - caja / 2)} ${f(cy - caja / 2)} ${f(caja)} ${f(caja)}" preserveAspectRatio="xMidYMid meet" shape-rendering="crispEdges" role="img" aria-label="Planta del pueblo">${rect(cx - caja / 2, cy - caja / 2, caja, caja, SUELO)}${caminos}${calles}${piezas}</svg>`;
 }

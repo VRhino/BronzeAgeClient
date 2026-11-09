@@ -380,6 +380,122 @@ describe('las puertas de muralla', () => {
 });
 
 /** Lo más que una pieza puede asomar fuera de su huella (un alero, un poste de la valla), en ul (0,2 ul = 60 cm). */
+describe('los talleres de la comida, la estatua y las aldeas de viñas y olivos (tanda 69)', () => {
+  // las huellas del motor (`EDIFICIO_TAMANO` de Trazado_Urbano.md, en celdas de 3 ul), tumbadas y de pie; la estatua, la de por defecto
+  const HUELLAS: [string, number, number][] = [['molino', 6, 6], ['horno', 6, 3], ['horno', 3, 6], ['quesera', 6, 3], ['quesera', 3, 6], ['bodega', 6, 6], ['prensa', 6, 3], ['prensa', 3, 6], ['estatua', 3, 3]];
+  const edificio = (tipo: string, ancho: number, alto: number, estilo: number, semilla: number, extra: Partial<{ buey: boolean; cultivo: string }> = {}) =>
+    ({ id: `t-${semilla}`, tipo, x: 0, y: 0, ancho, alto, estado: 'activo' as const, avance: null, mejora: false, danado: false, nivel: 1, estilo, semilla, ...extra });
+  const montar = (e: ReturnType<typeof edificio>): Piezas => { const p = new Piezas(); montarEdificio(p, e); return p; };
+
+  test('cada uno, en cualquier estilo y semilla (el molino con buey y sin él), no sale de su huella más que un alero', () => {
+    let peor = { fuera: 0, que: '' };
+    for (const [tipo, ancho, alto] of HUELLAS) for (const estilo of [1, 2, 3, 4, 5]) for (let k = 0; k < 30; k++) for (const buey of tipo === 'molino' ? [false, true] : [false]) {
+      const e = edificio(tipo, ancho, alto, estilo, k * 7919 + 11, { buey });
+      for (const q of montar(e).lista) { const fuera = salida(q, e); if (fuera > peor.fuera) peor = { fuera, que: `${tipo} ${ancho}×${alto} estilo ${estilo} semilla ${e.semilla}${buey ? ' con buey' : ''}: ${q.forma}` }; }
+    }
+    expect(peor.fuera, peor.que).toBeLessThanOrEqual(ALERO);
+  });
+
+  test('cada uno tiene su maqueta, no el bloque de por defecto', () => {
+    const colores = (tipo: string, ancho: number, alto: number) => new Set(montar(edificio(tipo, ancho, alto, 3, 101)).lista.map((q) => q.color));
+    expect(colores('molino', 6, 6).has(COLOR.piedraOscura)).toBe(true);
+    expect(colores('horno', 6, 3).has(COLOR.pan)).toBe(true);
+    expect(colores('quesera', 6, 3).has(COLOR.queso)).toBe(true);
+    expect(colores('bodega', 6, 6).has(COLOR.mosto)).toBe(true);
+    expect(colores('prensa', 6, 3).has(COLOR.aceituna)).toBe(true);
+    expect(colores('estatua', 3, 3).has(COLOR.fuego)).toBe(true);
+    // la estatua, de piedra hasta el estilo 3 y de bronce desde el 4
+    expect(montar(edificio('estatua', 3, 3, 4, 101)).lista.filter((q) => q.color === COLOR.bronce).length).toBeGreaterThan(8);
+  });
+
+  test('el molino con su buey lleva el buey uncido a la vara; sin él, no', () => {
+    const bueyes = (buey: boolean) => montar(edificio('molino', 6, 6, 2, 55, { buey })).lista.filter((q) => q.color === COLOR.buey).length;
+    expect(bueyes(true)).toBeGreaterThan(0);
+    expect(bueyes(false)).toBe(0);
+  });
+
+  test('el buey del motor llega a la maqueta del molino', () => {
+    const a = { id: 'as-1', nivel: 2, edificios: [{ id: 'm-1', tipo: 'molino', estado: 'activo' as const, posicion: { x: 3, y: 3 }, buey: true }, { id: 'm-2', tipo: 'molino', estado: 'activo' as const, posicion: { x: 12, y: 3 } }], recintos: [] };
+    const c = ciudadEnVista(a, { calles: [], caminos: [], huellas: { 'm-1': { x: 0, y: 0, ancho: 6, alto: 6 }, 'm-2': { x: 9, y: 0, ancho: 6, alto: 6 } }, murallas: [], radio: 30, celda: 3 }, { instante: 0 })!;
+    expect(c.edificios.find((e) => e.id === 'm-1')!.buey).toBe(true);
+    expect(c.edificios.find((e) => e.id === 'm-2')!.buey).toBeUndefined();
+  });
+
+  test('viñas y olivares: la granja de la aldea según su cultivo, sin salir de su parcela', () => {
+    let peor = { fuera: 0, que: '' };
+    // las huellas de la granja por nivel (2 × 2, 2 × 3, 4 × 3 y 6 × 6 celdas)
+    for (const [ancho, alto] of [[6, 6], [6, 9], [12, 9], [18, 18]] as const) for (const cultivo of ['vid', 'oliva']) for (const estilo of [1, 2, 3]) {
+      const e = edificio('granja', ancho, alto, estilo, ancho * 31 + alto, { cultivo });
+      const p = montar(e), colores = new Set(p.lista.map((q) => q.color));
+      expect(colores.has(cultivo === 'vid' ? COLOR.vid : COLOR.olivo), `${cultivo} ${ancho}×${alto}`).toBe(true);
+      expect(colores.has(COLOR.trigo) || colores.has(COLOR.cultivo)).toBe(false);
+      for (const q of p.lista) { const fuera = salida(q, e); if (fuera > peor.fuera) peor = { fuera, que: `${cultivo} ${ancho}×${alto} estilo ${estilo}: ${q.forma}` }; }
+    }
+    expect(peor.fuera, peor.que).toBeLessThanOrEqual(ALERO);
+  });
+
+  test('en la aldea, el cultivo del motor hace sus granjas viñas u olivares; el corral sigue siendo corral', () => {
+    const j = JSON.parse(readFileSync(new URL('./ciudad3d/pueblos/aldea-2.json', import.meta.url), 'utf8')) as { id: string; tipoExtractor: string; planta: { id: string; tipo: string; posicion: { x: number; y: number }; ancho: number; alto: number }[]; trazado: { unidadesPorCelda: number; radioUl: number; calles: EscenaPueblo['calles']; caminos: EscenaPueblo['caminos'] } };
+    const escena = (cultivo?: string): EscenaPueblo => ({
+      puebloId: j.id, tipo: j.tipoExtractor, nivelMadre: 3, unidadesPorCelda: j.trazado.unidadesPorCelda, radio: j.trazado.radioUl, cultivo,
+      edificios: j.planta.map((p) => ({ edificioId: p.id, tipo: p.tipo, posicion: { x: p.posicion.x / 1000, y: p.posicion.y / 1000 }, ancho: p.ancho, alto: p.alto })),
+      calles: j.trazado.calles, caminos: j.trazado.caminos,
+    });
+    for (const cultivo of ['vid', 'oliva']) {
+      const c = puebloEnVista(escena(cultivo), { instante: 0 })!;
+      expect(c.edificios.filter((e) => e.tipo === 'granja').every((e) => e.cultivo === cultivo)).toBe(true);
+      expect(c.edificios.filter((e) => e.tipo !== 'granja').every((e) => e.cultivo === undefined)).toBe(true);
+    }
+    expect(puebloEnVista(escena('trigo'), { instante: 0 })!.edificios.every((e) => e.cultivo === undefined)).toBe(true);
+    expect(puebloEnVista(escena(), { instante: 0 })!.edificios.every((e) => e.cultivo === undefined)).toBe(true);
+  });
+});
+
+describe('la puerta de la muralla resalta (Víctor, 2026-11-08)', () => {
+  // un anillo cuadrado con las puertas de la LAYOUT_VERSION 7 del motor: dos celdas de muro recto a cada lado (una de una celda al sur, una de
+  // dos al norte), como la muestra del banco
+  const recinto = (nivel: number) => {
+    const h = 5, celdas: { col: number; row: number; clase: 'muro' | 'puerta' | 'torre' }[] = [];
+    const clase = (col: number, row: number): 'muro' | 'puerta' | 'torre' =>
+      (row === h && col === 0) || (row === -h && (col === 0 || col === -1)) ? 'puerta' : Math.abs(col) === h && Math.abs(row) === h ? 'torre' : 'muro';
+    for (let c = -h; c <= h; c++) celdas.push({ col: c, row: -h, clase: clase(c, -h) });
+    for (let r = -h + 1; r <= h; r++) celdas.push({ col: h, row: r, clase: clase(h, r) });
+    for (let c = h - 1; c >= -h; c--) celdas.push({ col: c, row: h, clase: clase(c, h) });
+    for (let r = h - 1; r > -h; r--) celdas.push({ col: -h, row: r, clase: clase(-h, r) });
+    const a = { id: 'm', nivel: 3, edificios: [], recintos: [{ id: 'r', nivel, celdas, avance: celdas.length }] };
+    return ciudadEnVista(a, { calles: [], caminos: [], huellas: {}, murallas: [], radio: 21, celda: 3 }, { instante: 0 })!.recintos[0]!;
+  };
+
+  for (const nivel of [1, 2, 3]) {
+    test(`nivel ${nivel}: pendones rojos en las torres de la puerta, fuego a los lados del paso y las hojas entreabiertas`, () => {
+      const r = recinto(nivel), p = new Piezas();
+      montarMurallas(p, [r]);
+      const de = (color: number) => p.lista.filter((q) => q.color === color);
+      // dos puertas, dos torres cada una, un pendón por torre
+      expect(de(COLOR.rojo).length).toBeGreaterThanOrEqual(4);
+      expect(de(COLOR.fuego).length).toBeGreaterThanOrEqual(4);
+      if (nivel >= 2) expect(de(COLOR.bronce).length).toBeGreaterThan(0);
+      if (nivel === 1) expect(de(COLOR.cuerno).length).toBeGreaterThan(0);
+      if (nivel === 3) expect(de(COLOR.rocaClara).length).toBe(3);
+      // nada de una puerta ni de sus torres sale de sus celdas (las del paso y las dos de los lados) más que un alero (el foso, que corre de
+      // celda en celda, aparte)
+      const N = r.celdas.length;
+      let peor = { fuera: 0, que: '' };
+      r.celdas.forEach((c, i) => {
+        if (c.clase !== 'puerta' || r.celdas[(i - 1 + N) % N]!.clase === 'puerta') return;
+        const grupo = [(i - 1 + N) % N];
+        for (let j = i; r.celdas[j % N]!.clase === 'puerta'; j++) grupo.push(j % N);
+        grupo.push((grupo[grupo.length - 1]! + 1) % N);
+        const xs = grupo.map((k) => r.celdas[k]!.x), ys = grupo.map((k) => r.celdas[k]!.y);
+        const caja = { x: Math.min(...xs) - 1.5, y: Math.min(...ys) - 1.5, ancho: Math.max(...xs) - Math.min(...xs) + 3, alto: Math.max(...ys) - Math.min(...ys) + 3 };
+        const ids = new Set(grupo.map((k) => idDeCeldaDeMuro(r.id, k)));
+        for (const q of p.lista) if (ids.has(q.de!) && q.color !== COLOR.foso) { const fuera = salida(q, caja); if (fuera > peor.fuera) peor = { fuera, que: `puerta de (${c.x}, ${c.y}): ${q.forma} ${q.color.toString(16)}` }; }
+      });
+      expect(peor.fuera, peor.que).toBeLessThanOrEqual(ALERO);
+    });
+  }
+});
+
 const ALERO = 0.2;
 
 /** Cuánto asoma una pieza fuera del rectángulo `e` (negativo: dentro), con su forma de verdad (girada, inclinada y escalada como en la malla). */

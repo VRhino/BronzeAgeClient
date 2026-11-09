@@ -1,6 +1,6 @@
 // Las maquetas de plaza del mundo 3D (0.173.0): las casas no se montan unas en otras ni en lo del centro (Víctor, 2026-11-07).
 import { describe, expect, test } from 'vitest';
-import { piezasDeCiudad } from '../src/mundo3d/maquetas';
+import { banderasDeCiudad, piezasDeCiudad, piezasDePueblo } from '../src/mundo3d/maquetas';
 
 type Caja = ReturnType<typeof piezasDeCiudad>[number];
 
@@ -42,5 +42,27 @@ describe('maquetas de plaza', () => {
     expect(muro(false)).toBe(0);
     expect(muro(true)).toBeGreaterThan(0);
     expect(muro(undefined)).toBe(muro(true));
+  });
+
+  // la puerta, que se distinga del muro (Víctor, 2026-11-08): una bandera en cada torre de la puerta
+  test('nivel 3 con muralla: dos banderas más, las de las torres de la puerta', () => {
+    expect(banderasDeCiudad(0, 0, 2.5, 3, 4242, true)).toBe(banderasDeCiudad(0, 0, 2.5, 3, 4242, false) + 2);
+    expect(banderasDeCiudad(0, 0, 2.5, 5, 4242, true)).toBe(banderasDeCiudad(0, 0, 2.5, 5, 4242, false) + 2);
+  });
+});
+
+describe('las aldeas por su cultivo (tanda 69)', () => {
+  const mats = (cultivo?: string): Set<string> => new Set(piezasDePueblo(0, 0, true, 77, cultivo).map((c) => c.mat));
+  test('la de trigo, sus campos dorados; la de vid, la tierra con sus hileras de cepas; la de olivo, los olivos', () => {
+    expect(mats('trigo').has('campo')).toBe(true);
+    expect(mats(undefined).has('campo')).toBe(true);
+    expect(mats('vid').has('vid')).toBe(true);
+    expect(mats('vid').has('campo')).toBe(false);
+    expect(mats('oliva').has('olivo')).toBe(true);
+    expect(mats('oliva').has('campo')).toBe(false);
+  });
+  test('un extractor no tiene campos, tenga lo que tenga', () => {
+    const m = new Set(piezasDePueblo(0, 0, false, 77, 'vid').map((c) => c.mat));
+    expect(m.has('vid') || m.has('campo')).toBe(false);
   });
 });

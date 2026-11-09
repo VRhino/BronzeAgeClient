@@ -84,8 +84,8 @@ export interface EtiquetaEnVista { id: string; posicion: Punto; texto: string; t
 /** Una plaza: la ciudad del juego ocupa el 10 % del radio de su zona. `recordada` = se vio alguna vez y ahora no (va bajo la niebla).
  * `muralla`: si tiene muralla (una empezada cuenta), lo que se sabe desde fuera; sin saberlo (recordada), lo de su nivel. */
 export interface PlazaEnVista { id: string; posicion: Punto; radioCiudad: number; color: string; recordada: boolean; nivel: number; muralla?: boolean }
-/** Un pueblo: extractor sobre su nodo o aldea agrícola. */
-export interface PuebloEnVista { id: string; posicion: Punto; aldea: boolean; color: string }
+/** Un pueblo: extractor sobre su nodo o aldea agrícola; la aldea, con su `cultivo` (tanda 69: `trigo`, `vid` u `oliva`) si se sabe. */
+export interface PuebloEnVista { id: string; posicion: Punto; aldea: boolean; color: string; cultivo?: string }
 /** Una avanzada: 1 atalaya, 2 fuerte, 3 ciudadela. */
 export interface AvanzadaEnVista { id: string; posicion: Punto; etapa: number; ruinas: boolean; color: string }
 /** Una obra de mapa a la espera de materiales o ya en marcha (`arrancada`). */
@@ -485,7 +485,7 @@ export function mundoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVista
   for (const c of campamentos) trazos.push({ puntos: circulo(c.posicion, c.radioProteccion), ancho: ANCHOS.anillo, color: COLOR_ANILLO, bajoNiebla: false, tipo: 'anillo' });
   return {
     plazas,
-    pueblos: (p.pueblos ?? []).map((x) => ({ id: x.id, posicion: x.posicion, aldea: x.tipo === 'aldeaAgricola', color: colorDeMadre(x.madreId, x.propio) })),
+    pueblos: (p.pueblos ?? []).map((x) => ({ id: x.id, posicion: x.posicion, aldea: x.tipo === 'aldeaAgricola', color: colorDeMadre(x.madreId, x.propio), cultivo: x.cultivo })),
     avanzadas: (p.avanzadas ?? []).map((x) => ({ id: x.id, posicion: x.posicion, etapa: x.etapa, ruinas: x.enRuinas, color: colorDeMadre(x.madreId, x.propia) })),
     // la mejora de una aldea no se pinta aparte: la aldea ya está
     obras: (p.obrasDeMapa ?? []).filter((o) => o.tipo !== 'mejoraAldea').map((o) => ({ id: o.id, posicion: o.posicion, arrancada: o.terminaEn !== undefined, color: colorDeMadre(o.madreId, o.propia) })),
