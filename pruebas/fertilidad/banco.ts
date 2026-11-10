@@ -17,6 +17,7 @@ import { pintarTerreno } from '../../src/render';
 import { cablearCapas, cultivoVisible, htmlCapas } from '../../src/ui/capasMapa';
 import { capasDelMapa, fijarCapa, fijarCultivoDeLaCapa } from '../../src/mundo/capasDelMapa';
 import { esCultivo, pintarSitiosDeAldea, sitiosDeAldea } from '../../src/mundo/fertilidad';
+import { poligonoDeZona } from '../../src/mundo/zonasRecordadas';
 import { cultivosDesbloqueados, reglasDeAldea } from '../../src/ui/pueblos';
 import { bloqueDeDatos, type ProyeccionJugador } from '../../src/apiCliente';
 
@@ -46,11 +47,30 @@ const p = {
   exploracion: { tamanoCelda: 5, columnas: 0, filas: 0, celdas: '', visibles: '' }, instante: 0,
 } as unknown as ProyeccionJugador;
 
+// `&zonas=1` (0.198.2): estás dentro de tu plaza (no va entre las avistadas), en el centro del encuadre, y dos plazas de otras Facciones que solo
+// recuerdas se le acercan por el sur y el este. Antes sus zonas recordadas se metían en la tuya; ahora la recortan, como en la vista 3D.
+function ponerZonas(centro: { x: number; y: number }, r: number): void {
+  const conocidas = [
+    { asentamientoId: 'as-461', faccionId: 'f-2', nivel: 1, posicion: { x: centro.x - r * 0.3, y: centro.y + r * 1.45 }, conocidoEn: 0, radioPotencial: r * 0.8 },
+    { asentamientoId: 'as-570', faccionId: 'f-3', nivel: 1, posicion: { x: centro.x + r * 1.3, y: centro.y + r * 0.9 }, conocidoEn: 0, radioPotencial: r * 0.9 },
+  ];
+  // la zona real de tu plaza la recorta el motor contra las vecinas: aquí igual
+  const zonaReal = poligonoDeZona({ centro, radio: r, faccionId: 'f-1' }, conocidas.map((c) => ({ centro: c.posicion, radio: c.radioPotencial, faccionId: c.faccionId })));
+  Object.assign(p, {
+    faccionId: 'f-1',
+    facciones: [{ id: 'f-1', nombre: 'Tu Facción' }, { id: 'f-2', nombre: 'Casa de Suppiluliuma' }, { id: 'f-3', nombre: 'Casa de Amenofis' }],
+    asentamientos: [{ id: 'as-1', nombre: 'Tu plaza', faccionId: 'f-1', nivel: 2, posicion: centro, zonaReal, edificios: [] }],
+    zonasFusionadas: [{ faccionId: 'f-1', contornos: [zonaReal] }],
+    asentamientosConocidos: conocidas,
+  });
+}
+
 function pintar(): void {
   const ancho = Number(qs.get('ancho') ?? mapa.config.ancho);
   const x0 = Number(qs.get('x') ?? 0), y0 = Number(qs.get('y') ?? 0);
   canvas.width = innerWidth;
   canvas.height = innerHeight;
+  if (qs.get('zonas')) ponerZonas({ x: x0 + ancho / 2, y: y0 + (ancho * canvas.height) / canvas.width / 2 }, ancho / 6);
   const escala = canvas.width / ancho;
   const ctx = canvas.getContext('2d')!;
   ctx.setTransform(1, 0, 0, 1, -x0 * escala, -y0 * escala);

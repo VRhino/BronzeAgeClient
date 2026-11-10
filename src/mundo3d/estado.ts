@@ -471,7 +471,7 @@ export function mundoDesdeProyeccion(p: ProyeccionJugador, reglas: ReglasDeVista
   }
   // lo que solo se recuerda: el disco de su radio recortado por los de otras Facciones que se conocen, como lo recorta el motor
   // (`zonasRecordadas.ts`); con el trazo de lo que se ve
-  const recordadas = zonasDeLoRecordado(p.asentamientosAvistados, p.asentamientosConocidos);
+  const recordadas = zonasDeLoRecordado(p.asentamientosAvistados, p.asentamientosConocidos, [...(p.asentamientos ?? []), ...(p.plazasPropias ?? [])]);
   for (const c of p.asentamientosConocidos ?? []) {
     const radioZona = c.radioPotencial ?? reglas.radioZonaInicial, zona = recordadas.get(c.asentamientoId);
     plazas.push({ id: c.asentamientoId, posicion: c.posicion, radioCiudad: radioZona * FRACCION_CIUDAD, color: color(c.faccionId), recordada: true, nivel: c.nivel ?? 1 });

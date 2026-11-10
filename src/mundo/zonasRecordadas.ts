@@ -42,10 +42,21 @@ export function poligonoDeZona(yo: Disco, otros: readonly Disco[], lados = LADOS
   return pol;
 }
 
-/** La zona de cada plaza recordada que tiene radio, recortada contra las demás que se conocen, por id. */
-export function zonasDeLoRecordado(avistados: readonly AsentamientoAvistado[] | undefined, conocidos: readonly AsentamientoConocido[] | undefined): Map<string, Point[]> {
+/** Una plaza propia con su zona real (`Asentamiento.zonaReal`): la de dentro no viene entre las avistadas. */
+export interface PlazaConZona { id: string; posicion: Point; faccionId: string; zonaReal?: Point[] }
+
+/**
+ * La zona de cada plaza recordada que tiene radio, recortada contra las demás que se conocen, por id. `propias`: las plazas de tu Facción con
+ * su zona real; la plaza en la que estás dentro no va entre las avistadas y, sin ella, una zona recordada vecina se metía en la suya (Víctor,
+ * 2026-11-10, al colocar una avanzada desde Territorio).
+ */
+export function zonasDeLoRecordado(avistados: readonly AsentamientoAvistado[] | undefined, conocidos: readonly AsentamientoConocido[] | undefined, propias: readonly PlazaConZona[] = []): Map<string, Point[]> {
   const discos: (Disco & { id: string })[] = [];
   for (const a of avistados ?? []) if ((a.zona?.length ?? 0) >= 3) discos.push({ id: a.id, centro: a.posicion, radio: radioDeSilueta(a.posicion, a.zona), faccionId: a.faccionId || `sin-${a.id}` });
+  for (const a of propias) {
+    if ((a.zonaReal?.length ?? 0) < 3 || discos.some((d) => d.id === a.id)) continue;
+    discos.push({ id: a.id, centro: a.posicion, radio: radioDeSilueta(a.posicion, a.zonaReal!), faccionId: a.faccionId || `sin-${a.id}` });
+  }
   for (const c of conocidos ?? []) if (c.radioPotencial !== undefined) discos.push({ id: c.asentamientoId, centro: c.posicion, radio: c.radioPotencial, faccionId: c.faccionId || `sin-${c.asentamientoId}` });
   const out = new Map<string, Point[]>();
   for (const c of conocidos ?? []) {

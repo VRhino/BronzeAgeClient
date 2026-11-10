@@ -267,6 +267,18 @@ describe('lo que hay en el mundo, sacado de la proyección', () => {
     expect(Math.min(...recortada.map((v) => v.x))).toBeCloseTo(110, 1); // a 20 · 15 / 30 = 10 u de la vista
   });
 
+  test('la plaza propia en la que estás dentro (no va entre las avistadas) también recorta lo recordado (Víctor, 2026-11-10)', () => {
+    // tu plaza en (0, 0) con su zona real de radio 20; una recordada de otra Facción a 30 u, de radio 20: la frontera, a 15 u de cada una
+    const zonaReal = Array.from({ length: 48 }, (_, i) => ({ x: 20 * Math.cos((Math.PI * 2 * i) / 48), y: 20 * Math.sin((Math.PI * 2 * i) / 48) }));
+    const conocidos = [{ asentamientoId: 'r-1', faccionId: 'f-3', posicion: { x: 30, y: 0 }, nivel: 1, conocidoEn: 0, radioPotencial: 20 }] as AsentamientoConocido[];
+    expect(Math.min(...zonasDeLoRecordado([], conocidos).get('r-1')!.map((q) => q.x))).toBeCloseTo(10, 6); // sin ella, se metía 10 u en la tuya
+    const propias = [{ id: 'as-1', faccionId: 'f-1', posicion: { x: 0, y: 0 }, zonaReal }];
+    expect(Math.min(...zonasDeLoRecordado([], conocidos, propias).get('r-1')!.map((q) => q.x))).toBeCloseTo(15, 6);
+    // si la propia ya viene entre las avistadas (estás fuera), no se cuenta dos veces
+    const vista = [{ id: 'as-1', faccionId: 'f-1', posicion: { x: 0, y: 0 }, nivel: 1, zona: zonaReal }];
+    expect(Math.min(...zonasDeLoRecordado(vista, conocidos, propias).get('r-1')!.map((q) => q.x))).toBeCloseTo(15, 6);
+  });
+
   test('pueblos, avanzadas y obras con el color de su Facción; la mejora de una aldea no se pinta aparte', () => {
     expect(m.pueblos.map((x) => [x.id, x.aldea])).toEqual([['pu', true], ['ex', false]]);
     expect(m.pueblos[0]!.color).toBe(m.plazas[0]!.color); // el de su plaza madre ajena

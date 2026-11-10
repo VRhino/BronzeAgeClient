@@ -499,6 +499,10 @@ como círculo entero, su zona se metía en las vecinas. El cliente la recorta co
 recordadas. Donde chocan dos zonas sale la frontera. Se pinta con el trazo de lo que se ve; vale también para el relleno del territorio y
 para el modo mapa.
 
+Desde 0.198.2 (Víctor, 2026-11-10) cuentan también las plazas de tu Facción con su zona real (`asentamientos` y `plazasPropias`): la plaza
+en la que estás dentro no va entre las avistadas y, al abrir el modo mapa desde dentro (colocar una avanzada o una aldea desde Territorio),
+las zonas recordadas vecinas se metían en la tuya. Banco: `/pruebas/fertilidad/?capa=0&zonas=1&x=1030&y=1640&ancho=420`.
+
 ## Carteles de columnas, ejércitos y caravanas (0.154.0)
 
 Petición de Víctor del 2026-11-06. Sobre cada columna personal, un cartel HTML (`etiquetas.ts`, tipo `columna`) con el escudo de su Facción,

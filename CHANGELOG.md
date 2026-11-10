@@ -3,6 +3,17 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.198.2] — 2026-11-10 · Las fronteras del modo mapa abierto desde dentro de la plaza · contrato 0.20.0 (motor `b55e90f`)
+
+Aviso de Víctor del 2026-11-10: al colocar una avanzada desde Territorio, el mapa enseñaba las zonas de plazas vecinas metidas en la tuya;
+en la vista 3D salían bien. Sin cambios en el motor ni en el contrato.
+
+- Las zonas de las plazas que solo se recuerdan se recortan contra las de las otras Facciones que se conocen (`zonasDeLoRecordado`), pero la
+  plaza en la que estás dentro no va entre las avistadas: el mapa abierto desde dentro no la contaba y las zonas vecinas entraban en la tuya.
+  Ahora cuentan también tus plazas con su zona real (`asentamientos` y `plazasPropias`), en el modo mapa y en el mundo 3D.
+- Banco `/pruebas/fertilidad/?capa=0&zonas=1`: tu plaza y dos recordadas de otras Facciones que se le acercan. Prueba en
+  `pruebas/mundo3d.test.ts`.
+
 ## [0.198.1] — 2026-11-10 · La muralla 3D ya no cruza la plaza; el blasón de la Facción en los informes de región · contrato 0.20.0 (motor `b55e90f`)
 
 Dos avisos de Víctor del 2026-11-10 (el primero, urgente). Sin cambios en el motor ni en el contrato.

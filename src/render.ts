@@ -778,7 +778,8 @@ export function pintarTerreno(
   // tenue entre sus provincias. La frontera exterior de lo tuyo la traza la zona fusionada (paso 9); tus líneas entre provincias, encima de
   // ella, después.
   const conZonaPropia = (proyeccion.zonasFusionadas || []).some((z) => z.faccionId === proyeccion.faccionId && z.contornos.length > 0);
-  const recordadas = zonasDeLoRecordado(proyeccion.asentamientosAvistados, proyeccion.asentamientosConocidos);
+  // con las plazas propias (la de dentro no va entre las avistadas): una zona recordada vecina no se mete en la tuya
+  const recordadas = zonasDeLoRecordado(proyeccion.asentamientosAvistados, proyeccion.asentamientosConocidos, [...(proyeccion.asentamientos ?? []), ...(proyeccion.plazasPropias ?? [])]);
   const zonas: (ZonaDeFaccion & { recordada: boolean; color: string })[] = [
     ...(proyeccion.asentamientosAvistados || []).filter((a) => (a.zona?.length ?? 0) >= 3).map((a) => ({ faccionId: a.faccionId || `sin-${a.id}`, contorno: a.zona!, recordada: false, color: faccionColor(a.faccionId, proyeccion.facciones) })),
     ...(proyeccion.asentamientosConocidos || []).flatMap((c) => {
