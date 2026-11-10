@@ -91,6 +91,11 @@ if (qs0.get('comida')) {
   const hay = { harina: 140, pan: 260, carne: 45, leche: 80, queso: 30, uva: 120, vino: 40, cebada: 95, cerveza: 30, aceituna: 90, sesamo: 60, aceite: 25 };
   for (const [r, n] of Object.entries(hay)) a.almacen = { ...a.almacen, [r]: { cantidad: n, capacidad: a.almacen?.trigo?.capacidad ?? 1000 } };
 }
+// `&vacios=1` (0.195.0): una plaza que empieza, con casi todo a 0 (la elección de la barra del Almacén enseña solo lo que hay y «Mostrar todos»)
+if (qs0.get('vacios')) {
+  const quedan = new Set(['madera', 'piedra', 'trigo', 'oro', 'cobre', 'livestock', 'harina', 'pan']);
+  a.almacen = Object.fromEntries(Object.entries(a.almacen ?? {}).map(([r, x]) => [r, quedan.has(r) ? x : { ...x, cantidad: 0 }])) as typeof a.almacen;
+}
 const construir = new URLSearchParams(location.search).get('construir');
 
 let barra = '';

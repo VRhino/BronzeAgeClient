@@ -212,14 +212,23 @@ export function htmlAlmacenPie(a: Asentamiento, esc: Escapar): string {
   return grupo('almacen', 'Almacén', piezas, ` data-abrir-almacen role="button" tabindex="0" title="Abrir el Almacén" style="--n:${n};--n2:${Math.ceil(n / 2)}"`);
 }
 
-/** En la ventana del Almacén: todos los recursos de la plaza, para elegir cuáles van en la barra de arriba. */
+/** ¿Enseña la elección de la barra todos los recursos o solo los que hay? Vive entre repintados; al recargar, vuelve a «solo los que hay». */
+let eleccionConTodos = false;
+
+/** En la ventana del Almacén: los recursos de la plaza, para elegir cuáles van en la barra de arriba. De serie, solo los que tiene (más de 0, lo
+ * que se ve como 1 o más) y los que ya van en la barra, para poder quitarlos; «Mostrar todos» enseña el resto (Víctor, 2026-11-10). */
 export function htmlEleccionBarra(a: Asentamiento, esc: Escapar): string {
   const lista = recursosDeLaBarra(a);
   fijarPlazaDelTip(a);
   const sola = barraAutomaticaActiva();
   const orden = Object.keys(RECURSO_ICONO);
-  const hay = Object.entries(a.almacen ?? {}).filter(([, x]) => x.cantidad >= 1 || x.capacidad > 0).map(([r]) => r);
-  const recursos = [...new Set([...hay, ...lista])].sort((x, y) => (orden.indexOf(x) + 1 || 99) - (orden.indexOf(y) + 1 || 99) || x.localeCompare(y));
+  const almacen = Object.entries(a.almacen ?? {});
+  const conAlgo = almacen.filter(([, x]) => x.cantidad >= 1).map(([r]) => r);
+  const todos = [...new Set([...almacen.filter(([, x]) => x.cantidad >= 1 || x.capacidad > 0).map(([r]) => r), ...lista])];
+  const visibles = new Set([...conAlgo, ...lista]);
+  const ocultos = todos.filter((r) => !visibles.has(r)).length;
+  const recursos = (eleccionConTodos ? todos : todos.filter((r) => visibles.has(r)))
+    .sort((x, y) => (orden.indexOf(x) + 1 || 99) - (orden.indexOf(y) + 1 || 99) || x.localeCompare(y));
   const lleno = lista.length >= MAX_BARRA_ALMACEN;
   const chip = (r: string): string => {
     const dentro = lista.includes(r);
@@ -231,10 +240,12 @@ export function htmlEleccionBarra(a: Asentamiento, esc: Escapar): string {
   const nota = sola
     ? `Ahora va sola: enseña lo que tiene la plaza, hasta ${MAX_BARRA_ALMACEN}, y lo nuevo entra si queda sitio. Si pones o quitas uno, manda tu elección.`
     : `La has elegido tú (hasta ${MAX_BARRA_ALMACEN}, la misma en todas tus plazas). Se guarda en este navegador.`;
+  const verTodos = ocultos || eleccionConTodos
+    ? `<button type="button" class="btn-secondary barra-todos" data-barra-todos aria-pressed="${eleccionConTodos}">${eleccionConTodos ? 'Solo los que hay' : 'Mostrar todos'}</button>` : '';
   return `<div class="obra-titulo"><span class="faction-kicker">En la barra de arriba</span><span class="obra-chip${lleno ? ' activa' : ''}">${lista.length}/${MAX_BARRA_ALMACEN}</span>`
-    + `${sola ? '<span class="obra-chip">Automática</span>' : '<button type="button" class="btn-secondary barra-sola" data-barra-sola>Que vaya sola</button>'}</div>
+    + `${sola ? '<span class="obra-chip">Automática</span>' : '<button type="button" class="btn-secondary barra-sola" data-barra-sola>Que vaya sola</button>'}${verTodos}</div>
     <p class="asent-lado-nota">${nota}</p>
-    <div class="barra-elecciones">${recursos.map(chip).join('')}</div>`;
+    <div class="barra-elecciones">${recursos.map(chip).join('') || '<span class="asent-pie-vacio">El almacén está vacío.</span>'}</div>`;
 }
 
 /** Cablea la elección: cada clic pone o quita y repinta (`alCambiar`); con la barra llena, `avisar`. «Que vaya sola» borra la elección. */
@@ -244,6 +255,7 @@ export function cablearEleccionBarra(raiz: HTMLElement, a: Asentamiento, alCambi
     else avisar(`La barra ya lleva ${MAX_BARRA_ALMACEN} recursos: quita uno antes de poner otro.`);
   }));
   raiz.querySelector('[data-barra-sola]')?.addEventListener('click', () => { guardarBarra(null); alCambiar(); });
+  raiz.querySelector('[data-barra-todos]')?.addEventListener('click', () => { eleccionConTodos = !eleccionConTodos; alCambiar(); });
 }
 
 /** Estado: mantenimiento y nutrición de 0 a 100, en verde, ámbar o rojo, con su palabra y qué los mueve en el letrero. */
@@ -260,8 +272,8 @@ export function htmlEstadoPie(a: Asentamiento, esc: Escapar): string {
     ]) : '',
     typeof a.nutricionPoblacion === 'number' ? medida('🍞', 'Nutrición', a.nutricionPoblacion, { bien: 'Bien comidos', medio: 'Escasea', mal: 'Hambre' }, [
       'Sube con comida en el almacén y baja sin ella.',
-      'Cada clase come primero lo suyo (carne todas; pan los pesants, queso los artesanos, vino, cerveza y aceite la nobleza) y el trigo pone lo que falte.',
-      'Cada bien que comen hace crecer más a su clase.',
+      'Cada tipo de población come primero lo suyo (carne todos; pan los pesants, queso los artesanos, vino, cerveza y aceite la nobleza) y el trigo pone lo que falte.',
+      'Cada bien que comen hace crecer más a su tipo de población.',
       'Con poca, la gente crece despacio; a cero, muere.',
     ]) : '',
   ].join('');

@@ -266,11 +266,18 @@ La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, es
 > clase, sitio para la gente, cabida, flota, Miradas, el buey, las tropas que recluta por nivel con nombre si la Facción tiene su tecnología, la
 > política de más de la Sala del Consejo, el prestigio de la estatua y la Maravilla), sus mejoras (lo que piden y lo que añaden) y, en la plaza,
 > cuántos hay, si hace falta para subirla de nivel (solo los niveles que quedan) y qué edificios lo piden. **Al pasar por un recurso del
-> Almacén** (las fichas y los botones de la barra): lo que hay, lo que entra y sale y cuándo se llena o se acaba; para qué sirve (la comida de
-> qué clase y su ración, la guarnición, los talleres que lo gastan, el equipo de las tropas, el oro del reclutamiento, construir, mejorar, subir
-> la plaza y el mantenimiento), de dónde sale (extractores, aldeas por cultivo, rebaños, talleres, recaudación por clase, batallas) y qué lo
-> multiplica (la Cantería, el buey, la fertilidad, el bosque, el crecimiento con la ración entera y las políticas, marcadas si están activas).
-> Todo sale del catálogo y de los bloques del motor. El `title` del navegador se va; las cifras siguen en el `aria-label`.
+> Almacén** (las fichas y los botones de la barra), **sin cifras desde 0.195.0** (Víctor: «no mostrar números en general, solo los
+> multiplicadores»; las cifras están en la ficha): para qué sirve (qué tipos de población lo comen, la guarnición, los talleres que lo gastan y
+> qué hacen, el equipo de las tropas, el reclutamiento, construir, mejorar, subir la plaza y el mantenimiento, con el nivel desde el que lo
+> pide), solo con lo que la Facción puede hacer ya (lo que pide una tecnología que no tiene no sale); de dónde sale, solo el sitio
+> (extractores, aldeas por cultivo, rebaños, talleres, la recaudación, batallas); y qué lo multiplica (la Cantería, el buey, la fertilidad, el
+> bosque, el crecimiento con la ración entera y las políticas, marcadas si están activas). Con el almacén lleno, lo avisa. Se dice «tipos de
+> población», no «clases». Todo sale del catálogo y de los bloques del motor. El `title` del navegador se va; las cifras siguen en el
+> `aria-label`. **Al pasar por un cuadrito de «Construidos»** (0.195.0): cuántos hay y de qué nivel, si alguno se mejora o está dañado, su
+> función, lo que da su nivel de ahora (el del mejor), la mejora siguiente con lo que pide y añade, y para qué hace falta en la plaza.
+>
+> **«En la barra de arriba» con solo lo que hay** (0.195.0): en la ventana del Almacén, la elección de la barra enseña de serie los recursos
+> con algo y los que ya van en la barra; «Mostrar todos» enseña el resto.
 >
 > **Albergue de caravanas** (0.128.0, motor b5e27ace). Sale en «Construir», en Gobierno junto al Mercado, solo con un Mercado activo (lo
 > que pide su nivel 1, `requiereEdificio`; el rechazo del motor, `obra.falta_edificio`, tiene su texto). Su ficha dice lo que suma a la flota a

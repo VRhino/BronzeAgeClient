@@ -3,6 +3,24 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.195.0] — 2026-11-10 · Almacén: la barra solo con lo que hay; tooltips de recurso sin cifras y tooltip en «Construidos» · contrato 0.20.0 (motor `b55e90f`)
+
+Petición de Víctor del 2026-11-10. Sin cambios en el motor ni en el contrato.
+
+- **«En la barra de arriba»** (ventana del Almacén): de serie solo salen los recursos con algo (1 o más) y los que ya van en la barra, para
+  poder quitarlos; el botón **«Mostrar todos»** de la cabecera enseña el resto y pasa a «Solo los que hay». Dura hasta recargar.
+- **Tooltip de recurso, sin cifras**: ni existencias ni entradas y salidas por minuto (eso está en la ficha del Almacén), ni la ración, ni el
+  «N por unidad» de las recetas, ni ritmos en «De dónde sale», que dice solo el sitio (Horno, Las aldeas de cebada, La recaudación…). Solo
+  quedan los multiplicadores (×) y el nivel de la plaza desde el que el mantenimiento pide piedra u oro. Con el almacén lleno, el aviso sigue.
+- **«Tipos de población»**, no «clases»: «Lo comen todos los tipos de población», «todos los tipos de población crecen ×…»; también en el
+  letrero de Nutrición de la barra.
+- **«Para qué sirve» solo con lo que tu Facción puede hacer**: las recetas, los talleres, las mejoras y las tropas que piden una tecnología
+  que no tiene no salen (p. ej. el lingote de cobre no dice «Armería hace arma de cobre» sin Metalurgia del cobre).
+- **Tooltip en «Construidos»**: cada cuadrito lleva el tooltip con ficha (`data-tip="construido:<tipo>"`) en vez del `title` del navegador:
+  cuántos hay y de qué nivel, si alguno se mejora o está dañado, qué hace, lo que da su nivel de ahora (con varios de niveles distintos, el
+  mejor), la mejora siguiente con lo que pide y añade, y para qué hace falta en la plaza.
+- Banco: `/pruebas/hud/?ventana=almacen&vacios=1`, una plaza con casi todo a 0.
+
 ## [0.194.0] — 2026-11-10 · Los sitios de la aldea, con la fertilidad de su cultivo · contrato 0.20.0 (motor `b55e90f`)
 
 Petición de Víctor del 2026-11-10 («que cuando elegimos en Territorio fundar aldea con un cultivo, se muestre la fertilidad de dicho cultivo con

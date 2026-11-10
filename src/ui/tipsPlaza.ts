@@ -119,8 +119,9 @@ const EI = (tipo: string, nivel?: number | null): string =>
 /** Un edificio con su icono y su nombre a la vista (el tooltip no deja pasar el ratón por sus piezas, así que un icono solo no se lee). */
 const EIN = (tipo: string, nivel?: number | null): string =>
   `<span class="ta-rec ta-edi">${iconoEdificio(tipo, 18)}<span class="tip-nombre">${esc(EN(tipo))}</span>${nivel ? `<b>${nivel}</b>` : ''}</span>`;
-/** Varios edificios: con su nombre si son pocos; si son muchos, cuántos y sus iconos. */
-const edificios = (tipos: string[]): string => (tipos.length <= 6 ? tipos.map((t) => EIN(t)).join(' ') : `${tipos.length} edificios <span class="ta-fichas tip-iconos">${tipos.map((t) => EI(t)).join('')}</span>`);
+/** Varios edificios: con su nombre si son pocos; si son muchos, «muchos edificios» y sus iconos (sin contarlos: el tooltip de un recurso no lleva
+ * cifras). */
+const edificios = (tipos: string[]): string => (tipos.length <= 6 ? tipos.map((t) => EIN(t)).join(' ') : `muchos edificios <span class="ta-fichas tip-iconos">${tipos.map((t) => EI(t)).join('')}</span>`);
 /** Lo que gasta una receta por unidad, con el nombre de cada insumo: «🍇2 de uva». */
 const insumos = (c: Record<string, number>): string => yLista(Object.entries(c).map(([r, n]) => `${RI(r, n)} de ${esc(RN(r).toLowerCase())}`));
 /** Una pieza con un icono cualquiera (tiempo, gente…). */
@@ -174,8 +175,10 @@ function tamanoDe(tipo: string, def: Def): { ancho: number; alto: number } {
   return t;
 }
 
-/** Lo que da un nivel (o la raíz, para el 1): capacidades, cupos, producción y gente. `previo`, el nivel de antes, para contar solo lo que cambia. */
-function loQueDa(tipo: string, def: Def, n: number, nivel: Nivel, previo?: Nivel): string[] {
+/** Lo que da un nivel (o la raíz, para el 1): capacidades, cupos, producción y gente. `previo`, el nivel de antes, para contar solo lo que cambia.
+ * `todo`: lo que da un edificio que ya está en ese nivel, con lo de la raíz y las tropas de los niveles de antes (el tooltip de Construidos). */
+function loQueDa(tipo: string, def: Def, n: number, nivel: Nivel, previo?: Nivel, todo = false): string[] {
+  const raiz = n === 1 || todo;
   const li: string[] = [];
   const recetasPrevias = new Set((previo?.recetas ?? []).map((r) => `${r.produce}:${Object.keys(r.consumePorUnidad).join('+')}`));
   for (const r of nivel.recetas ?? []) {
@@ -184,33 +187,33 @@ function loQueDa(tipo: string, def: Def, n: number, nivel: Nivel, previo?: Nivel
     if (!recetasPrevias.has(clave)) li.push(receta(r));
     else if (antes && antes.produccionBase !== r.produccionBase) li.push(`${RI(r.produce)} ${esc(RN(r.produce))}: hasta <span class="ta-n">${num(r.produccionBase)}</span>/min`);
   }
-  const base = produccionBaseDe(nivel) ?? (n === 1 ? produccionBaseDe(def) : null);
+  const base = produccionBaseDe(nivel) ?? (raiz ? produccionBaseDe(def) : null);
   const basePrevia = previo ? produccionBaseDe(previo) : null;
   if (base && base.base !== basePrevia?.base) li.push(`${RI(base.recurso)} ${esc(RN(base.recurso))}: hasta <span class="ta-n">${num(base.base)}</span>/min con la mano de obra completa`);
-  const trab = nivel.trabajadoresRequeridos ?? (n === 1 ? def.trabajadoresRequeridos : undefined);
+  const trab = nivel.trabajadoresRequeridos ?? (raiz ? def.trabajadoresRequeridos : undefined);
   const trabPrevio = previo?.trabajadoresRequeridos;
   if (trab && trab !== trabPrevio) {
     const c = claseQueTrabaja(tipo, def);
     li.push(`${IC(CLASE[c]!.icono, String(trab), clase(c, trab))} ${clase(c, trab)} de mano de obra`);
   }
-  if (n === 1 && (def.capacidadPesants || def.capacidadArtesanos)) li.push(`Sitio para <span class="ta-n">${def.capacidadPesants ?? 0}</span> pesants y <span class="ta-n">${def.capacidadArtesanos ?? 0}</span> artesanos`);
-  if (n === 1 && def.capacidadPorRecursoAdicional) li.push(`<span class="ta-n">+${def.capacidadPorRecursoAdicional}</span> de cabida para cada recurso`);
+  if (raiz && (def.capacidadPesants || def.capacidadArtesanos)) li.push(`Sitio para <span class="ta-n">${def.capacidadPesants ?? 0}</span> pesants y <span class="ta-n">${def.capacidadArtesanos ?? 0}</span> artesanos`);
+  if (raiz && def.capacidadPorRecursoAdicional) li.push(`<span class="ta-n">+${def.capacidadPorRecursoAdicional}</span> de cabida para cada recurso`);
   if (nivel.capacidadTrigo && nivel.capacidadTrigo !== previo?.capacidadTrigo) li.push(`${RI('trigo')} <span class="ta-n">${previo?.capacidadTrigo ? '' : '+'}${nivel.capacidadTrigo}</span> de cabida para el trigo`);
   if (nivel.capacidadNobles && nivel.capacidadNobles !== previo?.capacidadNobles) li.push(`${IC(CLASE.nobleza!.icono, String(nivel.capacidadNobles), 'nobles')} sitio para ${nivel.capacidadNobles} nobles`);
   if ((nivel.cupoCaravanas || nivel.cupoCarros) && (nivel.cupoCaravanas !== previo?.cupoCaravanas || nivel.cupoCarros !== previo?.cupoCarros)) {
     li.push(`Flota: <span class="ta-n">${tipo === 'mercado' ? '' : '+'}${nivel.cupoCaravanas ?? 0}</span> caravanas y <span class="ta-n">${tipo === 'mercado' ? '' : '+'}${nivel.cupoCarros ?? 0}</span> carros`);
   }
   if (nivel.cupoMiradas && nivel.cupoMiradas !== previo?.cupoMiradas) li.push(`Hasta <span class="ta-n">${nivel.cupoMiradas}</span> Mirada${nivel.cupoMiradas > 1 ? 's' : ''} a la vez`);
-  if (n === 1 && def.factorBuey) li.push(`Con un buey, ×${num(def.factorBuey)}`);
+  if (raiz && def.factorBuey) li.push(`Con un buey, ×${num(def.factorBuey)}`);
   // las tropas que abre ese nivel: las de las tecnologías de tu Facción por su nombre, las demás contadas
-  const tropas = (tropasReclutables() ?? []).filter((t) => t.edificio === tipo && t.nivelRequerido === n);
+  const tropas = (tropasReclutables() ?? []).filter((t) => t.edificio === tipo && (todo ? t.nivelRequerido <= n : t.nivelRequerido === n));
   if (tropas.length) {
     const ad = adoptadas();
     const ya = ad ? tropas.filter((t) => ad.includes(t.tecnologia)) : tropas;
     const resto = tropas.length - ya.length;
     li.push(`Recluta ${ya.length ? yLista(ya.map((t) => esc(t.nombre))) : ''}${ya.length && resto ? `, y ${resto} más` : resto ? `${resto} tropa${resto > 1 ? 's' : ''}` : ''}${resto ? ` con tecnologías que tu Facción aún no tiene` : ''}`);
   }
-  if (n === 1 && tipo === 'salaConsejo') {
+  if (raiz && tipo === 'salaConsejo') {
     const slot = catalogoDePoliticas()?.reglas.slotSalaConsejo;
     if (slot) li.push(`<span class="ta-n">+${slot}</span> política para el Gobernador`);
   }
@@ -283,6 +286,17 @@ export function htmlTipEdificio(a: Asentamiento | null, tipo: string): string {
       const nv = Math.max(...hay.map((e) => e.nivelInterno ?? 1));
       plazaLi.push(`Ya ${hay.length > 1 ? `hay ${hay.length}` : 'hay uno'}${niveles.length > 1 ? `, el mejor de nivel ${nv}` : ''}`);
     }
+  }
+  plazaLi.push(...paraLaPlaza(a, tipo, cat ?? {}));
+  if (plazaLi.length) h += `<h4>En la plaza</h4><ul>${plazaLi.map((x) => `<li>${x}</li>`).join('')}</ul>`;
+  h += '<div class="ta-nota">Clic para ponerlo en la cola de obras.</div>';
+  return h;
+}
+
+/** Para qué hace falta el edificio en la plaza: subirla de nivel (los niveles que le quedan) y los edificios que lo piden para mejorar. */
+function paraLaPlaza(a: Asentamiento | null, tipo: string, cat: Record<string, Def>): string[] {
+  const li: string[] = [];
+  if (a) {
     const reqs = bloqueDeDatos<{ nivelMaximo?: number; requisitos?: Record<string, Requisito> }>('NIVEL_ASENTAMIENTO');
     const asc = bloqueDeDatos<{ nivelTechoProvisional?: number }>('ASCENSO_ASENTAMIENTO');
     const techo = Math.min(reqs?.nivelMaximo ?? 5, asc?.nivelTechoProvisional ?? 5);
@@ -290,17 +304,62 @@ export function htmlTipEdificio(a: Asentamiento | null, tipo: string): string {
       const objetivo = Number(k);
       if (objetivo <= a.nivel || objetivo > techo || !(r.edificios ?? []).includes(tipo)) continue;
       const deNivel = r.edificiosConNivel?.[tipo] ?? r.nivelInternoMinimo?.[tipo];
-      plazaLi.push(`Hace falta${deNivel ? ` de nivel ${deNivel}` : ''} para subir la plaza al nivel ${objetivo}`);
+      li.push(`Hace falta${deNivel ? ` de nivel ${deNivel}` : ''} para subir la plaza al nivel ${objetivo}`);
     }
   }
   const lePiden: string[] = [];
-  for (const [otro, d] of Object.entries(cat ?? {})) {
+  for (const [otro, d] of Object.entries(cat)) {
     if (otro === tipo) continue;
     for (const [n, x] of nivelesDe(d)) if (x.requiereEdificio === tipo) { lePiden.push(EIN(otro, n > 1 ? n : null)); break; }
   }
-  if (lePiden.length) plazaLi.push(`Lo piden: ${lePiden.join(' ')}`);
+  if (lePiden.length) li.push(`Lo piden: ${lePiden.join(' ')}`);
+  return li;
+}
+
+/** El tooltip de un tipo ya construido (ventana «Construidos», Víctor 2026-11-10): cuántos hay y de qué nivel, qué hacen, lo que da su nivel de
+ * ahora, la mejora siguiente con lo que pide y añade, y para qué hacen falta en la plaza. Con varios de niveles distintos, cuenta el mejor. */
+export function htmlTipConstruido(a: Asentamiento | null, tipo: string): string {
+  const cat = catalogo();
+  const def = cat?.[tipo];
+  if (!def) return '';
+  const hay = (a?.edificios ?? []).filter((e) => e.tipo === tipo && e.estado === 'activo');
+  const niveles = nivelesDe(def);
+  const nivelesHay = hay.map((e) => e.nivelInterno ?? 1);
+  const max = nivelesHay.length ? Math.max(...nivelesHay) : 1, min = nivelesHay.length ? Math.min(...nivelesHay) : 1;
+  const meta = [
+    hay.length > 1 ? `${hay.length} en la plaza` : 'uno en la plaza',
+    niveles.length > 1 ? `nivel ${min === max ? max : `${min} a ${max}`} de ${niveles.length}` : '',
+  ].filter(Boolean).join(' · ');
+  let h = `<div class="ta-tip-cab">${iconoEdificio(tipo, 34)}<div><h3>${esc(EN(tipo))}</h3><div class="ta-meta">${esc(meta)}</div></div></div>`;
+  const mejorando = hay.filter((e) => e.mejora), danados = hay.filter((e) => e.danado).length;
+  const estado = [
+    mejorando.length ? `${mejorando.length > 1 ? `${mejorando.length} se están mejorando` : `${hay.length > 1 ? 'Uno se está mejorando' : 'Se está mejorando'} al nivel ${mejorando[0]!.mejora!.nivelObjetivo}`}.` : '',
+    danados ? `${danados > 1 ? `${danados} están dañados` : hay.length > 1 ? 'Uno está dañado' : 'Está dañado'}.` : '',
+  ].filter(Boolean).join(' ');
+  if (estado) h += `<div class="ta-estado-caja${danados ? ' baja' : ''}">${esc(estado)}</div>`;
+  const funcion = FUNCION[tipo]?.(def);
+  if (funcion) h += `<p class="tip-funcion">${esc(funcion)}</p>`;
+
+  // lo que da el nivel de ahora (el mejor), entero
+  const actual = niveles.find(([n]) => n === max) ?? niveles[0];
+  if (actual) {
+    const da = loQueDa(tipo, def, actual[0], actual[1], undefined, true);
+    const titulo = niveles.length <= 1 ? `Qué da${hay.length > 1 ? ' cada uno' : ''}` : min !== max ? `Lo que da el mejor, de nivel ${max}` : `Lo que da en el nivel ${max}${hay.length > 1 ? ', cada uno' : ''}`;
+    if (da.length) h += `<h4>${titulo}</h4><ul>${da.map((x) => `<li>${x}</li>`).join('')}</ul>`;
+  }
+  // la mejora siguiente: lo que pide y lo que añade
+  const i = niveles.findIndex(([n]) => n === max);
+  const siguiente = i >= 0 ? niveles[i + 1] : undefined;
+  if (siguiente && actual) {
+    const [n, x] = siguiente;
+    const anade = loQueDa(tipo, def, n, x, actual[1]);
+    const pide = pideElNivel(x, a?.almacen, a ? a.nivel : null);
+    h += `<h4>${min !== max ? `Mejora del mejor al nivel ${n}` : `Mejora al nivel ${n}`}</h4>${pide ? `<div class="ta-fichas">${pide}</div>` : ''}${anade.length ? `<ul>${anade.map((y) => `<li>${y}</li>`).join('')}</ul>` : ''}`;
+  } else if (niveles.length > 1) h += `<div class="ta-nota">${min !== max ? 'El mejor está en su nivel más alto.' : 'Está en su nivel más alto.'}</div>`;
+
+  const plazaLi = paraLaPlaza(a, tipo, cat ?? {});
   if (plazaLi.length) h += `<h4>En la plaza</h4><ul>${plazaLi.map((x) => `<li>${x}</li>`).join('')}</ul>`;
-  h += '<div class="ta-nota">Clic para ponerlo en la cola de obras.</div>';
+  h += `<div class="ta-nota">${hay.length > 1 ? 'Clic para verlo en la plaza; cada clic, el siguiente.' : 'Clic para verlo en la plaza.'}</div>`;
   return h;
 }
 
@@ -332,81 +391,74 @@ export function textoDeExistencias(r: string, x: Existencia): string {
 /** Dónde está cada extractor de fuera de la plaza (los de los pueblos). */
 const DONDE_EXTRACTOR: Record<string, string> = {
   cantera: 'en los pueblos de cantera', mina: 'en los pueblos mineros', minaCobre: 'en los pueblos mineros', minaEstano: 'en los pueblos mineros', minaHierro: 'en los pueblos mineros',
-  lenera: 'en el bosque de tu zona', granja: 'la de la plaza',
+  lenera: 'en el bosque de tu zona',
 };
-/** Las clases en plural para las frases de comida («los pesants y los artesanos»). */
-const clasesTexto = (cs: string[]): string => (cs.length >= 3 ? 'todas las clases' : yLista(cs.map((c) => `los ${CLASE[c]?.varias ?? c}`)));
+/** Los tipos de población en plural para las frases de comida («los pesants y los artesanos»; los tres, «todos los tipos de población»). */
+const poblacionTexto = (cs: string[]): string => (cs.length >= 3 ? 'todos los tipos de población' : yLista(cs.map((c) => `los ${CLASE[c]?.varias ?? c}`)));
 
-/** Lo que hace un recurso: para qué sirve, de dónde sale y qué lo multiplica, sacado del catálogo y los bloques de la economía. */
+/** ¿Tiene tu Facción la tecnología? Sin ninguna pedida, sí; sin saber las adoptadas (o sin Facción), no. */
+const tieneTec = (t: string | undefined, ad: string[] | null): boolean => !t || (ad ?? []).includes(t);
+
+/** Lo que hace un recurso: para qué sirve, de dónde sale y qué lo multiplica, sacado del catálogo y los bloques de la economía. Sin cantidades ni
+ * ritmos (Víctor, 2026-11-10: «no mostrar números en general, solo los multiplicadores»; las cifras ya están en la ficha del Almacén), y en «Para
+ * qué sirve» solo lo que tu Facción puede hacer ya: las recetas, obras y tropas que piden una tecnología que no tiene no salen. */
 export function htmlTipRecurso(a: Asentamiento | null, r: string, nota?: string): string {
   const cat = catalogo() ?? {};
+  const ad = adoptadas();
   const x = a?.almacen?.[r];
-  let h = `<div class="ta-tip-cab"><span class="tip-ficha-icono" aria-hidden="true">${RECURSO_ICONO[r] ?? '📦'}</span><div><h3>${esc(RN(r))}</h3>`;
-  if (x) {
-    const { neto, lleno } = flujosDe(x);
-    h += `<div class="ta-meta">${Math.floor(x.cantidad)} de ${Math.floor(x.capacidad)} en el almacén · ${neto > 0 ? '+' : ''}${cifra(neto)}/min${lleno ? ' · lleno' : ''}</div>`;
-  }
-  h += '</div></div>';
-  if (x) {
-    const { produce, consume, neto, lleno } = flujosDe(x);
-    const minutos = neto > 0 && x.capacidad > 0 && !lleno ? (x.capacidad - x.cantidad) / neto : neto < 0 && x.cantidad > 0 ? x.cantidad / -neto : null;
-    const cuando = lleno ? 'Almacén lleno: lo que se produce de más se pierde.' : minutos !== null ? `${neto > 0 ? 'Se llena' : 'Se acaba'} en ${textoEnTiempoReal(minutos * 60_000)}.` : '';
-    if (produce || consume || cuando) {
-      h += `<div class="ta-estado-caja${neto < 0 ? ' baja' : ''}">${produce || consume ? `Por minuto entra <b>${cifra(produce)}</b> y sale <b>${cifra(consume)}</b>.` : ''}${cuando ? `${produce || consume ? '<br>' : ''}${esc(cuando)}` : ''}</div>`;
-    }
-  }
+  let h = `<div class="ta-tip-cab"><span class="tip-ficha-icono" aria-hidden="true">${RECURSO_ICONO[r] ?? '📦'}</span><div><h3>${esc(RN(r))}</h3></div></div>`;
+  if (x && flujosDe(x).lleno) h += '<div class="ta-estado-caja">Almacén lleno: lo que se produce de más se pierde.</div>';
 
   const usos: string[] = [], fuentes: string[] = [], multiplica: string[] = [];
   const bienes = bloqueDeDatos<{ bienes?: Record<string, Bien>; guarnicion?: string[] }>('BIENES_DE_CONSUMO');
   const bien = bienes?.bienes?.[r];
   const nivelPlaza = a?.nivel ?? 0;
 
-  // --- para qué sirve
-  if (bien) usos.push(`Comida de ${clasesTexto(bien.clases)}: ${num(bien.racion)} por cabeza y minuto`);
+  // --- para qué sirve: sin cifras y solo lo que se puede hacer ya
+  if (bien) usos.push(`Lo comen ${poblacionTexto(bien.clases)}`);
   if ((bienes?.guarnicion ?? []).includes(r)) usos.push('La guarnición lo come antes que el trigo');
   if (r === 'trigo') {
-    const consumo = bloqueDeDatos<{ consumoComidaPorHabitante?: number }>('POBLACION')?.consumoComidaPorHabitante;
-    usos.push(`La comida de base: ${consumo !== undefined ? `${num(consumo)} por habitante y minuto, ` : ''}lo que no cubren los demás bienes`);
+    usos.push('La comida de base: pone lo que no cubren los demás bienes');
     usos.push('Los víveres de columnas y ejércitos son solo trigo');
   }
   if (r === 'leche') usos.push('No se come: es la materia de la quesera');
-  // los talleres que lo gastan (el primer nivel donde lo hace)
-  const gastan = new Map<string, { tipo: string; nivel: number; receta: RecetaDeEdificio }>();
-  for (const [tipo, d] of Object.entries(cat)) for (const [n, nv] of nivelesDe(d)) for (const rc of nv.recetas ?? []) {
-    if (!(r in rc.consumePorUnidad)) continue;
-    const k = `${tipo}:${rc.produce}`;
-    if (!gastan.has(k)) gastan.set(k, { tipo, nivel: n, receta: rc });
+  // los talleres que lo gastan, si tu Facción tiene lo que piden el taller, el nivel donde sale la receta y la receta
+  const gastan = new Map<string, { tipo: string; produce: string }>();
+  for (const [tipo, d] of Object.entries(cat)) {
+    if (!tieneTec(d.requiereTecnologia, ad)) continue;
+    let nivelAbierto = true;
+    for (const [, nv] of nivelesDe(d)) {
+      nivelAbierto &&= tieneTec(nv.requiereTecnologia, ad);
+      if (!nivelAbierto) break;
+      for (const rc of nv.recetas ?? []) {
+        const k = `${tipo}:${rc.produce}`;
+        if (r in rc.consumePorUnidad && tieneTec(rc.requiereTecnologia, ad) && !gastan.has(k)) gastan.set(k, { tipo, produce: rc.produce });
+      }
+    }
   }
-  for (const { tipo, nivel, receta: rc } of gastan.values()) {
-    usos.push(`${EIN(tipo, nivel > 1 ? nivel : null)} hace ${RI(rc.produce)} ${esc(RN(rc.produce).toLowerCase())} con <span class="ta-n">${num(rc.consumePorUnidad[r]!)}</span> por unidad${rc.requiereTecnologia ? ` · pide ${tec(rc.requiereTecnologia)}` : ''}`);
-  }
-  // el equipo de las tropas
-  const tropas = (tropasReclutables() ?? []).filter((t) => (t.costoEquipo[r] ?? 0) > 0);
+  for (const { tipo, produce } of gastan.values()) usos.push(`${EIN(tipo)} hace ${RI(produce)} ${esc(RN(produce).toLowerCase())}`);
+  // el equipo de las tropas que tu Facción ya puede reclutar
+  const tropas = (tropasReclutables() ?? []).filter((t) => (t.costoEquipo[r] ?? 0) > 0 && tieneTec(t.tecnologia, ad));
   if (tropas.length) {
-    const ad = adoptadas();
-    const ya = ad ? tropas.filter((t) => ad.includes(t.tecnologia)) : tropas;
-    const resto = tropas.length - ya.length;
-    const nombres = ya.slice(0, 4).map((t) => esc(t.nombre));
-    const mas = ya.length - nombres.length + resto;
-    usos.push(`Equipo de ${tropas.length} tropa${tropas.length > 1 ? 's' : ''}${nombres.length ? `: ${nombres.join(', ')}${mas ? ` y ${mas} más` : ''}` : ''}`);
+    const nombres = tropas.map((t) => esc(t.nombre));
+    usos.push(`El equipo de ${nombres.length > 5 ? `${nombres.slice(0, 4).join(', ')} y otras tropas` : yLista(nombres)}`);
   }
-  if (r === 'oro') {
-    const porEscalon = Object.values(bloqueDeDatos<Record<string, number>>('RECLUTAMIENTO_ORO_POR_ESCALON') ?? {});
-    const caballo = bloqueDeDatos<number>('ORO_POR_CABALLO');
-    if (porEscalon.length) usos.push(`Reclutar: de ${Math.min(...porEscalon)} a ${Math.max(...porEscalon)} por soldado según el escalón${caballo ? `, y ${caballo} más por caballo` : ''}`);
+  if (r === 'oro' && Object.keys(bloqueDeDatos<Record<string, number>>('RECLUTAMIENTO_ORO_POR_ESCALON') ?? {}).length) {
+    usos.push(`Reclutar: lo paga cada soldado${bloqueDeDatos<number>('ORO_POR_CABALLO') ? ', y cada caballo aparte' : ''}`);
   }
-  // obras: construir y mejorar
-  const construir = Object.entries(cat).filter(([t, d]) => (d.costo?.[r] ?? 0) > 0 && !t.startsWith('mina') && t !== 'cantera' && t !== 'corral').map(([t]) => t);
+  // obras: construir y mejorar lo que tu Facción puede levantar
+  const construir = Object.entries(cat)
+    .filter(([t, d]) => (d.costo?.[r] ?? 0) > 0 && !t.startsWith('mina') && t !== 'cantera' && t !== 'corral' && tieneTec(d.requiereTecnologia, ad)).map(([t]) => t);
   if (construir.length) usos.push(`Construir: ${edificios(construir)}`);
-  const mejorar = Object.entries(cat).filter(([, d]) => nivelesDe(d).some(([, nv]) => (nv.costoMejora?.[r] ?? 0) > 0)).map(([t]) => t);
+  const mejorar = Object.entries(cat)
+    .filter(([, d]) => tieneTec(d.requiereTecnologia, ad) && nivelesDe(d).some(([, nv]) => (nv.costoMejora?.[r] ?? 0) > 0 && tieneTec(nv.requiereTecnologia, ad))).map(([t]) => t);
   if (mejorar.length) usos.push(`Mejorar: ${edificios(mejorar)}`);
-  // subir la plaza
+  // subir la plaza, si algún nivel que le queda lo pide
   const asc = bloqueDeDatos<{ porNivelObjetivo?: Record<string, { costo?: Record<string, number> }>; nivelTechoProvisional?: number }>('ASCENSO_ASENTAMIENTO');
   const reqs = bloqueDeDatos<{ nivelMaximo?: number }>('NIVEL_ASENTAMIENTO');
   const techo = Math.min(reqs?.nivelMaximo ?? 5, asc?.nivelTechoProvisional ?? 5);
-  const subir = Object.entries(asc?.porNivelObjetivo ?? {}).map(([k, v]) => [Number(k), v.costo?.[r] ?? 0] as const).filter(([k, n]) => n > 0 && k > nivelPlaza && k <= techo);
-  if (subir.length) usos.push(`Subir la plaza: ${yLista(subir.map(([k, n]) => `<span class="ta-n">${n}</span> para el nivel ${k}`))}`);
-  // el mantenimiento: madera siempre, piedra y oro desde su nivel
+  if (Object.entries(asc?.porNivelObjetivo ?? {}).some(([k, v]) => (v.costo?.[r] ?? 0) > 0 && Number(k) > nivelPlaza && Number(k) <= techo)) usos.push('Subir la plaza de nivel');
+  // el mantenimiento: madera siempre, piedra y oro desde su nivel (el nivel es la condición, no una cantidad)
   const mant = bloqueDeDatos<{ costoBase?: Record<string, number>; nivelParaPiedra?: number; nivelParaOro?: number }>('MANTENIMIENTO');
   if (mant) {
     if (mant.costoBase?.[r]) usos.push('El mantenimiento de la plaza');
@@ -414,45 +466,31 @@ export function htmlTipRecurso(a: Asentamiento | null, r: string, nota?: string)
     if (r === 'oro' && mant.nivelParaOro) usos.push(`El mantenimiento de la plaza, desde el nivel ${mant.nivelParaOro}`);
   }
 
-  // --- de dónde sale
+  // --- de dónde sale: solo el sitio
+  const lugares = new Set<string>();
+  const lugar = (html: string): void => { if (!lugares.has(html)) { lugares.add(html); fuentes.push(html); } };
   for (const [tipo, d] of Object.entries(cat)) {
     if (tipo === 'corral') continue; // el ganado de los corrales sale de los rebaños (abajo)
     const p = produccionBaseDe(d.niveles?.['1'] ?? {}) ?? produccionBaseDe(d);
-    if (p?.recurso !== r) continue;
-    fuentes.push(`${EIN(tipo)}${DONDE_EXTRACTOR[tipo] && tipo !== 'granja' ? ` ${esc(DONDE_EXTRACTOR[tipo]!)}` : ''}: hasta <span class="ta-n">${num(p.base)}</span>/min`);
+    if (p?.recurso === r) lugar(`${EIN(tipo)}${DONDE_EXTRACTOR[tipo] ? ` ${esc(DONDE_EXTRACTOR[tipo]!)}` : ''}`);
   }
   const cultivos = bloqueDeDatos<{ aldea?: { cultivos?: Record<string, { produce: string; nivelMadre: number }> } }>('PUEBLOS_EXTRACTORES')?.aldea?.cultivos ?? {};
   const NOMBRE_ALDEA: Record<string, string> = { trigo: 'trigo', vid: 'viñas', oliva: 'olivos', cebada: 'cebada', sesamo: 'sésamo' };
-  for (const [cultivo, c] of Object.entries(cultivos)) {
-    if (c.produce !== r) continue;
-    fuentes.push(`Las aldeas de ${NOMBRE_ALDEA[cultivo] ?? cultivo}${c.nivelMadre > 1 ? `, desde que una plaza de tu Facción llega al nivel ${c.nivelMadre}` : ''}`);
-  }
+  for (const [cultivo, c] of Object.entries(cultivos)) if (c.produce === r) lugar(`Las aldeas de ${NOMBRE_ALDEA[cultivo] ?? cultivo}`);
   const vacuno = bloqueDeDatos<Record<string, { lechePorCabezaYHora?: number; productos?: Record<string, number> }>>('ESPECIES')?.vacuno;
-  if (vacuno?.productos?.[r]) fuentes.push(`Los rebaños de las aldeas de trigo: <span class="ta-n">${vacuno.productos[r]}</span> por cabeza que pasa del pie de cría`);
-  if (r === 'leche' && vacuno?.lechePorCabezaYHora) fuentes.push(`Los rebaños de las aldeas de trigo: <span class="ta-n">${num(vacuno.lechePorCabezaYHora)}</span> por cabeza y hora, sin sacrificar`);
-  for (const [tipo, d] of Object.entries(cat)) {
-    const vistos = new Set<string>();
-    for (const [n, nv] of nivelesDe(d)) for (const rc of nv.recetas ?? []) {
-      const k = Object.keys(rc.consumePorUnidad).join('+');
-      if (rc.produce !== r || vistos.has(k)) continue;
-      vistos.add(k);
-      fuentes.push(`${EIN(tipo, n > 1 ? n : null)} con ${insumos(rc.consumePorUnidad)}: hasta <span class="ta-n">${num(rc.produccionBase)}</span>/min${rc.requiereTecnologia ? ` · pide ${tec(rc.requiereTecnologia)}` : ''}`);
-    }
-  }
-  if (r === 'oro') {
-    const imp = bloqueDeDatos<{ tasaPesants?: number; tasaArtesanos?: number; tasaNobleza?: number }>('IMPUESTOS');
-    if (imp) fuentes.push(`La recaudación: por minuto, ${num(imp.tasaPesants ?? 0)} por pesant, ${num(imp.tasaArtesanos ?? 0)} por artesano y ${num(imp.tasaNobleza ?? 0)} por noble`);
-  }
-  if (r.startsWith('chatarra')) fuentes.push('Las batallas: la de los caídos va al carro del que gana, o al almacén de la plaza que se defiende y gana');
+  if (vacuno?.productos?.[r] || (r === 'leche' && vacuno?.lechePorCabezaYHora)) lugar('Los rebaños de las aldeas de trigo');
+  for (const [tipo, d] of Object.entries(cat)) if (nivelesDe(d).some(([, nv]) => (nv.recetas ?? []).some((rc) => rc.produce === r))) lugar(EIN(tipo));
+  if (r === 'oro' && bloqueDeDatos('IMPUESTOS')) lugar('La recaudación: los impuestos de la población de la plaza');
+  if (r.startsWith('chatarra')) lugar('Las batallas: la de los caídos va al carro del que gana, o al almacén de la plaza que se defiende y gana');
 
-  // --- qué lo multiplica
+  // --- qué lo multiplica: lo único con cifras
   for (const [id, t] of Object.entries(tecnologias())) if (t.bonusProduccion?.recurso === r) multiplica.push(`${tec(id)}: ×${num(t.bonusProduccion.factor)} a lo que se produce`);
   for (const [tipo, d] of Object.entries(cat)) {
     if (d.factorBuey && nivelesDe(d).some(([, nv]) => (nv.recetas ?? []).some((rc) => rc.produce === r))) multiplica.push(`${EIN(tipo)} con un buey uncido: ×${num(d.factorBuey)}`);
   }
   if (r === 'trigo') multiplica.push('La fertilidad de la tierra, en la granja y en las aldeas');
   if (r === 'madera') multiplica.push('La densidad del bosque, en la leñera');
-  if (bien) multiplica.push(`Con la ración entera, ${clasesTexto(bien.clases)} crecen ×${num(bien.modificador)} (se multiplica con los demás bienes)`);
+  if (bien) multiplica.push(`Con la ración entera, ${poblacionTexto(bien.clases)} crecen ×${num(bien.modificador)} (se multiplica con los demás bienes)`);
   const politicas = bloqueDeDatos<{ id: string; nombre?: string; [k: string]: unknown }[]>('POLITICA_CATALOGO') ?? [];
   const activas = new Set((a?.politicasActivas ?? []).map((p) => p.politicaId));
   const esDeTaller = Object.values(cat).some((d) => nivelesDe(d).some(([, nv]) => (nv.recetas ?? []).some((rc) => rc.produce === r)));
@@ -470,6 +508,8 @@ export function htmlTipRecurso(a: Asentamiento | null, r: string, nota?: string)
   return h;
 }
 
-// Los dos tipos se apuntan al cargar el módulo: `data-tip="edificio:vivienda"` y `data-tip="recurso:madera"` (con `data-tip-nota` para el pie).
+// Los tipos se apuntan al cargar el módulo: `data-tip="edificio:vivienda"`, `data-tip="construido:vivienda"` y `data-tip="recurso:madera"` (con
+// `data-tip-nota` para el pie).
 registrarTip('edificio', (tipo) => htmlTipEdificio(plaza, tipo));
+registrarTip('construido', (tipo) => htmlTipConstruido(plaza, tipo));
 registrarTip('recurso', (r, el) => htmlTipRecurso(plaza, r, el.dataset.tipNota));

@@ -5442,6 +5442,9 @@ body:has(.eleccion-clic) .aviso-global { visibility: hidden; }
 
 /* «Que vaya sola»: devuelve la barra del Almacén al modo automático (0.125.0). */
 .barra-sola { width: auto; min-height: 0; padding: 3px 10px; font-size: 0.76rem; margin-left: auto; }
+/* «Mostrar todos» (0.195.0): junto a «Que vaya sola», o a la derecha si la barra va sola. */
+.barra-todos { width: auto; min-height: 0; padding: 3px 10px; font-size: 0.76rem; margin-left: auto; }
+.barra-sola + .barra-todos { margin-left: 0; }
 
 /* La vista de flota (0.126.0, Víctor 2026-11-03): a la izquierda, un cuarto, la lista de caravanas con lo mínimo; a la derecha, tres cuartos, la
  * elegida. En una ventana estrecha, una debajo de la otra. */

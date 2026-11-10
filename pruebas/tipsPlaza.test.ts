@@ -9,10 +9,10 @@ vi.stubGlobal('location', { protocol: 'http:', host: 'localhost' });
 vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => datos })));
 
 const { bloqueDeDatos } = await import('../src/apiCliente');
-const { htmlConstruir } = await import('../src/ui/panelObras');
+const { htmlConstruir, htmlConstruidosVentana } = await import('../src/ui/panelObras');
 const { fichaRecurso } = await import('../src/ui/vistaCiudad');
-const { htmlEleccionBarra } = await import('../src/ui/hudPlaza');
-const { htmlTipEdificio, htmlTipRecurso } = await import('../src/ui/tipsPlaza');
+const { alternarRecursoDeLaBarra, cablearEleccionBarra, htmlEleccionBarra } = await import('../src/ui/hudPlaza');
+const { htmlTipConstruido, htmlTipEdificio, htmlTipRecurso } = await import('../src/ui/tipsPlaza');
 const { contenidoTip } = await import('../src/ui/tipFicha');
 const { cultivosDesbloqueados } = await import('../src/ui/pueblos');
 const { estadoCliente } = await import('../src/ui/estadoCliente');
@@ -101,6 +101,12 @@ describe('el tooltip de los edificios de Construir', () => {
 });
 
 describe('el tooltip de los recursos del Almacén', () => {
+  /** Tu Facción, con esas tecnologías adoptadas (se deshace con `sinFaccion`). */
+  const conTecnologias = (...t: string[]): void => {
+    estadoCliente.proyeccionUltima = { faccionId: 'f-1', facciones: [], tecnologiasAdoptadas: t, asentamientos: [] } as unknown as ProyeccionJugador;
+  };
+  const sinFaccion = (): void => { estadoCliente.proyeccionUltima = null; };
+
   test('las fichas y los botones de la barra lo piden, con las cifras para el teclado', () => {
     const a = plaza(1, [], { trigo: { cantidad: 300, capacidad: 800, porMinuto: 4, produccion: 10, consumido: 6 } });
     const ficha = fichaRecurso('trigo', a.almacen!.trigo! as never, esc);
@@ -113,27 +119,44 @@ describe('el tooltip de los recursos del Almacén', () => {
     expect(contenidoTip({ dataset: { tip: 'recurso:madera', tipNota: 'Clic para ponerlo en la barra' } } as unknown as HTMLElement)).toContain('Clic para ponerlo en la barra');
   });
 
-  test('las existencias van arriba: lo que hay, lo que entra y sale y cuándo se llena', () => {
+  test('sin cifras: ni existencias ni ritmos, solo el aviso de almacén lleno (0.195.0)', () => {
     const a = plaza(1, [], { trigo: { cantidad: 300, capacidad: 800, porMinuto: 5, produccion: 10, consumido: 5 } });
     const t = sinEtiquetas(htmlTipRecurso(a, 'trigo'));
-    expect(t).toContain('300 de 800 en el almacén');
-    expect(t).toContain('Por minuto entra 10 y sale 5');
-    expect(t).toContain('Se llena en');
+    expect(t).not.toContain('300');
+    expect(t).not.toContain('/min');
+    expect(t).not.toContain('Por minuto');
+    expect(t).not.toContain('Se llena en');
+    const lleno = sinEtiquetas(htmlTipRecurso(plaza(1, [], { trigo: { cantidad: 800, capacidad: 800 } }), 'trigo'));
+    expect(lleno).toContain('Almacén lleno: lo que se produce de más se pierde.');
   });
 
-  test('el pan: comida de los pesants, su ración y su multiplicador, y de dónde sale', () => {
+  test('en ningún recurso sale otra cifra que la de los multiplicadores y el nivel del mantenimiento', () => {
+    conTecnologias('canteria', 'metalurgia_cobre', 'aleacion_bronce', 'carros_guerra');
+    for (const r of ['trigo', 'madera', 'piedra', 'oro', 'pan', 'harina', 'carne', 'leche', 'queso', 'cebada', 'uva', 'vino', 'cobre', 'lingoteCobre', 'cuero', 'livestock', 'chatarraBronce']) {
+      const t = sinEtiquetas(htmlTipRecurso(plaza(1), r))
+        .replace(/×\d+(,\d+)?/g, '')
+        .replace(/desde el nivel \d/g, '');
+      expect(t, r).not.toMatch(/\d/);
+    }
+    sinFaccion();
+  });
+
+  test('el pan: lo comen los pesants, sin la ración, y sale del horno', () => {
     const t = sinEtiquetas(htmlTipRecurso(plaza(1), 'pan'));
-    expect(t).toContain('Comida de los pesants: 0,04 por cabeza y minuto');
+    expect(t).toContain('Lo comen los pesants');
+    expect(t).not.toContain('por cabeza');
     expect(t).toContain('los pesants crecen ×2');
     expect(t).toContain('De dónde sale');
     expect(htmlTipRecurso(plaza(1), 'pan')).toContain('Horno');
   });
 
-  test('la carne: todas las clases y la guarnición', () => {
+  test('la carne: todos los tipos de población, no «clases», y la guarnición', () => {
     const t = sinEtiquetas(htmlTipRecurso(plaza(1), 'carne'));
-    expect(t).toContain('Comida de todas las clases');
+    expect(t).toContain('Lo comen todos los tipos de población');
+    expect(t).toContain('todos los tipos de población crecen ×');
+    expect(t).not.toContain('clases');
     expect(t).toContain('La guarnición lo come antes que el trigo');
-    expect(t).toContain('Los rebaños de las aldeas de trigo: 60 por cabeza');
+    expect(t).toContain('Los rebaños de las aldeas de trigo');
   });
 
   test('la piedra: la Cantería la multiplica, y paga el mantenimiento desde el nivel 2', () => {
@@ -141,36 +164,142 @@ describe('el tooltip de los recursos del Almacén', () => {
     expect(t).toContain('Cantería');
     expect(t).toContain('×1,5 a lo que se produce');
     expect(t).toContain('El mantenimiento de la plaza, desde el nivel 2');
-    expect(t).toMatch(/Subir la plaza: 400 para el nivel 2/);
+    expect(t).toContain('Subir la plaza de nivel');
   });
 
-  test('el oro: la recaudación por clase y el reclutamiento', () => {
+  test('el oro: la recaudación y el reclutamiento, sin tasas ni precios', () => {
     const t = sinEtiquetas(htmlTipRecurso(plaza(1), 'oro'));
-    expect(t).toContain('0,004 por pesant, 0,015 por artesano y 0,06 por noble');
-    expect(t).toContain('de 1 a 11 por soldado según el escalón, y 5 más por caballo');
+    expect(t).toContain('La recaudación: los impuestos de la población de la plaza');
+    expect(t).toContain('Reclutar: lo paga cada soldado, y cada caballo aparte');
     expect(t).toContain('Presión Fiscal');
   });
 
-  test('la leche no se come: es de la quesera; sale de los rebaños sin sacrificar', () => {
+  test('la leche no se come: es de la quesera; sale de los rebaños', () => {
     const t = sinEtiquetas(htmlTipRecurso(plaza(1), 'leche'));
     expect(t).toContain('No se come');
-    expect(t).toContain('3 por cabeza y hora, sin sacrificar');
+    expect(t).toContain('Los rebaños de las aldeas de trigo');
   });
 
   test('la harina: el molino con buey la dobla', () => {
     expect(sinEtiquetas(htmlTipRecurso(plaza(1), 'harina'))).toContain('con un buey uncido: ×2');
   });
 
-  test('la cebada: de las aldeas de cebada desde el nivel 3, y para la cerveza', () => {
+  test('la cebada: de las aldeas de cebada, y la bodega hace cerveza (sin «por unidad»)', () => {
     const t = sinEtiquetas(htmlTipRecurso(plaza(1), 'cebada'));
-    expect(t).toContain('Las aldeas de cebada, desde que una plaza de tu Facción llega al nivel 3');
-    expect(t).toContain('Cerveza');
+    expect(t).toContain('Las aldeas de cebada');
+    expect(t).not.toContain('desde que una plaza');
+    expect(t).toMatch(/Bodega hace .*cerveza/);
+    expect(t).not.toContain('por unidad');
+  });
+
+  test('las recetas, las tropas y las mejoras que piden una tecnología que no tienes no salen en «Para qué sirve»', () => {
+    // el lingote de cobre: la armería hace armas de cobre con él solo con Metalurgia del cobre
+    sinFaccion();
+    const sinMetalurgia = sinEtiquetas(htmlTipRecurso(plaza(2), 'lingoteCobre'));
+    expect(sinMetalurgia).not.toContain('Arma de cobre');
+    expect(sinMetalurgia).toContain('Armadura intermedia'); // esa no pide tecnología
+    conTecnologias('metalurgia_cobre');
+    expect(sinEtiquetas(htmlTipRecurso(plaza(2), 'lingoteCobre'))).toContain('Arma de cobre');
+    // el bronce de los carros de guerra de la carpintería, solo con Carros de guerra
+    const sinCarros = sinEtiquetas(htmlTipRecurso(plaza(3), 'cueroCurtido'));
+    expect(sinCarros).not.toMatch(/Carpintería hace/);
+    conTecnologias('carros_guerra');
+    expect(sinEtiquetas(htmlTipRecurso(plaza(3), 'cueroCurtido'))).toMatch(/Carpintería hace/);
+    sinFaccion();
   });
 
   test('la chatarra sale de las batallas y la refunde la Gran Fundición', () => {
     const t = sinEtiquetas(htmlTipRecurso(plaza(1), 'chatarraBronce'));
     expect(t).toContain('Las batallas');
     expect(htmlTipRecurso(plaza(1), 'chatarraBronce')).toContain('Gran Fundición');
+  });
+});
+
+describe('la elección de la barra de arriba en el Almacén (0.195.0)', () => {
+  const botones = (h: string): string[] => [...h.matchAll(/data-barra-recurso="([^"]+)"/g)].map((m) => m[1]!);
+  /** Una raíz de mentira con los botones de la cabecera: `pulsar('[data-barra-todos]')` hace el clic. */
+  const raizFalsa = (): { raiz: HTMLElement; pulsar: (sel: string) => void } => {
+    const clics = new Map<string, () => void>();
+    const raiz = {
+      querySelectorAll: () => [],
+      querySelector: (sel: string) => ({ addEventListener: (_: string, f: () => void) => { clics.set(sel, f); } }),
+    } as unknown as HTMLElement;
+    return { raiz, pulsar: (sel) => clics.get(sel)?.() };
+  };
+
+  test('de serie, solo los recursos con algo (y los que ya van en la barra), con «Mostrar todos»', () => {
+    const a = plaza(1, [], { madera: { cantidad: 50, capacidad: 900 }, piedra: { cantidad: 0, capacidad: 900 }, oro: { cantidad: 0.4, capacidad: 900 }, cobre: { cantidad: 0, capacidad: 900 } });
+    alternarRecursoDeLaBarra(a, 'cobre'); // elegido aunque esté a 0: sale para poder quitarlo
+    const h = htmlEleccionBarra(a, esc);
+    expect(botones(h)).toEqual(['madera', 'cobre']);
+    expect(h).toContain('data-barra-todos');
+    expect(h).toContain('Mostrar todos');
+    const { raiz, pulsar } = raizFalsa();
+    cablearEleccionBarra(raiz, a, () => {}, () => {});
+    pulsar('[data-barra-sola]'); // vuelve a ir sola
+  });
+
+  test('«Mostrar todos» enseña el resto y se vuelve «Solo los que hay»', () => {
+    const a = plaza(1, [], { madera: { cantidad: 50, capacidad: 900 }, piedra: { cantidad: 0, capacidad: 900 } });
+    let repintes = 0;
+    const { raiz, pulsar } = raizFalsa();
+    cablearEleccionBarra(raiz, a, () => { repintes += 1; }, () => {});
+    pulsar('[data-barra-todos]');
+    expect(repintes).toBe(1);
+    const todos = htmlEleccionBarra(a, esc);
+    expect(botones(todos)).toContain('piedra');
+    expect(todos).toContain('Solo los que hay');
+    pulsar('[data-barra-todos]');
+    expect(botones(htmlEleccionBarra(a, esc))).not.toContain('piedra');
+  });
+
+  test('si todo tiene algo, no hay botón', () => {
+    expect(htmlEleccionBarra(plaza(1, [], {}), esc)).not.toContain('data-barra-todos');
+  });
+});
+
+describe('el tooltip de los edificios construidos (0.195.0)', () => {
+  const conMejora = (e: Edificio, nivelObjetivo: number): Edificio => ({ ...e, mejora: { nivelObjetivo, completaEn: 0 } }) as Edificio;
+
+  test('cada cuadrito de «Construidos» lo pide con data-tip y sin el title del navegador', () => {
+    const html = htmlConstruidosVentana(plaza(2, [edificio('horno'), edificio('granja', 2)]), esc);
+    expect(html).toContain('data-tip="construido:horno"');
+    expect(html).toContain('data-tip="construido:granja"');
+    expect(html).not.toMatch(/class="construido[^"]*"[^>]*title=/);
+    expect(contenidoTip({ dataset: { tip: 'construido:horno' } } as unknown as HTMLElement)).toContain('<h3>Horno</h3>');
+  });
+
+  test('la granja de nivel 2: lo que da ahora y la mejora al nivel 3 con lo que pide', () => {
+    const t = sinEtiquetas(htmlTipConstruido(plaza(2, [edificio('granja', 2)]), 'granja'));
+    expect(t).toContain('uno en la plaza · nivel 2 de 4');
+    expect(t).toContain('Lo que da en el nivel 2');
+    expect(t).toMatch(/Trigo: hasta 180 \/min/);
+    expect(t).toContain('Mejora al nivel 3');
+    expect(t).toMatch(/Trigo: hasta 240 \/min/);
+    expect(t).toContain('Clic para verlo en la plaza.');
+  });
+
+  test('varios del mismo tipo: cuántos, el mejor nivel, los que se mejoran y los dañados', () => {
+    const casas = [edificio('vivienda'), { ...edificio('vivienda'), id: 'e-2', danado: true } as Edificio, conMejora({ ...edificio('vivienda'), id: 'e-3' }, 2)];
+    const t = sinEtiquetas(htmlTipConstruido(plaza(2, casas), 'vivienda'));
+    expect(t).toContain('3 en la plaza');
+    expect(t).toContain('Uno se está mejorando');
+    expect(t).toContain('Uno está dañado');
+    expect(t).toContain('Qué da cada uno');
+    expect(t).toContain('cada clic, el siguiente');
+  });
+
+  test('de niveles distintos, cuenta el mejor', () => {
+    const t = sinEtiquetas(htmlTipConstruido(plaza(3, [edificio('granja', 1), { ...edificio('granja', 2), id: 'e-2' } as Edificio]), 'granja'));
+    expect(t).toContain('2 en la plaza · nivel 1 a 2 de 4');
+    expect(t).toContain('Lo que da el mejor, de nivel 2');
+    expect(t).toContain('Mejora del mejor al nivel 3');
+  });
+
+  test('en su nivel más alto no ofrece mejora', () => {
+    const t = sinEtiquetas(htmlTipConstruido(plaza(4, [edificio('granja', 4)]), 'granja'));
+    expect(t).not.toContain('Mejora al nivel');
+    expect(t).toContain('Está en su nivel más alto.');
   });
 });
 

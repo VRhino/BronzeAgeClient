@@ -187,14 +187,15 @@ function construidosPorTipo(a: Asentamiento): Map<string, Edificio[]> {
 export const cuantosConstruidos = (a: Asentamiento): number => a.edificios.filter((e) => e.estado === 'activo').length;
 
 /** Un cuadrito de un tipo construido: su icono, su nombre, cuántos hay (×N) y su nivel (el más alto). Un clic elige en la vista 3D uno de ese
- * tipo, y el siguiente clic el siguiente (`data-construido` = sus ids). */
+ * tipo, y el siguiente clic el siguiente (`data-construido` = sus ids). Al pasar el ratón, el tooltip con ficha del tipo construido
+ * (`data-tip="construido:<tipo>"`, ui/tipsPlaza.ts; Víctor, 2026-11-10), en vez del `title` del navegador. */
 function casillaConstruido(t: string, lista: Edificio[], esc: Escapar): string {
   const niveles = lista.map((e) => e.nivelInterno ?? 1);
   const max = Math.max(...niveles), min = Math.min(...niveles);
   const mejorando = lista.filter((e) => e.mejora).length, danados = lista.filter((e) => e.danado).length;
   const notas = [mejorando ? `${mejorando} mejorándose` : '', danados ? `${danados} dañado${danados > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ');
   const titulo = `${nombreDe(t)}${lista.length > 1 ? ` ×${lista.length}` : ''} · nivel ${min === max ? max : `${min} a ${max}`}${notas ? ` · ${notas}` : ''}`;
-  return `<button type="button" class="construido${danados ? ' danado' : ''}${mejorando ? ' mejorando' : ''}" data-construido="${esc(lista.map((e) => e.id).join(' '))}" title="${esc(titulo)}" aria-label="${esc(titulo)}">
+  return `<button type="button" class="construido${danados ? ' danado' : ''}${mejorando ? ' mejorando' : ''}" data-construido="${esc(lista.map((e) => e.id).join(' '))}"${atributoTip('construido', t, esc)} aria-label="${esc(titulo)}">
       <span class="construido-icono">${iconoEdificio(t, 24)}</span><span class="construido-nombre">${esc(nombreDe(t))}</span>${lista.length > 1 ? `<b class="construido-n">×${lista.length}</b>` : ''}<b class="construido-nivel">${max}</b></button>`;
 }
 
@@ -204,6 +205,7 @@ function casillaConstruido(t: string, lista: Edificio[], esc: Escapar): string {
 export function htmlConstruidosVentana(a: Asentamiento, esc: Escapar): string {
   const porTipo = construidosPorTipo(a);
   if (!porTipo.size) return '';
+  fijarPlazaDelTip(a);
   const grupos = [...GRUPOS_CONSTRUIR, { id: 'otros', nombre: 'Otros', icono: '', tipos: [] as string[] }];
   const secciones = grupos.map((g) => {
     const tipos = [...porTipo.keys()].filter((t) => grupoDe(t) === g.id).sort((x, y) => {

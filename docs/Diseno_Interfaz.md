@@ -102,7 +102,8 @@ remata cabeceras y paneles con la moldura clásica. `opacity: .5` para que sea s
   `.falta` lo que no hay). Un elemento lo pide con `data-tip="tipo:argumento"` (`atributoTip`) y quien sabe pintar ese tipo se apunta con
   `registrarTip`; `data-tip-nota` añade un pie. Sigue al ratón (encima si abajo no cabe), con el teclado sale junto al elemento, y se va al
   salir, con Esc o al hacer clic. Si un repintado cambia el elemento por otro igual, pasa a él con las cifras nuevas. Lo usan los botones de
-  «Construir» y los recursos de la ventana del Almacén (`ui/tipsPlaza.ts`).
+  «Construir», los de «Construidos» (0.195.0) y los recursos de la ventana del Almacén (`ui/tipsPlaza.ts`; el de recurso, sin más cifras que
+  los multiplicadores).
 - **Tira de recursos** (`.asent-recursos`) — chips `icono + cifra` flotando abajo-centro sobre el
   mapa, uno por recurso con `floor(cantidad) >= 1`. Cada chip lleva una **barra de llenado**
   (`--llenado: %` sobre `cantidad / capacidad`) en el borde inferior, y un **tooltip** al pasar el
