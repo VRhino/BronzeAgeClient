@@ -1,6 +1,6 @@
 // Panel INTEL (backend 2026-10-05, Doc 5.12.10): la taberna vende Miradas (un ojo prestado sobre un punto del mapa, 2 h) e Informes de
 // plaza ajena (foto con fecha de su layout y su defensa). Se compra en la taberna de una plaza propia —estando dentro— o en la de un
-// campamento de mercenarios —dentro, o con la columna a la puerta—. Aquí no se decide ninguna regla: el precio es una cotización con
+// campamento de mercenarios —dentro, o con la columna a la puerta—; y rumores (0.199.0, `rumores.ts`). Aquí no se decide ninguna regla: el precio es una cotización con
 // `tarifasIntel` y quien valida es el backend, cuyo rechazo sale flotando (`mostrarAviso`).
 import { radioDePuerta, tropasReclutables, type ProyeccionJugador } from '../apiCliente';
 import { ayuda } from './ayuda';
@@ -10,6 +10,7 @@ import { mostrar as mostrarAviso } from './avisos';
 import { iconoEdificio } from './iconosEdificio';
 import { iconoTropa } from './iconosTropa';
 import { medallonNivel } from './juegoVisual';
+import { htmlServicioRumores } from './rumores';
 import { cablearInformesRegion, cablearServicioRegion, compraIntelEn, htmlInformesRegion, htmlServicioRegion } from './tabernaRegion';
 
 export type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
@@ -228,6 +229,7 @@ export function renderPanelIntel(p: ProyeccionJugador, e: Escapar, origenId?: st
             <button class="intel-comprar" type="button" id="intel-comprar-informe">Comprar informe</button>`}
         </section>
         ${region}
+        ${htmlServicioRumores(p, t, e)}
       </div>`;
 
   const informes = p.informesPlaza;
@@ -288,6 +290,11 @@ export function cablearPanelIntel(root: HTMLElement, p: ProyeccionJugador, ejecu
     if (!origen || !asentamientoId) return null;
     estadoIntel.informeAbierto = asentamientoId; // al llegar, se abre el informe recién comprado
     return { origen, asentamientoId };
+  });
+  // el rumor de las vetas de estaño (0.199.0): lo que trae llega por la máscara de exploración
+  comprar('[data-rumor-comprar]', 'comprarRumor', () => {
+    const origen = origenDe();
+    return origen ? { origen, tipo: 'vetas_estano' } : null;
   });
   const origen = origenDe();
   const plaza = origen?.tipo === 'asentamiento' ? p.asentamientos.find((a) => a.id === origen.id) : undefined;

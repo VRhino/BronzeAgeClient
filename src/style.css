@@ -6203,3 +6203,32 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
   .mapa-screen > .puerta-ventana, .mapa-screen > .puerta-ventana[data-ancho] { left: 16px; right: 16px; width: auto; bottom: calc(46vh + 28px); max-height: 40vh; }
 }
 @media (prefers-reduced-motion: reduce) { .mapa-screen > .puerta-ventana { animation: none; } }
+
+/* Reclutamiento de los ciudadanos (0.199.0): el interruptor del Gobernador y el General, y la nota de la ficha cuando no cabe en el Liderazgo. */
+.recl-cierre { display: inline-flex; margin: 4px 0 10px; }
+.recl-cierre small { margin-left: 6px; }
+.recl-nota { margin: 4px 0 10px; }
+.ta-ficha-nota.falta { color: #e58a6f; }
+
+/* Pausar consumo (0.199.0): un interruptor por bien de consumo en el Almacén; en la ventana de Facción, la pieza del bien pausado lleva ⏸. */
+.almacen-consumo { display: grid; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(169, 121, 63, 0.25); }
+.consumo-pausas { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 4px 12px; }
+.consumo-pausa { margin-bottom: 0; }
+.consumo-pausa input:checked ~ small { color: #e5b36f; }
+.consumo-pausa input:checked + .interruptor-pista { border-color: #d9a441; background: rgba(90, 64, 20, 0.85); box-shadow: 0 0 8px rgba(217, 164, 65, 0.4); }
+.consumo-pausa input:checked + .interruptor-pista i { background: #f1d394; }
+.asent-recurso.pausado { position: relative; }
+.asent-recurso.pausado::before { content: '⏸'; position: absolute; top: -6px; left: -4px; font-size: 0.62rem; line-height: 1; color: #f1d394; text-shadow: 0 0 3px #000; }
+
+/* El aviso de solvencia del ascenso (0.199.0): no bloquea la subida; ámbar, debajo de la tarjeta. */
+.ascenso-aviso { display: flex; gap: 10px; align-items: flex-start; margin: 8px 0; padding: 8px 12px; border: 1px solid rgba(217, 164, 65, 0.6); border-radius: 3px; background: rgba(90, 64, 20, 0.35); color: var(--pergamino); }
+.ascenso-aviso-icono { font-size: 1.1rem; color: #f1c86a; }
+.ascenso-aviso-cuerpo { display: grid; gap: 3px; }
+.ascenso-aviso-cuerpo > small { color: var(--text-secondary); }
+.ascenso-insolvencia { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+.ascenso-insolvencia li { display: flex; gap: 6px; align-items: baseline; font-size: 0.82rem; }
+.ascenso-insolvencia small { color: #f1c86a; }
+
+/* Rumores de la taberna (0.199.0): la fila de las vetas de estaño, con el «ya lo sabe» en lugar del botón. */
+.intel-rumor-sabido { font-size: 0.78rem; color: var(--text-secondary); white-space: nowrap; }
+.intel-rumores { grid-column: 1 / -1; }

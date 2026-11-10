@@ -70,7 +70,7 @@ del héroe solo (`radioDeVision`); el 3D tiene que seguir a la de la columna. El
 | Ruta, destino, mira del héroe; cintas pegadas al relieve | `src/mundo3d/lineas.ts` (hecho) | Proyección |
 | Clic, arrastre, rueda y teclas | `src/mundo3d/entrada.ts` (hecho) | El clic acaba en `objetosBajoElClic` y `marcharA` |
 | La lista de qué hay bajo el clic | `src/ui/eleccionClic.ts` (hecho) | Proyección |
-| Nombres: plazas, nodos, Miradas, tierra ajena (los de los nodos se quitan con el botón de capas) | `src/mundo3d/etiquetas.ts` (hecho) | Proyección y artefacto |
+| Nombres: plazas, nodos, Miradas, tierra ajena (los de los nodos se quitan con el botón de capas); la capa va con `z-index: 0`, por debajo de todo el HUD (0.200.0) | `src/mundo3d/etiquetas.ts` (hecho) | Proyección y artefacto |
 
 ## Fases
 

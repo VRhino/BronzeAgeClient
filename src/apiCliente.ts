@@ -504,7 +504,7 @@ function proyeccionActual(s: Sesion): ProyeccionJugador | PartidaSinHeroe {
 
 /** Precios, enfriamientos y cupos de la intel (`INTEL` y `cupoMiradas` de los niveles de la Taberna); a cero mientras no llegue `/v1/datos`. */
 export function tarifasDeIntel(): TarifasIntel {
-  type Intel = { mirada?: Partial<TarifasIntel['mirada']>; informe?: Partial<TarifasIntel['informe']>; campamento?: { cupoMiradas?: number }; region?: Partial<TarifasIntel['region']> };
+  type Intel = { mirada?: Partial<TarifasIntel['mirada']>; informe?: Partial<TarifasIntel['informe']>; campamento?: { cupoMiradas?: number }; region?: Partial<TarifasIntel['region']>; rumores?: { vetasEstano?: { oro?: number; radio?: number } } };
   const b = bloqueDeDatos<Intel>('INTEL');
   const niveles = nivelesDeEdificio('taberna') as Record<string, { cupoMiradas?: number }> | null;
   const porNivel = niveles ? Object.keys(niveles).map(Number).filter((n) => n > 0).sort((a, z) => a - z) : [];
@@ -516,6 +516,7 @@ export function tarifasDeIntel(): TarifasIntel {
     informe: { oroPorNivel: i.oroPorNivel ?? 0, cooldownMinutos: i.cooldownMinutos ?? 0 },
     cupoMiradas: { porNivelDeTaberna: Array.from(porNivelDeTaberna, (x) => x ?? 0), campamento: b?.campamento?.cupoMiradas ?? 0 },
     region: { oro: r.oro ?? 0, cooldownMinutos: r.cooldownMinutos ?? 0, caducidadMinutos: r.caducidadMinutos ?? 0 },
+    rumores: { vetasEstano: { oro: b?.rumores?.vetasEstano?.oro ?? 0, radio: b?.rumores?.vetasEstano?.radio ?? 0 } },
   };
 }
 

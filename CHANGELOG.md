@@ -3,6 +3,36 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.200.0] — 2026-11-10 · Las cinco ideas del motor y las etiquetas del mundo bajo los paneles · contrato 0.21.0 (motor `906fb24`)
+
+Lo que pidió Víctor el 2026-11-10 («si todo en una tanda»): las cinco ideas del motor en una sola versión, y antes, el aviso de que las
+etiquetas flotantes del mundo se montaban sobre los paneles laterales. **Hace falta partida nueva** (BAN61, la del motor 906fb24).
+
+- **Las etiquetas del mundo, debajo de los paneles.** La capa de nombres del mundo 3D (`.mundo3d-etiquetas`) no tenía contexto de apilamiento
+  propio y el cartel de las plazas (`z-index: 1`) empataba con el rastreador de misiones, que va antes en el DOM: ganaba el cartel. La capa lleva
+  ahora `z-index: 0` y queda entera por debajo del HUD.
+- **Contrato 0.21.0** (`src/contrato/` regenerado, REVISION 906fb24): `Asentamiento.insolvencia_ascenso` (52), `reclutamiento_cerrado_a_ciudadanos`
+  (53) y `consumo_pausado` (54) en la proyección; las órdenes `cerrarReclutamientoACiudadanos`, `pausarConsumo` y `comprarRumor`; textos para
+  `reclutamiento.solo_reponer`, `consumo.no_se_pausa`, `rumor.sin_novedad` e `intel.sin_oro`.
+- **Reclutar con tu columna en una plaza de tu Facción donde no resides** (`ui/reclutamiento.ts`). Si entraste con columna, no estás vetado y la
+  plaza no lo cerró, la ficha de la tropa trae el botón Reclutar: la escuadra nueva va a tu columna, come de sus víveres y la paga la plaza. Si no
+  cabe en tu Liderazgo (lo que llevas fuera del campamento y de la guarnición de visita de esa plaza), el botón sale apagado y lo dice. Encima del
+  árbol, una línea dice cómo reclutas ahí; sin columna o con el reclutamiento cerrado, no hay botón y la ficha dice por qué (cerrado, solo
+  repones, en tu Base).
+- **«Cerrar el reclutamiento a los ciudadanos»**: un interruptor en la ventana de Reclutamiento, solo para el Gobernador y el General que residen.
+- **Rumores en la taberna** (`ui/rumores.ts`): la tarjeta «Rumores» con «Vetas de estaño de la región», 80 de oro (`INTEL.rumores`), en la
+  taberna de una plaza (Rey, Embajador o Gobernador; paga el almacén) y en la de un campamento (cualquiera con Facción; paga tu oro). Si tu
+  Facción ya tiene exploradas todas las vetas de esa región (mapa y máscara de exploración, como el motor), no hay botón: «Tu Facción ya lo sabe».
+- **Pausar consumo** (`ui/consumoPausado.ts`): en la ventana del Almacén, el Gobernador y el Tesorero (residentes y dentro) tienen un interruptor
+  por bien de consumo que la plaza tiene, produce o tiene pausado (carne, pan, queso, vino, cerveza, aceite; nunca el trigo). Los demás ven solo
+  lo pausado. La pausa sale también en el letrero de la Nutrición, en el tooltip del recurso y en la ventana de Facción (⏸ en la pieza y una
+  nota en el Almacén de la plaza).
+- **El ascenso ya no depende de la solvencia**: debajo de la tarjeta de subir de nivel, un aviso ámbar con cada recurso que no cubriría el
+  mantenimiento del nivel siguiente («llega X y pediría Y por minuto»). El botón no cambia.
+- Bancos: `/pruebas/hud/?ventana=almacen&tesorero=1&pausa=carne,pan` (`&sinCargo=1` sin cargo),
+  `/pruebas/hud/?ventana=reclutamiento&visita=1&columna=1` (`&cerrado=1`, `&gobernador=1`), `/pruebas/centro/?insolvente=1&pausa=carne,pan`,
+  `/pruebas/taberna/?ver=intel` (`&sabido=1`). Pruebas en `pruebas/cincoIdeas.test.ts`; `pruebas/plaza/datos.json` lleva `INTEL.rumores`.
+
 ## [0.199.0] — 2026-11-10 · Acciones a la puerta, parte 2: Mercenarios, Mercado y Guarnición sin entrar · motor `906fb24`
 
 Pedido de Víctor del 2026-11-10 tras el 0.193.0. Lo que faltaba se pidió al motor (PR #14, merge 906fb24: el ámbito `CAMPAMENTO` con la columna

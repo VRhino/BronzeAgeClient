@@ -12,6 +12,7 @@ import { avanceDeObra } from './panelObras';
 import { poblacionDePlaza } from './panelCentro';
 import { atributoTip } from './tipFicha';
 import { fijarPlazaDelTip } from './tipsPlaza';
+import { lineaDeNutricion } from './consumoPausado';
 
 type Escapar = (valor: string) => string;
 
@@ -275,6 +276,7 @@ export function htmlEstadoPie(a: Asentamiento, esc: Escapar): string {
       'Cada tipo de población come primero lo suyo (carne todos; pan los pesants, queso los artesanos, vino, cerveza y aceite la nobleza) y el trigo pone lo que falte.',
       'Cada bien que comen hace crecer más a su tipo de población.',
       'Con poca, la gente crece despacio; a cero, muere.',
+      ...(lineaDeNutricion(a) ? [lineaDeNutricion(a)!] : []),
     ]) : '',
   ].join('');
   return piezas ? grupo('estado', 'Estado', piezas) : '';

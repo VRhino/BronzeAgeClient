@@ -102,7 +102,9 @@ La mayoría de acciones exigen **residir** + **tener el cargo** (`residenteConCa
 | puerta (`fijarPoliticaDeAcceso`) y veto (`vetarJugador`) | solo **Gobernador** |
 | activar política | el cargo dueño de esa política (`POLITICA_CATALOGO[].cargo`) |
 | renombrar asentamiento | cualquier **residente** |
-| reclutar tropa | cualquier **residente** (amplía SU propio escuadrón) |
+| reclutar tropa | cualquier **residente** (amplía SU propio escuadrón); desde 0.200.0 también el **ciudadano** que no reside y entró con su columna (la escuadra nueva va a la columna), salvo vetado o con el reclutamiento cerrado |
+| cerrar el reclutamiento a los ciudadanos (`cerrarReclutamientoACiudadanos`) | **Gobernador** o **General**, residentes |
+| pausar el consumo de un bien (`pausarConsumo`) | **Gobernador** o **Tesorero**, residentes y dentro |
 | colocar orden de mercado / crear caravana | cualquier **residente** |
 | trueques (aceptar/rechazar) | residente del lado que contesta |
 | asignar Rey / Embajador (Facción) | ver §10 |
@@ -302,6 +304,14 @@ La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, es
 > tu escuadra con su barra, coste en chips y botón Reclutar / Reponer / Completa) y una rejilla por edificio militar con barra de escuadra en cada
 > casilla. **Taberna**: cabecera con oro y Miradas en ojos, tarjetas de servicio (Mirada, Informe) con el precio en chip, Miradas con su barra de
 > tiempo e Informes con el nivel en escudo; el Informe abierto con edificios y guarnición en iconos y la muralla en barras.
+>
+> **Las cinco ideas del motor 906fb24** (0.200.0, 2026-11-10; bancos `pruebas/hud/`, `pruebas/centro/`, `pruebas/taberna/`). **Reclutamiento**: el
+> ciudadano que no reside recluta escuadras nuevas a la columna con la que entró (si no está vetado y la plaza no lo cerró; tiene que caber en su
+> Liderazgo), con una línea encima del árbol que lo explica; el Gobernador y el General residentes tienen el interruptor «Cerrar el reclutamiento
+> a los ciudadanos» (`ui/reclutamiento.ts`). **Taberna**: la tarjeta «Rumores» con las vetas de estaño de la región (`ui/rumores.ts`), sin botón si
+> la Facción ya las tiene exploradas. **Almacén**: «Pausar consumo», un interruptor por bien de consumo para el Gobernador y el Tesorero
+> (`ui/consumoPausado.ts`); lo pausado sale en la Nutrición, el tooltip del recurso y la ventana de Facción. **Ascenso**: la solvencia es un aviso
+> debajo de la tarjeta (`insolvenciaAscenso`), no un requisito.
 >
 > **Lo que trae un informe de región** (0.198.0, 2026-11-10, `ui/tabernaRegion.ts`; banco `pruebas/taberna/?ver=intel`). En «Tus informes de
 > región», cada informe con algo que ver es un botón (el de órdenes, solo mientras se ven; caducado se queda como texto) que abre debajo, uno a la

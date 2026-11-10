@@ -1,8 +1,11 @@
 /* Los nombres sobre el mundo 3D (src/mundo3d/etiquetas.ts): una capa encima del lienzo que no recoge el ratón. Cada nombre se ancla en su punto
    del mundo: encima (plazas y nodos), centrado (Miradas) o debajo (de quién es la tierra que pisa una columna). */
+/* `z-index: 0` le da su propio contexto de apilamiento: el `z-index` de dentro (las plazas por encima de los demás nombres) no sale de la capa,
+   y la capa entera queda por debajo de los paneles del HUD, también del rastreador de misiones (z-index 1, antes que el lienzo en el DOM). */
 .mundo3d-etiquetas {
   position: absolute;
   inset: 0;
+  z-index: 0;
   overflow: hidden;
   pointer-events: none;
 }

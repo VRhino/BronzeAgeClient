@@ -266,6 +266,15 @@ export interface Asentamiento {
   ultimaCaravanaCreadaEn?: number;
   /** El Gobernador cerró el sacar al carro a los ciudadanos (`cerrarAlmacenACiudadanos`); dejar sigue abierto. */
   almacenCerradoACiudadanos?: boolean;
+  /** El Gobernador o un General cerró a los ciudadanos que no residen el reclutar escuadras nuevas (`cerrarReclutamientoACiudadanos`, contrato 0.21.0):
+   * solo reponen. Abierto, la escuadra nueva va a la columna con la que entraron. Solo de dentro. */
+  reclutamientoCerradoACiudadanos?: boolean;
+  /** Los bienes de consumo cuyo consumo pausó el Gobernador o el Tesorero (`pausarConsumo`, contrato 0.21.0), en el orden del catálogo: la población no
+   * los come y la guarnición no come la carne. Ausente = ninguno. */
+  consumoPausado?: string[];
+  /** La advertencia de solvencia del nivel siguiente (contrato 0.21.0): cada recurso del mantenimiento de ese nivel que lo que llega por minuto no cubre.
+   * No bloquea el ascenso. Ausente = lo cubre todo o está en el nivel máximo. */
+  insolvenciaAscenso?: { recurso: string; llega: number; pide: number }[];
   /** Héroes residentes que llegaron fundando · comprando casa (Doc 2.5). */
   heroesFundadoresIds?: string[];
   casasCompradas?: string[];
@@ -1174,6 +1183,8 @@ export interface TarifasIntel {
   cupoMiradas: { porNivelDeTaberna: number[]; campamento: number };
   /** El informe de región (tanda 69, `INTEL.region`): oro fijo, enfriamiento por región y tipo, y lo que dura a la vista el de órdenes. */
   region: { oro: number; cooldownMinutos: number; caducidadMinutos: number };
+  /** Los rumores (contrato 0.21.0, `INTEL.rumores`): el de las vetas de estaño, su precio y el radio que deja explorado alrededor de cada una. */
+  rumores?: { vetasEstano: { oro: number; radio: number } };
 }
 
 /** Dónde se compra: la taberna de una plaza propia o la de un campamento de mercenarios. */

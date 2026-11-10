@@ -1,11 +1,12 @@
 // CENTRO URBANO de la plaza con aire de juego de estrategia (petición de Víctor, 2026-11-02, después de la de Edificios): la subida de nivel (encima
 // de las subpestañas; desde la 0.97.0, su propia ventana, que se abre desde el medallón del blasón), la población por clases (para la barra de
 // abajo de la plaza), el interruptor de auto-construcción y los Cargos (una silla por cargo, con su emblema). Lo que se pinta sale de la proyección y de `GET /v1/datos` (`NIVEL_ASENTAMIENTO`, `ASCENSO_ASENTAMIENTO`,
-// `EDIFICIO_CATALOGO`): el motor no proyecta la evaluación de la subida, así que se calcula aquí con sus mismos requisitos; el cupo de la Facción y
-// la solvencia los comprueba él al pedirla. Los rechazos salen flotando (`mostrarAviso`).
+// `EDIFICIO_CATALOGO`): el motor no proyecta la evaluación de la subida, así que se calcula aquí con sus mismos requisitos; el cupo de la Facción
+// lo comprueba él al pedirla. La solvencia ya no bloquea (motor 906fb24, cliente 0.199.0): llega como aviso en `insolvenciaAscenso` y se enseña
+// debajo de la tarjeta, sin tocar el botón. Los rechazos salen flotando (`mostrarAviso`).
 import type { ProyeccionJugador } from '../apiCliente';
 import { bloqueDeDatos } from '../apiCliente';
-import { EDIFICIO_NOMBRE } from '../paletas';
+import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { Asentamiento } from '../tiposDominio';
 import { ayuda } from './ayuda';
 import { mostrar as mostrarAviso } from './avisos';
@@ -83,7 +84,7 @@ export function htmlAscensoPlaza(p: ProyeccionJugador, a: Asentamiento, soyGober
   const reqs = bloqueDeDatos<NivelAsentamiento>('NIVEL_ASENTAMIENTO', alCargar);
   const asc = bloqueDeDatos<AscensoAsentamiento>('ASCENSO_ASENTAMIENTO', alCargar);
   if (!reqs || !asc) return '';
-  const info = ayuda('plaza:ascenso', 'La subida de nivel no es automática: la pide el Gobernador, se paga entera del almacén y tarda una obra. Si conquistan la plaza durante la obra, se pierde. El servidor comprueba además el cupo de tu Facción y que los ingresos cubran el mantenimiento del nivel nuevo.');
+  const info = ayuda('plaza:ascenso', 'La subida de nivel no es automática: la pide el Gobernador, se paga entera del almacén y tarda una obra. Si conquistan la plaza durante la obra, se pierde. El servidor comprueba además el cupo de tu Facción. Si lo que llega a la plaza no cubre el mantenimiento del nivel nuevo, lo verás aquí como aviso, pero puedes subir igual.');
   if (a.ascenso) {
     const total = a.ascenso.completaEn - a.ascenso.iniciadoEn;
     const hecho = total > 0 ? Math.max(0, Math.min(1, (ahora() - a.ascenso.iniciadoEn) / total)) : 1;
@@ -113,8 +114,20 @@ export function htmlAscensoPlaza(p: ProyeccionJugador, a: Asentamiento, soyGober
       </span>
       <button id="btn-solicitar-ascenso" class="ascenso-boton" type="button"${puede && soyGobernador ? '' : ' disabled'} title="${esc(motivo)}" aria-label="${esc(motivo)}">⬆</button>
     </div>
+    ${htmlAvisoSolvencia(a, objetivo, esc)}
     ${plegable('ascenso:requisitos', `<span class="plegable-titulo">Requisitos del nivel ${objetivo}</span><span class="plegable-meta${puede ? '' : ' falta'}">${cumplidos} de ${lista.length}</span>`,
       `<ul class="ascenso-reqs">${lista.map((x) => htmlRequisito(x, esc)).join('')}</ul>${soyGobernador ? '' : '<p class="asent-lado-nota">Solo el Gobernador puede pedir la subida.</p>'}`, requisitosAbiertos)}`;
+}
+
+/** El aviso de solvencia (`insolvenciaAscenso`): cada recurso del mantenimiento del nivel `objetivo` que lo que llega por minuto no cubre. No bloquea. */
+export function htmlAvisoSolvencia(a: Asentamiento, objetivo: number, esc: Escapar): string {
+  const lista = a.insolvenciaAscenso ?? [];
+  if (!lista.length) return '';
+  const fmt = (n: number): string => (Math.abs(n) >= 10 ? miles(Math.round(n)) : n.toFixed(1).replace('.', ','));
+  const filas = lista.map((x) => `<li><span aria-hidden="true">${RECURSO_ICONO[x.recurso] ?? '📦'}</span><b>${esc(RECURSO_NOMBRE[x.recurso] ?? x.recurso)}</b><small>llega ${fmt(x.llega)} y pediría ${fmt(x.pide)} por minuto</small></li>`).join('');
+  return `<div class="ascenso-aviso" role="note"><span class="ascenso-aviso-icono" aria-hidden="true">⚠</span><span class="ascenso-aviso-cuerpo">
+      <strong>Con lo que llega hoy, el nivel ${objetivo} no se pagaría solo</strong><small>No impide subir, pero el mantenimiento iría a la baja si no cambia.</small>
+      <ul class="ascenso-insolvencia">${filas}</ul></span></div>`;
 }
 
 /** ¿Se puede pedir ya la subida? (sin obra en marcha, bajo el techo y con todo lo que se comprueba aquí cumplido): el medallón del blasón brilla. */

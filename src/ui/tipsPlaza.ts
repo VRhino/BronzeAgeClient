@@ -398,6 +398,7 @@ export function htmlTipRecurso(a: Asentamiento | null, r: string, nota?: string)
   const x = a?.almacen?.[r];
   let h = `<div class="ta-tip-cab"><span class="tip-ficha-icono" aria-hidden="true">${RECURSO_ICONO[r] ?? '📦'}</span><div><h3>${esc(RN(r))}</h3></div></div>`;
   if (x && flujosDe(x).lleno) h += '<div class="ta-estado-caja">Almacén lleno: lo que se produce de más se pierde.</div>';
+  if (a?.consumoPausado?.includes(r)) h += '<div class="ta-estado-caja">Consumo pausado en esta plaza: la población no lo come y el trigo pone lo que cubría.</div>';
 
   const usos: string[] = [], fuentes: string[] = [], multiplica: string[] = [];
   const bienes = bloqueDeDatos<{ bienes?: Record<string, Bien>; guarnicion?: string[] }>('BIENES_DE_CONSUMO');

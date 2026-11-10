@@ -210,6 +210,9 @@ function asentamiento(a: pb.Asentamiento, ahora: number): d.Asentamiento {
     politicasActivas: a.politicasActivas.map((p) => ({ id: p.id, politicaId: p.politicaId, cargo: p.cargo, activadaEn: instante(p.activadaEnMs)!, expiraEn: instante(p.expiraEnMs)! })),
     ultimaCaravanaCreadaEn: instante(a.ultimaCaravanaCreadaEnMs),
     almacenCerradoACiudadanos: a.almacenCerradoACiudadanos,
+    reclutamientoCerradoACiudadanos: a.reclutamientoCerradoACiudadanos || undefined,
+    consumoPausado: a.consumoPausado.length ? a.consumoPausado : undefined,
+    insolvenciaAscenso: a.insolvenciaAscenso.length ? a.insolvenciaAscenso.map((x) => ({ recurso: x.recurso, llega: mil(x.llega), pide: mil(x.pide) })) : undefined,
     heroesFundadoresIds: a.fundadoresIds,
     casasCompradas: a.casasCompradas,
     cargos: a.cargos

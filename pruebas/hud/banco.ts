@@ -25,6 +25,7 @@ import { SUBPESTANA_GUARNICION } from '../../src/ui/panelGuarnicion';
 import { FICHA_OBRA, SUBPESTANA_PUEBLOS } from '../../src/ui/pueblos';
 import { ahora as ahoraJuego } from '../../src/ui/juegoVisual';
 import { cablearTesoreria, htmlReservaRecursos } from '../../src/ui/panelTesoreria';
+import { cablearPausarConsumo, htmlPausarConsumo } from '../../src/ui/consumoPausado';
 import { htmlAutoConstruccion } from '../../src/ui/panelCentro';
 import { bloqueDeDatos, nivelesDeEdificio } from '../../src/apiCliente';
 import type { Edificio } from '../../src/tiposDominio';
@@ -148,6 +149,15 @@ function pintarAlmacen(): void {
     a.cargos = { ...(a.cargos ?? {}), tesoreroId: 'h' } as typeof a.cargos;
     (p.heroe as { ubicacion: unknown }).ubicacion = { tipo: 'asentamiento', asentamientoId: a.id };
     a.reservaManual = { madera: 200, trigo: 300 };
+    a.heroesFundadoresIds = [...(a.heroesFundadoresIds ?? []), 'h'];
+  }
+  // `&pausa=carne,pan`: esos bienes con el consumo pausado (0.199.0); con `&tesorero=1`, sus interruptores
+  if (qs.get('pausa')) {
+    a.consumoPausado = qs.get('pausa')!.split(',');
+    // la ciudad del banco no guarda comida: algo de carne, pan, queso y cerveza para ver sus interruptores
+    for (const [r, n] of [['carne', 140], ['pan', 260], ['queso', 45], ['cerveza', 30]] as const) a.almacen![r] ??= { cantidad: n, capacidad: 2000 } as never;
+    // `&sinCargo=1`: el héroe no es Gobernador ni Tesorero: solo ve lo pausado
+    if (qs.get('sinCargo')) a.cargos = { ...(a.cargos ?? {}), gobernadorId: 'otro', tesoreroId: null } as typeof a.cargos;
   }
   // `&carga=1`: la subpestaña «Tu carga» (0.172.0): residente en la plaza, con el carro cargado y el almacén personal
   if (qs.get('carga')) {
@@ -159,10 +169,11 @@ function pintarAlmacen(): void {
     cuerpo.innerHTML = `<div class="asent-tabs asent-subtabs"><button class="asent-tab" type="button">Almacén</button><button class="asent-tab activo" type="button">Tu carga</button></div><div class="asent-lado-cuerpo"><div class="almacen-carga">${htmlCarro(p, e, false, true, true)}</div></div>`;
     return;
   }
-  cuerpo.innerHTML = `<div class="cols-completa"><div class="col-completa">${htmlEleccionBarra(a, e)}${htmlExtraccion(c)}<div class="almacen-reserva">${htmlReservaRecursos(c)}</div></div><div class="col-completa">${htmlRecetas(c)}</div></div>`;
+  cuerpo.innerHTML = `<div class="cols-completa"><div class="col-completa">${htmlEleccionBarra(a, e)}${htmlExtraccion(c)}<div class="almacen-reserva">${htmlReservaRecursos(c)}</div>${htmlPausarConsumo(p, a, e)}</div><div class="col-completa">${htmlRecetas(c)}</div></div>`;
   cablearEleccionBarra(cuerpo, a, pintarAlmacen, (m) => alert(m));
   cablearProduccionYRecetas(c);
   cablearTesoreria(c);
+  cablearPausarConsumo(cuerpo, a, async (_t, x) => { const q = x as { recurso: string; pausado: boolean }; a.consumoPausado = [...new Set([...(a.consumoPausado ?? []).filter((r) => r !== q.recurso), ...(q.pausado ? [q.recurso] : [])])]; pintarAlmacen(); return null; });
 }
 pintarAlmacen();
 // `?ventana=caravanas`: la vista de flota de verdad (`htmlCaravanas`) con una flota de mentira: una en la plaza, una de camino, una en una aldea.
@@ -408,7 +419,8 @@ if (qs.get('obra')) {
 }
 // `?ventana=reclutamiento`: el árbol de reclutamiento de verdad (0.159.0) con una Facción a mitad de la Era II (la del banco de Facción → Tecnología).
 // `&plaza=barracon:2,galeriaDeTiro:2` deja esos edificios de reclutamiento a ese nivel y quita los demás (sin Caballerizas, su carril plegado);
-// `&inicio=1` con una Facción recién fundada; `&visita=1` sin residir.
+// `&inicio=1` con una Facción recién fundada; `&visita=1` sin residir (0.199.0: `&columna=1` entró con su columna, `&cerrado=1` la plaza lo cerró
+// a los ciudadanos); `&gobernador=1` residente y Gobernador, con el interruptor que lo cierra.
 if (ventana === 'reclutamiento') {
   const q = p as unknown as Record<string, unknown>;
   const inicio = Boolean(qs.get('inicio'));
@@ -424,8 +436,12 @@ if (ventana === 'reclutamiento') {
   for (const [t, n] of Object.entries(niveles)) a.edificios.push({ id: `r-${t}`, tipo: t, estado: 'activo', nivelInterno: n } as Edificio);
   a.heroesFundadoresIds = qs.get('visita') ? [] : ['h'];
   a.poblacion = { pesants: 140, artesanos: 30, nobleza: 6 };
-  q.heroe = { displayName: 'Víctor', ubicacion: { tipo: 'asentamiento', asentamientoId: a.id }, loadouts: [], escuadrones: inicio ? [] : [
-    { id: 's1', nombre: 'Honderos', tropaId: 'honderos', cantidad: 30, nivel: 1, contenedor: { tipo: 'campamento' } }] };
+  a.reclutamientoCerradoACiudadanos = Boolean(qs.get('cerrado'));
+  if (qs.get('gobernador')) a.cargos = { ...(a.cargos ?? {}), gobernadorId: 'h' } as typeof a.cargos;
+  q.facciones = [{ id: a.faccionId, nombre: 'Casa de Micenas', reyId: 'h', miembros: [{ heroeId: 'h', cargos: [] }] }];
+  q.ejercitos = qs.get('columna') ? [{ id: 'ej-1', liderId: 'h', participantes: [{ heroeId: 'h' }], posicionActual: a.posicion, estado: 'estacionado' }] : [];
+  q.heroe = { displayName: 'Víctor', liderazgoBase: 30, ubicacion: { tipo: 'asentamiento', asentamientoId: a.id }, loadouts: [], escuadrones: inicio ? [] : [
+    { id: 's1', nombre: 'Honderos', tropaId: 'honderos', cantidad: 30, nivel: 1, costeLiderazgo: 2, contenedor: qs.get('columna') ? { tipo: 'ejercito', ejercitoId: 'ej-1' } : { tipo: 'campamento' } }] };
   const pintarRecl = (): void => {
     const cuerpo = document.querySelector<HTMLElement>('.asent-edif-cuerpo');
     if (!cuerpo) return;

@@ -144,6 +144,11 @@ const MENSAJES: Record<string, string> = {
   'almacen.sin_existencias': 'No hay de eso de sobra en el almacén (el trigo no baja de la reserva).',
   'carro.no_lleva': 'Tu carro no lleva de eso.',
   'heroe.sin_columna': 'Has entrado sin columna: no traes carro.',
+  // Las cinco ideas del 2026-11-10 (contrato 0.21.0)
+  'reclutamiento.solo_reponer': 'Esta plaza ha cerrado el reclutamiento a los ciudadanos que no residen en ella: solo repones una escuadra que ya tienes aquí.',
+  'consumo.no_se_pausa': 'Ese recurso no es un bien de consumo que se pueda pausar (solo carne, pan, queso, vino, cerveza y aceite).',
+  'rumor.sin_novedad': 'Tu Facción ya conoce todo lo que cuenta ese rumor en esta región: no se ha cobrado nada.',
+  'intel.sin_oro': 'No hay oro para pagarlo.',
   'heroe.no_esta_en_la_plaza': 'Tienes que estar dentro de la plaza.',
   'tecnologia.adopcion_invalida': 'No se puede adoptar esa tecnología ahora.',
   'aedas.venta_invalida': 'No se puede vender eso al aeda.',

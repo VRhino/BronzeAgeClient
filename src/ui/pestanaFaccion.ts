@@ -2,6 +2,7 @@ import { bloqueDeDatos, type ProyeccionJugador, type ReglasPrestigio } from '../
 import type { Asentamiento, Faccion, Sigilo } from '../tiposDominio';
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import { grupo, htmlEstadoPie, htmlPoblacionPie, pieza } from './hudPlaza';
+import { textoPausados } from './consumoPausado';
 import { iconoEdificio } from './iconosEdificio';
 import { iconoTropa } from './iconosTropa';
 import { ahora, barraAvance, cuentaAtras, miles } from './juegoVisual';
@@ -222,11 +223,13 @@ function htmlInteriorPlaza(p: ProyeccionJugador, a: Asentamiento, abierta: boole
   const hombres = (a.guarnicion ?? []).reduce((t, g) => t + g.cantidad, 0);
   const guarnicionPieza = escuadras ? pieza('🛡', hombres ? miles(hombres) : String(escuadras), 0, 'Guarnición', [`${escuadras} escuadra(s)${hombres ? `, ${miles(hombres)} hombres` : ''}`], '', e) : '';
   // El almacén entero, no la elección de la barra de arriba de la plaza (Víctor, 2026-11-04: «solo muestra 5 espacios»): todo lo que tiene.
+  const pausados = new Set(a.consumoPausado ?? []);
   const almacenPiezas = recursos.map(([r, x]) => {
     const llenado = x.capacidad > 0 ? (x.cantidad / x.capacidad) * 100 : 0;
     const neto = x.porMinuto ?? 0;
     return pieza(RECURSO_ICONO[r] ?? '📦', miles(x.cantidad), llenado, RECURSO_NOMBRE[r] ?? r,
-      [`${miles(x.cantidad)}${x.capacidad > 0 ? ` de ${miles(x.capacidad)}` : ''}`, `${neto > 0 ? '+' : ''}${neto.toFixed(1)} por minuto`], llenado >= 90 ? 'lleno' : '', e);
+      [`${miles(x.cantidad)}${x.capacidad > 0 ? ` de ${miles(x.capacidad)}` : ''}`, `${neto > 0 ? '+' : ''}${neto.toFixed(1)} por minuto`, ...(pausados.has(r) ? ['Consumo pausado: la población no lo come'] : [])],
+      [llenado >= 90 ? 'lleno' : '', pausados.has(r) ? 'pausado' : ''].filter(Boolean).join(' '), e);
   }).join('');
   const chips = `<div class="fplaza-pie">${htmlPoblacionPie(a, e)}${almacenPiezas ? grupo('almacen', 'Almacén', almacenPiezas) : ''}${htmlEstadoPie(a, e)}${obrasPiezas ? grupo('obras', 'Obras', obrasPiezas) : ''}${guarnicionPieza ? grupo('guarnicion', 'Guarnición', guarnicionPieza) : ''}</div>`;
   if (!abierta) return { chips, detalle: '' };
@@ -264,7 +267,8 @@ function htmlInteriorPlaza(p: ProyeccionJugador, a: Asentamiento, abierta: boole
   const cupo = a.cupoGuarnicion !== undefined ? `<small>cupo ${a.cupoGuarnicion} pts por héroe</small>` : '';
   const detalle = `<div class="fplaza-detalle">
       <div class="fplaza-bloque fplaza-almacen"><div class="obra-titulo"><span class="faction-kicker">Almacén</span><small>por minuto · ▲ entra, ▼ sale</small></div>${almacen}
-        ${a.autoConstruccionPausada ? '<p class="legend-note">La auto-construcción está apagada: no se levantan edificios nuevos solos.</p>' : ''}</div>
+        ${a.autoConstruccionPausada ? '<p class="legend-note">La auto-construcción está apagada: no se levantan edificios nuevos solos.</p>' : ''}
+        ${pausados.size ? `<p class="legend-note">Consumo pausado: ${e(textoPausados(a))}. La población no lo come y el trigo pone lo que cubría.</p>` : ''}</div>
       <div class="fplaza-columna">
         ${poblacion ? `<div class="fplaza-bloque"><div class="obra-titulo"><span class="faction-kicker">Población</span></div>${poblacion}</div>` : ''}
         <div class="fplaza-bloque"><div class="obra-titulo"><span class="faction-kicker">Obras y mejoras</span></div>${obrasHtml}</div>

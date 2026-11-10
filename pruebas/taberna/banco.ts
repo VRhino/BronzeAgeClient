@@ -1,6 +1,7 @@
 // Banco de la taberna regional (tanda 69, `/pruebas/taberna/`): una partida de mentira, sin servidor, para mirar y fotografiar el informe de la
 // región en la taberna (`?ver=intel`), el tablón de los campamentos de la región (`?ver=mercenarios`) y las órdenes de la región en el Mercado
-// (`?ver=mercado`). `&monedas=N` da monedas al héroe; `&sinCargo=1` le quita el Gobierno de la plaza. Las órdenes se anotan en `window.__banco.enviadas`.
+// (`?ver=mercado`). `&monedas=N` da monedas al héroe; `&sinCargo=1` le quita el Gobierno de la plaza; `&sabido=1` deja todo explorado (el rumor de
+// las vetas de estaño, 0.199.0, ya no trae nada). Las órdenes se anotan en `window.__banco.enviadas`.
 import datos from '../plaza/datos.json';
 const fetchReal = window.fetch.bind(window);
 window.fetch = ((url: RequestInfo | URL, init?: RequestInit) =>
@@ -24,7 +25,10 @@ const e = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 // Un mundo de 400 × 300 con dos regiones del relieve: la mitad oeste (3) y la este (5).
 const columnas = 40, filas = 30;
 const region = new Uint8Array(columnas * filas).map((_, i) => (i % columnas < 24 ? 3 : 5));
-estadoCliente.mapaCache = { id: 'banco', mapa: { rasters: { region: { columnas, filas, celda: 10, datos: region } }, regiones: [{ id: 3, nombre: 'Llanura de Argos' }, { id: 5, nombre: 'Altiplano interior' }], nodos: [], parcelas: [] } as unknown as MapaGenerado };
+estadoCliente.mapaCache = { id: 'banco', mapa: { rasters: { region: { columnas, filas, celda: 10, datos: region } }, regiones: [{ id: 3, nombre: 'Llanura de Argos' }, { id: 5, nombre: 'Altiplano interior' }],
+  // estaño en las dos regiones (el rumor de la taberna, 0.199.0)
+  nodos: [{ id: 'n1', tipo: 'estano', rareza: 'rara', posicion: { x: 60, y: 80 }, cantidadInicial: 1 }, { id: 'n2', tipo: 'estano', rareza: 'rara', posicion: { x: 200, y: 260 }, cantidadInicial: 1 }, { id: 'n3', tipo: 'estano', rareza: 'rara', posicion: { x: 330, y: 90 }, cantidadInicial: 1 }],
+  parcelas: [] } as unknown as MapaGenerado };
 
 // Un sigilo fijo por Facción (el `n`-ésimo de cada lista del catálogo), para que las capturas salgan siempre igual.
 const sigilo = (n: number): Sigilo => {
@@ -97,6 +101,8 @@ const p = {
   pueblos: [], avanzadas: [], convocatorias: [], campamentosBandidos: [], ejercitos: [], ejercitosAvistados: [], caravanasAvistadas: [],
   relaciones: [{ id: 'rel-1', tipo: 'guerra', estado: 'activa', faccionAId: 'fac-1', faccionBId: 'fac-4' }],
   miradasIntel: [], informesPlaza: [], nombresDeCompaneros: {},
+  // nada explorado; `&sabido=1`, todo (el rumor de las vetas ya no trae nada)
+  exploracion: { tamanoCelda: 10, columnas, filas, celdas: qs.get('sabido') ? 'ff'.repeat(Math.ceil((columnas * filas) / 8)) : '', visibles: '' },
   tarifasIntel: tarifasDeIntel(),
 } as unknown as ProyeccionJugador;
 estadoCliente.proyeccionUltima = p;

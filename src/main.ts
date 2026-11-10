@@ -74,6 +74,7 @@ import { ayuda } from './ui/ayuda';
 import { htmlInformeDeInspeccion } from './ui/interaccionAjena';
 import { cablearPanelObras, construidoAlClicar, cuantosConstruidos, elegirGrupoDe, htmlConstruidosVentana, htmlConstruir, minutosDeObra } from './ui/panelObras';
 import { cablearTesoreria, htmlReservaRecursos } from './ui/panelTesoreria';
+import { cablearPausarConsumo, htmlPausarConsumo } from './ui/consumoPausado';
 import { montarPanelRendimiento } from './ui/panelRendimiento';
 import { cablearProduccionYRecetas, cablearVistaCiudad, confirmarCancelarObra, edificioSeleccionado, elegirEdificio, htmlExtraccion, htmlRecetas, htmlTooltipEdificio, repintarFicha } from './ui/vistaCiudad';
 import { campamentoEnVista } from './ciudad3d/campamento';
@@ -2762,11 +2763,12 @@ function contenidoDeVentana(v: VentanaPlaza, c: ContextoPlaza, ajena: boolean): 
       }
       return {
         titulo: 'Almacén', icono: iconoEdificio('almacen', 28), subs: subsAlmacen, sub: 'almacen', ancho: 'completa',
-        html: `<div class="cols-completa"><div class="col-completa">${htmlEleccionBarra(a, escaparHtml)}${htmlExtraccion(c)}<div class="almacen-reserva">${htmlReservaRecursos(c)}</div></div><div class="col-completa">${htmlRecetas(c)}</div></div>`,
+        html: `<div class="cols-completa"><div class="col-completa">${htmlEleccionBarra(a, escaparHtml)}${htmlExtraccion(c)}<div class="almacen-reserva">${htmlReservaRecursos(c)}</div>${htmlPausarConsumo(p, a, escaparHtml)}</div><div class="col-completa">${htmlRecetas(c)}</div></div>`,
         cablear: () => {
           cablearEleccionBarra(cuerpo, a, () => { renderPieDePlaza(); renderPanelEdificios(); }, (m) => mostrarAviso(m, true));
           cablearProduccionYRecetas(c);
           cablearTesoreria(c);
+          cablearPausarConsumo(cuerpo, a, ejecutarYRefrescar);
         },
       };
     case 'reclutamiento':
