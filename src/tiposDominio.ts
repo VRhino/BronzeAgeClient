@@ -242,6 +242,10 @@ export interface Asentamiento {
    * época Unix) en que termina. Mientras `instante < ocupacionHasta`: inmune a nuevo asedio, recauda oro
    * reducido, crece más lento, el mantenimiento no degrada. Ausente = no ocupado (caso normal). */
   ocupacionHasta?: number;
+  /** Hasta cuándo es inatacable (`protegida_hasta_ms`: un día tras su fundación o su conquista); ausente si nunca lo fue. */
+  protegidaHasta?: number;
+  /** Cuándo se fundó (`fundado_en_ms`). */
+  fundadoEn?: number;
   poblacion?: { pesants: number; artesanos: number; nobleza: number };
   /** Nutrición de la población 0-100 (hambruna). Ausente = 100. */
   nutricionPoblacion?: number;
@@ -554,6 +558,10 @@ export interface AsentamientoAvistado {
   tieneMuralla?: boolean;
   /** Solo de una plaza PROPIA con una columna tuya a su puerta (`radioPuerta`): su almacén. Ausente en el resto. */
   almacen?: Record<string, { cantidad: number; capacidad: number }>;
+  /** Hasta cuándo es inatacable (`protegida_hasta_ms`): llega en las de tu Facción; en una ajena, no (se deduce de `fundadoEn`). */
+  protegidaHasta?: number;
+  /** Cuándo se fundó (`fundado_en_ms`): toda plaza nace protegida `OCUPACION.proteccionMinutos`. */
+  fundadoEn?: number;
 }
 
 /** Lo que dio `inspeccionar` (backend 2026-10-09): composición de una columna, carga de una caravana o defensa de una plaza. */

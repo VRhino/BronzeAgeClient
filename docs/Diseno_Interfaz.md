@@ -164,6 +164,16 @@ remata cabeceras y paneles con la moldura clásica. `opacity: .5` para que sea s
     cierra la ventana. El minimapa es la planta en SVG (`.camp-lienzo`, `.pueblo-mini`); sin planta del motor o sin WebGL, la
     planta del campamento o el anillo de huecos del pueblo (`.pueblo-lienzo`) vuelven en grande al centro (`.sin-3d`).
 - **Login / Facción**: tarjeta central (`.login-card`) sobre el fondo, como un menú de campaña.
+- **Panel lateral de la Facción** (`htmlLateralFaccion`, `ui/pestanaFaccion.ts`, 0.202.0, Víctor 2026-11-10): el blasón con el nivel
+  como escudo en su esquina inferior derecha (`.faccion-escudo-con-nivel`, `.faccion-nivel`); bajo la experiencia, una franja con
+  miembros 👥, prestigio 🏆 y reputación ⚖️, icono y cifra (`.faccion-franja`); lo que da el prestigio, sin cuadros; el Rey 👑 y el
+  Embajador 📜 en una línea (`.faccion-cargos-fila`, el vacante apagado), y la Liga, que enseña solo a los aliados y vasallos (la guerra
+  no une, aunque el motor la cuente en la suya).
+- **Informe de combate** (`ui/informeCombate.ts`): la misma ventana para bandidos y, desde 0.202.0, para los combates entre jugadores
+  (columna contra columna, asedios, pueblos, avanzadas y caravanas), con victoria o derrota, contra quién, los poderes, las bajas y lo
+  que ganas o pierdes del carro. Del motor no llegan bajas por escuadra, así que esas tablas no salen.
+- **Ficha de una plaza en el mapa** (`.mapa-seldatos`): si está protegida, la fila «🛡 Protegida · le queda 18 h» (`.ficha-proteccion`,
+  `ui/proteccionPlaza.ts`, 0.202.0) y el Atacar apagado con su motivo.
 - **Ventana Ejército del mundo** (⚑ del riel del mapa, `.mapa-panel.mapa-panel-ventana`, 0.132.0, Víctor 2026-11-04): centrada como
   la de Misiones. A la izquierda, los integrantes (el Líder primero) con su tropa: lo tuyo con el nombre de cada escuadra, lo de los
   demás lo que deja ver el servidor (`heroesVisibles[].escuadrasQueLleva`). A la derecha, lo que toca hacer según tu papel (organizar,

@@ -167,7 +167,7 @@ describe('el prestigio en la ventana de la Facción', () => {
   test('enseña el prestigio, las alianzas que caben y lo próximo que abre', () => {
     const html = conPrestigio(340, 4, 1);
     expect(html).toContain('Prestigio');
-    expect(html).toContain('<strong>340</strong>');
+    expect(html).toContain('aria-label="Prestigio: 340"');
     expect(html).toContain('Alianzas <b>1 de 4</b>');
     expect(html).toContain('Estatuas <b>1</b>');
     expect(html).toContain('A 400: una alianza más');

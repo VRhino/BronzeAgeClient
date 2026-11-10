@@ -194,6 +194,7 @@ function asentamiento(a: pb.Asentamiento, ahora: number): d.Asentamiento {
     zonaReal: a.zona.length ? a.zona.map(punto) : undefined,
     medidorMantenimiento: a.medidorMantenimiento ? valorDeRitmo(a.medidorMantenimiento, ahora) : undefined,
     ocupacionHasta: instante(a.ocupacionHastaMs),
+    protegidaHasta: instante(a.protegidaHastaMs), fundadoEn: instante(a.fundadoEnMs),
     poblacion: a.poblacion
       ? { pesants: valorDeRitmo(a.poblacion.pesants, ahora), artesanos: valorDeRitmo(a.poblacion.artesanos, ahora), nobleza: valorDeRitmo(a.poblacion.nobleza, ahora) }
       : undefined,
@@ -692,6 +693,8 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
       id: p.id, nombre: p.nombre, faccionId: p.faccionId, posicion: punto(p.posicion), nivel: p.nivel, zona: p.zona.map(punto),
       edificios: p.edificios.length ? p.edificios.map(edificio) : undefined,
       mercadoActivo: p.mercadoActivo, tieneMuralla: p.tieneMuralla,
+      // la protección: su fin si llega (las de tu Facción) y la fundación, de la que sale la del primer día de una ajena
+      protegidaHasta: instante(p.protegidaHastaMs), fundadoEn: instante(p.fundadoEnMs),
       almacen: Object.keys(p.almacen).length ? Object.fromEntries(Object.entries(p.almacen).map(([k, x]) => [k, { cantidad: valorDeRitmo(x.cantidad, ahora), capacidad: mil(x.capacidad) }])) : undefined,
     })),
     asentamientosConocidos: fichas.map((f) => ({

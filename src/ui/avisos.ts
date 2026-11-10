@@ -402,7 +402,7 @@ export function procesar(e: EventoDominio, heroeId: string, modo: Modo): void {
     anotar({ ...base, texto: relacion.texto, clase: relacion.pideDecision ? 'peligro' : 'baja', titulo: 'Diplomacia', categoria: 'diplomacia', urgente: true }, modo, relacion.pideDecision);
     return;
   }
-  const informe = informeDeEvento(e, heroeId);
+  const informe = informeDeEvento(e, heroeId, estadoCliente.proyeccionUltima);
   if (!informe) return;
   anotar({ ...base, texto: informe.resumen, clase: informe.teAtacaron ? 'peligro' : 'combate', categoria: 'combate', urgente: true, informe }, modo, informe.teAtacaron);
   if (!silencioso) alInforme?.(informe);

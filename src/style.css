@@ -6232,3 +6232,28 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
 /* Rumores de la taberna (0.199.0): la fila de las vetas de estaño, con el «ya lo sabe» en lugar del botón. */
 .intel-rumor-sabido { font-size: 0.78rem; color: var(--text-secondary); white-space: nowrap; }
 .intel-rumores { grid-column: 1 / -1; }
+
+/* La protección de una plaza en su ficha del mapa (Víctor, 2026-11-10; ui/proteccionPlaza.ts): la fila en verde agua, como un escudo. */
+.mapa-seleccion-datos .ficha-proteccion span,
+.mapa-seleccion-datos .ficha-proteccion strong { color: #8fd3c1; }
+
+/* El panel lateral de la Facción sin los cinco cuadros (Víctor, 2026-11-10; ui/pestanaFaccion.ts): el nivel como escudo en la esquina inferior
+   derecha del blasón, miembros, prestigio y reputación en una franja, y el Rey y el Embajador en una línea. */
+.faccion-escudo-con-nivel { position: relative; display: inline-block; line-height: 0; }
+.faccion-lateral-escudo .faccion-escudo-con-nivel { width: min(168px, 70%); }
+.faccion-lateral-escudo .faccion-escudo-con-nivel .sigilo { width: 100%; }
+.faccion-escudo-con-nivel .faccion-nivel { position: absolute; right: -10px; bottom: -6px; width: 46px; height: 53px; line-height: normal; }
+.faccion-escudo-con-nivel .faccion-nivel b { font-size: 1.35rem; }
+.faction-detail-header .faccion-escudo-con-nivel .faccion-nivel { right: -14px; bottom: -8px; width: 32px; height: 37px; }
+.faction-detail-header .faccion-escudo-con-nivel .faccion-nivel b { font-size: 0.95rem; }
+.faccion-franja { width: 100%; display: flex; justify-content: space-around; align-items: center; gap: 8px; margin-top: 8px; padding: 8px 6px; border-top: 1px solid rgba(169, 121, 63, 0.3); border-bottom: 1px solid rgba(169, 121, 63, 0.3); }
+.faccion-franja-dato { display: inline-flex; align-items: center; gap: 6px; }
+.faccion-franja-dato i { font-style: normal; font-size: 1.1rem; }
+.faccion-franja-dato b { font-family: var(--fuente-titulo); font-size: 1.2rem; color: var(--oro-claro); }
+.faccion-lateral .faccion-prestigio { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.faccion-lateral .faccion-prestigio small { color: var(--text-secondary); font-size: 0.78rem; }
+.faccion-cargos-fila { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+.faccion-cargo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.faccion-cargo small { color: var(--text-secondary); font-size: 0.78rem; }
+.faccion-cargo b { color: var(--text-primary); overflow-wrap: anywhere; }
+.faccion-cargo.vacante b { color: var(--text-secondary); font-weight: 500; font-style: italic; }

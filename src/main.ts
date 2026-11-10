@@ -125,6 +125,7 @@ import { explicarError } from './ui/erroresServidor';
 import { motivosParaCrearFaccion } from './ui/validarFaccion';
 import { nombreDeHeroe } from './ui/nombres';
 import { htmlEstados } from './ui/estados';
+import { htmlFilaProteccion, motivoProtegida } from './ui/proteccionPlaza';
 import { cablearInteriorPueblo, cultivosDesbloqueados, htmlCuerpoPueblo, htmlTrazadoPueblo, nombreDePueblo, pestanasDePueblo, puebloActual, reglasDeAldea, selectorDePunto, type PestanaPueblo } from './ui/pueblos';
 import { pintarSitiosDeAldea, type Cultivo, type SitiosDeAldea } from './mundo/fertilidad';
 import { htmlMiembrosFaccion, htmlResidentesPlaza } from './ui/participacion';
@@ -1013,13 +1014,16 @@ interface AsentamientoEnMapa {
   /** Lo único que se sabe de dentro desde fuera (Víctor, 2026-11-07; motor 0e283fb): si tiene muralla y un Mercado activo. Solo en las avistadas. */
   tieneMuralla?: boolean;
   mercadoActivo?: boolean;
+  /** Su protección (Víctor, 2026-11-10): el fin si llega y su fundación (`ui/proteccionPlaza.ts`). Solo en las avistadas. */
+  protegidaHasta?: number;
+  fundadoEn?: number;
 }
 
 /** Los asentamientos que hay en la proyección con posición en el mapa: los avistados (en vivo) y los
  * recordados (última foto). Los propios llegan por una de esas dos listas cuando no se está dentro. */
 function asentamientosDelMapa(proyeccion: ProyeccionJugador): AsentamientoEnMapa[] {
   return [
-    ...proyeccion.asentamientosAvistados.map((a) => ({ id: a.id, nombre: a.nombre, faccionId: a.faccionId, nivel: a.nivel, posicion: a.posicion, recordado: null, tieneMuralla: a.tieneMuralla, mercadoActivo: a.mercadoActivo })),
+    ...proyeccion.asentamientosAvistados.map((a) => ({ id: a.id, nombre: a.nombre, faccionId: a.faccionId, nivel: a.nivel, posicion: a.posicion, recordado: null, tieneMuralla: a.tieneMuralla, mercadoActivo: a.mercadoActivo, protegidaHasta: a.protegidaHasta, fundadoEn: a.fundadoEn })),
     ...proyeccion.asentamientosConocidos.map((a) => ({ id: a.asentamientoId, nombre: a.nombre, faccionId: a.faccionId, nivel: a.nivel, posicion: a.posicion, recordado: a.conocidoEn })),
   ];
 }
@@ -1214,6 +1218,9 @@ function renderSeleccionMapaCuerpo(): void {
   const soyLider = miCol?.liderId === proyeccion.heroeId;
   // Solo un ejército abre un asedio (backend Doc 5.15.1b): una columna personal puede unirse a uno abierto desde su batalla en el mapa.
   if (ataque && !ataque.impide && miColumna(proyeccion)?.tipo === 'personal') ataque.impide = 'Solo un ejército abre un asedio: tu columna personal puede unirse a uno ya abierto.';
+  // protegida (un día tras su fundación o su conquista): el motor rechaza el asedio (`combate.plaza_protegida`)
+  const protegida = asentamiento.recordado === null ? motivoProtegida(asentamiento, proyeccion.instante, renderSeleccionMapa) : '';
+  if (ataque && protegida) ataque.impide = protegida;
   cont.hidden = false;
   // Lo largo (cómo entra un ejército, qué es atacar) va tras ⓘ; el motivo de una línea de un botón apagado se queda a la vista.
   const motivoEntrada = !entraEjercito ? '' : !propio ? 'Un ejército solo entra entero en una plaza de su Facción.' : soyLider ? '' : 'Solo el Líder hace entrar al ejército.';
@@ -1236,6 +1243,7 @@ function renderSeleccionMapaCuerpo(): void {
       <div><span>Nivel</span><strong>${asentamiento.nivel}</strong></div>
       ${asentamiento.tieneMuralla !== undefined ? `<div><span>Muralla</span><strong>${asentamiento.tieneMuralla ? 'Sí' : 'No'}</strong></div>` : ''}
       ${asentamiento.mercadoActivo !== undefined ? `<div><span>Mercado</span><strong>${asentamiento.mercadoActivo ? 'Sí' : 'No'}</strong></div>` : ''}
+      ${asentamiento.recordado === null ? htmlFilaProteccion(asentamiento, proyeccion.instante, escaparHtml, renderSeleccionMapa) : ''}
       ${asentamiento.recordado !== null ? `<div><span>Visto</span><strong>${escaparHtml(fechaDeMundo(asentamiento.recordado))}</strong></div>` : ''}
       ${ataque?.distancia != null ? `<div><span>Distancia</span><strong>${ataque.distancia}</strong></div>` : ''}
       ${((t) => t ? `<div><span>Tiempo hasta allí</span><strong>${escaparHtml(t)}</strong></div>` : '')(textoTiempoHasta(proyeccion, asentamiento.posicion))}

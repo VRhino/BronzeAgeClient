@@ -3,6 +3,26 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.202.0] — 2026-11-10 · Protección en la ficha, informe de combate entre jugadores, Liga solo con aliados y panel de Facción sin cuadros
+
+Lo que pidió Víctor el 2026-11-10 con dos capturas (la ficha de Siquem y el panel lateral de la Facción). Sin cambio de contrato.
+
+- **La protección de una plaza en su ficha del mapa** (`ui/proteccionPlaza.ts`): «🛡 Protegida · le queda 18 h» mientras dure, y el Atacar
+  apagado con «Está protegida: se podrá atacar dentro de…». Manda `protegida_hasta_ms` si llega (la plaza donde estás y las de tu Facción); de
+  una ajena solo llega `fundado_en_ms`, así que se cuenta el día de la fundación (`OCUPACION.proteccionMinutos`, 1440). La que da una conquista
+  a una plaza ajena no se ve hasta que el motor mande su fin en esa ficha.
+- **El informe de un combate entre jugadores** (`ui/informeCombate.ts`): la ventana que sale contra bandidos sale ahora también columna contra
+  columna (para los dos lados), en asedios, pueblos saqueados, avanzadas y caravanas (para los atacantes) y, en un asedio resistido, para los
+  residentes de la plaza. Lo que manda el motor llega plano y en milésimas: se traduce, y el `combate.encuentro` que sigue al `combate.resuelto`
+  se le suma (`apiCliente.guardarEvento`) para saber contra quién fue. Sin bajas por escuadra, las tablas de escuadras no salen; en su lugar, lo
+  que entra o sale del carro y los héroes heridos.
+- **La Liga, solo con los aliados** (`sigilo/imperio.ts`, `ligaDe`): las alianzas y los vasallajes activos; la guerra ya no une. El motor
+  (`politica::liga`) la sigue contando en la suya, la que llega en la ficha de otras Facciones.
+- **El panel lateral de la Facción** (`ui/pestanaFaccion.ts`): fuera los cinco cuadros; el nivel como escudo en la esquina inferior derecha del
+  blasón; miembros, prestigio y reputación en una franja con icono y cifra; el Rey y el Embajador en la misma línea.
+- Banco: `/pruebas/fichaPlaza/?horas=18` (la ficha) y `?informe=gana|pierde|asedio` (la ventana). Pruebas en `pruebas/proteccionPlaza.test.ts`,
+  `pruebas/combateJugadores.test.ts` y `pruebas/ladoFaccion.test.ts`.
+
 ## [0.201.0] — 2026-11-10 · La Cantera y las minas suben de nivel · contrato 0.22.0 (motor `c1ad93d`)
 
 El aviso del motor del 2026-11-10 (PR #15): los nodos de estaño traen 300-600 y la Cantera y las minas de pueblo suben del nivel 1 al 3 con la

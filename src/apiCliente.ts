@@ -323,6 +323,13 @@ function guardarEvento(e: EventoDominio): void {
   if (eventosVistos.has(k)) return;
   if (eventosVistos.size > 2000) eventosVistos.clear();
   eventosVistos.add(k);
+  // `combate.encuentro` llega justo tras su `combate.resuelto` (la misma versión) y dice las dos columnas y sus Facciones: se suman al resuelto,
+  // que solo nombra la atacante (`ejercitoId`), para que su informe sepa contra quién fue.
+  if (e.codigo === 'combate.encuentro') {
+    const q = (e.payload ?? {}) as Record<string, unknown>;
+    const r = eventosPorAvisar.find((x) => x.codigo === 'combate.resuelto' && x.version === e.version && (x.payload as Record<string, unknown> | undefined)?.ejercitoId === q.ejercitoAId);
+    if (r) r.payload = { ...(r.payload as object), ejercitoBId: q.ejercitoBId, faccionAId: q.faccionAId, faccionBId: q.faccionBId };
+  }
   eventosPorAvisar.push(e);
 }
 

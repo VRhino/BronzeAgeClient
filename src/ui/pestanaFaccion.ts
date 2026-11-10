@@ -5,7 +5,7 @@ import { grupo, htmlEstadoPie, htmlPoblacionPie, pieza } from './hudPlaza';
 import { textoPausados } from './consumoPausado';
 import { iconoEdificio } from './iconosEdificio';
 import { iconoTropa } from './iconosTropa';
-import { ahora, barraAvance, cuentaAtras, miles } from './juegoVisual';
+import { ahora, barraAvance, cuentaAtras, medallonNivel, miles } from './juegoVisual';
 import { avanceDeObra } from './panelObras';
 import { nombreDeTropa } from './ejercitos';
 import { fichaRecurso, recursosDelAlmacen } from './vistaCiudad';
@@ -93,20 +93,15 @@ function htmlCuposFaccion(p: ProyeccionJugador, faccion: Faccion, e: (valor: str
     </div>`;
 }
 
-/** Lo de tu Facción que se ve siempre: nivel, reputación y ciudadanos, Rey y Embajador, si piden entrar y la Liga. */
+/** Lo de tu Facción que se ve siempre (Víctor, 2026-11-10, sin los cinco cuadros): el Rey y el Embajador en una línea, si piden entrar y la Liga.
+ * El nivel va en el escudo y los miembros, el prestigio y la reputación, en la franja. */
 function htmlResumenFaccion(p: ProyeccionJugador, faccion: Faccion, e: (valor: string) => string): string {
   const liga = ligaDe(faccion.id, p.relaciones ?? []);
   const nombreDe = (id: string) => p.facciones.find((f) => f.id === id)?.nombre ?? id;
   const piden = faccion.reyId === p.heroeId && (faccion.solicitudesIds ?? []).length > 0;
-  return `<div class="faction-stats">
-        <div><span>Nivel</span><strong>${faccion.nivel}</strong></div>
-        <div><span>Reputación</span><strong>${faccion.reputacion ?? 0}</strong></div>
-        <div><span>Ciudadanos</span><strong>${faccion.ciudadanosIds?.length ?? 0}</strong></div>
-      </div>
-      <div class="faction-roles">
-        <div><span>Rey</span><strong>${e(faccion.reyId ? nombreDeHeroe(p, faccion.reyId) : 'Sin designar')}</strong></div>
-        <div><span>Embajador</span><strong>${e(faccion.embajadorId ? nombreDeHeroe(p, faccion.embajadorId) : 'Sin designar')}</strong></div>
-      </div>
+  const cargo = (icono: string, nombre: string, id?: string | null): string =>
+    `<span class="faccion-cargo${id ? '' : ' vacante'}"><small><i aria-hidden="true">${icono}</i> ${nombre}</small><b>${e(id ? nombreDeHeroe(p, id) : 'Sin designar')}</b></span>`;
+  return `<div class="faccion-cargos-fila">${cargo('👑', 'Rey', faccion.reyId)}${cargo('📜', 'Embajador', faccion.embajadorId)}</div>
       ${piden ? '<p class="asent-lado-nota">Hay héroes que piden entrar: contéstales en Miembros.</p>' : ''}
       <div class="faction-list">
         <span class="faction-kicker">Liga</span>
@@ -136,9 +131,10 @@ function htmlExperienciaFaccion(faccion: Faccion): string {
 }
 
 /** El prestigio de tu Facción (tanda 69, Diplomacia_Facciones §3.5b): solo sube, y lo que abre son umbrales: las alianzas a la vez (activas de
- * `topeAlianzas`), las estatuas de la capital y la Maravilla. Debajo, lo próximo que abre y a cuánto. */
-function htmlPrestigioFaccion(p: ProyeccionJugador, faccion: Faccion, e: (valor: string) => string): string {
-  if (faccion.prestigio === undefined) return '';
+ * `topeAlianzas`), las estatuas de la capital y la Maravilla. Su cifra va en la franja (`htmlFranjaFaccion`); aquí, lo que ya da y lo próximo que
+ * abre y a cuánto. `ayudaPrestigio` es su explicación. */
+function prestigioDe(p: ProyeccionJugador, faccion: Faccion): { usos: string; siguiente: string; texto: string } | null {
+  if (faccion.prestigio === undefined) return null;
   const r = bloqueDeDatos<ReglasPrestigio>('PRESTIGIO');
   const n = (v: number) => Math.floor(v).toLocaleString('es-ES');
   const prestigio = faccion.prestigio;
@@ -163,10 +159,26 @@ function htmlPrestigioFaccion(p: ProyeccionJugador, faccion: Faccion, e: (valor:
     r.ascensoPorNivel ? `las subidas de nivel de las plazas (${r.ascensoPorNivel} × el nivel nuevo)` : '', r.comercio ? `el comercio con otras Facciones (${r.comercio})` : '',
   ].filter(Boolean) : [];
   const texto = `${hechos.length ? `Sube con ${hechos.slice(0, -1).join(', ')} y ${hechos[hechos.length - 1]}. ` : ''}No se gasta ni se pierde. Da una alianza a la vez más cada ${cada ?? 100} de prestigio${estatuas.length ? `, las estatuas de la capital (a ${estatuas.map(n).join(', ')})` : ''}${r?.maravilla !== undefined ? ` y la Maravilla (a ${n(r.maravilla)})` : ''}.`;
-  return `<div class="faccion-xp faccion-prestigio">
-    <div class="faccion-xp-cab"><span>Prestigio${ayuda('faccion:prestigio', e(texto))}</span><strong>${n(prestigio)}</strong></div>
-    ${usos ? `<div class="faccion-prestigio-usos">${usos}</div>` : ''}
-    ${siguiente}
+  return { usos, siguiente, texto };
+}
+
+/** Lo que ya da el prestigio (alianzas, estatuas, Maravilla) y lo próximo que abre, bajo la franja. */
+function htmlPrestigioFaccion(p: ProyeccionJugador, faccion: Faccion): string {
+  const x = prestigioDe(p, faccion);
+  if (!x || (!x.usos && !x.siguiente)) return '';
+  return `<div class="faccion-prestigio">${x.usos ? `<div class="faccion-prestigio-usos">${x.usos}</div>` : ''}${x.siguiente}</div>`;
+}
+
+/** La franja de tu Facción (Víctor, 2026-11-10): miembros, prestigio y reputación, cada uno con su icono y su cifra, en una sola fila. */
+function htmlFranjaFaccion(p: ProyeccionJugador, faccion: Faccion, e: (valor: string) => string): string {
+  const x = prestigioDe(p, faccion);
+  const n = (v: number) => Math.floor(v).toLocaleString('es-ES');
+  const dato = (icono: string, nombre: string, valor: string, extra = ''): string =>
+    `<span class="faccion-franja-dato" title="${nombre}" aria-label="${nombre}: ${valor}"><i aria-hidden="true">${icono}</i><b>${valor}</b>${extra}</span>`;
+  return `<div class="faccion-franja">
+    ${dato('👥', 'Miembros', n(faccion.ciudadanosIds?.length ?? 0))}
+    ${faccion.prestigio !== undefined ? dato('🏆', 'Prestigio', n(faccion.prestigio), x ? ayuda('faccion:prestigio', e(x.texto)) : '') : ''}
+    ${dato('⚖️', 'Reputación', n(faccion.reputacion ?? 0))}
   </div>`;
 }
 
@@ -176,11 +188,12 @@ export function htmlLateralFaccion(proyeccion: ProyeccionJugador, e: (valor: str
   if (!faccion) return '';
   const esGranRey = ligaDe(faccion.id, proyeccion.relaciones ?? [])?.granReyId === faccion.id;
   return `<aside class="faccion-lateral">
-    <div class="faccion-lateral-escudo">${svgSigilo(faccion.sigilo, 168, { granRey: esGranRey })}</div>
+    <div class="faccion-lateral-escudo"><span class="faccion-escudo-con-nivel">${svgSigilo(faccion.sigilo, 168, { granRey: esGranRey })}${medallonNivel(faccion.nivel, 'faccion-nivel', `Facción de nivel ${faccion.nivel}`)}</span></div>
     <h2 class="faccion-lateral-nombre">${e(faccion.nombre)}</h2>
     <span class="faction-kicker">Tu facción${esGranRey ? ' · Gran Rey' : ''}</span>
     ${htmlExperienciaFaccion(faccion)}
-    ${htmlPrestigioFaccion(proyeccion, faccion, e)}
+    ${htmlFranjaFaccion(proyeccion, faccion, e)}
+    ${htmlPrestigioFaccion(proyeccion, faccion)}
     <div class="faccion-lateral-resumen">${htmlResumenFaccion(proyeccion, faccion, e)}</div>
     <div class="faccion-lateral-pie">
       ${htmlCuposFaccion(proyeccion, faccion, e)}
@@ -557,12 +570,12 @@ export function renderPestanaFaccion(
     // Con el panel de la izquierda (`htmlLateralFaccion`), el escudo y el nombre van allí; en los paneles sueltos, arriba.
     const cabecera = conLateral ? '' : `<div class="faction-detail-header">
         <span class="faction-kicker">Tu facción${esGranRey ? ' · Gran Rey' : ''}</span>
-        ${svgSigilo(faccion.sigilo, 64, { granRey: esGranRey })}
+        <span class="faccion-escudo-con-nivel">${svgSigilo(faccion.sigilo, 64, { granRey: esGranRey })}${medallonNivel(faccion.nivel, 'faccion-nivel', `Facción de nivel ${faccion.nivel}`)}</span>
         <h2>${escaparHtml(faccion.nombre)}</h2>
         <span class="faction-id">${escaparHtml(faccion.id)}</span>
       </div>`;
     return `${cabecera}
-      ${conLateral ? '' : htmlPrestigioFaccion(proyeccion, faccion, escaparHtml)}
+      ${conLateral ? '' : `${htmlFranjaFaccion(proyeccion, faccion, escaparHtml)}${htmlPrestigioFaccion(proyeccion, faccion)}`}
       ${htmlResumenFaccion(proyeccion, faccion, escaparHtml)}
       <div class="faction-list">
         <span class="faction-kicker">Títulos del servidor</span>
