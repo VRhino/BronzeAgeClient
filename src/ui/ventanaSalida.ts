@@ -3,7 +3,8 @@
 // con un «+» para añadir escuadras.
 //   residencia   tu plaza: `salirAlMundo`, tropa de tu campamento (sin la de guarnición) y carga del almacén de la plaza
 //   campamento   el de mercenarios: `salirDelCampamento`; si resides, tropa y carga de tu almacén personal; si no, sales con tu columna
-//   plazaAjena   `salirDeAsentamiento`: retomas la columna aparcada; si la plaza es de tu Facción, a la derecha el carro de tu columna y el almacén
+//   plazaAjena   `salirDeAsentamiento`: retomas la columna aparcada; si la plaza es de tu Facción, a la izquierda puedes convocar un ejército o unirte
+//                a uno que se prepara (con tu columna tal cual) y, a la derecha, el carro de tu columna y el almacén
 //                de la plaza, con «Al carro» (`cargarDePlaza`, salvo que el Gobernador lo cierre) y «A la plaza» (`dejarEnPlaza`) al momento, como
 //                en la ventana del Almacén (Víctor, 2026-11-07; 0.180.0)
 //   pueblo       `salirDePueblo`: vuelves a la puerta con la columna con la que entraste
@@ -50,8 +51,10 @@ const nombreDe = (l: LugarDeSalida): string =>
 const resideEnCampamento = (p: ProyeccionJugador, l: LugarDeSalida): boolean => l.tipo === 'campamento' && l.campamento.residentesIds.includes(p.heroeId);
 /** Donde se elige la tropa (tu residencia o tu campamento); en el resto se sale con la columna tal cual. */
 const seElige = (p: ProyeccionJugador, l: LugarDeSalida): boolean => l.tipo === 'residencia' || resideEnCampamento(p, l);
-/** Solo se convoca un ejército desde una plaza o un campamento. */
-const admiteEjercito = (l: LugarDeSalida): boolean => l.tipo === 'residencia' || l.tipo === 'campamento';
+/** Se convoca un ejército, o se une uno a otro, desde una plaza o un campamento: tu residencia, un campamento o, de visita, una plaza de tu Facción.
+ * El motor lo admite para cualquiera que esté dentro (`lugar_de`): el de visita convoca o se une con su columna aparcada, tal cual (`validar_salida`). */
+const admiteEjercito = (p: ProyeccionJugador, l: LugarDeSalida): boolean =>
+  l.tipo === 'residencia' || l.tipo === 'campamento' || (l.tipo === 'plazaAjena' && Boolean(p.faccionId) && l.asentamiento.faccionId === p.faccionId);
 
 /** Las escuadras que puedes sacar (donde se elige) o las que lleva tu columna (de visita). */
 function tropaDe(p: ProyeccionJugador, l: LugarDeSalida): Escuadron[] {
@@ -203,7 +206,7 @@ function htmlModo(p: ProyeccionJugador, l: LugarDeSalida, e: Escapar): string {
     : 'Sales al mapa por la puerta. Tus víveres van siempre contigo.';
   return `<p class="diario-texto">${e(donde)}</p>
     <p class="asent-lado-nota">Víveres: ${viveres} de trigo.</p>
-    ${admiteEjercito(l) ? htmlSalidaComoEjercito(p, e) : ''}`;
+    ${admiteEjercito(p, l) ? htmlSalidaComoEjercito(p, e) : ''}`;
 }
 
 /** El botón principal según el sitio. */
@@ -215,7 +218,7 @@ const textoSalir = (l: LugarDeSalida): string => (l.tipo === 'pueblo' || l.tipo 
 export function pintarVentanaSalida(raiz: HTMLElement, p: ProyeccionJugador, l: LugarDeSalida, ejecutar: Ejecutar, cerrar: () => void, repintar: () => void, e: Escapar): void {
   const avisar = (mensaje: string): void => { const error = raiz.querySelector<HTMLElement>('[data-salida-error]'); if (error) error.textContent = mensaje; };
   const cabecera = `<header class="diario-cab"><span class="diario-cab-titulo">Salir de ${e(nombreDe(l))}</span><button class="diario-cerrar" type="button" data-salida-cerrar aria-label="Cerrar">✕</button></header>`;
-  const preparacion = admiteEjercito(l) ? htmlPreparacion(p, e) : null;
+  const preparacion = admiteEjercito(p, l) ? htmlPreparacion(p, e) : null;
   if (preparacion) {
     // Ejército en preparación: el mismo reparto, con los integrantes a la izquierda, tu carro a la derecha y tu tropa abajo.
     pintar(raiz, `<div class="diario salida">${cabecera}
@@ -298,7 +301,7 @@ export function pintarVentanaSalida(raiz: HTMLElement, p: ProyeccionJugador, l: 
       eleccion = null;
       cerrar(); // el router lleva al mapa
     });
-    if (admiteEjercito(l)) cablearSalidaComoEjercito(raiz, p, ir, textoSalir(l), leerSeleccion, ejecutar, avisar, bloqueo);
+    if (admiteEjercito(p, l)) cablearSalidaComoEjercito(raiz, p, ir, textoSalir(l), leerSeleccion, ejecutar, avisar, bloqueo);
   }, `salida:${claveDe(l)}`);
-  if (admiteEjercito(l)) actualizarConvocatorias(raiz, p, leerSeleccion, ejecutar, avisar, e, bloqueo);
+  if (admiteEjercito(p, l)) actualizarConvocatorias(raiz, p, leerSeleccion, ejecutar, avisar, e, bloqueo);
 }

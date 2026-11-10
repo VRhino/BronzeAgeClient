@@ -3,6 +3,17 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.199.1] — 2026-11-10 · Ejército desde una plaza de tu Facción en la que no resides · motor `906fb24`
+
+Caso de Víctor: Rhino y Arkanthos, de la misma Facción, dentro de Tiro (plaza de su Facción); Arkanthos reside y Rhino no. Rhino no podía convocar
+un ejército al salir ni veía el que había convocado Arkanthos. Era del cliente: la ventana «Salir al mundo» solo enseñaba «Cómo sales» (columna
+personal o ejército) y la lista de ejércitos en preparación en tu residencia y en un campamento (`admiteEjercito`). El motor ya lo admitía para
+cualquiera que esté dentro de la plaza (`lugar_de`, `validar_salida`: el de visita convoca o se une con su columna aparcada, tal cual) y ya
+mandaba la convocatoria a toda la Facción.
+
+- **De visita en una plaza de tu Facción**, la ventana de salida enseña ahora «Cómo sales»: puedes **convocar un ejército** o **unirte** a uno que
+  se prepara allí. Sales con tu columna tal cual (tropa, carro y víveres); no se elige tropa ni carga del almacén.
+
 ## [0.199.0] — 2026-11-10 · Acciones a la puerta, parte 2: Mercenarios, Mercado y Guarnición sin entrar · motor `906fb24`
 
 Pedido de Víctor del 2026-11-10 tras el 0.193.0. Lo que faltaba se pidió al motor (PR #14, merge 906fb24: el ámbito `CAMPAMENTO` con la columna
