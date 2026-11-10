@@ -128,6 +128,12 @@ function oroDe(p: ProyeccionJugador, c: CampamentoMercenarios): { pagarCon: Paga
   return fuentes.find((f) => f.pagarCon === pagarCon) ?? fuentes[0] ?? null;
 }
 
+/** Los hombres que faltan a tus escuadras prestadas que se reponen donde estás (gratis, en su campamento: dentro o con tu columna a su puerta). */
+export function prestadasPorReponer(p: ProyeccionJugador, repintar?: () => void): number {
+  const tropas = tropasReclutables(repintar) ?? [];
+  return p.heroe.escuadrones.reduce((t, s) => { const r = comoReponer(p, s, tropas); return t + (r?.tipo === 'prestada' ? r.faltan : 0); }, 0);
+}
+
 export function comoReponer(p: ProyeccionJugador, s: Escuadron, tropas: TropaReclutable[]): Reponer | null {
   const t = tropas.find((x) => x.id === s.tropaId);
   if (!t) return null;

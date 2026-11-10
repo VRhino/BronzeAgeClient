@@ -8,7 +8,7 @@
 // Guarnecer, retirar, depositar y repostar se hacen dentro, con la columna con la que se entró, o a la puerta, desde la ficha del mapa; elegir la
 // tropa, el Gobernador de la madre dentro de ella o de la avanzada (motor 0e283fb, cliente 0.179.0). Mejorar, reparar, destruir y cancelar su obra
 // son de la madre: Territorio, tarjeta de la avanzada.
-import { bloqueDeDatos, radioDePuerta, tropasReclutables, type ProyeccionJugador, type TropaReclutable } from '../apiCliente';
+import { bloqueDeDatos, capacidadDeViveres, radioDePuerta, tropasReclutables, type ProyeccionJugador, type TropaReclutable } from '../apiCliente';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { Asentamiento, AvanzadaDeMapa, Escuadron } from '../tiposDominio';
 import { ayuda } from './ayuda';
@@ -18,6 +18,7 @@ import { chipLiderazgo } from './liderazgo';
 import { nombreDeHeroe } from './nombres';
 import type { Ejecutar } from './panelCarro';
 import { textoEnTiempoReal } from './estadoCliente';
+import type { AccionPuerta, VentanaPuerta } from './accionesPuerta';
 
 type Escapar = (valor: string) => string;
 
@@ -55,7 +56,7 @@ export function avanzadaActual(p: ProyeccionJugador): AvanzadaDeMapa | undefined
 }
 
 /** La plaza madre, si se conoce (propia, avistada o recordada), con su nombre. */
-export function madreDe(p: ProyeccionJugador, x: AvanzadaDeMapa): { a?: Asentamiento; nombre: string; faccionId?: string } {
+export function madreDe(p: ProyeccionJugador, x: { madreId: string }): { a?: Asentamiento; nombre: string; faccionId?: string } {
   const a = p.asentamientos.find((q) => q.id === x.madreId) ?? (p.asentamientosAvistados.find((q) => q.id === x.madreId) as Asentamiento | undefined);
   const c = p.asentamientosConocidos.find((q) => q.asentamientoId === x.madreId);
   return { a, nombre: a?.nombre ?? c?.nombre ?? 'su plaza madre', faccionId: a?.faccionId ?? c?.faccionId };
@@ -80,8 +81,11 @@ const deTuColumna = (p: ProyeccionJugador): Escuadron[] => {
 
 /** ¿Va con ella la Facción de la madre? La tuya, aliada o en vasallaje (en un sentido o en el otro): las que el motor deja entrar. */
 function puertaAbierta(p: ProyeccionJugador, x: AvanzadaDeMapa): boolean {
-  if (x.propia) return true;
-  const f = madreDe(p, x).faccionId;
+  return x.propia || faccionAmiga(p, madreDe(p, x).faccionId);
+}
+
+/** ¿Es la Facción `f` aliada o vasalla de la tuya (en un sentido o en el otro)? Las que el motor deja entrar en lo suyo. */
+export function faccionAmiga(p: ProyeccionJugador, f: string | undefined | null): boolean {
   if (!f || !p.faccionId) return false;
   return (p.relaciones ?? []).some((r) => r.estado === 'activa' && (r.tipo === 'alianza' || r.tipo === 'vasallaje')
     && ((r.faccionAId === f && r.faccionBId === p.faccionId) || (r.faccionBId === f && r.faccionAId === p.faccionId)));
@@ -97,20 +101,52 @@ const fila = (s: Escuadron, boton: string, e: Escapar): string =>
 
 // ---------------------------------------------------------------- en el mapa: entrar, guarnecer, depositar y repostar a la puerta
 
-/** Lo que se hace en la ficha del mapa con tu columna a su puerta: entrar (cualquiera con la puerta abierta) y, si es de tu Facción, dejar o recoger
- * escuadras (quien reside en la madre), dejar lo de tu carro y llenar los víveres (fuerte y ciudadela). */
-export function htmlAvanzadaALaPuerta(p: ProyeccionJugador, x: AvanzadaDeMapa, e: Escapar): string {
+/** Lo que se hace en la ficha del mapa con tu columna a su puerta (0.193.0, Víctor 2026-11-10: un botón por acción, abajo a la derecha). Entrar
+ * (el que va solo o el Líder) y llenar los víveres de su trigo (el Líder, fuerte y ciudadela, con sitio en los víveres) actúan al pulsarlos; tu
+ * guarnición (quien reside en la madre) y dejar lo del carro en su almacén abren su ventana, con los mismos bloques que por dentro. Lo que no se
+ * puede hacer desde donde está tu columna no sale. */
+export function puertaDeAvanzada(p: ProyeccionJugador, x: AvanzadaDeMapa, e: Escapar, ejecutar: Ejecutar): { acciones: AccionPuerta[]; ventanas: Record<string, () => VentanaPuerta>; nota: string } {
+  const nada = { acciones: [] as AccionPuerta[], ventanas: {} as Record<string, () => VentanaPuerta>, nota: '' };
   const mi = miColumna(p);
-  if (!mi || !operativa(x) || !puertaAbierta(p, x)) return '';
+  if (!mi || !operativa(x) || !puertaAbierta(p, x)) return nada;
   const d = Math.hypot(mi.posicionActual.x - x.posicion.x, mi.posicionActual.y - x.posicion.y);
   const puerta = radioDePuerta();
-  if (d > puerta) return `<p class="asent-lado-nota">Acerca tu columna a su puerta (está a ${n0(d)}; se entra a ${puerta} o menos).</p>`;
+  if (d > puerta) return { ...nada, nota: `<p class="asent-lado-nota">Acerca tu columna a su puerta (está a ${n0(d)}; se entra a ${puerta} o menos).</p>` };
   const solo = mi.participantes.length === 1;
   const lider = solo || mi.liderId === p.heroeId;
-  const entrar = `<div class="mapa-seleccion-acciones"><button class="btn-primary" type="button" data-avanzada-mapa="entrar"${lider ? '' : ' disabled title="Solo el Líder hace entrar al ejército."'}>${solo ? 'Entrar' : 'Entrar con el ejército'}</button></div>
-    ${lider ? '' : '<p class="asent-lado-nota">Solo el Líder hace entrar al ejército.</p>'}`;
-  const partes = x.propia ? [htmlGuarnicionTuya(p, x, true, e), htmlCargaAlAlmacen(p, x, true, e)].filter(Boolean).join('') : '';
-  return `${entrar}${partes}<p class="faction-error" data-avanzada-error role="alert"></p>`;
+  const acciones: AccionPuerta[] = [];
+  if (lider) acciones.push({ id: 'entrar', etiqueta: solo ? 'Entrar' : 'Entrar con el ejército', icono: '🚪', principal: true });
+  const trigo = Math.floor(x.almacen?.trigo ?? 0);
+  const hueco = capacidadDeViveres() * Math.max(1, mi.participantes.length) - Math.floor(p.heroe.viveres ?? 0);
+  if (lider && trigo >= 1 && hueco >= 1) acciones.push({ id: 'viveres', etiqueta: 'Llenar víveres', icono: '🌾', titulo: `Llena los víveres de tu columna con el trigo de su almacén (hay ${trigo}).` });
+  const ventanas: Record<string, () => VentanaPuerta> = {};
+  const pie = '<p class="faction-error" data-avanzada-error role="alert"></p>';
+  const cablear = (cuerpo: HTMLElement): void => cablearAvanzada(cuerpo, p, x, ejecutar);
+  if (x.propia && htmlGuarnicionTuya(p, x, true, e)) {
+    acciones.push({ id: 'guarnicion', etiqueta: 'Guarnición', icono: '🛡', ventana: true });
+    ventanas.guarnicion = () => ({ titulo: 'Tu guarnición', icono: iconoDeAvanzada(x.etapa), ancho: 'estrecha', html: `${htmlGuarnicionTuya(p, x, true, e)}${pie}`, cablear });
+  }
+  if (x.propia && htmlCargaAlAlmacen(p, x, true, e, false)) {
+    acciones.push({ id: 'carga', etiqueta: 'Carga', icono: '📦', ventana: true });
+    ventanas.carga = () => ({ titulo: 'Al almacén', icono: iconoDeAvanzada(x.etapa), ancho: 'estrecha', html: `${htmlCargaAlAlmacen(p, x, true, e, false)}${pie}`, cablear });
+  }
+  return { acciones, ventanas, nota: `${lider ? '' : '<p class="asent-lado-nota">Solo el Líder hace entrar al ejército.</p>'}${pie}` };
+}
+
+/** Cablea los botones directos de la puerta de la avanzada (Entrar y Llenar víveres) de la ficha del mapa. */
+export function cablearPuertaDeAvanzada(cont: HTMLElement, p: ProyeccionJugador, x: AvanzadaDeMapa, ejecutar: Ejecutar): void {
+  const error = cont.querySelector<HTMLElement>('[data-avanzada-error]');
+  const enviar = (sel: string, tipo: string, params: object): void => {
+    const b = cont.querySelector<HTMLButtonElement>(sel);
+    b?.addEventListener('click', async () => {
+      b.disabled = true;
+      const mensaje = await ejecutar(tipo, params);
+      b.disabled = false;
+      if (error) error.textContent = mensaje ?? '';
+    });
+  };
+  enviar('[data-puerta="entrar"]', 'entrarEnAvanzada', { heroeId: p.heroeId, avanzadaId: x.id });
+  enviar('[data-puerta="viveres"]', 'repostar', { heroeId: p.heroeId, lugarId: x.id });
 }
 
 /** Cablea los botones de la avanzada (los de la ficha del mapa y los de la pantalla de dentro). */
@@ -166,7 +202,7 @@ function htmlGuarnicionTuya(p: ProyeccionJugador, x: AvanzadaDeMapa, acciones: b
 }
 
 /** Dejar lo de tu carro en su almacén y llenar los víveres de su trigo (fuerte y ciudadela, con tu columna). */
-function htmlCargaAlAlmacen(p: ProyeccionJugador, x: AvanzadaDeMapa, acciones: boolean, e: Escapar): string {
+function htmlCargaAlAlmacen(p: ProyeccionJugador, x: AvanzadaDeMapa, acciones: boolean, e: Escapar, conRepostar = true): string {
   const columna = miColumna(p);
   const capacidad = x.capacidad ?? {};
   if (!acciones || !columna || !operativa(x) || !Object.values(capacidad).some((n) => n > 0)) return '';
@@ -178,9 +214,10 @@ function htmlCargaAlAlmacen(p: ProyeccionJugador, x: AvanzadaDeMapa, acciones: b
   });
   const viveres = Math.floor(p.heroe.viveres ?? 0);
   const trigo = Math.floor(x.almacen?.trigo ?? 0);
-  const repostar = lider && trigo >= 1
+  const repostar = conRepostar && lider && trigo >= 1
     ? `<div class="mapa-seleccion-acciones"><button class="btn-secondary" type="button" data-avanzada-mapa="repostar" title="Llena los víveres de tu columna con el trigo de su almacén (hay ${trigo}).">🌾 Llenar víveres (${viveres})</button></div>` : '';
   if (!filas.length && !repostar) return '';
+  if (!filas.length && !conRepostar) return '';
   return `<strong class="heroe-sub">Del carro a su almacén${ayuda('avanzada:almacen', 'El fuerte y la ciudadela guardan recursos para la Facción: se deja lo que lleva el carro de una columna de la Facción y de su trigo se llenan los víveres. La atalaya no tiene almacén.')}</strong>
     ${filas.join('') || '<p class="asent-lado-nota">Tu carro no lleva nada que quepa aquí.</p>'}${repostar}`;
 }

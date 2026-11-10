@@ -21,6 +21,7 @@ import {
   fijarCanalesTiempoReal,
   loginConClave,
   capacidadDeViveres,
+  radioDePuerta,
   costoDeRefundacion,
   nivelesBandidos,
   registrarCuenta,
@@ -114,6 +115,10 @@ import { cablearPanelIntel, renderPanelIntel } from './ui/panelIntel';
 import { cablearMercenariosDeRegion, htmlMercenariosDeRegion, tabernaActiva } from './ui/tabernaRegion';
 import { cablearMercadoDePlaza, htmlMercadoDePlaza } from './ui/mercadoDePlaza';
 import { svgPlanoBandidos } from './ui/planoBandidos';
+import { HTML_VENTANA_PUERTA, cablearBotonesDeVentana, cerrarVentanaPuerta, htmlAccionesPuerta, ofrecerVentanas, pintarVentanaPuerta, ventanaPuertaAbierta, type AccionPuerta, type VentanaPuerta } from './ui/accionesPuerta';
+import { caravanasALaPuerta, cablearCaravanasAdjuntas, htmlCaravanasAdjuntas } from './ui/caravanasAdjuntas';
+import { prestadasPorReponer } from './ui/basePersonal';
+import { tabernasDisponibles } from './ui/panelIntel';
 import { explicarError } from './ui/erroresServidor';
 import { motivosParaCrearFaccion } from './ui/validarFaccion';
 import { nombreDeHeroe } from './ui/nombres';
@@ -1113,7 +1118,10 @@ function fijarErrorSeleccion(cont: HTMLElement, texto: string | null): void {
 }
 
 function renderSeleccionMapa(): void {
+  // cada ficha dice qué ventanas abren sus botones de la puerta; las que no dicen nada, ninguna
+  ofrecerVentanas(claveSeleccion(), {});
   renderSeleccionMapaCuerpo();
+  pintarVentanaPuerta(document.querySelector<HTMLElement>('.mapa-screen > .puerta-ventana'), () => renderSeleccionMapa());
   const cont = document.querySelector<HTMLElement>('.mapa-seleccion');
   if (errorSeleccion && errorSeleccion.clave !== claveSeleccion()) errorSeleccion = null;
   const error = cont?.querySelector<HTMLElement>('#mapa-seleccion-error');
@@ -1171,9 +1179,19 @@ function renderSeleccionMapaCuerpo(): void {
     const objeto = ficha.buscar(proyeccion, seleccionMapa.id);
     if (objeto === undefined || objeto === null) break; // ya no está: se cierra más abajo
     cont.hidden = false;
-    const ctx = { ejecutar: ejecutarYRefrescar, ejecutarConDatos: ejecutarConDatosYRefrescar, repintar: renderSeleccionMapa, aviso: avisoMapa, cerrar: () => { seleccionMapa = null; renderSeleccionMapa(); }, escapar: escaparHtml };
-    if (!pintar(cont, ficha.html(proyeccion, objeto as never, ctx), undefined, claveSeleccion())) return;
+    const ctx = {
+      ejecutar: ejecutarYRefrescar, ejecutarConDatos: ejecutarConDatosYRefrescar, repintar: renderSeleccionMapa, aviso: avisoMapa,
+      cerrar: () => { seleccionMapa = null; renderSeleccionMapa(); }, escapar: escaparHtml,
+      alcance: (punto: { x: number; y: number }, conSoldados = false) => alcanceDeAtaque(proyeccion, punto, conSoldados),
+      verBatalla: (batallaId: string) => { seleccionMapa = { tipo: 'batalla', id: batallaId }; renderSeleccionMapa(); },
+    };
+    if (ficha.ventanas) ofrecerVentanas(claveSeleccion(), ficha.ventanas(proyeccion, objeto as never, ctx));
+    // la ✕ va siempre la primera (los pueblos, las avanzadas y las obras no la ponen)
+    const cuerpoFicha = ficha.html(proyeccion, objeto as never, ctx);
+    const conCerrar = cuerpoFicha.includes('mapa-seleccion-cerrar') ? cuerpoFicha : `<button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>${cuerpoFicha}`;
+    if (!pintar(cont, conCerrar, undefined, claveSeleccion())) return;
     cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', ctx.cerrar);
+    cablearBotonesDeVentana(cont, claveSeleccion(), renderSeleccionMapa);
     ficha.cablear?.(cont, proyeccion, objeto as never, ctx);
     return;
   }
@@ -1200,6 +1218,8 @@ function renderSeleccionMapaCuerpo(): void {
   const motivoAtaque = ataque ? ataque.impide : '';
   const motivoInspeccion = ataque?.distancia == null ? 'Sal al mundo con tu columna para mirar de cerca.'
     : ataque.distancia > radioDeInspeccion() ? `Acércate: estás a ${ataque.distancia} y se inspecciona a ${radioDeInspeccion()}. Su Facción recibe un aviso.` : '';
+  const puerta = puertaDePlaza(proyeccion, asentamiento, { propio, ataque, motivoInspeccion, entraEjercito, soyLider });
+  ofrecerVentanas(claveSeleccion(), puerta.ventanas);
   const ayudaPlaza = [
     entraEjercito && propio && soyLider ? 'Tu ejército entra entero y se desarma: los que residen aquí entran como siempre; los demás, de visita. Si lleva caravanas adjuntas, tienen que ser de esta plaza.' : '',
     ataque && !motivoAtaque ? 'Atacar es asediarla: si cae pasa a tu Facción; si aguanta, quedas herido.' : '',
@@ -1218,28 +1238,24 @@ function renderSeleccionMapaCuerpo(): void {
       ${ataque?.distancia != null ? `<div><span>Distancia</span><strong>${ataque.distancia}</strong></div>` : ''}
       ${((t) => t ? `<div><span>Tiempo hasta allí</span><strong>${escaparHtml(t)}</strong></div>` : '')(textoTiempoHasta(proyeccion, asentamiento.posicion))}
     </div>
-    <div class="mapa-seleccion-acciones">
-      <button id="btn-marchar-alli" class="btn-secondary" type="button">Marchar aquí</button>
-      <button id="btn-entrar-asent" class="btn-primary" type="button"${entraEjercito && (!propio || !soyLider) ? ` disabled title="${escaparHtml(motivoEntrada)}"` : ''}>${entraEjercito ? 'Entrar con el ejército' : 'Entrar'}</button>
-      ${ataque ? `<button id="btn-atacar-asent" class="btn-primary" type="button"${ataque.impide ? ` disabled title="${escaparHtml(ataque.impide)}"` : ''}>Atacar</button>` : ''}
-      ${ataque && asentamiento.recordado === null ? `<button id="btn-inspeccionar-asent" class="btn-secondary" type="button"${motivoInspeccion ? ` disabled title="${escaparHtml(motivoInspeccion)}"` : ''}>Inspeccionar</button>` : ''}
-    </div>
+    ${htmlAccionesPuerta(puerta.acciones, escaparHtml)}
     ${!propio ? htmlInformeDeInspeccion(proyeccion, 'asentamiento', asentamiento.id, escaparHtml) : ''}
     ${motivoEntrada ? `<p class="mapa-lista-vacia">${motivoEntrada}</p>` : ''}
     ${motivoAtaque && motivoAtaque.length <= 70 ? `<p class="mapa-lista-vacia">${escaparHtml(motivoAtaque)}</p>` : ''}
-    ${htmlMercadoDePlaza(proyeccion, asentamiento.id, escaparHtml)}
     <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`, undefined, claveSeleccion())) return;
-  cablearMercadoDePlaza(cont, asentamiento.id, { ejecutarConDatos: ejecutarConDatosYRefrescar, aviso: avisoMapa }, proyeccion.heroeId);
+  cablearBotonesDeVentana(cont, claveSeleccion(), renderSeleccionMapa);
   cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
-  cont.querySelector<HTMLButtonElement>('#btn-inspeccionar-asent')?.addEventListener('click', async (evento) => {
+  cablearAccionSeleccion(cont, '[data-puerta="viveres"]', 'repostar', { heroeId: proyeccion.heroeId, lugarId: asentamiento.id }, () => avisoMapa('Víveres llenos con el trigo de la plaza.'));
+  cont.querySelector('[data-puerta="batalla"]')?.addEventListener('click', () => { if (puerta.batallaId) { seleccionMapa = { tipo: 'batalla', id: puerta.batallaId }; renderSeleccionMapa(); } });
+  cont.querySelector<HTMLButtonElement>('[data-puerta="inspeccionar"]')?.addEventListener('click', async (evento) => {
     const boton = evento.currentTarget as HTMLButtonElement;
     boton.disabled = true;
     const { error } = await ejecutarConDatosYRefrescar('inspeccionar', { heroeId: proyeccion.heroeId, objetivo: { tipo: 'asentamiento', id: asentamiento.id } });
     if (error) { boton.disabled = false; fijarErrorSeleccion(cont, error); } else avisoMapa('Miras de cerca: su Facción recibe un aviso.');
   });
-  cont.querySelector('#btn-marchar-alli')?.addEventListener('click', () => void marcharAObjetivo({ tipo: 'asentamiento', id: asentamiento.id }));
-  cont.querySelector<HTMLButtonElement>('#btn-atacar-asent')?.addEventListener('click', (evento) => void atacarPlaza(cont, evento.currentTarget as HTMLButtonElement, asentamiento.id));
-  cont.querySelector('#btn-entrar-asent')?.addEventListener('click', async () => {
+  cont.querySelector('[data-puerta="marchar"]')?.addEventListener('click', () => void marcharAObjetivo({ tipo: 'asentamiento', id: asentamiento.id }));
+  cont.querySelector<HTMLButtonElement>('[data-puerta="atacar"]')?.addEventListener('click', (evento) => void atacarPlaza(cont, evento.currentTarget as HTMLButtonElement, asentamiento.id));
+  cont.querySelector('[data-puerta="entrar"]')?.addEventListener('click', async () => {
     try {
       // Un ejército entra entero y se desarma (`guarnecer`); una columna personal, por la puerta de siempre.
       const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, entraEjercito ? 'guarnecer' : 'entrarEnAsentamiento', { asentamientoId: asentamiento.id, heroeId: proyeccion.heroeId });
@@ -1251,6 +1267,51 @@ function renderSeleccionMapaCuerpo(): void {
       fijarErrorSeleccion(cont, mensajeError(err));
     }
   });
+}
+
+/** Lo que se hace a la puerta de una plaza (0.193.0, Víctor 2026-11-10: un botón por acción, y una ventana con su panel de siempre para lo que lo
+ * pide). Sin cambios en el motor: lo que no se puede hacer desde fuera no sale (pasar del carro al almacén de la plaza, por ejemplo, es solo
+ * dentro). Directas: Marchar aquí, Entrar, Llenar víveres (tu Facción: de una aliada no se sabe desde fuera si abre su almacén; el Líder, con sitio en
+ * los víveres), Atacar e Inspeccionar (ajena), La batalla (si hay un asedio). Ventanas: Mercado (sus órdenes), Caravanas (cargar de una plaza de tu
+ * Facción o entregar un trueque, con caravanas enganchadas), Taberna (la de tu Facción, si compras intel) y Carga (tu almacén personal, si resides). */
+function puertaDePlaza(p: ProyeccionJugador, a: AsentamientoEnMapa, x: { propio: boolean; ataque: { distancia: number | null; impide: string } | null; motivoInspeccion: string; entraEjercito: boolean; soyLider: boolean }): { acciones: AccionPuerta[]; ventanas: Record<string, () => VentanaPuerta>; batallaId?: string } {
+  const acciones: AccionPuerta[] = [{ id: 'marchar', etiqueta: 'Marchar aquí', icono: '➜' }];
+  const ventanas: Record<string, () => VentanaPuerta> = {};
+  const col = miColumna(p);
+  const aLaPuerta = col !== undefined && Math.hypot(col.posicionActual.x - a.posicion.x, col.posicionActual.y - a.posicion.y) <= radioDePuerta();
+  const lider = col !== undefined && (col.participantes.length === 1 || col.liderId === p.heroeId);
+  if (!(x.entraEjercito && (!x.propio || !x.soyLider))) acciones.push({ id: 'entrar', etiqueta: x.entraEjercito ? 'Entrar con el ejército' : 'Entrar', icono: '🚪', principal: true });
+  // de una aliada o vasalla no se sabe desde fuera si abre su almacén: solo la de tu Facción
+  const abreAlmacen = x.propio;
+  const hueco = col ? capacidadDeViveres() * Math.max(1, col.participantes.length) - Math.floor(p.heroe.viveres ?? 0) : 0;
+  if (aLaPuerta && lider && abreAlmacen && hueco >= 1) acciones.push({ id: 'viveres', etiqueta: 'Llenar víveres', icono: '🌾', titulo: 'Llena los víveres de tu columna con el trigo de la plaza (sin bajar de su reserva).' });
+  if (x.ataque) acciones.push({ id: 'atacar', etiqueta: 'Atacar', icono: '⚔', principal: true, motivo: x.ataque.impide || undefined });
+  if (x.ataque && a.recordado === null) acciones.push({ id: 'inspeccionar', etiqueta: 'Inspeccionar', icono: '👁', motivo: x.motivoInspeccion || undefined });
+  const batalla = (p.batallas ?? []).find((b) => b.contexto.asentamientoId === a.id);
+  if (batalla) acciones.push({ id: 'batalla', etiqueta: 'La batalla', icono: '⚔', titulo: 'Abre el asedio: desde él te unes a un lado.' });
+  // ventanas
+  const mercado = htmlMercadoDePlaza(p, a.id, escaparHtml);
+  if (mercado) {
+    acciones.push({ id: 'mercado', etiqueta: 'Mercado', icono: iconoEdificio('mercado', 18), ventana: true });
+    ventanas.mercado = () => ({
+      titulo: 'Mercado', icono: iconoEdificio('mercado', 28), ancho: 'normal',
+      html: `${htmlMercadoDePlaza(p, a.id, escaparHtml)}<p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`,
+      cablear: (cuerpo) => cablearMercadoDePlaza(cuerpo, a.id, { ejecutarConDatos: ejecutarConDatosYRefrescar, aviso: avisoMapa }, p.heroeId),
+    });
+  }
+  if (caravanasALaPuerta(p, a.id)) {
+    acciones.push({ id: 'caravanas', etiqueta: 'Caravanas', icono: '🐫', ventana: true });
+    ventanas.caravanas = () => ({ titulo: 'Caravanas de tu columna', icono: '🐫', ancho: 'normal', html: htmlCaravanasAdjuntas(p, escaparHtml, false), cablear: (cuerpo) => cablearCaravanasAdjuntas(cuerpo, p, ejecutarYRefrescar) });
+  }
+  if (x.propio && tabernasDisponibles(p).some((t) => t.origen.tipo === 'asentamiento' && t.origen.id === a.id)) {
+    acciones.push({ id: 'taberna', etiqueta: 'Taberna', icono: iconoEdificio('taberna', 18), ventana: true });
+    ventanas.taberna = () => ({ titulo: 'Taberna', icono: iconoEdificio('taberna', 28), ancho: 'ancha', html: renderPanelIntel(p, escaparHtml, a.id), cablear: (cuerpo) => cablearPanelIntel(cuerpo, p, ejecutarYRefrescar, () => { olvidarEdicion(cuerpo); invalidar(cuerpo); renderSeleccionMapa(); }) });
+  }
+  if (aLaPuerta && p.heroe.residenciaId === a.id) {
+    acciones.push({ id: 'carga', etiqueta: 'Carga', icono: '📦', ventana: true, titulo: 'Tu carro y tu almacén personal.' });
+    ventanas.carga = () => ({ titulo: 'Tu carga', icono: '📦', ancho: 'normal', html: htmlCarro(p, escaparHtml, false, false), cablear: (cuerpo) => cablearCarro(cuerpo, ejecutarYRefrescar, p.heroeId) });
+  }
+  return { acciones, ventanas, batallaId: batalla?.battleId };
 }
 
 /** Ficha de un campamento de bandidos (Doc 1.9): se ataca con la columna, llegando hasta él. Si cae, su botín va al
@@ -1319,15 +1380,12 @@ function renderSeleccionCampamento(cont: HTMLElement, proyeccion: ProyeccionJuga
       ${((t) => t ? `<div><span>Tiempo hasta allí</span><strong>${escaparHtml(t)}</strong></div>` : '')(textoTiempoHasta(proyeccion, campamento.posicion))}
       ${acosa ? `<div><span>Acosa</span><strong>${acosa}</strong></div>` : ''}
     </div>
-    <div class="mapa-seleccion-acciones">
-      <button id="btn-marchar-alli" class="btn-secondary" type="button">Marchar aquí</button>
-      <button id="btn-atacar-campamento" class="btn-primary" type="button"${impide ? ` disabled title="${escaparHtml(impide)}"` : ''}>Atacar</button>
-    </div>
+    ${htmlAccionesPuerta([{ id: 'marchar', etiqueta: 'Marchar aquí', icono: '➜' }, { id: 'atacar', etiqueta: 'Atacar', icono: '⚔', principal: true, motivo: impide || undefined }], escaparHtml)}
     ${impide && impide.length <= 70 ? `<p class="mapa-lista-vacia">${escaparHtml(impide)}</p>` : ''}
     <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`, undefined, claveSeleccion())) return;
   cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
-  cont.querySelector('#btn-marchar-alli')?.addEventListener('click', () => void marcharAObjetivo({ tipo: 'punto', punto: campamento.posicion }));
-  cont.querySelector<HTMLButtonElement>('#btn-atacar-campamento')?.addEventListener('click', async (evento) => {
+  cont.querySelector('[data-puerta="marchar"]')?.addEventListener('click', () => void marcharAObjetivo({ tipo: 'punto', punto: campamento.posicion }));
+  cont.querySelector<HTMLButtonElement>('[data-puerta="atacar"]')?.addEventListener('click', async (evento) => {
     const boton = evento.currentTarget as HTMLButtonElement;
     boton.disabled = true;
     const mensaje = await ejecutarYRefrescar('atacar', { heroeId: proyeccion.heroeId, objetivo: { tipo: 'campamento', id: campamento.id } });
@@ -1361,6 +1419,8 @@ function renderSeleccionMercenarios(cont: HTMLElement, proyeccion: ProyeccionJug
   const tuyo = campamento.residentesIds.includes(proyeccion.heroeId);
   const entraEjercito = columna !== undefined && (columna.tipo === 'ejercito' || columna.participantes.length > 1);
   const soyLider = columna?.liderId === proyeccion.heroeId;
+  const puerta = puertaDeCampamento(proyeccion, campamento, distancia, entraEjercito && !soyLider);
+  ofrecerVentanas(claveSeleccion(), puerta.ventanas);
   if (!pintar(cont, `
     <button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>
     <span class="faction-kicker">Campamento de mercenarios${tuyo ? ' · tu residencia' : ''}${ayuda('mapa:ficha-mercenarios', `${entraEjercito ? (soyLider ? 'Tu ejército entra entero y se desarma en la puerta: los que residen aquí entran con su tropa y su carro; los demás, de visita, con su columna aparcada. Si lleva caravanas adjuntas, tienen que ser de este lugar.' : 'Solo el Líder hace entrar al ejército.') : 'Se entra con la columna a la puerta.'} Junto al campamento nadie inicia un combate.`)}</span>
@@ -1370,15 +1430,40 @@ function renderSeleccionMercenarios(cont: HTMLElement, proyeccion: ProyeccionJug
       ${distancia !== null ? `<div><span>Distancia</span><strong>${distancia}</strong></div>` : ''}
       ${((t) => t ? `<div><span>Tiempo hasta allí</span><strong>${escaparHtml(t)}</strong></div>` : '')(textoTiempoHasta(proyeccion, campamento.posicion))}
     </div>
-    <div class="mapa-seleccion-acciones">
-      <button id="btn-marchar-alli" class="btn-secondary" type="button">Marchar aquí</button>
-      <button id="btn-entrar-mercenarios" class="btn-primary" type="button"${entraEjercito && !soyLider ? ' disabled title="Solo el Líder hace entrar al ejército."' : ''}>${entraEjercito ? 'Entrar con el ejército' : 'Entrar'}</button>
-    </div>
+    ${htmlAccionesPuerta(puerta.acciones, escaparHtml)}
     ${entraEjercito && !soyLider ? '<p class="mapa-lista-vacia">Solo el Líder hace entrar al ejército.</p>' : ''}
     <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`, undefined, claveSeleccion())) return;
+  cablearBotonesDeVentana(cont, claveSeleccion(), renderSeleccionMapa);
   cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
-  cont.querySelector('#btn-marchar-alli')?.addEventListener('click', () => void marcharAObjetivo({ tipo: 'punto', punto: campamento.posicion }));
-  cablearAccionSeleccion(cont, '#btn-entrar-mercenarios', 'entrarEnCampamento', { campamentoId: campamento.id, heroeId: proyeccion.heroeId }, () => { seleccionMapa = null; });
+  cont.querySelector('[data-puerta="marchar"]')?.addEventListener('click', () => void marcharAObjetivo({ tipo: 'punto', punto: campamento.posicion }));
+  cablearAccionSeleccion(cont, '[data-puerta="entrar"]', 'entrarEnCampamento', { campamentoId: campamento.id, heroeId: proyeccion.heroeId }, () => { seleccionMapa = null; });
+  cablearAccionSeleccion(cont, '[data-puerta="viveres"]', 'repostarEnCampamento', { campamentoId: campamento.id }, () => avisoMapa('Víveres llenos en el campamento.'));
+  cablearAccionSeleccion(cont, '[data-puerta="prestadas"]', 'reponerPrestamo', {}, () => avisoMapa('Prestadas repuestas, gratis.'));
+}
+
+/** Lo que se hace a la puerta de un campamento de mercenarios (0.193.0). Sin cambios en el motor: su mercado, su tablón, el fondo de refundación y
+ * reclutar solo llegan estando dentro, así que no salen aquí. Directas: Marchar aquí, Entrar, Llenar víveres (gratis, con sitio en los víveres) y
+ * Reponer las prestadas (las tuyas, gratis, si es tu campamento). Ventanas: Taberna (Mirada e informe, pagando con el carro) y Carga (tu almacén
+ * personal, si resides aquí). */
+function puertaDeCampamento(p: ProyeccionJugador, c: CampamentoMercenarios, distancia: number | null, sinEntrar: boolean): { acciones: AccionPuerta[]; ventanas: Record<string, () => VentanaPuerta> } {
+  const acciones: AccionPuerta[] = [{ id: 'marchar', etiqueta: 'Marchar aquí', icono: '➜' }];
+  const ventanas: Record<string, () => VentanaPuerta> = {};
+  const col = miColumna(p);
+  if (!sinEntrar) acciones.push({ id: 'entrar', etiqueta: col && col.participantes.length > 1 ? 'Entrar con el ejército' : 'Entrar', icono: '🚪', principal: true });
+  if (!col || distancia === null || distancia > radioDePuerta()) return { acciones, ventanas };
+  const hueco = capacidadDeViveres() * Math.max(1, col.participantes.length) - Math.floor(p.heroe.viveres ?? 0);
+  if (hueco >= 1) acciones.push({ id: 'viveres', etiqueta: 'Llenar víveres', icono: '🌾', titulo: 'Gratis en el campamento.' });
+  const faltan = prestadasPorReponer(p, () => renderSeleccionMapa());
+  if (faltan > 0) acciones.push({ id: 'prestadas', etiqueta: `Reponer prestadas (${faltan})`, icono: '⚔', titulo: `Faltan ${faltan} hombres en tus escuadras prestadas: se reponen gratis.` });
+  if (tabernasDisponibles(p).some((t) => t.origen.tipo === 'campamento' && t.origen.id === c.id)) {
+    acciones.push({ id: 'taberna', etiqueta: 'Taberna', icono: iconoEdificio('taberna', 18), ventana: true });
+    ventanas.taberna = () => ({ titulo: 'Taberna', icono: iconoEdificio('taberna', 28), ancho: 'ancha', html: renderPanelIntel(p, escaparHtml, c.id), cablear: (cuerpo) => cablearPanelIntel(cuerpo, p, ejecutarYRefrescar, () => { olvidarEdicion(cuerpo); invalidar(cuerpo); renderSeleccionMapa(); }) });
+  }
+  if (p.heroe.residenciaId === c.id || c.residentesIds.includes(p.heroeId)) {
+    acciones.push({ id: 'carga', etiqueta: 'Carga', icono: '📦', ventana: true, titulo: 'Tu carro y tu almacén personal.' });
+    ventanas.carga = () => ({ titulo: 'Tu carga', icono: '📦', ancho: 'normal', html: htmlCarro(p, escaparHtml, false, false), cablear: (cuerpo) => cablearCarro(cuerpo, ejecutarYRefrescar, p.heroeId) });
+  }
+  return { acciones, ventanas };
 }
 
 /** Ficha de un alijo de exploración (Doc 1.9b): se abre estando en el sitio, y lo que trae va al carro de la columna. */
@@ -1388,14 +1473,11 @@ function renderSeleccionAlijo(cont: HTMLElement, alijo: Alijo): void {
     <button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>
     <span class="faction-kicker">Alijo${ayuda('mapa:ficha-alijo', 'Hay que estar en el sitio. Lo que trae va al carro de tu columna (lo que no quepa se pierde).')}</span>
     <h3>${escaparHtml(contenido)}</h3>
-    <div class="mapa-seleccion-acciones">
-      <button id="btn-marchar-alli" class="btn-secondary" type="button">Marchar aquí</button>
-      <button id="btn-abrir-alijo" class="btn-primary" type="button">Abrir</button>
-    </div>
+    ${htmlAccionesPuerta([{ id: 'marchar', etiqueta: 'Marchar aquí', icono: '➜' }, { id: 'abrir', etiqueta: 'Abrir', icono: '🎁', principal: true }], escaparHtml)}
     <p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`, undefined, claveSeleccion())) return;
   cont.querySelector('.mapa-seleccion-cerrar')?.addEventListener('click', () => { seleccionMapa = null; renderSeleccionMapa(); });
-  cont.querySelector('#btn-marchar-alli')?.addEventListener('click', () => void marcharAObjetivo({ tipo: 'punto', punto: alijo.posicion }));
-  cablearAccionSeleccion(cont, '#btn-abrir-alijo', 'abrirAlijo', { alijoId: alijo.id }, () => { seleccionMapa = null; avisoMapa(`Alijo abierto: ${contenido} al carro.`); });
+  cont.querySelector('[data-puerta="marchar"]')?.addEventListener('click', () => void marcharAObjetivo({ tipo: 'punto', punto: alijo.posicion }));
+  cablearAccionSeleccion(cont, '[data-puerta="abrir"]', 'abrirAlijo', { alijoId: alijo.id }, () => { seleccionMapa = null; avisoMapa(`Alijo abierto: ${contenido} al carro.`); });
 }
 
 // --- INTEL DE LAS TABERNAS (Doc 5.12.10) ---------------------------------------------------------
@@ -1821,6 +1903,8 @@ document.addEventListener('keydown', (ev) => {
   if (ev.ctrlKey || ev.metaKey || ev.altKey || document.querySelector('.dialogo-velo, .briefing-fondo')) return;
   if ((ev.key === 'b' || ev.key === 'B') && !ev.repeat) { ev.preventDefault(); alternarBase(); }
   else if (ev.key === 'Escape' && panelJugador === 'base' && !document.querySelector('.ta-ficha:not([hidden])')) { ev.stopImmediatePropagation(); alternarBase(false); }
+  // con una ventana de la puerta abierta, Esc la cierra
+  else if (ev.key === 'Escape' && ventanaPuertaAbierta() && !vistaMapaAbierta && panelJugador === null) { ev.stopImmediatePropagation(); cerrarVentanaPuerta(); renderSeleccionMapa(); }
   // con el modo mapa abierto (y nada encima), Esc lo cierra como la ✕ de su esquina
   else if (ev.key === 'Escape' && vistaMapaAbierta && panelJugador === null && !document.querySelector('.eleccion-clic, .mapa-capas-lista:not([hidden])')) { ev.stopImmediatePropagation(); alternarVistaMapa(false); }
 }, true);
@@ -2144,6 +2228,7 @@ function montarMapa(): void {
     <aside class="mapa-panel" hidden></aside>
     <aside class="jugador-panel" hidden></aside>
     <aside class="mapa-seleccion" hidden></aside>
+    ${HTML_VENTANA_PUERTA}
     <p class="mapa-aviso" role="status" hidden></p>
     <div class="mapa-abajo">
       <nav class="mapa-riel" aria-label="Paneles del mapa">

@@ -3,6 +3,21 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.193.0] — 2026-11-10 · Acciones a la puerta: la ficha del mundo abajo a la derecha, con un botón por acción · contrato 0.20.0 (motor `b55e90f`)
+
+Petición de Víctor del 2026-11-10. Sin cambios en el motor ni en el contrato: si algo no se puede hacer desde fuera, no sale (carro ↔ almacén
+de plaza, mercado, tablón, fondo y reclutar del campamento de mercenarios, y contratar con el almacén de la plaza siguen solo dentro).
+
+- **La ficha de la selección del mundo** (`.mapa-seleccion`) pasa abajo a la derecha y lleva debajo una fila de botones: los que actúan al
+  pulsarlos (Entrar, Marchar, Llenar víveres, Atacar, Inspeccionar, Unirte a la batalla, Reponer prestadas) y los que abren una ventana a su
+  izquierda con el panel de siempre (Carga, Caravanas, Mercado, Taberna, Guarnición, Obra). Esc o ✕ la cierra; al cambiar de selección se
+  cierra sola (`ui/accionesPuerta.ts`).
+- **Plaza**: víveres a la puerta (`repostar` con `lugarId`, solo tu Facción), Mercado, Caravanas adjuntas (sin soltar), Taberna (intel a la
+  puerta para Rey, Embajador o Gobernador, como `resolver_compra`) y Carga del carro si resides y estás a la puerta; la batalla en curso.
+- **Campamento de mercenarios**: víveres (`repostarEnCampamento`), Reponer prestadas (`reponerPrestamo`) si resides, Taberna y Carga.
+- **Avanzadas y pueblos**: Entrar (Líder), Llenar víveres, Guarnición, Carga al almacén, Obra en curso, Atacar o la batalla.
+- Bandidos y alijos con la misma fila de botones.
+
 ## [0.192.0] — 2026-11-10 · Tooltips con ficha en Construir y en el Almacén, y una capa de fertilidad por cultivo desbloqueado · contrato 0.20.0 (motor `b55e90f`)
 
 Petición de Víctor del 2026-11-10. Sin cambios en el motor ni en el contrato.

@@ -54,7 +54,7 @@ const ev = (codigo: string, payload: Record<string, unknown>, horas: number, ase
 function pintar(): void {
   const ficha = app.querySelector<HTMLElement>('.mapa-seleccion')!;
   const id = qs.get('ficha') === 'camino' ? 'aeda-1' : 'aeda-2';
-  const ctx = { ejecutar: async () => null, ejecutarConDatos: async () => ({ error: null }), repintar: pintar, aviso: () => {}, cerrar: () => {}, escapar: e };
+  const ctx = { ejecutar: async () => null, ejecutarConDatos: async () => ({ error: null }), repintar: pintar, aviso: () => {}, cerrar: () => {}, escapar: e, alcance: () => ({ distancia: null, impide: '' }), verBatalla: () => {} };
   ficha.innerHTML = FICHA_AEDA.html(p, FICHA_AEDA.buscar(p, id) as never, ctx);
   app.querySelector<HTMLElement>('[data-cual="avisos"]')!.innerHTML = htmlAvisos(historialDeAvisos(), e);
   app.querySelector<HTMLElement>('[data-cual="cronica"]')!.innerHTML = htmlCronica(p, e);

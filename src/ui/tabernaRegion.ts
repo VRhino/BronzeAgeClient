@@ -6,7 +6,7 @@
 //  - la taberna enseña además el tablón de los campamentos de su región (`Asentamiento.mercenariosRegion`) y se contrata desde ahí, pagando con
 //    el almacén de la plaza (los mismos tres cargos) o con monedas.
 // Quien valida es el motor; aquí se enseña solo lo que el jugador puede hacer (regla de Víctor).
-import type { ProyeccionJugador } from '../apiCliente';
+import { radioDePuerta, type ProyeccionJugador } from '../apiCliente';
 import { nombreDeRegion, regionEn, type Region } from '../mundo/region';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { Asentamiento, InformeRegion, OrdenMercado, Point } from '../tiposDominio';
@@ -30,13 +30,18 @@ export const regionDePlaza = (a: { posicion: Point }): Region | null => regionEn
 
 export const tabernaActiva = (a: Asentamiento): boolean => (a.edificios ?? []).some((x) => x.tipo === 'taberna' && x.estado === 'activo');
 
-/** ¿Compra intel en la taberna de `a`? El Rey, el Embajador o el Gobernador de esa plaza de su Facción, dentro de ella (`compraIntel` del motor). */
-export function compraIntelEn(p: ProyeccionJugador, a: Asentamiento): boolean {
+/** ¿Compra intel en la taberna de `a`? El Rey, el Embajador o el Gobernador de esa plaza de su Facción, dentro de ella o con su columna a la puerta si `puertaVale` (la intel sí; contratar con el almacén de la plaza, solo dentro) (`compraIntel` del motor). */
+export function compraIntelEn(p: ProyeccionJugador, a: Asentamiento, puertaVale = false): boolean {
   if (!p.faccionId || a.faccionId !== p.faccionId) return false;
   const u = p.heroe.ubicacion;
-  if (u.tipo !== 'asentamiento' || u.asentamientoId !== a.id) return false;
+  const dentro = u.tipo === 'asentamiento' && u.asentamientoId === a.id;
+  // con la columna a su puerta también (`resolver_compra` del motor; 0.193.0)
+  const columna = puertaVale ? (p.ejercitos ?? []).find((c) => c.participantes.some((x) => x.heroeId === p.heroeId)) : undefined;
+  const aLaPuerta = columna !== undefined && Math.hypot(a.posicion.x - columna.posicionActual.x, a.posicion.y - columna.posicionActual.y) <= radioDePuerta();
+  if (!dentro && !aLaPuerta) return false;
   const f = miFaccion(p);
-  return f?.reyId === p.heroeId || f?.embajadorId === p.heroeId || a.cargos?.gobernadorId === p.heroeId;
+  const gobernador = a.cargos?.gobernadorId === p.heroeId || Boolean(f?.miembros?.find((m) => m.heroeId === p.heroeId)?.cargos.includes(`gobernador@${a.id}`));
+  return f?.reyId === p.heroeId || f?.embajadorId === p.heroeId || gobernador;
 }
 
 /** Los informes de región de tu Facción (`Faccion.informesRegion`): siguen en la lista hasta la próxima compra, aunque ya caducaran. */
@@ -55,7 +60,7 @@ const TIPO: Record<InformeRegion['tipo'], { icono: string; nombre: string }> = {
 
 /** La tarjeta «Informe de la región» de la taberna de la plaza `a`, con lo que hay en su almacén (`oroPlaza`). Vacía si no lo puedes comprar. */
 export function htmlServicioRegion(p: ProyeccionJugador, a: Asentamiento, oroPlaza: number, e: Escapar): string {
-  if (!compraIntelEn(p, a) || !tabernaActiva(a)) return '';
+  if (!compraIntelEn(p, a, true) || !tabernaActiva(a)) return '';
   const t = p.tarifasIntel.region;
   const region = regionDePlaza(a);
   const dura = textoEnTiempoReal(t.caducidadMinutos * 60_000);

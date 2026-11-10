@@ -6122,3 +6122,36 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
 .mapa-screen .mapa-panel { left: 16px; }
 .mapa-screen > .mapa-capas { left: 16px; right: auto; bottom: 16px; }
 .mapa-screen > .mapa-capas .mapa-capas-lista { left: 48px; right: auto; }
+
+/* La ficha del mundo, abajo a la derecha, con los botones de lo que se hace a su puerta (0.193.0, Víctor 2026-11-10). Las directas, en una fila;
+   las que abren ventana, en otra, con su icono encima. La ventana de la puerta (`.puerta-ventana`, el marco de las del riel de la plaza) se abre a
+   su izquierda, pegada abajo. */
+.mapa-screen > .mapa-seleccion { top: auto; bottom: 16px; right: 16px; width: 320px; max-height: calc(100vh - var(--jugador-alto, 56px) - 40px); }
+.puerta-acciones { display: flex; flex-direction: column; gap: 6px; margin-top: 2px; }
+.puerta-fila { display: flex; flex-wrap: wrap; gap: 6px; }
+.puerta-fila .puerta-boton { flex: 1 1 calc(50% - 6px); display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; padding: 5px 10px; font-size: 0.82rem; }
+.puerta-boton-icono { display: inline-flex; line-height: 1; }
+.puerta-boton-icono .icono-edificio { width: 18px; height: 18px; }
+.puerta-fila-ventanas { padding-top: 6px; border-top: 1px solid rgba(169, 121, 63, 0.3); }
+.puerta-fila-ventanas .puerta-boton {
+  flex: 1 1 calc(33% - 6px); flex-direction: column; gap: 2px; min-height: 52px; padding: 6px 4px;
+  background: rgba(20, 15, 10, 0.55); border: 1px solid var(--bronce-osc); border-radius: 3px; color: var(--oro); cursor: pointer;
+  font-family: var(--fuente-titulo); font-size: 0.74rem; letter-spacing: 0.04em;
+}
+.puerta-fila-ventanas .puerta-boton .puerta-boton-icono { font-size: 1.15rem; }
+.puerta-fila-ventanas .puerta-boton:hover:not(:disabled) { border-color: var(--oro); color: var(--oro-claro); }
+.puerta-fila-ventanas .puerta-boton.activo { border-color: var(--oro); color: var(--oro-claro); box-shadow: inset 0 -3px 0 var(--oro), inset 0 0 14px rgba(216, 184, 120, 0.2); }
+.puerta-boton:focus-visible { outline: 1px solid var(--oro); outline-offset: 1px; }
+.mapa-screen > .puerta-ventana {
+  top: auto; left: auto; right: calc(16px + 320px + 12px); bottom: 16px; transform: none;
+  width: min(560px, calc(100vw - 380px)); max-height: calc(100vh - var(--jugador-alto, 56px) - 40px); z-index: 4;
+  animation-name: ventana-puerta-entra;
+}
+.mapa-screen > .puerta-ventana[data-ancho="estrecha"] { width: min(420px, calc(100vw - 380px)); }
+.mapa-screen > .puerta-ventana[data-ancho="ancha"] { width: min(900px, calc(100vw - 380px)); }
+@keyframes ventana-puerta-entra { from { opacity: 0; transform: translateX(10px); } }
+@media (max-width: 760px) {
+  .mapa-screen > .mapa-seleccion { width: calc(100vw - 32px); max-height: 46vh; }
+  .mapa-screen > .puerta-ventana, .mapa-screen > .puerta-ventana[data-ancho] { left: 16px; right: 16px; width: auto; bottom: calc(46vh + 28px); max-height: 40vh; }
+}
+@media (prefers-reduced-motion: reduce) { .mapa-screen > .puerta-ventana { animation: none; } }

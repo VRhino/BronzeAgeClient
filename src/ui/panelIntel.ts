@@ -5,12 +5,12 @@
 import { radioDePuerta, tropasReclutables, type ProyeccionJugador } from '../apiCliente';
 import { ayuda } from './ayuda';
 import { EDIFICIO_COLOR, EDIFICIO_NOMBRE, RECURSO_ICONO } from '../paletas';
-import type { InformePlaza, MiradaIntel, OrigenDeIntel, Point } from '../tiposDominio';
+import type { Asentamiento, InformePlaza, MiradaIntel, OrigenDeIntel, Point } from '../tiposDominio';
 import { mostrar as mostrarAviso } from './avisos';
 import { iconoEdificio } from './iconosEdificio';
 import { iconoTropa } from './iconosTropa';
 import { medallonNivel } from './juegoVisual';
-import { cablearServicioRegion, htmlInformesRegion, htmlServicioRegion } from './tabernaRegion';
+import { cablearServicioRegion, compraIntelEn, htmlInformesRegion, htmlServicioRegion } from './tabernaRegion';
 
 export type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
 type Escapar = (valor: string) => string;
@@ -36,10 +36,21 @@ function miColumna(p: ProyeccionJugador) {
 }
 
 /** Las tabernas donde puede comprar ahora mismo: la de la plaza que pisa y la del campamento donde está o a cuya puerta tiene la columna. */
+/** La plaza de tu Facción, con Taberna activa, a cuya puerta está tu columna y en la que compras intel (Rey, Embajador o su Gobernador). */
+export function plazaPropiaALaPuerta(p: ProyeccionJugador): Asentamiento | undefined {
+  const columna = miColumna(p);
+  if (!columna || !p.faccionId) return undefined;
+  return (p.plazasPropias ?? []).find((a) => a.faccionId === p.faccionId && compraIntelEn(p, a, true)
+    && a.edificios.some((e) => e.tipo === 'taberna' && e.estado === 'activo')
+    && Math.hypot(a.posicion.x - columna.posicionActual.x, a.posicion.y - columna.posicionActual.y) <= radioDePuerta());
+}
+
 export function tabernasDisponibles(p: ProyeccionJugador): TabernaDisponible[] {
   const lista: TabernaDisponible[] = [];
   const cupos = p.tarifasIntel.cupoMiradas;
-  const plaza = p.asentamientos[0];
+  // La de la plaza donde estás o, con tu columna a su puerta, la de una plaza de tu Facción en la que compras (0.193.0: la puerta basta,
+  // `resolver_compra` del motor; compra el Rey, el Embajador o el Gobernador, como dentro).
+  const plaza = p.asentamientos[0] ?? plazaPropiaALaPuerta(p);
   const taberna = plaza?.edificios.find((e) => e.tipo === 'taberna' && e.estado === 'activo');
   if (plaza && taberna) {
     lista.push({
@@ -185,7 +196,7 @@ export function renderPanelIntel(p: ProyeccionJugador, e: Escapar, origenId?: st
   const oro = RECURSO_ICONO['oro'] ?? '🪙';
   const caro = (n: number | null): boolean => t !== undefined && n !== null && n > t.oro;
   // El informe de región (tanda 69): solo en la taberna de una plaza propia, y solo para quien lo puede comprar.
-  const plaza = t?.origen.tipo === 'asentamiento' ? p.asentamientos.find((a) => a.id === t.origen.id) : undefined;
+  const plaza = t?.origen.tipo === 'asentamiento' ? [...p.asentamientos, ...(p.plazasPropias ?? [])].find((a) => a.id === t.origen.id) : undefined;
   const region = plaza && t ? htmlServicioRegion(p, plaza, t.oro, e) : '';
 
   const compra = !t

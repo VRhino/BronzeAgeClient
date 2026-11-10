@@ -13,7 +13,8 @@ import { VistaCiudad3D } from '../../src/ciudad3d/vista';
 import { bloqueDeDatos, tropasReclutables, type ProyeccionJugador } from '../../src/apiCliente';
 import { htmlBarraJugador } from '../../src/ui/barraJugador';
 import { htmlBlasonInterior, htmlPlacaDeRecursos, htmlRielInterior, htmlTituloDeParte } from '../../src/ui/hudInterior';
-import { almacenDelPie, htmlAvanzadaALaPuerta, htmlParteAvanzada, iconoDeAvanzada, nombreDeEtapa, partesDeAvanzada, type ParteAvanzada } from '../../src/ui/avanzadas';
+import { htmlAccionesPuerta } from '../../src/ui/accionesPuerta';
+import { almacenDelPie, puertaDeAvanzada, htmlParteAvanzada, iconoDeAvanzada, nombreDeEtapa, partesDeAvanzada, type ParteAvanzada } from '../../src/ui/avanzadas';
 import { SUBPESTANA_PUEBLOS } from '../../src/ui/pueblos';
 import { estadoCliente } from '../../src/ui/estadoCliente';
 import { EDIFICIO_NOMBRE } from '../../src/paletas';
@@ -55,9 +56,12 @@ estadoCliente.proyeccionUltima = p;
 const app = document.getElementById('app')!;
 
 function pintarFicha(): void {
+  const puerta = puertaDeAvanzada(p, x, e, async () => null);
+  const cual = qs.get('ventana');
+  const ventana = cual && puerta.ventanas[cual] ? puerta.ventanas[cual]() : null;
   app.innerHTML = `<div class="mapa-screen" style="padding:24px"><div class="mapa-seleccion" style="position:static;max-width:380px">
     <span class="faction-kicker">Avanzada de tu Facción</span><h3>${e(nombreDeEtapa(x.etapa))}</h3><p class="asent-lado-nota">De ${e(madre.nombre!)}.</p>
-    ${htmlAvanzadaALaPuerta(p, x, e)}</div></div>`;
+    ${puerta.nota}${htmlAccionesPuerta(puerta.acciones, e)}</div>${ventana ? `<section class="asent-ventana puerta-ventana" style="position:static;margin-top:12px;max-width:520px"><header class="asent-ventana-cab"><div class="asent-ventana-titulo"><h2>${e(ventana.titulo)}</h2></div></header><div class="asent-edif-cuerpo"><div class="asent-lado-cuerpo">${ventana.html}</div></div></section>` : ''}</div>`;
 }
 
 function pintarTerritorio(): void {

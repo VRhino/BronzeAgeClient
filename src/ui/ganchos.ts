@@ -18,6 +18,7 @@ import { SUBPESTANA_MISIONES } from './misiones';
 import { FICHA_AVANZADA, FICHA_OBRA, FICHA_PUEBLO, SUBPESTANA_PUEBLOS, pueblosYObrasBajoElClic } from './pueblos';
 import { FICHA_CARAVANA_AJENA, FICHA_COLUMNA_AJENA, ajenosBajoElClic } from './interaccionAjena';
 import { FICHA_AEDA, aedasBajoElClic } from './aedas';
+import type { VentanaPuerta } from './accionesPuerta';
 
 type Escapar = (valor: string) => string;
 
@@ -98,6 +99,10 @@ export interface ContextoFicha {
   /** Cierra la selección y repinta. */
   cerrar: () => void;
   escapar: Escapar;
+  /** A qué distancia está tu columna de `punto` y, si no puedes atacarlo, por qué (vacío = puedes); `conSoldados`: pide tropa (asedios). */
+  alcance: (punto: { x: number; y: number }, conSoldados?: boolean) => { distancia: number | null; impide: string };
+  /** Abre en el mapa la ficha de esa batalla (el botón «Unirte a la batalla»). */
+  verBatalla: (batallaId: string) => void;
 }
 
 /** Una ficha de selección del mapa para un tipo de cosa nuevo (columna ajena, caravana ajena…). `buscar` la resuelve de la proyección (`undefined` = ya no existe: se cierra). */
@@ -106,6 +111,8 @@ export interface FichaMapaExtra {
   buscar: (p: ProyeccionJugador, id: string) => unknown;
   html: (p: ProyeccionJugador, objeto: never, c: ContextoFicha) => string;
   cablear?: (cont: HTMLElement, p: ProyeccionJugador, objeto: never, c: ContextoFicha) => void;
+  /** Las ventanas que abren sus botones de la puerta (`ui/accionesPuerta.ts`), por id. */
+  ventanas?: (p: ProyeccionJugador, objeto: never, c: ContextoFicha) => Record<string, () => VentanaPuerta>;
 }
 
 export const FICHAS_MAPA_EXTRA: FichaMapaExtra[] = [

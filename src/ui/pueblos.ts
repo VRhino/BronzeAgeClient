@@ -23,7 +23,7 @@ import { agarre } from './agarre';
 import { miColumna } from './ejercitos';
 import { dibujarIconoMapa } from '../mundo/iconosMapa';
 import { esCultivo, sitiosDeAldea, type Cultivo, type SitiosDeAldea } from '../mundo/fertilidad';
-import type { ContextoPlaza, FichaMapaExtra, ObjetoBajoElClic, SubpestanaPlaza } from './ganchos';
+import type { ContextoFicha, ContextoPlaza, FichaMapaExtra, ObjetoBajoElClic, SubpestanaPlaza } from './ganchos';
 import { cablearEscolta, escolta, puntosDeEscolta } from './panelMercado';
 import type { Ejecutar } from './panelCarro';
 import { nombreDeHeroe } from './nombres';
@@ -32,7 +32,8 @@ import { confirmar } from './dialogo';
 import { iconoEnFila } from './iconosTropa';
 import { ICONO_CARRETA, barraAvance, chipsDeCoste, medallonNivel } from './juegoVisual';
 import { mostrar as mostrarAviso } from './avisos';
-import { cablearAvanzada, claveDeEtapa, iconoDeAvanzada, htmlAvanzadaALaPuerta, htmlEleccionDeTropa, nombreDeEtapa, reglasDeObra as reglasDeObraDeAvanzada } from './avanzadas';
+import { cablearPuertaDeAvanzada, claveDeEtapa, faccionAmiga, iconoDeAvanzada, htmlEleccionDeTropa, madreDe, nombreDeEtapa, puertaDeAvanzada, reglasDeObra as reglasDeObraDeAvanzada } from './avanzadas';
+import { htmlAccionesPuerta, type AccionPuerta, type VentanaPuerta } from './accionesPuerta';
 
 type Escapar = (valor: string) => string;
 
@@ -576,18 +577,66 @@ const ETAPA_AVANZADA: Record<number, string> = { 1: 'Atalaya', 2: 'Fuerte', 3: '
 export const nombreDeAvanzada = (etapa: number): string => ETAPA_AVANZADA[etapa] ?? 'Avanzada';
 export const nombreDeObra = (o: ObraDeMapa): string => NOMBRE_OBRA[o.tipo] ?? 'Obra';
 
-/** La ficha de una avanzada: qué es, de qué plaza y si está en ruinas o la atacan. */
+/** La obra pendiente de la avanzada (mejora o reparación) o de la aldea (subida de nivel) `destinoId`, si la hay. */
+const obraSobre = (p: ProyeccionJugador, destinoId: string): ObraDeMapa | undefined =>
+  (p.obrasDeMapa ?? []).find((o) => o.destinoId === destinoId && (o.tipo === 'mejoraAvanzada' || o.tipo === 'reparacion' || o.tipo === 'mejoraAldea'));
+
+/** La obra a la puerta (0.193.0): si es tuya y aún pide materiales, un botón «Obra» que abre la entrega; si ya se levanta, una línea con lo que falta. */
+function puertaDeObra(p: ProyeccionJugador, o: ObraDeMapa | undefined, c: ContextoFicha): { accion?: AccionPuerta; ventana?: () => VentanaPuerta; nota: string } {
+  if (!o || !o.propia) return { nota: '' };
+  if (o.terminaEn !== undefined) return { nota: `<p class="asent-lado-nota">🔨 ${c.escapar(NOMBRE_OBRA[o.tipo])}: se levanta, ${c.escapar(textoEnTiempoReal(o.terminaEn - p.instante))}.</p>` };
+  return {
+    accion: { id: 'obra', etiqueta: 'Obra', icono: '🔨', ventana: true },
+    ventana: () => ({ titulo: NOMBRE_OBRA[o.tipo], icono: '🔨', ancho: 'estrecha', html: htmlEntrega(p, o, c), cablear: (cuerpo) => cablearEntrega(cuerpo, p, o, c) }),
+    nota: '',
+  };
+}
+
+/** «Atacar» un pueblo o una avanzada ajenos (no de una Facción aliada ni vasalla), y «La batalla» si ya la hay; con el motivo si aún no se puede. */
+function puertaDeAtaque(p: ProyeccionJugador, x: { madreId: string; posicion: Point; batallaId?: string }, propio: boolean, c: ContextoFicha): AccionPuerta[] {
+  const acciones: AccionPuerta[] = [];
+  if (x.batallaId && (p.batallas ?? []).some((b) => b.battleId === x.batallaId)) acciones.push({ id: 'batalla', etiqueta: 'La batalla', icono: '⚔', titulo: 'Abre la batalla: desde ella te unes a un lado.' });
+  if (propio || faccionAmiga(p, madreDe(p, x).faccionId) || x.batallaId) return acciones;
+  const { distancia: d, impide } = c.alcance(x.posicion, true);
+  if (d === null) return acciones;
+  acciones.push({ id: 'atacar', etiqueta: 'Atacar', icono: '⚔', principal: true, motivo: impide || undefined });
+  return acciones;
+}
+
+function cablearAtaque(cont: HTMLElement, p: ProyeccionJugador, x: { id: string; batallaId?: string }, tipo: 'pueblo' | 'avanzada', c: ContextoFicha): void {
+  const b = cont.querySelector<HTMLButtonElement>('[data-puerta="atacar"]');
+  b?.addEventListener('click', async () => {
+    b.disabled = true;
+    const mensaje = await c.ejecutar('atacar', { heroeId: p.heroeId, objetivo: { tipo, id: x.id } });
+    b.disabled = false;
+    const err = cont.querySelector<HTMLElement>('[data-puerta-error]');
+    if (err) err.textContent = mensaje ?? '';
+    if (!mensaje) c.aviso(tipo === 'pueblo' ? 'Atacas el pueblo.' : 'Atacas la avanzada.');
+  });
+  cont.querySelector<HTMLButtonElement>('[data-puerta="batalla"]')?.addEventListener('click', () => { if (x.batallaId) c.verBatalla(x.batallaId); });
+}
+
+/** La ficha de una avanzada: qué es, de qué plaza y si está en ruinas o la atacan, y los botones de lo que se hace a su puerta. */
 export const FICHA_AVANZADA: FichaMapaExtra = {
   tipo: 'avanzadaMapa',
   buscar: (p, id) => (p.avanzadas ?? []).find((x) => x.id === id),
   html: (p, x: AvanzadaDeMapa, c) => {
     const e = c.escapar;
+    const puerta = puertaDeAvanzada(p, x, e, c.ejecutar);
+    const obra = puertaDeObra(p, obraSobre(p, x.id), c);
+    const acciones = [...puerta.acciones, ...(obra.accion ? [obra.accion] : []), ...puertaDeAtaque(p, x, x.propia, c)];
     return `<span class="faction-kicker">${x.propia ? 'Avanzada de tu Facción' : 'Avanzada ajena'}</span>
       <h3>${e(ETAPA_AVANZADA[x.etapa] ?? 'Avanzada')}</h3>
       <p class="asent-lado-nota">De ${e(nombrePlaza(p, x.madreId))}.${x.enRuinas ? ' En ruinas.' : ''}${x.batallaId ? ' <strong>La están atacando.</strong>' : ''}</p>
-      ${htmlAvanzadaALaPuerta(p, x, e)}`;
+      ${obra.nota}${htmlAccionesPuerta(acciones, e)}${puerta.nota}<p class="faction-error" data-puerta-error role="alert"></p>`;
   },
-  cablear: (cont, p, x: AvanzadaDeMapa, c) => cablearAvanzada(cont, p, x, c.ejecutar),
+  cablear: (cont, p, x: AvanzadaDeMapa, c) => { cablearPuertaDeAvanzada(cont, p, x, c.ejecutar); cablearAtaque(cont, p, x, 'avanzada', c); },
+  ventanas: (p, x: AvanzadaDeMapa, c) => {
+    const obra = puertaDeObra(p, obraSobre(p, x.id), c);
+    const ventanas = { ...puertaDeAvanzada(p, x, c.escapar, c.ejecutar).ventanas };
+    if (obra.ventana) ventanas.obra = obra.ventana;
+    return ventanas;
+  },
 };
 
 export const FICHA_PUEBLO: FichaMapaExtra = {
@@ -595,38 +644,45 @@ export const FICHA_PUEBLO: FichaMapaExtra = {
   buscar: (p, id) => (p.pueblos ?? []).find((x) => x.id === id),
   html: (p, x: PuebloDeMapa, c) => {
     const e = c.escapar;
-    const mejora = (p.obrasDeMapa ?? []).find((o) => o.tipo === 'mejoraAldea' && o.destinoId === x.id);
+    const entrar = puertaDePueblo(p, x);
+    const obra = puertaDeObra(p, obraSobre(p, x.id), c);
+    const acciones = [...entrar.acciones, ...(obra.accion ? [obra.accion] : []), ...puertaDeAtaque(p, x, x.propio, c)];
     return `<span class="faction-kicker">${x.propio ? 'Pueblo de tu Facción' : 'Pueblo ajeno'}</span>
       <h3>${e(nombreDePueblo(x))}</h3>
       <p class="asent-lado-nota">De ${e(nombrePlaza(p, x.madreId))}.${x.batallaId ? ' <strong>Lo están atacando.</strong>' : ''}</p>
       ${x.propio ? `<p class="asent-lado-nota">${x.fertilidad !== undefined ? `Fertilidad ${x.fertilidad.toFixed(2).replace('.', ',')}. ` : ''}${x.carroId ? 'Su carro acarrea a la plaza.' : 'Sin carro de acarreo.'}</p>` : ''}
-      ${mejora ? htmlEntrega(p, mejora, c) : ''}
-      ${htmlEntrar(p, x, e)}`;
+      ${obra.nota}${htmlAccionesPuerta(acciones, e)}${entrar.nota ? `<p class="asent-lado-nota">${e(entrar.nota)}</p>` : ''}<p class="faction-error" data-puerta-error role="alert"></p>`;
   },
   cablear: (cont, p, x: PuebloDeMapa, c) => {
-    const mejora = (p.obrasDeMapa ?? []).find((o) => o.tipo === 'mejoraAldea' && o.destinoId === x.id);
-    if (mejora) cablearEntrega(cont, p, mejora, c);
-    const b = cont.querySelector<HTMLButtonElement>('[data-entrar-pueblo]');
+    const b = cont.querySelector<HTMLButtonElement>('[data-puerta="entrar"]');
     b?.addEventListener('click', async () => {
       b.disabled = true;
       const mensaje = await c.ejecutar('entrarEnPueblo', { heroeId: p.heroeId, puebloId: x.id });
       b.disabled = false;
-      const err = cont.querySelector<HTMLElement>('[data-entrar-error]');
+      const err = cont.querySelector<HTMLElement>('[data-puerta-error]');
       if (err) err.textContent = mensaje ?? '';
     });
+    cablearAtaque(cont, p, x, 'pueblo', c);
+  },
+  ventanas: (p, x: PuebloDeMapa, c) => {
+    const obra = puertaDeObra(p, obraSobre(p, x.id), c);
+    const ventanas: Record<string, () => VentanaPuerta> = {};
+    if (obra.ventana) ventanas.obra = obra.ventana;
+    return ventanas;
   },
 };
 
-/** «Entrar» en la ficha del pueblo: con tu columna a su puerta. Entra el que va solo; un ejército, por orden de su Líder. El acceso es el de la plaza madre. */
-function htmlEntrar(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar): string {
+/** «Entrar» en el pueblo: con tu columna a su puerta, en uno de tu Facción o de una aliada o vasalla (el acceso es el de la plaza madre). Entra
+ * el que va solo; un ejército, por orden de su Líder. Si aún no se puede, no hay botón y la nota dice por qué. */
+function puertaDePueblo(p: ProyeccionJugador, x: PuebloDeMapa): { acciones: AccionPuerta[]; nota: string } {
   const mi = miColumna(p);
-  if (!mi) return '';
+  if (!mi || !(x.propio || faccionAmiga(p, madreDe(p, x).faccionId))) return { acciones: [], nota: '' };
   const d = distancia(mi.posicionActual, x.posicion);
   const puerta = radioDePuerta();
   const solo = mi.participantes.length === 1;
-  const motivo = d > puerta ? `Acerca tu columna: está a ${n0(d)} y se entra a ${puerta} o menos.` : !solo && mi.liderId !== p.heroeId ? 'Solo el Líder hace entrar al ejército.' : '';
-  return `<div class="mapa-seleccion-acciones"><button class="btn-primary" type="button" data-entrar-pueblo${motivo ? ` disabled title="${e(motivo)}"` : ''}>${solo ? 'Entrar' : 'Entrar con el ejército'}</button></div>
-    ${motivo ? `<p class="asent-lado-nota">${e(motivo)}</p>` : ''}<p class="faction-error" data-entrar-error role="alert"></p>`;
+  if (d > puerta) return { acciones: [], nota: `Acerca tu columna: está a ${n0(d)} y se entra a ${puerta} o menos.` };
+  if (!solo && mi.liderId !== p.heroeId) return { acciones: [], nota: 'Solo el Líder hace entrar al ejército.' };
+  return { acciones: [{ id: 'entrar', etiqueta: solo ? 'Entrar' : 'Entrar con el ejército', icono: '🚪', principal: true }], nota: '' };
 }
 
 /** Lo que pide la obra, recurso a recurso (0.138.0, Víctor 2026-11-04): icono, barra de lo entregado, «faltan» y lo que lleva tu columna de ese
