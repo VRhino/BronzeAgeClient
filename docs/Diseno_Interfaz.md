@@ -96,6 +96,13 @@ remata cabeceras y paneles con la moldura clásica. `opacity: .5` para que sea s
   ese color (`--swatch`). Hover: borde `--bronce` + tinte oro.
 - **Tooltip** (`.asent-tooltip`) — panel mini con `--placa-sutil`; título en `--fuente-titulo` +
   `--oro-claro`, cuerpo `--text-secondary`. `pointer-events: none`, sigue al cursor, clamp al viewport.
+- **Tooltip con ficha** (`.ta-tip`, de los árboles de tecnologías y de tropas; y desde 0.192.0 `.ta-tip.tip-ficha`, `ui/tipFicha.ts`) —
+  placa de bronce de hasta 400 px: cabecera con el icono (svg del edificio o emoji del recurso), el nombre en `--fuente-titulo` `--oro-claro`
+  y una línea `.ta-meta`; secciones con `h4` en versal dorada con su barrita de bronce, listas, y piezas `.ta-rec` (icono y cifra, en rojo
+  `.falta` lo que no hay). Un elemento lo pide con `data-tip="tipo:argumento"` (`atributoTip`) y quien sabe pintar ese tipo se apunta con
+  `registrarTip`; `data-tip-nota` añade un pie. Sigue al ratón (encima si abajo no cabe), con el teclado sale junto al elemento, y se va al
+  salir, con Esc o al hacer clic. Si un repintado cambia el elemento por otro igual, pasa a él con las cifras nuevas. Lo usan los botones de
+  «Construir» y los recursos de la ventana del Almacén (`ui/tipsPlaza.ts`).
 - **Tira de recursos** (`.asent-recursos`) — chips `icono + cifra` flotando abajo-centro sobre el
   mapa, uno por recurso con `floor(cantidad) >= 1`. Cada chip lleva una **barra de llenado**
   (`--llenado: %` sobre `cantidad / capacidad`) en el borde inferior, y un **tooltip** al pasar el

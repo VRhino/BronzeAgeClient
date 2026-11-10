@@ -5369,14 +5369,9 @@ body:has(.eleccion-clic) .aviso-global { visibility: hidden; }
 .mapa-capas-muestra { display: flex; align-items: center; gap: 7px; font-size: 0.74rem; }
 .mapa-capas-muestra i { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid var(--c); background: color-mix(in srgb, var(--c) 45%, transparent); }
 .mapa-capas-nota { margin: 0; font-size: 0.7rem; color: var(--text-secondary); }
-/* El cultivo de la capa de fertilidad (0.190.0): cada uno tiene su tierra buena. */
-.mapa-capas-cultivos { display: flex; flex-wrap: wrap; gap: 3px; }
-.mapa-capas-cultivo { cursor: pointer; }
-.mapa-capas-cultivo input { position: absolute; opacity: 0; pointer-events: none; }
-.mapa-capas-cultivo > span { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; font-size: 0.72rem; border: 1px solid var(--bronce-osc); border-radius: 3px; background: rgba(18, 13, 8, 0.6); }
-.mapa-capas-cultivo:hover > span { border-color: var(--bronce); }
-.mapa-capas-cultivo input:checked + span { color: var(--oro-claro); border-color: var(--oro); background: rgba(90, 64, 24, 0.55); }
-.mapa-capas-cultivo input:focus-visible + span { outline: 1px solid var(--oro); outline-offset: 1px; }
+/* La fertilidad, una casilla por cultivo desbloqueado (0.192.0; antes, 0.190.0, unos botones en la leyenda): cada uno tiene su tierra buena. */
+.mapa-capas-fertilidad { display: flex; flex-direction: column; }
+.mapa-capas-fila-icono { display: inline-block; width: 1.3em; text-align: center; margin-right: 3px; }
 
 /* =====================================================================================
    Construcción como cajón del riel (0.109.0, Víctor 2026-11-03): al pulsar Construcción el riel se esconde y en su sitio sale el cajón, con
@@ -5941,6 +5936,21 @@ button.carro-hueco:hover, .carro-hueco.activo { border-color: var(--oro); box-sh
 .ta-tip .ap { color: var(--obra-ambar); font-weight: 700; }
 .ta-tip ul.ta-marcadas { list-style: none; padding-left: 0; }
 .ta-fichas { display: flex; flex-wrap: wrap; gap: 4px; }
+/* Los tooltips con ficha de la plaza (0.192.0, ui/tipFicha.ts y ui/tipsPlaza.ts): los edificios de Construir y los recursos del Almacén, con la
+   pinta de los de los árboles. Un poco más anchos, la cabecera con el emoji del recurso y la función del edificio en cursiva. */
+.ta-tip.tip-ficha { width: min(400px, calc(100vw - 24px)); }
+.tip-ficha-icono { flex: none; width: 34px; height: 34px; display: grid; place-items: center; font-size: 26px; line-height: 1; filter: drop-shadow(0 1px 1px rgba(0,0,0,.6)); }
+.tip-funcion { margin: 6px 0 0; color: var(--ta-texto-2); font-style: italic; text-wrap: pretty; }
+.tip-ficha ul li { text-wrap: pretty; }
+.tip-ficha .ta-fichas { align-items: center; }
+.tip-ficha ul.tip-niveles { list-style: none; padding-left: 0; gap: 5px; }
+.tip-ficha ul.tip-niveles > li > b { color: var(--oro-claro); font-weight: 600; }
+.tip-ficha ul.tip-niveles ul { padding-left: 14px; color: var(--ta-texto-2); }
+.ta-estado-caja.baja { border-color: rgba(226,103,90,.6); }
+.tip-ficha .ta-edi .tip-nombre { color: var(--pergamino); font-size: 12px; margin-left: 2px; }
+.tip-ficha .tip-iconos { display: inline-flex; gap: 2px; vertical-align: middle; }
+.tip-ficha .tip-iconos .ta-rec.ta-edi { padding: 1px 2px; }
+.prod-ficha:focus-visible { outline: 2px solid var(--oro); outline-offset: 1px; }
 .ta-ficha-recluta { display: flex; flex-wrap: wrap; gap: 6px; }
 .ta-ficha-boton .recl-costes { display: inline-flex; flex-wrap: wrap; gap: 4px; }
 .ta-ficha-boton .obra-coste { display: inline-flex; align-items: center; gap: 2px; padding: 0 5px; border-radius: 2px; background: rgba(20,14,8,.78); color: var(--pergamino); font-size: 12px; letter-spacing: 0; opacity: 1; }

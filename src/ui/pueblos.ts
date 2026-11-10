@@ -317,6 +317,16 @@ export function nivelAlcanzadoEnLaFaccion(p: ProyeccionJugador, a: Asentamiento)
   return Math.max(a.nivel, ...propias.map((x) => x.nivel));
 }
 
+/** Los cultivos que la Facción del jugador ya desbloqueó (por el mayor nivel alcanzado entre sus plazas, como `nivelAlcanzadoEnLaFaccion`): las
+ * capas de fertilidad del mapa enseñan solo esos (Víctor, 2026-11-10: «que el jugador no pueda ver los que no tiene disponibles»). Sin Facción
+ * ni plazas, los de nivel 1 (el trigo). */
+export function cultivosDesbloqueados(p: ProyeccionJugador | null | undefined): Cultivo[] {
+  const fid = p?.faccionId;
+  const propias = p && fid ? [...(p.asentamientos ?? []), ...(p.plazasPropias ?? []), ...(p.asentamientosAvistados ?? [])].filter((x) => x.faccionId === fid) : [];
+  const nivel = Math.max(1, ...propias.map((x) => x.nivel));
+  return CULTIVOS.map((c) => cultivo(c.id)).filter((c) => nivel >= c.nivelMadre).map((c) => c.id);
+}
+
 /** Los cultivos que puede tener la siguiente aldea de esta plaza: los que ya desbloqueó su Facción, sea cual sea el nivel de la madre (motor
  * b55e90f; regla de interfaz: lo que no se puede no se enseña). */
 const cultivosPosibles = (p: ProyeccionJugador, a: Asentamiento): (typeof CULTIVOS)[number][] => {

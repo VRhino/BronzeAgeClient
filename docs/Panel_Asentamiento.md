@@ -260,6 +260,18 @@ La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, es
 > de obra y, durante la obra o la mejora, su barra y lo que queda). La Producción está en la ventana del Almacén (0.107.0). En el riel solo
 > salen las ventanas que se pueden abrir (Taberna y Mercado, con el edificio activo).
 >
+> **Tooltips con ficha en Construir y en el Almacén** (0.192.0, Víctor 2026-11-10; `ui/tipsPlaza.ts`, con la pinta de los de los árboles).
+> **Al pasar por un edificio de «Construir»**: su tamaño en el trazado, si es único o cuántos caben, una frase con su función, el coste (en rojo
+> lo que falta) y la obra con las políticas de hoy, lo que da en el nivel 1 (recetas con su ritmo e insumos, producción base, mano de obra con su
+> clase, sitio para la gente, cabida, flota, Miradas, el buey, las tropas que recluta por nivel con nombre si la Facción tiene su tecnología, la
+> política de más de la Sala del Consejo, el prestigio de la estatua y la Maravilla), sus mejoras (lo que piden y lo que añaden) y, en la plaza,
+> cuántos hay, si hace falta para subirla de nivel (solo los niveles que quedan) y qué edificios lo piden. **Al pasar por un recurso del
+> Almacén** (las fichas y los botones de la barra): lo que hay, lo que entra y sale y cuándo se llena o se acaba; para qué sirve (la comida de
+> qué clase y su ración, la guarnición, los talleres que lo gastan, el equipo de las tropas, el oro del reclutamiento, construir, mejorar, subir
+> la plaza y el mantenimiento), de dónde sale (extractores, aldeas por cultivo, rebaños, talleres, recaudación por clase, batallas) y qué lo
+> multiplica (la Cantería, el buey, la fertilidad, el bosque, el crecimiento con la ración entera y las políticas, marcadas si están activas).
+> Todo sale del catálogo y de los bloques del motor. El `title` del navegador se va; las cifras siguen en el `aria-label`.
+>
 > **Albergue de caravanas** (0.128.0, motor b5e27ace). Sale en «Construir», en Gobierno junto al Mercado, solo con un Mercado activo (lo
 > que pide su nivel 1, `requiereEdificio`; el rechazo del motor, `obra.falta_edificio`, tiene su texto). Su ficha dice lo que suma a la flota a
 > su nivel (3 caravanas y 5 carros en el 1, 6 y 10 en el 2, 12 y 22 en el 3) y que sin Mercado activo no suma nada; mejorarlo pide el

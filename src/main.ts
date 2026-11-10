@@ -47,8 +47,8 @@ import { minutosHerido } from './ui/panelHeroe';
 import { baseOcupada, cablearBasePersonal, htmlBasePersonal } from './ui/basePersonal';
 import { htmlBarraJugador, type PanelJugador } from './ui/barraJugador';
 import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno, type CapasTematicas } from './render';
-import { capasDelMapa, cultivoDeLaCapa, distanciaDeCarga, type CapasDelMapa } from './mundo/capasDelMapa';
-import { cablearCapas, htmlCapas } from './ui/capasMapa';
+import { capasDelMapa, distanciaDeCarga, type CapasDelMapa } from './mundo/capasDelMapa';
+import { cablearCapas, cultivoVisible, htmlCapas } from './ui/capasMapa';
 import { EDIFICIO_NOMBRE, RECURSO_NOMBRE } from './paletas';
 import type { Alijo, Asentamiento, AvanzadaDeMapa, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, EscenaCampamento, Faccion, ParamsCrearHeroe, PuebloDeMapa, Sigilo } from './tiposDominio';
 import { svgSigilo } from './sigilo/sigilo';
@@ -118,8 +118,8 @@ import { explicarError } from './ui/erroresServidor';
 import { motivosParaCrearFaccion } from './ui/validarFaccion';
 import { nombreDeHeroe } from './ui/nombres';
 import { htmlEstados } from './ui/estados';
-import { cablearInteriorPueblo, htmlCuerpoPueblo, htmlTrazadoPueblo, nombreDePueblo, pestanasDePueblo, puebloActual, reglasDeAldea, selectorDePunto, type PestanaPueblo } from './ui/pueblos';
-import { pintarSitiosDeAldea, type SitiosDeAldea } from './mundo/fertilidad';
+import { cablearInteriorPueblo, cultivosDesbloqueados, htmlCuerpoPueblo, htmlTrazadoPueblo, nombreDePueblo, pestanasDePueblo, puebloActual, reglasDeAldea, selectorDePunto, type PestanaPueblo } from './ui/pueblos';
+import { pintarSitiosDeAldea, type Cultivo, type SitiosDeAldea } from './mundo/fertilidad';
 import { htmlMiembrosFaccion, htmlResidentesPlaza } from './ui/participacion';
 import { ascensoPosible, cablearCargosPlaza, htmlAscensoPlaza, htmlAutoConstruccion, htmlCargosPlaza } from './ui/panelCentro';
 import { cablearVentanaAedas, hayAedasEnPlaza, htmlVentanaAedas } from './ui/ventanaAedas';
@@ -1843,13 +1843,13 @@ function alternarVistaMapa(abrir: boolean = !vistaMapaAbierta, centro?: { x: num
   if (abrir) {
     pantalla.insertAdjacentHTML('beforeend', `<div class="mapa-screen mapa-interior">
       <div class="mapa-lienzo"><canvas id="mapa-interior"></canvas></div>
-      ${htmlCapas('mapa', reglasDeAldea().fertilidadMinima)}
+      ${htmlCapas('mapa', reglasDeAldea().fertilidadMinima, cultivosDeLasCapas())}
       <div class="mapa-zoom"><button type="button" data-zoom="in" aria-label="Acercar">+</button><button type="button" data-zoom="out" aria-label="Alejar">−</button></div>
       <button class="asent-ventana-cerrar mapa-interior-cerrar" type="button" title="Cerrar el mapa (Esc)" aria-label="Cerrar el mapa">✕</button>
       ${eleccionEnMapa ? `<div class="mapa-eleccion" role="status"><span>${escaparHtml(eleccionEnMapa.texto)}</span><p class="faction-error" data-eleccion-error role="alert"></p></div>` : ''}
     </div>`);
     const interior = pantalla.querySelector<HTMLElement>('.mapa-interior')!;
-    cablearCapas(interior, aplicarCapas);
+    cablearCapas(interior, aplicarCapas, cultivosDeLasCapas);
     // Eligiendo un punto, el clic lo manda; si el motor lo rechaza se dice por qué y se puede probar otro sitio.
     const alClicar = (evento: PointerEvent): void => {
       const eleccion = eleccionEnMapa;
@@ -1892,6 +1892,9 @@ function alternarVistaMapa(abrir: boolean = !vistaMapaAbierta, centro?: { x: num
   renderPanelJugador();
 }
 
+/** Los cultivos con capa de fertilidad en la lista: los que tu Facción ya desbloqueó (0.192.0, Víctor 2026-11-10). */
+const cultivosDeLasCapas = (): Cultivo[] => cultivosDesbloqueados(estadoCliente.proyeccionUltima);
+
 /** Las capas puestas o quitadas (botón de capas, en el modo mundo o en el mapa): las casillas de las dos pantallas dicen lo mismo, la vista 3D
  * pone o quita los nombres de los nodos y toma la distancia de carga, y el modo mapa se repinta. */
 function aplicarCapas(): void {
@@ -1902,8 +1905,9 @@ function aplicarCapas(): void {
     const leyenda = casilla.closest('.mapa-capas-lista')?.querySelector<HTMLElement>(`[data-leyenda="${capa}"]`);
     if (leyenda) leyenda.hidden = !c[capa];
   });
-  const cultivo = cultivoDeLaCapa();
-  document.querySelectorAll<HTMLInputElement>('.mapa-capas [data-capa-cultivo]').forEach((r) => { r.checked = r.value === cultivo; });
+  const cultivo = cultivoVisible(cultivosDeLasCapas());
+  document.querySelectorAll<HTMLInputElement>('.mapa-capas [data-capa-fertilidad]').forEach((r) => { r.checked = c.fertilidad && r.dataset.capaFertilidad === cultivo; });
+  document.querySelectorAll<HTMLElement>('.mapa-capas [data-leyenda="fertilidad"]').forEach((l) => { l.hidden = !c.fertilidad; });
   vista3dActiva?.fijarNombresDeNodos(c.nombresDeNodos);
   vista3dActiva?.fijarFertilidad(c.fertilidad, reglasDeAldea().fertilidadMinima, cultivo);
   vista3dActiva?.fijarDistanciaDeCarga(distanciaDeCarga());
@@ -1919,7 +1923,7 @@ function capasTematicas(): CapasTematicas {
   if (c.parcelas && base && parcelasConocidas?.de !== base) parcelasConocidas = { de: base, estadoDe: clasificadorDeParcelas(base) };
   return {
     sinNombres: !c.nombresDeNodos,
-    ...(c.fertilidad ? { fertilidad: { minimaAldea: reglasDeAldea().fertilidadMinima, cultivo: cultivoDeLaCapa() } } : {}),
+    ...(c.fertilidad ? { fertilidad: { minimaAldea: reglasDeAldea().fertilidadMinima, cultivo: cultivoVisible(cultivosDeLasCapas()) } } : {}),
     ...(c.parcelas && parcelasConocidas ? { parcelas: { estadoDe: parcelasConocidas.estadoDe } } : {}),
   };
 }
@@ -2150,11 +2154,11 @@ function montarMapa(): void {
       </nav>
       <div class="mapa-comida" role="status" hidden></div>
     </div>
-    ${htmlCapas('mundo', reglasDeAldea().fertilidadMinima)}
+    ${htmlCapas('mundo', reglasDeAldea().fertilidadMinima, cultivosDeLasCapas())}
     ${menuEsquinaHtml()}
   </div>`;
   const contenedor = document.querySelector<HTMLElement>('.mapa-screen')!;
-  cablearCapas(contenedor, aplicarCapas);
+  cablearCapas(contenedor, aplicarCapas, cultivosDeLasCapas);
   const lienzo = document.querySelector<HTMLElement>('.mapa-lienzo')!;
   // Un clic en el terreno (la vista 3D da el punto del mapa bajo el ratón y los centros de lo que tiene debajo): lo que hay se selecciona y la
   // columna marcha hacia ello; si son varias cosas, primero se elige una en la lista; en el suelo, se marcha allí. Con la lista abierta, un

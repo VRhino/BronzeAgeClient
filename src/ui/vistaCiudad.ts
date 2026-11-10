@@ -19,6 +19,8 @@ import { mostrar as mostrarAviso } from './avisos';
 import { iconoEdificio } from './iconosEdificio';
 import { barraAvance, chipsDeCoste, cuentaAtras, duracion } from './juegoVisual';
 import { avanceDeObra } from './panelObras';
+import { atributoTip } from './tipFicha';
+import { fijarPlazaDelTip, flujosDe, textoDeExistencias, type Existencia } from './tipsPlaza';
 import { confirmar } from './dialogo';
 import { RECETA_DE_INSUMO, esDeUnaReceta, insumoActivo, insumosDe, recetasDistintas, recetasElegibles } from './recetasUnicas';
 
@@ -422,17 +424,6 @@ function extractoresDe(a: Asentamiento, alCargar: () => void): Map<string, { rec
   return porTipo;
 }
 
-type Existencia = { cantidad: number; capacidad: number; porMinuto?: number; producido?: number; produccion?: number; consumido?: number };
-
-/** Lo que rinden los edificios (quepa o no), lo que se consume y lo que se enseña como neto: con el almacén lleno, el balance producción − consumo
- * y no el neto del almacén, que baja a lo que entra y hacía parecer la ficha a la baja (Víctor, 2026-11-03: «sale como si tuviera producción
- * negativa cuando no es así»). */
-function flujosDe(x: Existencia): { produce: number; consume: number; neto: number; lleno: boolean } {
-  const produce = x.produccion ?? x.producido ?? 0, consume = x.consumido ?? 0;
-  const lleno = x.capacidad > 0 && x.cantidad >= x.capacidad;
-  return { produce, consume, neto: lleno ? produce - consume : x.porMinuto ?? 0, lleno };
-}
-
 /** Los recursos que se mueven o que hay, en el orden de la paleta (los básicos primero). */
 export function recursosDelAlmacen(a: Asentamiento): [string, Existencia][] {
   const orden = Object.keys(RECURSO_ICONO);
@@ -447,13 +438,12 @@ export function recursosDelAlmacen(a: Asentamiento): [string, Existencia][] {
 export function fichaRecurso(r: string, x: Existencia, e: Escapar): string {
   const { produce: p, consume: c, neto: n, lleno } = flujosDe(x);
   const fraccion = x.capacidad > 0 ? Math.min(1, x.cantidad / x.capacidad) : 0;
-  const nombre = RECURSO_NOMBRE[r] ?? r;
   const minutos = n > 0 && x.capacidad > 0 && !lleno ? (x.capacidad - x.cantidad) / n : n < 0 && x.cantidad > 0 ? x.cantidad / -n : null;
-  const cuando = minutos === null ? '' : `${n > 0 ? 'Lleno' : 'Se acaba'} en ${textoEnTiempoReal(minutos * 60_000)}`;
-  const titulo = `${nombre}: ${Math.floor(x.cantidad)} de ${Math.floor(x.capacidad)}${p || c ? ` · por minuto produce ${fmt(p)}, consume ${fmt(c)}` : ''} · ${lleno ? 'balance' : 'neto'} ${n > 0 ? '+' : ''}${fmt(n)}/min${lleno ? ' · almacén lleno: lo que se produce de más se pierde' : cuando ? ` · ${cuando.toLowerCase()}` : ''}`;
+  // las cifras van en el tooltip con ficha (0.192.0: para qué sirve, de dónde sale y qué lo multiplica); con el teclado también se abre
+  const titulo = textoDeExistencias(r, x);
   const flujo = p + c > 0 ? `<span class="prod-flujo" aria-hidden="true"><i class="entra" style="width:${((p / (p + c)) * 100).toFixed(1)}%"></i><i class="sale"></i></span>` : '<span class="prod-flujo quieto" aria-hidden="true"></span>';
   const aviso = lleno ? '<span class="prod-ficha-aviso lleno">LLENO</span>' : minutos !== null && n < 0 && minutos < 60 ? `<span class="prod-ficha-aviso baja">⏳${e(textoEnTiempoReal(minutos * 60_000).replace(/ (min|h|s|d)$/, (_, u: string) => (u === 'min' ? 'm' : u)))}</span>` : '';
-  return `<div class="prod-ficha${lleno ? ' lleno' : ''}${n < 0 ? ' baja' : n > 0 ? ' sube' : ''}" title="${e(titulo)}">
+  return `<div class="prod-ficha${lleno ? ' lleno' : ''}${n < 0 ? ' baja' : n > 0 ? ' sube' : ''}"${atributoTip('recurso', r, e)} tabindex="0" role="group" aria-label="${e(titulo)}">
     <span class="prod-ficha-icono">${RECURSO_ICONO[r] ?? '📦'}</span>
     <span class="prod-ficha-neto ${signo(n)}">${n > 0 ? '▲' : n < 0 ? '▼' : '■'}&nbsp;${n > 0 ? '+' : ''}${fmt(n)}</span>
     <span class="prod-ficha-cifra">${Math.floor(x.cantidad)}${aviso || `<small>/${Math.floor(x.capacidad)}</small>`}</span>
@@ -478,6 +468,7 @@ export function htmlExtraccion(c: ContextoPlaza): string {
       <small>${ratio < 1 ? `${Math.round(ratio * 100)} %` : '✔'}</small>
     </div>`;
   const recursos = recursosDelAlmacen(a);
+  fijarPlazaDelTip(a);
   const fichas = recursos.length ? `<div class="prod-fichas">${recursos.map(([r, x]) => fichaRecurso(r, x, e)).join('')}</div>` : '<p class="mapa-lista-vacia">El almacén está vacío.</p>';
   const extractores = [...porTipo.entries()].sort(([x], [y]) => nombreDe(x).localeCompare(nombreDe(y))).map(([tipo, g]) => {
     const parados = g.edificios.filter((x) => x.pausadoPorAlmacenLleno).length;

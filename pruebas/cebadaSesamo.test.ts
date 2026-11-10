@@ -24,7 +24,7 @@ const { produce, nivelAlcanzadoEnLaFaccion, SUBPESTANA_PUEBLOS } = await import(
 const { sitiosDeAldea, fertilidadEn } = await import('../src/mundo/fertilidad');
 const { mapaDesdeArtefacto } = await import('../src/mundo/artefacto');
 const { htmlCapas } = await import('../src/ui/capasMapa');
-const { cultivoDeLaCapa, fijarCultivoDeLaCapa } = await import('../src/mundo/capasDelMapa');
+const { cultivoDeLaCapa, fijarCapa, fijarCultivoDeLaCapa } = await import('../src/mundo/capasDelMapa');
 
 beforeAll(async () => {
   await new Promise<void>((listo) => { if (bloqueDeDatos('EDIFICIO_CATALOGO', listo)) listo(); });
@@ -115,18 +115,25 @@ describe('la tierra de la cebada y del sésamo', () => {
 });
 
 describe('la capa de fertilidad, por cultivo', () => {
-  test('la leyenda deja elegir los cinco cultivos, y se recuerda el elegido', () => {
-    const html = htmlCapas('mapa', 0.3);
-    expect([...html.matchAll(/data-capa-cultivo/g)]).toHaveLength(5);
-    expect(html).toContain('value="trigo" data-capa-cultivo checked');
+  test('una casilla por cultivo desbloqueado, y se recuerda el elegido (0.192.0)', () => {
+    const cinco = ['trigo', 'vid', 'oliva', 'cebada', 'sesamo'] as const;
+    const html = htmlCapas('mapa', 0.3, cinco);
+    expect([...html.matchAll(/data-capa-fertilidad=/g)]).toHaveLength(5);
     fijarCultivoDeLaCapa('sesamo');
     expect(cultivoDeLaCapa()).toBe('sesamo');
-    expect(htmlCapas('mundo', 0.3)).toContain('value="sesamo" data-capa-cultivo checked');
+    fijarCapa('fertilidad', true);
+    expect(htmlCapas('mundo', 0.3, cinco)).toContain('data-capa-fertilidad="sesamo" checked');
+    // sin el sésamo desbloqueado no sale su casilla, y la capa pinta el trigo
+    expect(htmlCapas('mundo', 0.3, ['trigo', 'vid'])).not.toContain('data-capa-fertilidad="sesamo"');
+    expect(htmlCapas('mundo', 0.3, ['trigo', 'vid'])).toContain('data-capa-fertilidad="trigo" checked');
+    fijarCapa('fertilidad', false);
     fijarCultivoDeLaCapa('trigo');
   });
 
-  test('con un solo cultivo en el mundo no hay nada que elegir', () => {
-    expect(htmlCapas('mapa', 0.3, ['trigo'])).not.toContain('data-capa-cultivo');
+  test('de serie, solo el trigo', () => {
+    const html = htmlCapas('mapa', 0.3);
+    expect([...html.matchAll(/data-capa-fertilidad=/g)]).toHaveLength(1);
+    expect(html).toContain('Fertilidad del trigo');
   });
 });
 

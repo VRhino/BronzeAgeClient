@@ -3,6 +3,28 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.192.0] — 2026-11-10 · Tooltips con ficha en Construir y en el Almacén, y una capa de fertilidad por cultivo desbloqueado · contrato 0.20.0 (motor `b55e90f`)
+
+Petición de Víctor del 2026-11-10. Sin cambios en el motor ni en el contrato.
+
+- **Tooltip de los edificios de «Construir»**, con la pinta de los de los árboles de tecnologías y de tropas: su tamaño, si es único o cuántos
+  caben por plaza, una frase con su función, el coste (en rojo lo que falta en el almacén) y la obra, lo que da (recetas con su ritmo y sus
+  insumos, producción, mano de obra y de qué clase, sitio, cabida, flota, Miradas, el buey, las tropas que recluta, la política de más de la
+  Sala del Consejo, el prestigio de la estatua y la Maravilla), sus mejoras nivel a nivel (lo que piden y lo que añaden) y, en la plaza,
+  cuántos hay, si hace falta para subirla de nivel y qué edificios lo piden.
+- **Tooltip de los recursos del Almacén** (las fichas y los botones de la barra): lo que hay, lo que entra y sale y cuándo se llena o se acaba;
+  **para qué sirve** (comida de qué clase y su ración, guarnición, los talleres que lo gastan, el equipo de las tropas, el oro del reclutamiento,
+  construir, mejorar, subir la plaza y el mantenimiento), **de dónde sale** (extractores, aldeas por cultivo, rebaños, talleres, recaudación por
+  clase, batallas) y **qué lo multiplica** (la Cantería ×1,5 a la piedra, el molino con buey ×2, la fertilidad, el bosque, el crecimiento de la
+  clase con la ración entera y las políticas, marcadas las activas en la plaza).
+- El tooltip (`ui/tipFicha.ts`) es uno para todo el cliente: `data-tip="tipo:argumento"`, sigue al ratón y sale también con el teclado (las
+  fichas del almacén se pueden enfocar), y se va al salir, con Esc o con un clic. Si un repintado cambia la ficha por otra igual, el tooltip
+  pasa a ella con las cifras nuevas. El `title` del navegador se quita en esos botones; las cifras siguen en el `aria-label`.
+- **Capas del mapa: una casilla de fertilidad por cultivo**, solo de los cultivos que tu Facción ya desbloqueó (el trigo siempre; la vid y la
+  cebada con una plaza de nivel 3; el olivo y el sésamo con una de nivel 4). Se pinta una a la vez: marcar otra quita la de antes. Sustituye a la
+  casilla única con el cultivo elegido en la leyenda (0.190.0). Las casillas se rehacen al abrir la lista.
+- Bancos: `/pruebas/fertilidad/?nivel=N` (el mayor nivel de la Facción: qué cultivos salen). Pruebas nuevas en `pruebas/tipsPlaza.test.ts`.
+
 ## [0.191.0] — 2026-11-09 · Cebada, sésamo y una receta por bodega y prensa, parte 2: el 3D · contrato 0.20.0 (motor `b55e90f`)
 
 - **Cebadales y campos de sésamo**: en una aldea de cebada o de sésamo (`Pueblo.cultivo`), cada granja de la vista 3D es un cebadal (la cebada

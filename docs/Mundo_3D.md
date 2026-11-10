@@ -278,6 +278,12 @@ recuerda en este navegador (`bronzeage.capas`, `mundo/capasDelMapa.ts`) y vale p
 - **Fertilidad del suelo** (solo modo mapa). El raster `fertilidad` del artefacto (celdas de 4 u) en una capa de color: de óxido a ocre por
   debajo de la fertilidad mínima de la aldea agrícola (`reglasDeAldea`, 0,3 sin datos) y, desde ella, de paja a verde hondo. El salto de color
   en el corte es a propósito: se ve dónde cabe una aldea. La leyenda lleva la rampa con el corte marcado. El agua va sin color.
+  **Desde 0.192.0** (Víctor, 2026-11-10) va **una casilla por cultivo** («Fertilidad del trigo», «de la vid», «del olivo», «de la cebada»,
+  «del sésamo»), y **solo los que la Facción del jugador ya desbloqueó** (`cultivosDesbloqueados`, ui/pueblos.ts: por el mayor nivel alcanzado
+  entre sus plazas, como el motor; sin Facción, el trigo). Se pinta una a la vez: marcar otra quita la de antes, y desmarcar la marcada quita la
+  capa. La leyenda es común. Si el cultivo recordado no está entre los visibles (partida nueva), la capa pinta el trigo (`cultivoVisible`). Las
+  casillas se rehacen al abrir la lista, así que un cultivo nuevo sale sin recargar. Antes (0.190.0) era una sola casilla con el cultivo
+  elegido en unos botones de la leyenda.
 - **Parcelas de bosque** (solo modo mapa). Cada parcela del artefacto como su círculo de 4 u, más lleno cuanto más densa (la madera que daría
   su Leñera): verde si está libre, ámbar si tiene una Leñera conocida, rojo si cae en la zona de una plaza de otra Facción (`clasificadorDeParcelas`,
   el mismo criterio que la vista previa de fundar, salvo que ahí también las de tu Facción son ajenas, porque la plaza nueva no las puede tomar).

@@ -1,6 +1,7 @@
 // Banco de la capa de fertilidad por cultivo (`/pruebas/fertilidad/`, 0.190.0): el modo mapa sin servidor, con el mundo que sirve `/__banco/mundo`
 // (vite.config.ts, el que generó el motor), todo explorado, la fertilidad puesta y la lista de capas abierta. `?cultivo=trigo|vid|oliva|cebada|sesamo`
-// la abre con ese cultivo; `&x=&y=&ancho=` encuadra un trozo del mundo (en u; de serie, el mundo entero). Los datos de juego son los de
+// la abre con ese cultivo; `&x=&y=&ancho=` encuadra un trozo del mundo (en u; de serie, el mundo entero). `&nivel=N` (0.192.0): la plaza de
+// mayor nivel de tu Facción, que dice qué cultivos tienen casilla (de serie 4, los cinco; con 1, solo el trigo). Los datos de juego son los de
 // `../plaza/datos.json` (el corte de la aldea). Cuando acaba de pintar, `window.__banco.listo`.
 import datos from '../plaza/datos.json';
 const fetchReal = window.fetch.bind(window);
@@ -11,10 +12,10 @@ import { fromBinary } from '@bufbuild/protobuf';
 import { ArtefactoDeMundoSchema } from '../../src/contrato/gen/bronzeage/v1/world_pb';
 import { mapaDesdeArtefacto } from '../../src/mundo/artefacto';
 import { pintarTerreno } from '../../src/render';
-import { cablearCapas, htmlCapas } from '../../src/ui/capasMapa';
-import { capasDelMapa, cultivoDeLaCapa, fijarCapa, fijarCultivoDeLaCapa } from '../../src/mundo/capasDelMapa';
+import { cablearCapas, cultivoVisible, htmlCapas } from '../../src/ui/capasMapa';
+import { capasDelMapa, fijarCapa, fijarCultivoDeLaCapa } from '../../src/mundo/capasDelMapa';
 import { esCultivo } from '../../src/mundo/fertilidad';
-import { reglasDeAldea } from '../../src/ui/pueblos';
+import { cultivosDesbloqueados, reglasDeAldea } from '../../src/ui/pueblos';
 import { bloqueDeDatos, type ProyeccionJugador } from '../../src/apiCliente';
 
 const banco = { listo: false };
@@ -25,11 +26,14 @@ if (esCultivo(pedido)) fijarCultivoDeLaCapa(pedido);
 fijarCapa('fertilidad', true);
 
 await new Promise<void>((listo) => { if (bloqueDeDatos('PUEBLOS_EXTRACTORES', listo)) listo(); });
+// los cultivos con casilla: los de una Facción cuya plaza mayor es de `&nivel`
+const deLaFaccion = { faccionId: 'f-1', asentamientos: [], plazasPropias: [], asentamientosAvistados: [{ id: 'pl-1', faccionId: 'f-1', nivel: Number(qs.get('nivel') ?? 4) }] } as unknown as ProyeccionJugador;
+const cultivos = () => cultivosDesbloqueados(deLaFaccion);
 const mapa = mapaDesdeArtefacto(fromBinary(ArtefactoDeMundoSchema, new Uint8Array(await (await fetch('/__banco/mundo')).arrayBuffer())));
 
 document.getElementById('app')!.innerHTML = `<div class="mapa-screen mapa-interior" style="position:fixed;inset:0">
   <div class="mapa-lienzo"><canvas id="mapa-interior"></canvas></div>
-  ${htmlCapas('mapa', reglasDeAldea().fertilidadMinima)}
+  ${htmlCapas('mapa', reglasDeAldea().fertilidadMinima, cultivos())}
 </div>`;
 const raiz = document.querySelector<HTMLElement>('.mapa-interior')!;
 const canvas = document.querySelector<HTMLCanvasElement>('#mapa-interior')!;
@@ -48,9 +52,9 @@ function pintar(): void {
   const escala = canvas.width / ancho;
   const ctx = canvas.getContext('2d')!;
   ctx.setTransform(1, 0, 0, 1, -x0 * escala, -y0 * escala);
-  pintarTerreno(ctx, mapa, p, escala, true, capasDelMapa().fertilidad ? { fertilidad: { minimaAldea: reglasDeAldea().fertilidadMinima, cultivo: cultivoDeLaCapa() } } : {});
+  pintarTerreno(ctx, mapa, p, escala, true, capasDelMapa().fertilidad ? { fertilidad: { minimaAldea: reglasDeAldea().fertilidadMinima, cultivo: cultivoVisible(cultivos()) } } : {});
 }
-cablearCapas(raiz, pintar);
+cablearCapas(raiz, pintar, cultivos);
 pintar();
 // la lista abierta, para verla
 raiz.querySelector<HTMLButtonElement>('.mapa-capas-boton')?.click();

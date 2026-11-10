@@ -13,6 +13,8 @@ import { estadoCliente } from './estadoCliente';
 import { iconoEdificio } from './iconosEdificio';
 import { ahora, chipsDeCoste, duracion } from './juegoVisual';
 import { maximoPorPlaza, topeDeEdificiosLleno } from './recetasUnicas';
+import { atributoTip } from './tipFicha';
+import { factorDePoliticas, fijarPlazaDelTip } from './tipsPlaza';
 
 type Escapar = (valor: string) => string;
 type Cargo = 'gobernador' | 'maestroObras' | null;
@@ -85,12 +87,6 @@ function motivoParaConstruir(a: Asentamiento, tipo: string, def: DefEdificio, ca
 
 const catalogo = (): Record<string, DefEdificio> | null => bloqueDeDatos<Record<string, DefEdificio>>('EDIFICIO_CATALOGO');
 
-/** El producto de los factores de las políticas activas de la plaza para ese campo (1 si no hay). */
-function factorDePoliticas(a: Asentamiento, campo: string): number {
-  const politicas = bloqueDeDatos<{ id: string; [k: string]: unknown }[]>('POLITICA_CATALOGO') ?? [];
-  return (a.politicasActivas ?? []).reduce((t, x) => { const v = politicas.find((q) => q.id === x.politicaId)?.[campo]; return typeof v === 'number' ? t * v : t; }, 1);
-}
-
 /** Cuántos minutos dura la obra (o la mejora) de ese edificio, según el catálogo y las políticas de hoy; `null` sin catálogo. */
 export function minutosDeObra(a: Asentamiento, e: Edificio): number | null {
   const def = catalogo()?.[e.tipo];
@@ -142,6 +138,7 @@ export function elegirGrupoDe(tipo: string): void { grupoConstruir = grupoDe(tip
 /** `destacar`: un tipo que hace falta (la Vivienda, cuando ya no cabe más gente): su casilla y su pestaña llevan el «!». */
 export function htmlConstruir(a: Asentamiento, cargo: Cargo, esc: Escapar, destacar?: string): string {
   if (!cargo) return '';
+  fijarPlazaDelTip(a);
   const cat = catalogo();
   const tipos = cat
     ? Object.keys(cat).filter((t) => Object.keys(cat[t]!.costo ?? {}).length > 0 && !t.startsWith('mina') && t !== 'cantera' && t !== 'corral' && !(t === 'granja' && hayGranja(a)))
@@ -169,7 +166,7 @@ export function htmlConstruir(a: Asentamiento, cargo: Cargo, esc: Escapar, desta
     const tiempo = def.tiempoConstruccionMinutos ? ` · ${duracion(Math.round(def.tiempoConstruccionMinutos * factorDePoliticas(a, 'factorTiempoConstruccion')))}` : '';
     const costeTexto = Object.entries(coste).map(([r, n]) => `${n} ${RECURSO_NOMBRE[r] ?? r}`).join(', ');
     const titulo = `${nombreDe(t)}${costeTexto ? ` · ${costeTexto}` : ''}${tiempo}${caro ? ' · No hay bastante en el almacén' : ''}`;
-    return `<button class="obra-construir${caro ? ' caro' : ''}${t === destacar ? ' destaca' : ''}" type="button" data-construir="${esc(t)}" title="${esc(titulo)}" aria-label="${esc(titulo)}">
+    return `<button class="obra-construir${caro ? ' caro' : ''}${t === destacar ? ' destaca' : ''}" type="button" data-construir="${esc(t)}"${atributoTip('edificio', t, esc)} aria-label="${esc(titulo)}">
       ${t === destacar ? '<b class="asent-aviso-atencion" aria-hidden="true">!</b>' : ''}<span class="obra-construir-icono">${iconoEdificio(t, 30)}</span>
       <span class="obra-construir-nombre">${esc(nombreDe(t))}</span>
       <span class="obra-construir-coste">${chipsDeCoste(a, coste, esc, 2)}</span>

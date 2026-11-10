@@ -10,6 +10,8 @@ import { iconoEdificio } from './iconosEdificio';
 import { ahora, barraAvance, cuentaAtras, medallonNivel, miles, tonoDe, type Tono } from './juegoVisual';
 import { avanceDeObra } from './panelObras';
 import { poblacionDePlaza } from './panelCentro';
+import { atributoTip } from './tipFicha';
+import { fijarPlazaDelTip } from './tipsPlaza';
 
 type Escapar = (valor: string) => string;
 
@@ -213,6 +215,7 @@ export function htmlAlmacenPie(a: Asentamiento, esc: Escapar): string {
 /** En la ventana del Almacén: todos los recursos de la plaza, para elegir cuáles van en la barra de arriba. */
 export function htmlEleccionBarra(a: Asentamiento, esc: Escapar): string {
   const lista = recursosDeLaBarra(a);
+  fijarPlazaDelTip(a);
   const sola = barraAutomaticaActiva();
   const orden = Object.keys(RECURSO_ICONO);
   const hay = Object.entries(a.almacen ?? {}).filter(([, x]) => x.cantidad >= 1 || x.capacidad > 0).map(([r]) => r);
@@ -222,7 +225,7 @@ export function htmlEleccionBarra(a: Asentamiento, esc: Escapar): string {
     const dentro = lista.includes(r);
     const cantidad = a.almacen?.[r]?.cantidad ?? 0;
     const titulo = dentro ? 'Está en la barra: clic para quitarlo' : lleno ? `La barra ya lleva ${MAX_BARRA_ALMACEN}: quita uno antes` : 'Clic para ponerlo en la barra';
-    return `<button type="button" class="barra-eleccion${dentro ? ' elegido' : ''}${!dentro && lleno ? ' sin-sitio' : ''}" data-barra-recurso="${esc(r)}" aria-pressed="${dentro}" title="${esc(titulo)}">`
+    return `<button type="button" class="barra-eleccion${dentro ? ' elegido' : ''}${!dentro && lleno ? ' sin-sitio' : ''}" data-barra-recurso="${esc(r)}" aria-pressed="${dentro}"${atributoTip('recurso', r, esc)} data-tip-nota="${esc(titulo)}" aria-label="${esc(`${RECURSO_NOMBRE[r] ?? r}: ${titulo}`)}">`
       + `<span aria-hidden="true">${RECURSO_ICONO[r] ?? '📦'}</span><span class="barra-eleccion-nombre">${esc(RECURSO_NOMBRE[r] ?? r)}</span><small>${miles(cantidad)}</small></button>`;
   };
   const nota = sola
