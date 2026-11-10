@@ -3,6 +3,22 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.198.0] — 2026-11-10 · Taberna: ver lo que trae un informe de región comprado · contrato 0.20.0 (motor `b55e90f`)
+
+Petición de Víctor del 2026-11-10: tras comprar un informe de región solo se veía «comprado» y el tiempo. Sin cambios en el motor ni en el
+contrato, y sin tocar lo que ya hacía la taberna.
+
+- **El informe es un botón**: en «Tus informes de región», el de plazas (siempre) y el de órdenes (mientras se ven) abren debajo lo que trae,
+  uno a la vez; otro clic lo cierra. El de órdenes caducado sigue como texto.
+- **Sus plazas, con un buscador arriba**: las plazas de esa región que ves o recuerdas, sin las de tu Facción ni las de una Facción en guerra
+  con la tuya (como el motor), por nombre, con su nivel, Facción, sitio y de cuándo es la ficha. El buscador filtra por nombre o Facción, sin
+  tildes, sin repintar (no pierde el foco) y lo buscado sigue tras el sondeo.
+- **Las órdenes de cada plaza**: en el de órdenes, cada plaza con órdenes lleva sus ▲ ventas y ▼ compras y un clic abre sus órdenes (cantidad,
+  recurso, precio por unidad y caducidad), una plaza a la vez. Solo para verlas: se toman, como antes, desde el Mercado › Región. Las que no
+  tienen dicen «sin órdenes».
+- Banco `/pruebas/taberna/?ver=intel` con más plazas en las dos regiones, una vista ahora, una de una Facción en guerra y una propia.
+  Pruebas en `pruebas/tabernaInformes.test.ts`.
+
 ## [0.197.0] — 2026-11-10 · Territorio: los pueblos en botones, un detalle a la vez, y «Marcar» tras un «+» · contrato 0.20.0 (motor `b55e90f`)
 
 Petición de Víctor del 2026-11-10. Sin cambios en el motor ni en el contrato.

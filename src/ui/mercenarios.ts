@@ -184,7 +184,8 @@ export function textoDeObjetivo(p: ProyeccionJugador, o?: ObjetivoMercenario): s
 interface Opcion { valor: string; etiqueta: string; plaza?: string; posicion?: Point; liderId?: string; bandidos?: boolean }
 const clave = (o: ObjetivoMercenario | undefined): string => (o ? `${o.campo}:${o.id ?? ''}` : '');
 
-function enGuerraCon(p: ProyeccionJugador): Set<string> {
+/** Las Facciones en guerra con la tuya (relación de guerra activa). */
+export function enGuerraCon(p: ProyeccionJugador): Set<string> {
   const r = new Set<string>();
   for (const x of p.relaciones ?? []) {
     if (x.tipo !== 'guerra' || x.estado !== 'activa') continue;

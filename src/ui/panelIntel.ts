@@ -10,7 +10,7 @@ import { mostrar as mostrarAviso } from './avisos';
 import { iconoEdificio } from './iconosEdificio';
 import { iconoTropa } from './iconosTropa';
 import { medallonNivel } from './juegoVisual';
-import { cablearServicioRegion, compraIntelEn, htmlInformesRegion, htmlServicioRegion } from './tabernaRegion';
+import { cablearInformesRegion, cablearServicioRegion, compraIntelEn, htmlInformesRegion, htmlServicioRegion } from './tabernaRegion';
 
 export type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
 type Escapar = (valor: string) => string;
@@ -292,6 +292,7 @@ export function cablearPanelIntel(root: HTMLElement, p: ProyeccionJugador, ejecu
   const origen = origenDe();
   const plaza = origen?.tipo === 'asentamiento' ? p.asentamientos.find((a) => a.id === origen.id) : undefined;
   if (plaza) cablearServicioRegion(root, plaza, ejecutar);
+  cablearInformesRegion(root, repintar);
   root.querySelectorAll<HTMLButtonElement>('[data-informe]').forEach((boton) =>
     boton.addEventListener('click', () => {
       estadoIntel.informeAbierto = estadoIntel.informeAbierto === boton.dataset.informe ? null : boton.dataset.informe!;

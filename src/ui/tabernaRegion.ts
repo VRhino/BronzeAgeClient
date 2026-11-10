@@ -4,7 +4,9 @@
 //  - con un informe de órdenes vigente, el Mercado de cualquier plaza propia enseña esas órdenes y las toma a distancia con una caravana libre
 //    (`tomarOrdenADistancia`), con los cargos de los encargos;
 //  - la taberna enseña además el tablón de los campamentos de su región (`Asentamiento.mercenariosRegion`) y se contrata desde ahí, pagando con
-//    el almacén de la plaza (los mismos tres cargos) o con monedas.
+//    el almacén de la plaza (los mismos tres cargos) o con monedas;
+//  - en «Tus informes de región», cada informe con algo que ver abre lo que trae (0.198.0): sus plazas con un buscador y, en el de órdenes, las
+//    órdenes de compra y de venta de cada plaza.
 // Quien valida es el motor; aquí se enseña solo lo que el jugador puede hacer (regla de Víctor).
 import { radioDePuerta, type ProyeccionJugador } from '../apiCliente';
 import { nombreDeRegion, regionEn, type Region } from '../mundo/region';
@@ -16,7 +18,8 @@ import type { FuenteDeContrato } from './columnaQuePaga';
 import { motivoSinEncargo } from './encargoCaravana';
 import { estadoCliente, textoEnTiempoReal } from './estadoCliente';
 import type { ContextoPlaza, SubpestanaPlaza } from './ganchos';
-import { cablearTablonMercenarios, htmlTablonMercenarios } from './mercenarios';
+import { medallonNivel } from './juegoVisual';
+import { cablearTablonMercenarios, enGuerraCon, htmlTablonMercenarios } from './mercenarios';
 import { caravanasLibres } from './panelMercado';
 
 type Escapar = (valor: string) => string;
@@ -86,17 +89,135 @@ export function htmlServicioRegion(p: ProyeccionJugador, a: Asentamiento, oroPla
   </section>`;
 }
 
-/** «Tus informes de región», en la columna de lo comprado: de qué región, de qué tipo, si aún se ve y cuándo se puede repetir. */
+// ---------------------------------------------------------------- Lo comprado: ver lo que trae cada informe (0.198.0, Víctor 2026-11-10)
+
+const claveInforme = (x: InformeRegion): string => `${x.region}:${x.tipo}`;
+const vigenteInforme = (p: ProyeccionJugador, x: InformeRegion): boolean => x.caducaEn !== undefined && x.caducaEn > p.instante;
+/** ¿Hay algo que ver? El de plazas siempre (sus fichas están en tu memoria); el de órdenes, solo mientras se ven. */
+const seAbre = (p: ProyeccionJugador, x: InformeRegion): boolean => x.tipo === 'plazas' || vigenteInforme(p, x);
+
+// Lo abierto y lo buscado sobreviven a los repintados del sondeo: un informe abierto a la vez y, en el de órdenes, una plaza a la vez.
+let informeAbierto: string | null = null;
+let plazaAbierta: string | null = null;
+const buscado = new Map<string, string>();
+
+/** Para buscar: en minúsculas y sin tildes. */
+const normalizar = (t: string): string => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+
+const nombreDeFaccion = (p: ProyeccionJugador, id: string): string =>
+  p.facciones.find((f) => f.id === id)?.nombre ?? p.directorioFacciones?.find((f) => f.id === id)?.nombre ?? '';
+
+export interface PlazaDeLaRegion { id: string; nombre: string; faccionId: string; nivel: number; posicion: Point; conocidoEn?: number }
+
+/** Las plazas de la región `region` que entran en su informe, con lo que sabes de ellas (lo que ves ahora gana a la memoria): sin las de tu
+ * Facción ni las de una Facción en guerra con la tuya, como el motor. Por nombre. Vacío sin el mundo cargado. */
+export function plazasDeLaRegion(p: ProyeccionJugador, region: number): PlazaDeLaRegion[] {
+  const guerra = enGuerraCon(p);
+  const m = new Map<string, PlazaDeLaRegion>();
+  for (const a of p.asentamientosConocidos) m.set(a.asentamientoId, { id: a.asentamientoId, nombre: a.nombre ?? a.asentamientoId, faccionId: a.faccionId, nivel: a.nivel, posicion: a.posicion, conocidoEn: a.conocidoEn });
+  for (const a of p.asentamientosAvistados) m.set(a.id, { id: a.id, nombre: a.nombre ?? a.id, faccionId: a.faccionId, nivel: a.nivel, posicion: a.posicion });
+  return [...m.values()]
+    .filter((x) => x.faccionId !== p.faccionId && !guerra.has(x.faccionId) && regionEn(mapa(), x.posicion)?.id === region)
+    .sort((x, y) => x.nombre.localeCompare(y.nombre, 'es'));
+}
+
+/** Las órdenes activas que se ven de la plaza `id` (lo que trae el informe de órdenes): primero las de venta. */
+const ordenesDe = (p: ProyeccionJugador, id: string): OrdenMercado[] =>
+  (p.ordenes ?? []).filter((o) => o.asentamientoId === id && o.estado === 'activa' && o.cantidad - o.cantidadCumplida > 0)
+    .sort((x, y) => (x.tipo === y.tipo ? 0 : x.tipo === 'venta' ? -1 : 1));
+
+/** Una orden de la región, solo para verla (se toma desde el Mercado de tus plazas, en «Región»). */
+function filaDeOrden(p: ProyeccionJugador, o: OrdenMercado, e: Escapar): string {
+  const pendiente = Math.floor(o.cantidad - o.cantidadCumplida);
+  return `<div class="region-orden ${o.tipo}">
+    <span class="orden-ficha-icono">${RECURSO_ICONO[o.recurso] ?? '📦'}<i>${o.tipo === 'venta' ? '▲' : '▼'}</i></span>
+    <span class="region-orden-cuerpo"><b>${o.tipo === 'venta' ? 'Vende' : 'Compra'} ${pendiente} ${e(RECURSO_NOMBRE[o.recurso] ?? o.recurso)}</b><small>🪙 ${o.precioUnitario.toFixed(2)} c/u · caduca en ${textoEnTiempoReal(o.expiraEn - p.instante)}</small></span>
+  </div>`;
+}
+
+/** Lo que trae el informe `x`: la lista de las plazas de su región con un buscador arriba; en el de órdenes, cada plaza con órdenes se abre en
+ * un detalle con sus órdenes de compra y de venta. */
+export function htmlResultadoInforme(p: ProyeccionJugador, x: InformeRegion, e: Escapar): string {
+  const clave = claveInforme(x);
+  const q = buscado.get(clave) ?? '';
+  const n = normalizar(q);
+  const plazas = plazasDeLaRegion(p, x.region);
+  const region = nombreDeRegion(mapa(), x.region);
+  const fila = (pl: PlazaDeLaRegion): string => {
+    const faccion = nombreDeFaccion(p, pl.faccionId);
+    const texto = normalizar(`${pl.nombre} ${faccion}`);
+    const oculta = n !== '' && !texto.includes(n);
+    const de = [faccion, `📍 ${Math.round(pl.posicion.x)}, ${Math.round(pl.posicion.y)}`, pl.conocidoEn === undefined ? 'a la vista' : `de hace ${textoEnTiempoReal(p.instante - pl.conocidoEn)}`].filter(Boolean).join(' · ');
+    const cuerpo = `${medallonNivel(pl.nivel)}<span class="region-plaza-fila-texto"><b>${e(pl.nombre)}</b><small>${e(de)}</small></span>`;
+    if (x.tipo === 'plazas') return `<div class="region-plaza-fila" data-region-texto="${e(texto)}"${oculta ? ' hidden' : ''}>${cuerpo}</div>`;
+    const ordenes = ordenesDe(p, pl.id);
+    if (ordenes.length === 0) return `<div class="region-plaza-fila sin-ordenes" data-region-texto="${e(texto)}"${oculta ? ' hidden' : ''}>${cuerpo}<small class="region-plaza-cuenta">sin órdenes</small></div>`;
+    const ventas = ordenes.filter((o) => o.tipo === 'venta').length;
+    const compras = ordenes.length - ventas;
+    const abierta = plazaAbierta === pl.id;
+    const cuenta = `${ventas ? `<span class="region-cuenta venta" title="Órdenes de venta">▲ ${ventas}</span>` : ''}${compras ? `<span class="region-cuenta compra" title="Órdenes de compra">▼ ${compras}</span>` : ''}`;
+    return `<div class="region-plaza-item" data-region-texto="${e(texto)}"${oculta ? ' hidden' : ''}>
+      <button type="button" class="region-plaza-fila region-plaza-boton${abierta ? ' abierta' : ''}" data-region-plaza="${e(pl.id)}" aria-expanded="${abierta}" title="${e(abierta ? 'Cerrar' : `Ver las órdenes de ${pl.nombre}`)}">${cuerpo}<span class="region-plaza-cuenta">${cuenta}</span><span class="region-plaza-flecha" aria-hidden="true">${abierta ? '▴' : '▾'}</span></button>
+      ${abierta ? `<div class="region-plaza-ordenes">${ordenes.map((o) => filaDeOrden(p, o, e)).join('')}</div>` : ''}
+    </div>`;
+  };
+  const visibles = plazas.filter((pl) => n === '' || normalizar(`${pl.nombre} ${nombreDeFaccion(p, pl.faccionId)}`).includes(n)).length;
+  const titulo = x.tipo === 'plazas' ? `Las plazas de ${region}` : `Las órdenes de mercado de ${region}`;
+  const sub = x.tipo === 'plazas'
+    ? `Compraste el informe hace ${textoEnTiempoReal(p.instante - x.compradoEn)}: sus fichas están en tu memoria.`
+    : `Se ven ${textoEnTiempoReal(x.caducaEn! - p.instante)} más. Pulsa una plaza para ver sus órdenes; se toman desde el Mercado de tus plazas, en «Región».`;
+  const vacio = x.tipo === 'plazas' ? 'No hay ninguna plaza en esa región que no sea de tu Facción o de una Facción en guerra con ella.' : 'Ninguna plaza de esa región tiene órdenes que se vean.';
+  return `<section class="region-resultado" data-region-resultado="${clave}">
+    <div class="region-resultado-cab"><span aria-hidden="true">${TIPO[x.tipo].icono}</span><span><strong>${e(titulo)}</strong><small>${e(sub)}</small></span><span class="obra-chip">${plazas.length}</span></div>
+    ${plazas.length === 0 ? `<p class="mapa-lista-vacia">${vacio}</p>` : `<input class="form-input region-buscar" type="search" placeholder="Buscar plaza o Facción…" autocomplete="off" aria-label="Buscar plaza o Facción" data-region-buscar="${clave}" value="${e(q)}" />
+    <div class="region-plazas">${plazas.map(fila).join('')}</div>
+    <p class="mapa-lista-vacia" data-region-sin-coincidencias${visibles > 0 ? ' hidden' : ''}>Ninguna plaza ni Facción se llama así.</p>`}
+  </section>`;
+}
+
+/** «Tus informes de región», en la columna de lo comprado: de qué región, de qué tipo, si aún se ve y cuándo se puede repetir. Cada uno con algo
+ * que ver es un botón que abre lo que trae debajo de la lista (uno a la vez). */
 export function htmlInformesRegion(p: ProyeccionJugador, e: Escapar): string {
   const lista = [...informesDeRegion(p)].sort((x, y) => y.compradoEn - x.compradoEn);
   if (lista.length === 0) return '';
+  const abierto = lista.find((x) => claveInforme(x) === informeAbierto && seAbre(p, x));
   const filas = lista.map((x) => {
-    const vigente = x.caducaEn !== undefined && x.caducaEn > p.instante;
+    const vigente = vigenteInforme(p, x);
     const estado = x.tipo === 'ordenes' ? (vigente ? `a la vista ${textoEnTiempoReal(x.caducaEn! - p.instante)} más` : 'ya no se ven') : 'en tu memoria';
     const repetir = x.libreEn > p.instante ? `otra vez en ${textoEnTiempoReal(x.libreEn - p.instante)}` : 'se puede repetir';
-    return `<div class="intel-region-informe${vigente ? ' vigente' : ''}"><span aria-hidden="true">${TIPO[x.tipo].icono}</span><span><b>${e(nombreDeRegion(mapa(), x.region))}</b><small>${TIPO[x.tipo].nombre} · ${estado} · ${repetir}</small></span></div>`;
+    const cuerpo = `<span aria-hidden="true">${TIPO[x.tipo].icono}</span><span class="intel-region-informe-texto"><b>${e(nombreDeRegion(mapa(), x.region))}</b><small>${TIPO[x.tipo].nombre} · ${estado} · ${repetir}</small></span>`;
+    if (!seAbre(p, x)) return `<div class="intel-region-informe">${cuerpo}</div>`;
+    const esAbierto = x === abierto;
+    return `<button type="button" class="intel-region-informe${vigente ? ' vigente' : ''}${esAbierto ? ' abierto' : ''}" data-region-informe="${claveInforme(x)}" aria-expanded="${esAbierto}" title="${esAbierto ? 'Cerrar' : 'Ver lo que trae'}">${cuerpo}<span class="intel-region-informe-flecha" aria-hidden="true">${esAbierto ? '▴' : '▾'}</span></button>`;
   }).join('');
-  return `<div class="obra-titulo"><span class="faction-kicker">Tus informes de región</span><span class="obra-chip">${lista.length}</span></div><div class="intel-region-informes">${filas}</div>`;
+  return `<div class="obra-titulo"><span class="faction-kicker">Tus informes de región</span><span class="obra-chip">${lista.length}</span></div><div class="intel-region-informes">${filas}</div>${abierto ? htmlResultadoInforme(p, abierto, e) : ''}`;
+}
+
+/** Abrir y cerrar los informes y las plazas (repinta) y buscar (sin repintar, para no perder el foco: esconde las filas que no casan). */
+export function cablearInformesRegion(root: ParentNode, repintar: () => void): void {
+  root.querySelectorAll<HTMLButtonElement>('[data-region-informe]').forEach((b) => b.addEventListener('click', () => {
+    const clave = b.dataset.regionInforme!;
+    informeAbierto = informeAbierto === clave ? null : clave;
+    plazaAbierta = null;
+    repintar();
+  }));
+  root.querySelectorAll<HTMLButtonElement>('[data-region-plaza]').forEach((b) => b.addEventListener('click', () => {
+    const id = b.dataset.regionPlaza!;
+    plazaAbierta = plazaAbierta === id ? null : id;
+    repintar();
+  }));
+  root.querySelectorAll<HTMLInputElement>('[data-region-buscar]').forEach((input) => input.addEventListener('input', () => {
+    buscado.set(input.dataset.regionBuscar!, input.value);
+    const n = normalizar(input.value);
+    let visibles = 0;
+    root.querySelectorAll<HTMLElement>('[data-region-texto]').forEach((f) => {
+      const casa = n === '' || (f.dataset.regionTexto ?? '').includes(n);
+      f.hidden = !casa;
+      if (casa) visibles += 1;
+    });
+    const nada = root.querySelector<HTMLElement>('[data-region-sin-coincidencias]');
+    if (nada) nada.hidden = visibles > 0;
+  }));
 }
 
 export function cablearServicioRegion(root: HTMLElement, a: Asentamiento, ejecutar: Ejecutar): void {

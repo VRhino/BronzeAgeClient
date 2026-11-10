@@ -4314,11 +4314,40 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .intel-region-texto em { font-size: 0.7rem; font-style: normal; color: var(--obra-azul); }
 .intel-region-fila .intel-comprar { margin-top: 0; flex: none; }
 .intel-region-informes { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; }
-.intel-region-informe { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border: 1px solid rgba(107, 74, 41, 0.7); border-radius: 3px; background: rgba(18, 14, 9, 0.85); }
+.intel-region-informe { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border: 1px solid rgba(107, 74, 41, 0.7); border-radius: 3px; background: rgba(18, 14, 9, 0.85); color: var(--pergamino); font: inherit; text-align: left; }
 .intel-region-informe.vigente { border-color: rgba(111, 182, 255, 0.6); background: linear-gradient(90deg, rgba(40, 70, 110, 0.4), rgba(18, 14, 9, 0.85)); }
-.intel-region-informe > span:last-child { display: flex; flex-direction: column; min-width: 0; }
+.intel-region-informe-texto { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .intel-region-informe b { font-size: 0.8rem; color: var(--pergamino); }
 .intel-region-informe small { font-size: 0.66rem; color: var(--text-secondary); }
+/* 0.198.0: lo que trae un informe comprado, debajo de la lista (uno a la vez) */
+button.intel-region-informe { cursor: pointer; }
+button.intel-region-informe:hover { border-color: #c9a35a; }
+.intel-region-informe.abierto { border-color: #ffd24a; box-shadow: 0 0 0 1px #ffd24a; }
+.intel-region-informe-flecha, .region-plaza-flecha { flex: none; font-size: 0.7rem; color: var(--text-secondary); }
+.region-resultado { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; padding: 8px; border: 1px solid rgba(255, 210, 74, 0.45); border-radius: 3px; background: rgba(0, 0, 0, 0.28); }
+.region-resultado-cab { display: flex; align-items: center; gap: 8px; }
+.region-resultado-cab > span:nth-child(2) { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.region-resultado-cab strong { font-size: 0.86rem; color: var(--oro-claro); }
+.region-resultado-cab small { font-size: 0.7rem; color: var(--text-secondary); }
+.region-buscar { width: 100%; height: 30px; padding: 0 8px; font-size: 0.85rem; }
+.region-plazas { display: flex; flex-direction: column; gap: 4px; max-height: 420px; overflow-y: auto; }
+.region-plazas [hidden] { display: none; }
+.region-plaza-item { display: flex; flex-direction: column; gap: 4px; }
+.region-plaza-fila { display: flex; align-items: center; gap: 8px; width: 100%; padding: 4px 8px; border: 1px solid rgba(107, 74, 41, 0.6); border-radius: 3px; background: rgba(18, 14, 9, 0.85); color: var(--pergamino); font: inherit; text-align: left; }
+.region-plaza-fila .medallon-nivel { width: 26px; height: 30px; flex: none; }
+.region-plaza-fila .medallon-nivel b { font-size: 0.8rem; }
+.region-plaza-fila-texto { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.region-plaza-fila-texto b { font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.region-plaza-fila-texto small { font-size: 0.66rem; color: var(--text-secondary); }
+.region-plaza-fila.sin-ordenes { opacity: 0.7; }
+.region-plaza-cuenta { flex: none; display: flex; gap: 4px; font-size: 0.7rem; color: var(--text-secondary); }
+.region-cuenta { padding: 1px 5px; border-radius: 2px; font-weight: 700; }
+.region-cuenta.venta { color: var(--orden-venta); background: color-mix(in srgb, var(--orden-venta) 15%, transparent); }
+.region-cuenta.compra { color: var(--orden-compra); background: color-mix(in srgb, var(--orden-compra) 15%, transparent); }
+.region-plaza-boton { cursor: pointer; }
+.region-plaza-boton:hover { border-color: #c9a35a; }
+.region-plaza-boton.abierta { border-color: #ffd24a; }
+.region-plaza-ordenes { display: flex; flex-direction: column; gap: 4px; padding-left: 14px; border-left: 2px solid rgba(255, 210, 74, 0.35); margin-left: 12px; }
 .region-plaza { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
 .region-plaza-cab { display: flex; align-items: baseline; gap: 8px; border-bottom: 1px solid rgba(107, 74, 41, 0.5); padding-bottom: 3px; }
 .region-plaza-cab strong { font-size: 0.86rem; color: var(--oro-claro); }

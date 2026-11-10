@@ -303,6 +303,14 @@ La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, es
 > casilla. **Taberna**: cabecera con oro y Miradas en ojos, tarjetas de servicio (Mirada, Informe) con el precio en chip, Miradas con su barra de
 > tiempo e Informes con el nivel en escudo; el Informe abierto con edificios y guarnición en iconos y la muralla en barras.
 >
+> **Lo que trae un informe de región** (0.198.0, 2026-11-10, `ui/tabernaRegion.ts`; banco `pruebas/taberna/?ver=intel`). En «Tus informes de
+> región», cada informe con algo que ver es un botón (el de órdenes, solo mientras se ven; caducado se queda como texto) que abre debajo, uno a la
+> vez, lo que trae: la lista de las plazas de su región (las que ves y las de tu memoria, sin las de tu Facción ni las de una Facción en guerra
+> con la tuya, como el motor), por nombre, con el nivel en escudo, su Facción, el sitio y de cuándo es la ficha, y un buscador arriba (nombre o
+> Facción, sin tildes; esconde lo que no casa sin repintar, y lo buscado sigue tras el sondeo). En el de órdenes, cada plaza con órdenes lleva
+> ▲ ventas y ▼ compras y un clic abre sus órdenes (cantidad, recurso, precio y caducidad; solo para verlas, se toman desde el Mercado › Región);
+> las que no tienen dicen «sin órdenes» y no se abren.
+>
 > **Mercado** (0.88.0, 2026-11-02, `ui/panelMercado.ts`, `ui/panelTrueques.ts`; banco `pruebas/centro/`). **Órdenes**: una boleta con ▲ Vender
 > (ámbar) / ▼ Comprar (azul), el almacén como inventario de casillas (lo que hay primero; lo vacío, apagado), cantidad y precio con lo que se cobra
 > o paga, y las órdenes en pie como fichas con su barra de cumplido. **Caravanas**: cabecera con el Mercado, los cupos de caravanas y carros en

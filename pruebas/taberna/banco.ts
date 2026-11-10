@@ -50,18 +50,32 @@ const p = {
       ] },
     { id: 'fac-2', nombre: 'Reino de Tirinto', nivel: 2 },
     { id: 'fac-3', nombre: 'Hermandad de Pilos', nivel: 1 },
+    { id: 'fac-4', nombre: 'Liga de Tebas', nivel: 2 },
   ],
+  directorioFacciones: [{ id: 'fac-5', nombre: 'Clan de Eubea', nivel: 1, ciudadanos: 4, derrotada: false, sigilo: {} }],
   asentamientos: [plaza],
-  asentamientosAvistados: [],
+  // Lo que ves ahora y lo que recuerdas: en la región 3 (oeste) Argos se ve; en la 5 (este), las fichas del informe de plazas. Tebas está en
+  // guerra con tu Facción (no entra en los informes) y Corinto es tuya.
+  asentamientosAvistados: [{ id: 'as-9', nombre: 'Argos', faccionId: 'fac-3', nivel: 2, posicion: { x: 100, y: 60 }, zona: [] }],
   asentamientosConocidos: [
     { asentamientoId: 'as-7', nombre: 'Tirinto', faccionId: 'fac-2', nivel: 2, posicion: { x: 170, y: 120 }, conocidoEn: AHORA - 300 * MIN },
     { asentamientoId: 'as-8', nombre: 'Nauplia', faccionId: 'fac-3', nivel: 1, posicion: { x: 60, y: 230 }, conocidoEn: AHORA - 300 * MIN },
+    { asentamientoId: 'as-10', nombre: 'Lerna', faccionId: 'fac-2', nivel: 1, posicion: { x: 150, y: 250 }, conocidoEn: AHORA - 300 * MIN },
+    { asentamientoId: 'as-20', nombre: 'Orcómeno', faccionId: 'fac-3', nivel: 3, posicion: { x: 300, y: 60 }, conocidoEn: AHORA - 300 * MIN },
+    { asentamientoId: 'as-21', nombre: 'Gla', faccionId: 'fac-2', nivel: 2, posicion: { x: 330, y: 110 }, conocidoEn: AHORA - 300 * MIN },
+    { asentamientoId: 'as-22', nombre: 'Platea', faccionId: 'fac-5', nivel: 1, posicion: { x: 270, y: 180 }, conocidoEn: AHORA - 300 * MIN },
+    { asentamientoId: 'as-23', nombre: 'Tanagra', faccionId: 'fac-3', nivel: 2, posicion: { x: 360, y: 200 }, conocidoEn: AHORA - 300 * MIN },
+    { asentamientoId: 'as-24', nombre: 'Calcis', faccionId: 'fac-5', nivel: 4, posicion: { x: 380, y: 40 }, conocidoEn: AHORA - 300 * MIN },
+    { asentamientoId: 'as-25', nombre: 'Áulide', faccionId: 'fac-2', nivel: 1, posicion: { x: 320, y: 260 }, conocidoEn: AHORA - 300 * MIN },
+    { asentamientoId: 'as-26', nombre: 'Tebas', faccionId: 'fac-4', nivel: 4, posicion: { x: 290, y: 140 }, conocidoEn: AHORA - 300 * MIN },
+    { asentamientoId: 'as-27', nombre: 'Corinto', faccionId: 'fac-1', nivel: 2, posicion: { x: 250, y: 90 }, conocidoEn: AHORA - 300 * MIN },
   ],
   ordenes: [
     { id: 'ord-11', asentamientoId: 'as-7', tipo: 'venta', recurso: 'estano', cantidad: 120, cantidadCumplida: 20, precioUnitario: 3.2, creadoEn: AHORA - 90 * MIN, expiraEn: AHORA + 300 * MIN, estado: 'activa' },
     { id: 'ord-12', asentamientoId: 'as-7', tipo: 'compra', recurso: 'trigo', cantidad: 400, cantidadCumplida: 0, precioUnitario: 1.1, creadoEn: AHORA - 30 * MIN, expiraEn: AHORA + 600 * MIN, estado: 'activa' },
     { id: 'ord-13', asentamientoId: 'as-8', tipo: 'compra', recurso: 'aceite', cantidad: 50, cantidadCumplida: 0, precioUnitario: 4.5, creadoEn: AHORA - 10 * MIN, expiraEn: AHORA + 200 * MIN, estado: 'activa' },
     { id: 'ord-14', asentamientoId: 'as-8', tipo: 'venta', recurso: 'cobre', cantidad: 80, cantidadCumplida: 0, precioUnitario: 2.6, creadoEn: AHORA - 10 * MIN, expiraEn: AHORA + 200 * MIN, estado: 'activa' },
+    { id: 'ord-15', asentamientoId: 'as-9', tipo: 'venta', recurso: 'vino', cantidad: 30, cantidadCumplida: 0, precioUnitario: 5.0, creadoEn: AHORA - 10 * MIN, expiraEn: AHORA + 90 * MIN, estado: 'activa' },
   ],
   caravanas: [
     { id: 'car-3', nombre: 'Ánfora', tipo: 'comercial', origenAsentamientoId: 'as-1', posicionActual: plaza.posicion, estado: 'disponible', carros: [{ tipoCarro: 'basico', animal: 'buey' }, { tipoCarro: 'basico', animal: 'buey' }], contenido: {} },
@@ -72,7 +86,8 @@ const p = {
     { heroeId: 'heroe-30', displayName: 'Korax el Tracio', classDefinitionId: 'guerrero', nivel: 9, escuadrasQueLleva: [], equipamiento: {} },
     { heroeId: 'heroe-31', displayName: 'Dumu', classDefinitionId: 'guerrero', nivel: 3, escuadrasQueLleva: [], equipamiento: {} },
   ],
-  pueblos: [], avanzadas: [], convocatorias: [], campamentosBandidos: [], ejercitos: [], ejercitosAvistados: [], caravanasAvistadas: [], relaciones: [],
+  pueblos: [], avanzadas: [], convocatorias: [], campamentosBandidos: [], ejercitos: [], ejercitosAvistados: [], caravanasAvistadas: [],
+  relaciones: [{ id: 'rel-1', tipo: 'guerra', estado: 'activa', faccionAId: 'fac-1', faccionBId: 'fac-4' }],
   miradasIntel: [], informesPlaza: [], nombresDeCompaneros: {},
   tarifasIntel: tarifasDeIntel(),
 } as unknown as ProyeccionJugador;
