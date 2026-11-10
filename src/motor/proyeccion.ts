@@ -811,6 +811,7 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
       for (const x of [...deAmbito('VISTA:', 'campamentoMercenarios'), ...deAmbito('CAMPAMENTO:', 'campamentoMercenarios')]) m.set(x.id, x);
       return [...m.values()].map(campamentoMercenarios);
     })(),
+    campamentosAbiertos: deAmbito('CAMPAMENTO:', 'campamentoMercenarios').map((x) => x.id),
     escenasCampamento: deAmbito('CAMPAMENTO:', 'campamentoMercenarios').map(escenaCampamento).filter((e): e is d.EscenaCampamento => Boolean(e)),
     // la copia con planta: la de VISTA de quien está dentro (lleva otro sello que la de fuera); sin planta, el pueblo sigue con su anillo de huecos
     escenasPueblo: (() => {

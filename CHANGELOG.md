@@ -3,6 +3,22 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.199.0] — 2026-11-10 · Acciones a la puerta, parte 2: Mercenarios, Mercado y Guarnición sin entrar · motor `906fb24`
+
+Pedido de Víctor del 2026-11-10 tras el 0.193.0. Lo que faltaba se pidió al motor (PR #14, merge 906fb24: el ámbito `CAMPAMENTO` con la columna
+parada a la puerta; el Mercado, la flota y los encargos de la plaza propia desde la puerta, con `politicas_activas` y `ultima_caravana_creada_en_ms`
+en la ficha propia; la guarnición de la plaza y del pueblo o la aldea propios desde la puerta). En la ficha del mundo, con tu columna a la puerta:
+
+- **Campamento de mercenarios**: botones **Mercenarios** (el tablón, si alguien se ofrece) y **Mercado** (comprar), con los paneles de dentro.
+  Salen cuando llega el `CAMPAMENTO` (`ProyeccionJugador.campamentosAbiertos`): con la columna parada a su puerta.
+- **Plaza de tu Facción**:
+  - **Mercado**: el Mercado interno, si resides, con solo las partes que puedes usar: Órdenes (Gobernador o Tesorero), Caravanas, y Rutas
+    y Región (Gobernador, Tesorero o Maestro de Caravanas). Desde fuera no se da escolta ni se tocan las caravanas aparcadas ni se descarga
+    al almacén: siguen siendo de dentro. Renombrar una caravana vale también a la puerta.
+  - **Guarnición**: dejas escuadras de tu columna (a tu campamento si resides, de visita si no) y recoges las tuyas de vuelta a la columna.
+- **Pueblo o aldea de tu Facción**: **Guarnición** con la columna, igual que dentro (`guarnecerPueblo` / `retirarDePueblo`).
+- Los encargos de caravana ya no piden estar dentro: valen también con tu columna a la puerta.
+
 ## [0.198.2] — 2026-11-10 · Las fronteras del modo mapa abierto desde dentro de la plaza · contrato 0.20.0 (motor `b55e90f`)
 
 Aviso de Víctor del 2026-11-10: al colocar una avanzada desde Territorio, el mapa enseñaba las zonas de plazas vecinas metidas en la tuya;

@@ -69,6 +69,7 @@ import { cablearAdmision } from './ui/panelAdmision';
 import { cablearFichaBatalla, cablearFichaFormacion, formacionesVisibles, htmlFichaBatalla, htmlFichaFormacion } from './ui/panelBatalla';
 import { cablearPanelEjercito, ejercitosDeLaFaccion, htmlEjercitosFaccion, htmlFichaEjercito, htmlPanelEjercito, peticionesNuevas } from './ui/ejercitos';
 import { invalidar, olvidarEdicion, pintar, vaciar } from './ui/repintado';
+import { SUBPESTANA_GUARNICION } from './ui/panelGuarnicion';
 import { ayuda } from './ui/ayuda';
 import { htmlInformeDeInspeccion } from './ui/interaccionAjena';
 import { cablearPanelObras, construidoAlClicar, cuantosConstruidos, elegirGrupoDe, htmlConstruidosVentana, htmlConstruir, minutosDeObra } from './ui/panelObras';
@@ -1294,7 +1295,44 @@ function puertaDePlaza(p: ProyeccionJugador, a: AsentamientoEnMapa, x: { propio:
   const batalla = (p.batallas ?? []).find((b) => b.contexto.asentamientoId === a.id);
   if (batalla) acciones.push({ id: 'batalla', etiqueta: 'La batalla', icono: '⚔', titulo: 'Abre el asedio: desde él te unes a un lado.' });
   // ventanas
-  const mercado = htmlMercadoDePlaza(p, a.id, escaparHtml);
+  // la plaza de tu Facción, con su interior (FACCION): Mercado interno y Guarnición con la columna a la puerta (motor 906fb24)
+  const interior = x.propio && aLaPuerta ? p.plazasPropias?.find((q) => q.id === a.id) : undefined;
+  const contexto = (q: Asentamiento, cuerpo: HTMLElement): ContextoPlaza => ({
+    proyeccion: p, asentamiento: q, cuerpo, ejecutar: ejecutarYRefrescar, cargo: cargoConstructor(q, p.heroeId), resideAqui: resideEnLaPlaza(p, q), escapar: escaparHtml,
+    refrescar: () => { olvidarEdicion(cuerpo); invalidar(cuerpo); renderSeleccionMapa(); },
+  });
+  const mercadoInterno = interior && resideEnLaPlaza(p, interior) ? subsDeMercadoALaPuerta(p, interior) : [];
+  const mercado = mercadoInterno.length ? '' : htmlMercadoDePlaza(p, a.id, escaparHtml);
+  if (interior && mercadoInterno.length) {
+    acciones.push({ id: 'mercado', etiqueta: 'Mercado', icono: iconoEdificio('mercado', 18), ventana: true, titulo: 'El Mercado de tu plaza: órdenes, caravanas y rutas.' });
+    ventanas.mercado = () => {
+      const subs = subsDeMercadoALaPuerta(p, interior);
+      const sub = subs.some(([id]) => id === subMercadoPuerta) ? subMercadoPuerta : subs[0]![0];
+      const c = contexto(interior, document.createElement('div'));
+      const extra = SUBPESTANAS_MERCADO_EXTRA.find((q) => q.id === sub);
+      const cuerpoHtml = extra ? extra.html(c) : sub === 'caravanas' ? htmlCaravanas(p, interior, escaparHtml, renderSeleccionMapa) : sub === 'rutas' ? htmlRutas(p, interior, escaparHtml, renderSeleccionMapa) : htmlOrdenes(p, interior, escaparHtml);
+      return {
+        titulo: 'Mercado', icono: iconoEdificio('mercado', 28), ancho: 'ancha',
+        html: `${subs.length > 1 ? subpestanas(subs, sub) : ''}${cuerpoHtml}`,
+        cablear: (cuerpo) => {
+          const k = contexto(interior, cuerpo);
+          cuerpo.querySelectorAll<HTMLButtonElement>('[data-sub]').forEach((b) => b.addEventListener('click', () => { subMercadoPuerta = b.dataset.sub!; k.refrescar(); }));
+          if (extra) extra.cablear?.(k);
+          else if (sub === 'caravanas') cablearCaravanas(cuerpo, p, interior, ejecutarYRefrescar, k.refrescar);
+          else if (sub === 'rutas') cablearRutas(cuerpo, p, ejecutarYRefrescar, k.refrescar);
+          else cablearOrdenes(cuerpo, interior, ejecutarYRefrescar);
+        },
+      };
+    };
+  }
+  if (interior) {
+    acciones.push({ id: 'guarnicion', etiqueta: 'Guarnición', icono: '🛡', ventana: true, titulo: 'Deja o recoge tropa de tu columna sin entrar.' });
+    ventanas.guarnicion = () => ({
+      titulo: 'Guarnición', icono: '🛡', ancho: 'normal',
+      html: SUBPESTANA_GUARNICION.html(contexto(interior, document.createElement('div'))),
+      cablear: (cuerpo) => SUBPESTANA_GUARNICION.cablear?.(contexto(interior, cuerpo)),
+    });
+  }
   if (mercado) {
     acciones.push({ id: 'mercado', etiqueta: 'Mercado', icono: iconoEdificio('mercado', 18), ventana: true });
     ventanas.mercado = () => ({
@@ -1316,6 +1354,25 @@ function puertaDePlaza(p: ProyeccionJugador, a: AsentamientoEnMapa, x: { propio:
     ventanas.carga = () => ({ titulo: 'Tu carga', icono: '📦', ancho: 'normal', html: htmlCarro(p, escaparHtml, false, false), cablear: (cuerpo) => cablearCarro(cuerpo, ejecutarYRefrescar, p.heroeId) });
   }
   return { acciones, ventanas, batallaId: batalla?.battleId };
+}
+
+/** La subpestaña elegida en la ventana Mercado de la puerta de tu plaza (sobrevive a los repintados). */
+let subMercadoPuerta = '';
+
+/** Las partes del Mercado interno que se manejan con la columna a la puerta (motor 906fb24), solo las que puedes usar: Órdenes (Gobernador o
+ * Tesorero), Caravanas (cualquier residente), Rutas (Gobernador, Tesorero o Maestro de Caravanas) y las extra visibles (Región). Quien llama ya
+ * sabe que resides. */
+function subsDeMercadoALaPuerta(p: ProyeccionJugador, a: Asentamiento): [string, string][] {
+  const k = a.cargos;
+  const ordenes = [k?.gobernadorId, k?.tesoreroId].includes(p.heroeId);
+  const rutas = ordenes || k?.maestroCaravanasId === p.heroeId;
+  const c = { proyeccion: p, asentamiento: a, cuerpo: document.createElement('div'), ejecutar: ejecutarYRefrescar, refrescar: renderSeleccionMapa, cargo: null, resideAqui: true, escapar: escaparHtml } as ContextoPlaza;
+  return [
+    ...(ordenes ? [['ordenes', 'Órdenes'] as [string, string]] : []),
+    ['caravanas', 'Caravanas'],
+    ...(rutas ? [['rutas', 'Rutas'] as [string, string]] : []),
+    ...(rutas ? SUBPESTANAS_MERCADO_EXTRA.filter((x) => x.visible?.(c) ?? true).map((x) => [x.id, x.etiqueta] as [string, string]) : []),
+  ];
 }
 
 /** Ficha de un campamento de bandidos (Doc 1.9): se ataca con la columna, llegando hasta él. Si cae, su botín va al
@@ -1464,6 +1521,20 @@ function puertaDeCampamento(p: ProyeccionJugador, c: CampamentoMercenarios, dist
   if (tabernasDisponibles(p).some((t) => t.origen.tipo === 'campamento' && t.origen.id === c.id)) {
     acciones.push({ id: 'taberna', etiqueta: 'Taberna', icono: iconoEdificio('taberna', 18), ventana: true });
     ventanas.taberna = () => ({ titulo: 'Taberna', icono: iconoEdificio('taberna', 28), ancho: 'ancha', html: renderPanelIntel(p, escaparHtml, c.id), cablear: (cuerpo) => cablearPanelIntel(cuerpo, p, ejecutarYRefrescar, () => { olvidarEdicion(cuerpo); invalidar(cuerpo); renderSeleccionMapa(); }) });
+  }
+  // Con la columna parada a la puerta, el motor (906fb24) da el ámbito CAMPAMENTO: su Mercado y su tablón de Mercenarios, con los paneles de dentro.
+  if ((p.campamentosAbiertos ?? []).includes(c.id)) {
+    const seccion = (s: 'mercado' | 'mercenarios', titulo: string, icono: string, ancho: 'normal' | 'ancha'): (() => VentanaPuerta) => () => ({
+      titulo, icono, ancho,
+      html: `${htmlSeccionCampamento(s, p, c, escaparHtml)}<p id="camp-error" class="faction-error" role="alert"></p>`,
+      cablear: (cuerpo) => cablearCampamento(cuerpo, p, c, ejecutarYRefrescar, { ejecutarConDatos: ejecutarConDatosYRefrescar, repintar: () => { olvidarEdicion(cuerpo); invalidar(cuerpo); renderSeleccionMapa(); } }),
+    });
+    if ((c.tablon?.length ?? 0) > 0) {
+      acciones.push({ id: 'mercenarios', etiqueta: 'Mercenarios', icono: '⚔', ventana: true, titulo: 'Los que se ofrecen en el tablón del campamento.' });
+      ventanas.mercenarios = seccion('mercenarios', 'Mercenarios', '⚔', 'ancha');
+    }
+    acciones.push({ id: 'mercado', etiqueta: 'Mercado', icono: iconoEdificio('mercado', 18), ventana: true });
+    ventanas.mercado = seccion('mercado', 'Mercado del campamento', iconoEdificio('mercado', 28), 'normal');
   }
   if (p.heroe.residenciaId === c.id || c.residentesIds.includes(p.heroeId)) {
     acciones.push({ id: 'carga', etiqueta: 'Carga', icono: '📦', ventana: true, titulo: 'Tu carro y tu almacén personal.' });

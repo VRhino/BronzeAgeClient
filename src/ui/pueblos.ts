@@ -20,7 +20,7 @@ import { iconoEdificio } from './iconosEdificio';
 import type { Asentamiento, AvanzadaDeMapa, ObraDeMapa, Point, PuebloDeMapa } from '../tiposDominio';
 import { ayuda } from './ayuda';
 import { agarre } from './agarre';
-import { miColumna } from './ejercitos';
+import { columnaALaPuerta, miColumna } from './ejercitos';
 import { dibujarIconoMapa } from '../mundo/iconosMapa';
 import { capaDe, esCultivo, sitiosDeAldea, type Cultivo, type SitiosDeAldea } from '../mundo/fertilidad';
 import type { ContextoFicha, ContextoPlaza, FichaMapaExtra, ObjetoBajoElClic, SubpestanaPlaza } from './ganchos';
@@ -706,7 +706,8 @@ export const FICHA_PUEBLO: FichaMapaExtra = {
     const e = c.escapar;
     const entrar = puertaDePueblo(p, x);
     const obra = puertaDeObra(p, obraSobre(p, x.id), c);
-    const acciones = [...entrar.acciones, ...(obra.accion ? [obra.accion] : []), ...puertaDeAtaque(p, x, x.propio, c)];
+    const guarnicion: AccionPuerta[] = x.propio && columnaALaPuerta(p, x.posicion) ? [{ id: 'guarnicion', etiqueta: 'Guarnición', icono: '🛡', ventana: true, titulo: 'Deja o recoge tropa de tu columna sin entrar.' }] : [];
+    const acciones = [...entrar.acciones, ...(obra.accion ? [obra.accion] : []), ...guarnicion, ...puertaDeAtaque(p, x, x.propio, c)];
     return `<span class="faction-kicker">${x.propio ? 'Pueblo de tu Facción' : 'Pueblo ajeno'}</span>
       <h3>${e(nombreDePueblo(x))}</h3>
       <p class="asent-lado-nota">De ${e(nombrePlaza(p, x.madreId))}.${x.batallaId ? ' <strong>Lo están atacando.</strong>' : ''}</p>
@@ -728,6 +729,14 @@ export const FICHA_PUEBLO: FichaMapaExtra = {
     const obra = puertaDeObra(p, obraSobre(p, x.id), c);
     const ventanas: Record<string, () => VentanaPuerta> = {};
     if (obra.ventana) ventanas.obra = obra.ventana;
+    // la guarnición de un pueblo o una aldea de tu Facción, con la columna a su puerta (motor 906fb24: guarnecerPueblo / retirarDePueblo)
+    if (x.propio && columnaALaPuerta(p, x.posicion)) {
+      ventanas.guarnicion = () => ({
+        titulo: 'Guarnición', icono: '🛡', ancho: 'normal',
+        html: `${htmlGuarnicion(p, x, true, c.escapar)}<p class="faction-error" data-pueblo-dentro-error role="alert"></p>`,
+        cablear: (cuerpo) => cablearInteriorPueblo(cuerpo, p, x, c.ejecutar, c.repintar),
+      });
+    }
     return ventanas;
   },
 };

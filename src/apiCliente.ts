@@ -97,6 +97,8 @@ export interface ProyeccionJugador {
   campamentosBandidos: CampamentoBandido[];
   /** Los campamentos de mercenarios que conoces (como un camino: los explorados, más el tuyo y aquel en que estás). */
   campamentosMercenarios: CampamentoMercenarios[];
+  /** Los campamentos cuyo ámbito `CAMPAMENTO` tiene la sesión: dentro o, desde el motor 906fb24, con la columna parada a su puerta. */
+  campamentosAbiertos?: string[];
   /** La planta de cada campamento cuyo ámbito `CAMPAMENTO` tiene el héroe (puede tener más de uno: donde reside y donde está). */
   escenasCampamento: EscenaCampamento[];
   /** La planta del pueblo o la aldea donde estás (la manda el motor a quien está dentro); vacía fuera, o si el motor aún no la manda. */

@@ -39,7 +39,7 @@ const LARGO_NOMBRE_CARAVANA = 32;
 /** La caravana cuyo nombre se está cambiando: vive entre repintados (el sondeo de 3 s no lo cierra). */
 let caravanaRenombrando: string | null = null;
 
-/** El nombre de la tarjeta: con ✎ si puedes cambiarlo (resides en su origen y estás dentro) y, al pulsarlo, el campo con ✓ y ✕. */
+/** El nombre de la tarjeta: con ✎ si puedes cambiarlo (resides en su origen, dentro o a su puerta) y, al pulsarlo, el campo con ✓ y ✕. */
 function nombreEnTarjeta(c: Caravana, renombrable: boolean, e: Escapar): string {
   if (renombrable && caravanaRenombrando === c.id) {
     return `<span class="caravana-renombrar"><input class="form-input" type="text" maxlength="${LARGO_NOMBRE_CARAVANA}" data-caravana-nombre="${e(c.id)}" value="${e(c.nombre ?? '')}" placeholder="Sin nombre (${e(c.id)})" aria-label="Nombre de la caravana" />
@@ -48,6 +48,9 @@ function nombreEnTarjeta(c: Caravana, renombrable: boolean, e: Escapar): string 
   const lapiz = renombrable ? `<button class="caravana-lapiz" type="button" data-caravana-renombrar="${e(c.id)}" title="Ponerle nombre" aria-label="Ponerle nombre">✎</button>` : '';
   return `<strong title="${e(c.id)}">${e(nombreDeCaravana(c))}${lapiz}</strong>`;
 }
+
+/** ¿Está el héroe dentro de la plaza? Fuera (la ventana Mercado de la ficha del mundo, a la puerta) no se dan escolta ni se tocan las aparcadas. */
+const estaDentro = (p: ProyeccionJugador, a: Asentamiento): boolean => p.heroe.ubicacion.tipo === 'asentamiento' && p.heroe.ubicacion.asentamientoId === a.id;
 
 function resideAqui(p: ProyeccionJugador, a: Asentamiento): boolean {
   return [...(a.heroesFundadoresIds ?? []), ...(a.casasCompradas ?? [])].includes(p.heroeId);
@@ -419,6 +422,8 @@ function carrosEnHuecos(c: Caravana, a: Asentamiento, editable: boolean, otras: 
 /** De dónde salen las escuadras para escoltar una caravana de `a` en casa: residente, de tu campamento; de visita dentro de una plaza de tu Facción
  * (motor 7a6a0c48, 0.139.0), de la columna con la que entraste. `null` si no puedes ceder. */
 function fuenteDeEscolta(p: ProyeccionJugador, a: Asentamiento, reside: boolean): { lista: Escuadron[]; de: 'campamento' | 'columna' } | null {
+  // la escolta se da dentro (a la puerta, el motor 906fb24 acepta la flota pero no la escolta)
+  if (!estaDentro(p, a)) return null;
   if (reside) return { lista: p.heroe.escuadrones.filter((s) => s.contenedor.tipo === 'campamento' && !s.enGuarnicion && s.cantidad > 0), de: 'campamento' };
   const dentro = p.heroe.ubicacion.tipo === 'asentamiento' && p.heroe.ubicacion.asentamientoId === a.id;
   const columna = dentro && a.faccionId === p.faccionId ? miColumna(p) : undefined;
@@ -478,9 +483,9 @@ function seccionViaje(c: Caravana, p: ProyeccionJugador, a: Asentamiento, almace
 function detalleFlota(c: Caravana, p: ProyeccionJugador, a: Asentamiento, reside: boolean, flota: Caravana[], almacen: Record<string, number>, carrosLleno: boolean, d: DatosCaravana | null, e: Escapar): string {
   const estado = c.estado ?? 'disponible';
   const ajena = estado === 'aparcada' && c.origenAsentamientoId !== a.id;
-  const dentro = p.heroe.ubicacion.tipo === 'asentamiento' && p.heroe.ubicacion.asentamientoId === a.id;
   const { texto, enPlaza } = ubicacionDe(c, p, a);
-  const renombrable = reside && dentro && c.origenAsentamientoId === a.id && enPlaza;
+  // dentro o con la columna a la puerta (motor 906fb24): el panel solo se abre en esos dos sitios
+  const renombrable = reside && c.origenAsentamientoId === a.id && enPlaza;
   const reservar = enPlaza && reside && !ajena && estado === 'disponible'
     ? `<label class="interruptor caravana-reservar" title="Reservada: la plaza no la usa en sus envíos automáticos; sin reservar, una caravana con animal puede salir sola en el reparto"><input type="checkbox" data-reservar="${e(c.id)}"${c.reservadaManual ? ' checked' : ''} /><span class="interruptor-pista" aria-hidden="true"><i></i></span><span>Reservada</span></label>`
     : c.reservadaManual ? '<span class="obra-chip">🔒 Reservada</span>' : '';
@@ -522,7 +527,7 @@ function detalleFlota(c: Caravana, p: ProyeccionJugador, a: Asentamiento, reside
   // En casa (disponible, o esperando en su origen con encargo) quien reside y está dentro la descarga al almacén, todo o una parte (motor 5776ab69,
   // `moverCargaCaravanaAparcada` con `descargar`): entra lo que el almacén admite y cabe.
   const enCasa = estado === 'disponible' || (estado === 'esperando' && c.encargo?.paradaActual === 'origen');
-  const descarga = lleva.length && enCasa && reside && dentro;
+  const descarga = lleva.length && enCasa && reside && estaDentro(p, a);
   const hueco = (r: string): number => { const x = a.almacen?.[r]; return x && x.capacidad > 0 ? Math.max(0, Math.floor(x.capacidad - x.cantidad)) : Infinity; };
   const carga = lleva.length ? `<div class="flota-lleva-caja">
       <div class="aparcada-carga flota-lleva"><small>Lleva</small>${lleva.map(([r, n]) => `<span class="pacto-linea" title="${e(RECURSO_NOMBRE[r] ?? r)}"><i aria-hidden="true">${RECURSO_ICONO[r] ?? '📦'}</i><b>${Math.floor(n)}</b><small>${e(RECURSO_NOMBRE[r] ?? r)}</small></span>`).join('')}<small class="flota-lleva-total">${cargaDe(c)}${capacidad ? ` / ${capacidad}` : ''}</small></div>
@@ -606,7 +611,7 @@ export function htmlCaravanas(p: ProyeccionJugador, a: Asentamiento, e: Escapar,
   const reside = resideAqui(p, a);
   const flota = p.caravanas.filter((c) => c.tipo === 'comercial' && c.origenAsentamientoId === a.id);
   // Las de otra plaza que un ejército dejó aparcadas aquí: salen después de las de la flota.
-  const aparcadas = p.caravanas.filter((k) => k.estado === 'aparcada' && k.origenAsentamientoId !== a.id && k.posicionActual.x === a.posicion.x && k.posicionActual.y === a.posicion.y);
+  const aparcadas = !estaDentro(p, a) ? [] : p.caravanas.filter((k) => k.estado === 'aparcada' && k.origenAsentamientoId !== a.id && k.posicionActual.x === a.posicion.x && k.posicionActual.y === a.posicion.y);
   const almacen = Object.fromEntries(Object.entries(a.almacen ?? {}).map(([r, v]) => [r, v.cantidad]));
   // Topes de la flota (Doc 3.13.2): los pone el nivel interno del Mercado, más el del Albergue de caravanas activo (motor b5e27ace) y la
   // «Ampliación de Flota»; vienen en el balance. El servidor sigue siendo quien rechaza.

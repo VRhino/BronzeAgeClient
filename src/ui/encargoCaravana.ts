@@ -10,6 +10,7 @@ import { ritmoDelMundo, textoEnTiempoReal } from './estadoCliente';
 import type { Ejecutar } from './panelCarro';
 import { mostrar as mostrarAviso } from './avisos';
 import { confirmar } from './dialogo';
+import { columnaALaPuerta } from './ejercitos';
 
 type Escapar = (valor: string) => string;
 type Punta = 'origen' | 'destino';
@@ -49,7 +50,8 @@ export function motivoSinEncargo(p: ProyeccionJugador, a: Asentamiento, reside: 
   const cargo = [c?.gobernadorId, c?.tesoreroId, c?.maestroCaravanasId].includes(p.heroeId);
   if (!cargo) return 'Los encargos los dan el Gobernador, el Tesorero o el Maestro de Caravanas de esta plaza.';
   if (!reside) return 'Solo quien reside en esta plaza da encargos.';
-  if (!(p.heroe.ubicacion.tipo === 'asentamiento' && p.heroe.ubicacion.asentamientoId === a.id)) return 'Tienes que estar dentro de la plaza.';
+  // dentro o con la columna a su puerta (motor 906fb24)
+  if (!(p.heroe.ubicacion.tipo === 'asentamiento' && p.heroe.ubicacion.asentamientoId === a.id) && !columnaALaPuerta(p, a.posicion)) return 'Tienes que estar dentro de la plaza o con tu columna a su puerta.';
   return null;
 }
 

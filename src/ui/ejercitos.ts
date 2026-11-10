@@ -10,7 +10,7 @@
 // La marcha forzada se pone junto a los víveres, abajo en el mapa (`main.ts`); desde la 0.132.0 ya no sale aquí.
 // La política de unión («abierto» = aceptar, «decide el Líder» = preguntar, «cerrado» = rechazar) la fija el Líder al formar y no cambia.
 import type { ProyeccionJugador } from '../apiCliente';
-import { radioDeEncuentro } from '../apiCliente';
+import { radioDeEncuentro, radioDePuerta } from '../apiCliente';
 import type { Ejercito } from '../tiposDominio';
 import { ayuda } from './ayuda';
 import { nombreDeHeroe } from './nombres';
@@ -36,6 +36,12 @@ export const POLITICA: Record<'aceptar' | 'preguntar' | 'rechazar', string> = {
 const ESTADO: Record<Ejercito['estado'], string> = { marchando: 'en marcha', estacionado: 'acampado', regresando: 'de vuelta' };
 
 const distancia = (a: { x: number; y: number }, b: { x: number; y: number }): number => Math.hypot(a.x - b.x, a.y - b.y);
+
+/** ¿Va el héroe a bordo de su columna a la puerta de `punto` (a `radioDePuerta` o menos), sin entrar? Lo que el motor 906fb24 acepta además de dentro. */
+export function columnaALaPuerta(p: ProyeccionJugador, punto: { x: number; y: number }): boolean {
+  const c = miColumna(p);
+  return c !== undefined && Math.hypot(c.posicionActual.x - punto.x, c.posicionActual.y - punto.y) <= radioDePuerta();
+}
 
 export function miColumna(p: ProyeccionJugador): Ejercito | undefined {
   return p.ejercitos.find((c) => c.participantes.some((x) => x.heroeId === p.heroeId));

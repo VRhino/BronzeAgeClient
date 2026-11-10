@@ -2,19 +2,23 @@
 // (`Asentamiento.guarnicion`, motor 7a6a0c48), y dejar o sacar las tuyas (`asignarGuarnicion` / `retirarGuarnicion`):
 //  - si resides aquí, las de tu campamento (quedan en él con `enGuarnicion`);
 //  - de visita en una plaza de tu Facción (0.139.0), las de la columna con la que entraste (pasan a `contenedor: plaza`); al salir no se van contigo
-//    y se recogen desde dentro, de vuelta a la columna.
+//    y se recogen desde dentro, de vuelta a la columna;
+//  - a la puerta, con la columna (0.199.0, motor 906fb24; la ventana Guarnición de la ficha del mundo): se dejan las de la columna (a tu campamento
+//    si resides, de visita si no) y las tuyas de la guarnición vuelven a la columna.
 // El cupo es por héroe y en Liderazgo (`Asentamiento.cupoGuarnicion`, el mismo de visita). La guarnición defiende en un asedio y no sale, ni escolta, ni ataca.
 import type { Escuadron } from '../tiposDominio';
 import type { ContextoPlaza, SubpestanaPlaza } from './ganchos';
 import { iconoTropa } from './iconosTropa';
 import { mostrar as mostrarAviso } from './avisos';
-import { miColumna, nombreDeTropa } from './ejercitos';
+import { columnaALaPuerta, miColumna, nombreDeTropa } from './ejercitos';
 import { nombreDeHeroe } from './nombres';
 
 /** El desplegable de escuadras para dejar abierto: sobrevive a los repintados del sondeo. */
 let eligiendo = false;
 
 const dentroDe = (c: ContextoPlaza): boolean => c.proyeccion.heroe.ubicacion.tipo === 'asentamiento' && c.proyeccion.heroe.ubicacion.asentamientoId === c.asentamiento.id;
+/** Fuera, con tu columna a su puerta: se deja y se recoge con la columna. */
+const aLaPuertaDe = (c: ContextoPlaza): boolean => !dentroDe(c) && columnaALaPuerta(c.proyeccion, c.asentamiento.posicion);
 
 /** Tus escuadras en la guarnición de esta plaza: las de tu campamento si resides, las dejadas de visita si no. */
 function tuyasDentro(c: ContextoPlaza): Escuadron[] {
@@ -25,6 +29,8 @@ function tuyasDentro(c: ContextoPlaza): Escuadron[] {
 /** Las que puedes dejar: residente, las del campamento; de visita y dentro de una plaza de tu Facción, las de tu columna. */
 function paraDejar(c: ContextoPlaza): { lista: Escuadron[]; de: 'campamento' | 'columna' | null } {
   const { proyeccion: p, resideAqui } = c;
+  const puerta = aLaPuertaDe(c) ? miColumna(p) : undefined;
+  if (puerta) return { lista: p.heroe.escuadrones.filter((s) => s.contenedor.tipo === 'ejercito' && s.contenedor.ejercitoId === puerta.id && s.cantidad > 0), de: 'columna' };
   if (resideAqui) return { lista: p.heroe.escuadrones.filter((s) => s.contenedor.tipo === 'campamento' && !s.enGuarnicion && s.cantidad > 0), de: 'campamento' };
   const columna = dentroDe(c) ? miColumna(p) : undefined;
   if (!columna) return { lista: [], de: null };
@@ -49,7 +55,7 @@ function html(c: ContextoPlaza): string {
     ...mias.map((s) => `<div class="salida-hueco lleno" title="${e(`${s.nombre} · ${s.cantidad} hombres`)}">
         <span class="salida-hueco-icono">${iconoTropa(s.tropaId, 34)}</span><span class="salida-hueco-nombre">${e(s.nombre)}</span>
         <small>Tuya${s.contenedor.tipo === 'plaza' ? ' · de visita' : ''} · ${s.cantidad} hombres · ${s.costeLiderazgo} pts</small>
-        ${dentroDe(c) || resideAqui ? `<button class="salida-hueco-quitar" type="button" data-guarnicion-retirar="${e(s.id)}" title="${s.contenedor.tipo === 'plaza' ? 'Recogerla a tu columna' : 'Sacarla al campamento'}" aria-label="Sacar ${e(s.nombre)}">✕</button>` : ''}
+        ${dentroDe(c) || resideAqui || aLaPuertaDe(c) ? `<button class="salida-hueco-quitar" type="button" data-guarnicion-retirar="${e(s.id)}" title="${s.contenedor.tipo === 'plaza' || aLaPuertaDe(c) ? 'Recogerla a tu columna' : 'Sacarla al campamento'}" aria-label="Sacar ${e(s.nombre)}">✕</button>` : ''}
       </div>`),
     ...ajenas.map(({ info }) => info
       ? `<div class="salida-hueco lleno ajena" title="${e(`${nombreDeTropa(info.tropaId)} · ${info.cantidad} hombres · de ${nombreDeHeroe(p, info.heroeId)}`)}">
@@ -75,7 +81,8 @@ function html(c: ContextoPlaza): string {
       ? '<p class="asent-lado-nota">El cupo es 0: la plaza necesita un Barracón o una Galería de tiro para admitir guarnición.</p>'
       : candidatas.length === 0 && mias.length === 0
         ? `<p class="asent-lado-nota">${de === 'columna' ? 'Tu columna no trae escuadras con soldados.' : 'No tienes escuadras en el campamento: se reclutan aquí o vuelven con tu columna.'}</p>`
-        : de === 'columna' ? '<p class="asent-lado-nota">De visita: dejas tropa de la columna con la que entraste. No sale contigo; la recoges a tu columna estando dentro.</p>' : '';
+        : aLaPuertaDe(c) ? '<p class="asent-lado-nota">A la puerta: dejas tropa de tu columna y la recoges de vuelta a ella sin entrar.</p>'
+          : de === 'columna' ? '<p class="asent-lado-nota">De visita: dejas tropa de la columna con la que entraste. No sale contigo; la recoges a tu columna estando dentro o a la puerta.</p>' : '';
   return `<div class="caravana-seccion guarnicion-plaza">
       <div class="salida-tropa-cab"><strong class="heroe-sub">Guarnición · ${total} ${total === 1 ? 'escuadra' : 'escuadras'}</strong>${cabecera}</div>
       ${barra}
