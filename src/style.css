@@ -5946,9 +5946,6 @@ button.carro-hueco:hover, .carro-hueco.activo { border-color: var(--oro); box-sh
 .tip-funcion { margin: 6px 0 0; color: var(--ta-texto-2); font-style: italic; text-wrap: pretty; }
 .tip-ficha ul li { text-wrap: pretty; }
 .tip-ficha .ta-fichas { align-items: center; }
-.tip-ficha ul.tip-niveles { list-style: none; padding-left: 0; gap: 5px; }
-.tip-ficha ul.tip-niveles > li > b { color: var(--oro-claro); font-weight: 600; }
-.tip-ficha ul.tip-niveles ul { padding-left: 14px; color: var(--ta-texto-2); }
 .ta-estado-caja.baja { border-color: rgba(226,103,90,.6); }
 .tip-ficha .ta-edi .tip-nombre { color: var(--pergamino); font-size: 12px; margin-left: 2px; }
 .tip-ficha .tip-iconos { display: inline-flex; gap: 2px; vertical-align: middle; }

@@ -262,10 +262,10 @@ La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, es
 >
 > **Tooltips con ficha en Construir y en el Almacén** (0.192.0, Víctor 2026-11-10; `ui/tipsPlaza.ts`, con la pinta de los de los árboles).
 > **Al pasar por un edificio de «Construir»**: su tamaño en el trazado, si es único o cuántos caben, una frase con su función, el coste (en rojo
-> lo que falta) y la obra con las políticas de hoy, lo que da en el nivel 1 (recetas con su ritmo e insumos, producción base, mano de obra con su
-> clase, sitio para la gente, cabida, flota, Miradas, el buey, las tropas que recluta por nivel con nombre si la Facción tiene su tecnología, la
-> política de más de la Sala del Consejo, el prestigio de la estatua y la Maravilla), sus mejoras (lo que piden y lo que añaden) y, en la plaza,
-> cuántos hay, si hace falta para subirla de nivel (solo los niveles que quedan) y qué edificios lo piden. **Al pasar por un recurso del
+> lo que falta) y la obra con las políticas de hoy, lo que da **solo en el nivel 1** (desde 0.196.0: las recetas, qué hacen y con qué, sin
+> cifras; el recurso de base; la mano de obra con su tipo de población, sitio para la gente, cabida, flota, Miradas, el buey, las tropas que
+> recluta, la política de más de la Sala del Consejo, el prestigio de la estatua y la Maravilla) y, en la plaza, cuántos hay, si hace falta para
+> subirla de nivel (solo los niveles que quedan) y qué edificios lo piden. Lo que pide una tecnología que la Facción no tiene no sale. **Al pasar por un recurso del
 > Almacén** (las fichas y los botones de la barra), **sin cifras desde 0.195.0** (Víctor: «no mostrar números en general, solo los
 > multiplicadores»; las cifras están en la ficha): para qué sirve (qué tipos de población lo comen, la guarnición, los talleres que lo gastan y
 > qué hacen, el equipo de las tropas, el reclutamiento, construir, mejorar, subir la plaza y el mantenimiento, con el nivel desde el que lo
@@ -273,8 +273,9 @@ La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, es
 > (extractores, aldeas por cultivo, rebaños, talleres, la recaudación, batallas); y qué lo multiplica (la Cantería, el buey, la fertilidad, el
 > bosque, el crecimiento con la ración entera y las políticas, marcadas si están activas). Con el almacén lleno, lo avisa. Se dice «tipos de
 > población», no «clases». Todo sale del catálogo y de los bloques del motor. El `title` del navegador se va; las cifras siguen en el
-> `aria-label`. **Al pasar por un cuadrito de «Construidos»** (0.195.0): cuántos hay y de qué nivel, si alguno se mejora o está dañado, su
-> función, lo que da su nivel de ahora (el del mejor), la mejora siguiente con lo que pide y añade, y para qué hace falta en la plaza.
+> `aria-label`. **Al pasar por un cuadrito de «Construidos»** (0.195.0; 0.196.0): cuántos hay y de qué nivel, si alguno se mejora o está
+> dañado, su función, «Lo que tiene» todo junto (el del mejor), solo la mejora al nivel siguiente con lo que pide y añade (si no pide una
+> tecnología que la Facción no tiene), y para qué hace falta en la plaza.
 >
 > **«En la barra de arriba» con solo lo que hay** (0.195.0): en la ventana del Almacén, la elección de la barra enseña de serie los recursos
 > con algo y los que ya van en la barra; «Mostrar todos» enseña el resto.

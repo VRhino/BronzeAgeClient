@@ -3,6 +3,19 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.196.0] — 2026-11-10 · Tooltip de edificio más corto: sin lo bloqueado, solo el nivel que toca y la producción sin cifras · contrato 0.20.0 (motor `b55e90f`)
+
+Petición de Víctor del 2026-11-10. Sin cambios en el motor ni en el contrato.
+
+- **Sin lo bloqueado**: las recetas y las tropas que piden una tecnología que tu Facción no tiene no salen (antes, la tecnología con ✗ o «y N
+  más con tecnologías que tu Facción aún no tiene»); tampoco la mejora a un nivel que pide una, ni los edificios que lo piden si están
+  bloqueados. Las frases de la fundición, la carpintería y las caballerizas ya no hablan del bronce ni de los carros de guerra.
+- **«Construir»** (sin construir): solo lo del nivel 1, en «Qué da»; fuera la lista de mejoras y el «N niveles» de la cabecera.
+- **«Construidos»**: «Lo que tiene», todo junto (sin separar por nivel; con varios de niveles distintos, el mejor), y solo la mejora al nivel
+  siguiente, con lo que pide y lo que añade. La cabecera dice el nivel sin «de N».
+- **La producción sin cifras**: cada receta dice qué hace y con qué («🍷 Vino, con 🍇 uva»), sin el «hasta N/min» ni el «N por unidad»; la de
+  base, solo el recurso («🌾 Trigo»); y en la mejora, «produce más». El coste, la obra, la mano de obra y las cabidas siguen con su cifra.
+
 ## [0.195.1] — 2026-11-10 · «Entrar» en la ficha del mundo solo cuando se puede · contrato 0.20.0 (motor `b55e90f`)
 
 Nota de Víctor del 2026-11-10 sobre el 0.193.0. Sin cambios en el motor.

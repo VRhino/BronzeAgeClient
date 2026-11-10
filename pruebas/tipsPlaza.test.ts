@@ -8,7 +8,7 @@ import type { Asentamiento, Edificio } from '../src/tiposDominio';
 vi.stubGlobal('location', { protocol: 'http:', host: 'localhost' });
 vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => datos })));
 
-const { bloqueDeDatos } = await import('../src/apiCliente');
+const { bloqueDeDatos, tropasReclutables } = await import('../src/apiCliente');
 const { htmlConstruir, htmlConstruidosVentana } = await import('../src/ui/panelObras');
 const { fichaRecurso } = await import('../src/ui/vistaCiudad');
 const { alternarRecursoDeLaBarra, cablearEleccionBarra, htmlEleccionBarra } = await import('../src/ui/hudPlaza');
@@ -44,11 +44,13 @@ describe('el tooltip de los edificios de Construir', () => {
     expect(t).toContain('Clic para ponerlo en la cola de obras.');
   });
 
-  test('la bodega: sus dos recetas, quién la trabaja y el tope de tres por plaza', () => {
+  test('la bodega: sus dos recetas sin cifras (qué hace y con qué), quién la trabaja y el tope de tres por plaza', () => {
     const t = sinEtiquetas(htmlTipEdificio(plaza(3), 'bodega'));
     expect(t).toContain('hasta 3 por plaza');
-    expect(t).toMatch(/Vino: hasta 1 \/min, con .*2 .*por unidad/);
-    expect(t).toContain('Cerveza');
+    expect(t).toMatch(/Vino, con .*uva/);
+    expect(t).toMatch(/Cerveza, con .*cebada/);
+    expect(t).not.toContain('/min');
+    expect(t).not.toContain('por unidad');
     expect(t).toMatch(/🔨 3 artesanos artesanos de mano de obra/);
   });
 
@@ -65,11 +67,21 @@ describe('el tooltip de los edificios de Construir', () => {
     expect(h).toContain('No hay bastante en el almacén');
   });
 
-  test('las mejoras dicen lo que piden y lo que añaden', () => {
+  test('sin construir, solo lo del nivel 1: ni mejoras ni cuántos niveles tiene (0.196.0)', () => {
     const t = sinEtiquetas(htmlTipEdificio(plaza(2), 'granero'));
-    expect(t).toContain('Mejoras');
-    expect(t).toMatch(/Nivel 4 : .*plaza 3/);
-    expect(t).toContain('12000 de cabida para el trigo');
+    expect(t).not.toContain('Mejora');
+    expect(t).not.toMatch(/Nivel \d/);
+    expect(t).not.toContain('niveles');
+    expect(t).toContain('Qué da');
+    expect(t).toContain('+4000 de cabida para el trigo');
+    expect(t).not.toContain('12000');
+  });
+
+  test('la producción, sin cifras: la granja dice que da trigo, no cuánto', () => {
+    const t = sinEtiquetas(htmlTipEdificio(plaza(1), 'granja'));
+    expect(t).toMatch(/🌾 Trigo/);
+    expect(t).not.toContain('/min');
+    expect(t).not.toContain('mano de obra completa');
   });
 
   test('para qué hace falta en la plaza: subirla de nivel y quién lo pide', () => {
@@ -83,11 +95,23 @@ describe('el tooltip de los edificios de Construir', () => {
     expect(sinEtiquetas(htmlTipEdificio(plaza(2), 'mercado'))).toContain('Lo piden:');
   });
 
-  test('el barracón cuenta las tropas que abre; sin las tecnologías, contadas y sin nombre', () => {
-    estadoCliente.proyeccionUltima = { faccionId: 'f-1', facciones: [], tecnologiasAdoptadas: ['hostigamiento_tribal'], asentamientos: [] } as unknown as ProyeccionJugador;
-    const t = sinEtiquetas(htmlTipEdificio(plaza(2), 'barracon'));
-    expect(t).toContain('Recluta');
-    expect(t).toContain('con tecnologías que tu Facción aún no tiene');
+  test('las tropas que recluta, solo las de tecnologías de tu Facción; de las otras, ni rastro', () => {
+    const tropas = (tropasReclutables() ?? []).filter((x) => x.edificio === 'barracon' && x.nivelRequerido === 1);
+    expect(tropas.length).toBeGreaterThan(0);
+    estadoCliente.proyeccionUltima = { faccionId: 'f-1', facciones: [], tecnologiasAdoptadas: [], asentamientos: [] } as unknown as ProyeccionJugador;
+    const sin = sinEtiquetas(htmlTipEdificio(plaza(2), 'barracon'));
+    for (const x of tropas) expect(sin).not.toContain(x.nombre);
+    expect(sin).not.toContain('tecnologías que tu Facción');
+    estadoCliente.proyeccionUltima = { faccionId: 'f-1', facciones: [], tecnologiasAdoptadas: [tropas[0]!.tecnologia], asentamientos: [] } as unknown as ProyeccionJugador;
+    expect(sinEtiquetas(htmlTipEdificio(plaza(2), 'barracon'))).toContain(`Recluta ${tropas[0]!.nombre}`);
+    estadoCliente.proyeccionUltima = null;
+  });
+
+  test('las recetas que piden una tecnología que no tienes no salen', () => {
+    // la armería: el arma de cobre pide Metalurgia del cobre
+    expect(sinEtiquetas(htmlTipEdificio(plaza(2), 'armeria'))).not.toContain('Arma de cobre');
+    estadoCliente.proyeccionUltima = { faccionId: 'f-1', facciones: [], tecnologiasAdoptadas: ['metalurgia_cobre'], asentamientos: [] } as unknown as ProyeccionJugador;
+    expect(sinEtiquetas(htmlTipEdificio(plaza(2), 'armeria'))).toMatch(/Arma de cobre, con .*lingote de cobre/);
     estadoCliente.proyeccionUltima = null;
   });
 
@@ -269,14 +293,30 @@ describe('el tooltip de los edificios construidos (0.195.0)', () => {
     expect(contenidoTip({ dataset: { tip: 'construido:horno' } } as unknown as HTMLElement)).toContain('<h3>Horno</h3>');
   });
 
-  test('la granja de nivel 2: lo que da ahora y la mejora al nivel 3 con lo que pide', () => {
+  test('la granja de nivel 2: lo que tiene, todo junto, y solo la mejora al nivel 3, sin cifras de producción', () => {
     const t = sinEtiquetas(htmlTipConstruido(plaza(2, [edificio('granja', 2)]), 'granja'));
-    expect(t).toContain('uno en la plaza · nivel 2 de 4');
-    expect(t).toContain('Lo que da en el nivel 2');
-    expect(t).toMatch(/Trigo: hasta 180 \/min/);
+    expect(t).toContain('uno en la plaza · nivel 2');
+    expect(t).not.toContain('de 4');
+    expect(t).toContain('Lo que tiene');
     expect(t).toContain('Mejora al nivel 3');
-    expect(t).toMatch(/Trigo: hasta 240 \/min/);
+    expect(t).not.toContain('Mejora al nivel 4');
+    expect(t).toContain('Trigo: produce más');
+    expect(t).not.toContain('/min');
     expect(t).toContain('Clic para verlo en la plaza.');
+  });
+
+  test('la mejora siguiente sin lo bloqueado: sin su tecnología, ni la receta nueva ni el nivel que la pide', () => {
+    // la carpintería 2 hace carros de guerra solo con «Carros de guerra»
+    const carp = (): string => sinEtiquetas(htmlTipConstruido(plaza(3, [edificio('carpinteria')]), 'carpinteria'));
+    expect(carp()).toContain('Mejora al nivel 2');
+    expect(carp()).not.toContain('Carro de guerra');
+    estadoCliente.proyeccionUltima = { faccionId: 'f-1', facciones: [], tecnologiasAdoptadas: ['carros_guerra'], asentamientos: [] } as unknown as ProyeccionJugador;
+    expect(carp()).toMatch(/Carro de guerra, con .*madera.*cuero curtido.*lingote de bronce/);
+    // la fundición 3 pide «Forja de hierro estandarizada»: sin ella, no se enseña esa mejora
+    const fund = sinEtiquetas(htmlTipConstruido(plaza(4, [edificio('fundicion', 2)]), 'fundicion'));
+    expect(fund).not.toContain('Mejora al nivel 3');
+    expect(fund).not.toContain('nivel más alto');
+    estadoCliente.proyeccionUltima = null;
   });
 
   test('varios del mismo tipo: cuántos, el mejor nivel, los que se mejoran y los dañados', () => {
@@ -285,14 +325,14 @@ describe('el tooltip de los edificios construidos (0.195.0)', () => {
     expect(t).toContain('3 en la plaza');
     expect(t).toContain('Uno se está mejorando');
     expect(t).toContain('Uno está dañado');
-    expect(t).toContain('Qué da cada uno');
+    expect(t).toContain('Lo que tiene cada uno');
     expect(t).toContain('cada clic, el siguiente');
   });
 
   test('de niveles distintos, cuenta el mejor', () => {
     const t = sinEtiquetas(htmlTipConstruido(plaza(3, [edificio('granja', 1), { ...edificio('granja', 2), id: 'e-2' } as Edificio]), 'granja'));
-    expect(t).toContain('2 en la plaza · nivel 1 a 2 de 4');
-    expect(t).toContain('Lo que da el mejor, de nivel 2');
+    expect(t).toContain('2 en la plaza · nivel 1 a 2');
+    expect(t).toContain('Lo que tiene el mejor');
     expect(t).toContain('Mejora del mejor al nivel 3');
   });
 
