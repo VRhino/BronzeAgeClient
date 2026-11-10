@@ -78,7 +78,7 @@ import { cablearProduccionYRecetas, cablearVistaCiudad, confirmarCancelarObra, e
 import { campamentoEnVista } from './ciudad3d/campamento';
 import { puebloEnVista } from './ciudad3d/pueblo';
 import { avanzadaEnVista, svgPlanoAvanzada } from './ciudad3d/avanzada';
-import { almacenDelPie, avanzadaActual, cablearAvanzada, htmlParteAvanzada, iconoDeAvanzada, madreDe, nombreDeEtapa, partesDeAvanzada, type ParteAvanzada } from './ui/avanzadas';
+import { almacenDelPie, avanzadaActual, cablearAvanzada, faccionAmiga, htmlParteAvanzada, iconoDeAvanzada, madreDe, nombreDeEtapa, partesDeAvanzada, type ParteAvanzada } from './ui/avanzadas';
 import { ciudadEnVista } from './ciudad3d/estado';
 import { encuadreDeSvg, Minimapa } from './ciudad3d/minimapa';
 import { VistaCiudad3D, type MurallaElegida } from './ciudad3d/vista';
@@ -1280,7 +1280,11 @@ function puertaDePlaza(p: ProyeccionJugador, a: AsentamientoEnMapa, x: { propio:
   const col = miColumna(p);
   const aLaPuerta = col !== undefined && Math.hypot(col.posicionActual.x - a.posicion.x, col.posicionActual.y - a.posicion.y) <= radioDePuerta();
   const lider = col !== undefined && (col.participantes.length === 1 || col.liderId === p.heroeId);
-  if (!(x.entraEjercito && (!x.propio || !x.soyLider))) acciones.push({ id: 'entrar', etiqueta: x.entraEjercito ? 'Entrar con el ejército' : 'Entrar', icono: '🚪', principal: true });
+  // Entrar sale solo cuando se puede (Víctor 2026-11-10): con la columna a la puerta, sin formación, en una plaza que te abre (tuya, aliada o tu residencia);
+  // un ejército, solo en una de tu Facción y por su Líder.
+  const abre = x.propio || p.heroe.residenciaId === a.id || faccionAmiga(p, a.faccionId);
+  const puedeEntrar = aLaPuerta && !col?.formacion && (x.entraEjercito ? x.propio && x.soyLider : abre);
+  if (puedeEntrar) acciones.push({ id: 'entrar', etiqueta: x.entraEjercito ? 'Entrar con el ejército' : 'Entrar', icono: '🚪', principal: true });
   // de una aliada o vasalla no se sabe desde fuera si abre su almacén: solo la de tu Facción
   const abreAlmacen = x.propio;
   const hueco = col ? capacidadDeViveres() * Math.max(1, col.participantes.length) - Math.floor(p.heroe.viveres ?? 0) : 0;
@@ -1449,7 +1453,9 @@ function puertaDeCampamento(p: ProyeccionJugador, c: CampamentoMercenarios, dist
   const acciones: AccionPuerta[] = [{ id: 'marchar', etiqueta: 'Marchar aquí', icono: '➜' }];
   const ventanas: Record<string, () => VentanaPuerta> = {};
   const col = miColumna(p);
-  if (!sinEntrar) acciones.push({ id: 'entrar', etiqueta: col && col.participantes.length > 1 ? 'Entrar con el ejército' : 'Entrar', icono: '🚪', principal: true });
+  // Entrar, solo con la columna a la puerta (Víctor 2026-11-10: que no salga hasta que se pueda)
+  const aLaPuerta = col !== undefined && distancia !== null && distancia <= radioDePuerta();
+  if (!sinEntrar && aLaPuerta) acciones.push({ id: 'entrar', etiqueta: col && col.participantes.length > 1 ? 'Entrar con el ejército' : 'Entrar', icono: '🚪', principal: true });
   if (!col || distancia === null || distancia > radioDePuerta()) return { acciones, ventanas };
   const hueco = capacidadDeViveres() * Math.max(1, col.participantes.length) - Math.floor(p.heroe.viveres ?? 0);
   if (hueco >= 1) acciones.push({ id: 'viveres', etiqueta: 'Llenar víveres', icono: '🌾', titulo: 'Gratis en el campamento.' });

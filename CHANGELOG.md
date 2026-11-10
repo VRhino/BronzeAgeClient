@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.195.1] — 2026-11-10 · «Entrar» en la ficha del mundo solo cuando se puede · contrato 0.20.0 (motor `b55e90f`)
+
+Nota de Víctor del 2026-11-10 sobre el 0.193.0. Sin cambios en el motor.
+
+- En la ficha de una plaza o de un campamento de mercenarios, el botón **Entrar** ya no sale hasta que se puede. Hace falta la columna a la
+  puerta, sin formación, y una plaza que te abra (tuya, aliada o tu residencia). Con un ejército, además, solo en una de tu Facción y lo
+  hace su Líder. En pueblos y avanzadas ya era así.
+
 ## [0.195.0] — 2026-11-10 · Almacén: la barra solo con lo que hay; tooltips de recurso sin cifras y tooltip en «Construidos» · contrato 0.20.0 (motor `b55e90f`)
 
 Petición de Víctor del 2026-11-10. Sin cambios en el motor ni en el contrato.
