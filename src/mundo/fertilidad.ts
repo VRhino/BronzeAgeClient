@@ -108,13 +108,20 @@ export function sitiosDeAldea(
   return r;
 }
 
-/** Pinta los sitios sobre el mapa (en `escala` px por unidad): los válidos en verde, los fértiles pero cerca de algo en gris. */
+/** Pinta los sitios sobre el mapa (en `escala` px por unidad): los válidos en verde, los fértiles pero cerca de algo en gris. Cada mancha lleva un
+ * borde oscuro (0.194.0: sobre el pasto verde del modo mapa el verde solo apenas se veía): primero los cuadritos un poco más grandes en oscuro y
+ * encima los de color, así el borde queda solo alrededor de la mancha. */
 export function pintarSitiosDeAldea(ctx: CanvasRenderingContext2D, s: SitiosDeAldea, escala: number): void {
   const lado = Math.max(1.5, s.paso * escala);
+  const borde = Math.max(1, Math.min(2.5, lado * 0.25));
+  const capa = (puntos: Point[], color: string, oscuro: string): void => {
+    ctx.fillStyle = oscuro;
+    for (const p of puntos) ctx.fillRect(p.x * escala - lado / 2 - borde, p.y * escala - lado / 2 - borde, lado + 2 * borde, lado + 2 * borde);
+    ctx.fillStyle = color;
+    for (const p of puntos) ctx.fillRect(p.x * escala - lado / 2, p.y * escala - lado / 2, lado, lado);
+  };
   ctx.save();
-  ctx.fillStyle = 'rgba(160, 160, 150, 0.45)';
-  for (const p of s.cerca) ctx.fillRect(p.x * escala - lado / 2, p.y * escala - lado / 2, lado, lado);
-  ctx.fillStyle = 'rgba(70, 200, 90, 0.6)';
-  for (const p of s.validos) ctx.fillRect(p.x * escala - lado / 2, p.y * escala - lado / 2, lado, lado);
+  capa(s.cerca, 'rgba(176, 172, 160, 0.7)', 'rgba(40, 36, 30, 0.75)');
+  capa(s.validos, 'rgba(96, 226, 92, 0.78)', 'rgba(10, 46, 16, 0.9)');
   ctx.restore();
 }

@@ -22,7 +22,7 @@ import { ayuda } from './ayuda';
 import { agarre } from './agarre';
 import { miColumna } from './ejercitos';
 import { dibujarIconoMapa } from '../mundo/iconosMapa';
-import { esCultivo, sitiosDeAldea, type Cultivo, type SitiosDeAldea } from '../mundo/fertilidad';
+import { capaDe, esCultivo, sitiosDeAldea, type Cultivo, type SitiosDeAldea } from '../mundo/fertilidad';
 import type { ContextoFicha, ContextoPlaza, FichaMapaExtra, ObjetoBajoElClic, SubpestanaPlaza } from './ganchos';
 import { cablearEscolta, escolta, puntosDeEscolta } from './panelMercado';
 import type { Ejecutar } from './panelCarro';
@@ -366,7 +366,7 @@ function htmlMarcar(p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
       ${sinAldea ? `<span class="anillo-opcion-pide">Desde el nivel ${nivelAldea} de la plaza</span>`
         : `${costeAldea ? `<span class="anillo-opcion-coste" title="Con el carro de acarreo y su buey; se lleva al sitio">${costeLlano(costeAldea, e)}</span>` : ''}
           <small>📍 ${anillo.desde > 0 ? `de ${n0(anillo.desde)} a ` : 'hasta '}${n0(anillo.hasta)} u de la plaza</small>
-          ${htmlSitiosDeAldea(sitiosDeLaPlaza(p, a, deLaAldea.id), deLaAldea.conArticulo)}`}
+          ${capaQueFalta(deLaAldea.id) ? `<span class="fundacion-gate falta">${e(capaQueFalta(deLaAldea.id))}</span>` : htmlSitiosDeAldea(sitiosDeLaPlaza(p, a, deLaAldea.id), deLaAldea.conArticulo)}`}
       <button class="pueblo-boton principal" type="button" data-pueblo-accion="elegir-aldea"${sinAldea ? ' disabled' : ''}>🗺 Elegir el sitio</button>`)}
     ${carta(sinExtractor, `<span class="pueblo-opcion-icono" aria-hidden="true">⛏️</span>
       <strong>Extractor${ayuda('pueblos:extractor', 'Una cantera o una mina sobre un nodo libre de la zona. La piedra solo sale de un pueblo de cantera (la Cantera ya no se construye en la plaza), y en el nivel 1 caben dos pueblos: la cantera y la aldea. Pide su edificio, 50 de madera y el carro de acarreo con su buey, que se llevan al sitio.')}</strong>
@@ -421,7 +421,7 @@ function htmlCarroDeAcarreo(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar, m
 
 /** Quien abre el mapa para elegir un punto (lo pone `main.ts`): `alElegir` devuelve el error del motor, o `null` si salió bien (y el mapa se cierra).
  * `sitios`, si los hay, se pintan sobre el mapa (los de la aldea). */
-export const selectorDePunto: { abrir: ((texto: string, centro: Point, zona: Point[] | undefined, alElegir: (q: Point) => Promise<string | null>, sitios?: SitiosDeAldea | null) => void) | null } = { abrir: null };
+export const selectorDePunto: { abrir: ((texto: string, centro: Point, zona: Point[] | undefined, alElegir: (q: Point) => Promise<string | null>, sitios?: SitiosDeAldea | null, cultivo?: Cultivo) => void) | null } = { abrir: null };
 
 /** Lo que ocupa sitio para una aldea: las plazas y los pueblos (y sus obras) que se conocen. */
 export function ocupadosParaAldea(p: ProyeccionJugador): Point[] {
@@ -451,7 +451,16 @@ export function anilloDeAldea(p: ProyeccionJugador, a: Asentamiento): { desde: n
   return { desde: nivel === 1 ? 0 : techos[nivel - 2]!, hasta: techos[nivel - 1]! };
 }
 
+/** Si el mapa ya bajado no trae la capa de fertilidad de ese cultivo (un mundo de antes de la cebada y el sésamo), por qué no se ven sus sitios;
+ * `''` si la trae o el mapa aún no está. */
+export function capaQueFalta(cultivo: Cultivo): string {
+  const mapa = estadoCliente.mapaCache?.mapa;
+  if (!mapa || capaDe(mapa, cultivo)) return '';
+  return `Este mundo no trae la fertilidad ${cultivo === 'trigo' ? 'del trigo' : cultivo === 'oliva' ? 'del olivo' : cultivo === 'sesamo' ? 'del sésamo' : cultivo === 'vid' ? 'de la vid' : 'de la cebada'}: no se pueden enseñar sus sitios (hay que generar el mundo de nuevo).`;
+}
+
 /** Dónde cabe la aldea de ese cultivo en esta plaza, con el mapa ya bajado; `null` si aún no está o no trae la capa de fertilidad del cultivo. */
+export
 function sitiosDeLaPlaza(p: ProyeccionJugador, a: Asentamiento, cultivo: Cultivo): SitiosDeAldea | null {
   const mapa = estadoCliente.mapaCache?.mapa;
   if (!mapa) return null;
@@ -501,8 +510,11 @@ function cablearPueblos(c: ContextoPlaza): void {
       }
       case 'elegir-aldea': {
         const cult = cultivoDeLaAldeaNueva(p, a);
-        selectorDePunto.abrir?.(`Pulsa en el mapa donde levantar la ${cult.aldea.toLowerCase()}: en verde, la tierra buena para ${cult.conArticulo} de la zona donde cabe (en gris, buena pero pegada a una plaza o un pueblo).`, a.posicion, a.zonaReal,
-          (punto) => c.ejecutar('marcarAldea', { asentamientoId: a.id, heroeId: p.heroeId, punto, cultivo: cult.id }), sitiosDeLaPlaza(p, a, cult.id));
+        // los cuadritos verdes son la tierra buena de SU cultivo (`sitiosDeLaPlaza` con su capa); el modo mapa pone además la capa de
+        // fertilidad en ese cultivo si está puesta (0.194.0, Víctor 2026-11-10)
+        const sinCapa = capaQueFalta(cult.id);
+        selectorDePunto.abrir?.(sinCapa ? `Pulsa en el mapa donde levantar la ${cult.aldea.toLowerCase()}. ${sinCapa}` : `Pulsa en el mapa donde levantar la ${cult.aldea.toLowerCase()}: en verde, la tierra buena para ${cult.conArticulo} de la zona donde cabe (en gris, buena pero pegada a una plaza o un pueblo).`, a.posicion, a.zonaReal,
+          (punto) => c.ejecutar('marcarAldea', { asentamientoId: a.id, heroeId: p.heroeId, punto, cultivo: cult.id }), sitiosDeLaPlaza(p, a, cult.id), cult.id);
         return;
       }
       case 'mejorar-avanzada': return void enviar(b, 'mejorarAvanzada', { heroeId: p.heroeId, avanzadaId: b.dataset.avanzada });

@@ -20,7 +20,7 @@ const { explicarError } = await import('../src/ui/erroresServidor');
 const { RECURSO_NOMBRE, RECURSO_ICONO, RECURSO_COLOR, RECURSOS_POR_INDICE } = await import('../src/paletas');
 const { htmlRecetaUnica, htmlRecetas, htmlTooltipEdificio } = await import('../src/ui/vistaCiudad');
 const { TEXTO_DE_RECETA, recetasElegibles, recetasDistintas } = await import('../src/ui/recetasUnicas');
-const { produce, nivelAlcanzadoEnLaFaccion, SUBPESTANA_PUEBLOS } = await import('../src/ui/pueblos');
+const { produce, nivelAlcanzadoEnLaFaccion, SUBPESTANA_PUEBLOS, sitiosDeLaPlaza, capaQueFalta } = await import('../src/ui/pueblos');
 const { sitiosDeAldea, fertilidadEn } = await import('../src/mundo/fertilidad');
 const { mapaDesdeArtefacto } = await import('../src/mundo/artefacto');
 const { htmlCapas } = await import('../src/ui/capasMapa');
@@ -104,6 +104,19 @@ describe('la tierra de la cebada y del sésamo', () => {
     expect(sesamo.validos.every((q) => q.y >= 5)).toBe(true);
     expect(fertilidadEn(mapa, { x: 2.5, y: 2.5 }, 'cebada')).toBeCloseTo(200 / 255);
     expect(fertilidadEn(mapa, { x: 2.5, y: 2.5 }, 'sesamo')).toBe(0);
+  });
+
+  test('en Territorio, los cuadritos de la aldea nueva son los de su cultivo, y sin su capa se dice (0.194.0)', () => {
+    const a = { ...plaza(3), posicion: { x: 5, y: 5 }, zonaReal: [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 }] } as Asentamiento;
+    const p = { heroeId: 'h', faccionId: 'f-1', facciones: [], asentamientos: [a], asentamientosAvistados: [], pueblos: [], obrasDeMapa: [], avanzadas: [], caravanas: [] } as unknown as ProyeccionJugador;
+    estadoCliente.mapaCache = { mapa } as never;
+    const cebada = sitiosDeLaPlaza(p, a, 'cebada')!;
+    expect(cebada.validos.length).toBeGreaterThan(0);
+    expect(cebada.validos.every((q) => q.x < 5)).toBe(true);
+    expect(sitiosDeLaPlaza(p, a, 'trigo')!.validos).toHaveLength(0);
+    expect(capaQueFalta('cebada')).toBe('');
+    expect(capaQueFalta('vid')).toContain('no trae la fertilidad de la vid');
+    estadoCliente.mapaCache = null as never;
   });
 
   test('el artefacto del mundo trae sus dos capas (23 y 24)', () => {

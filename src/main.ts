@@ -48,7 +48,7 @@ import { minutosHerido } from './ui/panelHeroe';
 import { baseOcupada, cablearBasePersonal, htmlBasePersonal } from './ui/basePersonal';
 import { htmlBarraJugador, type PanelJugador } from './ui/barraJugador';
 import { edificioBajoCursor, pintarAsentamiento, pintarMiradas, pintarPrevisualizacionFundacion, pintarTerreno, type CapasTematicas } from './render';
-import { capasDelMapa, distanciaDeCarga, type CapasDelMapa } from './mundo/capasDelMapa';
+import { capasDelMapa, distanciaDeCarga, fijarCultivoDeLaCapa, type CapasDelMapa } from './mundo/capasDelMapa';
 import { cablearCapas, cultivoVisible, htmlCapas } from './ui/capasMapa';
 import { EDIFICIO_NOMBRE, RECURSO_NOMBRE } from './paletas';
 import type { Alijo, Asentamiento, AvanzadaDeMapa, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, EscenaCampamento, Faccion, ParamsCrearHeroe, PuebloDeMapa, Sigilo } from './tiposDominio';
@@ -1689,8 +1689,11 @@ let vistaMapaAbierta = false;
 let controlVistaMapa: ControlMapa | null = null;
 /** Elegir un punto en el modo mapa (la aldea agrícola, `ui/pueblos.ts`): el clic lo manda en vez de solo mirar. Se olvida al cerrar el mapa. */
 let eleccionEnMapa: { texto: string; zona?: { x: number; y: number }[]; alElegir: (q: { x: number; y: number }) => Promise<string | null>; sitios?: SitiosDeAldea | null } | null = null;
-selectorDePunto.abrir = (texto, centro, zona, alElegir, sitios) => {
+selectorDePunto.abrir = (texto, centro, zona, alElegir, sitios, cultivo) => {
   eleccionEnMapa = { texto, zona, alElegir, sitios };
+  // eligiendo el sitio de una aldea con la capa de fertilidad puesta, la capa pasa a su cultivo: lo que se ve debajo de los cuadritos verdes es
+  // la tierra de ese cultivo y no la de otro (0.194.0, Víctor 2026-11-10)
+  if (cultivo && capasDelMapa().fertilidad && cultivosDeLasCapas().includes(cultivo)) { fijarCultivoDeLaCapa(cultivo); aplicarCapas(); }
   alternarVistaMapa(true, centro);
 };
 

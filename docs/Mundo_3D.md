@@ -284,6 +284,10 @@ recuerda en este navegador (`bronzeage.capas`, `mundo/capasDelMapa.ts`) y vale p
   capa. La leyenda es común. Si el cultivo recordado no está entre los visibles (partida nueva), la capa pinta el trigo (`cultivoVisible`). Las
   casillas se rehacen al abrir la lista, así que un cultivo nuevo sale sin recargar. Antes (0.190.0) era una sola casilla con el cultivo
   elegido en unos botones de la leyenda.
+  **Elegir el sitio de una aldea** (Territorio ▸ «Elegir el sitio», 0.194.0, Víctor 2026-11-10): los cuadritos verdes son siempre la tierra
+  buena **del cultivo elegido** para esa aldea (su capa del artefacto, como el motor), y llevan un borde oscuro para que se vean sobre el pasto.
+  Si la capa de fertilidad está puesta, pasa a ese cultivo al abrir el mapa, para que lo de debajo sea la misma tierra. Si el mundo no trae la
+  capa de ese cultivo (uno de antes de la cebada y el sésamo), la carta y el aviso del mapa lo dicen en vez de no enseñar nada.
 - **Parcelas de bosque** (solo modo mapa). Cada parcela del artefacto como su círculo de 4 u, más lleno cuanto más densa (la madera que daría
   su Leñera): verde si está libre, ámbar si tiene una Leñera conocida, rojo si cae en la zona de una plaza de otra Facción (`clasificadorDeParcelas`,
   el mismo criterio que la vista previa de fundar, salvo que ahí también las de tu Facción son ajenas, porque la plaza nueva no las puede tomar).

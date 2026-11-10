@@ -3,6 +3,20 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.194.0] — 2026-11-10 · Los sitios de la aldea, con la fertilidad de su cultivo · contrato 0.20.0 (motor `b55e90f`)
+
+Petición de Víctor del 2026-11-10 («que cuando elegimos en Territorio fundar aldea con un cultivo, se muestre la fertilidad de dicho cultivo con
+los cuadritos verdes»). Sin cambios en el motor ni en el contrato.
+
+- Los cuadritos verdes de «Elegir el sitio» ya salían de la capa del cultivo elegido (desde 0.190.0); ahora hay una prueba que lo asegura de
+  punta a punta (Territorio ➜ sitios de la plaza para la cebada, no para el trigo).
+- **Se ven mejor**: cada mancha de cuadritos lleva un borde oscuro y un verde más vivo; sobre el pasto verde del modo mapa apenas se distinguían.
+  Vale también para la vista previa al fundar una plaza.
+- **La capa de fertilidad sigue a la aldea**: si está puesta al elegir el sitio, pasa al cultivo de esa aldea (lo de debajo de los cuadritos es
+  la misma tierra), y su casilla queda marcada.
+- **Sin la capa del cultivo en el mundo** (uno generado antes de la cebada y el sésamo), la carta de la aldea y el aviso del mapa lo dicen
+  («hay que generar el mundo de nuevo») en vez de no enseñar ningún cuadrito.
+- Banco: `/pruebas/fertilidad/?sitios=<cultivo>` pinta los sitios de aldea de ese cultivo en el centro del encuadre; `&capa=0`, sin la capa.
 ## [0.193.0] — 2026-11-10 · Acciones a la puerta: la ficha del mundo abajo a la derecha, con un botón por acción · contrato 0.20.0 (motor `b55e90f`)
 
 Petición de Víctor del 2026-11-10. Sin cambios en el motor ni en el contrato: si algo no se puede hacer desde fuera, no sale (carro ↔ almacén
