@@ -3,6 +3,20 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.198.1] — 2026-11-10 · La muralla 3D ya no cruza la plaza; el blasón de la Facción en los informes de región · contrato 0.20.0 (motor `b55e90f`)
+
+Dos avisos de Víctor del 2026-11-10 (el primero, urgente). Sin cambios en el motor ni en el contrato.
+
+- **La muralla 3D solo une celdas vecinas**: en una empalizada con un codo de una celda de más y una celda que sobresalía junto a la puerta,
+  la vista 3D tendía un muro desde el rincón hasta la puerta por encima de los edificios (en el 2D no estaba). El paseo de `anillosDe` no
+  recorría ese anillo de una vez, la vista caía al orden de obra del motor, y cada celda se unía con la de antes y la de después de la lista
+  aunque estuvieran a once celdas. Ahora cada celda tiende su tramo hacia sus vecinas de la rejilla (`vecinasDeMuro`: las de lado y, en
+  diagonal, solo si ninguna de lado las une ya), sea cual sea el orden; los pasos de puerta y sus torres salen de esas mismas vecinas.
+  Banco: `/pruebas/ciudad3d/?plaza=muestra-muralla&muralla=1&gruesa=1`; pruebas en `pruebas/murallaGruesa.test.ts`.
+- **El blasón de la Facción** a la izquierda de cada plaza en lo que trae un informe de región (el sigilo completo, de la Facción o del
+  directorio); el nivel pasa a la derecha. El nombre real de una plaza que solo se recuerda no llega del motor (`FichaConocida.nombre` va
+  siempre vacío), así que sale su id hasta que el motor lo mande.
+
 ## [0.198.0] — 2026-11-10 · Taberna: ver lo que trae un informe de región comprado · contrato 0.20.0 (motor `b55e90f`)
 
 Petición de Víctor del 2026-11-10: tras comprar un informe de región solo se veía «comprado» y el tiempo. Sin cambios en el motor ni en el

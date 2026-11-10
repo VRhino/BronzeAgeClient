@@ -241,6 +241,17 @@ function rehacerMuralla(): void {
   for (let r = -h + 1; r <= h; r++) celdas.push({ col: h, row: r, clase: clase(h, r) });
   for (let c = h - 1; c >= -h; c--) celdas.push({ col: c, row: h, clase: clase(c, h) });
   for (let r = h - 1; r > -h; r--) celdas.push({ col: -h, row: r, clase: clase(-h, r) });
+  // `&gruesa=1` (0.198.1): la de la captura de Víctor del 2026-11-10, un anillo de 10 × 8 con el rincón de arriba a la izquierda metido, una celda
+  // de más en el codo y otra que sobresale junto a la puerta, en el orden de obra del motor (lo que el paseo se saltó, al final)
+  if (new URLSearchParams(location.search).get('gruesa')) {
+    celdas.length = 0;
+    const k = (col: number, row: number, c: 'muro' | 'puerta' | 'torre' = 'muro') => celdas.push({ col: col - 5, row: row - 4, clase: c });
+    k(9, 4, 'puerta'); k(9, 5); k(9, 6); k(9, 7);
+    for (const c of [8, 7, 6, 5, 4, 3, 2, 1, 0]) k(c, 7);
+    k(0, 6); k(0, 5, 'torre'); k(0, 4); k(0, 3); k(1, 3); k(2, 3); k(3, 3); k(3, 2); k(3, 1); k(3, 0);
+    for (const c of [4, 5, 6, 7, 8, 9]) k(c, 0);
+    k(9, 1); k(9, 2); k(9, 3); k(10, 3); k(2, 4);
+  }
   const nivel = Number($<HTMLSelectElement>('muralla').value || 2);
   const a: FuenteDeCiudad = { id: 'muestra-muralla', nivel: 3, edificios: [], recintos: [{ id: 'recinto-muestra', nivel, celdas, avance: celdas.length }], ascenso: undefined };
   const calles: RectanguloLocal[] = [{ x: 0, y: 0, ancho: 3, alto: 3 * (h + 4) }, { x: -3, y: -3 * (h + 4), ancho: 6, alto: 3 * (h + 4) }];

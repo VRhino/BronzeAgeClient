@@ -1,5 +1,8 @@
-// Las murallas de la plaza: cada celda del recinto (en el orden de su anillo) lleva su tramo, que va de su centro hacia las celdas de antes y de
-// después; así el muro no sale de sus celdas (entre dos celdas en diagonal, los tramos se juntan en la esquina que comparten).
+// Las murallas de la plaza: cada celda del recinto lleva su tramo, que va de su centro hacia sus vecinas de la rejilla (las de lado y, en
+// diagonal, las que no une ya una de lado); así el muro no sale de sus celdas (entre dos celdas en diagonal, los tramos se juntan en la esquina
+// que comparten) y se ve lo mismo que en el 2D, venga la lista en el orden que venga. Antes iba hacia la celda de antes y la de después de la
+// lista: en un anillo grueso (un codo con una celda de más, una celda que sobresale junto a la puerta) la vista caía al orden de obra del motor,
+// que deja esas celdas para el final, y salía un muro de punta a punta por encima de los edificios (Víctor, 2026-11-10).
 //   Nivel 1: empalizada de estacas sobre un talud de tierra, con su foso por fuera; torres de vigía de madera; puerta con sus hojas, entre dos
 //            torres de madera unidas por una pasarela.
 //   Nivel 2: zócalo de piedra y muro de adobe con almenas; torres en bastión semicircular (Los Millares) con su garita; puerta entre dos torres
@@ -21,35 +24,79 @@ type V = { x: number; y: number };
 /** Lo que necesita cada celda para montarse: su centro, sus medios tramos, hacia dónde mira el tramo (`t`) y hacia fuera (`n`). */
 interface Tramo {
   c: CeldaDeMuro;
-  /** Los extremos de sus medios tramos (hacia la celda anterior y la siguiente). */
+  /** Los extremos de sus medios tramos (hacia cada vecina). */
   hacia: V[];
   /** Por cada medio tramo, si va hacia otra celda de puerta (el paso sigue: ni estacas ni muro). */
   aPuerta: boolean[];
-  /** Las celdas de antes y de después en el anillo. */
-  ant?: CeldaDeMuro;
-  sig?: CeldaDeMuro;
+  /** Sus vecinas (su puesto en la lista del recinto). */
+  vecinas: number[];
   t: V;
   n: V;
   k: number;
 }
 
+const LADOS = [[1, 0], [0, 1], [-1, 0], [0, -1]] as const;
+const DIAGONALES = [[1, 1], [-1, 1], [-1, -1], [1, -1]] as const;
+
+/** El lado de una celda: el del recinto o, si no lo trae, el menor paso entre dos celdas. */
+function ladoDe(r: RecintoEnVista): number {
+  if (r.lado) return r.lado;
+  let l = Infinity;
+  for (const a of r.celdas) for (const b of r.celdas) {
+    const d = Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
+    if (d > 1e-6 && d < l) l = d;
+  }
+  return Number.isFinite(l) ? l : 3;
+}
+
+/**
+ * Las vecinas de cada celda del muro en la rejilla (su puesto en `celdas`): las de lado y, en diagonal, solo las que no une ya una celda de lado
+ * de las dos (en un codo el muro dobla por la celda del codo; en una escalera en diagonal, va de esquina a esquina). Nunca una celda que no está
+ * al lado, sea cual sea el orden de la lista.
+ */
+export function vecinasDeMuro(celdas: readonly { x: number; y: number }[], lado: number): number[][] {
+  const clave = (c: number, f: number): string => `${c},${f}`;
+  const sitio = celdas.map((k) => [Math.round(k.x / lado - 0.5), Math.round(k.y / lado - 0.5)] as const);
+  const indice = new Map(sitio.map(([c, f], i) => [clave(c, f), i]));
+  return sitio.map(([c, f], i) => {
+    const v: number[] = [];
+    for (const [dc, df] of LADOS) {
+      const j = indice.get(clave(c + dc, f + df));
+      if (j !== undefined && j !== i) v.push(j);
+    }
+    for (const [dc, df] of DIAGONALES) {
+      const j = indice.get(clave(c + dc, f + df));
+      if (j === undefined || j === i || indice.has(clave(c + dc, f)) || indice.has(clave(c, f + df))) continue;
+      v.push(j);
+    }
+    return v;
+  });
+}
+
+const lejos = (a: V, b: V): number => Math.hypot(a.x - b.x, a.y - b.y);
+
 function tramos(r: RecintoEnVista): Tramo[] {
-  const N = r.celdas.length;
+  const vecinas = vecinasDeMuro(r.celdas, ladoDe(r));
   return r.celdas.map((c, i) => {
-    const ant = i > 0 ? r.celdas[i - 1] : r.cerrado ? r.celdas[N - 1] : undefined;
-    const sig = i < N - 1 ? r.celdas[i + 1] : r.cerrado ? r.celdas[0] : undefined;
-    const hacia: V[] = [], aPuerta: boolean[] = [];
-    for (const o of [ant, sig]) if (o) { hacia.push({ x: (c.x + o.x) / 2, y: (c.y + o.y) / 2 }); aPuerta.push(c.clase === 'puerta' && o.clase === 'puerta'); }
-    const a = ant ?? c, b = sig ?? c;
+    const vs = vecinas[i]!;
+    const hacia = vs.map((j) => ({ x: (c.x + r.celdas[j]!.x) / 2, y: (c.y + r.celdas[j]!.y) / 2 }));
+    const aPuerta = vs.map((j) => c.clase === 'puerta' && r.celdas[j]!.clase === 'puerta');
+    // por dónde va el muro: entre las dos vecinas más opuestas (con dos, esas; con una, hacia ella)
+    let a: CeldaDeMuro = c, b: CeldaDeMuro = c;
+    if (vs.length === 1) b = r.celdas[vs[0]!]!;
+    for (const x of vs) for (const y of vs) {
+      const p = r.celdas[x]!, q = r.celdas[y]!;
+      if (x < y && lejos(p, q) > lejos(a, b)) { a = p; b = q; }
+    }
     let tx = b.x - a.x, ty = b.y - a.y;
     const l = Math.hypot(tx, ty) || 1;
     tx /= l;
     ty /= l;
-    if (!ant && !sig) { tx = 1; ty = 0; }
+    if (vs.length === 0) { tx = 1; ty = 0; }
     // hacia fuera: la perpendicular que se aleja del centro de la plaza
     let nx = ty, ny = -tx;
     if (nx * c.x + ny * c.y < 0) { nx = -nx; ny = -ny; }
-    return { c, hacia, aPuerta, ant, sig, t: { x: tx, y: ty }, n: { x: nx, y: ny }, k: i };
+    return { c, hacia, aPuerta, vecinas: vs, t: { x: tx, y: ty }, n: { x: nx, y: ny }, k: i };
   });
 }
 
@@ -110,36 +157,43 @@ function antorcha(p: Piezas, q: V, n: V, y: number): void {
 
 // ───────────────────────────── Nivel 1: empalizada ─────────────────────────────
 
-/** Las celdas de puerta seguidas que empiezan en la `i` (si antes no hay otra de puerta): el paso que comparten, que lleva una sola puerta. */
-function pasoDesde(ts: readonly Tramo[], i: number): Tramo[] | null {
-  const tr = ts[i]!;
-  if (tr.c.clase !== 'puerta' || tr.ant?.clase === 'puerta') return null;
-  const paso = [tr];
-  for (let j = i; paso[paso.length - 1]!.sig?.clase === 'puerta' && paso.length < ts.length; ) {
-    j = (j + 1) % ts.length;
-    paso.push(ts[j]!);
-  }
-  return paso;
-}
+/** Un paso de puerta: sus celdas en fila (dos de puerta que se tocan son una puerta ancha) y la celda de muro que lo flanquea por cada lado. */
+interface Paso { celdas: Tramo[]; flancos: [Tramo | undefined, Tramo | undefined] }
 
 /**
- * Las celdas de muro que flanquean cada paso (la de antes de su primera celda de puerta y la de después de la última): llevan las torres de la
- * puerta. Solo si de verdad tocan el paso: un anillo a medio comprometer puede saltar de una celda a otra lejana, y ahí no hay torre.
+ * Los pasos de las puertas del recinto: cada grupo de celdas de puerta que se tocan, en fila de una punta a la otra, con la celda de muro que
+ * lo flanquea por cada lado (la vecina que más se aparta del paso a lo largo de él): llevan las torres de la puerta. Solo vecinas de verdad.
  */
-function flancosDePuertas(ts: readonly Tramo[]): Map<number, true> {
-  const N = ts.length, flancos = new Map<number, true>();
-  const lejos = (a: CeldaDeMuro, b: CeldaDeMuro): number => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
-  // el lado de una celda: el menor paso entre dos seguidas
-  const lado = Math.min(...ts.flatMap((tr) => (tr.sig && lejos(tr.c, tr.sig) > 0 ? [lejos(tr.c, tr.sig)] : [])));
-  const toca = (a: CeldaDeMuro, b: CeldaDeMuro | undefined): b is CeldaDeMuro => !!b && b.clase !== 'puerta' && lejos(a, b) <= lado * 1.01;
-  ts.forEach((tr, i) => {
-    const paso = pasoDesde(ts, i);
-    if (!paso) return;
-    const ultimo = paso[paso.length - 1]!;
-    if (toca(tr.c, tr.ant)) flancos.set((i - 1 + N) % N, true);
-    if (toca(ultimo.c, ultimo.sig)) flancos.set((ultimo.k + 1) % N, true);
-  });
-  return flancos;
+function pasosDePuerta(ts: readonly Tramo[]): Paso[] {
+  const visto = new Set<number>(), pasos: Paso[] = [];
+  for (const tr of ts) {
+    if (tr.c.clase !== 'puerta' || visto.has(tr.k)) continue;
+    const grupo: Tramo[] = [], pila = [tr.k];
+    visto.add(tr.k);
+    while (pila.length) {
+      const i = pila.pop()!;
+      grupo.push(ts[i]!);
+      for (const j of ts[i]!.vecinas) if (!visto.has(j) && ts[j]!.c.clase === 'puerta') { visto.add(j); pila.push(j); }
+    }
+    // el eje del paso: de una punta a la otra del grupo; con una sola celda, el del muro
+    let a = grupo[0]!, b = grupo[0]!;
+    for (const x of grupo) for (const y of grupo) if (lejos(x.c, y.c) > lejos(a.c, b.c)) { a = x; b = y; }
+    const l = lejos(a.c, b.c), t = l > 1e-6 ? { x: (b.c.x - a.c.x) / l, y: (b.c.y - a.c.y) / l } : a.t;
+    const sobreElEje = (x: Tramo, desde: Tramo): number => (x.c.x - desde.c.x) * t.x + (x.c.y - desde.c.y) * t.y;
+    grupo.sort((x, y) => sobreElEje(x, a) - sobreElEje(y, a));
+    const flanco = (g: Tramo, s: number): Tramo | undefined => {
+      let mejor: Tramo | undefined, m = 1e-6;
+      for (const j of g.vecinas) {
+        const x = ts[j]!;
+        if (x.c.clase === 'puerta') continue;
+        const d = s * sobreElEje(x, g);
+        if (d > m) { m = d; mejor = x; }
+      }
+      return mejor;
+    };
+    pasos.push({ celdas: grupo, flancos: [flanco(grupo[0]!, -1), flanco(grupo[grupo.length - 1]!, 1)] });
+  }
+  return pasos;
 }
 
 /**
@@ -367,17 +421,19 @@ const ALTO_NIVEL = [0, 2.0, 2.5, 3.5];
 /** Monta todos los recintos de la plaza en `p`. */
 export function montarMurallas(p: Piezas, recintos: readonly RecintoEnVista[]): void {
   for (const r of recintos) {
-    const ts = tramos(r), flancos = flancosDePuertas(ts), N = ts.length;
+    const ts = tramos(r), pasos = pasosDePuerta(ts);
+    const flancos = new Set(pasos.flatMap((x) => x.flancos.flatMap((f) => (f ? [f.k] : []))));
+    // la puerta de cada paso se monta con su primera celda
+    const pasoDe = new Map(pasos.map((x) => [x.celdas[0]!.k, x]));
     for (const tr of ts) {
       // cada celda lleva su id (`idDeCeldaDeMuro`) para el clic en la vista
       p.de = idDeCeldaDeMuro(r.id, tr.k);
       if (!tr.c.enPie) { zanja(p, tr); continue; }
       const n = Math.max(1, Math.min(3, tr.c.nivel)), flanco = flancos.has(tr.k);
       if (n === 1) {
-        const paso = pasoDesde(ts, tr.k);
-        // los flancos del paso: la celda de antes de la primera de puerta y la de después de la última (para la pasarela)
-        const lados = paso ? [(paso[0]!.k - 1 + N) % N, (paso[paso.length - 1]!.k + 1) % N].map((j) => (flancos.has(j) ? ts[j] : undefined)) : [];
-        empalizada(p, tr, paso, lados.map((x) => (x && x.c.nivel <= 1 ? x : undefined)), flanco);
+        const paso = pasoDe.get(tr.k);
+        // los flancos del paso (para la pasarela), si son de empalizada
+        empalizada(p, tr, paso?.celdas ?? null, paso ? paso.flancos.map((x) => (x && x.c.nivel <= 1 ? x : undefined)) : [], flanco);
       } else if (n === 2) piedraYAdobe(p, tr, flanco);
       else ciclopea(p, tr, flanco);
     }

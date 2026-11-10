@@ -8,6 +8,8 @@ window.fetch = ((url: RequestInfo | URL, init?: RequestInit) =>
 import '../../src/style.css';
 import { bloqueDeDatos, tarifasDeIntel, type ProyeccionJugador } from '../../src/apiCliente';
 import type { MapaGenerado } from '../../src/terreno';
+import { CATALOGO_SIGILO } from '../../src/sigilo/sigilo';
+import type { Sigilo } from '../../src/tiposDominio';
 import { estadoCliente } from '../../src/ui/estadoCliente';
 import type { ContextoPlaza } from '../../src/ui/ganchos';
 import { cablearPanelIntel, renderPanelIntel } from '../../src/ui/panelIntel';
@@ -23,6 +25,12 @@ const e = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const columnas = 40, filas = 30;
 const region = new Uint8Array(columnas * filas).map((_, i) => (i % columnas < 24 ? 3 : 5));
 estadoCliente.mapaCache = { id: 'banco', mapa: { rasters: { region: { columnas, filas, celda: 10, datos: region } }, regiones: [{ id: 3, nombre: 'Llanura de Argos' }, { id: 5, nombre: 'Altiplano interior' }], nodos: [], parcelas: [] } as unknown as MapaGenerado };
+
+// Un sigilo fijo por Facción (el `n`-ésimo de cada lista del catálogo), para que las capturas salgan siempre igual.
+const sigilo = (n: number): Sigilo => {
+  const k = CATALOGO_SIGILO, de = <T>(l: readonly T[], i: number): T => l[i % l.length]!;
+  return { formaId: de(k.formas, n), campoId: de(k.campos, n + 1), emblemaId: de(k.emblemas, n * 5 + 2), colorPrimarioId: de(k.colores, n * 3).id, colorSecundarioId: de(k.colores, n * 3 + 4).id, colorEmblemaId: de(k.colores, n * 3 + 7).id, orlaId: de(k.orlas, n), colorOrlaId: de(k.colores, n + 2).id };
+};
 
 const sinCargo = Boolean(qs.get('sinCargo'));
 const plaza = {
@@ -48,11 +56,11 @@ const p = {
         { region: 3, tipo: 'ordenes', compradoEn: AHORA - 40 * MIN, caducaEn: AHORA + 160 * MIN, libreEn: AHORA + 320 * MIN },
         { region: 5, tipo: 'plazas', compradoEn: AHORA - 300 * MIN, libreEn: AHORA + 60 * MIN },
       ] },
-    { id: 'fac-2', nombre: 'Reino de Tirinto', nivel: 2 },
-    { id: 'fac-3', nombre: 'Hermandad de Pilos', nivel: 1 },
-    { id: 'fac-4', nombre: 'Liga de Tebas', nivel: 2 },
+    { id: 'fac-2', nombre: 'Reino de Tirinto', nivel: 2, sigilo: sigilo(2) },
+    { id: 'fac-3', nombre: 'Hermandad de Pilos', nivel: 1, sigilo: sigilo(3) },
+    { id: 'fac-4', nombre: 'Liga de Tebas', nivel: 2, sigilo: sigilo(4) },
   ],
-  directorioFacciones: [{ id: 'fac-5', nombre: 'Clan de Eubea', nivel: 1, ciudadanos: 4, derrotada: false, sigilo: {} }],
+  directorioFacciones: [{ id: 'fac-5', nombre: 'Clan de Eubea', nivel: 1, ciudadanos: 4, derrotada: false, sigilo: sigilo(5) }],
   asentamientos: [plaza],
   // Lo que ves ahora y lo que recuerdas: en la región 3 (oeste) Argos se ve; en la 5 (este), las fichas del informe de plazas. Tebas está en
   // guerra con tu Facción (no entra en los informes) y Corinto es tuya.

@@ -11,6 +11,8 @@ vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => datos })
 
 const { cablearInformesRegion, htmlInformesRegion, plazasDeLaRegion } = await import('../src/ui/tabernaRegion');
 const { estadoCliente } = await import('../src/ui/estadoCliente');
+const { sigiloAleatorio } = await import('../src/sigilo/sigilo');
+const SIGILO = sigiloAleatorio();
 
 const AHORA = 1_000_000_000;
 const MIN = 60_000;
@@ -28,8 +30,8 @@ const INFORMES = [
 const proy = (informes: unknown[] = INFORMES): ProyeccionJugador =>
   ({
     heroeId: 'heroe-1', faccionId: 'f-1', instante: AHORA,
-    facciones: [{ id: 'f-1', nombre: 'Casa de Micenas', informesRegion: informes }, { id: 'f-2', nombre: 'Reino de Tirinto' }, { id: 'f-4', nombre: 'Liga de Tebas' }],
-    directorioFacciones: [{ id: 'f-5', nombre: 'Clan de Eubea' }],
+    facciones: [{ id: 'f-1', nombre: 'Casa de Micenas', informesRegion: informes }, { id: 'f-2', nombre: 'Reino de Tirinto', sigilo: SIGILO }, { id: 'f-4', nombre: 'Liga de Tebas' }],
+    directorioFacciones: [{ id: 'f-5', nombre: 'Clan de Eubea', sigilo: SIGILO }],
     relaciones: [{ id: 'r', tipo: 'guerra', estado: 'activa', faccionAId: 'f-4', faccionBId: 'f-1' }],
     asentamientos: [], plazasPropias: [],
     // Argos se ve ahora (gana a su ficha vieja); Tebas es de una Facción en guerra contigo y Corinto es tuya: no entran.
@@ -105,6 +107,8 @@ describe('lo que trae un informe de región comprado', () => {
     expect(html).not.toContain('Tebas');
     expect(html).not.toContain('Corinto');
     expect(html).not.toContain('data-region-plaza='); // en el de plazas no hay órdenes que abrir
+    // cada plaza con el blasón de su Facción (de FACCION o del directorio)
+    expect(html.match(/<span class="region-plaza-blason" aria-hidden="true"><svg/g)).toHaveLength(3);
     pulsar('data-region-informe', '5:plazas');
     expect(htmlInformesRegion(proy(), e)).not.toContain('region-resultado');
   });

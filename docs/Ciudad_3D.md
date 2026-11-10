@@ -101,8 +101,11 @@ formas, reutilizando del mundo 3D el cielo, la luz y la manera de pintar miles d
 
   Puertas y torres van donde dice la clase de la celda. Las celdas planificadas salen como zanja, y las que se están mejorando, con andamio.
   El motor manda las celdas en el orden de sus obras, que no siempre es el del anillo (puede llevar una torre al final de la lista). Lo
-  levantado y lo mejorado sigue ese orden, pero el dibujo encadena las celdas de vecina en vecina (`anillosDe`, como la empalizada del
-  campamento) cuando hacen un solo anillo; si no, se queda con el orden del motor.
+  levantado y lo mejorado sigue ese orden. El dibujo no depende del orden (desde 0.198.1): cada celda tiende su tramo hacia sus vecinas de la
+  rejilla (`vecinasDeMuro`): las de lado y, en diagonal, solo las que no une ya una de lado. Así se ve lo mismo que en el 2D aunque el anillo
+  sea grueso (un codo con una celda de más, una celda que sobresale junto a la puerta): antes cada celda iba hacia la de antes y la de
+  después de la lista y, en esos anillos, salía un muro de punta a punta por encima de los edificios. Las torres de la puerta van en las
+  vecinas de muro de cada punta del paso.
 - **Las puertas, entre dos torres** (desde 0.117.0): las celdas de muro que tocan el paso, una a cada lado, llevan la torre de la puerta, más
   alta que el muro y las otras torres. En la empalizada son dos torres de madera unidas por una pasarela con su baranda (si falta una, la
   puerta lleva su tejadillo); en el nivel 2, torres cuadradas de piedra y adobe que salen del muro, con almenas y una aspillera, y el paso

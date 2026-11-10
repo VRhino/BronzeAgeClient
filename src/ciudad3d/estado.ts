@@ -65,6 +65,8 @@ export interface RecintoEnVista {
   /** El anillo se cierra (la última celda toca la primera). */
   cerrado: boolean;
   mejorandoA?: number;
+  /** El lado de una celda, en ul: con él se buscan las vecinas de cada celda (`vecinasDeMuro`). */
+  lado?: number;
 }
 
 export type TipoRelleno = 'huerto' | 'patio' | 'arboles' | 'redil' | 'horno' | 'lena' | 'almiar' | 'vacio';
@@ -207,8 +209,8 @@ export function ciudadEnVista(a: FuenteDeCiudad, t: TrazadoAsentamiento | undefi
 
   const recintos: RecintoEnVista[] = (a.recintos ?? []).map((r) => {
     const enPie = Math.max(0, r.avance);
-    // lo levantado y lo mejorado va por el orden del motor (el de las obras); el dibujo, por el del anillo, si las celdas hacen uno solo (una
-    // torre añadida al final de la lista partía el anillo y tendía un muro de punta a punta por dentro de la plaza)
+    // lo levantado y lo mejorado va por el orden del motor (el de las obras); la lista, por el del anillo si las celdas hacen uno solo. El
+    // dibujo ya no depende del orden: cada celda se une con sus vecinas de la rejilla (`vecinasDeMuro`, 0.198.1)
     const anillos = anillosDe(r.celdas.map((c, i) => ({ ...c, i })));
     const orden = anillos.length === 1 ? anillos[0]! : r.celdas.map((c, i) => ({ ...c, i }));
     const celdas = orden.map((c) => ({
@@ -217,7 +219,7 @@ export function ciudadEnVista(a: FuenteDeCiudad, t: TrazadoAsentamiento | undefi
     }));
     const a0 = orden[0], a1 = orden[orden.length - 1];
     const cerrado = !!a0 && !!a1 && orden.length > 2 && Math.max(Math.abs(a0.col - a1.col), Math.abs(a0.row - a1.row)) <= 1;
-    return { id: r.id, nivel: r.nivel, celdas, cerrado, mejorandoA: r.mejorandoA };
+    return { id: r.id, nivel: r.nivel, celdas, cerrado, mejorandoA: r.mejorandoA, lado: T };
   });
 
   // Lo que abarca todo (para el suelo y la rejilla de celdas libres).

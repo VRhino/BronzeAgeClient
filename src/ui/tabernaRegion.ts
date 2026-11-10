@@ -9,6 +9,7 @@
 //    órdenes de compra y de venta de cada plaza.
 // Quien valida es el motor; aquí se enseña solo lo que el jugador puede hacer (regla de Víctor).
 import { radioDePuerta, type ProyeccionJugador } from '../apiCliente';
+import { svgSigilo } from '../sigilo/sigilo';
 import { nombreDeRegion, regionEn, type Region } from '../mundo/region';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { Asentamiento, InformeRegion, OrdenMercado, Point } from '../tiposDominio';
@@ -106,6 +107,11 @@ const normalizar = (t: string): string => t.normalize('NFD').replace(/[̀-ͯ]/g,
 
 const nombreDeFaccion = (p: ProyeccionJugador, id: string): string =>
   p.facciones.find((f) => f.id === id)?.nombre ?? p.directorioFacciones?.find((f) => f.id === id)?.nombre ?? '';
+/** El blasón de la Facción dueña (el sigilo completo, como en la etiqueta de la ciudad), o nada si no se sabe. */
+const blasonDe = (p: ProyeccionJugador, id: string): string => {
+  const sigilo = p.facciones.find((f) => f.id === id)?.sigilo ?? p.directorioFacciones?.find((f) => f.id === id)?.sigilo;
+  return `<span class="region-plaza-blason" aria-hidden="true">${sigilo ? svgSigilo(sigilo, 30) : ''}</span>`;
+};
 
 export interface PlazaDeLaRegion { id: string; nombre: string; faccionId: string; nivel: number; posicion: Point; conocidoEn?: number }
 
@@ -148,7 +154,7 @@ export function htmlResultadoInforme(p: ProyeccionJugador, x: InformeRegion, e: 
     const texto = normalizar(`${pl.nombre} ${faccion}`);
     const oculta = n !== '' && !texto.includes(n);
     const de = [faccion, `📍 ${Math.round(pl.posicion.x)}, ${Math.round(pl.posicion.y)}`, pl.conocidoEn === undefined ? 'a la vista' : `de hace ${textoEnTiempoReal(p.instante - pl.conocidoEn)}`].filter(Boolean).join(' · ');
-    const cuerpo = `${medallonNivel(pl.nivel)}<span class="region-plaza-fila-texto"><b>${e(pl.nombre)}</b><small>${e(de)}</small></span>`;
+    const cuerpo = `${blasonDe(p, pl.faccionId)}<span class="region-plaza-fila-texto"><b>${e(pl.nombre)}</b><small>${e(de)}</small></span>${medallonNivel(pl.nivel)}`;
     if (x.tipo === 'plazas') return `<div class="region-plaza-fila" data-region-texto="${e(texto)}"${oculta ? ' hidden' : ''}>${cuerpo}</div>`;
     const ordenes = ordenesDe(p, pl.id);
     if (ordenes.length === 0) return `<div class="region-plaza-fila sin-ordenes" data-region-texto="${e(texto)}"${oculta ? ' hidden' : ''}>${cuerpo}<small class="region-plaza-cuenta">sin órdenes</small></div>`;
