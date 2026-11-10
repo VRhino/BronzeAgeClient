@@ -387,6 +387,20 @@ function htmlSitiosDeAldea(s: SitiosDeAldea | null, paraQue = 'el trigo'): strin
   return `<span class="fundacion-gate falta">El anillo de la siguiente aldea no tiene tierra para ${paraQue} con fertilidad ${coma(fertilidadMinima)} o más dentro de la zona: no cabe. La zona crece con cada edificio terminado.</span>`;
 }
 
+/** Lo que está abierto bajo la fila de pueblos de Territorio (Víctor, 2026-11-10: un botón con el icono por pueblo, que abre su detalle, uno a
+ * la vez; y «Marcar» tras un «+» al principio, plegable): el id de un pueblo o de una obra, `'marcar'`, o `null` (nada). `undefined`: lo de
+ * serie, que es «Marcar» abierto si la plaza no tiene ningún pueblo ni obra (y quien mira puede marcar), y nada si tiene. Se olvida al cambiar
+ * de plaza. */
+let abiertoEnTerritorio: string | null | undefined;
+let plazaDeTerritorio = '';
+
+/** Un pueblo u obra como botón con su icono: el tono del borde dice cómo está (atacado, obra a falta de materiales o levantándose), y un
+ * distintivo, el nivel de la aldea; el nombre, al pasar el ratón. */
+function botonPueblo(id: string, icono: string, nombre: string, tono: string, distintivo: string, abierto: boolean, e: Escapar): string {
+  return `<button type="button" class="pueblo-icono-boton${tono ? ` ${tono}` : ''}${abierto ? ' abierto' : ''}" data-pueblo-abrir="${e(id)}" aria-expanded="${abierto}" title="${e(nombre)}" aria-label="${e(nombre)}">`
+    + `<span class="pueblo-emblema" aria-hidden="true">${icono}</span>${distintivo}</button>`;
+}
+
 function htmlPueblos(c: ContextoPlaza): string {
   const { proyeccion: p, asentamiento: a, escapar: e } = c;
   const { pueblos, obras } = deLaPlaza(p, a);
@@ -395,11 +409,40 @@ function htmlPueblos(c: ContextoPlaza): string {
   const lleno = total !== null && usados >= total;
   // A ventana completa (Víctor, 2026-11-06): la zona, los pueblos y marcar uno a la izquierda; las avanzadas a la derecha.
   const avanzadas = esDeMiFaccion(p, a) ? htmlAvanzadasDeLaPlaza(p, a, gestiona, c.cargo === 'gobernador' && c.resideAqui, e) : '';
+  // qué está abierto: lo elegido, si sigue ahí; si no, lo de serie
+  if (plazaDeTerritorio !== a.id) { plazaDeTerritorio = a.id; abiertoEnTerritorio = undefined; }
+  const puedeMarcar = gestiona && !lleno;
+  const ids = new Set([...pueblos.map((x) => x.id), ...obras.map((o) => o.id)]);
+  let abierto = abiertoEnTerritorio === undefined ? (ids.size === 0 && puedeMarcar ? 'marcar' : null) : abiertoEnTerritorio;
+  if (abierto === 'marcar' ? !puedeMarcar : abierto !== null && !ids.has(abierto)) abierto = null;
+
+  const botones = [
+    puedeMarcar ? `<button type="button" class="pueblo-icono-boton pueblo-marcar-boton${abierto === 'marcar' ? ' abierto' : ''}" data-pueblo-abrir="marcar" aria-expanded="${abierto === 'marcar'}" title="Marcar un pueblo nuevo" aria-label="Marcar un pueblo nuevo"><span class="pueblo-emblema" aria-hidden="true">+</span></button>` : '',
+    ...pueblos.map((x) => {
+      const aldea = esAldea(x);
+      const cult = cultivo(cultivoDe(x));
+      const nombre = `${aldea ? cult.aldea : nombreDePueblo(x)}${x.batallaId ? ' · ¡atacado!' : ''}`;
+      const distintivo = `${aldea ? `<b class="pueblo-icono-nivel">${x.nivelAldea ?? 1}</b>` : ''}${x.batallaId ? '<b class="pueblo-icono-alerta" aria-hidden="true">⚔</b>' : ''}`;
+      return botonPueblo(x.id, aldea ? RECURSO_ICONO[cult.produce] ?? '🌾' : iconoEdificio(x.tipo, 22), nombre, x.batallaId ? 'atacado' : '', distintivo, abierto === x.id, e);
+    }),
+    ...obras.map((o) => {
+      const levantando = o.terminaEn !== undefined;
+      const completa = !levantando && Object.keys(faltan(o)).length === 0;
+      const estado = levantando ? 'levantándose' : completa ? 'con todos los materiales' : 'faltan materiales';
+      return botonPueblo(o.id, ICONO_OBRA[o.tipo], `${NOMBRE_OBRA[o.tipo]} · ${estado}`, levantando ? 'obra levantando' : completa ? 'obra completa' : 'obra pendiente', '', abierto === o.id, e);
+    }),
+  ].join('');
+  const x = pueblos.find((y) => y.id === abierto), o = obras.find((y) => y.id === abierto);
+  const detalle = abierto === 'marcar' ? htmlMarcar(p, a, e)
+    : x ? tarjetaPueblo(p, a, x, gestiona, obras, e)
+      : o ? tarjetaObra(p, a, o, gestiona, e) : '';
   return `<div class="cols-completa territorio-cols"><div class="col-completa">${htmlZona(p, a, e)}
-    <div class="obra-titulo"><span class="faction-kicker">Pueblos</span><span class="obra-chip${lleno ? ' lleno' : ''}" title="Cupo de pueblos por el nivel de la plaza">🏘 ${usados} / ${total ?? '—'}${total ? casillas(usados, total) : ''}</span>${ayuda('plaza:pueblos', 'Un pueblo es de la plaza: se marca aquí, una columna de tu Facción lleva sus materiales hasta la obra en el mapa y los entrega a su puerta (cualquier ciudadano de la columna), y con todo entregado se levanta. Su carro acarrea lo que produce a la plaza.')}</div>
-    ${pueblos.length + obras.length === 0 ? '<p class="mapa-lista-vacia">Esta plaza aún no tiene pueblos.</p>'
-      : `<div class="pueblo-cartas">${pueblos.map((x) => tarjetaPueblo(p, a, x, gestiona, obras, e)).join('')}${obras.map((o) => tarjetaObra(p, a, o, gestiona, e)).join('')}</div>`}
-    ${gestiona ? htmlMarcar(p, a, e) : '<p class="asent-lado-nota">Los pueblos los marca, mejora y destruye el Gobernador o el Maestro de Obras, residente y dentro de la plaza.</p>'}
+    <div class="obra-titulo"><span class="faction-kicker">Pueblos</span><span class="obra-chip${lleno ? ' lleno' : ''}" title="Cupo de pueblos por el nivel de la plaza">🏘 ${usados} / ${total ?? '—'}${total ? casillas(usados, total) : ''}</span>${ayuda('plaza:pueblos', 'Un pueblo es de la plaza: se marca aquí, una columna de tu Facción lleva sus materiales hasta la obra en el mapa y los entrega a su puerta (cualquier ciudadano de la columna), y con todo entregado se levanta. Su carro acarrea lo que produce a la plaza. Pulsa un pueblo para ver su detalle, y «+» para marcar uno nuevo.')}</div>
+    ${botones ? `<div class="pueblo-iconos">${botones}</div>` : ''}
+    ${ids.size === 0 && !puedeMarcar ? '<p class="mapa-lista-vacia">Esta plaza aún no tiene pueblos.</p>' : ''}
+    ${detalle ? `<div class="pueblo-detalle">${detalle}</div>` : ''}
+    ${gestiona ? (lleno && abierto === null ? '<p class="asent-lado-nota">🏘 Cupo lleno: para marcar otro pueblo, sube la plaza de nivel o destruye uno.</p>' : '')
+      : '<p class="asent-lado-nota">Los pueblos los marca, mejora y destruye el Gobernador o el Maestro de Obras, residente y dentro de la plaza.</p>'}
     </div>${avanzadas ? `<div class="col-completa">${avanzadas}</div>` : ''}</div>`;
 }
 
@@ -487,6 +530,11 @@ function cablearPueblos(c: ContextoPlaza): void {
       sel.disabled = false;
       if (mensaje) mostrarAviso(mensaje, true);
     });
+  }));
+  // un botón de la fila abre su detalle (y cierra el que hubiera); otro clic en el mismo lo cierra
+  cuerpo.querySelectorAll<HTMLButtonElement>('[data-pueblo-abrir]').forEach((b) => b.addEventListener('click', () => {
+    abiertoEnTerritorio = b.getAttribute('aria-expanded') === 'true' ? null : b.dataset.puebloAbrir!;
+    c.refrescar();
   }));
   cuerpo.querySelectorAll<HTMLInputElement>('[data-pueblo-nodo]').forEach((r) => r.addEventListener('change', () => { if (r.checked) nodoElegido = r.value; }));
   // el cultivo cambia lo que da y dónde cabe: se repinta la carta

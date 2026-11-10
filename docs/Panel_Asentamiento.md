@@ -333,6 +333,11 @@ La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, es
 > en fichas con barra, marcar en dos cartas (aldea y extractor, con los nodos libres como casillas) y las avanzadas en tarjetas. Todos los
 > rechazos salen flotando.
 >
+> **Pueblos en botones** (0.197.0, Víctor 2026-11-10): los pueblos y las obras de la plaza van en una fila de botones con su icono (el nombre al
+> pasar el ratón; el borde dice si está atacado o si la obra espera materiales o se levanta; la aldea lleva su nivel). Un clic abre su tarjeta
+> debajo, una sola a la vez, y otro clic la cierra. «Marcar un pueblo nuevo» va tras un «+» al principio de la fila, plegable, y abierto de serie
+> si la plaza no tiene ningún pueblo ni obra; con el cupo lleno, el «+» no sale.
+>
 > **Avanzadas en Territorio** (0.174.0, `ui/pueblos.ts`, `tarjetaAvanzada`): cada una con su icono de etapa, la guarnición (de serie y de
 > jugadores) y lo que guarda; para el Gobernador o el Maestro de Obras residente y dentro, «⬆ Fuerte / Ciudadela» con su coste (`mejorarAvanzada`),
 > «🔧 Reparar» en ruinas (`repararAvanzada`, la mitad del coste de su etapa) y «✕ Destruir» (`destruirAvanzada`); su obra de mejora o reparación

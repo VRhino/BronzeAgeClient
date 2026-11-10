@@ -4735,6 +4735,23 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .cupo-casillas i.usada { border-color: var(--oro); background: var(--oro); }
 .obra-chip.lleno .cupo-casillas i.usada { border-color: var(--obra-ambar); background: var(--obra-ambar); }
 .pueblo-cartas { display: flex; flex-direction: column; gap: 6px; }
+/* Territorio (0.197.0): los pueblos y las obras en una fila de botones con su icono; el «+» de marcar va el primero. Un clic abre su detalle
+   debajo (uno a la vez) y otro lo cierra. El borde dice cómo está: verde, bien; rojo, atacado; ámbar, obra a falta de materiales; azul, obra
+   levantándose. */
+.pueblo-iconos { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.pueblo-icono-boton { --tono: var(--obra-verde); position: relative; display: grid; place-items: center; width: 50px; height: 50px; padding: 0; border: 1px solid rgba(107, 74, 41, 0.8); border-bottom: 3px solid var(--tono); border-radius: 4px; background: linear-gradient(180deg, rgba(52, 39, 23, 0.95), rgba(22, 16, 10, 0.95)); color: var(--oro-claro); cursor: pointer; }
+.pueblo-icono-boton:hover, .pueblo-icono-boton:focus-visible { border-color: var(--oro); border-bottom-color: var(--tono); outline: none; }
+.pueblo-icono-boton.abierto { border-color: var(--oro-claro); border-bottom-color: var(--tono); box-shadow: 0 0 0 1px var(--oro), 0 0 10px rgba(255, 210, 74, 0.25); }
+.pueblo-icono-boton.atacado { --tono: var(--obra-rojo); }
+.pueblo-icono-boton.obra.pendiente { --tono: var(--obra-ambar); }
+.pueblo-icono-boton.obra.levantando { --tono: var(--obra-azul); }
+.pueblo-icono-boton .pueblo-emblema { width: 36px; height: 36px; font-size: 1.2rem; }
+.pueblo-marcar-boton { --tono: var(--oro); border-style: dashed; border-bottom-style: solid; }
+.pueblo-marcar-boton .pueblo-emblema { font-family: var(--fuente-titulo); font-size: 1.6rem; font-weight: 700; line-height: 1; }
+.pueblo-icono-nivel { position: absolute; top: 1px; right: 3px; font-size: 0.62rem; font-weight: 700; color: var(--oro); }
+.pueblo-icono-alerta { position: absolute; top: 0; left: 2px; font-size: 0.7rem; }
+.pueblo-detalle { margin-bottom: 8px; }
+.pueblo-detalle > .obra-titulo:first-child { margin-top: 0; }
 .pueblo-tarjeta, .obra-mapa { --tono: var(--obra-verde); display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border: 1px solid rgba(107, 74, 41, 0.8); border-left: 3px solid var(--tono); border-radius: 3px; background: linear-gradient(180deg, rgba(36, 27, 17, 0.95), rgba(18, 14, 9, 0.95)); }
 .pueblo-tarjeta.atacado { --tono: var(--obra-rojo); box-shadow: 0 0 10px rgba(226, 103, 90, 0.25); }
 .pueblo-tarjeta.ruinas { --tono: var(--text-muted); }

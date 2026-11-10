@@ -3,6 +3,17 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.197.0] — 2026-11-10 · Territorio: los pueblos en botones, un detalle a la vez, y «Marcar» tras un «+» · contrato 0.20.0 (motor `b55e90f`)
+
+Petición de Víctor del 2026-11-10. Sin cambios en el motor ni en el contrato.
+
+- **Los pueblos en botones**: en «Pueblos y aldeas», cada pueblo y cada obra es un botón con su icono (el cultivo de la aldea, el edificio del
+  extractor, el de la obra); el nombre sale al pasar el ratón, la aldea lleva su nivel y el borde dice cómo está (rojo, atacado; ámbar, obra
+  a falta de materiales; azul, levantándose). Un clic abre su tarjeta de siempre debajo; otro botón la cambia (una sola a la vez) y otro clic
+  en el mismo la cierra.
+- **«Marcar un pueblo nuevo» tras un «+»**, el primero de la fila: lo abre y lo pliega. Abierto de serie si la plaza no tiene ningún pueblo ni
+  obra; con el cupo lleno, el «+» no sale y se dice. Lo abierto se recuerda entre repintados y se olvida al cambiar de plaza.
+
 ## [0.196.0] — 2026-11-10 · Tooltip de edificio más corto: sin lo bloqueado, solo el nivel que toca y la producción sin cifras · contrato 0.20.0 (motor `b55e90f`)
 
 Petición de Víctor del 2026-11-10. Sin cambios en el motor ni en el contrato.
