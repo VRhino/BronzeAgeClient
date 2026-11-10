@@ -5,14 +5,15 @@
 //   2. llevar   la obra queda «pendiente de materiales» en el mapa: una columna de la Facción lleva lo que pide en su carro o en sus caravanas
 //               enganchadas y, a la puerta de la obra, cualquiera de sus ciudadanos lo entrega (`entregarEnObra`);
 //   3. esperar  con todo entregado arranca la obra (4-8 h) y el pueblo queda activo.
-// La aldea sube de nivel igual (`mejorarAldea` deja otra obra de materiales) y sigue produciendo mientras tanto. Aquí no se decide ninguna regla: las
+// La aldea sube de nivel igual (`mejorarAldea` deja otra obra de materiales) y sigue produciendo mientras tanto; desde el motor c1ad93d, también la
+// Cantera y las minas (niveles 1 a 3, cada uno con la madre en ese nivel). Aquí no se decide ninguna regla: las
 // cifras salen de `GET /v1/datos` y el motor valida; su rechazo se enseña tal cual.
 //   plaza      la subpestaña «Territorio» del Centro urbano (lo que hay en su zona y sus pueblos) (`SUBPESTANA_PUEBLOS`): cupo, lista, marcar, mejorar, reponer carro, destruir;
 //              con aire de juego (2026-11-02): la zona en fichas con casillas, cada pueblo y cada obra en su tarjeta y el marcar en dos cartas
 //   mapa       los pueblos y las obras se pintan (`dibujarPueblosYObras`) y se seleccionan (`pueblosYObrasBajoElClic`, fichas `FICHA_PUEBLO`/`FICHA_OBRA`)
 //   ascenso    la subida de nivel de la plaza (el nivel 2 pide un pueblo activo, aldea o extractor) se pinta en `panelCentro.ts`
 //   dentro     se entra en un pueblo activo como de visita, con la columna entera (`entrarEnPueblo` / `salirDePueblo`); dentro se gestiona con esa
-//              columna (`htmlPestanasPueblo`): guarnición, carga, escolta del carro de acarreo y mejora de la aldea. La escolta también se cede desde la plaza.
+//              columna (`htmlPestanasPueblo`): guarnición, carga, escolta del carro de acarreo y mejora del pueblo. La escolta también se cede desde la plaza.
 import { bloqueDeDatos, catalogoDeCaravanas, radioDePuerta, techosDeZona, type ProyeccionJugador } from '../apiCliente';
 import { estadoCliente, textoEnTiempoReal } from './estadoCliente';
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE, faccionColor } from '../paletas';
@@ -34,6 +35,8 @@ import { ICONO_CARRETA, barraAvance, chipsDeCoste, medallonNivel } from './juego
 import { mostrar as mostrarAviso } from './avisos';
 import { cablearPuertaDeAvanzada, claveDeEtapa, faccionAmiga, iconoDeAvanzada, htmlEleccionDeTropa, madreDe, nombreDeEtapa, puertaDeAvanzada, reglasDeObra as reglasDeObraDeAvanzada } from './avanzadas';
 import { htmlAccionesPuerta, type AccionPuerta, type VentanaPuerta } from './accionesPuerta';
+import { tieneCargoEnPlaza } from './cargosPlaza';
+import { recursoDeExtractor } from '../motor/proyeccion';
 
 type Escapar = (valor: string) => string;
 
@@ -50,7 +53,11 @@ interface ParamsPueblos {
      * el que ha alcanzado alguna plaza de la Facción, no el de la madre. */
     cultivos?: Partial<Record<Cultivo, { produce: string; nivelMadre: number; corrales: boolean }>>;
   };
+  /** La Cantera y las minas de pueblo por nivel (motor c1ad93d, 2026-11-10): el `factor` multiplica lo que sacan y los trabajadores que piden;
+   * el nivel 2 y el 3 piden la plaza madre en ese nivel operativo (`nivelMadre`) y su `coste`, que se lleva como una obra. */
+  extractor?: { niveles?: Record<string, NivelExtractor> };
 }
+interface NivelExtractor { factor: number; nivelMadre?: number; coste?: Record<string, number>; obraMinutos?: number }
 
 /** Los cultivos de una aldea (tanda 69, Economia_Construccion §14.0), en el orden en que se ofrecen; lo que dan y su nivel salen de los datos. */
 const CULTIVOS: { id: Cultivo; nombre: string; conArticulo: string; aldea: string; granja: string; produce: string; nivelMadre: number; corrales: boolean; uso: string }[] = [
@@ -91,12 +98,58 @@ const sumar = (...xs: (Record<string, number> | undefined)[]): Record<string, nu
 };
 
 export const esAldea = (x: { tipo: string }): boolean => x.tipo === 'aldeaAgricola';
+/** El nombre de un pueblo sin su nivel: «Aldea de trigo», «Cantera», «Mina de estaño». */
+const nombreSinNivel = (x: PuebloDeMapa): string => (esAldea(x) ? cultivo(cultivoDe(x)).aldea : EDIFICIO_NOMBRE[x.tipo] ?? x.tipo);
+/** El nombre de un pueblo con su nivel, si llega: la aldea y, desde el motor c1ad93d, también la Cantera y las minas. */
 export function nombreDePueblo(x: PuebloDeMapa): string {
-  return esAldea(x) ? `${cultivo(cultivoDe(x)).aldea}${x.nivelAldea ? ` (nivel ${x.nivelAldea})` : ''}` : EDIFICIO_NOMBRE[x.tipo] ?? x.tipo;
+  return `${nombreSinNivel(x)}${x.nivelAldea ? ` (nivel ${x.nivelAldea})` : ''}`;
 }
+/** El nivel de un pueblo; sin el dato (un extractor de antes del motor c1ad93d), 1. */
+export const nivelDePueblo = (x: PuebloDeMapa): number => x.nivelAldea ?? 1;
 const NOMBRE_OBRA: Record<ObraDeMapa['tipo'], string> = {
   pueblo: 'Obra de pueblo', aldea: 'Obra de aldea agrícola', mejoraAldea: 'Mejora de aldea', avanzada: 'Obra de avanzada', mejoraAvanzada: 'Mejora de avanzada', reparacion: 'Reparación de avanzada',
 };
+
+// ---------------------------------------------------------------- los niveles de la Cantera y las minas (motor c1ad93d, 2026-11-10)
+// Suben del 1 al 3 con la orden de la aldea (`mejorarAldea { heroeId, puebloId }`), la del Gobernador o el Maestro de Obras de la madre, y solo si
+// la madre tiene ya el nivel operativo que pide el siguiente (`PUEBLOS_EXTRACTORES.extractor.niveles.N.nivelMadre`; si no, `pueblo.nivel_insuficiente`).
+// La mejora deja una obra de materiales (`ObraDeMapa` `mejoraAldea` con `destinoId` = el pueblo), como la de la aldea; mientras, saca con su nivel de antes.
+
+/** El nivel `n` de la Cantera y las minas, de los datos de juego. */
+const nivelDeExtractor = (n: number): NivelExtractor | undefined => params()?.extractor?.niveles?.[String(n)];
+
+/** Lo que multiplica el nivel de un extractor lo que saca (y los trabajadores que pide); sin los datos, su propio nivel (1, 2, 3). */
+export const factorDeExtractor = (x: PuebloDeMapa): number => nivelDeExtractor(nivelDePueblo(x))?.factor ?? nivelDePueblo(x);
+
+/** El nivel siguiente de un extractor, si lo hay y la madre tiene ya el nivel operativo que pide; si no, nada (no se enseña el botón). */
+export function siguienteDeExtractor(x: PuebloDeMapa, madre: { nivel: number; nivelActual?: number } | undefined): (NivelExtractor & { nivel: number; coste: Record<string, number> }) | undefined {
+  if (esAldea(x) || !madre) return undefined;
+  const nivel = nivelDePueblo(x) + 1;
+  const sig = nivelDeExtractor(nivel);
+  if (!sig?.coste) return undefined;
+  return (madre.nivelActual ?? madre.nivel) >= (sig.nivelMadre ?? 1) ? { ...sig, coste: sig.coste, nivel } : undefined;
+}
+
+const VECES: Record<number, string> = { 2: 'el doble', 3: 'el triple' };
+const veces = (f: number): string => VECES[f] ?? `×${f}`;
+
+/** «Al nivel N: …» del botón de mejora de un extractor (sin cifras). */
+const textoMejoraExtractor = (n: { nivel: number; factor: number }): string =>
+  `Al nivel ${n.nivel}: saca ${veces(n.factor)} que en el nivel 1 y pide ${veces(n.factor)} de trabajadores a la plaza. Lo que pide se lleva al pueblo como una obra.`;
+
+/** La ficha de lo que saca un extractor por su nivel: el recurso y su multiplicador. */
+function chipDeExtraccion(x: PuebloDeMapa, e: Escapar): string {
+  const f = factorDeExtractor(x);
+  const r = recursoDeExtractor(x.tipo);
+  const titulo = f > 1 ? `Por su nivel saca ${veces(f)} que en el nivel 1, y pide ${veces(f)} de trabajadores a la plaza` : 'Lo que saca de serie: cada nivel más lo multiplica';
+  return `<span class="obra-chip" title="${e(titulo)}">${RECURSO_ICONO[r] ?? '⛏'} ${e(RECURSO_NOMBRE[r] ?? r)} ×${f}</span>`;
+}
+
+/** ¿Puede el jugador subir de nivel los pueblos de esa madre? Su Gobernador o su Maestro de Obras (desde la plaza o desde dentro del pueblo). */
+function gestionaLaMadre(p: ProyeccionJugador, madreId: string): boolean {
+  const a = madreDe(p, { madreId }).a ?? ({ id: madreId } as Asentamiento);
+  return tieneCargoEnPlaza(p, a, 'gobernador') || tieneCargoEnPlaza(p, a, 'maestroObras');
+}
 /** El pueblo de una obra: comparten número (`obra-7` ↔ `pueblo-7`). */
 const puebloDeObra = (obraId: string): string => obraId.replace(/^obra-/, 'pueblo-');
 const faltan = (o: ObraDeMapa): Record<string, number> =>
@@ -239,16 +292,18 @@ function carroEnTarjeta(p: ProyeccionJugador, x: PuebloDeMapa, madre: Asentamien
 }
 
 /**
- * Un pueblo de la plaza como tarjeta (2026-11-02): su emblema (🌾 la aldea, el edificio del extractor), el medallón de nivel de la aldea, el
- * almacén en barra, el rebaño, la fertilidad, el carro de acarreo con su escolta y, para quien gestiona, «⬆ Nivel N», «🛒 Reponer carro» y «✕ Destruir».
+ * Un pueblo de la plaza como tarjeta (2026-11-02): su emblema (🌾 la aldea, el edificio del extractor), su medallón de nivel (el del extractor desde
+ * el motor c1ad93d, con lo que saca por él), el almacén en barra, el rebaño, la fertilidad, el carro de acarreo con su escolta y, para quien
+ * gestiona, «⬆ Nivel N» (en un extractor, solo con la madre al nivel que pide), «🛒 Reponer carro» y «✕ Destruir».
  */
 function tarjetaPueblo(p: ProyeccionJugador, a: Asentamiento, x: PuebloDeMapa, gestiona: boolean, obras: ObraDeMapa[], e: Escapar): string {
   const aldea = esAldea(x);
   const cult = cultivo(cultivoDe(x));
   const niveles = params()?.aldea?.niveles ?? {};
-  const nivel = x.nivelAldea ?? 1;
+  const nivel = nivelDePueblo(x);
   const deAhora = aldea ? niveles[String(nivel)] : undefined;
   const siguiente = aldea && x.nivelAldea ? niveles[String(x.nivelAldea + 1)] : undefined;
+  const sigExtractor = siguienteDeExtractor(x, a);
   const mejorando = obras.some((o) => o.tipo === 'mejoraAldea' && o.destinoId === x.id);
   const guardado = Object.values(x.almacen).reduce((t, n) => t + n, 0);
   const k = x.capacidad > 0 ? Math.min(1, guardado / x.capacidad) : 0;
@@ -260,17 +315,19 @@ function tarjetaPueblo(p: ProyeccionJugador, a: Asentamiento, x: PuebloDeMapa, g
     x.batallaId ? '<span class="pueblo-alerta">⚔ ¡Atacado!</span>' : '',
     mejorando ? `<span class="obra-chip activa" title="La mejora está en marcha: mira su obra en la lista">🔨 Subiendo a ${nivel + 1}</span>` : '',
     x.fertilidad !== undefined ? `<span class="obra-chip" title="Fertilidad del punto de la aldea">🌱 ${coma(x.fertilidad)}</span>` : '',
+    aldea ? '' : chipDeExtraccion(x, e),
     deAhora ? `<span class="obra-chip" title="Granjas de la aldea">${RECURSO_ICONO[cult.produce] ?? '🌾'} ${deAhora.granjas} granja${deAhora.granjas === 1 ? '' : 's'}</span>${cult.corrales ? `<span class="obra-chip" title="Corrales de la aldea">🐄 ${deAhora.corrales} corral${deAhora.corrales === 1 ? '' : 'es'}</span>` : ''}` : '',
   ].join('');
   const coste = costeCarro();
   const acciones = !gestiona ? '' : `<div class="anillo-acciones pueblo-acciones">
       ${aldea && siguiente && !mejorando ? `<button class="anillo-mejorar" type="button" data-pueblo-accion="mejorar" data-pueblo="${e(x.id)}" title="${e(`Al nivel ${nivel + 1}: ${siguiente.granjas} granjas${cult.corrales ? ` y ${siguiente.corrales} corrales` : ''}. Lo que pide se lleva a la aldea como una obra.`)}">⬆ Nivel ${nivel + 1} <span class="pueblo-boton-coste">${costeLlano(siguiente.coste, e)}</span></button>` : ''}
+      ${sigExtractor && !mejorando ? `<button class="anillo-mejorar" type="button" data-pueblo-accion="mejorar" data-pueblo="${e(x.id)}" title="${e(textoMejoraExtractor(sigExtractor))}">⬆ Nivel ${sigExtractor.nivel} <span class="pueblo-boton-coste">${costeLlano(sigExtractor.coste, e)}</span></button>` : ''}
       ${x.carroId ? '' : `<button class="pueblo-boton" type="button" data-pueblo-accion="carro" data-pueblo="${e(x.id)}" title="Compra en la plaza un carro con su buey para el acarreo (si no, la plaza lo repone sola en cuanto puede pagarlo).">🛒 Reponer carro${coste ? ` <span class="pueblo-boton-coste">${chipsDeCoste(a, coste, e)}</span>` : ''}</button>`}
       <button class="anillo-abandonar" type="button" data-pueblo-accion="destruir" data-pueblo="${e(x.id)}">✕ Destruir</button></div>`;
   return `<div class="pueblo-tarjeta ${aldea ? 'aldea' : 'extractor'}${x.batallaId ? ' atacado' : ''}">
     <div class="anillo-cab"><span class="pueblo-emblema" aria-hidden="true">${aldea ? RECURSO_ICONO[cult.produce] ?? '🌾' : iconoEdificio(x.tipo, 26)}</span>
-      <span class="anillo-titulo"><strong>${e(aldea ? cult.aldea : nombreDePueblo(x))}</strong><small>${e(sub)}</small></span>
-      ${aldea ? medallonNivel(nivel, mejorando ? 'en-obra' : '', `Aldea de nivel ${nivel}`) : ''}</div>
+      <span class="anillo-titulo"><strong>${e(nombreSinNivel(x))}</strong><small>${e(sub)}</small></span>
+      ${medallonNivel(nivel, mejorando ? 'en-obra' : '', `${aldea ? 'Aldea' : x.tipo === 'cantera' ? 'Cantera' : 'Mina'} de nivel ${nivel}`)}</div>
     ${chips ? `<div class="anillo-chips">${chips}</div>` : ''}
     <div class="pueblo-medida${k >= 0.9 ? ' lleno' : ''}" title="Almacén del pueblo: lo acarrea su carro a la plaza; lleno, deja de producir"><span>📦 Almacén</span>${barraAvance(k)}<small>${n0(guardado)} / ${n0(x.capacidad)}</small></div>
     ${recursos.length ? `<div class="pueblo-recursos">${recursos.map(([rr, n]) => fichaRecurso(rr, n, e)).join('')}</div>` : ''}
@@ -297,7 +354,7 @@ function tarjetaObra(p: ProyeccionJugador, a: Asentamiento, o: ObraDeMapa, gesti
   const cancelar = gestiona && o.tipo !== 'mejoraAldea' ? `<div class="anillo-acciones"><button class="anillo-abandonar" type="button" ${deAvanzada ? `data-pueblo-accion="cancelar-obra" data-obra="${e(o.id)}"` : `data-pueblo-accion="destruir" data-pueblo="${e(puebloDeObra(o.id))}"`} title="Cancela la obra: no devuelve lo entregado.">✕ Cancelar</button></div>` : '';
   return `<div class="obra-mapa ${estado}">
     <div class="anillo-cab"><span class="pueblo-emblema" aria-hidden="true">${ICONO_OBRA[o.tipo]}</span>
-      <span class="anillo-titulo"><strong>${e(NOMBRE_OBRA[o.tipo])}</strong><small>${e(sub)}</small></span>
+      <span class="anillo-titulo"><strong>${e(nombreDeObra(o, p))}</strong><small>${e(sub)}</small></span>
       <span class="anillo-estado">${levantando ? '🔨 Levantándose' : completa ? '✓ Materiales' : '📦 Faltan materiales'}</span></div>
     ${levantando ? `<div class="anillo-avance">${barraAvance(null)}<small>⏳ ${e(textoEnTiempoReal(o.terminaEn! - p.instante))}</small></div>`
       : `<div class="pacto-lineas">${lineas}</div>${completa ? '' : '<small class="obra-mapa-nota">Una columna de tu Facción lo lleva y lo entrega a la puerta de la obra.</small>'}`}
@@ -421,15 +478,15 @@ function htmlPueblos(c: ContextoPlaza): string {
     ...pueblos.map((x) => {
       const aldea = esAldea(x);
       const cult = cultivo(cultivoDe(x));
-      const nombre = `${aldea ? cult.aldea : nombreDePueblo(x)}${x.batallaId ? ' · ¡atacado!' : ''}`;
-      const distintivo = `${aldea ? `<b class="pueblo-icono-nivel">${x.nivelAldea ?? 1}</b>` : ''}${x.batallaId ? '<b class="pueblo-icono-alerta" aria-hidden="true">⚔</b>' : ''}`;
+      const nombre = `${nombreSinNivel(x)}${x.batallaId ? ' · ¡atacado!' : ''}`;
+      const distintivo = `<b class="pueblo-icono-nivel">${nivelDePueblo(x)}</b>${x.batallaId ? '<b class="pueblo-icono-alerta" aria-hidden="true">⚔</b>' : ''}`;
       return botonPueblo(x.id, aldea ? RECURSO_ICONO[cult.produce] ?? '🌾' : iconoEdificio(x.tipo, 22), nombre, x.batallaId ? 'atacado' : '', distintivo, abierto === x.id, e);
     }),
     ...obras.map((o) => {
       const levantando = o.terminaEn !== undefined;
       const completa = !levantando && Object.keys(faltan(o)).length === 0;
       const estado = levantando ? 'levantándose' : completa ? 'con todos los materiales' : 'faltan materiales';
-      return botonPueblo(o.id, ICONO_OBRA[o.tipo], `${NOMBRE_OBRA[o.tipo]} · ${estado}`, levantando ? 'obra levantando' : completa ? 'obra completa' : 'obra pendiente', '', abierto === o.id, e);
+      return botonPueblo(o.id, ICONO_OBRA[o.tipo], `${nombreDeObra(o, p)} · ${estado}`, levantando ? 'obra levantando' : completa ? 'obra completa' : 'obra pendiente', '', abierto === o.id, e);
     }),
   ].join('');
   const x = pueblos.find((y) => y.id === abierto), o = obras.find((y) => y.id === abierto);
@@ -635,7 +692,12 @@ export function pueblosYObrasBajoElClic(p: ProyeccionJugador, punto: Point): Obj
 const ETAPA_AVANZADA: Record<number, string> = { 1: 'Atalaya', 2: 'Fuerte', 3: 'Ciudadela' };
 /** Lo que es una avanzada por su etapa, y una obra de mapa por su tipo (para la lista de qué hay bajo un clic). */
 export const nombreDeAvanzada = (etapa: number): string => ETAPA_AVANZADA[etapa] ?? 'Avanzada';
-export const nombreDeObra = (o: ObraDeMapa): string => NOMBRE_OBRA[o.tipo] ?? 'Obra';
+/** El nombre de una obra de mapa: la mejora de un extractor dice de qué y a qué nivel («Mejora de la mina a nivel 2»). */
+export function nombreDeObra(o: ObraDeMapa, p: ProyeccionJugador | null | undefined = estadoCliente.proyeccionUltima): string {
+  const x = o.tipo === 'mejoraAldea' ? (p?.pueblos ?? []).find((y) => y.id === o.destinoId) : undefined;
+  if (x && !esAldea(x)) return `Mejora de ${x.tipo === 'cantera' ? 'la cantera' : 'la mina'} a nivel ${nivelDePueblo(x) + 1}`;
+  return NOMBRE_OBRA[o.tipo] ?? 'Obra';
+}
 
 /** La obra pendiente de la avanzada (mejora o reparación) o de la aldea (subida de nivel) `destinoId`, si la hay. */
 const obraSobre = (p: ProyeccionJugador, destinoId: string): ObraDeMapa | undefined =>
@@ -644,10 +706,10 @@ const obraSobre = (p: ProyeccionJugador, destinoId: string): ObraDeMapa | undefi
 /** La obra a la puerta (0.193.0): si es tuya y aún pide materiales, un botón «Obra» que abre la entrega; si ya se levanta, una línea con lo que falta. */
 function puertaDeObra(p: ProyeccionJugador, o: ObraDeMapa | undefined, c: ContextoFicha): { accion?: AccionPuerta; ventana?: () => VentanaPuerta; nota: string } {
   if (!o || !o.propia) return { nota: '' };
-  if (o.terminaEn !== undefined) return { nota: `<p class="asent-lado-nota">🔨 ${c.escapar(NOMBRE_OBRA[o.tipo])}: se levanta, ${c.escapar(textoEnTiempoReal(o.terminaEn - p.instante))}.</p>` };
+  if (o.terminaEn !== undefined) return { nota: `<p class="asent-lado-nota">🔨 ${c.escapar(nombreDeObra(o, p))}: se levanta, ${c.escapar(textoEnTiempoReal(o.terminaEn - p.instante))}.</p>` };
   return {
     accion: { id: 'obra', etiqueta: 'Obra', icono: '🔨', ventana: true },
-    ventana: () => ({ titulo: NOMBRE_OBRA[o.tipo], icono: '🔨', ancho: 'estrecha', html: htmlEntrega(p, o, c), cablear: (cuerpo) => cablearEntrega(cuerpo, p, o, c) }),
+    ventana: () => ({ titulo: nombreDeObra(o, p), icono: '🔨', ancho: 'estrecha', html: htmlEntrega(p, o, c), cablear: (cuerpo) => cablearEntrega(cuerpo, p, o, c) }),
     nota: '',
   };
 }
@@ -811,7 +873,7 @@ export const FICHA_OBRA: FichaMapaExtra = {
   tipo: 'obraMapa',
   buscar: (p, id) => (p.obrasDeMapa ?? []).find((o) => o.id === id),
   html: (p, o: ObraDeMapa, c) => `<span class="faction-kicker">${o.propia ? 'Obra de tu Facción' : 'Obra ajena'}</span>
-    <h3>${c.escapar(NOMBRE_OBRA[o.tipo])}</h3>
+    <h3>${c.escapar(nombreDeObra(o, p))}</h3>
     <p class="asent-lado-nota">De ${c.escapar(nombrePlaza(p, o.madreId))}.${o.propia ? '' : ' Pendiente, se ve pero no se puede atacar.'}</p>
     ${o.propia ? htmlEntrega(p, o, c) : ''}`,
   cablear: (cont, p, o: ObraDeMapa, c) => cablearEntrega(cont, p, o, c),
@@ -823,7 +885,7 @@ export const FICHA_OBRA: FichaMapaExtra = {
 //   guarnecerPueblo / retirarDePueblo { puebloId, escuadronIds }   escuadras de la columna a la guarnición (cupo de Liderazgo por héroe) y vuelta
 //   cargarDePueblo / dejarEnPueblo   { puebloId, recurso, cantidad } del almacén local al carro de la columna y vuelta (solo lo que el pueblo produce)
 //   asignarEscolta / quitarEscolta   sobre su carro de acarreo, con escuadras de la columna (el cupo, el del Mercado de la madre)
-//   mejorarAldea                     el Gobernador o el Maestro de Obras de la madre, residente en ella
+//   mejorarAldea                     el Gobernador o el Maestro de Obras de la madre, residente en ella (la aldea o, desde c1ad93d, el extractor)
 // El corral y el rebaño siguen solos, y el carro de acarreo se repone solo.
 
 /** El pueblo en el que está el héroe, si está dentro de uno. */
@@ -986,14 +1048,21 @@ function htmlResumenPueblo(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar): s
   const topeRebano = especie && nivel ? especie.topePorCorral * nivel.corrales : undefined;
   const mejora = (p.obrasDeMapa ?? []).find((o) => o.tipo === 'mejoraAldea' && o.destinoId === x.id);
   const ciudadano = x.propio;
+  // subir de nivel: el Gobernador o el Maestro de Obras de la madre; un extractor, además, con la madre al nivel que pide el siguiente
+  const gestor = ciudadano && gestionaLaMadre(p, x.madreId);
+  const sigExtractor = gestor && !mejora ? siguienteDeExtractor(x, madreDe(p, x).a) : undefined;
+  const enMarcha = mejora ? ' Tiene una mejora en marcha: sus materiales se entregan en el mapa, a su puerta.' : '';
   const columna = miColumna(p);
   const dentro = columna ? columna.participantes.map((q) => nombreDeHeroe(p, q.heroeId)).join(', ') : '';
   return `<p class="asent-lado-nota">De ${e(nombrePlaza(p, x.madreId))}.${x.fertilidad !== undefined ? ` Fertilidad ${x.fertilidad.toFixed(2).replace('.', ',')}.` : ''}${x.batallaId ? ' <strong>Lo están atacando: si sigues dentro, defiendes.</strong>' : ''}</p>
     ${aldea ? `<strong class="heroe-sub">Aldea</strong>
-      <p class="asent-lado-nota">${e(cult.aldea)}, nivel ${x.nivelAldea ?? 1}${nivel ? `: ${conCorrales(nivel)}` : ''}. ${e(cult.uso)}${mejora ? ' Tiene una mejora en marcha: sus materiales se entregan en el mapa, a su puerta.' : ''}</p>
-      ${ciudadano && siguiente && !mejora ? `<div class="mapa-seleccion-acciones"><button class="btn-secondary" type="button" data-pueblo-dentro="mejorar" title="${e(`Al nivel ${x.nivelAldea! + 1}: ${conCorrales(siguiente)}. Pide ${listaRecursos(siguiente.coste)}, que se traen como una obra.`)}">Mejorar a nivel ${x.nivelAldea! + 1}</button><small class="asent-lado-nota">El Gobernador o el Maestro de Obras de la plaza madre.</small></div>` : ''}
+      <p class="asent-lado-nota">${e(cult.aldea)}, nivel ${x.nivelAldea ?? 1}${nivel ? `: ${conCorrales(nivel)}` : ''}. ${e(cult.uso)}${enMarcha}</p>
+      ${gestor && siguiente && !mejora ? `<div class="mapa-seleccion-acciones"><button class="btn-secondary" type="button" data-pueblo-dentro="mejorar" title="${e(`Al nivel ${x.nivelAldea! + 1}: ${conCorrales(siguiente)}. Pide ${listaRecursos(siguiente.coste)}, que se traen como una obra.`)}">Mejorar a nivel ${x.nivelAldea! + 1}</button></div>` : ''}
       ${x.rebano ? `<div class="carro-ocupacion"><strong class="heroe-sub">Rebaño ${e(ESPECIE_NOMBRE[x.rebano.especie] ?? x.rebano.especie)}</strong><span>${n0(x.rebano.cabezas)}${topeRebano ? ` / ${topeRebano}` : ''} cabezas</span></div>${topeRebano ? barra(x.rebano.cabezas, topeRebano) : ''}
         <p class="asent-lado-nota">Crece solo hasta el tope de sus corrales; lo que pasa del pie de cría entra como ganado en el almacén.</p>` : ''}` : ''}
+    ${aldea ? '' : `<strong class="heroe-sub">${e(EDIFICIO_NOMBRE[x.tipo] ?? x.tipo)}</strong>
+      <p class="asent-lado-nota">Nivel ${nivelDePueblo(x)}: ${factorDeExtractor(x) > 1 ? `saca ${veces(factorDeExtractor(x))} que en el nivel 1` : 'saca lo de serie'}.${enMarcha}</p>
+      ${sigExtractor ? `<div class="mapa-seleccion-acciones"><button class="btn-secondary" type="button" data-pueblo-dentro="mejorar" title="${e(`${textoMejoraExtractor(sigExtractor)} Pide ${listaRecursos(sigExtractor.coste)}.`)}">Mejorar a nivel ${sigExtractor.nivel}</button></div>` : ''}`}
     <strong class="heroe-sub">Dentro</strong>
     <p class="asent-lado-nota">${dentro ? `Tu columna (${e(dentro)}), fuera del mapa: nadie la ve y sigue comiendo de sus víveres.` : 'Tú.'} Al salir vuelve a la puerta con todo lo que trajo; tu guarnición se queda.</p>
     ${ciudadano ? '' : '<p class="asent-lado-nota">Solo los ciudadanos de la Facción de su plaza madre lo gestionan.</p>'}`;

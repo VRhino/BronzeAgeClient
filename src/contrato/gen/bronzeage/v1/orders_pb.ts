@@ -3989,6 +3989,9 @@ export const OrdenMarcarAldeaSchema: GenMessage<OrdenMarcarAldea> = /*@__PURE__*
   messageDesc(file_bronzeage_v1_orders, 136);
 
 /**
+ * Sube de nivel un pueblo activo: la aldea agrícola o, desde el 2026-11-10, un extractor (Cantera o mina, hasta el nivel 3 y no más que el nivel de
+ * la plaza madre: `pueblo.nivel_insuficiente`). Deja una mejora pendiente de materiales (Economia_Construccion §14).
+ *
  * @generated from message bronzeage.v1.OrdenMejorarAldea
  */
 export type OrdenMejorarAldea = Message<"bronzeage.v1.OrdenMejorarAldea"> & {

@@ -360,6 +360,18 @@ function avisoFundacion(): void {
         { id: 'pueblo-2', tipo: 'aldeaAgricola', cultivo: 'vid', madreId: a.id, propio: true, posicion: cerca(-6, 9), nivelAldea: 1, fertilidad: 0.64, almacen: { uva: 120 }, capacidad: 1000 },
       ];
     }
+    // `&minas=1` (0.201.0): una cantera de nivel 1, que puede subir al 2, y una mina de estaño de nivel 2 subiendo al 3 (la plaza, en nivel 3)
+    if (qs.get('minas')) {
+      a.nivel = 3; a.nivelActual = 3;
+      const cerca = (dx: number, dy: number) => ({ x: a.posicion.x + dx, y: a.posicion.y + dy });
+      (p as unknown as { pueblos: unknown[] }).pueblos = [
+        { id: 'pueblo-1', tipo: 'cantera', madreId: a.id, propio: true, posicion: cerca(9, -4), nivelAldea: 1, almacen: { piedra: 140 }, capacidad: 1000 },
+        { id: 'pueblo-2', tipo: 'minaEstano', madreId: a.id, propio: true, posicion: cerca(-7, 8), nivelAldea: 2, almacen: { estano: 260 }, capacidad: 1000 },
+      ];
+      (p as unknown as { obrasDeMapa: unknown[] }).obrasDeMapa = [
+        { id: 'obra-2', tipo: 'mejoraAldea', madreId: a.id, propia: true, posicion: cerca(-7, 8), destinoId: 'pueblo-2', requerido: { madera: 360, piedra: 120 }, entregado: { madera: 200, piedra: 120 } },
+      ];
+    }
     a.cargos = { ...(a.cargos ?? {}), gobernadorId: 'h' } as typeof a.cargos;
     a.faccionId = a.faccionId || 'fac-1';
     (p as unknown as { faccionId: string }).faccionId = a.faccionId;

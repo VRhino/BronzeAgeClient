@@ -61,7 +61,7 @@ export function rotuloDe(p: ProyeccionJugador, sel: { tipo: string; id: string }
     }
     case 'obraMapa': {
       const o = (p.obrasDeMapa ?? []).find((y) => y.id === sel.id);
-      return { icono: '⚒', titulo: o ? nombreDeObra(o) : 'Obra', detalle: o ? junta(`De ${nombreDePlaza(p, o.madreId)}`, o.terminaEn !== undefined ? 'en marcha' : 'esperando materiales') : '' };
+      return { icono: '⚒', titulo: o ? nombreDeObra(o, p) : 'Obra', detalle: o ? junta(`De ${nombreDePlaza(p, o.madreId)}`, o.terminaEn !== undefined ? 'en marcha' : 'esperando materiales') : '' };
     }
     case 'aeda': {
       const a = (p.aedasAvistados ?? []).find((x) => x.id === sel.id);

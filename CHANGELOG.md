@@ -3,6 +3,27 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.201.0] — 2026-11-10 · La Cantera y las minas suben de nivel · contrato 0.22.0 (motor `c1ad93d`)
+
+El aviso del motor del 2026-11-10 (PR #15): los nodos de estaño traen 300-600 y la Cantera y las minas de pueblo suben del nivel 1 al 3 con la
+orden de la aldea, cada nivel atado al de la plaza madre. **Hace falta partida nueva y mundo nuevo** (la huella de las reglas cambia).
+
+- **Contrato 0.22.0** (`src/contrato/` regenerado, REVISION c1ad93d): solo comentarios. `Pueblo.nivel_aldea` llega ahora también en un extractor
+  y su mejora en marcha es una `ObraDeMapa` `mejoraAldea` con `destinoId` = el pueblo, como la de la aldea.
+- **El nivel del extractor**: en el botón de la fila de Territorio, en el escudo de su tarjeta y en su nombre («Mina de estaño (nivel 2)», en el
+  blasón de dentro, la barra del jugador y el mapa). La tarjeta lleva una ficha con lo que saca por su nivel («🪨 Piedra ×1», «⚙ Estaño ×2»),
+  con un multiplicador y no un ritmo, como pidió Víctor para los tooltips.
+- **«⬆ Nivel N» en la Cantera y las minas** (`siguienteDeExtractor`, `ui/pueblos.ts`): con su coste (180 madera y 60 piedra al 2; 360 y 120 al 3,
+  de `PUEBLOS_EXTRACTORES.extractor.niveles`), solo para el Gobernador o el Maestro de Obras residente y dentro, sin mejora en marcha y con la
+  plaza ya en el nivel operativo que pide el siguiente. Manda `mejorarAldea { heroeId, puebloId }`. Dentro del pueblo, «Mejorar a nivel N» en el
+  Resumen, con la misma regla; el de la aldea, que antes salía a cualquier ciudadano, ahora también solo a quien tiene ese cargo en la madre.
+- **La obra de la mejora** se llama por lo que sube («Mejora de la mina a nivel 3», «Mejora de la cantera a nivel 2») en Territorio, en la
+  ficha del mapa, en la elección del clic y a la puerta. Como la de la aldea, no ocupa cupo.
+- **Rechazos**: `pueblo.no_esta_activo`, `pueblo.mejora_en_curso` y `pueblo.nivel_maximo` hablan del pueblo y no de la aldea;
+  `pueblo.nivel_insuficiente` dice que una cantera o una mina no sube por encima del nivel de su plaza.
+- Banco: `/pruebas/hud/?ventana=territorio&minas=1`. Pruebas en `pruebas/extractoresPorNivel.test.ts`; `pruebas/plaza/datos.json` lleva
+  `PUEBLOS_EXTRACTORES.extractor`.
+
 ## [0.200.0] — 2026-11-10 · Las cinco ideas del motor y las etiquetas del mundo bajo los paneles · contrato 0.21.0 (motor `906fb24`)
 
 Lo que pidió Víctor el 2026-11-10 («si todo en una tanda»): las cinco ideas del motor en una sola versión, y antes, el aviso de que las

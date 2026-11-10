@@ -356,6 +356,14 @@ La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, es
 > debajo, una sola a la vez, y otro clic la cierra. «Marcar un pueblo nuevo» va tras un «+» al principio de la fila, plegable, y abierto de serie
 > si la plaza no tiene ningún pueblo ni obra; con el cupo lleno, el «+» no sale.
 >
+> **La Cantera y las minas por nivel** (0.201.0, motor `c1ad93d`, contrato 0.22.0): el extractor lleva su nivel (1 a 3) como la aldea: en el
+> botón de la fila, el escudo de la tarjeta y el nombre («Mina de estaño (nivel 2)»), y una ficha con lo que saca por él («⚙ Estaño ×2», el
+> `factor` de `PUEBLOS_EXTRACTORES.extractor.niveles`, sin cifras por minuto). «⬆ Nivel N» con su coste sale solo al Gobernador o al Maestro de
+> Obras residente y dentro, sin mejora en marcha y con la plaza ya en el nivel operativo que pide el siguiente (`nivelMadre`); manda
+> `mejorarAldea`. Su obra se llama «Mejora de la mina (o de la cantera) a nivel N» y no ocupa cupo. Dentro del pueblo, el Resumen dice su nivel
+> y lo que saca, y «Mejorar a nivel N» (la aldea igual) sale solo a quien tiene ese cargo en la madre (`ui/cargosPlaza.ts`). Banco:
+> `/pruebas/hud/?ventana=territorio&minas=1`. Pruebas en `pruebas/extractoresPorNivel.test.ts`.
+>
 > **Avanzadas en Territorio** (0.174.0, `ui/pueblos.ts`, `tarjetaAvanzada`): cada una con su icono de etapa, la guarnición (de serie y de
 > jugadores) y lo que guarda; para el Gobernador o el Maestro de Obras residente y dentro, «⬆ Fuerte / Ciudadela» con su coste (`mejorarAvanzada`),
 > «🔧 Reparar» en ruinas (`repararAvanzada`, la mitad del coste de su etapa) y «✕ Destruir» (`destruirAvanzada`); su obra de mejora o reparación

@@ -820,6 +820,7 @@ export interface PuebloDeMapa {
   /** Cuándo vuelve el siguiente minero o granjero de la guarnición mermada; ausente con la guarnición completa. */
   guarnicionReponeEn?: number;
   batallaId?: string;
+  /** El nivel del pueblo (1 a 3): el de la aldea y, desde el motor c1ad93d, también el de la Cantera o la mina. */
   nivelAldea?: number;
   /** Fertilidad del punto de la aldea (1 = 1,0). */
   fertilidad?: number;
@@ -828,7 +829,7 @@ export interface PuebloDeMapa {
   cultivo?: string;
   /** Escuadrones de jugadores en su guarnición (de todos los héroes). */
   guarnicionJugadoresIds?: string[];
-  /** Liderazgo que puede dejar cada héroe en su guarnición: 30 en nivel 1 y 15 más por nivel de la aldea. */
+  /** Liderazgo que puede dejar cada héroe en su guarnición: 30 en nivel 1 y 15 más por nivel del pueblo (la aldea o, desde el motor c1ad93d, el extractor). */
   cupoGuarnicionPorHeroe?: number;
 }
 

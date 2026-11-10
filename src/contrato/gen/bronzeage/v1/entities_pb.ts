@@ -2305,7 +2305,8 @@ export type Pueblo = Message<"bronzeage.v1.Pueblo"> & {
   versionInterior: bigint;
 
   /**
-   * Aldea agrícola (Economia_Construccion §14.2): su nivel (1 a 3; ausente en un extractor), la fertilidad del punto (milésimas: 1000 = 1,0) y su almacén
+   * El nivel del pueblo (1 a 3): de la aldea agrícola y, desde el 2026-11-10, también del extractor (antes ausente en él). Aldea agrícola
+   * (Economia_Construccion §14.2): la fertilidad del punto (milésimas: 1000 = 1,0) y su almacén
    * local por recurso (trigo y ganado, que comparten la capacidad de `almacen_local`). `almacen_local` lleva el trigo.
    *
    * @generated from field: optional uint32 nivel_aldea = 13;
