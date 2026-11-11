@@ -3973,8 +3973,8 @@ export type OrdenMarcarAldea = Message<"bronzeage.v1.OrdenMarcarAldea"> & {
   punto?: Punto | undefined;
 
   /**
-   * trigo (sin él) | vid | oliva (tanda 69 §12) | cebada | sesamo (2026-11-09). La vid y la cebada piden que alguna plaza de la Facción haya
-   * alcanzado el nivel 3, y la oliva y el sésamo el 4 (`pueblo.cultivo_bloqueado`).
+   * trigo (sin él) | vid | oliva (tanda 69 §12) | cebada | sesamo (2026-11-09) | ganado (la aldea ganadera, desde el nivel 1, 2026-11-11). La vid y
+   * la cebada piden que alguna plaza de la Facción haya alcanzado el nivel 3, y la oliva y el sésamo el 4 (`pueblo.cultivo_bloqueado`).
    *
    * @generated from field: optional string cultivo = 4;
    */

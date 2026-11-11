@@ -820,7 +820,7 @@ export interface PuebloDeMapa {
   tipo: string;
   nodoId?: string;
   posicion: Point;
-  /** Lo que guarda su almacén local (entre todo): en una aldea, lo de su cultivo y, la de trigo, ganado, carne y leche; en un extractor, su recurso (`recurso` vacío si no se sabe). */
+  /** Lo que guarda su almacén local (entre todo): en una aldea, lo de su cultivo y, la ganadera (motor 3d05872), ganado, carne y leche; en un extractor, su recurso (`recurso` vacío si no se sabe). */
   almacen: Record<string, number>;
   capacidad: number;
   carroId?: string;
@@ -833,7 +833,7 @@ export interface PuebloDeMapa {
   /** Fertilidad del punto de la aldea (1 = 1,0). */
   fertilidad?: number;
   rebano?: { especie: string; cabezas: number };
-  /** El cultivo de la aldea (tanda 69 §12): `trigo`, `vid` u `oliva`. Se elige al marcarla y no cambia; ausente en un extractor. */
+  /** El cultivo de la aldea (tanda 69 §12): `trigo`, `vid`, `oliva`, `cebada`, `sesamo` o, la ganadera (motor 3d05872), `ganado`. Se elige al marcarla y no cambia; ausente en un extractor. */
   cultivo?: string;
   /** Escuadrones de jugadores en su guarnición (de todos los héroes). */
   guarnicionJugadoresIds?: string[];
@@ -1233,7 +1233,7 @@ export interface EscenaPueblo {
   edificios: { edificioId: string; tipo: string; posicion: Point; ancho: number; alto: number }[];
   calles: RectanguloLocal[];
   caminos: RectanguloLocal[];
-  /** El cultivo de la aldea (tanda 69): `trigo`, `vid` u `oliva`; ausente en un extractor. */
+  /** El cultivo de la aldea (tanda 69): `trigo`, `vid`, `oliva`, `cebada`, `sesamo` o `ganado` (la ganadera, motor 3d05872); ausente en un extractor. */
   cultivo?: string;
 }
 

@@ -534,6 +534,18 @@ function corral(m: Marco, estilo: number): void {
   }
   choza(m, -r * 0.45, -r * 0.4, r * 0.25, { frente: 1 });
   almiar(m, r * 0.4, -r * 0.35, 0.35);
+  // el rebaño, solo en los corrales de la aldea ganadera (motor 3d05872; `cultivo: 'ganado'`, lo pone `puebloEnVista`): un abrevadero y, en la
+  // mitad libre, unas reses y unas ovejas paciendo, cada corral con las suyas (la semilla del edificio)
+  if (m.e.cultivo !== 'ganado') return;
+  abrevadero(m, r * 0.05, -r * 0.1, Math.min(1.4, r * 0.45), 0, estilo >= 3);
+  // a 1,7 de la bestia de tiro: que se lean como rebaño desde la cámara de la plaza
+  const cabezas = 5 + Math.floor(m.azar(60) * 3), k = 1.7;
+  for (let i = 0; i < cabezas; i++) {
+    const u = (-0.6 + (1.2 * (i + 0.5)) / cabezas + 0.08 * (m.azar(61 + i) - 0.5)) * r, v = (0.32 + 0.33 * m.azar(70 + i)) * r;
+    const a = m.azar(80 + i) * Math.PI * 2;
+    if (m.azar(90 + i) < 0.35) oveja(m, u, v, a, k);
+    else bestia(m, u, v, a, false, m.azar(100 + i) < 0.5 ? COLOR.buey : COLOR.res, k);
+  }
 }
 
 function caballerizas(m: Marco, estilo: number): void {
@@ -1138,15 +1150,25 @@ function carroParado(m: Marco, u: number, v: number, a: number, carga: number, c
   }
 }
 
-/** Una bestia de tiro de pie, con la cabeza hacia `a`: un buey con sus cuernos, o un asno, más chico y gris, de orejas largas. */
-function bestia(m: Marco, u: number, v: number, a: number, asno: boolean): void {
-  const en = girado(u, v, a), k = asno ? 0.72 : 1, color = asno ? COLOR.asno : COLOR.buey;
+/** Una bestia de tiro de pie, con la cabeza hacia `a`: un buey con sus cuernos, o un asno, más chico y gris, de orejas largas. `pelo`, otro
+ * color para el buey (las reses del rebaño). */
+function bestia(m: Marco, u: number, v: number, a: number, asno: boolean, pelo?: number, escala = 1): void {
+  const en = girado(u, v, a), k = (asno ? 0.72 : 1) * escala, color = asno ? COLOR.asno : pelo ?? COLOR.buey;
   const caja = (c: number, du: number, dv: number, l: number, s: number, h: number, y: number): void => { const [x, z] = en(du, dv); m.caja(c, x, z, l, s, h, y, a); };
   caja(color, 0, 0, 0.56 * k, 0.24 * k, 0.24 * k, 0.26 * k);
   for (const du of [-0.2, 0.2]) for (const dv of [-0.075, 0.075]) { const [x, z] = en(du * k, dv * k); m.poste(oscurecer(color, 0.8), x, z, 0.27 * k, 0.06 * k); }
   caja(color, 0.34 * k, 0, 0.16 * k, 0.13 * k, 0.15 * k, 0.3 * k);
   if (asno) for (const dv of [-0.035, 0.035]) caja(color, 0.31 * k, dv * k, 0.03, 0.03, 0.12 * k, 0.45 * k);
-  else caja(COLOR.cuerno, 0.31, 0, 0.04, 0.28, 0.04, 0.43);
+  else caja(COLOR.cuerno, 0.31 * k, 0, 0.04 * k, 0.28 * k, 0.04 * k, 0.43 * k);
+}
+
+/** Una oveja de pie, con la cabeza hacia `a`: el vellón claro y la cabeza y las patas oscuras (el rebaño de la aldea ganadera). */
+function oveja(m: Marco, u: number, v: number, a: number, k = 1): void {
+  const en = girado(u, v, a);
+  const caja = (c: number, du: number, dv: number, l: number, s: number, h: number, y: number): void => { const [x, z] = en(du * k, dv * k); m.caja(c, x, z, l * k, s * k, h * k, y * k, a); };
+  caja(COLOR.lana, 0, 0, 0.34, 0.2, 0.17, 0.15);
+  for (const du of [-0.11, 0.11]) for (const dv of [-0.05, 0.05]) { const [x, z] = en(du * k, dv * k); m.poste(COLOR.pielOscura, x, z, 0.16 * k, 0.04 * k); }
+  caja(COLOR.pielOscura, 0.21, 0, 0.1, 0.09, 0.09, 0.22);
 }
 
 /** Un abrevadero de `l` de largo, girado `a` (0: a lo largo de u): de tablas o, con `piedra`, una pila de piedra. */

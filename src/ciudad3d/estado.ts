@@ -36,7 +36,7 @@ export interface EdificioEnVista {
   /** El molino con su buey (tanda 69, `Edificio.buey`): la maqueta lo pone dando vueltas a la muela. */
   buey?: boolean;
   /** La granja de una aldea que no es de trigo (tanda 69 y motor b55e90f, `Pueblo.cultivo`, lo pone `puebloEnVista`): `vid`, `oliva`, `cebada`
-   * o `sesamo`; sin él, de trigo. */
+   * o `sesamo`; sin él, de trigo. Y los corrales de la aldea ganadera (motor 3d05872): `ganado`, que los llena de rebaño. */
   cultivo?: string;
   /** La bodega o la prensa (motor b55e90f, `Edificio.receta`): el insumo de la receta que trabaja (`uva` o `cebada`; `aceituna` o `sesamo`). */
   receta?: string;

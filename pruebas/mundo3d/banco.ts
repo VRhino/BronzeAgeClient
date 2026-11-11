@@ -180,8 +180,8 @@ function mundoDePrueba(c: Punto, vacio: boolean): { mundo: MundoEnVista; ajenas:
   // `?niveles`: una fila con una plaza de cada nivel (1 a 5) al sur del héroe
   if (parametros.has('niveles')) for (let n = 1; n <= 5; n++) m.plazas.push({ id: `nivel-${n}`, posicion: en(-14 + 7 * n, -10), radioCiudad: 1.5, color: PROPIO, recordada: false, nivel: n });
   m.pueblos.push({ id: 'aldea', posicion: en(6, 5, plaza), aldea: true, color: PROPIO }, { id: 'cantera', posicion: en(-6, 6, plaza), aldea: false, color: PROPIO });
-  // `?cultivos`: una fila de aldeas, una de cada cultivo (trigo, vid, olivo, cebada y sésamo), al norte del héroe
-  if (parametros.has('cultivos')) (['trigo', 'vid', 'oliva', 'cebada', 'sesamo'] as const).forEach((cultivo, n) => m.pueblos.push({ id: `aldea-${cultivo}`, posicion: en(-10 + 5 * n, 6), aldea: true, color: PROPIO, cultivo }));
+  // `?cultivos`: una fila de aldeas, una de cada cultivo (trigo, vid, olivo, cebada, sésamo y, desde el motor 3d05872, la ganadera), al norte del héroe
+  if (parametros.has('cultivos')) (['trigo', 'vid', 'oliva', 'cebada', 'sesamo', 'ganado'] as const).forEach((cultivo, n) => m.pueblos.push({ id: `aldea-${cultivo}`, posicion: en(-10 + 5 * n, 6), aldea: true, color: PROPIO, cultivo }));
   m.avanzadas.push(
     { id: 'atalaya', posicion: en(11, -3, plaza), etapa: 1, ruinas: false, color: PROPIO },
     { id: 'fuerte', posicion: en(-3, 12, plaza), etapa: 2, ruinas: false, color: PROPIO },

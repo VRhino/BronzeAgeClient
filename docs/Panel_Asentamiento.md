@@ -364,6 +364,12 @@ La columna derecha (`.asent-lado`) es un **panel de gestión con pestañas**, es
 > y lo que saca, y «Mejorar a nivel N» (la aldea igual) sale solo a quien tiene ese cargo en la madre (`ui/cargosPlaza.ts`). Banco:
 > `/pruebas/hud/?ventana=territorio&minas=1`. Pruebas en `pruebas/extractoresPorNivel.test.ts`.
 >
+> **La aldea ganadera** (0.203.0, motor `3d05872`): un cultivo más al marcar la aldea (`ganado`, desde el nivel 1), y la carta se llama
+> «Aldea ganadera». Solo corrales y rebaño, sin granjas: su tarjeta y su Resumen dicen sus corrales y su rebaño, sin fertilidad; se le deja
+> ganado, carne y leche. Sus sitios, en la tierra del trigo. La aldea de trigo ya no tiene corrales. La Granja de la fundación tiene un solo
+> nivel (sin «Mejorar») y el nivel 2 pide una Leñera y dos pueblos activos, todo desde los datos. Banco: `/pruebas/hud/?ventana=territorio&aldeas=1`.
+> Pruebas en `pruebas/aldeaGanadera.test.ts`.
+>
 > **Avanzadas en Territorio** (0.174.0, `ui/pueblos.ts`, `tarjetaAvanzada`): cada una con su icono de etapa, la guarnición (de serie y de
 > jugadores) y lo que guarda; para el Gobernador o el Maestro de Obras residente y dentro, «⬆ Fuerte / Ciudadela» con su coste (`mejorarAvanzada`),
 > «🔧 Reparar» en ruinas (`repararAvanzada`, la mitad del coste de su etapa) y «✕ Destruir» (`destruirAvanzada`); su obra de mejora o reparación

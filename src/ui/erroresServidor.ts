@@ -124,7 +124,7 @@ const MENSAJES: Record<string, string> = {
   'pueblo.nivel_maximo': 'Ese pueblo ya está en su nivel máximo.',
   'pueblo.escuadra_fuera_de_tu_columna': 'Esa escuadra no va en la columna con la que entraste.',
   'pueblo.escuadra_no_esta': 'Esa escuadra no está en la guarnición de este pueblo.',
-  'pueblo.recurso_ajeno': 'Este pueblo solo admite lo que produce (la aldea de trigo: trigo, ganado, carne y leche; las demás, su cultivo: uva, aceituna, cebada o sésamo).',
+  'pueblo.recurso_ajeno': 'Este pueblo solo admite lo que produce (la aldea ganadera: ganado, carne y leche; las demás, su cultivo: trigo, uva, aceituna, cebada o sésamo).',
   'pueblo.almacen_sin_sitio': 'El almacén del pueblo está lleno.',
   'pueblo.nada_que_cargar': 'El pueblo no tiene de eso.',
   'pueblo.nada_que_dejar': 'Tu carro no lleva de eso.',

@@ -17,6 +17,8 @@ const COLORES = {
   tierra: 0x8b6e4e, rastrojo: 0xa89064, vid: 0x4f7a2e, olivo: 0x7d8a58,
   // las de cebada y de sésamo (motor b55e90f): la cebada pálida en surcos verdes, las matas de sésamo y su flor
   cebada: 0xcdbb74, cebadaVerde: 0x95a256, sesamo: 0x5a8a40, florSesamo: 0xeed6dc,
+  // la ganadera (motor 3d05872): el suelo pisado de los corrales y su rebaño, reses pardas y ovejas
+  pasto: 0x9c8656, res: 0x7a5a3e, oveja: 0xe6dfcc,
 };
 type Material = keyof typeof COLORES;
 /** Color de la bandera de los campamentos de mercenarios y de los de bandidos (los del 2D). */
@@ -242,7 +244,8 @@ function ciudadPlana(p: Piezas, x: number, y: number, rc: number, nivel: number,
 /**
  * Un pueblo: empalizada y casas; la aldea agrícola con sus campos alrededor, el extractor con su bocamina. Los campos, según el cultivo
  * (tanda 69): de trigo, dorados; de vid, tierra con sus hileras de cepas; de olivo, tierra clara con olivos en tresbolillo. Y desde el motor
- * b55e90f: de cebada, pálidos con surcos verdes y una hacina; de sésamo, tierra con hileras de matas altas salpicadas de flor.
+ * b55e90f: de cebada, pálidos con surcos verdes y una hacina; de sésamo, tierra con hileras de matas altas salpicadas de flor. La ganadera (motor
+ * 3d05872), sin campos: en su lugar, corrales redondos de estacas sobre la tierra pisada, con reses y ovejas dentro.
  */
 function pueblo(p: Piezas, x: number, y: number, aldea: boolean, color: string, sem: number, cultivo?: string): void {
   // más grande que la maqueta (`MUNDO3D.pueblo`, Víctor 2026-11-07)
@@ -279,6 +282,13 @@ function pueblo(p: Piezas, x: number, y: number, aldea: boolean, color: string, 
           const [rx, ry] = en(0, (-0.105 + i * 0.07) * M);
           p.caja('sesamo', rx, ry, 0.38 * M, 0.026 * M, 0.05 * M, a);
           for (let k = 0; k < 3; k++) { const [fx, fy] = en((-0.12 + k * 0.12 + (i % 2) * 0.05) * M, (-0.105 + i * 0.07) * M); p.caja('florSesamo', fx, fy, 0.03 * M, 0.03 * M, 0.012 * M, a, 0.05 * M); }
+        }
+      } else if (cultivo === 'ganado') {
+        p.caja('pasto', cx, cy, 0.38 * M, 0.38 * M, 0.01 * M, a);
+        p.anillo(cx, cy, 0.2 * M, 0.04 * M, 0.012 * M, 'madera', 3);
+        for (let i = 0; i < 4; i++) {
+          const [rx, ry] = en((-0.1 + (i % 2) * 0.13 + 0.03 * hash(sem, k, 11 + i)) * M, (-0.06 + Math.floor(i / 2) * 0.11) * M);
+          p.caja(i === 3 ? 'oveja' : 'res', rx, ry, 0.075 * M, 0.035 * M, 0.035 * M, a + 2 * hash(sem, k, 15 + i), 0.02 * M);
         }
       } else {
         p.caja('campo', cx, cy, 0.42 * M, 0.3 * M, 0.015 * M, a);

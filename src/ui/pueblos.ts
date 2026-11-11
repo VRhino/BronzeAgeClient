@@ -1,6 +1,6 @@
 // PUEBLOS Y OBRAS DE MAPA (Economia_Construccion §14 y §14.0; motor 7086ebc). Un pueblo es de su plaza madre: un extractor sobre un nodo de piedra
-// o mineral, o una ALDEA AGRÍCOLA en un punto fértil de la zona para su cultivo (tanda 69: trigo, con corrales y rebaño, vid u olivo; motor
-// b55e90f: cebada o sésamo; acarrea lo que da). Se levanta en tres pasos:
+// o mineral, o una ALDEA AGRÍCOLA en un punto fértil de la zona para su cultivo (tanda 69: trigo, vid u olivo; motor b55e90f: cebada o sésamo;
+// motor 3d05872: la GANADERA, solo corrales y rebaño, sin granjas, y la de trigo ya sin corrales; acarrea lo que da). Se levanta en tres pasos:
 //   1. marcar   desde la plaza madre, su Gobernador o su Maestro de Obras, residente y dentro: `marcarPueblo { nodoId }` o `marcarAldea { punto, cultivo }`;
 //   2. llevar   la obra queda «pendiente de materiales» en el mapa: una columna de la Facción lleva lo que pide en su carro o en sus caravanas
 //               enganchadas y, a la puerta de la obra, cualquiera de sus ciudadanos lo entrega (`entregarEnObra`);
@@ -23,7 +23,8 @@ import { ayuda } from './ayuda';
 import { agarre } from './agarre';
 import { columnaALaPuerta, miColumna } from './ejercitos';
 import { dibujarIconoMapa } from '../mundo/iconosMapa';
-import { capaDe, esCultivo, sitiosDeAldea, type Cultivo, type SitiosDeAldea } from '../mundo/fertilidad';
+import { capaDe, capaDeCultivo, esCultivo, sitiosDeAldea, type Cultivo, type SitiosDeAldea } from '../mundo/fertilidad';
+import { NOMBRE_DE_CULTIVO } from './capasMapa';
 import type { ContextoFicha, ContextoPlaza, FichaMapaExtra, ObjetoBajoElClic, SubpestanaPlaza } from './ganchos';
 import { cablearEscolta, escolta, puntosDeEscolta } from './panelMercado';
 import type { Ejecutar } from './panelCarro';
@@ -49,9 +50,10 @@ interface ParamsPueblos {
     fertilidadMinima?: number;
     separacionMinima?: number;
     niveles?: Record<string, { granjas: number; corrales: number; coste: Record<string, number>; obraMinutos: number }>;
-    /** Tanda 69: lo que da cada cultivo, desde qué nivel y si lleva corrales (solo el trigo). El nivel (`nivelMadre`) es, desde el motor b55e90f,
-     * el que ha alcanzado alguna plaza de la Facción, no el de la madre. */
-    cultivos?: Partial<Record<Cultivo, { produce: string; nivelMadre: number; corrales: boolean }>>;
+    /** Tanda 69: lo que da cada cultivo, desde qué nivel, si lleva corrales y si lleva granjas (`granjas`, por defecto sí). Desde el motor
+     * 3d05872 los corrales son solo de la ganadera, que no lleva granjas. El nivel (`nivelMadre`) es, desde el motor b55e90f, el que ha
+     * alcanzado alguna plaza de la Facción, no el de la madre. */
+    cultivos?: Partial<Record<Cultivo, { produce: string; nivelMadre: number; corrales: boolean; granjas?: boolean }>>;
   };
   /** La Cantera y las minas de pueblo por nivel (motor c1ad93d, 2026-11-10): el `factor` multiplica lo que sacan y los trabajadores que piden;
    * el nivel 2 y el 3 piden la plaza madre en ese nivel operativo (`nivelMadre`) y su `coste`, que se lleva como una obra. */
@@ -60,19 +62,26 @@ interface ParamsPueblos {
 interface NivelExtractor { factor: number; nivelMadre?: number; coste?: Record<string, number>; obraMinutos?: number }
 
 /** Los cultivos de una aldea (tanda 69, Economia_Construccion §14.0), en el orden en que se ofrecen; lo que dan y su nivel salen de los datos. */
-const CULTIVOS: { id: Cultivo; nombre: string; conArticulo: string; aldea: string; granja: string; produce: string; nivelMadre: number; corrales: boolean; uso: string }[] = [
-  { id: 'trigo', nombre: 'Trigo', conArticulo: 'el trigo', aldea: 'Aldea de trigo', granja: 'Granja', produce: 'trigo', nivelMadre: 1, corrales: true, uso: 'Trigo y, con su rebaño, ganado, carne y leche.' },
-  { id: 'vid', nombre: 'Vid', conArticulo: 'la vid', aldea: 'Aldea de viñas', granja: 'Viña', produce: 'uva', nivelMadre: 3, corrales: false, uso: 'Uva para la bodega, que hace el vino. Sin corrales.' },
-  { id: 'oliva', nombre: 'Olivo', conArticulo: 'el olivo', aldea: 'Aldea de olivos', granja: 'Olivar', produce: 'aceituna', nivelMadre: 4, corrales: false, uso: 'Aceituna para la prensa, que hace el aceite. Sin corrales.' },
+const CULTIVOS: { id: Cultivo; nombre: string; conArticulo: string; aldea: string; granja: string; produce: string; nivelMadre: number; corrales: boolean; granjas: boolean; uso: string }[] = [
+  { id: 'trigo', nombre: 'Trigo', conArticulo: 'el trigo', aldea: 'Aldea de trigo', granja: 'Granja', produce: 'trigo', nivelMadre: 1, corrales: false, granjas: true, uso: 'Trigo para la plaza. Sin corrales: el rebaño es de la aldea ganadera.' },
+  { id: 'vid', nombre: 'Vid', conArticulo: 'la vid', aldea: 'Aldea de viñas', granja: 'Viña', produce: 'uva', nivelMadre: 3, corrales: false, granjas: true, uso: 'Uva para la bodega, que hace el vino. Sin corrales.' },
+  { id: 'oliva', nombre: 'Olivo', conArticulo: 'el olivo', aldea: 'Aldea de olivos', granja: 'Olivar', produce: 'aceituna', nivelMadre: 4, corrales: false, granjas: true, uso: 'Aceituna para la prensa, que hace el aceite. Sin corrales.' },
   // los de la tierra húmeda (motor b55e90f): la cebada en la alta y el sésamo en la baja
-  { id: 'cebada', nombre: 'Cebada', conArticulo: 'la cebada', aldea: 'Aldea de cebada', granja: 'Cebadal', produce: 'cebada', nivelMadre: 3, corrales: false, uso: 'Cebada para la bodega, que hace la cerveza. Sin corrales.' },
-  { id: 'sesamo', nombre: 'Sésamo', conArticulo: 'el sésamo', aldea: 'Aldea de sésamo', granja: 'Campo de sésamo', produce: 'sesamo', nivelMadre: 4, corrales: false, uso: 'Sésamo para la prensa, que hace aceite. Sin corrales.' },
+  { id: 'cebada', nombre: 'Cebada', conArticulo: 'la cebada', aldea: 'Aldea de cebada', granja: 'Cebadal', produce: 'cebada', nivelMadre: 3, corrales: false, granjas: true, uso: 'Cebada para la bodega, que hace la cerveza. Sin corrales.' },
+  { id: 'sesamo', nombre: 'Sésamo', conArticulo: 'el sésamo', aldea: 'Aldea de sésamo', granja: 'Campo de sésamo', produce: 'sesamo', nivelMadre: 4, corrales: false, granjas: true, uso: 'Sésamo para la prensa, que hace aceite. Sin corrales.' },
+  // la aldea ganadera (motor 3d05872): solo corrales y su rebaño, sin granjas, en la tierra del trigo y desde el nivel 1
+  { id: 'ganado', nombre: 'Ganado', conArticulo: 'el ganado', aldea: 'Aldea ganadera', granja: 'Corral', produce: 'livestock', nivelMadre: 1, corrales: true, granjas: false, uso: 'Corrales con un rebaño que crece solo y da ganado, carne y leche. Sin granjas: pasta en la tierra del trigo.' },
 ];
 /** Un cultivo con lo que dicen los datos de juego (`PUEBLOS_EXTRACTORES.aldea.cultivos`) por encima de lo de serie. */
 function cultivo(id: Cultivo): (typeof CULTIVOS)[number] {
   const base = CULTIVOS.find((c) => c.id === id) ?? CULTIVOS[0]!;
   const datos = params()?.aldea?.cultivos?.[id];
-  return datos ? { ...base, produce: datos.produce, nivelMadre: datos.nivelMadre, corrales: datos.corrales } : base;
+  return datos ? { ...base, produce: datos.produce, nivelMadre: datos.nivelMadre, corrales: datos.corrales, granjas: datos.granjas ?? true } : base;
+}
+/** Lo que tiene una aldea en un nivel, según lo que lleva su cultivo: «2 granjas», «1 corral» (la ganadera). */
+function piezasDeAldea(c: (typeof CULTIVOS)[number], n: { granjas: number; corrales: number }): string {
+  const cuenta = (k: number, uno: string, varios: string): string => `${k} ${k === 1 ? uno : varios}`;
+  return [c.granjas ? cuenta(n.granjas, 'granja', 'granjas') : '', c.corrales ? cuenta(n.corrales, 'corral', 'corrales') : ''].filter(Boolean).join(' y ');
 }
 /** El cultivo de una aldea; sin el dato, trigo (las de antes de la tanda 69). */
 const cultivoDe = (x: PuebloDeMapa): Cultivo => (esCultivo(x.cultivo) ? x.cultivo : 'trigo');
@@ -314,13 +323,15 @@ function tarjetaPueblo(p: ProyeccionJugador, a: Asentamiento, x: PuebloDeMapa, g
   const chips = [
     x.batallaId ? '<span class="pueblo-alerta">⚔ ¡Atacado!</span>' : '',
     mejorando ? `<span class="obra-chip activa" title="La mejora está en marcha: mira su obra en la lista">🔨 Subiendo a ${nivel + 1}</span>` : '',
-    x.fertilidad !== undefined ? `<span class="obra-chip" title="Fertilidad del punto de la aldea">🌱 ${coma(x.fertilidad)}</span>` : '',
+    // la fertilidad hace crecer las granjas; a la cría no le cambia nada (la ganadera, motor 3d05872)
+    x.fertilidad !== undefined && cult.granjas ? `<span class="obra-chip" title="Fertilidad del punto de la aldea">🌱 ${coma(x.fertilidad)}</span>` : '',
     aldea ? '' : chipDeExtraccion(x, e),
-    deAhora ? `<span class="obra-chip" title="Granjas de la aldea">${RECURSO_ICONO[cult.produce] ?? '🌾'} ${deAhora.granjas} granja${deAhora.granjas === 1 ? '' : 's'}</span>${cult.corrales ? `<span class="obra-chip" title="Corrales de la aldea">🐄 ${deAhora.corrales} corral${deAhora.corrales === 1 ? '' : 'es'}</span>` : ''}` : '',
+    deAhora && cult.granjas ? `<span class="obra-chip" title="Granjas de la aldea">${RECURSO_ICONO[cult.produce] ?? '🌾'} ${deAhora.granjas} granja${deAhora.granjas === 1 ? '' : 's'}</span>` : '',
+    deAhora && cult.corrales ? `<span class="obra-chip" title="Corrales de la aldea">🐄 ${deAhora.corrales} corral${deAhora.corrales === 1 ? '' : 'es'}</span>` : '',
   ].join('');
   const coste = costeCarro();
   const acciones = !gestiona ? '' : `<div class="anillo-acciones pueblo-acciones">
-      ${aldea && siguiente && !mejorando ? `<button class="anillo-mejorar" type="button" data-pueblo-accion="mejorar" data-pueblo="${e(x.id)}" title="${e(`Al nivel ${nivel + 1}: ${siguiente.granjas} granjas${cult.corrales ? ` y ${siguiente.corrales} corrales` : ''}. Lo que pide se lleva a la aldea como una obra.`)}">⬆ Nivel ${nivel + 1} <span class="pueblo-boton-coste">${costeLlano(siguiente.coste, e)}</span></button>` : ''}
+      ${aldea && siguiente && !mejorando ? `<button class="anillo-mejorar" type="button" data-pueblo-accion="mejorar" data-pueblo="${e(x.id)}" title="${e(`Al nivel ${nivel + 1}: ${piezasDeAldea(cult, siguiente)}. Lo que pide se lleva a la aldea como una obra.`)}">⬆ Nivel ${nivel + 1} <span class="pueblo-boton-coste">${costeLlano(siguiente.coste, e)}</span></button>` : ''}
       ${sigExtractor && !mejorando ? `<button class="anillo-mejorar" type="button" data-pueblo-accion="mejorar" data-pueblo="${e(x.id)}" title="${e(textoMejoraExtractor(sigExtractor))}">⬆ Nivel ${sigExtractor.nivel} <span class="pueblo-boton-coste">${costeLlano(sigExtractor.coste, e)}</span></button>` : ''}
       ${x.carroId ? '' : `<button class="pueblo-boton" type="button" data-pueblo-accion="carro" data-pueblo="${e(x.id)}" title="Compra en la plaza un carro con su buey para el acarreo (si no, la plaza lo repone sola en cuanto puede pagarlo).">🛒 Reponer carro${coste ? ` <span class="pueblo-boton-coste">${chipsDeCoste(a, coste, e)}</span>` : ''}</button>`}
       <button class="anillo-abandonar" type="button" data-pueblo-accion="destruir" data-pueblo="${e(x.id)}">✕ Destruir</button></div>`;
@@ -377,12 +388,12 @@ export function nivelAlcanzadoEnLaFaccion(p: ProyeccionJugador, a: Asentamiento)
 
 /** Los cultivos que la Facción del jugador ya desbloqueó (por el mayor nivel alcanzado entre sus plazas, como `nivelAlcanzadoEnLaFaccion`): las
  * capas de fertilidad del mapa enseñan solo esos (Víctor, 2026-11-10: «que el jugador no pueda ver los que no tiene disponibles»). Sin Facción
- * ni plazas, los de nivel 1 (el trigo). */
+ * ni plazas, los de nivel 1 (el trigo). La ganadera no sale: no tiene capa propia, mira la del trigo. */
 export function cultivosDesbloqueados(p: ProyeccionJugador | null | undefined): Cultivo[] {
   const fid = p?.faccionId;
   const propias = p && fid ? [...(p.asentamientos ?? []), ...(p.plazasPropias ?? []), ...(p.asentamientosAvistados ?? [])].filter((x) => x.faccionId === fid) : [];
   const nivel = Math.max(1, ...propias.map((x) => x.nivel));
-  return CULTIVOS.map((c) => cultivo(c.id)).filter((c) => nivel >= c.nivelMadre).map((c) => c.id);
+  return CULTIVOS.map((c) => cultivo(c.id)).filter((c) => nivel >= c.nivelMadre && capaDeCultivo(c.id) === c.id).map((c) => c.id);
 }
 
 /** Los cultivos que puede tener la siguiente aldea de esta plaza: los que ya desbloqueó su Facción, sea cual sea el nivel de la madre (motor
@@ -417,7 +428,7 @@ function htmlMarcar(p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
   const carta = (bloqueada: boolean, cuerpo: string): string => `<div class="pueblo-opcion${bloqueada ? ' bloqueada' : ''}">${cuerpo}</div>`;
   return `${titulo}<div class="pueblo-opciones">
     ${carta(sinAldea, `<span class="pueblo-opcion-icono" aria-hidden="true">${RECURSO_ICONO[deLaAldea.produce] ?? '🌾'}</span>
-      <strong>Aldea agrícola${ayuda('pueblos:aldea', `Granjas en un punto fértil de la zona para su cultivo (fertilidad ${pr?.aldea?.fertilidadMinima ?? 0.3} o más, a ${pr?.aldea?.separacionMinima ?? 3} de toda plaza y todo pueblo, con camino hasta la plaza). El cultivo se elige al marcarla y no cambia: trigo, que lleva corrales y un rebaño que crece solo y da ganado, carne y leche; vid o cebada, que dan uva o cebada para la bodega (el vino o la cerveza), en cuanto una plaza de tu Facción llega al nivel ${cultivo('vid').nivelMadre}; u olivo o sésamo, que dan aceituna o sésamo para la prensa (el aceite), desde que una llega al ${cultivo('oliva').nivelMadre}. La plaza que marca la aldea puede ser de cualquier nivel. Cada cultivo tiene su propia tierra buena: la cebada y el sésamo, la húmeda. Cada aldea va en su anillo: las dos primeras hasta el techo de la zona del nivel 1, la tercera en el anillo que añade el nivel 2, y así, para que no se junten. El nivel 2 de la plaza pide un pueblo activo: una aldea o un extractor.`)}</strong>
+      <strong>${deLaAldea.id === 'ganado' ? 'Aldea ganadera' : 'Aldea agrícola'}${ayuda('pueblos:aldea', `Granjas en un punto fértil de la zona para su cultivo (fertilidad ${pr?.aldea?.fertilidadMinima ?? 0.3} o más, a ${pr?.aldea?.separacionMinima ?? 3} de toda plaza y todo pueblo, con camino hasta la plaza). El cultivo se elige al marcarla y no cambia: trigo; ganado, la aldea ganadera, sin granjas y con corrales y un rebaño que crece solo y da ganado, carne y leche, que pasta en la tierra del trigo; vid o cebada, que dan uva o cebada para la bodega (el vino o la cerveza), en cuanto una plaza de tu Facción llega al nivel ${cultivo('vid').nivelMadre}; u olivo o sésamo, que dan aceituna o sésamo para la prensa (el aceite), desde que una llega al ${cultivo('oliva').nivelMadre}. La plaza que marca la aldea puede ser de cualquier nivel. Cada cultivo tiene su propia tierra buena: la cebada y el sésamo, la húmeda. Cada aldea va en su anillo: las dos primeras hasta el techo de la zona del nivel 1, la tercera en el anillo que añade el nivel 2, y así, para que no se junten. El nivel 2 de la plaza pide ${pueblosParaElNivel2()}: aldeas o extractores.`)}</strong>
       ${sinAldea ? '' : cultivos}
       <small>${e(deLaAldea.uso)}</small>
       ${sinAldea ? `<span class="anillo-opcion-pide">Desde el nivel ${nivelAldea} de la plaza</span>`
@@ -556,7 +567,13 @@ export function anilloDeAldea(p: ProyeccionJugador, a: Asentamiento): { desde: n
 export function capaQueFalta(cultivo: Cultivo): string {
   const mapa = estadoCliente.mapaCache?.mapa;
   if (!mapa || capaDe(mapa, cultivo)) return '';
-  return `Este mundo no trae la fertilidad ${cultivo === 'trigo' ? 'del trigo' : cultivo === 'oliva' ? 'del olivo' : cultivo === 'sesamo' ? 'del sésamo' : cultivo === 'vid' ? 'de la vid' : 'de la cebada'}: no se pueden enseñar sus sitios (hay que generar el mundo de nuevo).`;
+  return `Este mundo no trae la fertilidad ${NOMBRE_DE_CULTIVO[capaDeCultivo(cultivo)].de}: no se pueden enseñar sus sitios (hay que generar el mundo de nuevo).`;
+}
+
+/** Los pueblos activos que pide el nivel 2 de una plaza (`NIVEL_ASENTAMIENTO.requisitos.2.pueblosActivos`; dos desde el motor 3d05872). */
+function pueblosParaElNivel2(): string {
+  const n = bloqueDeDatos<{ requisitos?: Record<string, { pueblosActivos?: number }> }>('NIVEL_ASENTAMIENTO', alLlegarDatos)?.requisitos?.['2']?.pueblosActivos ?? 2;
+  return n === 1 ? 'un pueblo activo' : `${n} pueblos activos`;
 }
 
 /** Dónde cabe la aldea de ese cultivo en esta plaza, con el mapa ya bajado; `null` si aún no está o no trae la capa de fertilidad del cultivo. */
@@ -900,12 +917,13 @@ function barra(valor: number, tope: number): string {
   return `<div class="carro-barra carro-barra-${pct >= 100 ? 'llena' : pct >= 80 ? 'casi' : 'ok'}"><span style="width:${pct}%"></span></div>`;
 }
 
-/** Lo que produce el pueblo (lo único que se le puede dejar, `Pueblo::recursos` del motor): la aldea, lo de su cultivo y, la de trigo, lo de su
- * rebaño (ganado, carne y leche); un extractor, lo que guarda su almacén. */
+/** Lo que produce el pueblo (lo único que se le puede dejar, `Pueblo::recursos` del motor): la aldea, lo de sus granjas y, si lleva corrales (la
+ * ganadera, desde el motor 3d05872), lo de su rebaño (ganado, carne y leche); un extractor, lo que guarda su almacén. */
 export function produce(x: PuebloDeMapa): string[] {
   if (!esAldea(x)) return Object.keys(x.almacen).filter((r) => r);
   const c = cultivo(cultivoDe(x));
-  return c.corrales ? [c.produce, 'livestock', 'carne', 'leche'] : [c.produce];
+  const rebano = c.corrales ? ['livestock', 'carne', 'leche'] : [];
+  return [...new Set([...(c.granjas ? [c.produce] : []), ...rebano])];
 }
 
 const fila = (s: { id: string; tropaId: string; nombre: string; cantidad: number; costeLiderazgo: number }, boton: string, e: Escapar): string =>
@@ -984,8 +1002,8 @@ let pestanaPueblo: PestanaPueblo = 'resumen';
 /** Un carro de acarreo, para el trazado (no es un edificio del catálogo). */
 const ICONO_CARRO = '<svg class="icono-edificio" width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><path fill="var(--relleno, rgba(205,160,90,0.25))" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M5 11h17v9H5z"/><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="23" r="3.5"/><circle cx="18" cy="23" r="3.5"/><path d="M22 15h7"/></g></svg>';
 
-/** El trazado del pueblo: el centro, el almacén, el carro de acarreo y, en una aldea, los huecos de todas sus granjas y, en la de trigo, sus corrales
- * (las de vid y olivo no tienen rebaño: tanda 69). */
+/** El trazado del pueblo: el centro, el almacén, el carro de acarreo y, en una aldea, los huecos de todas sus granjas o, en la ganadera, de
+ * todos sus corrales (motor 3d05872: la de trigo ya no tiene rebaño). */
 export function htmlTrazadoPueblo(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar): string {
   const aldea = esAldea(x);
   const cult = cultivo(cultivoDe(x));
@@ -997,7 +1015,7 @@ export function htmlTrazadoPueblo(p: ProyeccionJugador, x: PuebloDeMapa, e: Esca
     `<div class="pueblo-hueco${lleno ? '' : ' vacio'}" style="${estilo}" title="${e(titulo)}">${icono ?? iconoEdificio(tipo, 30)}</div>`;
   const anillo: string[] = [];
   if (aldea) {
-    const maxGranjas = Math.max(actual?.granjas ?? 0, ...niveles.map(([, n]) => n.granjas));
+    const maxGranjas = cult.granjas ? Math.max(actual?.granjas ?? 0, ...niveles.map(([, n]) => n.granjas)) : 0;
     const maxCorrales = cult.corrales ? Math.max(actual?.corrales ?? 0, ...niveles.map(([, n]) => n.corrales)) : 0;
     for (let i = 0; i < maxGranjas; i++) {
       const lleno = i < (actual?.granjas ?? 0);
@@ -1040,7 +1058,7 @@ export function htmlAlmacenPueblo(x: PuebloDeMapa, e: Escapar): string {
 function htmlResumenPueblo(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar): string {
   const aldea = esAldea(x);
   const cult = cultivo(cultivoDe(x));
-  const conCorrales = (n: { granjas: number; corrales: number }): string => `${n.granjas} granjas${cult.corrales ? ` y ${n.corrales} corrales` : ''}`;
+  const conCorrales = (n: { granjas: number; corrales: number }): string => piezasDeAldea(cult, n);
   const pr = params();
   const nivel = aldea ? pr?.aldea?.niveles?.[String(x.nivelAldea ?? 1)] : undefined;
   const siguiente = aldea && x.nivelAldea ? pr?.aldea?.niveles?.[String(x.nivelAldea + 1)] : undefined;
@@ -1054,7 +1072,7 @@ function htmlResumenPueblo(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar): s
   const enMarcha = mejora ? ' Tiene una mejora en marcha: sus materiales se entregan en el mapa, a su puerta.' : '';
   const columna = miColumna(p);
   const dentro = columna ? columna.participantes.map((q) => nombreDeHeroe(p, q.heroeId)).join(', ') : '';
-  return `<p class="asent-lado-nota">De ${e(nombrePlaza(p, x.madreId))}.${x.fertilidad !== undefined ? ` Fertilidad ${x.fertilidad.toFixed(2).replace('.', ',')}.` : ''}${x.batallaId ? ' <strong>Lo están atacando: si sigues dentro, defiendes.</strong>' : ''}</p>
+  return `<p class="asent-lado-nota">De ${e(nombrePlaza(p, x.madreId))}.${x.fertilidad !== undefined && cult.granjas ? ` Fertilidad ${x.fertilidad.toFixed(2).replace('.', ',')}.` : ''}${x.batallaId ? ' <strong>Lo están atacando: si sigues dentro, defiendes.</strong>' : ''}</p>
     ${aldea ? `<strong class="heroe-sub">Aldea</strong>
       <p class="asent-lado-nota">${e(cult.aldea)}, nivel ${x.nivelAldea ?? 1}${nivel ? `: ${conCorrales(nivel)}` : ''}. ${e(cult.uso)}${enMarcha}</p>
       ${gestor && siguiente && !mejora ? `<div class="mapa-seleccion-acciones"><button class="btn-secondary" type="button" data-pueblo-dentro="mejorar" title="${e(`Al nivel ${x.nivelAldea! + 1}: ${conCorrales(siguiente)}. Pide ${listaRecursos(siguiente.coste)}, que se traen como una obra.`)}">Mejorar a nivel ${x.nivelAldea! + 1}</button></div>` : ''}

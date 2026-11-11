@@ -3,6 +3,34 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.203.0] — 2026-11-11 · La aldea ganadera, la de trigo sin corrales, la Granja de un solo nivel y el nivel 2 con dos pueblos · motor `3d05872`
+
+Lo que trae el motor 3d05872 (PR #16), que Víctor pidió adaptar «en interfaces y modelos 3d». **Hace falta partida nueva.** El contrato sigue
+en 0.22.0: `src/contrato/` regenerado (REVISION 3d05872), solo comentarios.
+
+- **La aldea ganadera** (cultivo `ganado` en `marcarAldea` y en `Pueblo.cultivo`): al marcar una aldea sale desde el nivel 1, junto al trigo, y la
+  carta pasa a llamarse «Aldea ganadera» con su texto (corrales con un rebaño que da ganado, carne y leche; sin granjas; pasta en la tierra del
+  trigo). Sus sitios se buscan en la capa de fertilidad del trigo (`capaDeCultivo`, `mundo/fertilidad.ts`), y no sale como casilla aparte en las
+  capas del mapa. Su tarjeta de Territorio y su Resumen dentro dicen sus corrales y su rebaño, sin granjas ni fertilidad (no cambia la cría);
+  «⬆ Nivel N» habla de corrales. Lo que se le puede dejar es ganado, carne y leche. Su icono, dentro y en la fila, es el corral.
+- **La aldea de trigo, sin corrales**: solo granjas y trigo; ni rebaño ni ganado en su tarjeta, su carga o su texto. El ganado sale ahora de «los
+  rebaños de las aldeas ganaderas» (tooltip del Almacén, árboles de tropas y de tecnologías: el hito del Corral pide «una aldea ganadera
+  activa»), y el rechazo `pueblo.recurso_ajeno` lo dice así.
+- **3D**: dentro de la ganadera, sus corrales (la planta del motor: un Corral de ancla, los de su nivel y el del buey) llevan su rebaño, reses y
+  ovejas paciendo y un abrevadero; el corral del buey de las demás aldeas se queda vacío. En el mundo, la maqueta de la ganadera cambia los
+  campos por corrales redondos de estacas con reses y ovejas.
+- **La Granja de la fundación tiene un solo nivel** (80 de trigo por minuto): su ficha ya no ofrece mejora, y su tooltip dice que no sube de
+  nivel. Sale de los datos (`EDIFICIO_CATALOGO`), sin regla en el cliente.
+- **El nivel 2 de la plaza pide 400 pesants, una Leñera y dos pueblos activos**; la Granja a nivel 2 ya no cuenta. También sale de los datos
+  (`NIVEL_ASENTAMIENTO`); la ayuda de «Marcar» lo dice con la cifra de los datos.
+- **La guarnición come la carne junto al trigo**, una ración por soldado (antes, toda la carne y luego trigo): el tooltip de la carne lo dice así.
+- **Protección y Liga** (lo de 0.202.0, ya en el motor): la ficha de una plaza ajena trae `protegida_hasta_ms`, también tras una conquista, y la
+  Liga que manda el motor ya no cuenta la guerra; el cliente no cambia, solo sus comentarios.
+- Datos de prueba (`pruebas/plaza/datos.json`) sacados de nuevo de `Docs/Mechanics` del motor 3d05872 (también traen las minas a 10). Bancos: la
+  ganadera en `/pruebas/hud/?ventana=territorio&aldeas=1`, en `/pruebas/ciudad3d/?plaza=pueblos/aldea-2&cultivo=ganado` (plantas nuevas del
+  motor en `pruebas/ciudad3d/pueblos/`, `aldea-N` y `ganadera-N`) y en `/pruebas/mundo3d/?cultivos`. Pruebas en `pruebas/aldeaGanadera.test.ts`;
+  las de la Granja con niveles pasan al Granero.
+
 ## [0.202.0] — 2026-11-10 · Protección en la ficha, informe de combate entre jugadores, Liga solo con aliados y panel de Facción sin cuadros
 
 Lo que pidió Víctor el 2026-11-10 con dos capturas (la ficha de Siquem y el panel lateral de la Facción). Sin cambio de contrato.

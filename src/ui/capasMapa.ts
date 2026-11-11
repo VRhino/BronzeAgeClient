@@ -14,6 +14,8 @@ export const NOMBRE_DE_CULTIVO: Record<Cultivo, { nombre: string; de: string; da
   oliva: { nombre: 'Olivo', de: 'del olivo', da: 'aceituna' },
   cebada: { nombre: 'Cebada', de: 'de la cebada', da: 'cebada' },
   sesamo: { nombre: 'Sésamo', de: 'del sésamo', da: 'sesamo' },
+  // la ganadera no tiene capa propia (mira la del trigo) y no sale como casilla: `cultivosDesbloqueados` la deja fuera
+  ganado: { nombre: 'Ganado', de: 'del trigo', da: 'livestock' },
 };
 
 /** El cultivo que pinta la capa: el elegido si está entre los que se pueden ver; si no (una partida nueva, una Facción que aún no llega), el

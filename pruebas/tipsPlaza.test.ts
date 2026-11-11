@@ -88,7 +88,9 @@ describe('el tooltip de los edificios de Construir', () => {
     expect(sinEtiquetas(htmlTipEdificio(plaza(2), 'fundicion'))).toContain('Hace falta para subir la plaza al nivel 3');
     // en una plaza que ya pasó ese nivel ya no se dice
     expect(sinEtiquetas(htmlTipEdificio(plaza(3), 'fundicion'))).not.toContain('subir la plaza al nivel 3');
-    expect(sinEtiquetas(htmlTipEdificio(plaza(1, [edificio('granja')]), 'granja'))).toContain('Hace falta de nivel 2 para subir la plaza al nivel 2');
+    // desde el motor 3d05872 el nivel 2 pide la Leñera y ya no la Granja a nivel 2
+    expect(sinEtiquetas(htmlTipEdificio(plaza(1, [edificio('lenera')]), 'lenera'))).toContain('Hace falta para subir la plaza al nivel 2');
+    expect(sinEtiquetas(htmlTipEdificio(plaza(1, [edificio('granja')]), 'granja'))).not.toContain('subir la plaza al nivel 2');
     const carpinteria = htmlTipEdificio(plaza(2), 'carpinteria');
     expect(carpinteria).toContain('Lo piden:');
     expect(carpinteria).toContain('Barracón');
@@ -179,8 +181,8 @@ describe('el tooltip de los recursos del Almacén', () => {
     expect(t).toContain('Lo comen todos los tipos de población');
     expect(t).toContain('todos los tipos de población crecen ×');
     expect(t).not.toContain('clases');
-    expect(t).toContain('La guarnición lo come antes que el trigo');
-    expect(t).toContain('Los rebaños de las aldeas de trigo');
+    expect(t).toContain('La guarnición lo come junto al trigo, una ración por soldado');
+    expect(t).toContain('Los rebaños de las aldeas ganaderas');
   });
 
   test('la piedra: la Cantería la multiplica, y paga el mantenimiento desde el nivel 2', () => {
@@ -201,7 +203,7 @@ describe('el tooltip de los recursos del Almacén', () => {
   test('la leche no se come: es de la quesera; sale de los rebaños', () => {
     const t = sinEtiquetas(htmlTipRecurso(plaza(1), 'leche'));
     expect(t).toContain('No se come');
-    expect(t).toContain('Los rebaños de las aldeas de trigo');
+    expect(t).toContain('Los rebaños de las aldeas ganaderas');
   });
 
   test('la harina: el molino con buey la dobla', () => {
@@ -293,15 +295,24 @@ describe('el tooltip de los edificios construidos (0.195.0)', () => {
     expect(contenidoTip({ dataset: { tip: 'construido:horno' } } as unknown as HTMLElement)).toContain('<h3>Horno</h3>');
   });
 
-  test('la granja de nivel 2: lo que tiene, todo junto, y solo la mejora al nivel 3, sin cifras de producción', () => {
-    const t = sinEtiquetas(htmlTipConstruido(plaza(2, [edificio('granja', 2)]), 'granja'));
+  // La Granja tiene un solo nivel desde el motor 3d05872: los niveles se prueban con el Granero, que tiene cuatro.
+  test('la granja, de un solo nivel: ni nivel, ni mejora, ni cifras de producción', () => {
+    const t = sinEtiquetas(htmlTipConstruido(plaza(2, [edificio('granja')]), 'granja'));
+    expect(t).toContain('uno en la plaza');
+    expect(t).not.toContain('· nivel');
+    expect(t).not.toContain('Mejora al nivel');
+    expect(t).not.toContain('nivel más alto');
+    expect(t).not.toContain('/min');
+    expect(t).toContain('Clic para verlo en la plaza.');
+  });
+
+  test('el granero de nivel 2: lo que tiene, todo junto, y solo la mejora al nivel 3', () => {
+    const t = sinEtiquetas(htmlTipConstruido(plaza(4, [edificio('granero', 2)]), 'granero'));
     expect(t).toContain('uno en la plaza · nivel 2');
     expect(t).not.toContain('de 4');
     expect(t).toContain('Lo que tiene');
     expect(t).toContain('Mejora al nivel 3');
     expect(t).not.toContain('Mejora al nivel 4');
-    expect(t).toContain('Trigo: produce más');
-    expect(t).not.toContain('/min');
     expect(t).toContain('Clic para verlo en la plaza.');
   });
 
@@ -330,14 +341,14 @@ describe('el tooltip de los edificios construidos (0.195.0)', () => {
   });
 
   test('de niveles distintos, cuenta el mejor', () => {
-    const t = sinEtiquetas(htmlTipConstruido(plaza(3, [edificio('granja', 1), { ...edificio('granja', 2), id: 'e-2' } as Edificio]), 'granja'));
+    const t = sinEtiquetas(htmlTipConstruido(plaza(4, [edificio('granero', 1), { ...edificio('granero', 2), id: 'e-2' } as Edificio]), 'granero'));
     expect(t).toContain('2 en la plaza · nivel 1 a 2');
     expect(t).toContain('Lo que tiene el mejor');
     expect(t).toContain('Mejora del mejor al nivel 3');
   });
 
   test('en su nivel más alto no ofrece mejora', () => {
-    const t = sinEtiquetas(htmlTipConstruido(plaza(4, [edificio('granja', 4)]), 'granja'));
+    const t = sinEtiquetas(htmlTipConstruido(plaza(4, [edificio('granero', 4)]), 'granero'));
     expect(t).not.toContain('Mejora al nivel');
     expect(t).toContain('Está en su nivel más alto.');
   });

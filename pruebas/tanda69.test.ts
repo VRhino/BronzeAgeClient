@@ -226,24 +226,27 @@ describe('el buey del molino', () => {
 describe('el cultivo de las aldeas', () => {
   const aldea = (cultivo?: string): PuebloDeMapa => ({ id: 'pueblo-1', tipo: 'aldeaAgricola', madreId: 'as-1', propio: true, posicion: { x: 0, y: 0 }, almacen: {}, capacidad: 1000, ...(cultivo ? { cultivo } : {}) }) as PuebloDeMapa;
 
-  test('lo que produce (y se le puede dejar) depende del cultivo: solo la de trigo tiene rebaño', () => {
-    expect(produce(aldea('trigo'))).toEqual(['trigo', 'livestock', 'carne', 'leche']);
-    expect(produce(aldea())).toEqual(['trigo', 'livestock', 'carne', 'leche']);
+  // Desde el motor 3d05872 la de trigo ya no tiene corrales: el rebaño es de la ganadera, que no tiene granjas.
+  test('lo que produce (y se le puede dejar) depende del cultivo: solo la ganadera tiene rebaño', () => {
+    expect(produce(aldea('trigo'))).toEqual(['trigo']);
+    expect(produce(aldea())).toEqual(['trigo']);
+    expect(produce(aldea('ganado'))).toEqual(['livestock', 'carne', 'leche']);
     expect(produce(aldea('vid'))).toEqual(['uva']);
     expect(produce(aldea('oliva'))).toEqual(['aceituna']);
   });
 
   // Desde el motor b55e90f, con la cebada (nivel 3) y el sésamo (nivel 4) también; el nivel que cuenta es el de la Facción (pruebas/cebadaSesamo.test.ts).
-  test('al marcar una aldea, la vid sale desde el nivel 3 de la plaza y el olivo desde el 4; con solo el trigo no hay que elegir', () => {
+  test('al marcar una aldea, la vid sale desde el nivel 3 de la plaza y el olivo desde el 4; la ganadera, siempre', () => {
     const cultivos = (nivel: number): string[] => {
       const a = { ...plaza(nivel), posicion: { x: 50, y: 50 }, faccionId: 'f-1', cargos: { gobernadorId: 'h' } } as unknown as Asentamiento;
       const proyeccion = { heroeId: 'h', faccionId: 'f-1', facciones: [], asentamientos: [a], asentamientosAvistados: [], pueblos: [], obrasDeMapa: [], avanzadas: [], caravanas: [] } as unknown as ProyeccionJugador;
       const c = { proyeccion, asentamiento: a, cargo: 'gobernador', resideAqui: true, escapar: esc, refrescar: () => {} } as unknown as ContextoPlaza;
       return [...SUBPESTANA_PUEBLOS.html(c).matchAll(/name="pueblo-cultivo" value="(\w+)"/g)].map((m) => m[1]!);
     };
-    expect(cultivos(1)).toEqual([]);
-    expect(cultivos(3)).toEqual(['trigo', 'vid', 'cebada']);
-    expect(cultivos(4)).toEqual(['trigo', 'vid', 'oliva', 'cebada', 'sesamo']);
+    // desde el motor 3d05872 la ganadera sale desde el nivel 1, así que ya siempre hay que elegir
+    expect(cultivos(1)).toEqual(['trigo', 'ganado']);
+    expect(cultivos(3)).toEqual(['trigo', 'vid', 'cebada', 'ganado']);
+    expect(cultivos(4)).toEqual(['trigo', 'vid', 'oliva', 'cebada', 'sesamo', 'ganado']);
   });
 });
 

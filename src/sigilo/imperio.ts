@@ -15,7 +15,7 @@ export interface Liga {
 }
 
 /** La Liga de una Facción: la red de Facciones conectadas con ella por alianzas y vasallajes activos. La guerra no une (Víctor, 2026-11-10: la
- * Liga enseña solo a los aliados; el motor, `politica::liga`, cuenta también la guerra al calcular la suya). */
+ * Liga enseña solo a los aliados; el motor, `politica::liga`, la calcula igual desde 3d05872). */
 export function ligaDe(faccionId: string, relaciones: readonly RelacionPolitica[]): Liga | undefined {
   const activas = relaciones.filter((r) => r.estado === 'activa' && (r.tipo === 'alianza' || r.tipo === 'vasallaje'));
   const miembros = new Set([faccionId]);

@@ -728,7 +728,7 @@ function pintarPueblo(p: ProyeccionJugador): void {
   const madre = p.asentamientos.find((a) => a.id === pueblo.madreId)?.nombre ?? p.asentamientosAvistados.find((a) => a.id === pueblo.madreId)?.nombre
     ?? p.asentamientosConocidos.find((a) => a.asentamientoId === pueblo.madreId)?.nombre;
   pintar(blason, htmlBlasonInterior({
-    icono: iconoDePueblo(pueblo.tipo), nombre: nombreDePueblo(pueblo),
+    icono: iconoDePueblo(pueblo.tipo, undefined, pueblo.cultivo), nombre: nombreDePueblo(pueblo),
     lineas: [...(madre ? [`De ${madre}`] : []), pueblo.propio ? 'De tu Facción' : 'De visita'],
   }, escaparHtml), undefined, 'blason-pueblo');
   const htmlAlmacen = htmlPlacaDeRecursos('almacen', 'Almacén', pueblo.almacen, escaparHtml, pueblo.capacidad || undefined);

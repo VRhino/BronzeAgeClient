@@ -352,11 +352,12 @@ function avisoFundacion(): void {
       a.faccionId = a.faccionId || 'fac-1';
       (p as unknown as { asentamientosAvistados: unknown[] }).asentamientosAvistados = [{ id: 'as-99', nombre: 'Tirinto', faccionId: a.faccionId, nivel: 4, posicion: { x: a.posicion.x + 300, y: a.posicion.y }, zona: [] }];
     }
-    // `&aldeas=1` (tanda 69): una aldea de trigo con su rebaño y una de viñas, sin corrales
+    // `&aldeas=1` (tanda 69; motor 3d05872): una aldea de trigo, ya sin corrales, una ganadera con su rebaño y una de viñas
     if (qs.get('aldeas') === '1') {
       const cerca = (dx: number, dy: number) => ({ x: a.posicion.x + dx, y: a.posicion.y + dy });
       (p as unknown as { pueblos: unknown[] }).pueblos = [
-        { id: 'pueblo-1', tipo: 'aldeaAgricola', cultivo: 'trigo', madreId: a.id, propio: true, posicion: cerca(8, 3), nivelAldea: 2, fertilidad: 0.71, almacen: { trigo: 210, livestock: 40, carne: 18, leche: 35 }, capacidad: 1000, rebano: { especie: 'vacuno', cabezas: 52 } },
+        { id: 'pueblo-1', tipo: 'aldeaAgricola', cultivo: 'trigo', madreId: a.id, propio: true, posicion: cerca(8, 3), nivelAldea: 2, fertilidad: 0.71, almacen: { trigo: 210 }, capacidad: 1000 },
+        { id: 'pueblo-3', tipo: 'aldeaAgricola', cultivo: 'ganado', madreId: a.id, propio: true, posicion: cerca(2, -9), nivelAldea: 2, fertilidad: 0.52, almacen: { livestock: 40, carne: 18, leche: 35 }, capacidad: 1000, rebano: { especie: 'vacuno', cabezas: 52 } },
         { id: 'pueblo-2', tipo: 'aldeaAgricola', cultivo: 'vid', madreId: a.id, propio: true, posicion: cerca(-6, 9), nivelAldea: 1, fertilidad: 0.64, almacen: { uva: 120 }, capacidad: 1000 },
       ];
     }

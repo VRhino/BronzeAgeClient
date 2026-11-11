@@ -2374,8 +2374,8 @@ export type Pueblo = Message<"bronzeage.v1.Pueblo"> & {
   nivelMadre?: number | undefined;
 
   /**
-   * El cultivo de la aldea agrícola (tanda 69 §12): trigo | vid | oliva | cebada | sesamo (2026-11-09). Se elige al marcarla y no cambia; ausente
-   * en un extractor.
+   * El cultivo de la aldea agrícola (tanda 69 §12): trigo | vid | oliva | cebada | sesamo (2026-11-09) | ganado (la aldea ganadera, 2026-11-11: solo
+   * corrales y rebaño, sin granjas; la de trigo ya no lleva corrales). Se elige al marcarla y no cambia; ausente en un extractor.
    *
    * @generated from field: optional string cultivo = 23;
    */

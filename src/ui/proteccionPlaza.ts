@@ -1,8 +1,8 @@
 // La protección de una plaza (Combate §6 y §8; Fundacion_Y_Refundacion §5): toda plaza nace inatacable un día (`OCUPACION.proteccionMinutos`,
 // 1440) y lo vuelve a ser tras cada conquista; atacarla se rechaza con `combate.plaza_protegida`. Víctor, 2026-11-10: la ficha de la plaza en el
 // mapa dice si está protegida y cuánto le queda.
-//   de dónde   `protegida_hasta_ms` del contrato si llega (la plaza donde estás y las de tu Facción); si no (una ajena desde fuera, que solo trae
-//              su ficha), el día de la fundación: `fundado_en_ms` + `proteccionMinutos`. La de tras una conquista ajena no llega en esa ficha.
+//   de dónde   `protegida_hasta_ms` del contrato, que desde el motor 3d05872 llega en toda ficha de plaza, también tras una conquista; si no
+//              llega (un motor de antes), el día de la fundación: `fundado_en_ms` + `proteccionMinutos`.
 import { bloqueDeDatos } from '../apiCliente';
 import { textoEnTiempoReal } from './estadoCliente';
 

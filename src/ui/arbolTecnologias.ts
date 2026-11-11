@@ -77,10 +77,11 @@ const ROMANO = ['', 'I', 'II', 'III', 'IV', 'V'];
 export const BRUTO: Record<string, { donde: string; tec?: string }> = {
   madera: { donde: 'Leñera' }, piedra: { donde: 'un pueblo de cantera' }, cobre: { donde: 'un pueblo de mina de cobre' },
   estano: { donde: 'un pueblo de mina de estaño' }, hierro: { donde: 'un pueblo de mina de hierro', tec: 'forja_hierro_temprana' },
-  livestock: { donde: 'el rebaño de una aldea agrícola' }, trigo: { donde: 'Granja' }, oro: { donde: 'impuestos y pueblo de mina de oro' },
+  livestock: { donde: 'el rebaño de una aldea ganadera' }, trigo: { donde: 'Granja' }, oro: { donde: 'impuestos y pueblo de mina de oro' },
 };
 /** El hito «edificio» de estos tipos se cumple con un pueblo o una aldea (Tecnologia_Aedas §3). */
-const HITO_PUEBLO: Record<string, string> = { corral: 'una aldea agrícola activa', cantera: 'un pueblo de cantera activo', minaHierro: 'un pueblo de mina de hierro activo' };
+// el Corral, desde el motor 3d05872, solo con una aldea ganadera (la de trigo ya no tiene corrales)
+const HITO_PUEBLO: Record<string, string> = { corral: 'una aldea ganadera activa', cantera: 'un pueblo de cantera activo', minaHierro: 'un pueblo de mina de hierro activo' };
 /** El texto de cada contador de logro. */
 const CONTADOR: Record<string, string> = {
   'extraido.cobre': 'cobre extraído', 'extraido.estano': 'estaño extraído', 'extraido.piedra': 'piedra extraída', 'extraido.hierro': 'hierro extraído',

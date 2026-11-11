@@ -52,7 +52,7 @@ function requisitosDeNivel(p: ProyeccionJugador, a: Asentamiento, r: RequisitoNi
       texto: `${minimo === pedidos.length ? 'Edificios en marcha' : `${minimo} de estos edificios`} (${hechos.length}/${minimo})`,
       extra: iconos(pedidos, (t) => hechos.includes(t)),
     }] : []),
-    // Un edificio activo de ese tipo a ese nivel o más (nivel 2: una Granja a nivel 2).
+    // Un edificio activo de ese tipo a ese nivel o más (el nivel 2 pidió una Granja a nivel 2 hasta el motor 3d05872; hoy ninguno lo usa).
     ...Object.entries(r.edificiosConNivel ?? {}).map(([tipo, nivel]) => {
       const mejor = Math.max(0, ...a.edificios.filter((x) => x.tipo === tipo && x.estado === 'activo').map((x) => x.nivelInterno ?? 1));
       return { ok: mejor >= nivel, icono: iconoEdificio(tipo, 18), texto: `${nombreEdificio(tipo)} a nivel ${nivel}`, extra: marcasNivel(Math.min(mejor, nivel), nivel) };

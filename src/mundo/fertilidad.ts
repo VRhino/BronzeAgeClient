@@ -6,12 +6,15 @@
 // aquí (es el A* del motor): un punto válido puede salir rechazado por eso.
 import type { MapaGenerado, Point, RasterU8 } from '../terreno';
 
-/** El cultivo de una aldea (tanda 69, Economia_Construccion §14.0; la cebada y el sésamo desde el motor b55e90f): cada uno mira su capa de
- * fertilidad. */
-export type Cultivo = 'trigo' | 'vid' | 'oliva' | 'cebada' | 'sesamo';
+/** El cultivo de una aldea (tanda 69, Economia_Construccion §14.0; la cebada y el sésamo desde el motor b55e90f; el ganado, la aldea ganadera,
+ * desde el motor 3d05872): cada uno mira su capa de fertilidad, y el ganado la del trigo (pasta donde se daría el trigo). */
+export type Cultivo = 'trigo' | 'vid' | 'oliva' | 'cebada' | 'sesamo' | 'ganado';
 
-/** Todos, en el orden en que se ofrecen. */
-export const CULTIVOS_DE_ALDEA: readonly Cultivo[] = ['trigo', 'vid', 'oliva', 'cebada', 'sesamo'];
+/** Todos, en el orden en que se ofrecen (el del motor: la ganadera, la última). */
+export const CULTIVOS_DE_ALDEA: readonly Cultivo[] = ['trigo', 'vid', 'oliva', 'cebada', 'sesamo', 'ganado'];
+
+/** El cultivo cuya capa de fertilidad mira `c`: el suyo, salvo la ganadera, que mira la del trigo (`Geografia::fertilidad_en` con `Ganado`). */
+export const capaDeCultivo = (c: Cultivo): Cultivo => (c === 'ganado' ? 'trigo' : c);
 
 /** ¿Es el id de un cultivo de aldea? */
 export const esCultivo = (x: unknown): x is Cultivo => typeof x === 'string' && (CULTIVOS_DE_ALDEA as readonly string[]).includes(x);
@@ -24,6 +27,7 @@ export function capaDe(mapa: MapaGenerado, cultivo: Cultivo): RasterU8 | undefin
     case 'oliva': return r?.fertilidadOliva;
     case 'cebada': return r?.fertilidadCebada;
     case 'sesamo': return r?.fertilidadSesamo;
+    // el trigo y la ganadera
     default: return r?.fertilidad;
   }
 }

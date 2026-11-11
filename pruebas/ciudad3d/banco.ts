@@ -10,7 +10,9 @@
 // mandos puestos (capturas): `?plaza=muestra-comida&estilo=3&muralla=2&cultivo=vid`.
 // Tanda 69: la muestra de los talleres de la comida y la estatua («muestra-comida»), la de la muralla con las puertas rectas de la
 // `LAYOUT_VERSION` 7 («muestra-muralla», con el mando «Muralla») y el cultivo de las aldeas (el mando «Cultivo»). Desde 0.191.0 (motor b55e90f),
-// la bodega de la cerveza y la prensa del sésamo en «muestra-comida», y la cebada y el sésamo en «Cultivo».
+// la bodega de la cerveza y la prensa del sésamo en «muestra-comida», y la cebada y el sésamo en «Cultivo». Desde el motor 3d05872 las aldeas
+// del banco son las de su planta nueva (la de trigo, sin más corral que el del buey) y «Cultivo» tiene la ganadera, con su planta propia
+// (`pueblos/ganadera-N.json`: un Corral de ancla, los corrales de su nivel y el del buey, sin granjas).
 import { fromBinary } from '@bufbuild/protobuf';
 import { AsentamientoSchema, CampamentoMercenariosSchema } from '../../src/contrato/gen/bronzeage/v1/entities_pb';
 import { campamentoEnVista } from '../../src/ciudad3d/campamento';
@@ -132,12 +134,12 @@ function fijarPlano(svgTexto: string): void {
 
 /** Un pueblo o una aldea: la planta del motor con el estilo de su madre (el mando «Estilo»; si no, 2). */
 async function rehacerPueblo(nombre: string): Promise<void> {
-  const j = await cargarPueblo(nombre);
+  const elegido = nombre.startsWith('aldea-') ? $<HTMLSelectElement>('cultivo').value || undefined : undefined;
+  // la ganadera tiene su propia planta (sin granjas, con sus corrales); las demás aldeas comparten la de trigo
+  const j = await cargarPueblo(elegido === 'ganado' ? nombre.replace('aldea-', 'ganadera-') : nombre);
   actual = null;
-  const estilo = $<HTMLSelectElement>('nivel').value, cultivo = j.tipoExtractor === 'aldeaAgricola' ? $<HTMLSelectElement>('cultivo').value || undefined : undefined;
-  // la aldea de viñas o de olivos no tiene corrales (tanda 69), salvo el del buey, el primero de la planta: las plantas del banco son de trigo
-  const corralDelBuey = j.planta.findIndex((p) => p.tipo === 'corral');
-  const planta = cultivo ? j.planta.filter((p, i) => p.tipo !== 'corral' || i === corralDelBuey) : j.planta;
+  const estilo = $<HTMLSelectElement>('nivel').value, cultivo = j.tipoExtractor === 'aldeaAgricola' ? elegido : undefined;
+  const planta = j.planta;
   const e: EscenaPueblo = {
     puebloId: j.id, tipo: j.tipoExtractor, nivelMadre: estilo ? Number(estilo) : 2, unidadesPorCelda: j.trazado.unidadesPorCelda, radio: j.trazado.radioUl,
     edificios: planta.map((p) => ({ edificioId: p.id, tipo: p.tipo, posicion: { x: p.posicion.x / 1000, y: p.posicion.y / 1000 }, ancho: p.ancho, alto: p.alto })),

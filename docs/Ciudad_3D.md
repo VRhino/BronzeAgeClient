@@ -174,7 +174,9 @@ lados, las calles y la empalizada celda a celda).
 Desde 0.101.0, dentro de un pueblo (cantera o mina) o de una aldea agrícola, el centro de la pantalla es la misma vista 3D, con la planta en
 SVG como minimapa (`pueblo.ts`, `ui/planoPueblo.ts`). La planta la manda el motor solo a quien está dentro, sea de su Facción o ajeno
 (`Pueblo.planta`, `trazado` y `nivel_madre`, motor 61366539; `EscenaPueblo` en el cliente): el ancla, las casas, el almacén, el corral del buey
-y, en la aldea, sus granjas y corrales, cada uno con su centro y sus lados, más las calles y los caminos.
+y, en la aldea, sus granjas o, en la ganadera (motor 3d05872), sus corrales, cada uno con su centro y sus lados, más las calles y los caminos.
+Los corrales de la ganadera llevan su rebaño (reses, ovejas y un abrevadero; `cultivo: 'ganado'` en el edificio, lo pone `puebloEnVista`); el
+del buey de las demás aldeas y de los extractores, no.
 
 - **El estilo es el de la plaza madre, hasta el 3**: madera y paja en el nivel 1, piedra y paja en el 2, adobe con terrado en el 3 y
   siguientes. Cada pieza va en su huella exacta.
@@ -246,7 +248,9 @@ con la planta en SVG como minimapa (`svgPlanoAvanzada`).
     bodega del vino, la de la cerveza, la prensa de la aceituna, la del sésamo y la estatua, del estilo 1 al 5.
   - «Muralla con puertas rectas» es un anillo cuadrado con las puertas de la `LAYOUT_VERSION` 7 (una de una celda al sur y otra de dos al
     norte, con dos celdas de muro recto a cada lado), del nivel del mando «Muralla».
-  - El mando «Cultivo» hace de vid, de olivo, de cebada o de sésamo las aldeas, sin más corral que el del buey.
+  - El mando «Cultivo» hace de vid, de olivo, de cebada o de sésamo las aldeas, sin más corral que el del buey; «ganadera» cambia a su planta
+    (`pueblos/ganadera-N.json`, sin granjas y con sus corrales). Las plantas de `pueblos/aldea-N.json` y `ganadera-N.json` son las del motor
+    3d05872.
 - `window.banco.mirar({ x, y, distancia, giro, inclinacion })` mueve la cámara para las capturas, y `window.banco.huella(id)` dice dónde
   está un edificio.
 - La dirección pone los mandos al abrir: `?plaza=muestra-comida`, `?plaza=muestra-muralla&muralla=3` o

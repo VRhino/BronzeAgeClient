@@ -1,6 +1,7 @@
 // Un pueblo extractor o una aldea en la vista 3D: su planta (la que manda el motor estando dentro, `EscenaPueblo`) dibujada como una plaza pequeña,
 // con el estilo de su plaza madre hasta el 3. El ancla (la cantera, la boca de la mina o la granja) va en el origen; luego las casas, el almacén,
-// el corral del buey y, en la aldea, sus granjas (de trigo, viñas, olivares, cebadales o sésamo, según su cultivo) y corrales. Cada pieza en su huella exacta: el trazado manda (Víctor, 2026-11-02).
+// el corral del buey y, en la aldea, sus granjas (de trigo, viñas, olivares, cebadales o sésamo, según su cultivo) o, en la ganadera (motor
+// 3d05872), sus corrales con el rebaño. Cada pieza en su huella exacta: el trazado manda (Víctor, 2026-11-02).
 import type { Edificio, EscenaPueblo, RectanguloLocal } from '../tiposDominio';
 import { ciudadEnVista, type CiudadEnVista, type OpcionesCiudad } from './estado';
 
@@ -25,5 +26,7 @@ export function puebloEnVista(e: EscenaPueblo, o: OpcionesCiudad): CiudadEnVista
   // las granjas de una aldea que no es de trigo (tanda 69; cebada y sésamo, motor b55e90f): el motor las manda como `granja` y la maqueta las
   // hace viña, olivar, cebadal o campo de sésamo
   if (c && e.cultivo && e.cultivo !== 'trigo') for (const x of c.edificios) if (x.tipo === 'granja') x.cultivo = e.cultivo;
+  // los corrales de la ganadera (motor 3d05872), con su rebaño dentro; en las demás, el corral del buey se queda vacío
+  if (c && e.cultivo === 'ganado') for (const x of c.edificios) if (x.tipo === 'corral') x.cultivo = 'ganado';
   return c;
 }

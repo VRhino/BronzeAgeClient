@@ -146,7 +146,7 @@ const FUNCION: Record<string, (d: Def) => string> = {
   vivienda: (d) => `Casa de la gente de la plaza: da sitio a ${d.capacidadPesants ?? 0} pesants y ${d.capacidadArtesanos ?? 0} artesanos. Sin sitio, la población deja de crecer.`,
   almacen: (d) => `Amplía lo que cabe en la plaza: ${d.capacidadPorRecursoAdicional ?? 0} más de cada recurso. Lo que se produce con el almacén lleno se pierde.`,
   granero: () => 'Guarda el trigo: cada nivel le da más cabida.',
-  granja: () => 'La granja de la fundación: da el trigo de la plaza, más cuanto más fértil es la tierra. Hay una sola y se mejora; el trigo de más sale de las aldeas.',
+  granja: () => 'La granja de la fundación: da el trigo de la plaza, más cuanto más fértil es la tierra. Hay una sola y no sube de nivel; el trigo de más sale de las aldeas.',
   lenera: () => 'Corta madera en una parcela de bosque libre de tu zona: cuanto más denso el bosque, más madera.',
   molino: (d) => `Muele el trigo en harina para el horno. Con un buey uncido rinde ×${num(d.factorBuey ?? 2)}.`,
   horno: () => 'Cuece la harina en pan, la comida que hace crecer a los pesants.',
@@ -407,7 +407,8 @@ export function htmlTipRecurso(a: Asentamiento | null, r: string, nota?: string)
 
   // --- para qué sirve: sin cifras y solo lo que se puede hacer ya
   if (bien) usos.push(`Lo comen ${poblacionTexto(bien.clases)}`);
-  if ((bienes?.guarnicion ?? []).includes(r)) usos.push('La guarnición lo come antes que el trigo');
+  // desde el motor 3d05872, a la vez que el trigo, como la población (antes, toda la que podía y luego trigo)
+  if ((bienes?.guarnicion ?? []).includes(r)) usos.push('La guarnición lo come junto al trigo, una ración por soldado');
   if (r === 'trigo') {
     usos.push('La comida de base: pone lo que no cubren los demás bienes');
     usos.push('Los víveres de columnas y ejércitos son solo trigo');
@@ -465,11 +466,12 @@ export function htmlTipRecurso(a: Asentamiento | null, r: string, nota?: string)
     const p = produccionBaseDe(d.niveles?.['1'] ?? {}) ?? produccionBaseDe(d);
     if (p?.recurso === r) lugar(`${EIN(tipo)}${DONDE_EXTRACTOR[tipo] ? ` ${esc(DONDE_EXTRACTOR[tipo]!)}` : ''}`);
   }
-  const cultivos = bloqueDeDatos<{ aldea?: { cultivos?: Record<string, { produce: string; nivelMadre: number }> } }>('PUEBLOS_EXTRACTORES')?.aldea?.cultivos ?? {};
+  const cultivos = bloqueDeDatos<{ aldea?: { cultivos?: Record<string, { produce: string; nivelMadre: number; granjas?: boolean }> } }>('PUEBLOS_EXTRACTORES')?.aldea?.cultivos ?? {};
   const NOMBRE_ALDEA: Record<string, string> = { trigo: 'trigo', vid: 'viñas', oliva: 'olivos', cebada: 'cebada', sesamo: 'sésamo' };
-  for (const [cultivo, c] of Object.entries(cultivos)) if (c.produce === r) lugar(`Las aldeas de ${NOMBRE_ALDEA[cultivo] ?? cultivo}`);
+  // la ganadera (motor 3d05872) no tiene granjas: lo suyo sale del rebaño (abajo)
+  for (const [cultivo, c] of Object.entries(cultivos)) if (c.produce === r && c.granjas !== false) lugar(`Las aldeas de ${NOMBRE_ALDEA[cultivo] ?? cultivo}`);
   const vacuno = bloqueDeDatos<Record<string, { lechePorCabezaYHora?: number; productos?: Record<string, number> }>>('ESPECIES')?.vacuno;
-  if (vacuno?.productos?.[r] || (r === 'leche' && vacuno?.lechePorCabezaYHora)) lugar('Los rebaños de las aldeas de trigo');
+  if (vacuno?.productos?.[r] || (r === 'leche' && vacuno?.lechePorCabezaYHora)) lugar('Los rebaños de las aldeas ganaderas');
   for (const [tipo, d] of Object.entries(cat)) if (nivelesDe(d).some(([, nv]) => (nv.recetas ?? []).some((rc) => rc.produce === r))) lugar(EIN(tipo));
   if (r === 'oro' && bloqueDeDatos('IMPUESTOS')) lugar('La recaudación: los impuestos de la población de la plaza');
   if (r.startsWith('chatarra')) lugar('Las batallas: la de los caídos va al carro del que gana, o al almacén de la plaza que se defiende y gana');

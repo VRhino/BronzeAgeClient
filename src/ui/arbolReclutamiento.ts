@@ -201,7 +201,7 @@ const ORIGEN_ICONO: Record<string, string> = { pesants: '🌾', artesanos: '⚒�
 const PUEBLO: Record<string, [string, string]> = {
   'un pueblo de mina de hierro': ['minaHierro', 'Pueblo de mina de hierro'], 'un pueblo de mina de cobre': ['minaCobre', 'Pueblo de mina de cobre'],
   'un pueblo de mina de estaño': ['minaEstano', 'Pueblo de mina de estaño'], 'un pueblo de cantera': ['cantera', 'Pueblo de cantera'],
-  'el rebaño de una aldea agrícola': ['corral', 'Aldea agrícola con rebaño'], Leñera: ['lenera', 'Leñera'], Granja: ['granja', 'Granja'],
+  'el rebaño de una aldea ganadera': ['corral', 'Aldea ganadera'], Leñera: ['lenera', 'Leñera'], Granja: ['granja', 'Granja'],
   'impuestos y pueblo de mina de oro': ['mina', 'Pueblo de mina de oro'],
 };
 const MEDALLA: Partial<Record<EstadoTropa, string>> = { lista: '✓', tuya: '⚑', adoptable: '!' };

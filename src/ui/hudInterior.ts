@@ -38,9 +38,9 @@ export function iconoDeParte(parte: string, lado = 28): string {
   return d ? svg(lado, d) : iconoEdificio(parte, lado);
 }
 
-/** El icono de lo que es un pueblo (su mina, su cantera o, en una aldea, la granja). */
-export function iconoDePueblo(tipo: string, lado = 46): string {
-  return iconoEdificio(tipo === 'aldeaAgricola' ? 'granja' : tipo, lado);
+/** El icono de lo que es un pueblo (su mina, su cantera o, en una aldea, la granja; en la ganadera, motor 3d05872, el corral). */
+export function iconoDePueblo(tipo: string, lado = 46, cultivo?: string): string {
+  return iconoEdificio(tipo === 'aldeaAgricola' ? (cultivo === 'ganado' ? 'corral' : 'granja') : tipo, lado);
 }
 
 /** El icono del campamento, para su blasón. */

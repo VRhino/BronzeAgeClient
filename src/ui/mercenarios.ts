@@ -206,7 +206,7 @@ function objetivosPropios(p: ProyeccionJugador) {
   const o = (campo: string, id: string, resto: Omit<Opcion, 'valor'>): Opcion => ({ valor: `${campo}:${id}`, ...resto });
   return {
     plazas: plazasDe(p, (f) => f === p.faccionId).map((x) => o('asentamientoId', x.id, { etiqueta: `🏰 ${x.nombre}`, plaza: x.id, posicion: x.posicion })),
-    pueblos: (p.pueblos ?? []).filter((x) => x.propio).map((x) => o('puebloId', x.id, { etiqueta: `${x.tipo === 'aldeaAgricola' ? '🌾 Aldea' : '⛏ Pueblo'} de ${nombreDePlaza(p, x.madreId)}`, plaza: x.madreId, posicion: x.posicion })),
+    pueblos: (p.pueblos ?? []).filter((x) => x.propio).map((x) => o('puebloId', x.id, { etiqueta: `${x.tipo === 'aldeaAgricola' ? (x.cultivo === 'ganado' ? '🐄 Aldea' : '🌾 Aldea') : '⛏ Pueblo'} de ${nombreDePlaza(p, x.madreId)}`, plaza: x.madreId, posicion: x.posicion })),
     avanzadas: (p.avanzadas ?? []).filter((x) => x.propia && !x.enRuinas).map((x) => o('avanzadaId', x.id, { etiqueta: `🗼 Avanzada de ${nombreDePlaza(p, x.madreId)}`, plaza: x.madreId, posicion: x.posicion })),
     caravanas: p.caravanas.filter((x) => !x.faccionId || x.faccionId === p.faccionId).map((x) => o('caravanaId', x.id, { etiqueta: `🐂 ${textoDeObjetivo(p, { campo: 'caravanaId', id: x.id })}`, plaza: x.origenAsentamientoId, posicion: x.posicionActual })),
     ejercitos: p.ejercitos.filter((x) => x.faccionId === p.faccionId && x.tipo === 'ejercito').map((x) => o('ejercitoId', x.id, { etiqueta: `⚑ Ejército de ${x.liderId ? nombreDeHeroe(p, x.liderId) : x.id}`, posicion: x.posicionActual, liderId: x.liderId })),

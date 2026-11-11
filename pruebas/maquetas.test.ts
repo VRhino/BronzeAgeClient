@@ -66,6 +66,11 @@ describe('las aldeas por su cultivo (tanda 69)', () => {
     expect(mats('sesamo').has('sesamo') && mats('sesamo').has('florSesamo')).toBe(true);
     for (const c of ['cebada', 'sesamo']) expect(mats(c).has('campo') || mats(c).has('vid') || mats(c).has('olivo')).toBe(false);
   });
+  test('la ganadera, sin campos: corrales sobre pasto con su rebaño (motor 3d05872)', () => {
+    expect(mats('ganado').has('pasto') && mats('ganado').has('res') && mats('ganado').has('oveja')).toBe(true);
+    expect(mats('ganado').has('campo') || mats('ganado').has('vid') || mats('ganado').has('tierra')).toBe(false);
+    expect(mats('trigo').has('res')).toBe(false);
+  });
   test('un extractor no tiene campos, tenga lo que tenga', () => {
     const m = new Set(piezasDePueblo(0, 0, false, 77, 'vid').map((c) => c.mat));
     expect(m.has('vid') || m.has('campo')).toBe(false);

@@ -72,15 +72,16 @@ describe('las aldeas de cebada y de sésamo, desbloqueadas por la Facción', () 
   });
 
   test('una madre de nivel 1 ofrece la vid y la cebada si otra plaza de la Facción llegó al 3, y el olivo y el sésamo si llegó al 4', () => {
-    expect(cultivos([])).toEqual([]);
-    expect(cultivos([{ nivel: 2 }])).toEqual([]);
-    expect(cultivos([{ nivel: 3 }])).toEqual(['trigo', 'vid', 'cebada']);
-    expect(cultivos([{ nivel: 2 }, { nivel: 4 }])).toEqual(['trigo', 'vid', 'oliva', 'cebada', 'sesamo']);
+    // la ganadera (motor 3d05872) sale desde el nivel 1, la última
+    expect(cultivos([])).toEqual(['trigo', 'ganado']);
+    expect(cultivos([{ nivel: 2 }])).toEqual(['trigo', 'ganado']);
+    expect(cultivos([{ nivel: 3 }])).toEqual(['trigo', 'vid', 'cebada', 'ganado']);
+    expect(cultivos([{ nivel: 2 }, { nivel: 4 }])).toEqual(['trigo', 'vid', 'oliva', 'cebada', 'sesamo', 'ganado']);
   });
 
   test('cuenta el nivel alcanzado, no el operativo, y solo las plazas de la Facción', () => {
-    expect(cultivos([{ nivel: 4, nivelActual: 2 }])).toEqual(['trigo', 'vid', 'oliva', 'cebada', 'sesamo']);
-    expect(cultivos([{ nivel: 5, faccionId: 'f-9' }])).toEqual([]);
+    expect(cultivos([{ nivel: 4, nivelActual: 2 }])).toEqual(['trigo', 'vid', 'oliva', 'cebada', 'sesamo', 'ganado']);
+    expect(cultivos([{ nivel: 5, faccionId: 'f-9' }])).toEqual(['trigo', 'ganado']);
     const a = plaza(3, [], 1);
     expect(nivelAlcanzadoEnLaFaccion({ asentamientos: [a], asentamientosAvistados: [] } as unknown as ProyeccionJugador, a)).toBe(3);
   });
