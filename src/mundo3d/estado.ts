@@ -312,9 +312,9 @@ export function etiquetasDesdeProyeccion(p: ProyeccionJugador, columnas: readonl
     }
     return svg;
   };
-  // Un Aeda parado en una plaza no anda por ella: lo dice el cartel de la plaza.
+  // Un Aeda parado en una plaza no anda por ella: lo dice el cartel de la plaza, como su Armería activa (motor 457c278, donde se compra y se forja).
   const conAeda = new Set((p.aedasAvistados ?? []).map((a) => a.enAsentamientoId).filter(Boolean));
-  for (const a of p.asentamientosAvistados ?? []) out.push({ id: `plaza:${a.id}`, posicion: a.posicion, texto: a.nombre || a.id, tipo: 'plaza', color: color(a.faccionId), subtexto: `Nivel ${a.nivel}${conAeda.has(a.id) ? ' · 📜 Aeda' : ''}`, sigilo: escudo(a.faccionId) });
+  for (const a of p.asentamientosAvistados ?? []) out.push({ id: `plaza:${a.id}`, posicion: a.posicion, texto: a.nombre || a.id, tipo: 'plaza', color: color(a.faccionId), subtexto: `Nivel ${a.nivel}${a.armeriaActiva ? ' · ⚒️ Armería' : ''}${conAeda.has(a.id) ? ' · 📜 Aeda' : ''}`, sigilo: escudo(a.faccionId) });
   for (const c of p.asentamientosConocidos ?? []) out.push({ id: `plaza:${c.asentamientoId}`, posicion: c.posicion, texto: c.nombre || c.asentamientoId, tipo: 'plaza', color: color(c.faccionId), tenue: true, subtexto: `Nivel ${c.nivel}`, sigilo: escudo(c.faccionId) });
   // Los campamentos con su cartel, como las plazas: los de mercenarios (siempre a la vista) y los de bandidos que se ven ahora.
   for (const c of p.campamentosMercenarios ?? []) out.push({ id: `mercenarios:${c.id}`, posicion: c.posicion, texto: '⛺ Mercenarios', tipo: 'campamento', color: '#9cc3ea' });

@@ -112,7 +112,7 @@ describe('la ficha de la pieza', () => {
   test('qué es, qué hace y su icono', () => {
     expect(o.textoDeTipo(fichaDeObjeto('torso_pesada_cobre')!)).toBe('Armadura pesada · torso');
     expect(o.textoDeEfecto(fichaDeObjeto('medalla_tropa_pequena')!)).toContain('Da 12 de experiencia');
-    expect(o.textoDeEfecto(fichaDeObjeto('cofre_monturas')!)).toMatch(/^Una montura: .+ %\)/);
+    expect(o.textoDeEfecto(fichaDeObjeto('cofre_monturas')!)).toMatch(/^Una montura: .+\u00a0%\)/);
     expect(['crisol', 'plano_2', 'cofre_monturas', 'montura_estepa'].map(o.iconoDeObjeto)).toEqual(['🏺', '📜', '🧰', '🐎']);
   });
 });

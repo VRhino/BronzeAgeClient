@@ -1,7 +1,7 @@
 // Banco de la taberna regional (tanda 69, `/pruebas/taberna/`): una partida de mentira, sin servidor, para mirar y fotografiar el informe de la
 // región en la taberna (`?ver=intel`), el tablón de los campamentos de la región (`?ver=mercenarios`) y las órdenes de la región en el Mercado
 // (`?ver=mercado`). `&monedas=N` da monedas al héroe; `&sinCargo=1` le quita el Gobierno de la plaza; `&sabido=1` deja todo explorado (el rumor de
-// las vetas de estaño, 0.199.0, ya no trae nada). Las órdenes se anotan en `window.__banco.enviadas`.
+// las vetas de estaño, 0.199.0, ya no trae nada); `&fondo=N` da a la plaza un fondo de forja (0.207.0). Las órdenes se anotan en `window.__banco.enviadas`.
 import datos from '../plaza/datos.json';
 const fetchReal = window.fetch.bind(window);
 window.fetch = ((url: RequestInfo | URL, init?: RequestInit) =>
@@ -44,6 +44,8 @@ const plaza = {
   almacen: { oro: { cantidad: 340, capacidad: 2000 }, trigo: { cantidad: 900, capacidad: 2000 }, vino: { cantidad: 60, capacidad: 2000 }, madera: { cantidad: 400, capacidad: 2000 } },
   edificios: [{ id: 'e1', tipo: 'taberna', estado: 'activo', nivelInterno: 1 }, { id: 'e2', tipo: 'mercado', estado: 'activo', nivelInterno: 2 }],
   politicasActivas: [],
+  // `&fondo=N` (0.207.0): el fondo de la plaza, lo que cobró su forja, para pagar contratos a la tarifa en monedas
+  ...(qs.get('fondo') ? { forja: { aliados: { abierta: false, recargoPct: 100 }, neutrales: { abierta: false, recargoPct: 100 }, enemigos: { abierta: false, recargoPct: 100 }, fondo: Number(qs.get('fondo')) } } : {}),
   mercenariosRegion: [
     { heroeId: 'heroe-30', campamentoId: 'camp-2', tropa: [{ tropaId: 'milicia_lanceros', cantidad: 60, nivel: 4 }, { tropaId: 'arqueros', cantidad: 30, nivel: 3 }], tarifas: [{ plazoDias: 1, oro: 12, monedas: 1200 }, { plazoDias: 3, oro: 28, monedas: 2800 }, { plazoDias: 7, oro: 56, monedas: 5600 }, { oro: 400, monedas: 40000 }],
       ficha: { rango: 3, rangoId: 'capitan', renombre: 420, renombreSiguienteRango: 700, medallas: [{ id: 'muralla', grado: 2, cuenta: 12, siguienteUmbral: 25 }], premios: 0, historial: { firmados: 14, terminados: 12, despidos: 1, buenas: 6, malas: 1 } } },

@@ -3,6 +3,36 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.207.0] — 2026-11-12 · La Armería de la plaza: tienda, forja en cualquier plaza con su impuesto, abrir la forja y su fondo · motor `457c278`
+
+La última de las cuatro versiones de lo que el motor pasó al cliente el 2026-11-12. Sin cambio de contrato (0.24.0).
+
+- **La ventana «Armería»** en el riel de la plaza (`ui/armeria.ts`), dentro de cualquier plaza con la Armería activa, también ajena si la puerta
+  te dejó entrar. Sus pestañas salen solo cuando se pueden usar: la Tienda siempre, la Forja si está abierta a tu grupo y «Abrir la forja» al
+  Tesorero o al Gobernador.
+- **La tienda** (`comprarObjeto`, `venderObjeto`): compra armas, armaduras y monturas hasta el tier 2, con los metales que abre la tecnología de la
+  Facción de la plaza, filtradas por tipo y, de serie, por lo que admite tu clase; cada una con su rareza y sus cifras plegadas. El botón Comprar
+  sale con monedas y sitio en la mochila; si no, «te faltan N» o una línea de mochila llena. Vender: toda la mochila, con lo que pagan por cada
+  pieza (la mitad de su ficha) y la cantidad de lo apilado.
+- **La forja en cualquier plaza** (`forjarObjeto`): tu grupo sale de la puerta (tu Facción, aliados por alianza o vasallaje, enemigos por guerra o
+  neutrales) y, con él, si la forja está abierta y su recargo. Lista lo que puedes forjar ya y pliega el resto, cada uno con lo que te falta: el
+  plano y los crisoles de la mochila, una casilla libre, los materiales a mano (en tu residencia, tu almacén personal y tu carro; en otra plaza,
+  el carro de la columna con la que entraste) y el impuesto en monedas con el recargo, que va al fondo de la plaza. Los tiers III a V esperan su
+  Era (la nota de arriba dice cuáles abre la Era del mundo). Cada coste, en rojo si falta.
+- **Abrir la forja** (`configurarForja`): los tres grupos de fuera, cada uno abierta o cerrada y su recargo de la lista (con lo que pagaría un tier
+  II), Guardar solo si cambias algo, el aviso de que abrir la forja no abre la puerta y el fondo de la plaza a la vista.
+- **El fondo de la plaza** paga contratos de mercenarios en la Taberna: «Pagar con» el fondo, a la tarifa en monedas, para el Rey, el Embajador o
+  el Gobernador dentro de su plaza (`pagarCon: fondoPlaza`; `mercenarios.sin_fondo` traducido).
+- **Desde fuera**: la ficha de una plaza en el mapa dice «Armería: ⚒️ Tienda y forja» y su rótulo en la vista 3D lleva «⚒️ Armería», también de
+  las avistadas (`armeria_activa`).
+- **La plaza ajena por dentro**: con lo que trae la `VISTA` de quien está dentro (sus edificios en pie, en obra y dañados, con su huella, y sus
+  recintos de muralla), la vista de la ciudad la pinta como la propia; queda probado contra la proyección.
+- Avisos nuevos: `heroe.objeto_comprado`, `heroe.objeto_vendido`, `heroe.objeto_forjado` y `asentamiento.forja_configurada`; rechazos `armeria.*`,
+  `forja.*` y `sin_cambios` en castellano. Y el espacio duro antes de «%» en los efectos de los objetos (el cofre ya no parte «(5 %)»).
+- Bancos: `/pruebas/armeria/` (`?pestana=tienda|forja|abrir`, `&cargo=tesorero`, `&grupo=aliados|neutrales|enemigos` con `&abierta=1`,
+  `&era=1..5`, `&llena=1`, `&monedas=N`), `/pruebas/taberna/?ver=mercenarios&fondo=N` y `/pruebas/fichaPlaza/?armeria=1`. Pruebas en
+  `pruebas/armeria.test.ts`.
+
 ## [0.206.0] — 2026-11-12 · El equipo del héroe, su mochila y su almacén de objetos, el botín y los objetos como premio · motor `457c278`
 
 La tercera de las cuatro versiones de lo que el motor pasó al cliente el 2026-11-12. Sin cambio de contrato (0.24.0).

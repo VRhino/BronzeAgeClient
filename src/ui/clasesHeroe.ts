@@ -61,6 +61,9 @@ export interface CatalogoDeObjetos {
   /** Lo que paga la tienda al comprarte una pieza, en % de su precio (50), y hasta qué tier vende (2). */
   ventaPct?: number;
   tiendaHastaTier?: number;
+  /** La forja en las plazas (Heroe_Y_Tropa §4.6): el impuesto base por tier, los recargos que una plaza puede poner a cada grupo de fuera, el de
+   * partida y el `orden` de la Era del mundo que pide cada tier (el II, ninguna). */
+  forja?: { impuestoPorTier: Record<string, number>; recargosPct: number[]; recargoInicialPct: number; eraPorTier: Record<string, number> };
 }
 
 export const NOMBRE_DE_ATRIBUTO: Record<AtributoDeClase, string> = { fuerza: 'Fuerza', destreza: 'Destreza', armadura: 'Armadura', vitalidad: 'Vitalidad' };

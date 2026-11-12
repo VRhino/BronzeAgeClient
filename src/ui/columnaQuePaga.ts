@@ -49,8 +49,8 @@ export function fuentesDePago(p: ProyeccionJugador, c: Pick<CampamentoMercenario
 }
 
 /** Con qué se paga un contrato (tanda 69, motor d0326fd): además del oro, las monedas del héroe que firma y, desde la taberna de una plaza, el
- * oro de su almacén (`almacenPlaza`). */
-export type PagarContratoCon = PagarCon | 'monedas' | 'almacenPlaza';
+ * oro de su almacén (`almacenPlaza`) o las monedas de su fondo (`fondoPlaza`, motor 457c278: lo que cobró su forja). */
+export type PagarContratoCon = PagarCon | 'monedas' | 'almacenPlaza' | 'fondoPlaza';
 
 export interface FuenteDeContrato {
   pagarCon: PagarContratoCon;

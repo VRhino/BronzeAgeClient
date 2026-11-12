@@ -237,10 +237,12 @@ export function cablearServicioRegion(root: HTMLElement, a: Asentamiento, ejecut
 
 // ---------------------------------------------------------------- La taberna: el tablón de la región
 
-/** Con qué se paga un contrato desde la taberna de `a`: el almacén de la plaza (si eres Rey, Embajador o Gobernador, dentro) y tus monedas. */
+/** Con qué se paga un contrato desde la taberna de `a`: el almacén de la plaza y, desde la 0.207.0 (motor 457c278), el fondo de la plaza (lo que
+ * cobró su forja, a la tarifa en monedas), si eres Rey, Embajador o Gobernador y estás dentro; y tus monedas. El fondo solo si llega a algo. */
 export function fuentesDeRegion(p: ProyeccionJugador, a: Asentamiento): FuenteDeContrato[] {
   const fuentes: FuenteDeContrato[] = [];
   if (compraIntelEn(p, a)) fuentes.push({ pagarCon: 'almacenPlaza', nombre: 'el almacén de la plaza', saldo: a.almacen?.['oro']?.cantidad ?? 0, enMonedas: false });
+  if (compraIntelEn(p, a) && (a.forja?.fondo ?? 0) > 0) fuentes.push({ pagarCon: 'fondoPlaza', nombre: 'el fondo de la plaza', saldo: a.forja!.fondo, enMonedas: true });
   const monedas = p.heroe.monedas ?? 0;
   if (monedas > 0) fuentes.push({ pagarCon: 'monedas', nombre: 'tus monedas', saldo: monedas, enMonedas: true });
   return fuentes;

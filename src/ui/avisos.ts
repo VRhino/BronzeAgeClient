@@ -25,6 +25,7 @@ import { TEXTO_DE_RECETA } from './recetasUnicas';
 import { textoDeHechoAeda } from './aedas';
 import { textoDeNivelSubido } from './progresionHeroe';
 import { textoDeBotinDeObjetos, textoDeObjetoUsado } from './objetosHeroe';
+import { textoDeHechoArmeria } from './armeria';
 
 /** Los eventos de «alguien te ha mirado»: el backend los emite sin decir quién. */
 const CODIGOS_DE_AVISO = new Set(['asentamiento.observado', 'columna.observada', 'caravana.observada', 'asentamiento.informe_pedido']);
@@ -294,6 +295,17 @@ export function procesar(e: EventoDominio, heroeId: string, modo: Modo): void {
   }
   // El equipo nuevo ya se ve en la Base: el hecho no necesita aviso.
   if (e.codigo === 'heroe.equipo_cambiado') return;
+  // La Armería (0.207.0, motor 457c278): lo comprado, vendido y forjado, y quién abre o cierra la forja de una plaza de tu Facción.
+  if (e.codigo === 'heroe.objeto_comprado' || e.codigo === 'heroe.objeto_vendido' || e.codigo === 'heroe.objeto_forjado' || e.codigo === 'asentamiento.forja_configurada') {
+    const proy = estadoCliente.proyeccionUltima;
+    const nombrePlaza = (n: string): string => {
+      const id = n.startsWith('as-') ? n : `as-${n}`;
+      return proy?.asentamientos.find((x) => x.id === id)?.nombre ?? proy?.asentamientosAvistados.find((x) => x.id === id)?.nombre ?? proy?.asentamientosConocidos.find((x) => x.asentamientoId === id)?.nombre ?? id;
+    };
+    const texto = textoDeHechoArmeria(e.codigo, (e.payload ?? {}) as Record<string, unknown>, nombrePlaza);
+    if (texto) anotar({ ...base, texto, clase: 'mirada', titulo: e.codigo === 'asentamiento.forja_configurada' ? 'Forja' : 'Armería', categoria: 'economia', urgente: false, clave: `${e.codigo}|${e.version}` }, modo);
+    return;
+  }
   if (e.codigo === 'mision.cumplida' || e.codigo === 'mision.reclamada') {
     // Misiones (motor, mecánica 49): `mision` y `dueno` (`heroe-N`, `as-N`, `f-N`). Al reclamar (recompensas flexibles, motor 168a3be), solo
     // lo que se dio: `participacion` (la de cada uno), `xp` y `oro` en milésimas, `recursos` ([recurso, milésimas]) y `escuadras` ([tropa, soldados, id]).

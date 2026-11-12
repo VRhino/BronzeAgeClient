@@ -6342,3 +6342,56 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
 .faccion-cargo small { color: var(--text-secondary); font-size: 0.78rem; }
 .faccion-cargo b { color: var(--text-primary); overflow-wrap: anywhere; }
 .faccion-cargo.vacante b { color: var(--text-secondary); font-weight: 500; font-style: italic; }
+/* 0.207.0: la ventana «Armería» de la plaza (ui/armeria.ts): la tienda, la forja y abrir la forja a los de fuera. */
+.arm-ventana { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.arm-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+.arm-cab .asent-lado-nota { flex-basis: 100%; margin: 0; }
+.arm-saldo { display: inline-flex; align-items: center; gap: 5px; color: var(--text-secondary); font-size: 0.86rem; }
+.arm-saldo strong { color: var(--oro-claro); font-family: var(--fuente-titulo); font-size: 1.05rem; }
+.arm-filtros { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.arm-chip { margin-left: 0; cursor: pointer; font: inherit; font-size: 0.78rem; font-weight: 600; padding: 2px 10px; }
+.arm-chip.activo { border-color: var(--oro); background: rgba(201, 162, 39, 0.16); color: #ffe7a6; }
+.arm-solo { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 0.8rem; cursor: pointer; }
+.arm-filtros .arm-solo { margin-left: auto; }
+.arm-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.arm-fila { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto auto; align-items: center; gap: 4px 10px; padding: 7px 10px; border: 1px solid rgba(169, 121, 63, 0.35); border-radius: 3px; background: rgba(0, 0, 0, 0.22); }
+.arm-fila-forja { grid-template-columns: 34px minmax(0, 1fr) auto; }
+.arm-fila-forja .arm-costes { grid-column: 2 / 3; }
+.arm-fila-forja .arm-accion { grid-column: 3; grid-row: 1 / span 2; }
+.arm-grupo { grid-template-columns: 34px minmax(0, 1fr) auto auto auto; }
+.arm-pieza-icono { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--bronce-osc); border-radius: 3px; background: rgba(0, 0, 0, 0.3); font-size: 19px; line-height: 1; align-self: start; }
+.arm-pieza-icono.r-comun { border-color: #8f897b; }
+.arm-pieza-icono.r-pocoComun { border-color: #7fc27a; }
+.arm-pieza-icono.r-rara { border-color: #6fa8e6; }
+.arm-pieza-icono.r-epica { border-color: #b98ae6; }
+.arm-pieza-icono.r-legendaria { border-color: #e6a64a; }
+.arm-pieza-texto { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; min-width: 0; }
+.arm-pieza-texto strong { color: var(--pergamino); font-weight: 600; font-size: 0.88rem; }
+.arm-pieza-texto strong em { color: var(--oro); font-style: normal; }
+.arm-pieza-texto small { color: var(--text-secondary); font-size: 0.76rem; }
+.arm-pieza-texto .ta-rareza { font-size: 10px; }
+.arm-cifras { flex-basis: 100%; font-size: 0.78rem; }
+.arm-cifras summary { cursor: pointer; color: var(--text-secondary); width: max-content; }
+.arm-cifras[open] summary { color: var(--oro-claro); }
+.arm-cifras .obj-tabla { margin-top: 4px; }
+.arm-precio { white-space: nowrap; color: var(--oro-claro); font-weight: 600; font-size: 0.86rem; }
+.arm-precio.caro { color: #ffb3a8; }
+.arm-accion { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 4px; justify-self: end; text-align: right; }
+.arm-accion.obj-mover { flex-direction: row; }
+.arm-accion small { color: var(--text-secondary); font-size: 0.74rem; }
+.arm-accion .btn-primary, .arm-accion .btn-secondary { width: auto; margin: 0; white-space: nowrap; }
+.arm-falta { color: #ffb3a8 !important; font-size: 0.76rem; }
+.arm-pieza-texto .arm-falta { flex-basis: 100%; }
+.arm-calidad { color: var(--oro) !important; }
+.arm-costes { display: flex; flex-wrap: wrap; gap: 4px; }
+.arm-coste { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border: 1px solid rgba(169, 121, 63, 0.45); border-radius: 9px; background: rgba(0, 0, 0, 0.3); color: var(--pergamino); font-size: 0.76rem; white-space: nowrap; }
+.arm-coste.falta { border-color: var(--obra-rojo); color: #ffb3a8; }
+.arm-faltan > summary { cursor: pointer; color: var(--text-secondary); font-size: 0.82rem; padding: 4px 0; }
+.arm-faltan[open] > summary { margin-bottom: 6px; }
+.arm-campo { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 0.72rem; color: var(--text-secondary); }
+.arm-campo select.form-input { padding: 3px 6px; font-size: 0.82rem; }
+@container (max-width: 640px) {
+  .arm-fila, .arm-grupo { grid-template-columns: 34px minmax(0, 1fr) auto; }
+  .arm-fila > .arm-accion { grid-column: 2 / -1; justify-self: start; align-items: flex-start; flex-direction: row; }
+  .arm-grupo .arm-campo { grid-column: auto; }
+}

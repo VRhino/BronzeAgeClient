@@ -1,6 +1,7 @@
 // Banco de la ficha de una plaza ajena en el mapa (`/pruebas/fichaPlaza/`), con su protección (Víctor, 2026-11-10; `ui/proteccionPlaza.ts`). La
 // ficha de verdad la pinta `renderSeleccionMapa` en main.ts; aquí va la misma caja (`.mapa-seleccion`) con sus filas, la de la protección y el
-// botón Atacar apagado con su motivo, sin servidor. `?horas=N` le quedan N horas (18 de serie); `&sin=1` ya no está protegida.
+// botón Atacar apagado con su motivo, sin servidor. `?horas=N` le quedan N horas (18 de serie); `&sin=1` ya no está protegida;
+// `&armeria=1` tiene la Armería activa (0.207.0: la misma fila que pinta main.ts).
 // `?informe=gana|pierde|asedio`: la ventana del informe de un combate entre jugadores (`ui/informeCombate.ts`), como la abre main.ts.
 import datos from '../plaza/datos.json';
 const fetchReal = window.fetch.bind(window);
@@ -31,6 +32,7 @@ function pintar(): void {
       <div><span>Nivel</span><strong>1</strong></div>
       <div><span>Muralla</span><strong>No</strong></div>
       <div><span>Mercado</span><strong>No</strong></div>
+      ${qs.get('armeria') ? '<div><span>Armería</span><strong>⚒️ Tienda y forja</strong></div>' : ''}
       ${htmlFilaProteccion(plaza, ahora, e, pintar)}
       <div><span>Distancia</span><strong>4</strong></div>
       <div><span>Tiempo hasta allí</span><strong>~16 s</strong></div>

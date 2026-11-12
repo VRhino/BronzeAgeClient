@@ -19,6 +19,14 @@ export interface Sigilo {
 }
 
 /** Relación diplomática entre dos Facciones (pública). En un vasallaje, A es la señora; en una guerra, quien la declaró. */
+/** La forja de una plaza para un grupo de fuera: abierta o cerrada y su recargo sobre el impuesto base (uno de `OBJETOS.forja.recargosPct`, en %). */
+export interface AperturaForja { abierta: boolean; recargoPct: number }
+/** Los grupos de fuera a los que una plaza abre o cierra su forja (`configurarForja`). */
+export type GrupoForja = 'aliados' | 'neutrales' | 'enemigos';
+/** La forja de la Armería de una plaza (`Asentamiento.forja`, Heroe_Y_Tropa §4.6): la misma Facción forja siempre, a la base; cada grupo de fuera,
+ * si está abierta a él, con su recargo. `fondo`: las monedas que cobró, con las que la plaza paga contratos de mercenarios. */
+export interface ForjaPlaza { aliados: AperturaForja; neutrales: AperturaForja; enemigos: AperturaForja; fondo: number }
+
 export interface RelacionPolitica {
   id?: string;
   tipo: 'vasallaje' | 'alianza' | 'guerra' | string;
@@ -279,6 +287,12 @@ export interface Asentamiento {
   /** La advertencia de solvencia del nivel siguiente (contrato 0.21.0): cada recurso del mantenimiento de ese nivel que lo que llega por minuto no cubre.
    * No bloquea el ascenso. Ausente = lo cubre todo o está en el nivel máximo. */
   insolvenciaAscenso?: { recurso: string; llega: number; pide: number }[];
+  /** Tiene la Armería activa (contrato 0.24.0, motor 457c278): llega en toda ficha, también desde fuera. Ahí se compra, se vende y se forja. */
+  armeriaActiva?: boolean;
+  /** Su forja: la apertura y el recargo de cada grupo de fuera y su fondo de monedas (el impuesto de la forja). Solo de dentro. */
+  forja?: ForjaPlaza;
+  /** Los metales de `OBJETOS.metales` que abre su Armería (los de la tecnología de la Facción de la plaza, `inicio` incluido). Solo de dentro. */
+  metalesArmeria?: string[];
   /** Héroes residentes que llegaron fundando · comprando casa (Doc 2.5). */
   heroesFundadoresIds?: string[];
   casasCompradas?: string[];
@@ -557,6 +571,8 @@ export interface AsentamientoAvistado {
   mercadoActivo?: boolean;
   /** Tiene muralla (algún recinto, uno empezado cuenta; motor 0e283fb): sin tipo, nivel ni avance. */
   tieneMuralla?: boolean;
+  /** Tiene la Armería activa (motor 457c278): desde fuera, el icono del mapa. */
+  armeriaActiva?: boolean;
   /** Solo de una plaza PROPIA con una columna tuya a su puerta (`radioPuerta`): su almacén. Ausente en el resto. */
   almacen?: Record<string, { cantidad: number; capacidad: number }>;
   /** Hasta cuándo es inatacable (`protegida_hasta_ms`): llega en las de tu Facción; en una ajena, no (se deduce de `fundadoEn`). */

@@ -214,6 +214,10 @@ function asentamiento(a: pb.Asentamiento, ahora: number): d.Asentamiento {
     reclutamientoCerradoACiudadanos: a.reclutamientoCerradoACiudadanos || undefined,
     consumoPausado: a.consumoPausado.length ? a.consumoPausado : undefined,
     insolvenciaAscenso: a.insolvenciaAscenso.length ? a.insolvenciaAscenso.map((x) => ({ recurso: x.recurso, llega: mil(x.llega), pide: mil(x.pide) })) : undefined,
+    // la Armería (motor 457c278): si está activa (siempre) y, de dentro, su forja y los metales que abre
+    armeriaActiva: a.armeriaActiva || undefined,
+    forja: a.forja ? forjaDePlaza(a.forja) : undefined,
+    metalesArmeria: a.metalesArmeria.length ? a.metalesArmeria : undefined,
     heroesFundadoresIds: a.fundadoresIds,
     casasCompradas: a.casasCompradas,
     cargos: a.cargos
@@ -259,6 +263,12 @@ function trazado(a: pb.Asentamiento): d.TrazadoAsentamiento | undefined {
     };
   });
   return { calles: t.calles.map(rect), caminos: t.caminos.map(rect), huellas, murallas, radio: t.radioUl || undefined, celda: T };
+}
+
+/** La forja de una plaza (`ForjaPlaza`): la apertura de cada grupo de fuera y el fondo, en monedas. */
+function forjaDePlaza(f: pb.ForjaPlaza): d.ForjaPlaza {
+  const ap = (x: pb.AperturaForja | undefined): d.AperturaForja => ({ abierta: x?.abierta ?? false, recargoPct: x?.recargoPct ?? 0 });
+  return { aliados: ap(f.aliados), neutrales: ap(f.neutrales), enemigos: ap(f.enemigos), fondo: Number(f.fondo) };
 }
 
 /** Una plaza del contrato como la ve el cliente: su interior y lo que se dibuja de su ciudad (el banco de la vista 3D, `pruebas/ciudad3d/`). */
@@ -694,7 +704,7 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
     asentamientosAvistados: [...ajenas, ...propias].filter((p) => p.id !== interior?.id).map((p) => ({
       id: p.id, nombre: p.nombre, faccionId: p.faccionId, posicion: punto(p.posicion), nivel: p.nivel, zona: p.zona.map(punto),
       edificios: p.edificios.length ? p.edificios.map(edificio) : undefined,
-      mercadoActivo: p.mercadoActivo, tieneMuralla: p.tieneMuralla,
+      mercadoActivo: p.mercadoActivo, tieneMuralla: p.tieneMuralla, armeriaActiva: p.armeriaActiva || undefined,
       // la protección: su fin si llega (las de tu Facción) y la fundación, de la que sale la del primer día de una ajena
       protegidaHasta: instante(p.protegidaHastaMs), fundadoEn: instante(p.fundadoEnMs),
       almacen: Object.keys(p.almacen).length ? Object.fromEntries(Object.entries(p.almacen).map(([k, x]) => [k, { cantidad: valorDeRitmo(x.cantidad, ahora), capacidad: mil(x.capacidad) }])) : undefined,

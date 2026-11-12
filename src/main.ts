@@ -76,6 +76,7 @@ import { cablearPanelObras, construidoAlClicar, cuantosConstruidos, elegirGrupoD
 import { cablearTesoreria, htmlReservaRecursos } from './ui/panelTesoreria';
 import { cablearPausarConsumo, htmlPausarConsumo } from './ui/consumoPausado';
 import { montarPanelRendimiento } from './ui/panelRendimiento';
+import { cablearArmeria, htmlArmeria, pestanasDeArmeria } from './ui/armeria';
 import { cablearProduccionYRecetas, cablearVistaCiudad, confirmarCancelarObra, edificioSeleccionado, elegirEdificio, htmlExtraccion, htmlRecetas, htmlTooltipEdificio, repintarFicha } from './ui/vistaCiudad';
 import { campamentoEnVista } from './ciudad3d/campamento';
 import { puebloEnVista } from './ciudad3d/pueblo';
@@ -1015,6 +1016,8 @@ interface AsentamientoEnMapa {
   /** Lo único que se sabe de dentro desde fuera (Víctor, 2026-11-07; motor 0e283fb): si tiene muralla y un Mercado activo. Solo en las avistadas. */
   tieneMuralla?: boolean;
   mercadoActivo?: boolean;
+  /** Tiene la Armería activa (motor 457c278): ahí se compra, se vende y se forja. */
+  armeriaActiva?: boolean;
   /** Su protección (Víctor, 2026-11-10): el fin si llega y su fundación (`ui/proteccionPlaza.ts`). Solo en las avistadas. */
   protegidaHasta?: number;
   fundadoEn?: number;
@@ -1024,7 +1027,7 @@ interface AsentamientoEnMapa {
  * recordados (última foto). Los propios llegan por una de esas dos listas cuando no se está dentro. */
 function asentamientosDelMapa(proyeccion: ProyeccionJugador): AsentamientoEnMapa[] {
   return [
-    ...proyeccion.asentamientosAvistados.map((a) => ({ id: a.id, nombre: a.nombre, faccionId: a.faccionId, nivel: a.nivel, posicion: a.posicion, recordado: null, tieneMuralla: a.tieneMuralla, mercadoActivo: a.mercadoActivo, protegidaHasta: a.protegidaHasta, fundadoEn: a.fundadoEn })),
+    ...proyeccion.asentamientosAvistados.map((a) => ({ id: a.id, nombre: a.nombre, faccionId: a.faccionId, nivel: a.nivel, posicion: a.posicion, recordado: null, tieneMuralla: a.tieneMuralla, mercadoActivo: a.mercadoActivo, armeriaActiva: a.armeriaActiva, protegidaHasta: a.protegidaHasta, fundadoEn: a.fundadoEn })),
     ...proyeccion.asentamientosConocidos.map((a) => ({ id: a.asentamientoId, nombre: a.nombre, faccionId: a.faccionId, nivel: a.nivel, posicion: a.posicion, recordado: a.conocidoEn })),
   ];
 }
@@ -1244,6 +1247,7 @@ function renderSeleccionMapaCuerpo(): void {
       <div><span>Nivel</span><strong>${asentamiento.nivel}</strong></div>
       ${asentamiento.tieneMuralla !== undefined ? `<div><span>Muralla</span><strong>${asentamiento.tieneMuralla ? 'Sí' : 'No'}</strong></div>` : ''}
       ${asentamiento.mercadoActivo !== undefined ? `<div><span>Mercado</span><strong>${asentamiento.mercadoActivo ? 'Sí' : 'No'}</strong></div>` : ''}
+      ${asentamiento.recordado === null && asentamiento.armeriaActiva ? '<div><span>Armería</span><strong>⚒️ Tienda y forja</strong></div>' : ''}
       ${asentamiento.recordado === null ? htmlFilaProteccion(asentamiento, proyeccion.instante, escaparHtml, renderSeleccionMapa) : ''}
       ${asentamiento.recordado !== null ? `<div><span>Visto</span><strong>${escaparHtml(fechaDeMundo(asentamiento.recordado))}</strong></div>` : ''}
       ${ataque?.distancia != null ? `<div><span>Distancia</span><strong>${ataque.distancia}</strong></div>` : ''}
@@ -2467,7 +2471,7 @@ function renderVentanaSalida(): void {
 
 /** Las ventanas de la plaza (Víctor, 2026-11-02, «rehacer la interfaz de asentamiento»): cada una con su icono en el riel de la izquierda, salvo la
  * subida de nivel (el medallón del blasón) e Información (el «?» de la barra). Solo hay una abierta, a media pantalla, junto al riel. */
-type VentanaPlaza = 'construccion' | 'gobierno' | 'defensa' | 'territorio' | 'reclutamiento' | 'taberna' | 'mercado' | 'ejercito' | 'aedas' | 'ascenso' | 'informacion' | 'almacen';
+type VentanaPlaza = 'construccion' | 'gobierno' | 'defensa' | 'territorio' | 'reclutamiento' | 'taberna' | 'mercado' | 'armeria' | 'ejercito' | 'aedas' | 'ascenso' | 'informacion' | 'almacen';
 let ventanaPlaza: VentanaPlaza | null = null;
 /** La subpestaña elegida en cada ventana que tiene varias. */
 const subDeVentana: Partial<Record<VentanaPlaza, string>> = {};
@@ -2568,6 +2572,8 @@ const RIEL: { id: VentanaPlaza; titulo: string; icono: string; requiere?: { tipo
   { id: 'reclutamiento', titulo: 'Reclutamiento', icono: iconoEdificio('barracon', 28) },
   { id: 'taberna', titulo: 'Taberna', icono: iconoEdificio('taberna', 28), requiere: { tipo: 'taberna', nombre: 'una Taberna' } },
   { id: 'mercado', titulo: 'Mercado', icono: iconoEdificio('mercado', 28), requiere: { tipo: 'mercado', nombre: 'un Mercado' }, deVisita: true },
+  // la Armería (0.207.0, motor 457c278): tienda, forja y, al Tesorero o al Gobernador, abrir la forja; también de visita
+  { id: 'armeria', titulo: 'Armería', icono: iconoEdificio('armeria', 28), requiere: { tipo: 'armeria', nombre: 'una Armería' }, deVisita: true },
   // unirse a un ejército de tu Facción que pasa cerca (antes, el botón «Ejércitos» de arriba): solo sale cuando hay a cuál (`ejercitosParaUnirse`)
   { id: 'ejercito', titulo: 'Unirse a un ejército', icono: ICONO_RIEL.ejercito },
   // los Aedas de la plaza (Víctor, 2026-11-07; antes en Facción → Tecnología): solo sale con un Aeda dentro, itinerante parado o residente
@@ -2575,7 +2581,7 @@ const RIEL: { id: VentanaPlaza; titulo: string; icono: string; requiere?: { tipo
 ];
 
 /** Un clic en uno de estos edificios (en pie) en la vista 3D abre su ventana, además de su ficha. */
-const VENTANA_DE_EDIFICIO: Record<string, VentanaPlaza> = { barracon: 'reclutamiento', galeriaDeTiro: 'reclutamiento', caballerizas: 'reclutamiento', taberna: 'taberna', mercado: 'mercado', albergueCaravanas: 'mercado' };
+const VENTANA_DE_EDIFICIO: Record<string, VentanaPlaza> = { barracon: 'reclutamiento', galeriaDeTiro: 'reclutamiento', caballerizas: 'reclutamiento', taberna: 'taberna', mercado: 'mercado', albergueCaravanas: 'mercado', armeria: 'armeria' };
 /** La subpestaña de esa ventana que abre el clic, si no es la primera: el Albergue de caravanas lleva a las Caravanas del Mercado. */
 const SUB_DE_EDIFICIO: Record<string, string> = { albergueCaravanas: 'caravanas' };
 
@@ -2608,6 +2614,8 @@ function ventanaDisponible(v: VentanaPlaza, p: ProyeccionJugador, a: Asentamient
   if (v === 'construccion') return !ajena && Boolean(cargoConstructor(a, p.heroeId));
   if (v === 'ejercito') return !ajena && ejercitosParaUnirse(p, a).length > 0;
   if (v === 'aedas') return hayAedasEnPlaza(p, a);
+  // la Armería activa: lo dice la plaza (`armeriaActiva`, también la ajena) o, si no llega, sus edificios
+  if (v === 'armeria') return Boolean(a.armeriaActiva) || a.edificios.some((e) => e.tipo === 'armeria' && e.estado === 'activo');
   const def = RIEL.find((x) => x.id === v);
   if (!def || (ajena && !def.deVisita)) return false;
   return !def.requiere || a.edificios.some((e) => e.tipo === def.requiere!.tipo && e.estado === 'activo');
@@ -2814,6 +2822,15 @@ function contenidoDeVentana(v: VentanaPlaza, c: ContextoPlaza, ajena: boolean): 
           else if (sub === 'rutas') cablearRutas(cuerpo, p, ejecutarYRefrescar, renderPanelEdificios);
           else cablearOrdenes(cuerpo, a, ejecutarYRefrescar);
         },
+      };
+    }
+    case 'armeria': {
+      const subs = pestanasDeArmeria(p, a, c.resideAqui);
+      const sub = elegir(subs);
+      return {
+        ...base, ancho: 'completa', subs: subs.length > 1 ? subs : [], sub,
+        html: htmlArmeria(p, a, c.resideAqui, sub, escaparHtml),
+        cablear: () => cablearArmeria(cuerpo, a, ejecutarYRefrescar, () => { invalidar(cuerpo); renderPanelEdificios(); }),
       };
     }
     case 'ascenso':

@@ -62,8 +62,8 @@ export function cifrasDe(item: Pick<ItemInstancia, 'itemDefinitionId' | 'estadis
 export function textoDeEfecto(f: FichaObjeto): string {
   const x = f.efecto;
   if (x?.experienciaTropa) return `Da ${x.experienciaTropa} de experiencia a una escuadra tuya que no sea prestada ni esté en el nivel 10.`;
-  if (x?.experienciaHeroePct) return `Da a tu héroe el ${x.experienciaHeroePct} % de lo que pide su nivel para subir.`;
-  if (x?.monturaDe?.length) return `Una montura: ${x.monturaDe.map((m) => `${nombreDeObjeto(m.objeto)} (${Math.round(m.probabilidad * 100)} %)`).join(', ')}. Va a la mochila; si no cabe, al almacén de objetos.`;
+  if (x?.experienciaHeroePct) return `Da a tu héroe el ${x.experienciaHeroePct}\u00a0% de lo que pide su nivel para subir.`;
+  if (x?.monturaDe?.length) return `Una montura: ${x.monturaDe.map((m) => `${nombreDeObjeto(m.objeto)} (${Math.round(m.probabilidad * 100)}\u00a0%)`).join(', ')}. Va a la mochila; si no cabe, al almacén de objetos.`;
   return '';
 }
 
@@ -93,7 +93,7 @@ export function dentroDeSuResidencia(p: ProyeccionJugador): boolean {
 }
 
 /** Los pesos de armadura que admite la clase del arma puesta. */
-function pesosDeLaClase(h: HeroeProyectado): string[] {
+export function pesosDeLaClase(h: HeroeProyectado): string[] {
   const clase = fichaDeObjeto(h.equipamiento.arma?.itemDefinitionId ?? '')?.clase ?? h.classDefinitionId;
   return clasesDeHeroe()?.find((c) => c.id === clase)?.armaduras ?? [];
 }
@@ -197,8 +197,8 @@ function htmlHuecos(h: HeroeProyectado, e: Escapar): string {
   }).join('');
 }
 
-/** Las cifras de una pieza en filas: atributos, la terna de daño, penetración o defensa, la salud; o lo de la montura. */
-function htmlCifras(c: CombateDeObjeto): string {
+/** Las cifras de una pieza en filas: atributos, la terna de daño, penetración o defensa, la salud; o lo de la montura (también en la Armería). */
+export function htmlCifras(c: CombateDeObjeto): string {
   const filas: string[] = [];
   const atr = ATRIBUTOS.filter((a) => c.atributos?.[a]).map((a) => `${NOMBRE_DE_ATRIBUTO[a]} +${num(c.atributos![a]!)}`);
   if (atr.length) filas.push(`<p class="obj-atributos">${atr.join(' · ')}</p>`);
