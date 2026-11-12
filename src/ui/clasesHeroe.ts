@@ -39,6 +39,8 @@ export interface FichaObjeto {
 export interface CatalogoDeObjetos {
   objetos: FichaObjeto[];
   rarezas?: Record<string, string>;
+  /** La tecnología que pide cada metal de las piezas (`null`, la de inicio: ninguna). */
+  metales?: Record<string, string | null>;
 }
 
 export const NOMBRE_DE_ATRIBUTO: Record<AtributoDeClase, string> = { fuerza: 'Fuerza', destreza: 'Destreza', armadura: 'Armadura', vitalidad: 'Vitalidad' };

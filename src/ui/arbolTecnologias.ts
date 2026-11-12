@@ -17,6 +17,7 @@ import { NOMBRE_TEC_EN_PANTALLA } from '../nombresEnPantalla';
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import { iconoEdificio } from './iconosEdificio';
 import { iconoTropa } from './iconosTropa';
+import { catalogoDeObjetos } from './clasesHeroe';
 import { fijarDibujo, htmlTablero, montarTablero, muestraLinea, type CartaTablero, type ContextoArbol } from './arbolTablero';
 
 export type { ContextoArbol };
@@ -94,19 +95,34 @@ const CONTADOR: Record<string, string> = {
   'reclutados.caballeria': 'jinetes reclutados (cada carro cuenta 5)', 'reclutados.arqueros': 'arqueros reclutados',
   'reclutados.escaramuzadores_jabalina': 'escaramuzadores con jabalina reclutados', 'reclutados.arqueros_compuesto': 'arqueros con arco compuesto reclutados',
   'reclutados.jinetes_asirios': 'jinetes asirios reclutados', 'plazasEnNivel.2': 'plazas a la vez en nivel 2 o más (récord)', 'plazasEnNivel.3': 'plazas a la vez en nivel 3 o más (récord)',
+  // los doce de las Eras IV y V (motor c82d6ed, Tecnologia_Aedas §7.2)
+  'fabricado.armaHierroCalidad': 'armas de hierro de calidad fabricadas', 'caminos.compartidos': 'el primer camino compartido abierto',
+  'escuadras.veteranas': 'escuadras que llegan al nivel 5', 'batallas.conTresHeroes': 'batallas con tres héroes o más en un bando',
+  'batallas.ganadasEnInferioridad': 'batallas ganadas en inferioridad', 'escuadras.eliteDestruidas': 'escuadras de élite destruidas',
+  'batallas.campoAbiertoConCaballeria': 'batallas ganadas en campo abierto con caballería', 'batallas.campoAbiertoConCaballeriaElite': 'batallas ganadas en campo abierto con caballería de élite',
+  'batallas.armasCombinadas': 'batallas con armas combinadas', 'batallas.contraCoalicion': 'batallas ganadas por una sola Facción contra una coalición',
+  'batallas.conRey': 'batallas en las que combate un Rey', 'persecuciones.deCaballeria': 'ataques de columnas con caballería',
 };
 /** El texto de un contador de logro («caravanas destruidas o capturadas»), o el id legible. */
 const mayuscula = (x: string): string => x.charAt(0).toUpperCase() + x.slice(1);
 export const textoContador = (c: string): string => CONTADOR[c] ?? c.replace(/[._]/g, ' ');
 /** Lo que el canon (Doc 6.6, 5.2 y 5.3) dice que abren y el motor aún no aplica. */
-const CANON_CORTO: Record<string, string> = { disciplina_formacion: 'Formaciones cerradas', carpinteria_militar: 'Escalas y defensas', trabajos_asedio: 'Equipo de asedio' };
+const CANON_CORTO: Record<string, string> = { carpinteria_militar: 'Escalas y defensas', trabajos_asedio: 'Equipo de asedio' };
+/** Las tecnologías que cambian una cifra o abren algo que no es contenido (Tecnologia_Aedas §4.1, 2026-11-12), en corto para la carta. */
+const EFECTO_CORTO: Record<string, string> = { disciplina_formacion: 'Formaciones cerradas', ejercito_permanente: '+10 % experiencia de escuadra', logistica_campana: 'Víveres ×1,5' };
+/** Las piezas de metal del héroe que abre una tecnología (`OBJETOS.metales`): «de acero». */
+function metalDe(id: string): string | null {
+  const metales = catalogoDeObjetos()?.metales;
+  const m = metales ? Object.entries(metales).find(([, tec]) => tec === id)?.[0] : undefined;
+  return m ? m.replace(/_/g, ' ') : null;
+}
 /** Carriles por tema, con el icono del edificio que manda en cada uno. Una tecnología nueva sin carril cae en «Otras». */
 const CARRILES_BASE = [
-  { id: 'gobierno', nombre: 'Gobierno y obras', icono: 'salaConsejo', tecs: ['canteria', 'instituciones_civicas'] },
-  { id: 'infanteria', nombre: 'Infantería', icono: 'barracon', tecs: ['leva_comunal', 'escudos_ligeros', 'armamento_palacial', 'disciplina_formacion', 'panoplia_bronce', 'ciudadania_militar', 'falange_hoplita'] },
-  { id: 'metal', nombre: 'Metalurgia', icono: 'fundicion', tecs: ['metalurgia_cobre', 'aleacion_bronce', 'bronce_calidad_militar', 'forja_hierro_temprana', 'bronce_laminado', 'forja_hierro_estandarizada'] },
-  { id: 'proyectiles', nombre: 'Proyectiles', icono: 'galeriaDeTiro', tecs: ['hostigamiento_tribal', 'arqueria_palacial', 'arco_compuesto', 'pantalla_escaramuzadores', 'arqueria_especializada'] },
-  { id: 'caballeria', nombre: 'Caballería', icono: 'caballerizas', tecs: ['cria_caballar', 'carros_guerra', 'equitacion_militar', 'caballeria_organizada'] },
+  { id: 'gobierno', nombre: 'Gobierno y obras', icono: 'salaConsejo', tecs: ['canteria', 'instituciones_civicas', 'cuerpo_oficiales', 'logistica_campana'] },
+  { id: 'infanteria', nombre: 'Infantería', icono: 'barracon', tecs: ['leva_comunal', 'escudos_ligeros', 'armamento_palacial', 'disciplina_formacion', 'panoplia_bronce', 'ciudadania_militar', 'falange_hoplita', 'ejercito_permanente', 'infanteria_profesional', 'reforma_macedonica', 'falange_sarisa', 'cuerpo_hipaspistas'] },
+  { id: 'metal', nombre: 'Metalurgia', icono: 'fundicion', tecs: ['metalurgia_cobre', 'aleacion_bronce', 'bronce_calidad_militar', 'forja_hierro_temprana', 'bronce_laminado', 'forja_hierro_estandarizada', 'acero_templado'] },
+  { id: 'proyectiles', nombre: 'Proyectiles', icono: 'galeriaDeTiro', tecs: ['hostigamiento_tribal', 'arqueria_palacial', 'arco_compuesto', 'pantalla_escaramuzadores', 'arqueria_especializada', 'hostigadores_profesionales'] },
+  { id: 'caballeria', nombre: 'Caballería', icono: 'caballerizas', tecs: ['cria_caballar', 'carros_guerra', 'equitacion_militar', 'caballeria_organizada', 'carga_caballeria', 'formacion_cuna', 'companeros_reales'] },
   { id: 'asedio', nombre: 'Ingeniería y asedio', icono: 'carpinteria', tecs: ['carpinteria_militar', 'trabajos_asedio'] },
 ];
 
@@ -190,6 +206,8 @@ export function requisitos(D: DatosArbol) {
       else if (h.tipo === 'edificio' && !HITO_PUEBLO[h.edificio]) reqEdificio(acc, h.edificio, h.nivelInterno || 1, 'hito');
       else if (h.tipo === 'edificio' && h.edificio === 'minaHierro') anotaTec(acc, 'forja_hierro_temprana', 'pueblo de mina de hierro');
       else if (h.tipo === 'capitalEnNivel') reqEdificio(acc, h.conEdificio, 1, 'hito');
+      else if (h.tipo === 'edificioEnPlazaDeNivel') { reqEdificio(acc, h.edificio, h.nivelInterno || 1, 'hito'); acc.plaza = Math.max(acc.plaza, h.nivelPlaza); }
+      else if (h.tipo === 'plazaEnNivel') acc.plaza = Math.max(acc.plaza, h.nivel);
     }
     for (const x of logroDe(id)) anotaTec(acc, x, 'logro');
     acc.tecs.delete(id);
@@ -263,6 +281,11 @@ export interface EstadoArbol {
 
 /** Al 30 % de adoptadas de una Era (con las de arranque, redondeando hacia arriba) aparece la siguiente (Víctor, 2026-11-06). */
 export const UMBRAL_ERA = 0.3;
+/** Cuánto dura una Era, en la cabecera de los árboles. La última (la V, motor c82d6ed) no tiene plazo: no hay otra detrás. */
+export function duracionDeEra(x: { orden: number; plazoSemanas: number; minimoSemanas?: number }, ultima: number): string {
+  if (x.orden >= ultima) return 'la última Era, sin plazo';
+  return x.minimoSemanas !== undefined ? `dura de ${x.minimoSemanas} a ${x.plazoSemanas} semanas` : `dura hasta ${x.plazoSemanas} semanas`;
+}
 export const erasOrdenadas = (D: DatosArbol): { id: string; orden: number; nombre: string; plazoSemanas: number; minimoSemanas?: number }[] =>
   Object.entries(D.eras).sort((a, b) => a[1].orden - b[1].orden).map(([id, e]) => ({ id, ...e }));
 export const tecsDeEra = (D: DatosArbol, o: number): string[] => Object.keys(D.tec).filter((t) => eraOrd(D, D.tec[t]!.era) === o);
@@ -393,6 +416,9 @@ function abreDe(G: Grafo, id: string, e: Escapar): string {
   Object.entries(D.edificios).forEach(([t, x]) => Object.entries(x.niveles).filter(([, l]) => l.tec === id).forEach(([nv]) => h.push(ico(iconoEdificio(t, 24), `${EN(t)} ${nv}`, nv))));
   Object.entries(D.recetas).filter(([, r]) => r.tec === id).forEach(([prod]) => h.push(`<span class="ta-abre-rec" title="${e(RN(prod))}"><span aria-hidden="true">${RECURSO_ICONO[prod] ?? '📦'}</span><span class="ta-sr">${e(RN(prod))}</span></span>`));
   if (k.bonusProduccion) h.push(`<span class="ta-abre-rec" title="${e(RN(k.bonusProduccion.recurso))} ×${num(k.bonusProduccion.factor)}"><span aria-hidden="true">${RECURSO_ICONO[k.bonusProduccion.recurso] ?? '📦'}</span><b>×${num(k.bonusProduccion.factor)}</b><span class="ta-sr">${e(RN(k.bonusProduccion.recurso))}</span></span>`);
+  if (EFECTO_CORTO[id]) h.push(`<span class="ta-abre-efecto">${e(EFECTO_CORTO[id]!)}</span>`);
+  const metal = metalDe(id);
+  if (metal) h.push(`<span class="ta-abre-efecto" title="Las piezas de ${e(metal)} del héroe, en la Armería">⚒ ${e(metal)}</span>`);
   if (CANON_CORTO[id]) h.push(`<span class="ta-abre-canon">${e(CANON_CORTO[id]!)} · canon</span>`);
   return h.join('');
 }
@@ -423,7 +449,7 @@ export function htmlArbol(p: ProyeccionJugador, e: Escapar, precioAeda: (id: str
     const llevas = adoptadasEn(D, E.adoptadas, x.orden), cupo = cupoEra(D, x.orden);
     return `<span class="ta-era-num" aria-hidden="true">${ROMANO[x.orden] ?? x.orden}</span>
       <span class="ta-era-nombre">Era ${ROMANO[x.orden] ?? x.orden} · ${e(x.nombre)}</span>
-      <span class="ta-era-sub">${x.minimoSemanas !== undefined ? `dura de ${x.minimoSemanas} a ${x.plazoSemanas} semanas` : `dura hasta ${x.plazoSemanas} semanas`}</span>
+      <span class="ta-era-sub">${duracionDeEra(x, ultima)}</span>
       <span class="ta-era-coste">Adoptar cada una: ${costeTxt(D.tarifa[x.id])}</span>
       ${sigue ? `<span class="ta-era-sigue"><span>La Era ${ROMANO[x.orden + 1]} aparece con ${cupo} de ${tecsDeEra(D, x.orden).length} adoptadas: llevas <b>${llevas}</b></span><span class="barra" style="--p:${Math.min(1, llevas / Math.max(1, cupo))}"></span></span>` : ''}
       ${actual || futura(x.orden) ? `<span class="ta-era-marca${actual ? ' actual' : ' futura'}">${actual ? 'Era del mundo' : 'Bloqueada'}</span>` : ''}`;
@@ -482,6 +508,13 @@ function hitoLi(G: Grafo, e: Escapar, c: CondicionHito): string {
     case 'recursoEnCapital': return `${RI(c.recurso)} en el almacén de la capital`;
     case 'capitalEnNivel': return `Capital a nivel ${c.nivel} con ${EI(c.conEdificio)}`;
     case 'yacimientoEnTerritorio': return `Un yacimiento de ${RI(c.recurso)} en tu territorio`;
+    // las seis de las Eras IV y V (motor c82d6ed)
+    case 'escuadrasVivas': return `${miles(c.cantidad)} escuadras con soldados entre los héroes de la Facción`;
+    case 'heroesEnFaccion': return `${miles(c.cantidad)} héroes en la Facción`;
+    case 'plazaEnNivel': return `Una plaza de la Facción a nivel ${c.nivel}`;
+    case 'nivelFaccion': return `La Facción a nivel ${c.nivel}`;
+    case 'columnasEnMarcha': return `${miles(c.cantidad)} columnas de la Facción en marcha a la vez`;
+    case 'edificioEnPlazaDeNivel': return `${EI(c.edificio, c.nivelInterno || 1)} en una plaza de nivel ${c.nivelPlaza}`;
   }
 }
 
@@ -523,7 +556,12 @@ function tipTec(d: Dibujo, id: string, precioAeda: (id: string) => number | null
     h += `<div class="ta-req">Facción</div><ul>${hito.map((x, i) => `<li>${marca(i)}${hitoLi(G, e, x)}</li>`).join('') || '<li>nada más</li>'}</ul>`;
     const otras = [...a.tecs.keys()].filter((x) => visibles.has(x) && !k.hito.some((q) => q.tipo === 'tecnologia' && q.id === x) && [...a.tecs.get(x)!].some((m) => m !== 'logro'));
     const eds = [...a.eds.entries()].filter(([x]) => !k.hito.some((q) => q.tipo === 'edificio' && q.edificio === x));
-    if (otras.length || eds.length || a.plaza > 1) h += `<div class="ta-nota">Esos edificios piden${a.plaza > 1 ? ` plaza a nivel ${a.plaza}` : ''}${eds.map(([x, nv]) => `, ${e(EN(x))} ${nv}`).join('')}${otras.length ? `, y ${otras.map((x) => e(TN(x))).join(', ')}` : ''}.</div>`;
+    // la plaza que ya pide el hito (una plaza de nivel N, un edificio en una plaza de nivel N) no se repite como si la pidieran los edificios
+    const plazaDelHito = Math.max(1, ...k.hito.map((q) => (q.tipo === 'plazaEnNivel' ? q.nivel : q.tipo === 'edificioEnPlazaDeNivel' ? q.nivelPlaza : 1)));
+    const plazaEdificios = a.plaza > plazaDelHito ? a.plaza : 1;
+    const piden = [...(plazaEdificios > 1 ? [`plaza a nivel ${plazaEdificios}`] : []), ...eds.map(([x, nv]) => `${e(EN(x))} ${nv}`)];
+    if (otras.length) piden.push(`${piden.length ? 'y ' : ''}${otras.map((x) => e(TN(x))).join(', ')}`);
+    if (piden.length) h += `<div class="ta-nota">Esos edificios piden ${piden.join(', ')}.</div>`;
   }
   const tropaChip = (x: TropaReclutable): string => `<span class="ta-rec ta-edi" title="${e(x.nombre)}">${iconoTropa(x.id, 18)}<span class="ta-sr">${e(x.nombre)}</span></span>`;
   const tropas = D.tropas.filter((x) => x.tecnologia === id);
@@ -538,8 +576,15 @@ function tipTec(d: Dibujo, id: string, precioAeda: (id: string) => number | null
   if (nivs.length) lst.push(`<li>Mejora: ${nivs.join(' ')}</li>`);
   if (k.bonusProduccion) lst.push(`<li>×${num(k.bonusProduccion.factor)} ${RI(k.bonusProduccion.recurso)}</li>`);
   if (id === 'instituciones_civicas') lst.push(`<li>Con la ${EI('salaConsejo')}: el nivel 4 de plaza (la pide) y +1 política del Gobernador</li>`);
+  const efecto: Record<string, string> = {
+    disciplina_formacion: 'Las formaciones cerradas (muro de escudos, testudo, cuadro y cuña), para elegirlas en cada escuadra desde Tropas',
+    ejercito_permanente: 'Las escuadras de los héroes de tu Facción ganan un 10 % más de experiencia; el héroe, no',
+    logistica_campana: ((l) => `Los víveres de cada héroe de tu Facción ×${num(l?.bonusViveres?.factor ?? 1.5)} (de ${l?.capacidadViveresPorHeroe ?? 350} a ${Math.round((l?.capacidadViveresPorHeroe ?? 350) * (l?.bonusViveres?.factor ?? 1.5))})`)(bloqueDeDatos<{ capacidadViveresPorHeroe?: number; bonusViveres?: { factor: number } }>('LOGISTICA')),
+  };
+  if (efecto[id]) lst.push(`<li>${efecto[id]}</li>`);
+  const metal = metalDe(id);
+  if (metal) lst.push(`<li>Las piezas de ${e(metal)} del héroe: comprarlas y forjarlas en la Armería de las plazas de tu Facción</li>`);
   const canon: Record<string, string> = {
-    disciplina_formacion: 'Formaciones cerradas: táctica de batalla (romper formación penaliza; los lanceros en formación tienen bono anti-carga)',
     carpinteria_militar: `Escalas y defensas de campaña: equipo de la ${EI('carpinteria', 2)}, sin efecto en el combate con números`,
     trabajos_asedio: `Equipo de asedio de la ${EI('carpinteria', 2)}, sin efecto en el combate con números`,
   };

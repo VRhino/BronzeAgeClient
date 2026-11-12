@@ -8,7 +8,7 @@
 // Cerrado, el ciudadano solo repone (en su Base). El Gobernador y el General residentes lo abren y lo cierran con un interruptor
 // (`cerrarReclutamientoACiudadanos`).
 import type { ProyeccionJugador } from '../apiCliente';
-import { costeDeLiderazgo, oroPorSoldado, tropasReclutables } from '../apiCliente';
+import { costeDeLiderazgo, oroPorSoldado, tropasReclutables, origenDeTropa } from '../apiCliente';
 import type { Asentamiento } from '../tiposDominio';
 import { ayuda } from './ayuda';
 import { mostrar as mostrarAviso } from './avisos';
@@ -20,7 +20,6 @@ import type { Ejecutar } from './panelCarro';
 
 type Escapar = (valor: string) => string;
 
-const ORIGEN = (escalon: number): 'pesants' | 'artesanos' | 'nobleza' => (escalon <= 2 ? 'pesants' : escalon === 3 ? 'artesanos' : 'nobleza');
 const ORIGEN_ICONO: Record<string, string> = { pesants: '🌾', artesanos: '⚒️', nobleza: '👑' };
 
 /** Cómo recluta el jugador en `a` (`reclutamiento::permiso` del motor): `todo` si reside; `ciudadano` si es de su Facción, no reside y no está
@@ -63,7 +62,7 @@ function acciones(p: ProyeccionJugador, a: Asentamiento, e: Escapar, id: string)
     const usado = liderazgoFuera(p, a) + costeDeLiderazgo(t.id);
     if (usado > p.heroe.liderazgoBase) liderazgo = `No cabe en tu Liderazgo (${usado} / ${p.heroe.liderazgoBase})`;
   }
-  const origen = ORIGEN(t.escalon);
+  const origen = origenDeTropa(t);
   const libres = Math.floor(a.poblacion?.[origen] ?? 0);
   const oro = oroPorSoldado(t) ?? 0;
   const porSoldado: Record<string, number> = { ...(t.costoEquipo as Record<string, number>) };

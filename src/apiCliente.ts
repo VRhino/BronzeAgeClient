@@ -11,7 +11,7 @@ import { NOMBRE_TEC_EN_PANTALLA } from './nombresEnPantalla';
 import type { GrafoNavegacion } from './contrato/gen/bronzeage/v1/world_pb';
 import { cargarRelieve, type Relieve } from './mundo/relieve';
 import { EPOCA_CONTRATO, instante, moverAlInstante, proyectar } from './motor/proyeccion';
-import { textoEnTiempoReal } from './ui/estadoCliente';
+import { estadoCliente, textoEnTiempoReal } from './ui/estadoCliente';
 import { ComandoDesconocido, traducirOrden } from './motor/ordenes';
 
 import type { AcuerdoTrueque, AedaAvistado, AvanzadaDeMapa, AedaResidenteProyectado, Alijo, Asentamiento, AsentamientoAvistado, AsentamientoConocido, BatallaVisible, CaminoProyectado, CampamentoBandido, CampamentoMercenarios, CampamentoParaElegir, Caravana, CaravanaAvistada, Convocatoria, Ejercito, EjercitoAvistado, EscenaCampamento, EscenaPueblo, EvaluacionAscenso, EventoDominio, Faccion, FaccionDelDirectorio, HeroeProyectado, HeroePublico, InformeDeInspeccion, ObraDeMapa, PuebloDeMapa, InformePlaza, MiradaIntel, Mision, NieblaProyectada, OrdenMercado, ParamsGuardarLoadout, ParamsRepartirPuntos, ProduccionItem, PropuestaAnexion, PropuestaFusion, PropuestaRelacion, RelacionPolitica, Sigilo, TarifasIntel, TecnologiaJugador, Titulo, TrazadoAsentamiento, ZonaFaccion } from './tiposDominio';
@@ -673,6 +673,25 @@ export interface TropaReclutable {
   velocidad?: number;
   /** Caballos por soldado: se pagan en oro. */
   caballos?: number;
+  /** De qué clase salen sus soldados si no es la de su escalón (los falangitas, de artesanos; motor c82d6ed). */
+  poblacion?: 'pesants' | 'artesanos' | 'nobleza';
+  /** La rareza de Conquest, del 1 al 5 (no es el escalón, que fija Liderazgo, oro y población; motor c82d6ed). */
+  tier?: number;
+  /** Las cifras de combate de Conquest (el motor no las usa): para la ficha de la tropa. */
+  combate?: CombateDeTropa;
+}
+
+/** Tres cifras, una por tipo de daño. */
+export interface PorTipoDeDano { perforante: number; cortante: number; contundente: number }
+/** El bloque `combate` de una tropa (`TROPAS_RECLUTABLES`, Heroe_Y_Tropa §12). */
+export interface CombateDeTropa {
+  vida: number; dano: PorTipoDeDano; penetracion: PorTipoDeDano; defensa: PorTipoDeDano; alivio: PorTipoDeDano;
+  bloqueo: number; cadencia: number; alcance: number; precision?: number; municion?: number;
+}
+
+/** De qué clase de población salen los soldados de una tropa: su campo `poblacion` o, sin él, la de su escalón (1-2 pesants, 3 artesanos, 4-5 nobleza). */
+export function origenDeTropa(t: Pick<TropaReclutable, 'escalon' | 'poblacion'>): 'pesants' | 'artesanos' | 'nobleza' {
+  return t.poblacion ?? (t.escalon <= 2 ? 'pesants' : t.escalon === 3 ? 'artesanos' : 'nobleza');
 }
 
 /** Una política del catálogo (`POLITICA_CATALOGO`): su cargo, su nombre y los efectos (`factor*`, `cupo*`, `perfilTrazado`) como campos sueltos. */
@@ -696,7 +715,7 @@ interface BalancePublico {
   cuposYNiveles?: { POLITICAS?: ReglasDePoliticas; CAP_FUNDACION_POR_NIVEL?: number[]; CIUDADANIA?: { cooldownCambioResidenciaDias?: number; cooldownCreacionFaccionDias?: number } };
   caravanas?: { CARAVANA_COOLDOWN?: { cooldownMinutos?: number }; CARRO_CATALOGO?: Record<string, CarroDelCatalogo>; ANIMAL_CATALOGO?: Record<string, AnimalDelCatalogo>; CARAVANA_PREPARACION?: { kPorCarro?: number; maxProgramacionDias?: number }; CARAVANA_ESCOLTA?: { liderazgoPorNivelMercado?: number[] } };
   politica?: { PUERTA?: { cerradaAPorDefecto?: string[] }; CAPITAL?: { cooldownDias?: number } };
-  mundoYMilitar?: { LOGISTICA?: { capacidadViveresPorHeroe?: number; capacidadCarroPorJugador?: number; radioEncuentro?: number; radioReabastecimiento?: number; factorConsumoEnMarcha?: number; factorConsumoEstacionado?: number }; MILITAR?: { racionPorSoldadoPorMinuto?: number }; FUNDACION?: { materialesIniciales?: Record<string, number>; viviendasIniciales?: number; costoMaderaExtraCaravana?: number }; MERCENARIOS?: { refundacion?: { porcentajeCoste?: number; excluir?: string[] }; radioProteccion?: number; edificiosMilitares?: string[]; nivelEdificios?: number }; MOVIMIENTO?: { radioPuerta?: number; radioInspeccion?: number; consumoPorParticipante?: number; factorConsumoMarchaForzada?: number }; RECLUTAMIENTO_ORO_POR_ESCALON?: Record<string, number>; ORO_POR_CABALLO?: number };
+  mundoYMilitar?: { LOGISTICA?: { capacidadViveresPorHeroe?: number; bonusViveres?: { tecnologia: string; factor: number }; capacidadCarroPorJugador?: number; radioEncuentro?: number; radioReabastecimiento?: number; factorConsumoEnMarcha?: number; factorConsumoEstacionado?: number }; MILITAR?: { racionPorSoldadoPorMinuto?: number }; FUNDACION?: { materialesIniciales?: Record<string, number>; viviendasIniciales?: number; costoMaderaExtraCaravana?: number }; MERCENARIOS?: { refundacion?: { porcentajeCoste?: number; excluir?: string[] }; radioProteccion?: number; edificiosMilitares?: string[]; nivelEdificios?: number }; MOVIMIENTO?: { radioPuerta?: number; radioInspeccion?: number; consumoPorParticipante?: number; factorConsumoMarchaForzada?: number }; RECLUTAMIENTO_ORO_POR_ESCALON?: Record<string, number>; ORO_POR_CABALLO?: number };
   tecnologia?: CatalogoTecnologia;
   internas?: { CAMPAMENTOS_BANDIDOS?: { niveles?: Record<string, NivelDeBandidos> } };
 }
@@ -857,9 +876,15 @@ export function capacidadDeCarga(c: { capacidadCarga?: number; participantes: un
   return c.capacidadCarga ?? Math.max(1, c.participantes.length) * (balance()?.mundoYMilitar?.LOGISTICA?.capacidadCarroPorJugador ?? 500);
 }
 
-/** Lo que caben los víveres de un héroe (`LOGISTICA.capacidadViveresPorHeroe`); 350 mientras no llegue el balance. */
+/**
+ * Lo que caben los víveres de un héroe (`LOGISTICA.capacidadViveresPorHeroe`); 350 mientras no llegue el balance. Con la tecnología de
+ * `LOGISTICA.bonusViveres` en tu Facción (Logística de campaña, Era IV), por su factor (×1,5), como el motor (`militar::datos`, reglas de la Facción).
+ */
 export function capacidadDeViveres(alCargar?: () => void): number {
-  return balance(alCargar)?.mundoYMilitar?.LOGISTICA?.capacidadViveresPorHeroe ?? 350;
+  const l = balance(alCargar)?.mundoYMilitar?.LOGISTICA;
+  const base = l?.capacidadViveresPorHeroe ?? 350;
+  const bonus = l?.bonusViveres;
+  return bonus && estadoCliente.proyeccionUltima?.tecnologia?.propias?.adoptadas.includes(bonus.tecnologia as never) ? base * bonus.factor : base;
 }
 
 /**

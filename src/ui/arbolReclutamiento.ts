@@ -8,10 +8,11 @@
 //   - Solo recluta: reponer va aparte (Víctor, 2026-11-06). Con la escuadra ya hecha, la carta lo dice y no hay botón (una por tropa y héroe).
 //   - Solo sale lo que se puede reclutar aquí (Víctor, 2026-11-07; 0.181.0): las tropas listas y las que ya tienes. Las que piden tecnología,
 //     edificio, nivel o una Era que aún no empieza no salen, ni los carriles sin tropa que reclutar ni las Eras sin ninguna.
-import { bloqueDeDatos, oroPorSoldado, type ProyeccionJugador, type TropaReclutable } from '../apiCliente';
+import { htmlFichaCombate } from './fichaCombate';
+import { bloqueDeDatos, oroPorSoldado, type ProyeccionJugador, type TropaReclutable, origenDeTropa } from '../apiCliente';
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { Asentamiento } from '../tiposDominio';
-import { datosDelArbol, requisitos, ultimaEraVisible, cupoEra, eraOrd, erasOrdenadas, tecsDeEra, adoptadasEn, BRUTO, type Acc, type DatosArbol } from './arbolTecnologias';
+import { datosDelArbol, requisitos, ultimaEraVisible, cupoEra, eraOrd, erasOrdenadas, duracionDeEra, tecsDeEra, adoptadasEn, BRUTO, type Acc, type DatosArbol } from './arbolTecnologias';
 import { fijarDibujo, htmlTablero, montarTablero, muestraLinea, type CartaTablero, type ContextoArbol, type NodoTablero, type TipoArista } from './arbolTablero';
 import { iconoEdificio } from './iconosEdificio';
 import { iconoTropa } from './iconosTropa';
@@ -196,7 +197,6 @@ export function disponerTropas(G: GrafoTropas, eraVisible: number, plegados: Set
 
 // ── Piezas ───────────────────────────────────────────────────────────────────
 
-const ORIGEN = (escalon: number): 'pesants' | 'artesanos' | 'nobleza' => (escalon <= 2 ? 'pesants' : escalon === 3 ? 'artesanos' : 'nobleza');
 const ORIGEN_ICONO: Record<string, string> = { pesants: '🌾', artesanos: '⚒️', nobleza: '👑' };
 const PUEBLO: Record<string, [string, string]> = {
   'un pueblo de mina de hierro': ['minaHierro', 'Pueblo de mina de hierro'], 'un pueblo de mina de cobre': ['minaCobre', 'Pueblo de mina de cobre'],
@@ -343,7 +343,7 @@ export function htmlArbolDeLugar(D: DatosArbol, L: LugarDeReclutamiento, e: Esca
     const n = [...G.nodos.values()].filter((y) => y.era === x.orden && !ocultas.has(y.id)).length;
     return `<span class="ta-era-num" aria-hidden="true">${ROMANO[x.orden] ?? x.orden}</span>
       <span class="ta-era-nombre">Era ${ROMANO[x.orden] ?? x.orden} · ${e(x.nombre)}</span>
-      <span class="ta-era-sub">${n} tropa${n === 1 ? '' : 's'} · ${x.minimoSemanas !== undefined ? `dura de ${x.minimoSemanas} a ${x.plazoSemanas} semanas` : `dura hasta ${x.plazoSemanas} semanas`}</span>
+      <span class="ta-era-sub">${n} tropa${n === 1 ? '' : 's'} · ${duracionDeEra(x, ultima)}</span>
       ${sigue ? `<span class="ta-era-sigue"><span>La Era ${ROMANO[x.orden + 1]} aparece con ${cupo} de las ${tecsDeEra(D, x.orden).length} tecnologías de esta Era adoptadas: llevas <b>${llevas}</b></span><span class="barra" style="--p:${Math.min(1, llevas / Math.max(1, cupo))}"></span></span>` : ''}
       ${actual || futura(x.orden) ? `<span class="ta-era-marca${actual ? ' actual' : ' futura'}">${actual ? 'Era del mundo' : 'Bloqueada'}</span>` : ''}`;
   };
@@ -355,7 +355,7 @@ export function htmlArbolDeLugar(D: DatosArbol, L: LugarDeReclutamiento, e: Esca
     const edificio = t.edificio === 'centroUrbano' ? EI(L.centro.icono, null, L.centro.nombre) : EI(t.edificio, t.nivelRequerido);
     cartas.push({ carril: n.carril, col: n.col!, fila: n.fila!, html: (estilo) => `<button type="button" class="ta-carta ta-tropa ${est}" data-nodo="${e(id)}" style="${estilo}" aria-label="${e(t.nombre)}">
       <span class="ta-carta-cab"><span class="ta-carta-ico">${iconoTropa(t.id, 30)}</span><span class="ta-carta-nombre">${e(t.nombre)}</span><span class="ta-medalla" aria-hidden="true">${MEDALLA[est] ?? ''}</span></span>
-      <span class="ta-carta-datos">${edificio}<span>escalón ${t.escalon}</span><span>${t.unidadesPorDefecto} ${ORIGEN_ICONO[ORIGEN(t.escalon)]}</span></span>
+      <span class="ta-carta-datos">${edificio}<span>escalón ${t.escalon}</span><span>${t.unidadesPorDefecto} ${ORIGEN_ICONO[origenDeTropa(t)]}</span></span>
       <span class="ta-carta-stats">${stats(t)}</span>
       ${porTipo.length ? `<span class="ta-carta-pide">${porTipo.map(([tp, l]) => `<span class="ta-pide">${muestraLinea(tp)}Tras ${l.map((x) => mini(G.nodos.get(x.de)!.d, 20)).join('')}${l.length === 1 ? `<span class="ta-pide-nombre">${e(corta(G.nodos.get(l[0]!.de)!.d.nombre, 26))}</span>` : ''}</span>`).join('')}</span>` : ''}
       <span class="ta-carta-estado">${L.carta(id, pz)}</span></button>` });
@@ -409,7 +409,7 @@ function tipTropa(d: Dibujo, id: string): string {
     const k = D.tec[x]!;
     return `<li>${marca(x)} <span class="ta-tec">${e(TN(x))}</span> <span class="ta-meta">(Era ${ROMANO[eraOrd(D, k.era)] ?? ''}${k.deArranque ? ', de arranque' : ''}${motivo ? ` · ${motivo}` : ''})</span></li>`;
   }).join('');
-  const origen = ORIGEN(t.escalon);
+  const origen = origenDeTropa(t);
   const oroEsc = oroPorSoldado(t);
   const centro = t.edificio === 'centroUrbano';
   let h = `<div class="ta-tip-cab">${iconoTropa(t.id, 34)}<div><h3>${e(t.nombre)}</h3><div class="ta-meta">${e(centro ? L.centro.nombre : `${nombreEdificio(t.edificio)} ${t.nivelRequerido}`)} · Era ${ROMANO[n.era]} · escalón ${t.escalon} · escuadra de ${t.unidadesPorDefecto} ${ORIGEN_ICONO[origen]}</div></div></div>`;
@@ -427,6 +427,7 @@ function tipTropa(d: Dibujo, id: string): string {
     h += `<li>${IC(ORIGEN_ICONO[origen]!, 1, `${origen} libres de la plaza`)} ${origen === 'pesants' ? 'campesino' : origen === 'artesanos' ? 'artesano' : 'noble'} libre de la plaza</li></ul>`;
   }
   h += `<h4>En campaña</h4><div class="ta-fichas">${stats(t)}</div>`;
+  h += htmlFichaCombate(t, e);
   const tras = n.todos.map((x) => G.nodos.get(x.de)!.d), lleva = n.hijosTodos.filter((x) => visibles.has(x)).map((x) => G.nodos.get(x)!.d);
   if (tras.length || lleva.length) h += `<h4>En el árbol</h4><ul>${tras.length ? `<li>Va tras: ${tras.map((x) => `${mini(x, 18)} ${e(x.nombre)}`).join(', ')}</li>` : ''}${lleva.length ? `<li>Lleva a: ${lleva.map((x) => `${mini(x, 18)} ${e(x.nombre)}`).join(', ')}</li>` : ''}</ul>`;
   return h;

@@ -908,6 +908,10 @@ export interface Escuadron {
   habilidadesDesbloqueadas: string[];
   formacionesDesbloqueadas: number[];
   formacionSeleccionada: number;
+  /** La familia de formación elegida, por su id de `FORMACIONES` (`elegirFormacion`, Heroe_Y_Tropa §10.4); vacía, la de reposo. */
+  formacion: string;
+  /** Reservada para una batalla de Unity: no se le cambia la formación (el ticket ya congeló la suya). */
+  enBatalla: boolean;
   /** Lo que cuesta en Liderazgo, calculado por el servidor: con esto se sabe si un loadout cabe antes de guardarlo. */
   costeLiderazgo: number;
 }
@@ -1275,7 +1279,14 @@ export type CondicionHito =
   | { tipo: 'tecnologia'; id: TecnologiaId }
   | { tipo: 'recursoEnCapital'; recurso: string }
   | { tipo: 'capitalEnNivel'; nivel: number; conEdificio: string }
-  | { tipo: 'yacimientoEnTerritorio'; recurso: string };
+  | { tipo: 'yacimientoEnTerritorio'; recurso: string }
+  // las seis de las Eras IV y V (motor c82d6ed, Tecnologia_Aedas §3.1)
+  | { tipo: 'escuadrasVivas'; cantidad: number }
+  | { tipo: 'heroesEnFaccion'; cantidad: number }
+  | { tipo: 'plazaEnNivel'; nivel: number }
+  | { tipo: 'nivelFaccion'; nivel: number }
+  | { tipo: 'columnasEnMarcha'; cantidad: number }
+  | { tipo: 'edificioEnPlazaDeNivel'; edificio: string; nivelInterno?: number; nivelPlaza: number };
 
 /** Lo que sabe el jugador de la tecnología del mundo (`proyeccion.tecnologia`, Doc 6.3-6.4). */
 export interface TecnologiaJugador {

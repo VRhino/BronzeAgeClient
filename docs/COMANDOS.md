@@ -253,6 +253,7 @@ Solo tienen efecto si el backend declara `SERVIDORES_BATALLA` (en Render, hoy no
 - [x] `salirDelCampamento` — `campamentoId`, `heroeId`, `escuadronIds`, `carga` · pestaña Salir
 - [x] `guardarEnAlmacenPersonal` / `sacarDelAlmacenPersonal` — `recurso`, `cantidad` · panel del Carro
 - [x] `ordenarEscuadras` — `escuadronIds` (orden de combate) · panel de la columna del mapa
+- [x] `elegirFormacion` — `escuadronId`, `formacion` (id de `FORMACIONES`) · Base › Tropas, en cada escuadra (0.205.0): la de reposo y las abiertas siempre, las cerradas con Disciplina de formación; mientras la escuadra combate no sale el selector (`batalla.bloqueado`). Rechazos traducidos: `formacion.desconocida`, `formacion.sin_tecnologia`, `escuadra.ajena`
 - [x] `pasarAViveres` — ver Caravanas
 - [x] `contratarMercenario` — `mercenarioId`, `trabajo`, `objetivo` y `plazoDias` (o, el permanente, `residenciaAsentamientoId`); opcional: `pagarCon` (`almacenPersonal` \| `carro`, motor 2b2c2a58) · tablón de mercenarios del campamento: quien reside allí elige «Pagar con» su almacén personal o el carro que lleva (el de su columna o, dentro y sin columna, el que trajo); de visita, el carro de su columna
 - [x] `prorrogarContrato` — `mercenarioId`, `plazoDias` · Facción › Mercenarios; sin `pagarCon`, el motor cobra del carro de la columna o, dentro del campamento donde resides y sin columna, del almacén personal

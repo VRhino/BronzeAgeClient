@@ -42,6 +42,17 @@ const DIBUJOS: Record<string, string> = {
   hequetai: `<path ${R} d="M7 23c0-9 4-15 9-15s9 6 9 15Z"/><path ${T} d="M8 14h16M7 18h18M16 8V4M6 23h20"/><path ${T} d="M10 14v4M14 14v4M18 14v4M22 14v4"/>`,
   hoplitas_ciudadanos: `${lanza(4, 29, 27, 3)}<circle ${R} cx="15" cy="18" r="10"/><circle ${T} cx="15" cy="18" r="7"/>`,
   espartiatas: `<circle ${R} cx="16" cy="17" r="11"/><path ${T} d="M10 23L16 10l6 13"/>`,
+  // Eras IV y V (motor c82d6ed)
+  epilektoi: `${lanza(4, 29, 27, 3)}<circle ${R} cx="15" cy="18" r="10"/><path ${T} d="M15 11l2 5h5l-4 3 1.5 5-4.5-3-4.5 3 1.5-5-4-3h5Z"/>`,
+  inmortales: `${lanza(9, 30, 23, 2)}<circle ${R} cx="9.6" cy="28.6" r="2"/><path ${R} d="M15 10h12v16c-2 2-10 2-12 0Z"/><path ${T} d="M15 15c4 1 8 1 12 0M15 20c4 1 8 1 12 0"/>`,
+  falangitas: `${lanza(2, 31, 30, 1)}${lanza(6, 31, 31, 6)}${escudo(11, 22, 6)}`,
+  hipaspistas: `${lanza(26, 30, 29, 2)}<circle ${R} cx="14" cy="18" r="11"/><path ${T} d="M8 12c3-3 9-3 12 0M14 7v4"/><circle ${T} cx="14" cy="18" r="3"/>`,
+  peltastas_ificrates: `${lanza(3, 30, 29, 2)}<path ${R} d="M6 13c2 2 5 2 7-1 2 3 5 3 7 1-1 7-4 11-7 11S7 20 6 13Z"/>`,
+  agrianos: `${lanza(4, 28, 21, 4)}${lanza(8, 30, 25, 6)}${lanza(13, 30, 29, 10)}`,
+  caballeria_tesalia: `${caballo}<path ${R} d="M25 1l5 5-5 5-5-5Z"/>`,
+  caballeria_noble_persa: `${caballo}<path ${R} d="M21 11l2-9 2 4 2-4 2 9Z"/>`,
+  prodromos: `${caballo}<path ${R} d="M20 2l10 5-10 5 3-5Z"/>`,
+  companeros: `${caballo}${lanza(15, 30, 30, 2)}<path ${T} d="M25 4v6M22 7h6M23 5l4 4M27 5l-4 4"/>`,
   // Galería de Tiro: tiradores.
   honderos: honda,
   escaramuzadores_jabalina: `${lanza(5, 28, 22, 4)}${lanza(11, 29, 28, 7)}`,

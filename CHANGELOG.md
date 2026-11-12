@@ -3,6 +3,33 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.205.0] — 2026-11-12 · Las Eras IV y V, la ficha de combate de las tropas y la experiencia y la formación de cada escuadra · motor `457c278`
+
+La segunda de las cuatro versiones de lo que el motor pasó al cliente el 2026-11-12. Sin cambio de contrato (0.24.0, como la 0.204.0).
+
+- **Las Eras IV y V** en los dos árboles: las doce tecnologías nuevas en sus carriles (gobierno, infantería, metal, proyectiles, caballería), la
+  Era V como la última, «sin plazo», y las seis condiciones de hito nuevas en castellano (escuadras vivas, héroes en la Facción, una plaza de
+  nivel N, la Facción a nivel N, columnas en marcha a la vez, un edificio en una plaza de nivel N), con sus doce contadores. La nota de «esos
+  edificios piden plaza a nivel N» ya no repite la plaza que pide el propio hito.
+- **Lo que cambian tres tecnologías** sin abrir contenido (Tecnologia_Aedas §4.1): Disciplina de formación abre las formaciones cerradas (deja de
+  ser «canon, sin efecto»), Ejército permanente da +10 % de experiencia a las escuadras, Logística de campaña sube los víveres de cada héroe ×1,5
+  (de 350 a 525, y el cliente ya lo cuenta así al repostar, al pasar a víveres y en la barra de víveres). Las tecnologías de metal dicen qué
+  piezas del héroe abren en la Armería (`OBJETOS.metales`).
+- **Las diez tropas nuevas** (epílektoi, inmortales, falangitas, hipaspistas, peltastas de Ifícrates, agrianos, caballería tesalia, caballería
+  noble persa, pródromos y compañeros) con su icono, y la población de la que salen por su campo `poblacion` (los falangitas, de los artesanos
+  aunque sean del escalón 4).
+- **La ficha de combate de cada tropa** (`ui/fichaCombate.ts`), en su tooltip del árbol de reclutamiento y del campamento: el tier con el nombre y
+  el color de su rareza (`OBJETOS.rarezas`), la vida por soldado, el bloqueo, la cadencia, el alcance, la precisión y la munición de las de
+  distancia, y una tabla de daño, penetración, defensa y alivio por tipo (perforante, cortante, contundente); las filas a cero no salen.
+- **La experiencia de la escuadra** (`ui/progresionEscuadra.ts`): en Base › Tropas, cada escuadra dice su nivel con una barra hacia el siguiente
+  (la curva de `MILITAR.experienciaParaSubirEscuadra`, 10 del 1 al 2 y 1.375 hasta el 10) y en qué nivel gana su próxima habilidad (4, 7 y 10);
+  las prestadas, que no ganan experiencia, lo dicen.
+- **La formación de la escuadra**: un selector en cada escuadra con las familias de `FORMACIONES` que permite tu Facción (la de reposo, línea,
+  columna y dispersa siempre; muro de escudos, testudo, cuadro y cuña con Disciplina de formación), que manda `elegirFormacion`. Mientras la
+  escuadra combate sale solo el nombre de la suya, marcada «en batalla»; una que la Facción ya no permite se ve apagada.
+- Bancos: los dos árboles con las Eras IV y V en `/pruebas/arboles/` (y `?arbol=tropas`), la experiencia y la formación en `/pruebas/base/`.
+  Pruebas en `pruebas/erasYEscuadras.test.ts`.
+
 ## [0.204.0] — 2026-11-12 · Para jugar la partida nueva: la clase del héroe, su nivel, el aceite de sésamo y el nivel 5 · motor `457c278`
 
 La primera de las cuatro versiones que recogen lo que el motor pasó al cliente el 2026-11-12 (`Docs/Coordinacion/Pendientes_Cliente_Jugador.md`,

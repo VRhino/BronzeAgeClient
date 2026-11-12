@@ -382,7 +382,7 @@ function escuadron(e: pb.Escuadron, ahora: number): d.Escuadron {
     experiencia: mil(e.experiencia), moral: valorDeRitmo(e.moral, ahora), contenedor,
     prestada: e.prestadaPorCampamentoId ? { campamentoId: e.prestadaPorCampamentoId } : undefined,
     enGuarnicion: e.enGuarnicion, habilidadesDesbloqueadas: e.habilidadesDesbloqueadas, formacionesDesbloqueadas: e.formacionesDesbloqueadas,
-    formacionSeleccionada: e.formacionSeleccionada, costeLiderazgo: 0, // lo pone apiCliente con el escalón de la tropa (LIDERAZGO de /v1/datos)
+    formacionSeleccionada: e.formacionSeleccionada, formacion: e.formacion, enBatalla: e.reservaBatalla !== undefined, costeLiderazgo: 0, // lo pone apiCliente con el escalón de la tropa (LIDERAZGO de /v1/datos)
   };
 }
 

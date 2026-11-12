@@ -5871,6 +5871,19 @@ button.carro-hueco:hover, .carro-hueco.activo { border-color: var(--oro); box-sh
 .ta-abre-rec { display: inline-flex; align-items: center; gap: 2px; font-size: 16px; line-height: 1; }
 .ta-abre-rec b { font-size: 11px; color: var(--oro); }
 .ta-abre-canon { font-size: 11px; color: var(--obra-ambar); border: 1px dashed rgba(224,165,58,.6); border-radius: 2px; padding: 1px 5px; }
+.ta-abre-efecto { font-size: 11px; color: var(--pergamino); border: 1px solid rgba(201,162,39,.55); border-radius: 2px; padding: 1px 5px; }
+/* 0.205.0: la ficha de combate de la tropa en su tooltip (ui/fichaCombate.ts), con el color de su rareza. */
+.ta-rareza { text-transform: none; letter-spacing: 0; font-weight: 600; font-size: 11px; padding: 0 6px; border-radius: 2px; border: 1px solid currentColor; }
+.ta-rareza.r-comun { color: #c9c2b0; }
+.ta-rareza.r-pocoComun { color: #7fc27a; }
+.ta-rareza.r-rara { color: #6fa8e6; }
+.ta-rareza.r-epica { color: #b98ae6; }
+.ta-rareza.r-legendaria { color: #e6a64a; }
+.ta-combate { margin-top: 6px; border-collapse: collapse; font-size: 11.5px; width: 100%; }
+.ta-combate th, .ta-combate td { padding: 2px 6px; text-align: right; font-variant-numeric: tabular-nums; }
+.ta-combate thead th { color: var(--text-secondary); font-weight: 500; font-size: 10.5px; }
+.ta-combate tbody th { text-align: left; color: var(--text-secondary); font-weight: 500; }
+.ta-combate tbody tr + tr { border-top: 1px solid rgba(255,255,255,.06); }
 .ta-carta-pide { display: grid; gap: 3px; font-size: 11px; line-height: 1.25; color: var(--ta-texto-2); }
 .ta-pide { display: flex; gap: 6px; align-items: center; }
 .ta-pide svg { flex: none; }
@@ -6053,6 +6066,13 @@ button.carro-hueco:hover, .carro-hueco.activo { border-color: var(--oro); box-sh
 .base-hombres b { color: var(--pergamino); }
 .base-escuadra.mermada .base-hombres .obra-barra i { background: linear-gradient(90deg, #a2482e, #e2965a); }
 .base-sitio { color: var(--text-secondary); font-size: 0.8rem; }
+/* 0.205.0: la experiencia de la escuadra hacia su siguiente nivel y su formación (ui/progresionEscuadra.ts). */
+.base-esc-progreso { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; color: var(--text-secondary); font-size: 0.8rem; }
+.base-esc-nivel { display: inline-flex; align-items: center; gap: 6px; }
+.base-esc-nivel .base-esc-xp { width: 70px; height: 5px; flex: none; }
+.base-esc-nivel .base-esc-xp i { background: linear-gradient(90deg, #6d8fb8, #a9c6e6); }
+.base-formacion { display: inline-flex; align-items: center; gap: 5px; color: var(--pergamino); }
+.base-formacion select.form-input { padding: 2px 6px; font-size: 0.8rem; min-height: 0; width: auto; }
 .base-escuadra-acciones { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 .base-reponer .recl-costes, .base-reponer-prestadas { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-left: 6px; }
 .base-reponer .obra-coste { display: inline-flex; align-items: center; gap: 2px; padding: 0 5px; border-radius: 2px; background: rgba(20, 14, 8, 0.78); color: var(--pergamino); font-size: 12px; }

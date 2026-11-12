@@ -1,6 +1,8 @@
 // Banco de la BASE PERSONAL (0.161.0, `/pruebas/base/`): una partida de mentira, sin servidor, con la ventana que pinta `renderPanelJugador`.
 // `?pestana=tropas|bienes|loadouts|heroe|historial|plazas`; `?donde=plaza` (por defecto: dentro de tu plaza, con escuadras por reponer),
 // `?donde=camp` (en tu campamento de mercenarios, con una prestada y una del Barracón por reponer) o `?donde=columna` (en el mapa).
+// Desde la 0.205.0 la Facción tiene Disciplina de formación y Logística de campaña: las escuadras eligen entre las ocho formaciones
+// (la de Tirinto está en batalla y no se toca) y los víveres caben 525.
 import '../../src/style.css';
 import datos from '../plaza/datos.json';
 const fetchReal = window.fetch.bind(window);
@@ -23,7 +25,7 @@ const edificios = [
 ];
 const almacen = Object.fromEntries(Object.entries({ madera: 640, piedra: 210, trigo: 900, oro: 120, armaMadera: 14, armaBronce: 2, armaduraBasica: 6, armaduraIntermedia: 0 }).map(([k, n]) => [k, { cantidad: n, capacidad: 2000 }]));
 const esc = (id: string, nombre: string, tropaId: string, cantidad: number, contenedor: object, extra: object = {}) => ({
-  id, nombre, heroeId: 'h', tropaId, origen: 'pesants', cantidad, nivel: 2, experiencia: 4, moral: 86, contenedor, enGuarnicion: false, habilidadesDesbloqueadas: [], formacionesDesbloqueadas: [], formacionSeleccionada: 0, costeLiderazgo: Math.ceil(cantidad / 2), ...extra,
+  id, nombre, heroeId: 'h', tropaId, origen: 'pesants', cantidad, nivel: 2, experiencia: 18, moral: 86, contenedor, enGuarnicion: false, habilidadesDesbloqueadas: [], formacionesDesbloqueadas: [], formacionSeleccionada: 0, formacion: '', enBatalla: false, costeLiderazgo: Math.ceil(cantidad / 2), ...extra,
 });
 const p = {
   gameId: 'banco', instante: AHORA, version: 1, heroeId: 'h', faccionId: enCamp ? null : 'fac-1', mapaId: 'm',
@@ -39,11 +41,11 @@ const p = {
       esc('s2', 'Lanceros de mimbre', 'lanceros_mimbre', 9, { tipo: 'campamento' }),
       esc('s3', 'Honderos', 'honderos', 20, { tipo: 'campamento' }, { enGuarnicion: true }),
     ] : [
-      esc('s1', 'Lanceros de mimbre', 'lanceros_mimbre', 25, columna ? { tipo: 'ejercito', ejercitoId: 'ej-1' } : { tipo: 'campamento' }, { enGuarnicion: !columna }),
+      esc('s1', 'Lanceros de mimbre', 'lanceros_mimbre', 25, columna ? { tipo: 'ejercito', ejercitoId: 'ej-1' } : { tipo: 'campamento' }, { enGuarnicion: !columna, nivel: 5, experiencia: 220, formacion: 'muro_escudos' }),
       esc('s2', 'Hacheros ligeros', 'hacheros_ligeros', 7, columna ? { tipo: 'ejercito', ejercitoId: 'ej-1' } : { tipo: 'campamento' }),
       esc('s3', 'Honderos', 'honderos', 11, { tipo: 'campamento' }),
       esc('s4', 'Milicia de lanceros', 'milicia_lanceros', 25, { tipo: 'pueblo', puebloId: 'pu-1' }),
-      esc('s5', 'Espadachines de cobre', 'espadachines_cobre', 14, { tipo: 'plaza', asentamientoId: 'as-4' }),
+      esc('s5', 'Espadachines de cobre', 'espadachines_cobre', 14, { tipo: 'plaza', asentamientoId: 'as-4' }, { nivel: 10, experiencia: 1400, formacion: 'cuna', enBatalla: true }),
     ],
     loadouts: [{ id: 'l1', displayName: 'Defensa de casa', squadIds: ['s1', 's3'], activo: true, liderazgoTotal: 18 }, { id: 'l2', displayName: 'Salida', squadIds: ['s1', 's2'], activo: false, liderazgoTotal: 16 }],
     inventario: [{ itemDefinitionId: 'pocion_vigor', tipo: 'consumible', cantidad: 3, precio: 20, casillaInventario: 0 }, { itemDefinitionId: 'escudo_mimbre', tipo: 'armadura', cantidad: 1, precio: 45, casillaInventario: 1 }],
@@ -62,6 +64,7 @@ const p = {
   informesPlaza: enCamp ? [] : [{ asentamientoId: 'as-8', faccionId: 'fac-2', nombre: 'Hattusa', nivel: 4, conocidoEn: AHORA - 26 * H, edificios: [{ tipo: 'centroUrbano', posicion: { x: 0, y: 0 }, estado: 'activo', ambito: 'ciudad', nivel: 4 }, { tipo: 'barracon', posicion: { x: 3, y: 1 }, estado: 'activo', ambito: 'ciudad', nivel: 2 }], recintos: [{ nivel: 1, celdas: [], avance: 0.6 }], guarnicion: [{ tropaId: 'arqueros', cantidad: 36, heroeId: 'x' }], heroesIds: ['x'] }],
   tarifasIntel: { informe: { oroPorNivel: 20, cooldownMinutos: 600 }, mirada: { radio: 20, duracionMinutos: 120, oroBase: 10, oroPorUnidad: 0.5, cooldownMinutos: 60 } },
   miradasIntel: [], caravanas: [], convocatorias: [], nombresHeroes: {},
+  tecnologia: enCamp ? undefined : { era: 'era_iv', eraDesde: 0, logros: [], propias: { aparecidas: [], adoptadas: ['leva_comunal', 'disciplina_formacion', 'logistica_campana'] }, reveladas: [] },
 } as unknown as ProyeccionJugador;
 estadoCliente.proyeccionUltima = p;
 elegirPestanaBase((qs.get('pestana') ?? 'tropas') as PestanaBase);

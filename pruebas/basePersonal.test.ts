@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('../src/apiCliente', () => ({
   bloqueDeDatos: () => null, catalogoDeTecnologia: () => null, tropasReclutables: () => [], oroPorSoldado: (t: { edificio: string }) => (t.edificio === 'centroUrbano' ? 0 : 2),
   radioDePuerta: () => 2, capacidadDeViveres: () => 350, consumoDeViveres: () => null, asignarGuarnicion: () => null, retirarGuarnicion: () => null,
+  origenDeTropa: (t: { escalon: number; poblacion?: string }) => t.poblacion ?? (t.escalon <= 2 ? 'pesants' : t.escalon === 3 ? 'artesanos' : 'nobleza'),
 }));
 import type { ProyeccionJugador, TropaReclutable } from '../src/apiCliente';
 import { comoReponer } from '../src/ui/basePersonal';

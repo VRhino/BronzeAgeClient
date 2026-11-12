@@ -2,14 +2,14 @@
 // «Héroe», «Escuadras» y «Carro» de la barra de arriba; se abre con el yelmo de la barra o con la tecla B, en cualquier pantalla.
 //  - A la izquierda, el héroe: nivel, experiencia, Liderazgo, sus monedas (un solo saldo desde la tanda 69), víveres (y cuánto aguantan), dónde está, dónde reside (solo se ve:
 //    la residencia se cambia desde dentro de la plaza o del campamento) y sus cargos, con un acceso a lo que manda cada uno.
-//  - Pestañas: Tropas (todas sus escuadras, dónde está cada una, su orden, la guarnición y **reponer** donde se pueda), Bienes (almacén personal,
+//  - Pestañas: Tropas (todas sus escuadras, dónde está cada una, su orden, su experiencia y su formación, la guarnición y **reponer** donde se pueda), Bienes (almacén personal,
 //    carro, pasar a víveres, inventario y equipo), Loadouts, Héroe (atributos), Historial y Plazas conocidas.
 // Regla de Víctor: una acción solo sale donde se puede hacer. Reponer, por ejemplo, solo dentro de la plaza donde la escuadra se repone
 // (`reclutarTropa` con la escuadra hecha la completa hasta su tope, motor `militar::reclutamiento`) o en tu campamento de mercenarios
 // (`reclutarEnCampamento` para la tuya, `reponerPrestamo` gratis para las prestadas). Lo que no llega (equipo, oro, gente) va en rojo y lo apaga.
 // Aquí no se decide ninguna regla del motor: si algo cambia, el rechazo del servidor se enseña tal cual.
 import type { ProyeccionJugador } from '../apiCliente';
-import { asignarGuarnicion, capacidadDeViveres, consumoDeViveres, oroPorSoldado, radioDePuerta, retirarGuarnicion, tropasReclutables, type TropaReclutable } from '../apiCliente';
+import { asignarGuarnicion, capacidadDeViveres, consumoDeViveres, oroPorSoldado, radioDePuerta, retirarGuarnicion, tropasReclutables, type TropaReclutable, origenDeTropa } from '../apiCliente';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { Asentamiento, CampamentoMercenarios, Ejercito, Escuadron, HeroeProyectado, ItemInstancia, SlotEquipo } from '../tiposDominio';
 import { ayuda } from './ayuda';
@@ -26,6 +26,7 @@ import { detalleInforme, hace } from './panelIntel';
 import { nombreDeAvanzada, nombreDePueblo } from './pueblos';
 import { progresoDeNivel } from './progresionHeroe';
 import { nombreDeClase } from './clasesHeroe';
+import { formacionesPermitidas, htmlExperienciaEscuadra, htmlSelectorFormacion } from './progresionEscuadra';
 
 type Escapar = (valor: string) => string;
 
@@ -63,7 +64,6 @@ const ROMANO = ['', 'I', 'II', 'III', 'IV', 'V'];
 const nombreRec = (r: string): string => RECURSO_NOMBRE[r] ?? r;
 const iconoRec = (r: string): string => RECURSO_ICONO[r] ?? '📦';
 const distancia = (a: { x: number; y: number }, b: { x: number; y: number }): number => Math.hypot(a.x - b.x, a.y - b.y);
-const ORIGEN = (escalon: number): 'pesants' | 'artesanos' | 'nobleza' => (escalon <= 2 ? 'pesants' : escalon === 3 ? 'artesanos' : 'nobleza');
 const ORIGEN_ICONO: Record<string, string> = { pesants: '🌾', artesanos: '⚒️', nobleza: '👑' };
 
 function miColumna(p: ProyeccionJugador): Ejercito | undefined {
@@ -164,7 +164,7 @@ export function comoReponer(p: ProyeccionJugador, s: Escuadron, tropas: TropaRec
     const porSoldado: Record<string, number> = { ...(t.costoEquipo as Record<string, number>) };
     if (oro > 0) porSoldado['oro'] = (porSoldado['oro'] ?? 0) + oro;
     const coste = Object.fromEntries(Object.entries(porSoldado).map(([r, n]) => [r, Math.ceil(n * faltan)]).filter(([, n]) => (n as number) > 0)) as Record<string, number>;
-    const origen = ORIGEN(t.escalon);
+    const origen = origenDeTropa(t);
     const libres = Math.floor(a.poblacion?.[origen] ?? 0);
     const falta = Object.entries(coste).some(([r, n]) => (a.almacen?.[r]?.cantidad ?? 0) < n);
     const motivo = falta ? 'El almacén de la plaza no tiene bastante.' : libres < faltan ? `No hay ${faltan} ${origen} libres en la plaza.` : '';
@@ -275,6 +275,7 @@ function htmlTropas(p: ProyeccionJugador, e: Escapar, repintar: () => void): str
   const enCampamento = [...reponer.values()].some((x) => x?.tipo === 'campamento');
   const c = campamentoAMano(p);
   const fuentes = c && enCampamento ? fuentesDePago(p, c) : [];
+  const permitidas = formacionesPermitidas(p.faccionId ? p.tecnologia?.propias?.adoptadas ?? [] : null);
   const cabecera = `<div class="obra-titulo"><span class="faction-kicker">Tus escuadras</span>
       <span class="obra-chip" title="Escuadras">⚔ ${escuadras.length}</span><span class="obra-chip" title="Hombres en total">🧑 ${total}</span>
       <span class="obra-chip" title="Liderazgo de tus escuadras en la guarnición de tu residencia, frente al cupo que te da">🛡 ${h.guarnicionOcupada}/${h.cupoGuarnicion}</span>
@@ -302,7 +303,8 @@ function htmlTropas(p: ProyeccionJugador, e: Escapar, repintar: () => void): str
       ${iconoEnFila(s.tropaId)}
       <div class="base-escuadra-cuerpo">
         <strong>${e(s.nombre)} ${chipLiderazgo(s)}${s.prestada ? ' <em class="heroe-marca">prestada</em>' : ''}${s.enGuarnicion ? ' <em class="heroe-marca">en guarnición</em>' : ''}${defiende ? ' <em class="heroe-marca">defiende</em>' : ''}</strong>
-        <span class="base-hombres"><span class="obra-barra"><i style="width:${pct}%"></i></span><b>${s.cantidad}/${tope}</b> hombres · nivel ${s.nivel} · moral ${Math.round(s.moral)}</span>
+        <span class="base-hombres"><span class="obra-barra"><i style="width:${pct}%"></i></span><b>${s.cantidad}/${tope}</b> hombres · moral ${Math.round(s.moral)}</span>
+        <span class="base-esc-progreso">${htmlExperienciaEscuadra(s)}${htmlSelectorFormacion(s, permitidas, e)}</span>
         <span class="base-sitio">📍 ${e(dondeEstaLaEscuadra(p, s))}</span>
       </div>
       <div class="base-escuadra-acciones">${boton}${guarnicion}</div>
@@ -424,6 +426,13 @@ export function cablearBasePersonal(panel: HTMLElement, p: ProyeccionJugador, ct
     return ctx.ejecutar('reclutarEnCampamento', { tropaId: b.dataset.baseReponerCamp!, pagarCon: (c && oroDe(p, c)?.pagarCon) ?? 'almacenPersonal' });
   });
   boton('[data-base-reponer-prestadas]', () => ctx.ejecutar('reponerPrestamo', {}));
+  panel.querySelectorAll<HTMLSelectElement>('[data-base-formacion]').forEach((x) => x.addEventListener('change', async () => {
+    const antes = p.heroe.escuadrones.find((s) => s.id === x.dataset.baseFormacion)?.formacion;
+    x.disabled = true;
+    const m = await ctx.ejecutar('elegirFormacion', { escuadronId: x.dataset.baseFormacion!, formacion: x.value });
+    x.disabled = false;
+    if (m !== null) { if (antes) x.value = antes; error(m); }
+  }));
   boton('[data-base-asignar]', (b) => ctx.aplicar(asignarGuarnicion(estadoCliente.gameIdActivo, b.dataset.baseAsignar!)));
   boton('[data-base-retirar]', (b) => ctx.aplicar(retirarGuarnicion(estadoCliente.gameIdActivo, b.dataset.baseRetirar!)));
   panel.querySelectorAll<HTMLButtonElement>('[data-base-mover]').forEach((b) => b.addEventListener('click', async () => {
