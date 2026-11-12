@@ -228,7 +228,7 @@ function htmlForja(p: ProyeccionJugador, a: Asentamiento, resideAqui: boolean, e
       chip('💰', r.impuesto, 'monedas de impuesto', (p.heroe.monedas ?? 0) < r.impuesto, e),
     ].join('');
     const calidad = `<small class="arm-calidad">calidad ${x.calidad[0]} a ${x.calidad[1]} %</small>`;
-    const accion = r.faltan.length === 0 ? `<button class="btn-primary btn-chico" type="button" data-arm-forjar="${e(r.f.id)}">Forjar</button>` : `<small class="arm-falta">Te falta ${e(r.faltan.join(', '))}.</small>`;
+    const accion = r.faltan.length === 0 ? `<button class="btn-primary btn-chico" type="button" data-arm-forjar="${e(r.f.id)}">Forjar</button>` : `<small class="arm-falta">Te ${r.faltan.length === 1 && /^(un|una|1) /.test(r.faltan[0]!) ? 'falta' : 'faltan'} ${e(r.faltan.join(', '))}.</small>`;
     return `<li class="arm-fila arm-fila-forja">${htmlPieza(r.f, e, calidad)}<span class="arm-costes">${costes}</span><span class="arm-accion">${accion}</span></li>`;
   };
   const listas = recetas.filter((r) => r.faltan.length === 0), faltan = recetas.filter((r) => r.faltan.length > 0);
