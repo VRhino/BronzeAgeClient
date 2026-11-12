@@ -33,6 +33,20 @@ export interface FichaObjeto {
   clase?: string;
   tipoArmadura?: PesoDeArmadura;
   metal?: string;
+  /** Las cifras al 100 %: un arma, atributos, daño y penetración; una armadura, atributos, defensa y salud; una montura, vida, trote, galope y aguante. */
+  combate?: CombateDeObjeto;
+  /** Lo que hace un consumible al usarlo (Objetos_Del_Heroe §3.5). */
+  efecto?: { experienciaTropa?: number; experienciaHeroePct?: number; monturaDe?: { objeto: string; probabilidad: number }[] };
+  /** La receta de la forja (tiers II a V): plano de su tier, crisoles, materiales y el rango de calidad en %. */
+  forja?: { plano: number; crisoles: number; materiales: Record<string, number>; calidad: [number, number] } | null;
+}
+
+/** Una terna por tipo de golpe. */
+export interface PorTipoDeGolpe { perforante: number; cortante: number; contundente: number }
+export interface CombateDeObjeto {
+  atributos?: Partial<Record<AtributoDeClase, number>>;
+  dano?: PorTipoDeGolpe; penetracion?: PorTipoDeGolpe; defensa?: PorTipoDeGolpe; salud?: number;
+  vida?: number; trote?: number; galope?: number; aguante?: number;
 }
 
 /** El bloque `OBJETOS`, con lo que hace falta hasta ahora. */
@@ -41,6 +55,12 @@ export interface CatalogoDeObjetos {
   rarezas?: Record<string, string>;
   /** La tecnología que pide cada metal de las piezas (`null`, la de inicio: ninguna). */
   metales?: Record<string, string | null>;
+  /** Las casillas de la mochila (72) y del almacén de objetos (144). */
+  casillasMochila?: number;
+  casillasAlmacen?: number;
+  /** Lo que paga la tienda al comprarte una pieza, en % de su precio (50), y hasta qué tier vende (2). */
+  ventaPct?: number;
+  tiendaHastaTier?: number;
 }
 
 export const NOMBRE_DE_ATRIBUTO: Record<AtributoDeClase, string> = { fuerza: 'Fuerza', destreza: 'Destreza', armadura: 'Armadura', vitalidad: 'Vitalidad' };

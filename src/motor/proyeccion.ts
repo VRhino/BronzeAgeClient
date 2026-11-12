@@ -422,10 +422,11 @@ function heroe(h: pb.Heroe, escuadrones: pb.Escuadron[], ahora: number): d.Heroe
     puntosDeAtributoSinGastar: h.puntosDeAtributoSinGastar,
     atributosBase: { fuerza: h.atributosBase?.fuerza ?? 0, destreza: h.atributosBase?.destreza ?? 0, armadura: h.atributosBase?.armadura ?? 0, vitalidad: h.atributosBase?.vitalidad ?? 0 },
     loadouts: h.loadouts.map((l) => ({ id: l.id, displayName: l.displayName, squadIds: l.squadIds, activo: l.activo, liderazgoTotal: l.liderazgoTotal })),
-    inventario: h.inventario.map(item),
+    inventario: h.inventario.map(item), almacenObjetos: h.almacenObjetos.map(item),
     equipamiento: {
       arma: eq?.arma ? item(eq.arma) : null, casco: eq?.casco ? item(eq.casco) : null, torso: eq?.torso ? item(eq.torso) : null,
       guantes: eq?.guantes ? item(eq.guantes) : null, pantalones: eq?.pantalones ? item(eq.pantalones) : null, botas: eq?.botas ? item(eq.botas) : null,
+      montura: eq?.montura ? item(eq.montura) : null,
     },
     monedas: Number(h.monedas),
     cupoGuarnicion: h.cupoGuarnicion,
@@ -448,7 +449,8 @@ function heroePublico(h: pb.Heroe): d.HeroePublico {
   return {
     heroeId: h.id, displayName: h.displayName, classDefinitionId: h.classDefinitionId, nivel: h.nivel, heridoHasta: instante(h.heridoHastaMs),
     escuadrasQueLleva: h.escuadrasQueLleva.map((e) => ({ tropaId: e.tropaId, cantidad: e.cantidad, nivel: e.nivel })),
-    equipamiento: { arma: null, casco: null, torso: null, guantes: null, pantalones: null, botas: null },
+    // su equipo puesto, por el id de cada pieza (motor 457c278: la clase y el equipo, sin mochila, almacén ni atributos)
+    equipamiento: Object.fromEntries((['arma', 'casco', 'torso', 'guantes', 'pantalones', 'botas', 'montura'] as const).map((k) => [k, h.equipamiento?.[k]?.itemDefinitionId ?? null])) as d.HeroePublico['equipamiento'],
     contratado: h.contratado, fichaMercenario: h.fichaMercenario ? fichaMercenario(h.fichaMercenario) : undefined,
   };
 }

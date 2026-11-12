@@ -8,7 +8,7 @@ import { textoEnTiempoReal } from './estadoCliente';
 import { nombreDeContador } from './misiones';
 import { nombreDeHeroe } from './nombres';
 import { cablearPlegables, plegable } from './plegable';
-import { premiosDeMision, textoDePremios, type Premio } from './recompensasMision';
+import { premiosDeDiaria, premiosDeMision, textoDePremios, type Premio } from './recompensasMision';
 import type { SubpestanaPlaza } from './ganchos';
 import { mostrar as mostrarAviso } from './avisos';
 import { barraAvance } from './juegoVisual';
@@ -61,7 +61,9 @@ function misCargos(p: ProyeccionJugador, d: DuenoTablon): Set<string> {
  * héroe; una grupal, la plaza o la Facción del tablón. */
 function premios(x: DefinicionRecurrente, d: DuenoTablon): Premio[] {
   const cobro = x.tipo === 'individual' ? 'personal' : d.tipo === 'plaza' ? 'plaza' : 'faccion';
-  return premiosDeMision({ participacion: x.participacion, xp: x.experiencia }, x.recompensas, cobro, x.tipo === 'grupal');
+  const lista = premiosDeMision({ participacion: x.participacion, xp: x.experiencia }, x.recompensas, cobro, x.tipo === 'grupal');
+  // una diaria individual da además los objetos de `BOTIN_OBJETOS.misionDiaria` (motor 457c278)
+  return x.duracion === 'diaria' && x.tipo === 'individual' ? [...lista, ...premiosDeDiaria()] : lista;
 }
 
 function recompensa(x: DefinicionRecurrente, d: DuenoTablon): string {

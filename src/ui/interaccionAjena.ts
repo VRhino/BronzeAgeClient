@@ -8,6 +8,7 @@
 //   Dejar de perseguir   si ya vas tras esa presa.
 // Lo que da `inspeccionar` (composición de la columna, carga de la caravana o defensa de la plaza) se lee SIEMPRE de `informesDeInspeccion` de la
 // proyección (10 min de mundo): así sobrevive a recargar y a cerrar la ficha.
+import { HUECOS, iconoDeObjeto, nombreDeObjeto, rarezaDeObjeto, textoDeTipoDeObjeto } from './objetosHeroe';
 import { textoTiempoHasta } from '../mundo/tiempoDeMarcha';
 import type { ProyeccionJugador } from '../apiCliente';
 import { radioDeEncuentro, radioDeInspeccion, radioDeProteccionMercenarios, tropasReclutables } from '../apiCliente';
@@ -124,8 +125,9 @@ function htmlHeroe(p: ProyeccionJugador, id: string, e: Escapar): string {
   if (!h) return `<div class="mapa-lista-item"><div><strong>${e(nombreDeHeroe(p, id))}</strong>${linea('sin ficha a la vista')}</div></div>`;
   const herido = heridoAhora(p, id) ? ` · herido ${Math.ceil((h.heridoHasta! - p.instante) / 60_000)} min` : '';
   const tropa = h.escuadrasQueLleva.length > 0 ? h.escuadrasQueLleva.map((s) => `${iconoMini(s.tropaId)}${e(nombreTropa(s.tropaId))} ×${s.cantidad} (nv ${s.nivel})`).join(', ') : 'sin tropa';
-  const puesto = Object.values(h.equipamiento ?? {}).filter((x): x is string => Boolean(x));
-  return `<div class="mapa-lista-item"><div><strong>${e(h.displayName)}</strong>${linea(`${e(nombreDeClase(h.classDefinitionId))} · nivel ${h.nivel}${herido}`)}${linea(tropa)}${htmlMercenarioPublico(h.contratado, h.fichaMercenario, e)}${puesto.length > 0 ? linea(`Equipo: ${puesto.map((x) => e(x.replace(/_/g, ' '))).join(', ')}`) : ''}</div></div>`;
+  // su equipo puesto (motor 457c278: la clase y los siete huecos, sin mochila ni atributos), en el orden de los huecos y con el nombre de su ficha
+  const puesto = HUECOS.map(([k]) => h.equipamiento?.[k]).filter((x): x is string => Boolean(x));
+  return `<div class="mapa-lista-item"><div><strong>${e(h.displayName)}</strong>${linea(`${e(nombreDeClase(h.classDefinitionId))} · nivel ${h.nivel}${herido}`)}${linea(tropa)}${htmlMercenarioPublico(h.contratado, h.fichaMercenario, e)}${puesto.length > 0 ? linea(`Equipo: ${puesto.map((x) => `<span class="obj-puesto ${rarezaDeObjeto(x)}" title="${e(textoDeTipoDeObjeto(x))}">${iconoDeObjeto(x)} ${e(nombreDeObjeto(x))}</span>`).join(', ')}`) : ''}</div></div>`;
 }
 
 /** El informe vigente de lo que ese héroe tuyo inspeccionó (lo anota el servidor y viaja en la proyección). */

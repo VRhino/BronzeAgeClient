@@ -1,6 +1,12 @@
 // Banco de las recompensas de misión flexibles (`/pruebas/misiones/`): una partida de mentira, sin servidor, con la ventana de misiones (cadenas
 // de héroe, plaza y Facción) y el tablón de una plaza, para mirar la recompensa fija y la lista libre. Las órdenes no salen.
+// Desde la 0.206.0 lee los datos de `pruebas/plaza/datos.json`: H2 da además un objeto y la diaria individual, los de `BOTIN_OBJETOS.misionDiaria`.
 import '../../src/style.css';
+import datos from '../plaza/datos.json';
+const fetchReal = window.fetch.bind(window);
+window.fetch = ((url: RequestInfo | URL, init?: RequestInit) =>
+  String(url).endsWith('/v1/datos') ? Promise.resolve(new Response(JSON.stringify(datos), { status: 200, headers: { 'Content-Type': 'application/json' } })) : fetchReal(url, init)) as typeof fetch;
+import { bloqueDeDatos } from '../../src/apiCliente';
 import type { ProyeccionJugador } from '../../src/apiCliente';
 import { htmlPanelMisiones, elegirPestanaMisiones } from '../../src/ui/misiones';
 import { htmlTablon } from '../../src/ui/tablon';
@@ -13,7 +19,7 @@ const cond = (contador: string, avance: number, umbral: number) => ({ contador, 
 const mision = (id: string, estado: Mision['estado'], m: Partial<Mision>): Mision => ({ id, estado, condiciones: [cond('victorias', 3, 5)], recompensaExperiencia: 0, participacion: 0, recompensas: [], ...m });
 
 const heroe: Mision[] = [
-  mision('H2', 'cumplida', { recompensas: [{ tipo: 'recurso', clave: 'madera', cantidad: 300 }, { tipo: 'oro', cantidad: 5 }, { tipo: 'tropa', clave: 'exploradores_caballo', cantidad: 10 }, { tipo: 'xp', cantidad: 2.5 }] }),
+  mision('H2', 'cumplida', { recompensas: [{ tipo: 'recurso', clave: 'madera', cantidad: 300 }, { tipo: 'oro', cantidad: 5 }, { tipo: 'tropa', clave: 'exploradores_caballo', cantidad: 10 }, { tipo: 'objeto', clave: 'medalla_tropa_grande', cantidad: 1 }, { tipo: 'xp', cantidad: 2.5 }] }),
   mision('H3', 'activa', { recompensas: [{ tipo: 'recurso', clave: 'trigo', cantidad: 200 }] }),
 ];
 const plaza: Mision[] = [mision('A4', 'activa', { participacion: 10, recompensas: [{ tipo: 'recurso', clave: 'piedra', cantidad: 400 }, { tipo: 'xp', cantidad: 15 }] })];
@@ -47,6 +53,10 @@ function ver(v: string): void {
   if (v === 'diario') { elegirPestanaMisiones('heroe', 'H2'); lienzo.innerHTML = htmlPanelMisiones(p, e); }
   else lienzo.innerHTML = `<div class="banco-marco">${htmlTablon(p, { tipo: 'plaza', id: 'as-1', tablon: tablon as never }, e)}</div>`;
 }
-document.querySelectorAll<HTMLButtonElement>('[data-ver]').forEach((b) => b.addEventListener('click', () => ver(b.dataset.ver!)));
-ver('diario');
-(window as unknown as { __banco: unknown }).__banco = { ver, listo: true };
+let vista = 'diario';
+document.querySelectorAll<HTMLButtonElement>('[data-ver]').forEach((b) => b.addEventListener('click', () => { vista = b.dataset.ver!; ver(vista); }));
+const banco = { ver, listo: false };
+(window as unknown as { __banco: unknown }).__banco = banco;
+// se repinta cuando llegan los datos: los nombres de los objetos y la tabla de la diaria salen de ellos
+const repintar = (): void => { ver(vista); banco.listo = bloqueDeDatos('OBJETOS', repintar) !== null && bloqueDeDatos('BOTIN_OBJETOS', repintar) !== null; };
+repintar();

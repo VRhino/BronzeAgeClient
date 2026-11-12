@@ -1,16 +1,17 @@
 // La recompensa de una misión (recompensas flexibles, motor 168a3be; Misiones §4-§8, Misiones_Recurrentes §5): la FIJA de su tipo (plaza →
-// participación, Facción → XP de Facción, héroe → ninguna) y la LISTA libre (recurso, oro, xp, tropa). Aquí se convierte en premios con su
+// participación, Facción → XP de Facción, héroe → ninguna) y la LISTA libre (recurso, oro, xp, tropa y, desde el motor 457c278, objeto). Aquí se convierte en premios con su
 // icono, su cifra y adónde va cada cosa al reclamar; Misiones (cadenas) y el Tablón (recurrentes) los pintan con sus etiquetas.
 import type { RecompensaMision } from '../tiposDominio';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
-import { tropasReclutables } from '../apiCliente';
+import { bloqueDeDatos, tropasReclutables } from '../apiCliente';
 import { iconoTropa } from './iconosTropa';
+import { premioDeObjeto } from './objetosHeroe';
 
 /** Quién cobra: el héroe (cadena de héroe, recurrente individual), la plaza o la Facción (cadenas y grupales de su tablón). */
 export type CobroMision = 'personal' | 'plaza' | 'faccion';
 
 export interface Premio {
-  tipo: 'participacion' | 'xp' | 'oro' | 'recurso' | 'tropa';
+  tipo: 'participacion' | 'xp' | 'oro' | 'recurso' | 'tropa' | 'objeto';
   /** HTML del icono (un emoji o un SVG). */
   icono: string;
   cifra: string;
@@ -48,8 +49,21 @@ export function premiosDeMision(fija: { participacion?: number; xp?: number }, l
     else if (r.tipo === 'oro') premios.push({ tipo: 'oro', icono: RECURSO_ICONO.oro ?? '🪙', cifra: cifra(r.cantidad), nombre: 'oro', destino: `Oro ${ALMACEN[cobro]}`, fija: false });
     else if (r.tipo === 'recurso' && r.clave) premios.push({ tipo: 'recurso', icono: RECURSO_ICONO[r.clave] ?? '📦', cifra: cifra(r.cantidad), nombre: (RECURSO_NOMBRE[r.clave] ?? r.clave).toLowerCase(), destino: `${RECURSO_NOMBRE[r.clave] ?? r.clave} ${ALMACEN[cobro]}`, fija: false });
     else if (r.tipo === 'tropa' && r.clave) premios.push({ tipo: 'tropa', icono: iconoTropa(r.clave, 16), cifra: cifra(r.cantidad), nombre: nombreDeTropa(r.clave), destino: 'Soldados que nacen en el campamento donde resides: completan tu escuadra de esa tropa hasta su tope y lo que sobra se pierde', fija: false });
+    else if (r.tipo === 'objeto' && r.clave) { const o = premioDeObjeto(r.clave); premios.push({ tipo: 'objeto', icono: o.icono, cifra: cifra(r.cantidad), nombre: o.nombre, destino: DESTINO_OBJETO, fija: false }); }
   }
   return premios;
+}
+
+const DESTINO_OBJETO = 'A tu mochila; si no cabe, a tu almacén de objetos, y si tampoco, se pierde';
+
+/** Los objetos que da además una diaria individual (`BOTIN_OBJETOS.misionDiaria`, D5): los seguros, con su cifra; los de suerte, con su %. */
+export function premiosDeDiaria(): Premio[] {
+  const tabla = bloqueDeDatos<{ misionDiaria?: { objeto: string; cantidad: number; probabilidad: number }[] }>('BOTIN_OBJETOS')?.misionDiaria ?? [];
+  return tabla.map((x) => {
+    const o = premioDeObjeto(x.objeto);
+    const suerte = x.probabilidad < 1 ? ` (${Math.round(x.probabilidad * 100)} %)` : '';
+    return { tipo: 'objeto', icono: o.icono, cifra: cifra(x.cantidad), nombre: `${o.nombre}${suerte}`, destino: `${DESTINO_OBJETO}${suerte ? '. Sale con esa probabilidad' : ''}`, fija: false };
+  });
 }
 
 /** Los premios en una línea de texto: «10 de participación, 300 madera, 10 Exploradores a caballo». */

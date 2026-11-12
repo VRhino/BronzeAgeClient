@@ -2,8 +2,9 @@
 // «Héroe», «Escuadras» y «Carro» de la barra de arriba; se abre con el yelmo de la barra o con la tecla B, en cualquier pantalla.
 //  - A la izquierda, el héroe: nivel, experiencia, Liderazgo, sus monedas (un solo saldo desde la tanda 69), víveres (y cuánto aguantan), dónde está, dónde reside (solo se ve:
 //    la residencia se cambia desde dentro de la plaza o del campamento) y sus cargos, con un acceso a lo que manda cada uno.
-//  - Pestañas: Tropas (todas sus escuadras, dónde está cada una, su orden, su experiencia y su formación, la guarnición y **reponer** donde se pueda), Bienes (almacén personal,
-//    carro, pasar a víveres, inventario y equipo), Loadouts, Héroe (atributos), Historial y Plazas conocidas.
+//  - Pestañas: Tropas (todas sus escuadras, dónde está cada una, su orden, su experiencia y su formación, la guarnición y **reponer** donde se pueda), Equipo
+//    (los siete huecos, la mochila y el almacén de objetos: ui/objetosHeroe.ts, 0.206.0), Bienes (almacén personal, carro y pasar a víveres), Loadouts,
+//    Héroe (atributos), Historial y Plazas conocidas.
 // Regla de Víctor: una acción solo sale donde se puede hacer. Reponer, por ejemplo, solo dentro de la plaza donde la escuadra se repone
 // (`reclutarTropa` con la escuadra hecha la completa hasta su tope, motor `militar::reclutamiento`) o en tu campamento de mercenarios
 // (`reclutarEnCampamento` para la tuya, `reponerPrestamo` gratis para las prestadas). Lo que no llega (equipo, oro, gente) va en rojo y lo apaga.
@@ -11,7 +12,7 @@
 import type { ProyeccionJugador } from '../apiCliente';
 import { asignarGuarnicion, capacidadDeViveres, consumoDeViveres, oroPorSoldado, radioDePuerta, retirarGuarnicion, tropasReclutables, type TropaReclutable, origenDeTropa } from '../apiCliente';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
-import type { Asentamiento, CampamentoMercenarios, Ejercito, Escuadron, HeroeProyectado, ItemInstancia, SlotEquipo } from '../tiposDominio';
+import type { Asentamiento, CampamentoMercenarios, Ejercito, Escuadron, HeroeProyectado } from '../tiposDominio';
 import { ayuda } from './ayuda';
 import { historialDeAvisos } from './avisos';
 import { fuentesDePago, type PagarCon } from './columnaQuePaga';
@@ -26,12 +27,13 @@ import { detalleInforme, hace } from './panelIntel';
 import { nombreDeAvanzada, nombreDePueblo } from './pueblos';
 import { progresoDeNivel } from './progresionHeroe';
 import { nombreDeClase } from './clasesHeroe';
+import { cablearEquipoHeroe, htmlEquipoHeroe } from './objetosHeroe';
 import { formacionesPermitidas, htmlExperienciaEscuadra, htmlSelectorFormacion } from './progresionEscuadra';
 
 type Escapar = (valor: string) => string;
 
-export type PestanaBase = 'tropas' | 'bienes' | 'loadouts' | 'heroe' | 'historial' | 'plazas';
-const PESTANAS: [PestanaBase, string][] = [['tropas', 'Tropas'], ['bienes', 'Bienes'], ['loadouts', 'Loadouts'], ['heroe', 'Héroe'], ['historial', 'Historial'], ['plazas', 'Plazas conocidas']];
+export type PestanaBase = 'tropas' | 'equipo' | 'bienes' | 'loadouts' | 'heroe' | 'historial' | 'plazas';
+const PESTANAS: [PestanaBase, string][] = [['tropas', 'Tropas'], ['equipo', 'Equipo'], ['bienes', 'Bienes'], ['loadouts', 'Loadouts'], ['heroe', 'Héroe'], ['historial', 'Historial'], ['plazas', 'Plazas conocidas']];
 
 let pestana: PestanaBase = 'tropas';
 /** De dónde sale el oro al reponer en el campamento; se recuerda entre repintados. */
@@ -315,21 +317,6 @@ function htmlTropas(p: ProyeccionJugador, e: Escapar, repintar: () => void): str
 
 // ── Bienes ──
 
-const SLOTS: [SlotEquipo, string][] = [['arma', 'Arma'], ['casco', 'Casco'], ['torso', 'Torso'], ['guantes', 'Guantes'], ['pantalones', 'Pantalones'], ['botas', 'Botas']];
-const nombreItem = (i: ItemInstancia): string => i.itemDefinitionId.replace(/_/g, ' ');
-
-function htmlEquipo(h: HeroeProyectado, e: Escapar): string {
-  const slots = SLOTS.map(([id, nombre]) => {
-    const x = h.equipamiento[id];
-    return `<div class="base-slot${x ? '' : ' vacio'}" title="${e(x ? `${nombreItem(x)}${x.estadisticas?.length ? ` · ${x.estadisticas.map((s) => `${s.nombre} ${s.valor}`).join(', ')}` : ''}` : 'Vacío')}"><span>${nombre}</span><strong>${x ? e(nombreItem(x)) : '—'}</strong></div>`;
-  }).join('');
-  const inventario = h.inventario.length
-    ? `<div class="base-inventario">${h.inventario.map((x) => `<div class="base-item" title="${e(`${x.tipo} · ${x.precio} de precio`)}"><strong>${e(nombreItem(x))}</strong>${x.cantidad > 1 ? `<small>×${x.cantidad}</small>` : ''}</div>`).join('')}</div>`
-    : '<p class="mapa-lista-vacia">El inventario está vacío.</p>';
-  return `<div class="obra-titulo"><span class="faction-kicker">Equipo e inventario</span>${ayuda('base:equipo', 'Lo que lleva puesto tu héroe y lo que guarda. De momento solo se ve: equiparse aún no es una orden del servidor.')}</div>
-    <div class="base-slots">${slots}</div>${inventario}`;
-}
-
 /** Pasar trigo del carro a los víveres (`pasarAViveres`): solo el Líder de la columna y solo lo que cabe. */
 function htmlPasarAViveres(p: ProyeccionJugador, repintar: () => void): string {
   const col = miColumna(p);
@@ -345,7 +332,7 @@ function htmlPasarAViveres(p: ProyeccionJugador, repintar: () => void): string {
 }
 
 function htmlBienes(p: ProyeccionJugador, e: Escapar, repintar: () => void): string {
-  return `<div class="base-bienes"><div class="base-bienes-carga">${htmlPasarAViveres(p, repintar)}${htmlCarro(p, e, false, false)}</div><div class="base-bienes-equipo">${htmlEquipo(p.heroe, e)}</div></div>`;
+  return `<div class="base-bienes"><div class="base-bienes-carga">${htmlPasarAViveres(p, repintar)}${htmlCarro(p, e, false, false)}</div></div>`;
 }
 
 // ── Historial ──
@@ -394,6 +381,7 @@ function htmlPlazas(p: ProyeccionJugador, e: Escapar): string {
 
 export function htmlBasePersonal(p: ProyeccionJugador, e: Escapar, repintar: () => void): string {
   const cuerpo = pestana === 'tropas' ? htmlTropas(p, e, repintar)
+    : pestana === 'equipo' ? htmlEquipoHeroe(p, e)
     : pestana === 'bienes' ? htmlBienes(p, e, repintar)
     : pestana === 'loadouts' ? htmlLoadouts(p.heroe, e)
     : pestana === 'heroe' ? htmlFichaHeroe(p.heroe, p, e)
@@ -449,6 +437,7 @@ export function cablearBasePersonal(panel: HTMLElement, p: ProyeccionJugador, ct
 
   // Bienes
   if (pestana === 'bienes') cablearCarro(panel, ctx.ejecutar, p.heroeId);
+  if (pestana === 'equipo') cablearEquipoHeroe(panel, ctx.ejecutar, ctx.repintar);
   boton('[data-base-viveres]', () => {
     const n = Math.floor(Number(panel.querySelector<HTMLInputElement>('[data-base-viveres-cantidad]')?.value ?? 0));
     return n >= 1 ? ctx.ejecutar('pasarAViveres', { cantidad: n }) : Promise.resolve('Pon una cantidad de 1 o más.');

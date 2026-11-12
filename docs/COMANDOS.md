@@ -255,6 +255,10 @@ Solo tienen efecto si el backend declara `SERVIDORES_BATALLA` (en Render, hoy no
 - [x] `ordenarEscuadras` — `escuadronIds` (orden de combate) · panel de la columna del mapa
 - [x] `elegirFormacion` — `escuadronId`, `formacion` (id de `FORMACIONES`) · Base › Tropas, en cada escuadra (0.205.0): la de reposo y las abiertas siempre, las cerradas con Disciplina de formación; mientras la escuadra combate no sale el selector (`batalla.bloqueado`). Rechazos traducidos: `formacion.desconocida`, `formacion.sin_tecnologia`, `escuadra.ajena`
 - [x] `pasarAViveres` — ver Caravanas
+- [x] `equiparObjeto` — `casilla` (de la mochila) · Base › Equipo, ficha de la pieza: «Ponérsela» dentro de una plaza, un pueblo o un campamento y sin escuadras en batalla (D2), si lo que vuelve cabe en la mochila (0.206.0)
+- [x] `desequiparObjeto` — `hueco` (casco \| torso \| guantes \| pantalones \| botas \| montura; el arma no) · Base › Equipo, con sitio en la mochila
+- [x] `usarObjeto` — `casilla`; opcional: `escuadronId` (la que recibe una medalla de tropa) · Base › Equipo: medallas y cofre de monturas
+- [x] `guardarObjeto` / `sacarObjeto` — `casilla`, `cantidad` · Base › Equipo, solo dentro de tu residencia (D22). Rechazos traducidos: `equipo.*`, `mochila.llena`, `objeto.*`, `inventario.*`, `almacen_objetos.*`
 - [x] `contratarMercenario` — `mercenarioId`, `trabajo`, `objetivo` y `plazoDias` (o, el permanente, `residenciaAsentamientoId`); opcional: `pagarCon` (`almacenPersonal` \| `carro`, motor 2b2c2a58) · tablón de mercenarios del campamento: quien reside allí elige «Pagar con» su almacén personal o el carro que lleva (el de su columna o, dentro y sin columna, el que trajo); de visita, el carro de su columna
 - [x] `prorrogarContrato` — `mercenarioId`, `plazoDias` · Facción › Mercenarios; sin `pagarCon`, el motor cobra del carro de la columna o, dentro del campamento donde resides y sin columna, del almacén personal
 

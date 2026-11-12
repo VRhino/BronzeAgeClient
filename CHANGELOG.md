@@ -3,6 +3,30 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.206.0] — 2026-11-12 · El equipo del héroe, su mochila y su almacén de objetos, el botín y los objetos como premio · motor `457c278`
+
+La tercera de las cuatro versiones de lo que el motor pasó al cliente el 2026-11-12. Sin cambio de contrato (0.24.0).
+
+- **El equipo de siete huecos** (Heroe_Y_Tropa §4.5; `ui/objetosHeroe.ts`), en la pestaña nueva **Base › Equipo**: arma, casco, torso, guantes,
+  pantalones, botas y montura, cada uno con su pieza y el color de su rareza. El arma define la clase y no se quita (se cambia por otra); lo demás
+  se quita con «Quitársela» si hay sitio en la mochila. La pestaña Bienes se queda con la carga.
+- **La mochila (72 casillas) y el almacén de objetos (144)**, por casillas: cada pieza en la suya, lo apilable junto con su cifra, las forjadas con
+  ✦. Al elegir una pieza, su ficha: qué es, su tier y rareza, dónde está, su precio, sus atributos y su tabla de daño, penetración o defensa por
+  tipo de golpe (una forjada, con las cifras que le salieron por su calidad), y lo que hace un consumible.
+- **Las órdenes**, cada una solo donde el motor la acepta (regla de interfaz): `equiparObjeto` («Ponérsela») y `desequiparObjeto` dentro de una
+  plaza, un pueblo o un campamento y sin escuadras en batalla (D2); `usarObjeto` para las medallas (con el selector de la escuadra que la recibe:
+  ni prestadas ni en el nivel 10) y el cofre de monturas; `guardarObjeto` y `sacarObjeto` con su cantidad, solo dentro de tu residencia (D22).
+  Un arma de otra clase avisa de las armaduras que vuelven a la mochila, y no se ofrece si no caben; una armadura que tu clase no admite lo dice.
+  Con la mochila llena o una escuadra en batalla, una línea lo explica arriba. Sus rechazos, en castellano.
+- **El aviso de botín** (`heroe.botin`): lo que llegó de la batalla, de los bandidos, de la diaria, del alijo, del rango de mercenario o de la
+  misión, a la mochila, al almacén (si la mochila estaba llena) o perdido. Y el de `heroe.objeto_usado`: la medalla con su escuadra o el cofre con
+  la montura que salió (urgente, para que no pase desapercibida).
+- **El equipo de otro héroe**, en la ficha de una columna ajena: las piezas que lleva puestas, en el orden de los huecos y con su rareza.
+- **Los objetos como premio**: las recompensas de misión de tipo `objeto` con su icono y su nombre, y las diarias individuales del tablón dicen
+  los objetos que dan además (`BOTIN_OBJETOS.misionDiaria`: crisol y las dos medallas pequeñas).
+- Bancos: `/pruebas/base/?pestana=equipo` (con `&mochila=llena` y `&batalla=1`), `/pruebas/objetos/` (el equipo ajeno y los avisos) y
+  `/pruebas/misiones/` con los premios de objeto. Pruebas en `pruebas/objetosHeroe.test.ts`.
+
 ## [0.205.0] — 2026-11-12 · Las Eras IV y V, la ficha de combate de las tropas y la experiencia y la formación de cada escuadra · motor `457c278`
 
 La segunda de las cuatro versiones de lo que el motor pasó al cliente el 2026-11-12. Sin cambio de contrato (0.24.0, como la 0.204.0).

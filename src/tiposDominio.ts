@@ -446,8 +446,9 @@ export interface Mision {
 
 /** Un elemento de la lista libre de una recompensa de misión (Misiones §4): recurso, oro y xp en unidades; una tropa, en soldados. */
 export interface RecompensaMision {
-  tipo: 'recurso' | 'oro' | 'xp' | 'tropa';
-  /** El recurso o la tropa; sin ella en oro y xp. */
+  /** `objeto` (motor 457c278): piezas de `OBJETOS` a la mochila; solo en una misión personal y nunca un material. */
+  tipo: 'recurso' | 'oro' | 'xp' | 'tropa' | 'objeto';
+  /** El recurso, la tropa o el objeto; sin ella en oro y xp. */
   clave?: string;
   cantidad: number;
 }
@@ -866,19 +867,23 @@ export interface Alijo {
 }
 
 export type AtributoHeroe = 'fuerza' | 'destreza' | 'armadura' | 'vitalidad';
-export type SlotEquipo = 'arma' | 'casco' | 'torso' | 'guantes' | 'pantalones' | 'botas';
+/** Los siete huecos del equipo (Objetos_Del_Heroe §3.2; la montura desde el motor 457c278). El arma está siempre puesta. */
+export type SlotEquipo = 'arma' | 'casco' | 'torso' | 'guantes' | 'pantalones' | 'botas' | 'montura';
 
-/** Copia local de `ItemInstancia` (backend, doc 01 §12.1: el `InventoryItem` de Conquest). Hoy inventario y equipo
- * llegan siempre vacíos: no hay `equipar` ni de dónde sacar objetos hasta CQ-004. */
+/** Una pieza (`ItemInstancia`, Heroe_Y_Tropa §4.5): de la mochila, del almacén de objetos o puesta. */
 export interface ItemInstancia {
+  /** El id de su ficha en `OBJETOS`. */
   itemDefinitionId: string;
-  tipo: 'arma' | 'armadura' | 'consumible' | 'visual';
+  tipo: 'arma' | 'armadura' | 'montura' | 'material' | 'consumible';
+  /** Lo apilable va junto en una sola casilla. */
   cantidad: number;
-  /** Solo el equipo único; ausente = apilable. */
+  /** Solo una pieza forjada (`obj-N`); la de tienda o de botín es la ficha al 100 %. */
   itemInstanceId?: string;
+  /** Las cifras de una forjada, ya por su calidad: `fuerza`…, `danoPerforante`…, `penetracion…`, `defensa…` y `salud`. */
   estadisticas?: { nombre: string; valor: number }[];
+  /** El de su ficha. */
   precio: number;
-  /** -1 si no ocupa casilla. */
+  /** El número fijo de su casilla (de 0 a la capacidad menos 1), el que llevan las órdenes; una pieza puesta lleva 0, que no significa nada. */
   casillaInventario: number;
 }
 
@@ -964,7 +969,10 @@ export interface HeroeProyectado {
   /** La base de la clase (la del arma puesta) más lo repartido (motor c82d6ed, D16); lo que da el equipo lo suma Conquest. */
   atributosBase: Record<AtributoHeroe, number>;
   loadouts: Loadout[];
+  /** La mochila (`OBJETOS.casillasMochila`, 72 casillas). */
   inventario: ItemInstancia[];
+  /** El almacén de objetos de su residencia (`OBJETOS.casillasAlmacen`, 144 casillas; D22). */
+  almacenObjetos: ItemInstancia[];
   equipamiento: Record<SlotEquipo, ItemInstancia | null>;
   /** Las monedas del héroe (tanda 69): un solo saldo, aparte del oro de las plazas (100 monedas valen 1 de oro en los precios que admiten las dos).
    * Se ganan combatiendo y pagan contratos de mercenario. */

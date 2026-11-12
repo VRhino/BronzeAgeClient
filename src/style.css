@@ -3306,6 +3306,7 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .tablon-chip-xp { border-color: #7aa0d8; color: #a9c4ee; }
 .tablon-chip-participacion { border-color: #8fbf7a; color: #b5dba3; }
 .tablon-chip-tropa { border-color: #c9895a; color: #e6b48c; }
+.tablon-chip-objeto { border-color: #a58ad8; color: #c9b6ee; }
 .tablon-chip.fija { font-weight: 600; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
 .tablon-chip { display: inline-flex; align-items: center; gap: 3px; }
 .tablon-chip-icono { display: inline-flex; font-size: 0.8rem; line-height: 1; }
@@ -6082,6 +6083,53 @@ button.carro-hueco:hover, .carro-hueco.activo { border-color: var(--oro); box-sh
 .base-bienes-carga, .base-bienes-equipo { display: flex; flex-direction: column; gap: 10px; }
 .base-viveres { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px; border: 1px solid var(--bronce-osc); border-radius: 3px; }
 .base-viveres .form-input { width: 80px; margin: 0; }
+/* 0.206.0: la pestaña Equipo de la Base (ui/objetosHeroe.ts): los siete huecos, la mochila y el almacén de objetos por casillas, y la ficha. */
+.obj-pantalla { display: grid; grid-template-columns: minmax(230px, 0.8fr) minmax(0, 1.6fr) minmax(260px, 1fr); gap: 18px; align-items: start; }
+.obj-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.obj-lugar { margin: 0 0 10px; }
+.obj-huecos { display: grid; gap: 6px; }
+.obj-hueco { display: grid; grid-template-columns: 30px 1fr; grid-template-rows: auto auto; column-gap: 8px; align-items: center; text-align: left; padding: 7px 10px; border: 1px solid var(--bronce-osc); border-left-width: 3px; border-radius: 3px; background: rgba(0, 0, 0, 0.22); color: var(--pergamino); font: inherit; cursor: pointer; }
+.obj-hueco i { grid-row: span 2; font-size: 20px; font-style: normal; text-align: center; }
+.obj-hueco span { color: var(--text-secondary); font-size: 0.72rem; letter-spacing: .06em; text-transform: uppercase; }
+.obj-hueco strong { font-weight: 600; font-size: 0.86rem; line-height: 1.25; }
+.obj-hueco em { color: var(--oro); font-style: normal; }
+.obj-hueco.vacio { cursor: default; opacity: .6; border-style: dashed; }
+.obj-hueco.vacio strong { color: var(--text-secondary); font-weight: 400; }
+.obj-hueco.elegida, .obj-casilla.elegida { outline: 2px solid var(--oro); outline-offset: 1px; }
+.obj-rejilla { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; }
+.obj-casilla { position: relative; aspect-ratio: 1; min-width: 0; display: grid; place-items: center; padding: 0; border: 1px solid rgba(169, 121, 63, 0.45); border-radius: 3px; background: rgba(0, 0, 0, 0.3); color: var(--pergamino); font: inherit; cursor: pointer; }
+.obj-casilla i { font-style: normal; font-size: clamp(14px, 1.5vw, 20px); line-height: 1; }
+.obj-casilla b { position: absolute; right: 2px; bottom: 1px; font-size: 10px; font-weight: 700; text-shadow: 0 0 3px #000, 0 0 2px #000; }
+.obj-casilla em { position: absolute; left: 2px; top: 0; font-size: 9px; font-style: normal; color: var(--oro); }
+.obj-casilla.vacia { cursor: default; border-color: rgba(169, 121, 63, 0.14); background: rgba(0, 0, 0, 0.14); }
+.obj-casilla:not(.vacia):hover { background: rgba(201, 162, 39, 0.12); }
+/* El color de la rareza en el borde: el mismo de la ficha de combate de las tropas. */
+.obj-casilla.r-comun, .obj-hueco.r-comun { border-color: #8f897b; }
+.obj-casilla.r-pocoComun, .obj-hueco.r-pocoComun { border-color: #7fc27a; }
+.obj-casilla.r-rara, .obj-hueco.r-rara { border-color: #6fa8e6; }
+.obj-casilla.r-epica, .obj-hueco.r-epica { border-color: #b98ae6; }
+.obj-casilla.r-legendaria, .obj-hueco.r-legendaria { border-color: #e6a64a; }
+.obj-puesto.r-pocoComun { color: #9fd49a; } .obj-puesto.r-rara { color: #8fbcef; } .obj-puesto.r-epica { color: #cba6ee; } .obj-puesto.r-legendaria { color: #efbb6a; }
+.obj-nota { margin: 0; color: var(--text-secondary); font-size: 0.78rem; }
+.obj-ficha { padding: 12px 14px; border: 1px solid var(--bronce-osc); border-radius: 4px; background: rgba(0, 0, 0, 0.25); gap: 8px; }
+.obj-ficha p { margin: 0; font-size: 0.86rem; }
+.obj-ficha-cab { display: flex; gap: 10px; align-items: center; }
+.obj-ficha-cab > i { font-size: 28px; font-style: normal; }
+.obj-ficha-cab h4 { margin: 0; font-size: 1rem; color: var(--pergamino); }
+.obj-ficha-cab small, .obj-ficha-tier small { color: var(--text-secondary); font-size: 0.78rem; }
+.obj-ficha-tier { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.obj-forjada { color: var(--oro); }
+.obj-atributos { color: var(--pergamino); }
+.obj-aviso { color: var(--obra-ambar); font-size: 0.8rem; }
+.obj-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 4px; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+.obj-acciones .obj-aviso { flex-basis: 100%; }
+.obj-campo { display: flex; flex-basis: 100%; min-width: 0; max-width: 100%; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-secondary); }
+.obj-campo span { flex: none; }
+.obj-campo select.form-input { flex: 1 1 0; min-width: 0; width: 0; padding: 3px 6px; font-size: 0.82rem; }
+.obj-tabla abbr { text-decoration: none; }
+.obj-mover { display: inline-flex; align-items: center; gap: 6px; }
+.obj-cantidad { width: 64px; padding: 3px 6px; }
+@media (max-width: 1100px) { .obj-pantalla { grid-template-columns: 1fr; } }
 .base-slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .base-slot { display: flex; flex-direction: column; gap: 2px; padding: 8px; border: 1px solid var(--bronce-osc); border-radius: 3px; background: rgba(0, 0, 0, 0.22); }
 .base-slot span { color: var(--text-secondary); font-size: 0.75rem; }

@@ -69,7 +69,7 @@ Todo lo de 0.26.0 se probó con **proyección fabricada** (el servidor rechaza l
 
 **Unity** (lo resuelve Conquest, no el cliente web):
 - Creación completa del héroe: género y aspecto (la pantalla pide ya el nombre y la clase, 0.204.0).
-- Equipo, mochila y almacén de objetos (0.206.0), tienda y forja (0.207.0). Los perks ya no existen en el motor (c82d6ed): los abre el nivel en Conquest.
+- Los perks ya no existen en el motor (c82d6ed): los abre el nivel en Conquest. El equipo, la mochila y el almacén de objetos sí están en el cliente web (Base › Equipo, 0.206.0); la tienda y la forja llegan en la 0.207.0.
 - Batallas de Unity: `unirseABatalla`, `cancelarBatalla`, `proyeccion.batallas`, token de asignación.
 
 **Descartado del canon:**
