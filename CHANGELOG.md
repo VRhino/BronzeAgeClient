@@ -3,6 +3,33 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.204.0] — 2026-11-12 · Para jugar la partida nueva: la clase del héroe, su nivel, el aceite de sésamo y el nivel 5 · motor `457c278`
+
+La primera de las cuatro versiones que recogen lo que el motor pasó al cliente el 2026-11-12 (`Docs/Coordinacion/Pendientes_Cliente_Jugador.md`,
+«Ya pasado»), con el reparto que aprobó Víctor. **Hace falta partida nueva (BAN63).** Contrato 0.24.0: `src/contrato/` regenerado (REVISION
+457c278). Lo que falta va en 0.205.0 (Eras IV y V, tropas, experiencia de escuadra y formaciones), 0.206.0 (equipo, mochila y almacén de objetos,
+botín) y 0.207.0 (Armería, tienda, forja, fondo de la plaza y la plaza ajena por dentro).
+
+- **La clase al crear el héroe** (D21; `ui/clasesHeroe.ts`): la pantalla de elegir campamento pide además la clase, una de las cinco de
+  `CLASES_HEROE`, con su armadura, sus atributos de base en puntos y con qué nace (el arma de tier I de la clase, el torso, los guantes, los
+  pantalones y las botas de su armadura inicial y el caballo de tiro, como `Equipo::inicial` del motor, nombres de `OBJETOS`). Sin clase el botón
+  dice «Elige tu clase» y no se nace; antes se mandaba `Spear`, que el motor ya rechaza (`heroe.clase_desconocida`, traducido). La clase del héroe
+  (la de su arma) sale con su nombre en la Base y, la de otro héroe, en su ficha y en la Taberna.
+- **El nivel del héroe** (`ui/progresionHeroe.ts`): la Base enseña «Hacia el nivel N» con lo que lleva sobre lo que pide y su barra, sacado de
+  `experiencia_hacia_siguiente_nivel` (ahora lo que falta, en milésimas) y de la curva de `PROGRESION_HEROE` (100, 120… 680 desde el 30). Al subir
+  llega un aviso con `heroe.nivel_subio` («más Liderazgo y un punto de atributo», hasta el 30). Repartir puntos ya estaba, solo con puntos sin
+  gastar. El Liderazgo es el de `liderazgo_base` (nace con 14): el reclutamiento, la salida y los loadouts ya ofrecían solo lo que cabe.
+- **Adiós a los perks**: fuera de la proyección, del loadout y de `guardarLoadout`, como en el contrato.
+- **El aceite de sésamo** (`aceiteSesamo`, el recurso 42): su nombre, icono y color en el almacén, el mercado, las caravanas y la cola de hechos;
+  la prensa de sésamo lo da a él, y `aceite` pasa a llamarse «Aceite de oliva». Se pausa como los demás bienes de la nobleza.
+- **La plaza sube al nivel 5**: sin el techo provisional del 4; el coste del 5 (con vino, cerveza y los dos aceites) sale de los datos.
+- **Lo pequeño del rescate (motor ebfc4354)**: el carro de acarreo de una madre sin Mercado admite 100 de escolta (antes el cliente no daba
+  cupo); en Talleres, una receta que pide otro edificio (hoy el Arma de Hierro de Calidad, una Fundición de nivel 3) sale con candado y dice
+  cuál le falta. Fundar ya te dejaba dentro de la plaza nueva: el motor ahora mete la columna y el cliente la sigue sin cambios.
+- Datos de prueba (`pruebas/plaza/datos.json`) sacados de nuevo de `Docs/Mechanics` del motor 457c278, ahora con `Objetos_Del_Heroe`. Bancos:
+  la clase en `/pruebas/eleccion/`, el nivel en `/pruebas/base/`, el nivel 5 en `/pruebas/centro/?nivel=4`, los aceites y la Fundición en
+  `/pruebas/hud/?ventana=almacen&armeria=3&comida=1&tesorero=1&pausa=carne`. Pruebas en `pruebas/claseYNivel.test.ts`.
+
 ## [0.203.0] — 2026-11-11 · La aldea ganadera, la de trigo sin corrales, la Granja de un solo nivel y el nivel 2 con dos pueblos · motor `3d05872`
 
 Lo que trae el motor 3d05872 (PR #16), que Víctor pidió adaptar «en interfaces y modelos 3d». **Hace falta partida nueva.** El contrato sigue

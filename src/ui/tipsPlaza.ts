@@ -288,8 +288,7 @@ function paraLaPlaza(a: Asentamiento | null, tipo: string, cat: Record<string, D
   const li: string[] = [];
   if (a) {
     const reqs = bloqueDeDatos<{ nivelMaximo?: number; requisitos?: Record<string, Requisito> }>('NIVEL_ASENTAMIENTO');
-    const asc = bloqueDeDatos<{ nivelTechoProvisional?: number }>('ASCENSO_ASENTAMIENTO');
-    const techo = Math.min(reqs?.nivelMaximo ?? 5, asc?.nivelTechoProvisional ?? 5);
+    const techo = reqs?.nivelMaximo ?? 5;
     for (const [k, r] of Object.entries(reqs?.requisitos ?? {})) {
       const objetivo = Number(k);
       if (objetivo <= a.nivel || objetivo > techo || !(r.edificios ?? []).includes(tipo)) continue;
@@ -446,9 +445,9 @@ export function htmlTipRecurso(a: Asentamiento | null, r: string, nota?: string)
     .filter(([, d]) => tieneTec(d.requiereTecnologia, ad) && nivelesDe(d).some(([, nv]) => (nv.costoMejora?.[r] ?? 0) > 0 && tieneTec(nv.requiereTecnologia, ad))).map(([t]) => t);
   if (mejorar.length) usos.push(`Mejorar: ${edificios(mejorar)}`);
   // subir la plaza, si algún nivel que le queda lo pide
-  const asc = bloqueDeDatos<{ porNivelObjetivo?: Record<string, { costo?: Record<string, number> }>; nivelTechoProvisional?: number }>('ASCENSO_ASENTAMIENTO');
+  const asc = bloqueDeDatos<{ porNivelObjetivo?: Record<string, { costo?: Record<string, number> }> }>('ASCENSO_ASENTAMIENTO');
   const reqs = bloqueDeDatos<{ nivelMaximo?: number }>('NIVEL_ASENTAMIENTO');
-  const techo = Math.min(reqs?.nivelMaximo ?? 5, asc?.nivelTechoProvisional ?? 5);
+  const techo = reqs?.nivelMaximo ?? 5;
   if (Object.entries(asc?.porNivelObjetivo ?? {}).some(([k, v]) => (v.costo?.[r] ?? 0) > 0 && Number(k) > nivelPlaza && Number(k) <= techo)) usos.push('Subir la plaza de nivel');
   // el mantenimiento: madera siempre, piedra y oro desde su nivel (el nivel es la condición, no una cantidad)
   const mant = bloqueDeDatos<{ costoBase?: Record<string, number>; nivelParaPiedra?: number; nivelParaOro?: number }>('MANTENIMIENTO');

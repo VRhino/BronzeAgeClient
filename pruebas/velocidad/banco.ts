@@ -34,7 +34,7 @@ const base = {
   instante: Date.parse('2026-11-02T10:00:00Z'), heroeId: 'heroe-1', faccionId: 'f-1',
   facciones: [{ id: 'f-1', nombre: 'Casa del Toro', reyId: 'heroe-1', miembros: [] }],
   asentamientos: [plaza], campamentosMercenarios: [], ejercitos: [], caravanas: [], convocatorias: [], heroesVisibles: [],
-  heroe: { id: 'heroe-1', displayName: 'Korax', escuadrones, loadouts: [{ id: 'l1', displayName: 'Vanguardia', squadIds: ['e1', 'e2'], activo: true, perksSeleccionados: [] }], liderazgoBase: 100, viveres: 180, carro: { capacidad: 300 }, almacenPersonal: {} },
+  heroe: { id: 'heroe-1', displayName: 'Korax', escuadrones, loadouts: [{ id: 'l1', displayName: 'Vanguardia', squadIds: ['e1', 'e2'], activo: true }], liderazgoBase: 100, viveres: 180, carro: { capacidad: 300 }, almacenPersonal: {} },
   nombresDeCompaneros: { 'heroe-2': 'Ita', 'heroe-3': 'Nestor' },
 };
 const proyeccion = (extra: object): ProyeccionJugador => ({ ...base, ...extra }) as unknown as ProyeccionJugador;

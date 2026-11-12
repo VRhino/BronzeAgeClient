@@ -22,6 +22,7 @@ import { nombreDeHeroe } from './nombres';
 import { minutosHerido } from './panelHeroe';
 import { iconoEnFila, iconoMini } from './iconosTropa';
 import { htmlMercenarioPublico } from './mercenarios';
+import { nombreDeClase } from './clasesHeroe';
 
 type Escapar = (valor: string) => string;
 type Punto = { x: number; y: number };
@@ -124,7 +125,7 @@ function htmlHeroe(p: ProyeccionJugador, id: string, e: Escapar): string {
   const herido = heridoAhora(p, id) ? ` · herido ${Math.ceil((h.heridoHasta! - p.instante) / 60_000)} min` : '';
   const tropa = h.escuadrasQueLleva.length > 0 ? h.escuadrasQueLleva.map((s) => `${iconoMini(s.tropaId)}${e(nombreTropa(s.tropaId))} ×${s.cantidad} (nv ${s.nivel})`).join(', ') : 'sin tropa';
   const puesto = Object.values(h.equipamiento ?? {}).filter((x): x is string => Boolean(x));
-  return `<div class="mapa-lista-item"><div><strong>${e(h.displayName)}</strong>${linea(`${e(h.classDefinitionId)} · nivel ${h.nivel}${herido}`)}${linea(tropa)}${htmlMercenarioPublico(h.contratado, h.fichaMercenario, e)}${puesto.length > 0 ? linea(`Equipo: ${puesto.map((x) => e(x.replace(/_/g, ' '))).join(', ')}`) : ''}</div></div>`;
+  return `<div class="mapa-lista-item"><div><strong>${e(h.displayName)}</strong>${linea(`${e(nombreDeClase(h.classDefinitionId))} · nivel ${h.nivel}${herido}`)}${linea(tropa)}${htmlMercenarioPublico(h.contratado, h.fichaMercenario, e)}${puesto.length > 0 ? linea(`Equipo: ${puesto.map((x) => e(x.replace(/_/g, ' '))).join(', ')}`) : ''}</div></div>`;
 }
 
 /** El informe vigente de lo que ese héroe tuyo inspeccionó (lo anota el servidor y viaja en la proyección). */

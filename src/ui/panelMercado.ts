@@ -551,6 +551,12 @@ export function puntosDeEscolta(a: Asentamiento, alCargar?: () => void): number 
   return cat && nivelMercado > 0 ? cat.escoltaPorNivelMercado[nivelMercado - 1] : undefined;
 }
 
+/** El cupo de escolta del carro de acarreo de un pueblo: el del Mercado de su madre y, sin Mercado, el del primer nivel (100; motor ebfc4354,
+ * antes 0). `undefined` sin datos. */
+export function puntosDeEscoltaDelCarro(madre: Asentamiento, alCargar?: () => void): number | undefined {
+  return puntosDeEscolta(madre, alCargar) ?? catalogoDeCaravanas(alCargar)?.escoltaPorNivelMercado[0];
+}
+
 /** «Añadir escolta», «Ceder» y «Retirar» de las escoltas pintadas con `escolta` dentro de `raiz`. */
 export function cablearEscolta(raiz: HTMLElement, p: ProyeccionJugador, ejecutar: Ejecutar): void {
   // Escolta: «Añadir escolta» despliega o pliega la lista en la propia tarjeta (sin repintar: el conjunto hace que el siguiente pintado salga igual).

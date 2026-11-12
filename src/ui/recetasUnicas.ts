@@ -13,15 +13,15 @@ interface TallerDeUnaReceta { maximoPorPlaza?: number; recetasDistintasPorNivel?
 export const RECETA_DE_INSUMO: Record<string, { taller: string; produce: string; nombre: string }> = {
   uva: { taller: 'bodega', produce: 'vino', nombre: 'Vino' },
   cebada: { taller: 'bodega', produce: 'cerveza', nombre: 'Cerveza' },
-  aceituna: { taller: 'prensa', produce: 'aceite', nombre: 'Aceite de aceituna' },
-  sesamo: { taller: 'prensa', produce: 'aceite', nombre: 'Aceite de sésamo' },
+  aceituna: { taller: 'prensa', produce: 'aceite', nombre: 'Aceite de oliva' },
+  sesamo: { taller: 'prensa', produce: 'aceiteSesamo', nombre: 'Aceite de sésamo' },
 };
 
 /** El aviso del hecho `construccion.receta_elegida`, por el insumo que se eligió. */
 export const TEXTO_DE_RECETA: Record<string, string> = {
   uva: 'Una bodega de la plaza hace ahora vino, de uva.',
   cebada: 'Una bodega de la plaza hace ahora cerveza, de cebada.',
-  aceituna: 'Una prensa de la plaza hace ahora aceite de aceituna.',
+  aceituna: 'Una prensa de la plaza hace ahora aceite de oliva.',
   sesamo: 'Una prensa de la plaza hace ahora aceite de sésamo.',
 };
 

@@ -87,7 +87,7 @@ function renderEditor(h: HeroeProyectado, e: Escapar): string {
 export function htmlLoadouts(h: HeroeProyectado, e: Escapar): string {
   if (borrador) return renderEditor(h, e) + '<p class="faction-error" data-campo="error" role="alert"></p>';
   return `
-    <strong class="heroe-sub">Loadouts${ayuda('jugador:heroe-loadouts', 'El loadout activo es el que defiende tu residencia mientras estás dentro. Los perks llegarán con el catálogo de Conquest.')}</strong>
+    <strong class="heroe-sub">Loadouts${ayuda('jugador:heroe-loadouts', 'El loadout activo es el que defiende tu residencia mientras estás dentro.')}</strong>
     <div class="mapa-lista">${h.loadouts
       .map((l) => `<div class="mapa-lista-item heroe-fila">
         <div><strong>${e(l.displayName)}${l.activo ? ' <em class="heroe-marca">activo</em>' : ''}</strong><span>${l.squadIds.length} escuadras · ${l.liderazgoTotal} / ${h.liderazgoBase} de Liderazgo</span></div>
@@ -132,7 +132,7 @@ export function cablearHeroe(panel: HTMLElement, h: HeroeProyectado, aplicar: Ap
         return;
       }
       case 'activar':
-        if (elegido) void accion(boton, () => guardarLoadout(gameId, { loadoutId: elegido.id, displayName: elegido.displayName, squadIds: elegido.squadIds, perksSeleccionados: elegido.perksSeleccionados, activo: true }));
+        if (elegido) void accion(boton, () => guardarLoadout(gameId, { loadoutId: elegido.id, displayName: elegido.displayName, squadIds: elegido.squadIds, activo: true }));
         return;
       case 'borrar':
         if (elegido) void confirmar(`Se borra el loadout «${elegido.displayName}».`, { titulo: '¿Borrar el loadout?', aceptar: 'Borrar', peligro: true }).then((ok) => { if (ok) void accion(boton, () => borrarLoadout(gameId, elegido.id)); });
@@ -145,12 +145,10 @@ export function cablearHeroe(panel: HTMLElement, h: HeroeProyectado, aplicar: Ap
       case 'guardar': {
         const b = borrador;
         if (!b) return;
-        const previo = loadout(b.loadoutId);
         void accion(boton, () => guardarLoadout(gameId, {
           ...(b.loadoutId ? { loadoutId: b.loadoutId } : {}),
           displayName: b.displayName.trim(),
           squadIds: [...b.squadIds],
-          perksSeleccionados: previo?.perksSeleccionados ?? [],
           activo: b.activo,
         }));
       }

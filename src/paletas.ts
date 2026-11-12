@@ -21,11 +21,13 @@ export const RECURSO_NOMBRE: Record<string, string> = {
   uva: 'Uva',
   vino: 'Vino',
   aceituna: 'Aceituna',
-  aceite: 'Aceite',
+  // el id sigue siendo `aceite`; el de sésamo es otro recurso (motor c82d6ed)
+  aceite: 'Aceite de oliva',
   // los cultivos de la tierra húmeda (motor b55e90f)
   cebada: 'Cebada',
   cerveza: 'Cerveza',
   sesamo: 'Sésamo',
+  aceiteSesamo: 'Aceite de sésamo',
   lingoteCobre: 'Lingote de cobre',
   lingoteEstano: 'Lingote de estaño',
   lingoteBronce: 'Lingote de bronce',
@@ -56,14 +58,14 @@ export const RECURSOS_POR_INDICE: readonly string[] = [
   'madera', 'piedra', 'trigo', 'cobre', 'estano', 'oro', 'livestock', 'hierro', 'lingoteCobre', 'lingoteEstano', 'lingoteBronce', 'lingoteHierro',
   'cuero', 'cueroCurtido', 'cueroCalidad', 'armaMadera', 'armaCobre', 'armaBronce', 'armaBronceCalidad', 'armaHierro', 'armaHierroCalidad',
   'armaduraBasica', 'armaduraIntermedia', 'armaduraBronce', 'armaduraBronceCalidad', 'carroGuerra', 'chatarraCobre', 'chatarraBronce', 'chatarraHierro',
-  'harina', 'pan', 'carne', 'leche', 'queso', 'uva', 'aceituna', 'vino', 'aceite', 'cebada', 'cerveza', 'sesamo',
+  'harina', 'pan', 'carne', 'leche', 'queso', 'uva', 'aceituna', 'vino', 'aceite', 'cebada', 'cerveza', 'sesamo', 'aceiteSesamo',
 ];
 
 export const RECURSO_ICONO: Record<string, string> = {
   madera: '🪵', piedra: '🪨', trigo: '🌾', cobre: '🟠', estano: '⚙️', oro: '🪙', livestock: '🐄',
   // la comida, junto al trigo y al ganado (el orden de este objeto es el del almacén)
   harina: '🥣', pan: '🍞', carne: '🥩', leche: '🥛', queso: '🧀', uva: '🍇', vino: '🍷', cebada: '🍃', cerveza: '🍺',
-  aceituna: '🌿', sesamo: '🌼', aceite: '🏺',
+  aceituna: '🌿', sesamo: '🌼', aceite: '🏺', aceiteSesamo: '🫙',
   lingoteCobre: '🔶', lingoteEstano: '🔩', lingoteBronce: '🟫', cuero: '🟤', cueroCurtido: '🧵',
   cueroCalidad: '✨', armaMadera: '🏹', armaCobre: '🗡️', armaBronce: '⚔️', armaBronceCalidad: '🛡️',
   armaduraBasica: '🥋', armaduraIntermedia: '🛡️', armaduraBronce: '🛡️', armaduraBronceCalidad: '🛡️',
@@ -91,6 +93,7 @@ export const RECURSO_COLOR: Record<string, string> = {
   cebada: '#d6b45c',
   cerveza: '#b07a26',
   sesamo: '#e6d2a0',
+  aceiteSesamo: '#b8863a',
   lingoteCobre: '#d98a4a',
   lingoteEstano: '#5a8fd9',
   lingoteBronce: '#a97142',

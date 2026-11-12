@@ -364,21 +364,24 @@ export function htmlRecetas(c: ContextoPlaza): string {
   const filas = recetasDe(c.asentamiento, c.refrescar).map((r) => {
     const parada = pausadas.has(r.produce);
     const falta = adoptadas && r.tecnologia && !adoptadas.includes(r.tecnologia) ? r.tecnologia : '';
+    // la receta que pide otro edificio activo de cierto nivel (`requiereEdificio`, motor ebfc4354): hoy, el Arma de Hierro de Calidad, una Fundición de nivel 3
+    const req = r.edificioReq;
+    const sinEdificio = req && !(c.asentamiento.edificios ?? []).some((x) => x.tipo === req.tipo && x.estado === 'activo' && (x.nivelInterno ?? 1) >= req.nivel) ? `${nombreDe(req.tipo)} de nivel ${req.nivel}` : '';
     const nombre = RECURSO_NOMBRE[r.produce] ?? r.produce;
     const insumos = Object.entries(r.insumos).map(([x, n]) => `<span class="prod-insumo" title="${e(`${fmt(n)} ${RECURSO_NOMBRE[x] ?? x} por unidad`)}">${RECURSO_ICONO[x] ?? '📦'}<small>${fmt(n)}</small></span>`).join('');
     const talleres = [...r.talleres].map(([t, n]) => `<span class="prod-taller" title="${e(nombreDe(t))}">${iconoEdificio(t, 16)}${n > 1 ? `<small>×${n}</small>` : ''}</span>`).join('');
-    const estado = falta ? 'bloqueada' : parada ? 'parada' : 'marcha';
-    const titulo = `${nombre}: ${falta ? `bloqueada, requiere la tecnología «${falta}»` : parada ? 'parada' : 'en marcha'}${r.porMinuto ? ` · hasta ${fmt(r.porMinuto)}/min con la mano de obra completa` : ''}${Object.keys(r.insumos).length ? ` · por unidad: ${Object.entries(r.insumos).map(([x, n]) => `${fmt(n)} ${RECURSO_NOMBRE[x] ?? x}`).join(', ')}` : ''}`;
+    const estado = falta || sinEdificio ? 'bloqueada' : parada ? 'parada' : 'marcha';
+    const titulo = `${nombre}: ${falta ? `bloqueada, requiere la tecnología «${falta}»` : sinEdificio ? `bloqueada, le falta una ${sinEdificio} en la plaza` : parada ? 'parada' : 'en marcha'}${r.porMinuto ? ` · hasta ${fmt(r.porMinuto)}/min con la mano de obra completa` : ''}${Object.keys(r.insumos).length ? ` · por unidad: ${Object.entries(r.insumos).map(([x, n]) => `${fmt(n)} ${RECURSO_NOMBRE[x] ?? x}`).join(', ')}` : ''}`;
     const interruptor = c.cargo
       ? `<button class="prod-interruptor${parada ? '' : ' encendido'}" type="button" data-receta="${e(r.produce)}" data-pausar="${parada ? '0' : '1'}" title="${parada ? 'Reanudar' : 'Parar'} en todos los talleres" aria-label="${parada ? 'Reanudar' : 'Parar'} ${e(nombre)}">${parada ? '▶' : '<span class="prod-pausa">❚❚</span>'}</button>`
-      : `<span class="prod-estado" aria-hidden="true">${falta ? '🔒' : parada ? '⏸' : '▶'}</span>`;
+      : `<span class="prod-estado" aria-hidden="true">${falta || sinEdificio ? '🔒' : parada ? '⏸' : '▶'}</span>`;
     return `<div class="prod-receta ${estado}" title="${e(titulo)}">
       <span class="prod-cadena">${insumos || '<span class="prod-insumo vacio">·</span>'}<span class="prod-flecha">➜</span><span class="prod-producto">${RECURSO_ICONO[r.produce] ?? '📦'}</span></span>
-      <span class="prod-receta-cuerpo"><strong>${e(nombre)}</strong><span class="prod-receta-pie">${talleres}${r.porMinuto ? `<small>${fmt(r.porMinuto)}/min</small>` : ''}${falta ? '<small class="falta">🔒 tecnología</small>' : ''}</span></span>
+      <span class="prod-receta-cuerpo"><strong>${e(nombre)}</strong><span class="prod-receta-pie">${talleres}${r.porMinuto ? `<small>${fmt(r.porMinuto)}/min</small>` : ''}${falta ? '<small class="falta">🔒 tecnología</small>' : sinEdificio ? `<small class="falta">🔒 ${e(sinEdificio)}</small>` : ''}</span></span>
       ${interruptor}
     </div>`;
   }).join('');
-  return `<div class="obra-titulo"><span class="faction-kicker">Talleres</span>${ayuda('plaza:recetas', 'Cada fila: lo que gasta por unidad ➜ lo que fabrica, con los talleres que la hacen y su ritmo con la mano de obra completa. ⏸ la para en todos los talleres de la plaza; ▶ la reanuda. Con candado: falta la tecnología. Solo el Gobernador o el Maestro de Obras las paran o reanudan.')}</div>
+  return `<div class="obra-titulo"><span class="faction-kicker">Talleres</span>${ayuda('plaza:recetas', 'Cada fila: lo que gasta por unidad ➜ lo que fabrica, con los talleres que la hacen y su ritmo con la mano de obra completa. ⏸ la para en todos los talleres de la plaza; ▶ la reanuda. Con candado: falta la tecnología, o el edificio que pide esa receta. Solo el Gobernador o el Maestro de Obras las paran o reanudan.')}</div>
     <div class="prod-recetas">${filas || '<p class="mapa-lista-vacia">Ningún taller activo con recetas.</p>'}</div>`;
 }
 

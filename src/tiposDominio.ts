@@ -751,8 +751,8 @@ export interface ProduccionItem {
   cantidadPorMinuto: number;
 }
 
-/** `params` de `crearHeroe` (backend `session/comandos/crearHeroe.ts`). `classDefinitionId` y las piezas de
- * `avatar` son ids de los catálogos de Conquest: el backend los guarda sin interpretarlos. */
+/** `params` de `crearHeroe`. `classDefinitionId` es una clase de `CLASES_HEROE` (motor c82d6ed; otra, `heroe.clase_desconocida`); las piezas
+ * de `avatar` son ids de los catálogos de Conquest, que el motor guarda sin interpretarlos. */
 export interface ParamsCrearHeroe {
   displayName: string;
   classDefinitionId: string;
@@ -918,7 +918,6 @@ export interface Loadout {
   id: string;
   displayName: string;
   squadIds: string[];
-  perksSeleccionados: number[];
   activo: boolean;
   /** Liderazgo que suman sus escuadras, calculado por el servidor. */
   liderazgoTotal: number;
@@ -955,12 +954,11 @@ export interface HeroeProyectado {
   /** TODAS tus escuadras, estén donde estén (`contenedor`). */
   escuadrones: Escuadron[];
   nivel: number;
+  /** Lo que le FALTA para el nivel siguiente, en unidades (motor c82d6ed; la curva, en `PROGRESION_HEROE`: `ui/progresionHeroe.ts`). */
   experienciaHaciaSiguienteNivel: number;
   puntosDeAtributoSinGastar: number;
-  puntosDePerkSinGastar: number;
-  /** Solo lo repartido (tope 100 por atributo); la base de la clase la suma Conquest. */
+  /** La base de la clase (la del arma puesta) más lo repartido (motor c82d6ed, D16); lo que da el equipo lo suma Conquest. */
   atributosBase: Record<AtributoHeroe, number>;
-  perksDesbloqueados: number[];
   loadouts: Loadout[];
   inventario: ItemInstancia[];
   equipamiento: Record<SlotEquipo, ItemInstancia | null>;
@@ -1097,7 +1095,6 @@ export interface ParamsGuardarLoadout {
   loadoutId?: string;
   displayName: string;
   squadIds: string[];
-  perksSeleccionados: number[];
   activo?: boolean;
 }
 

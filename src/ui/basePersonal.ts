@@ -24,6 +24,8 @@ import { cablearCarro, htmlCarro, type Ejecutar } from './panelCarro';
 import { cablearHeroe, dentroDeSuResidencia, dondeEsta, editandoLoadout, htmlFichaHeroe, htmlLoadouts, minutosHerido, soltarBorrador, type Aplicar } from './panelHeroe';
 import { detalleInforme, hace } from './panelIntel';
 import { nombreDeAvanzada, nombreDePueblo } from './pueblos';
+import { progresoDeNivel } from './progresionHeroe';
+import { nombreDeClase } from './clasesHeroe';
 
 type Escapar = (valor: string) => string;
 
@@ -224,6 +226,14 @@ function htmlViveres(p: ProyeccionJugador, repintar: () => void): string {
   return `<div class="faccion-lateral-dato"><span>🌾 Víveres</span><strong>${viveres} / ${capacidad}</strong></div>${dura}`;
 }
 
+/** La barra hacia el nivel siguiente: lo que lleva sobre lo que pide (motor c82d6ed). */
+function htmlExperiencia(h: HeroeProyectado, repintar: () => void): string {
+  const x = progresoDeNivel(h, repintar);
+  if (!x) return `<div class="faccion-lateral-dato"><span>Experiencia</span><strong>faltan ${Math.ceil(h.experienciaHaciaSiguienteNivel)}</strong></div>`;
+  return `<div class="base-experiencia"><div class="faccion-lateral-dato"><span>Hacia el nivel ${h.nivel + 1}</span><strong>${Math.floor(x.lleva)} / ${x.pide}</strong></div>
+    <span class="obra-barra"><i style="width:${x.pct}%"></i></span></div>`;
+}
+
 function htmlLateral(p: ProyeccionJugador, e: Escapar, repintar: () => void): string {
   const h = p.heroe;
   const herido = minutosHerido(p);
@@ -233,10 +243,11 @@ function htmlLateral(p: ProyeccionJugador, e: Escapar, repintar: () => void): st
   return `<aside class="faccion-lateral base-lateral">
     <div class="base-retrato">${YELMO}<span class="base-nivel" title="Nivel">${h.nivel}</span></div>
     <h2 class="faccion-lateral-nombre">${e(h.displayName)}</h2>
+    <p class="base-donde base-clase" title="La clase es la del arma que lleva puesta">${e(nombreDeClase(h.classDefinitionId, repintar))}</p>
     <p class="base-donde">${e(dondeEsta(h, p))}${f ? ` · ${e(f.nombre)}` : ''}</p>
     ${herido !== null ? `<p class="heroe-herido">Herido: ${herido} min</p>` : ''}
     <div class="faccion-lateral-pie">
-      <div class="faccion-lateral-dato"><span>Experiencia</span><strong>${h.experienciaHaciaSiguienteNivel}</strong></div>
+      ${htmlExperiencia(h, repintar)}
       <div class="faccion-lateral-dato"><span>Liderazgo</span><strong>${h.liderazgoBase}</strong></div>
       ${puntos > 0 ? `<button class="base-puntos" type="button" data-base-pestana="heroe">${puntos} ${puntos === 1 ? 'punto' : 'puntos'} sin gastar</button>` : ''}
       <div class="base-monedas" title="Tus monedas: las ganas combatiendo (también contra bandidos) y pagan contratos de mercenario. Aparte del oro de las plazas: 100 monedas valen 1 de oro."><span>💰 Monedas</span><strong>${h.monedas.toLocaleString('es-ES')}</strong></div>

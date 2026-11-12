@@ -28,8 +28,8 @@ const esc = (id: string, nombre: string, tropaId: string, cantidad: number, cont
 const p = {
   gameId: 'banco', instante: AHORA, version: 1, heroeId: 'h', faccionId: enCamp ? null : 'fac-1', mapaId: 'm',
   heroe: {
-    id: 'h', displayName: 'Víctor', classDefinitionId: 'guerrero', nivel: 7, experienciaHaciaSiguienteNivel: 340, liderazgoBase: 120, puntosDeAtributoSinGastar: 3, puntosDePerkSinGastar: 0,
-    atributosBase: { fuerza: 12, destreza: 8, armadura: 6, vitalidad: 10 }, perksDesbloqueados: [],
+    id: 'h', displayName: 'Víctor', classDefinitionId: 'arco_lanza', nivel: 7, experienciaHaciaSiguienteNivel: 60, liderazgoBase: 32, puntosDeAtributoSinGastar: 3,
+    atributosBase: { fuerza: 12, destreza: 8, armadura: 6, vitalidad: 10 }, 
     ubicacion: enCamp ? { tipo: 'mercenarios', campamentoId: 'camp-2' } : columna ? { tipo: 'columna', ejercitoId: 'ej-1' } : { tipo: 'asentamiento', asentamientoId: 'as-1' },
     residenciaId: enCamp ? 'camp-2' : 'as-1',
     almacenPersonal: { oro: 86, trigo: 120, madera: 40, armaBronce: 3 }, capacidadAlmacenPersonal: 1000, carro: columna ? {} : { madera: 60, trigo: 30 },
@@ -45,7 +45,7 @@ const p = {
       esc('s4', 'Milicia de lanceros', 'milicia_lanceros', 25, { tipo: 'pueblo', puebloId: 'pu-1' }),
       esc('s5', 'Espadachines de cobre', 'espadachines_cobre', 14, { tipo: 'plaza', asentamientoId: 'as-4' }),
     ],
-    loadouts: [{ id: 'l1', displayName: 'Defensa de casa', squadIds: ['s1', 's3'], perksSeleccionados: [], activo: true, liderazgoTotal: 18 }, { id: 'l2', displayName: 'Salida', squadIds: ['s1', 's2'], perksSeleccionados: [], activo: false, liderazgoTotal: 16 }],
+    loadouts: [{ id: 'l1', displayName: 'Defensa de casa', squadIds: ['s1', 's3'], activo: true, liderazgoTotal: 18 }, { id: 'l2', displayName: 'Salida', squadIds: ['s1', 's2'], activo: false, liderazgoTotal: 16 }],
     inventario: [{ itemDefinitionId: 'pocion_vigor', tipo: 'consumible', cantidad: 3, precio: 20, casillaInventario: 0 }, { itemDefinitionId: 'escudo_mimbre', tipo: 'armadura', cantidad: 1, precio: 45, casillaInventario: 1 }],
     equipamiento: { arma: { itemDefinitionId: 'espada_bronce', tipo: 'arma', cantidad: 1, precio: 120, casillaInventario: -1, estadisticas: [{ nombre: 'daño', valor: 14 }] }, casco: null, torso: { itemDefinitionId: 'coraza_lino', tipo: 'armadura', cantidad: 1, precio: 60, casillaInventario: -1 }, guantes: null, pantalones: null, botas: null },
     bandidosDestruidos: [AHORA - 30 * H, AHORA - 5 * H], alijosAbiertos: ['al-1', 'al-4', 'al-9'],

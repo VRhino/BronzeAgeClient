@@ -44,8 +44,11 @@ describe('los tres recursos nuevos', () => {
       expect(RECURSO_COLOR[r]).toBeTruthy();
     }
     expect(RECURSO_NOMBRE.sesamo).toBe('Sésamo');
-    expect(RECURSOS_POR_INDICE).toHaveLength(41);
-    expect(RECURSOS_POR_INDICE.slice(38)).toEqual(['cebada', 'cerveza', 'sesamo']);
+    // y el aceite de sésamo, el 42 (motor c82d6ed)
+    expect(RECURSOS_POR_INDICE).toHaveLength(42);
+    expect(RECURSOS_POR_INDICE.slice(38)).toEqual(['cebada', 'cerveza', 'sesamo', 'aceiteSesamo']);
+    expect([RECURSO_NOMBRE.aceite, RECURSO_NOMBRE.aceiteSesamo]).toEqual(['Aceite de oliva', 'Aceite de sésamo']);
+    expect(RECURSO_ICONO.aceiteSesamo && RECURSO_COLOR.aceiteSesamo).toBeTruthy();
     expect([RECURSOS_POR_INDICE[34], RECURSOS_POR_INDICE[35]]).toEqual(['uva', 'aceituna']);
   });
 
@@ -222,7 +225,9 @@ describe('la receta de la bodega y la prensa', () => {
     expect(filas(plaza(5, [bodega('ed-1')]))).toEqual(['Vino']);
     expect(filas(plaza(5, [bodega('ed-1'), bodega('ed-2', { receta: 'cebada' })]))).toEqual(['Cerveza', 'Vino']);
     expect(filas(plaza(5, [bodega('ed-1'), bodega('ed-2', { receta: 'cebada', recetaParada: true })], 4))).toEqual(['Vino']);
-    expect(filas(plaza(4, [prensa('ed-1', { receta: 'sesamo' })]))).toEqual(['Aceite']);
+    // el sésamo da su propio aceite, y el de la aceituna se llama de oliva (motor c82d6ed)
+    expect(filas(plaza(4, [prensa('ed-1', { receta: 'sesamo' })]))).toEqual(['Aceite de sésamo']);
+    expect(filas(plaza(4, [prensa('ed-1')]))).toEqual(['Aceite de oliva']);
     expect(htmlRecetas({ proyeccion: { heroeId: 'h', facciones: [] }, asentamiento: plaza(4, [prensa('ed-1', { receta: 'sesamo' })]), cargo: null, escapar: esc, refrescar: () => {} } as unknown as ContextoPlaza)).toContain('Sésamo');
   });
 

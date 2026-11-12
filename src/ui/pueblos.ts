@@ -26,7 +26,7 @@ import { dibujarIconoMapa } from '../mundo/iconosMapa';
 import { capaDe, capaDeCultivo, esCultivo, sitiosDeAldea, type Cultivo, type SitiosDeAldea } from '../mundo/fertilidad';
 import { NOMBRE_DE_CULTIVO } from './capasMapa';
 import type { ContextoFicha, ContextoPlaza, FichaMapaExtra, ObjetoBajoElClic, SubpestanaPlaza } from './ganchos';
-import { cablearEscolta, escolta, puntosDeEscolta } from './panelMercado';
+import { cablearEscolta, escolta, puntosDeEscoltaDelCarro } from './panelMercado';
 import type { Ejecutar } from './panelCarro';
 import { nombreDeHeroe } from './nombres';
 import { chipLiderazgo } from './liderazgo';
@@ -297,7 +297,7 @@ function carroEnTarjeta(p: ProyeccionJugador, x: PuebloDeMapa, madre: Asentamien
   return `<div class="pueblo-carro ${e(estado)}"><span class="pueblo-carro-icono">${ICONO_CARRETA}</span>
       <span class="pueblo-carro-texto"><b>Carro de acarreo</b><small>${ESTADO_CARRO_ICONO[estado] ?? ''} ${e(ESTADO_CARRO[estado] ?? estado)}</small></span>
       ${carga.length ? `<span class="pueblo-carro-carga">${carga.map(([r, n]) => fichaRecurso(r, n, e)).join('')}</span>` : ''}</div>
-    <div class="caravana-seccion">${escolta(c, p, reside, c.estado === 'disponible', puntosDeEscolta(madre, alLlegarDatos), e)}</div>`;
+    <div class="caravana-seccion">${escolta(c, p, reside, c.estado === 'disponible', puntosDeEscoltaDelCarro(madre, alLlegarDatos), e)}</div>`;
 }
 
 /**
@@ -527,7 +527,7 @@ function htmlCarroDeAcarreo(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar, m
   const linea = `<p class="asent-lado-nota">Carro de acarreo ${e(ESTADO_CARRO[c.estado ?? ''] ?? c.estado ?? '')}${lleva ? ` con ${e(lleva)}` : ''}${cedidas ? ` · ${cedidas} escuadra(s) de escolta` : ' · sin escolta'}.</p>`;
   if (!madre) return linea;
   const reside = [...(madre.heroesFundadoresIds ?? []), ...(madre.casasCompradas ?? [])].includes(p.heroeId);
-  return `${linea}<div class="escolta-caravana">${escolta(c, p, reside, c.estado === 'disponible', puntosDeEscolta(madre, alLlegarDatos), e)}</div>`;
+  return `${linea}<div class="escolta-caravana">${escolta(c, p, reside, c.estado === 'disponible', puntosDeEscoltaDelCarro(madre, alLlegarDatos), e)}</div>`;
 }
 
 /** Quien abre el mapa para elegir un punto (lo pone `main.ts`): `alElegir` devuelve el error del motor, o `null` si salió bien (y el mapa se cierra).
@@ -979,11 +979,11 @@ function htmlEscoltaDentro(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar): s
   const libres = columna ? p.heroe.escuadrones.filter((s) => s.contenedor.tipo === 'ejercito' && s.contenedor.ejercitoId === columna.id && s.cantidad > 0) : [];
   // Dentro del pueblo no se está en la madre: su Mercado (que fija el cupo) se lee de la ficha que llega de ella.
   const madre = p.asentamientos.find((a) => a.id === x.madreId) ?? (p.asentamientosAvistados.find((a) => a.id === x.madreId) as Asentamiento | undefined);
-  const cupo = c.escoltaLiderazgo?.cupo ?? (madre ? puntosDeEscolta(madre, alLlegarDatos) : undefined);
+  const cupo = c.escoltaLiderazgo?.cupo ?? (madre ? puntosDeEscoltaDelCarro(madre, alLlegarDatos) : undefined);
   const usado = c.escoltaLiderazgo?.usado ?? cedidas.reduce((t, s) => t + s.costeLiderazgo, 0);
   const libre = cupo === undefined ? Infinity : cupo - usado;
   const otros = Math.max(0, (c.escoltaIds ?? []).length - cedidas.length);
-  return `<div class="carro-ocupacion"><strong class="heroe-sub">Escolta del carro${ayuda('pueblo:escolta', 'Cede escuadras de tu columna al carro de acarreo mientras está parado aquí: viajan con él a la plaza y vuelven. El cupo de escolta, en Liderazgo, es el del Mercado de la plaza madre. «Retirar» las devuelve a tu columna.')}</strong><span>${cupo !== undefined ? `cupo ${usado} / ${cupo}` : madre ? 'la madre no tiene Mercado: sin cupo' : 'cupo desconocido'}</span></div>
+  return `<div class="carro-ocupacion"><strong class="heroe-sub">Escolta del carro${ayuda('pueblo:escolta', 'Cede escuadras de tu columna al carro de acarreo mientras está parado aquí: viajan con él a la plaza y vuelven. El cupo de escolta, en Liderazgo, es el del Mercado de la plaza madre o, si no tiene, el del primer nivel. «Retirar» las devuelve a tu columna.')}</strong><span>${cupo !== undefined ? `cupo ${usado} / ${cupo}` : madre ? 'la madre no tiene Mercado: sin cupo' : 'cupo desconocido'}</span></div>
     ${cupo !== undefined ? barra(usado, cupo) : ''}
     <p class="asent-lado-nota">${cedidas.length + otros ? `${cedidas.length + otros} escuadra(s) de escolta${otros ? `, ${otros} de otros héroes` : ''}` : 'Sin escolta'}.${parada ? '' : ' Solo se cambia con el carro parado aquí.'}</p>
     ${cedidas.length ? `<div class="mapa-lista">${cedidas.map((s) => fila(s, parada ? `<button class="btn-secondary" type="button" data-pueblo-dentro="quitar-escolta" data-escuadra="${e(s.id)}" data-caravana="${e(c.id)}">Retirar</button>` : '', e)).join('')}</div>` : ''}

@@ -14,6 +14,7 @@ import { textoEnTiempoReal } from './estadoCliente';
 import { iconoMini } from './iconosTropa';
 import { nombreDeHeroe } from './nombres';
 import type { Ejecutar } from './panelCarro';
+import { nombreDeClase } from './clasesHeroe';
 
 type Escapar = (s: string) => string;
 
@@ -392,7 +393,7 @@ function htmlOferta(p: ProyeccionJugador, o: OfertaMercenario, yo: Puestos, fuen
   return `<article class="merc-oferta${herido ? ' herido' : ''}" data-merc-oferta="${id}" data-faccion="${e(p.faccionId ?? '')}">
     <header class="merc-oferta-cab">
       ${o.ficha ? insigniaDeRango(o.ficha.rango, 36) : ''}
-      <div><strong>${e(nombreDeHeroe(p, o.heroeId))}</strong><small><span class="merc-rango-nombre">${o.ficha ? e(RANGO_MERCENARIO[o.ficha.rangoId] ?? o.ficha.rangoId) : ''}</span>${publico ? ` · ${e(publico.classDefinitionId)} · nivel ${publico.nivel}` : ''}${herido ? ` · <span class="merc-herido">herido ${textoEnTiempoReal(o.heridoHasta! - p.instante)}</span>` : ''}</small></div>
+      <div><strong>${e(nombreDeHeroe(p, o.heroeId))}</strong><small><span class="merc-rango-nombre">${o.ficha ? e(RANGO_MERCENARIO[o.ficha.rangoId] ?? o.ficha.rangoId) : ''}</span>${publico ? ` · ${e(nombreDeClase(publico.classDefinitionId))} · nivel ${publico.nivel}` : ''}${herido ? ` · <span class="merc-herido">herido ${textoEnTiempoReal(o.heridoHasta! - p.instante)}</span>` : ''}</small></div>
     </header>
     ${region ? htmlCampamentoDeOferta(p, o, region) : ''}
     ${o.ficha ? htmlFichaMercenario(o.ficha, e, true, false) : ''}

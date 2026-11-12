@@ -23,7 +23,7 @@ type Escapar = (valor: string) => string;
 
 interface RequisitoNivel { pesants?: number; artesanos?: number; edificios?: string[]; edificiosMinimo?: number; aldeasAgricolas?: number; pueblosActivos?: number; nivelInternoMinimo?: Record<string, number>; recintoCompletoNivelMinimo?: number; edificiosConNivel?: Record<string, number> }
 interface NivelAsentamiento { nivelMaximo?: number; requisitos?: Record<string, RequisitoNivel>; techoPoblacion?: Record<string, number> }
-interface AscensoAsentamiento { porNivelObjetivo?: Record<string, { costo: Record<string, number>; obraMinutos: number }>; nivelTechoProvisional?: number }
+interface AscensoAsentamiento { porNivelObjetivo?: Record<string, { costo: Record<string, number>; obraMinutos: number }> }
 type DefEdificio = { capacidadPesants?: number; capacidadArtesanos?: number; niveles?: Record<string, { capacidadNobles?: number }> };
 
 const nombreEdificio = (t: string): string => EDIFICIO_NOMBRE[t] ?? t;
@@ -94,7 +94,8 @@ export function htmlAscensoPlaza(p: ProyeccionJugador, a: Asentamiento, soyGober
     </div>`;
   }
   const objetivo = a.nivel + 1;
-  const techo = Math.min(reqs.nivelMaximo ?? 5, asc.nivelTechoProvisional ?? 5);
+  // hasta el nivel máximo, el 5 (motor c82d6ed: ya no hay techo provisional en el 4)
+  const techo = reqs.nivelMaximo ?? 5;
   if (objetivo > techo) {
     return `<div class="ascenso-tarjeta tope"><span class="ascenso-niveles">${medallonNivel(a.nivel, 'listo')}</span>
       <span class="ascenso-info"><strong>Nivel más alto de hoy${info}</strong><small>La plaza no puede subir más por ahora.</small></span></div>`;
@@ -136,7 +137,7 @@ export function ascensoPosible(p: ProyeccionJugador, a: Asentamiento, alCargar?:
   const asc = bloqueDeDatos<AscensoAsentamiento>('ASCENSO_ASENTAMIENTO', alCargar);
   if (!reqs || !asc || a.ascenso) return false;
   const objetivo = a.nivel + 1;
-  if (objetivo > Math.min(reqs.nivelMaximo ?? 5, asc.nivelTechoProvisional ?? 5)) return false;
+  if (objetivo > (reqs.nivelMaximo ?? 5)) return false;
   const coste = asc.porNivelObjetivo?.[String(objetivo)]?.costo ?? {};
   return requisitosDeNivel(p, a, reqs.requisitos?.[String(objetivo)] ?? {}, coste, (v) => v).every((x) => x.ok !== false);
 }

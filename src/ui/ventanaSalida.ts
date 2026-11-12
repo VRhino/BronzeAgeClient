@@ -276,7 +276,7 @@ export function pintarVentanaSalida(raiz: HTMLElement, p: ProyeccionJugador, l: 
       const suyas = new Set(p.heroe.escuadrones.map((s) => s.id));
       const squadIds = [...loadout.squadIds.filter((id) => !aqui.has(id) && suyas.has(id)), ...sel.ids];
       boton.disabled = true;
-      const mensaje = await ejecutar('guardarLoadout', { loadoutId: loadout.id, displayName: loadout.displayName, squadIds, perksSeleccionados: loadout.perksSeleccionados });
+      const mensaje = await ejecutar('guardarLoadout', { loadoutId: loadout.id, displayName: loadout.displayName, squadIds });
       if (mensaje) { boton.disabled = false; avisar(mensaje); }
       else mostrarAviso(`Loadout «${loadout.displayName}» guardado.`);
     });

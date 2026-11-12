@@ -12,6 +12,7 @@ import { analizarCampamentos, edificioMilitarDe, nombresDeCampamentos, RADIO_FOC
 import { RECURSO_COLOR, RECURSO_NOMBRE } from '../paletas';
 import { iconoEdificio } from './iconosEdificio';
 import { iconoTropa } from './iconosTropa';
+import { htmlSelectorDeClase, type ClaseHeroe, type FichaObjeto } from './clasesHeroe';
 
 type Escapar = (s: string) => string;
 
@@ -24,8 +25,11 @@ export interface OpcionesEleccion {
   tropas: () => TropaReclutable[] | null;
   /** ¿Es de arranque esa tecnología? (lo que todo campamento ofrece desde el primer día). */
   deArranque: (tecnologia: string) => boolean;
+  /** Las clases del héroe (`CLASES_HEROE`) y las fichas de los objetos (`OBJETOS`, para su equipo inicial); `null` mientras no lleguen. */
+  clases: () => ClaseHeroe[] | null;
+  objetos: () => FichaObjeto[] | null;
   /** Crea el héroe; devuelve el mensaje de error o `null` si fue bien. */
-  crear: (nombre: string, campamentoId: string) => Promise<string | null>;
+  crear: (nombre: string, campamentoId: string, clase: string) => Promise<string | null>;
   escapar: Escapar;
   /** Para repintar cuando lleguen los datos de juego. */
   alCargarDatos?: (f: () => void) => void;
@@ -131,6 +135,7 @@ export function montarEleccionCampamento(raiz: HTMLElement, o: OpcionesEleccion)
         <div class="elegir-ficha-cuerpo"></div>
         <section class="elegir-comparacion" hidden></section>
         <form class="elegir-form" id="form-crear-heroe">
+          <div class="elegir-clase"></div>
           <label class="form-label" for="input-nombre-heroe">Nombre de tu héroe</label>
           <input type="text" id="input-nombre-heroe" class="form-input" required maxlength="24" autocomplete="off" placeholder="Cómo te llamarán" />
           <button type="submit" id="btn-crear-heroe" class="btn-primary">Nacer aquí</button>
@@ -145,6 +150,9 @@ export function montarEleccionCampamento(raiz: HTMLElement, o: OpcionesEleccion)
   const mini = raiz.querySelector<HTMLCanvasElement>('.elegir-minimapa')!;
   const cajaComparar = raiz.querySelector<HTMLElement>('.elegir-comparacion')!;
   const botonCrear = raiz.querySelector<HTMLButtonElement>('#btn-crear-heroe')!;
+  const cajaClase = raiz.querySelector<HTMLElement>('.elegir-clase')!;
+  /** La clase elegida: sin ella no se nace (motor c82d6ed, `heroe.clase_desconocida`). */
+  let clase: string | null = null;
 
   // ─────────── datos ───────────
 
@@ -251,8 +259,18 @@ export function montarEleccionCampamento(raiz: HTMLElement, o: OpcionesEleccion)
 
   function pintarFicha(): void {
     cuerpoFicha.innerHTML = htmlFicha();
-    botonCrear.textContent = fichas[elegido] ? `Nacer en ${fichas[elegido]!.nombre}` : 'Nacer aquí';
-    botonCrear.disabled = !fichas[elegido];
+    pintarBoton();
+  }
+
+  function pintarBoton(): void {
+    botonCrear.textContent = !clase ? 'Elige tu clase' : fichas[elegido] ? `Nacer en ${fichas[elegido]!.nombre}` : 'Nacer aquí';
+    botonCrear.disabled = !fichas[elegido] || !clase;
+  }
+
+  function pintarClase(): void {
+    const clases = o.clases();
+    cajaClase.innerHTML = clases ? htmlSelectorDeClase(clases, o.objetos(), clase, e) : '<p class="clase-ficha tenue">Cargando las clases…</p>';
+    pintarBoton();
   }
 
   // ─────────── comparar ───────────
@@ -724,9 +742,9 @@ export function montarEleccionCampamento(raiz: HTMLElement, o: OpcionesEleccion)
     ev.preventDefault();
     const f = fichas[elegido];
     const nombre = raiz.querySelector<HTMLInputElement>('#input-nombre-heroe')?.value.trim() ?? '';
-    if (!f) return;
+    if (!f || !clase) return;
     botonCrear.disabled = true;
-    const mensaje = await o.crear(nombre, f.c.id);
+    const mensaje = await o.crear(nombre, f.c.id, clase);
     if (!mensaje || !vivo) return;
     botonCrear.disabled = false;
     const error = raiz.querySelector<HTMLElement>('#error-heroe');
@@ -738,10 +756,18 @@ export function montarEleccionCampamento(raiz: HTMLElement, o: OpcionesEleccion)
 
   // ─────────── arranque ───────────
 
+  cajaClase.addEventListener('click', (ev) => {
+    const b = (ev.target as HTMLElement).closest<HTMLButtonElement>('[data-clase]');
+    if (!b) return;
+    clase = b.dataset.clase ?? null;
+    pintarClase();
+  });
+
   calcular();
   pintarLista();
   pintarFicha();
-  o.alCargarDatos?.(() => { if (vivo) repintarTodo(); });
+  pintarClase();
+  o.alCargarDatos?.(() => { if (vivo) { repintarTodo(); pintarClase(); } });
   marco = requestAnimationFrame(dibujar);
   void o.mapa.then((m) => {
     if (!vivo) return;

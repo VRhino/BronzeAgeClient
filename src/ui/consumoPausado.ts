@@ -1,5 +1,5 @@
 // Pausar el consumo de un bien por plaza (motor 906fb24, contrato 0.21.0; cliente 0.199.0). El Gobernador o el Tesorero, residentes y dentro,
-// pausan o reanudan en la ventana del Almacén el consumo de carne, pan, queso, vino, cerveza o aceite (`pausarConsumo { asentamientoId, recurso,
+// pausan o reanudan en la ventana del Almacén el consumo de carne, pan, queso, vino, cerveza o los dos aceites (`pausarConsumo { asentamientoId, recurso,
 // pausado }`): la población deja de comerlo y su clase pierde el empuje al crecimiento que daba, el trigo pone lo que cubría y la guarnición no come
 // la carne. Sirve para guardarlo y venderlo. Lo pausado llega en `Asentamiento.consumoPausado` (dentro y, para las plazas de tu Facción, desde
 // fuera): lo ven todos los de dentro en el Almacén, en el letrero de la Nutrición y en la ventana de Facción. El trigo nunca se pausa.
@@ -14,7 +14,7 @@ type Escapar = (valor: string) => string;
 type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
 
 /** Los bienes de consumo, en el orden del catálogo (`BIENES_DE_CONSUMO.bienes`; sin el bloque, los seis del motor). */
-const BIENES_DE_SERIE = ['carne', 'pan', 'queso', 'vino', 'cerveza', 'aceite'];
+const BIENES_DE_SERIE = ['carne', 'pan', 'queso', 'vino', 'cerveza', 'aceite', 'aceiteSesamo'];
 export function bienesDeConsumo(): string[] {
   const bienes = bloqueDeDatos<{ bienes?: Record<string, unknown> }>('BIENES_DE_CONSUMO')?.bienes;
   const lista = bienes ? Object.keys(bienes).filter((r) => r !== 'trigo') : [];

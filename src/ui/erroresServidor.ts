@@ -146,7 +146,7 @@ const MENSAJES: Record<string, string> = {
   'heroe.sin_columna': 'Has entrado sin columna: no traes carro.',
   // Las cinco ideas del 2026-11-10 (contrato 0.21.0)
   'reclutamiento.solo_reponer': 'Esta plaza ha cerrado el reclutamiento a los ciudadanos que no residen en ella: solo repones una escuadra que ya tienes aquí.',
-  'consumo.no_se_pausa': 'Ese recurso no es un bien de consumo que se pueda pausar (solo carne, pan, queso, vino, cerveza y aceite).',
+  'consumo.no_se_pausa': 'Ese recurso no es un bien de consumo que se pueda pausar (solo carne, pan, queso, vino, cerveza y los dos aceites, de oliva y de sésamo).',
   'rumor.sin_novedad': 'Tu Facción ya conoce todo lo que cuenta ese rumor en esta región: no se ha cobrado nada.',
   'intel.sin_oro': 'No hay oro para pagarlo.',
   'heroe.no_esta_en_la_plaza': 'Tienes que estar dentro de la plaza.',
@@ -207,6 +207,8 @@ const MENSAJES: Record<string, string> = {
   'receta.desconocida': 'Ese edificio no tiene una receta con ese insumo.',
   'receta.tope_por_plaza': 'La plaza ya trabaja todas las recetas distintas que le deja su nivel en ese edificio: la bodega, una hasta el nivel 4 y las dos en el 5; la prensa, siempre una.',
   'edificio.desconocido': 'Ese edificio ya no está en la plaza.',
+  // La clase del héroe, obligatoria al crearlo (motor c82d6ed).
+  'heroe.clase_desconocida': 'Elige una de las clases para tu héroe.',
   // Servicio de acceso del motor (`POST /v1/registro` y `/v1/sesiones`), por si llega el código sin su texto.
   datos_invalidos: 'Nick de 3 a 32 caracteres (letras, cifras, «_», «-» o «.») y contraseña de 8 a 128.',
   nick_repetido: 'Ese nick ya está registrado.',

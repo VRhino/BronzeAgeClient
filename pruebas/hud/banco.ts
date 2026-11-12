@@ -89,8 +89,15 @@ if (qs0.get('nivelActual')) a.nivelActual = Number(qs0.get('nivelActual'));
 if (qs0.get('grupo')) elegirGrupoDe(qs0.get('grupo')!);
 // `&comida=1` (tanda 69): el almacén con la comida nueva, junto al trigo
 if (qs0.get('comida')) {
-  const hay = { harina: 140, pan: 260, carne: 45, leche: 80, queso: 30, uva: 120, vino: 40, cebada: 95, cerveza: 30, aceituna: 90, sesamo: 60, aceite: 25 };
+  const hay = { harina: 140, pan: 260, carne: 45, leche: 80, queso: 30, uva: 120, vino: 40, cebada: 95, cerveza: 30, aceituna: 90, sesamo: 60, aceite: 25, aceiteSesamo: 18 };
   for (const [r, n] of Object.entries(hay)) a.almacen = { ...a.almacen, [r]: { cantidad: n, capacidad: a.almacen?.trigo?.capacidad ?? 1000 } };
+}
+// `&armeria=3` (0.204.0): la Armería a ese nivel y la Fundición por debajo del 3, para ver en Talleres la receta que pide la Fundición de nivel 3
+if (qs0.get('armeria')) {
+  for (const x of a.edificios ?? []) {
+    if (x.tipo === 'armeria') x.nivelInterno = Number(qs0.get('armeria'));
+    if (x.tipo === 'fundicion') x.nivelInterno = Math.min(x.nivelInterno ?? 1, 2);
+  }
 }
 // `&vacios=1` (0.195.0): una plaza que empieza, con casi todo a 0 (la elección de la barra del Almacén enseña solo lo que hay y «Mostrar todos»)
 if (qs0.get('vacios')) {

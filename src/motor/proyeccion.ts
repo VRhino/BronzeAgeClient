@@ -417,11 +417,11 @@ function heroe(h: pb.Heroe, escuadrones: pb.Escuadron[], ahora: number): d.Heroe
     almacenPersonal: cantidades(h.almacenPersonal), capacidadAlmacenPersonal: mil(h.capacidadAlmacenPersonal), carro: cantidades(h.fueraCarro),
     viveres: h.viveres ? valorDeRitmo(h.viveres, ahora) : undefined,
     escuadrones: propias.map((e) => escuadron(e, ahora)),
-    nivel: h.nivel, experienciaHaciaSiguienteNivel: Number(h.experienciaHaciaSiguienteNivel),
-    puntosDeAtributoSinGastar: h.puntosDeAtributoSinGastar, puntosDePerkSinGastar: h.puntosDePerkSinGastar,
+    // lo que le falta para el nivel siguiente, en milésimas en el contrato (motor c82d6ed)
+    nivel: h.nivel, experienciaHaciaSiguienteNivel: mil(h.experienciaHaciaSiguienteNivel),
+    puntosDeAtributoSinGastar: h.puntosDeAtributoSinGastar,
     atributosBase: { fuerza: h.atributosBase?.fuerza ?? 0, destreza: h.atributosBase?.destreza ?? 0, armadura: h.atributosBase?.armadura ?? 0, vitalidad: h.atributosBase?.vitalidad ?? 0 },
-    perksDesbloqueados: h.perksDesbloqueados,
-    loadouts: h.loadouts.map((l) => ({ id: l.id, displayName: l.displayName, squadIds: l.squadIds, perksSeleccionados: l.perksSeleccionados, activo: l.activo, liderazgoTotal: l.liderazgoTotal })),
+    loadouts: h.loadouts.map((l) => ({ id: l.id, displayName: l.displayName, squadIds: l.squadIds, activo: l.activo, liderazgoTotal: l.liderazgoTotal })),
     inventario: h.inventario.map(item),
     equipamiento: {
       arma: eq?.arma ? item(eq.arma) : null, casco: eq?.casco ? item(eq.casco) : null, torso: eq?.torso ? item(eq.torso) : null,

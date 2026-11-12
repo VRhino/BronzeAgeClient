@@ -23,6 +23,7 @@ import { textoDeMision } from './misiones';
 import { RECURSOS_POR_INDICE, RECURSO_NOMBRE } from '../paletas';
 import { TEXTO_DE_RECETA } from './recetasUnicas';
 import { textoDeHechoAeda } from './aedas';
+import { textoDeNivelSubido } from './progresionHeroe';
 
 /** Los eventos de «alguien te ha mirado»: el backend los emite sin decir quién. */
 const CODIGOS_DE_AVISO = new Set(['asentamiento.observado', 'columna.observada', 'caravana.observada', 'asentamiento.informe_pedido']);
@@ -271,6 +272,13 @@ export function procesar(e: EventoDominio, heroeId: string, modo: Modo): void {
     // Solo pedir unirse exige decisión; lo demás informa y se agrupa por tipo.
     const urgente = e.codigo === 'convocatoria.union_pedida';
     anotar({ ...base, texto, clase: 'mirada', titulo: 'Ejército en preparación', categoria: 'movimientos', urgente, clave: e.codigo }, modo, urgente);
+    return;
+  }
+  if (e.codigo === 'heroe.nivel_subio') {
+    // Tu héroe sube de nivel (motor c82d6ed, `emitir_propio`: solo lo oye él): una vez aunque cruce varios, con el nivel nuevo. Hasta el 30 trae
+    // Liderazgo y un punto de atributo.
+    const p = (e.payload ?? {}) as { nivel?: number };
+    anotar({ ...base, texto: textoDeNivelSubido(Number(p.nivel ?? 0)), clase: 'mirada', titulo: 'Nivel', categoria: 'economia', urgente: true, clave: `${e.codigo}|${e.version}` }, modo);
     return;
   }
   if (e.codigo === 'mision.cumplida' || e.codigo === 'mision.reclamada') {

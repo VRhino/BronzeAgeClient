@@ -121,6 +121,7 @@ import { HTML_VENTANA_PUERTA, cablearBotonesDeVentana, cerrarVentanaPuerta, html
 import { caravanasALaPuerta, cablearCaravanasAdjuntas, htmlCaravanasAdjuntas } from './ui/caravanasAdjuntas';
 import { prestadasPorReponer } from './ui/basePersonal';
 import { tabernasDisponibles } from './ui/panelIntel';
+import { catalogoDeObjetos, clasesDeHeroe } from './ui/clasesHeroe';
 import { explicarError } from './ui/erroresServidor';
 import { motivosParaCrearFaccion } from './ui/validarFaccion';
 import { nombreDeHeroe } from './ui/nombres';
@@ -379,10 +380,8 @@ function crearHeroe(params: ParamsCrearHeroe): Promise<string | null> {
   return ejecutarYRefrescar('crearHeroe', params);
 }
 
-/** Lo que la pantalla PROVISIONAL manda además del nombre y el campamento — `Spear` es la única clase que tiene hoy
- * Conquest. docs/Features_Pendientes.md §0. */
-const HEROE_PROVISIONAL: Omit<ParamsCrearHeroe, 'displayName' | 'campamentoId'> = {
-  classDefinitionId: 'Spear',
+/** Lo que la pantalla manda además del nombre, el campamento y la clase (una de `CLASES_HEROE`, motor c82d6ed): el aspecto, que aún no se elige. */
+const HEROE_PROVISIONAL: Omit<ParamsCrearHeroe, 'displayName' | 'campamentoId' | 'classDefinitionId'> = {
   genero: 'masculino',
   avatar: { cabezaId: '', peloId: '', barbaId: '', cejasId: '' },
 };
@@ -399,9 +398,11 @@ function montarHeroe(): void {
     edificiosMilitares: () => edificiosMilitaresDeCampamento(),
     tropas: () => tropasReclutables(),
     deArranque: (t) => Boolean(catalogoDeTecnologia()?.TECNOLOGIAS[t]?.deArranque),
-    crear: (nombre, campamentoId) => crearHeroe({ ...HEROE_PROVISIONAL, displayName: nombre, campamentoId }),
+    clases: () => clasesDeHeroe(),
+    objetos: () => catalogoDeObjetos()?.objetos ?? null,
+    crear: (nombre, campamentoId, clase) => crearHeroe({ ...HEROE_PROVISIONAL, displayName: nombre, campamentoId, classDefinitionId: clase }),
     escapar: escaparHtml,
-    alCargarDatos: (f) => { edificiosMilitaresDeCampamento(f); tropasReclutables(f); catalogoDeTecnologia(f); },
+    alCargarDatos: (f) => { edificiosMilitaresDeCampamento(f); tropasReclutables(f); catalogoDeTecnologia(f); clasesDeHeroe(f); catalogoDeObjetos(f); },
   });
 }
 

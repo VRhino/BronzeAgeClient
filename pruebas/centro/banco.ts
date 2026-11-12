@@ -1,6 +1,6 @@
 // Banco del panel derecho de la plaza (`/pruebas/centro/`): la subida de nivel, el Resumen (con la Residencia al pie), los Cargos, Reclutamiento, Taberna, Mercado (Órdenes, Caravanas y Trueques), Muralla, Puerta, Tesorería, Fundación, Misiones, Tablón y Territorio, con una plaza de mentira y
 // sin servidor. Los datos de juego son los bloques de Docs/Mechanics del motor (`../plaza/datos.json`, como `GET /v1/datos`). Las órdenes no
-// salen: se anotan en `window.__banco.enviadas`. `?insolvente=1` con el aviso de solvencia del ascenso y `?pausa=carne,pan` con consumo pausado (0.199.0).
+// salen: se anotan en `window.__banco.enviadas`. `?insolvente=1` con el aviso de solvencia del ascenso y `?pausa=carne,pan` con consumo pausado (0.199.0) y `?nivel=4` con la plaza en ese nivel (0.204.0).
 import datos from '../plaza/datos.json';
 const fetchReal = window.fetch.bind(window);
 window.fetch = ((url: RequestInfo | URL, init?: RequestInit) =>
@@ -36,6 +36,8 @@ function ver(): void {
   // `?insolvente=1`: el aviso de solvencia del ascenso (0.199.0); `?pausa=carne,pan`: consumo pausado (se lee en el letrero de la Nutrición)
   if (qs.get('insolvente')) a.insolvenciaAscenso = [{ recurso: 'trigo', llega: 4.2, pide: 6.5 }, { recurso: 'madera', llega: 1.5, pide: 3 }];
   if (qs.get('pausa')) a.consumoPausado = qs.get('pausa')!.split(',');
+  // `?nivel=4`: la plaza en ese nivel, para ver la subida al siguiente (al 5 con los dos aceites, 0.204.0)
+  if (qs.get('nivel')) { a.nivel = Number(qs.get('nivel')); (a as { nivelActual?: number }).nivelActual = a.nivel; }
   estadoCliente.proyeccionUltima = p;
   estadoCliente.mapaCache = MAPA as unknown as { id: string; mapa: MapaGenerado };
   actualizarSeguimiento(p, () => {}); // como tras cada proyección: sin él no se puede seguir ninguna
