@@ -3,6 +3,17 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.207.1] — 2026-11-13 · Al reconectar ya no se pierden el campamento, la batalla ni la Facción · motor `4a16dab`
+
+Arreglo, sin cambio de contrato (0.24.0). Salió al portar la sesión a Conquest.
+
+- **Al reconectar, la sesión tiraba ámbitos que seguían suscritos.** Tras la `Bienvenida` se descarta del almacén lo que el servidor ya no da
+  por suscrito, y la lista de suscritos se armaba con una tabla de tipos de ámbito escrita a mano (`claveCorta` en `contrato/sesion.ts`) que no
+  seguía el orden del contrato: CAMPAMENTO salía como FACCION, BATALLA como VISTA, FACCION como BATALLA. Sus claves no casaban con las del
+  almacén y esos tres ámbitos se borraban en cada reconexión; como el servidor los reanuda «sin novedad», no volvían hasta su siguiente foto.
+  Ahora las claves salen del propio contrato (`clavesSuscritas` en `contrato/almacen.ts`, con `claveDeAmbito`).
+- Prueba: `pruebas/almacen.test.ts`, los siete tipos de ámbito con la misma clave en la `Bienvenida` y en el almacén.
+
 ## [0.207.0] — 2026-11-12 · La Armería de la plaza: tienda, forja en cualquier plaza con su impuesto, abrir la forja y su fondo · motor `457c278`
 
 La última de las cuatro versiones de lo que el motor pasó al cliente el 2026-11-12. Sin cambio de contrato (0.24.0).

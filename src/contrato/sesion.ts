@@ -18,7 +18,7 @@ import {
   type Reloj,
   type ResultadoOrden,
 } from './gen/bronzeage/v1/session_pb';
-import { Almacen, Incoherencia } from './almacen';
+import { Almacen, Incoherencia, clavesSuscritas } from './almacen';
 
 /** El cuerpo de una orden, sin `peticion_id` (lo pone la sesión): `{ case: 'crearHeroe', value: {...} }`. */
 import { medidas } from './medidas';
@@ -198,7 +198,7 @@ export class Sesion {
         this.bienvenida = c.value;
         if (c.value.reloj) this.ajustarReloj(c.value.reloj, Number.POSITIVE_INFINITY);
         // Lo que reanuda con foto o es nuevo llega en su mensaje; lo que ya no está suscrito se descarta.
-        const suscritos = new Set(c.value.ambitos.map((a) => `${a.ambito ? claveCorta(a.ambito.tipo) : ''}:${a.ambito?.id ?? ''}`));
+        const suscritos = clavesSuscritas(c.value.ambitos);
         // La VISTA no se reanuda: se vuelve a pedir abajo (`cambiarVista`) y llega como foto. Hasta entonces se queda la de antes, para que el
         // mapa no se vacíe un momento (los campamentos y las columnas a la vista parpadeaban en cada reconexión).
         for (const k of [...this.almacen.ambitos.keys()]) if (!suscritos.has(k) && !(k.startsWith('VISTA:') && this.vista)) this.almacen.ambitos.delete(k);
@@ -371,10 +371,6 @@ export class Sesion {
     this.estado = e;
     for (const f of this.oyentesEstado) f(e, error);
   }
-}
-
-function claveCorta(tipo: number): string {
-  return ['NO_ESPECIFICADO', 'HEROE', 'ASENTAMIENTO', 'FACCION', 'VISTA', 'BATALLA', 'ADMIN', 'CAMPAMENTO'][tipo] ?? String(tipo);
 }
 
 function suscribir<F>(s: Set<F>, f: F): () => void {

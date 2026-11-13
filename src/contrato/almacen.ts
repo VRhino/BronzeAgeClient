@@ -49,6 +49,12 @@ export function claveDeAmbito(a: AmbitoPb | undefined): string {
   return `${AmbitoTipo[a.tipo].replace(/^AMBITO_/, '')}:${a.id}`;
 }
 
+/** Las claves de los ámbitos que la `Bienvenida` da por suscritos, con la misma forma con que el almacén los guarda. Al reconectar se descarta lo que
+ * no esté aquí: una clave escrita de otra manera tiraría ámbitos que siguen suscritos (pasaba con CAMPAMENTO, BATALLA y FACCION hasta la 0.207.0). */
+export function clavesSuscritas(ambitos: readonly { ambito?: AmbitoPb }[]): Set<string> {
+  return new Set(ambitos.flatMap((a) => (a.ambito ? [claveDeAmbito(a.ambito)] : [])));
+}
+
 /** La clave de una entidad dentro de su ámbito. */
 export function clave(tipo: TipoEntidad, id: string): string {
   return `${tipo}:${id}`;

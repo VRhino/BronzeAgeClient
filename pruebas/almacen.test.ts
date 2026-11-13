@@ -3,7 +3,7 @@ import { describe, expect, test } from 'vitest';
 import { create } from '@bufbuild/protobuf';
 import { AmbitoTipo, TipoEntidad } from '../src/contrato/gen/bronzeage/v1/common_pb';
 import { MensajeDeServidorSchema, TipoCambio, TipoCliente, type MensajeDeServidor } from '../src/contrato/gen/bronzeage/v1/session_pb';
-import { Almacen, Incoherencia, clave } from '../src/contrato/almacen';
+import { Almacen, Incoherencia, clave, clavesSuscritas } from '../src/contrato/almacen';
 
 type Init = Parameters<typeof create<typeof MensajeDeServidorSchema>>[1];
 const m = (x: Init): MensajeDeServidor['cuerpo'] => create(MensajeDeServidorSchema, x).cuerpo;
@@ -64,6 +64,21 @@ describe('almacén', () => {
     expect(h.versionesConocidas).toEqual({ 'ASENTAMIENTO:as-3': 10n });
     expect(h.versionesInterioresConocidas).toEqual({ 'ASENTAMIENTO:as-3': 4n });
     expect(h.compresiones).toEqual(['zstd']);
+  });
+
+  test('los ámbitos suscritos de la Bienvenida llevan la misma clave con que el almacén los guarda, de todos los tipos', () => {
+    // Al reconectar se descarta lo que la Bienvenida no nombra: con otra clave se tiraban el campamento, la batalla y la Facción.
+    const tipos = [AmbitoTipo.AMBITO_HEROE, AmbitoTipo.AMBITO_ASENTAMIENTO, AmbitoTipo.AMBITO_CAMPAMENTO, AmbitoTipo.AMBITO_BATALLA,
+      AmbitoTipo.AMBITO_FACCION, AmbitoTipo.AMBITO_VISTA, AmbitoTipo.AMBITO_ADMIN];
+    const a = new Almacen();
+    const ambitos = tipos.map((tipo, i) => ({ tipo, id: `x-${i}` }));
+    for (const ambito of ambitos) a.aplicar(m({ cuerpo: { case: 'foto', value: { ambito, version: 1n } } }));
+    const b = m({ cuerpo: { case: 'bienvenida', value: { ambitos: ambitos.map((ambito) => ({ ambito, version: 1n })) } } });
+    if (b.case !== 'bienvenida') throw new Error('no es una Bienvenida');
+    const suscritos = clavesSuscritas(b.value.ambitos);
+    expect([...suscritos].sort()).toEqual([...a.ambitos.keys()].sort());
+    expect(suscritos.has('CAMPAMENTO:x-2')).toBe(true);
+    expect(suscritos.has('FACCION:x-4')).toBe(true);
   });
 
   test('el revocado descarta el ámbito', () => {
