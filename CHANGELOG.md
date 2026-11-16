@@ -3,6 +3,29 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.210.0] — 2026-11-16 · Las murallas por Era y el borde del sitio de reunión · motor `810cbf1`
+
+Sin cambio de contrato (0.27.0). Sigue a la 0.209.0: la muralla de la plaza luce también su Era, y el Centro Urbano de nivel 1 tiene lo del
+clan al borde.
+
+- **Las murallas por Era** (`ciudad3d/murallas.ts`): la Era de la plaza manda entera en la muralla, sin turnos por punto (`RecintoEnVista.epoca`,
+  de `ciudadEnVista`). La empalizada del nivel 1 es de todas las Eras; el muro de piedra (nivel 2) y la muralla con adarve (nivel 3) se visten
+  de su época:
+  - Era I, como estaba, pieza a pieza (piedra y adobe con bastiones; la ciclópea con la puerta de los leones).
+  - Era II: piedra en seco, tosca (tres hiladas de piedras de varios tonos y un remate de lajas), sin almenas, con torres sencillas de piedra.
+  - Era III: adobe con sus vigas de atado de madera sobre un zócalo alto de piedra, con su albardilla, almenas y adarve; torres cuadradas.
+  - Era IV: sillería en hiladas sobre un zócalo de piedra clara, con almenas y adarve; torres cuadradas con saeteras.
+  - Era V: sillería más alta, con almenas y adarve; torres redondas más altas, con sus bandas, saeteras y su anillo de almenas.
+  - La puerta lleva siempre su torre a cada lado, con su pendón, y en el paso el umbral, las jambas, el dintel (de madera hasta la III, de
+    piedra en la IV y de mármol en la V), las hojas entreabiertas y los braseros. Nada sale de sus celdas.
+  - Ninguna Era se ve más débil que la anterior: en el mismo nivel, ni el muro ni las torres bajan de alto, ni tienen menos piezas.
+- **El Centro Urbano de nivel 1**, en una huella grande: al borde, dos chozas del clan (o casillas, según la Era), el corral con su cerca y sus
+  ovejas y el huerto con su valla; el centro sigue despejado para el sitio de reunión. La casa del jefe, algo más pequeña.
+- **La mesa 3D**: la muestra «muestra-muralla» usa el mando «Era».
+- Pruebas: `pruebas/ciudad3d.test.ts`, la Era de la plaza en la muralla, que ninguna Era se ve más débil (alto y piezas, en el pueblo y en
+  la ciudad, en los tres niveles), la fábrica de cada Era, la torre a cada lado de la puerta y dentro de su celda en las cinco Eras, y el
+  borde del sitio de reunión.
+
 ## [0.209.0] — 2026-11-16 · Las Eras IV y V, el suelo de las ciudades altas y el Centro Urbano por nivel · motor `810cbf1`
 
 Sin cambio de contrato (0.27.0). Lo pidió Víctor el 2026-11-16: las Eras IV y V con su propio aire, que avanzar de Era nunca se vea como

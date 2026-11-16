@@ -698,7 +698,7 @@ function bancos(m: Marco, u: number, v: number, r: number, n: number, a0 = 0): v
  * la de su época).
  */
 function lugarDeReunion(m: Marco, L: number, S: number): void {
-  const lado = Math.min(L, S), r = Math.max(0.7, Math.min(1.2, lado * 0.15));
+  const lado = Math.min(L, S), r = Math.max(0.7, Math.min(1.0, lado * 0.13));
   const corro = Math.min(1.9, lado * 0.27), suelo = Math.min(lado * 0.78, 2 * corro + 2.4);
   m.forma('cilindro', mezclar(COLOR.tierra, COLOR.rocaClara, 0.25), 0, 0, suelo, suelo, 0.03);
   fogata(m, 0, 0, 3);
@@ -708,6 +708,17 @@ function lugarDeReunion(m: Marco, L: number, S: number): void {
   m.caja(COLOR.piedraClara, L / 2 - 0.7, -S / 2 + 0.7, 0.8, 0.6, 0.08, 0.5);
   pozo(m, -L / 2 + 0.8, S / 2 - 0.8);
   if (lado >= 6) arbol(m, L / 2 - 0.9, S / 2 - 0.9, 0.95, 1);
+  // al borde, si la huella da para ello, lo del clan: dos chozas, el corral con su cerca y sus ovejas, y el huerto; el centro, despejado
+  if (lado < 8) return;
+  choza(m, 0, -S / 2 + 0.85, 0.7, { frente: 1 });
+  choza(m, -L / 2 + 0.85, -S * 0.08, 0.7, { frente: 1 });
+  const cl = Math.min(2.2, S * 0.22), cu = L / 2 - 0.85;
+  cerco(m, cu, 0, 1.4, cl, false);
+  for (let i = 0; i < 2; i++) oveja(m, cu + (i ? 0.25 : -0.2), (i ? 0.35 : -0.3) * (cl / 2), m.azar(130 + i) * Math.PI * 2, 1.4);
+  const hl = Math.min(2.6, L * 0.24), hv = S / 2 - 0.8;
+  m.losa(COLOR.tierraOscura, 0, hv, hl, 1.2, 0.04);
+  for (let i = 0; i < 3; i++) m.losa(i % 2 ? COLOR.cultivo : COLOR.hoja, 0, hv - 0.4 + i * 0.4, hl - 0.2, 0.2, 0.1, 0.04);
+  valla(m, -hl / 2, hv + 0.65, hl / 2, hv + 0.65, 0.35);
 }
 
 /**

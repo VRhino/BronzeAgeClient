@@ -147,7 +147,7 @@ export class VistaCiudad3D {
       for (const e of c.edificios) montarEdificio(p, e);
       this.edificios = this.cambiar(this.edificios, p);
     }
-    const cm = c.recintos.map((r) => `${r.id}:${r.cerrado}:${r.mejorandoA}:${r.celdas.map((k) => `${k.x},${k.y},${k.clase[0]}${k.enPie ? k.nivel : 0}`).join(';')}`).join('|');
+    const cm = c.recintos.map((r) => `${r.id}:${r.cerrado}:${r.mejorandoA}:${r.epoca ?? 1}:${r.celdas.map((k) => `${k.x},${k.y},${k.clase[0]}${k.enPie ? k.nivel : 0}`).join(';')}`).join('|');
     if (cm !== this.claves.murallas) {
       this.claves.murallas = cm;
       const p = new Piezas();

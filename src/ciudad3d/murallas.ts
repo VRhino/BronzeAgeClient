@@ -15,6 +15,10 @@
 // hojas entreabiertas hacia dentro (con bandas de bronce en la piedra), pendones rojos en las torres de la puerta y fuego a los lados del paso;
 // en la empalizada, además, el puente de tablas sobre el foso y el bucráneo en el dintel; en la de adobe, el umbral enlosado y el marco
 // enlucido con el dintel pintado de rojo; en la ciclópea, las jambas y el dintel de piedra clara y el relieve de los leones en el triángulo.
+// Las Eras (Víctor, 2026-11-16; `RecintoEnVista.epoca`, la Era de la plaza entera, sin punto): lo de arriba es la Era I, pieza a pieza. Desde la
+// II, el muro de piedra (nivel 2) y la muralla con adarve (nivel 3) se visten de su época (`muroDeEra`): piedra en seco tosca en la II, adobe con
+// vigas de atado sobre zócalo de piedra en la III, sillería en hiladas con torres cuadradas en la IV y con torres redondas más altas en la V. La
+// empalizada (nivel 1) es de todas las Eras. Ninguna Era se ve más débil que la anterior (`FABRICAS`).
 import { COLOR } from './config';
 import { hash3, type CeldaDeMuro, type RecintoEnVista } from './estado';
 import { mezclar, type Piezas } from './piezas';
@@ -394,6 +398,152 @@ function ciclopea(p: Piezas, tr: Tramo, flanco = false): void {
   }
 }
 
+// ───────────────────────────── Las murallas de las Eras II a V ─────────────────────────────
+
+/** La fábrica del muro de cada Era (de la II a la V), para los niveles 2 y 3 (el 3, más alto). */
+interface FabricaDeMuro {
+  /** El alto del muro en el nivel 2 (el 3, `alto3`), su grueso y el zócalo (alto, color; sin él, 0). */
+  alto: number;
+  alto3: number;
+  grueso: number;
+  zocalo: number;
+  colorZocalo: number;
+  /** El color del muro (de cada piedra, por su `k`); si lleva hiladas marcadas (la sillería), vigas de atado de madera (el adobe), almenas; el dintel. */
+  color: (k: number) => number;
+  hiladas: boolean;
+  vigas: boolean;
+  almenas: boolean;
+  dintel: number;
+  /** Las torres: toscas (de piedras), cuadradas o redondas; su lado (o su diámetro) y su alto en el nivel 2 y en el 3. */
+  torre: 'tosca' | 'cuadrada' | 'redonda';
+  ladoTorre: number;
+  altoTorre: number;
+  altoTorre3: number;
+}
+
+const tono = (a: number, b: number, k: number, ...c: number[]): number => mezclar(a, b, hash3(c[0]!, c[1]!, k));
+const ADOBE_MURO = mezclar(COLOR.adobe, COLOR.barro, 0.25);
+
+// Ninguna Era se ve más débil que la anterior (Víctor, 2026-11-16): el muro y las torres nunca bajan de alto de una Era a la siguiente en el mismo
+// nivel (la II, tan alta como la de la I; lo tosco es la piedra, no la altura), ni tienen menos piezas (`pruebas/ciudad3d.test.ts`).
+const FABRICAS: Record<number, (c: CeldaDeMuro) => FabricaDeMuro> = {
+  // II: piedra en seco, tosca (tres hiladas de piedras de varios tonos y un remate de lajas), sin almenas; torres sencillas de piedra
+  2: (c) => ({ alto: 2.2, alto3: 3.0, grueso: 1.5, zocalo: 0, colorZocalo: COLOR.piedra, color: (k) => tono(COLOR.piedra, COLOR.piedraOscura, k, Math.round(c.x * 7), Math.round(c.y * 7)), hiladas: false, vigas: false, almenas: false, dintel: COLOR.maderaOscura, torre: 'tosca', ladoTorre: 2.0, altoTorre: 4.4, altoTorre3: 4.9 }),
+  // III: adobe con sus vigas de atado sobre un zócalo alto de piedra, con almenas; torres cuadradas
+  3: () => ({ alto: 2.4, alto3: 3.1, grueso: 1.4, zocalo: 0.8, colorZocalo: COLOR.piedra, color: () => ADOBE_MURO, hiladas: false, vigas: true, almenas: true, dintel: COLOR.maderaOscura, torre: 'cuadrada', ladoTorre: 2.2, altoTorre: 4.6, altoTorre3: 5.0 }),
+  // IV: sillería en hiladas sobre un zócalo de piedra clara, con almenas; torres cuadradas con saeteras
+  4: () => ({ alto: 2.8, alto3: 3.4, grueso: 1.5, zocalo: 0.4, colorZocalo: COLOR.piedraClara, color: () => COLOR.sillar, hiladas: true, vigas: false, almenas: true, dintel: COLOR.piedraClara, torre: 'cuadrada', ladoTorre: 2.4, altoTorre: 5.0, altoTorre3: 5.4 }),
+  // V: sillería más alta, con almenas; torres redondas, más altas
+  5: () => ({ alto: 3.2, alto3: 3.8, grueso: 1.6, zocalo: 0.4, colorZocalo: COLOR.piedraClara, color: () => COLOR.sillar, hiladas: true, vigas: false, almenas: true, dintel: COLOR.marmol, torre: 'redonda', ladoTorre: 2.5, altoTorre: 5.6, altoTorre3: 6.2 }),
+};
+
+/** Lo alto del muro de una Era y un nivel (para los andamios de la mejora). */
+function altoDeMuro(era: number, nivel: number): number {
+  if (era <= 1 || nivel <= 1) return ALTO_NIVEL[Math.min(3, nivel)]!;
+  const f = FABRICAS[era]!({ x: 0, y: 0, clase: 'muro', enPie: true, nivel });
+  return nivel >= 3 ? f.alto3 : f.alto;
+}
+
+/** Las hiladas marcadas de la sillería en una caja de `l` × `s` girada `g`, de `y0` a `y1`. */
+function hiladasDe(p: Piezas, x: number, z: number, l: number, s: number, g: number, y0: number, y1: number): void {
+  const c = mezclar(COLOR.sillar, COLOR.piedraOscura, 0.3);
+  for (let y = y0 + 0.4; y < y1 - 0.15; y += 0.4) p.caja(c, x, z, l + 0.02, s + 0.02, 0.03, g, y);
+}
+
+/**
+ * Una torre de la muralla de las Eras II a V en (x, z), girada `g` y con `n` hacia fuera: tosca (tres hiladas de piedras de varios tonos y un
+ * remate bajo), cuadrada (zócalo, cuerpo, hiladas o no, saeteras y almenas) o redonda (sillería, sus bandas, saeteras y un anillo de almenas).
+ * Devuelve su alto.
+ */
+function torreDeEra(p: Piezas, f: FabricaDeMuro, nivel: number, x: number, z: number, g: number, n: V): number {
+  const alto = nivel >= 3 ? f.altoTorre3 : f.altoTorre, a = f.ladoTorre, en = (da: number, db: number): [number, number] => [x + da * Math.cos(g) - db * Math.sin(g), z + da * Math.sin(g) + db * Math.cos(g)];
+  if (f.torre === 'redonda') {
+    p.forma('cilindro', f.colorZocalo, x, z, a + 0.08, a + 0.08, f.zocalo, g);
+    p.forma('cilindro', f.color(30), x, z, a, a, alto - f.zocalo, g, f.zocalo);
+    const banda = mezclar(COLOR.sillar, COLOR.piedraOscura, 0.3);
+    for (let y = f.zocalo + 0.5; y < alto - 0.2; y += 0.5) p.forma('cilindro', banda, x, z, a + 0.03, a + 0.03, 0.03, g, y);
+    for (let k = 0; k < 10; k++) {
+      const t = (k / 10) * Math.PI * 2;
+      if (k % 2 === 0) p.caja(f.color(31), x + Math.cos(t) * (a / 2 - 0.15), z + Math.sin(t) * (a / 2 - 0.15), 0.32, 0.26, 0.4, t + Math.PI / 2, alto);
+    }
+    p.forma('cilindro', mezclar(COLOR.sillar, COLOR.piedraOscura, 0.15), x, z, a + 0.1, a + 0.1, 0.12, g, alto - 0.12);
+  } else if (f.torre === 'tosca') {
+    for (let k = 0; k < 3; k++) p.caja(f.color(32 + k), x, z, a - k * 0.06, a - k * 0.06 + 0.04 * (k % 2), alto / 3, g + (k - 1) * 0.03, (k * alto) / 3);
+    for (const [da, db] of [[-1, -1], [1, -1], [1, 1], [-1, 1]] as const) { const [qx, qz] = en(da * (a / 2 - 0.2), db * (a / 2 - 0.2)); p.caja(f.color(40 + da + 2 * db), qx, qz, 0.4, 0.4, 0.3, g + 0.2 * da, alto); }
+  } else {
+    if (f.zocalo) p.caja(f.colorZocalo, x, z, a + 0.08, a + 0.08, Math.max(f.zocalo, 0.4) + 0.2, g);
+    p.caja(f.color(30), x, z, a, a, alto, g);
+    if (f.hiladas) hiladasDe(p, x, z, a, a, g, f.zocalo, alto);
+    if (f.vigas) for (let y = f.zocalo + 0.6; y < alto - 0.3; y += 0.6) p.caja(COLOR.maderaOscura, x, z, a + 0.03, a + 0.03, 0.06, g, y);
+    for (let i = -2; i <= 2; i++) for (const [da, db] of [[i * 0.24, 1], [i * 0.24, -1], [1, i * 0.24], [-1, i * 0.24]] as const) {
+      if (Math.abs(i) % 2) continue;
+      const [qx, qz] = en(da * (a / 2 - 0.14), db * (a / 2 - 0.14));
+      p.caja(f.color(31), qx, qz, 0.28, 0.28, 0.4, g, alto);
+    }
+  }
+  // las saeteras de la cara de fuera (desde la Era III)
+  if (f.torre !== 'tosca') for (const s of [-1, 1]) p.caja(COLOR.hueco, x + n.x * (a / 2 + 0.005) + Math.cos(g) * s * a * 0.22, z + n.y * (a / 2 + 0.005) + Math.sin(g) * s * a * 0.22, 0.12, 0.05, 0.42, g, alto - 0.9);
+  return alto;
+}
+
+/**
+ * El muro de las Eras II a V en una celda (niveles 2 y 3; el 1, la empalizada, es de todas las Eras): el zócalo y el muro de su fábrica a lo largo
+ * de cada medio tramo, las hiladas, las almenas por fuera; la torre de la celda de torre o la de la puerta en los flancos del paso; y en la puerta,
+ * el umbral, las jambas, el dintel (de madera o de piedra), las hojas entreabiertas, los braseros y el muro corrido encima.
+ */
+function muroDeEra(p: Piezas, tr: Tramo, era: number, nivel: number, flanco: boolean): void {
+  const { c } = tr, g = giroDe(tr.t), f = FABRICAS[era]!(c), H = nivel >= 3 ? f.alto3 : f.alto, G = f.grueso, puerta = c.clase === 'puerta';
+  const desde = puerta ? 0.5 : 0;
+  if (!puerta) {
+    if (f.zocalo) p.caja(f.colorZocalo, c.x, c.y, G + 0.12, G + 0.12, f.zocalo, g);
+    p.caja(f.color(0), c.x, c.y, G, G, H - f.zocalo, g, f.zocalo);
+    if (f.hiladas) hiladasDe(p, c.x, c.y, G, G, g, f.zocalo, H);
+  }
+  tr.hacia.forEach((h, j) => {
+    if (f.torre === 'tosca') {
+      // de piedras: tres hiladas de dos, cada una de su tono y algo más o menos gruesa, y un remate de lajas
+      const dx = h.x - c.x, dy = h.y - c.y, l = Math.hypot(dx, dy), t00 = Math.min(0.9, desde / (l || 1)), gg = Math.atan2(dy, dx);
+      for (let hil = 0; hil < 3; hil++) for (let b = 0; b < 2; b++) {
+        const t0 = Math.max(t00, (b + (hil % 2) * 0.5) / 2), t1 = Math.min(1, (b + (hil % 2) * 0.5) / 2 + 0.5);
+        if (t1 <= t0) continue;
+        const k = j * 10 + hil * 3 + b, ex = 0.1 * (hash3(Math.round(c.x * 3), Math.round(c.y * 3), k + 40) - 0.5);
+        p.caja(f.color(k + 1), c.x + dx * ((t0 + t1) / 2), c.y + dy * ((t0 + t1) / 2), l * (t1 - t0) + 0.02, G + ex, H / 3, gg, (hil * H) / 3);
+      }
+      for (const q of puntos(tr, h, 0.3, 0)) if (Math.hypot(q.x - c.x, q.y - c.y) >= desde) p.caja(f.color(j * 7 + 50), q.x, q.y, 0.36, G - 0.2, 0.12, g + 0.15, H);
+      return;
+    }
+    if (f.zocalo) aLoLargo(p, f.colorZocalo, tr, h, G + 0.12, f.zocalo, 0, 0, 0, desde);
+    aLoLargo(p, f.color(j + 1), tr, h, G, H - f.zocalo, f.zocalo, 0, 0, desde);
+    if (f.hiladas) for (let y = f.zocalo + 0.4; y < H - 0.15; y += 0.4) aLoLargo(p, mezclar(COLOR.sillar, COLOR.piedraOscura, 0.3), tr, h, G + 0.02, 0.03, y, 0, 0, desde);
+    if (f.vigas) {
+      // el adobe: la albardilla de piedra sobre el zócalo y las vigas de atado de madera
+      aLoLargo(p, COLOR.piedraClara, tr, h, G + 0.16, 0.08, f.zocalo, 0, 0, desde);
+      for (let y = f.zocalo + 0.45; y < H - 0.2; y += 0.45) aLoLargo(p, COLOR.maderaOscura, tr, h, G + 0.03, 0.06, y, 0, 0, desde);
+    }
+    if (f.almenas) for (const q of puntos(tr, h, 0.4, G / 2 - 0.14)) p.caja(f.color(j + 20), q.x, q.y, 0.24, 0.24, 0.32, g, H);
+    // el adarve: el pretil de dentro, por donde se anda
+    if (f.almenas) aLoLargo(p, f.color(j + 30), tr, h, 0.2, 0.22, H, -(G / 2 - 0.1), 0, desde);
+  });
+  if (c.clase === 'torre' && !puerta) torreDeEra(p, f, nivel, c.x + tr.n.x * 0.2, c.y + tr.n.y * 0.2, g, tr.n);
+  else if (flanco) {
+    const q = sitioDeTorre(tr, 0.2), { g: gt, n } = ejesDeTorre(tr), alto = torreDeEra(p, f, nivel, q.x, q.y, gt, n), fuera = f.ladoTorre / 2 + 0.05;
+    pendon(p, { x: q.x + n.x * fuera, y: q.y + n.y * fuera }, gt, 0.75, alto * 0.35, alto * 0.75);
+  }
+  if (puerta) {
+    // el paso: umbral, jambas (de la piedra del muro), el dintel, las hojas, los braseros y el muro corrido encima (con sus almenas)
+    const Hp = Math.min(2.0, H - 0.25), jamba = f.torre === 'tosca' ? f.color(60) : f.hiladas ? COLOR.piedraClara : COLOR.piedra;
+    p.caja(COLOR.losa, c.x, c.y, 1.5, 2.9, 0.05, g);
+    for (const s of [-1, 1]) {
+      p.caja(jamba, c.x + tr.t.x * s * 1.05, c.y + tr.t.y * s * 1.05, 0.6, G + 0.1, Hp, g);
+      hoja(p, { x: c.x + tr.t.x * s * 0.73 - tr.n.x * 0.6, y: c.y + tr.t.y * s * 0.73 - tr.n.y * 0.6 }, tr.t, tr.n, s, 0.72, Hp - 0.15, 0.05, COLOR.madera, era >= 3 ? COLOR.bronce : COLOR.maderaOscura, 2);
+      brasero(p, c.x + tr.t.x * s * 1.1 + tr.n.x * 1.12, c.y + tr.t.y * s * 1.1 + tr.n.y * 1.12);
+    }
+    p.caja(f.dintel, c.x, c.y, 2.6, G + 0.1, 0.3, g, Hp - 0.05);
+    if (H > Hp + 0.3) p.caja(f.color(61), c.x, c.y, 2.6, G, H - Hp - 0.25, g, Hp + 0.25);
+    if (f.almenas) for (const k of [-1, 0, 1]) p.caja(f.color(62), c.x + tr.t.x * k * 0.85 + tr.n.x * (G / 2 - 0.14), c.y + tr.t.y * k * 0.85 + tr.n.y * (G / 2 - 0.14), 0.28, 0.24, 0.32, g, Math.max(H, Hp + 0.25));
+  }
+}
+
 // ───────────────────────────── Lo planificado y las mejoras ─────────────────────────────
 
 /** Una celda comprometida y aún sin levantar: la zanja marcada y estacas con cuerda. */
@@ -421,7 +571,7 @@ const ALTO_NIVEL = [0, 2.0, 2.5, 3.5];
 /** Monta todos los recintos de la plaza en `p`. */
 export function montarMurallas(p: Piezas, recintos: readonly RecintoEnVista[]): void {
   for (const r of recintos) {
-    const ts = tramos(r), pasos = pasosDePuerta(ts);
+    const ts = tramos(r), pasos = pasosDePuerta(ts), era = Math.max(1, Math.min(5, Math.floor(r.epoca ?? 1)));
     const flancos = new Set(pasos.flatMap((x) => x.flancos.flatMap((f) => (f ? [f.k] : []))));
     // la puerta de cada paso se monta con su primera celda
     const pasoDe = new Map(pasos.map((x) => [x.celdas[0]!.k, x]));
@@ -434,13 +584,14 @@ export function montarMurallas(p: Piezas, recintos: readonly RecintoEnVista[]): 
         const paso = pasoDe.get(tr.k);
         // los flancos del paso (para la pasarela), si son de empalizada
         empalizada(p, tr, paso?.celdas ?? null, paso ? paso.flancos.map((x) => (x && x.c.nivel <= 1 ? x : undefined)) : [], flanco);
-      } else if (n === 2) piedraYAdobe(p, tr, flanco);
+      } else if (era > 1) muroDeEra(p, tr, era, n, flanco);
+      else if (n === 2) piedraYAdobe(p, tr, flanco);
       else ciclopea(p, tr, flanco);
     }
     // la mejora en obra: andamios en la primera celda que aún no es del nivel nuevo
     if (r.mejorandoA !== undefined) {
       const tr = ts.filter((t) => t.c.enPie && t.c.nivel !== r.mejorandoA).sort((a, b) => (a.c.obra ?? a.k) - (b.c.obra ?? b.k))[0];
-      if (tr) { p.de = idDeCeldaDeMuro(r.id, tr.k); andamioDeMuro(p, tr, ALTO_NIVEL[Math.min(3, r.mejorandoA)]!); }
+      if (tr) { p.de = idDeCeldaDeMuro(r.id, tr.k); andamioDeMuro(p, tr, altoDeMuro(era, r.mejorandoA)); }
     }
   }
   p.de = undefined;

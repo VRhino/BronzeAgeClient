@@ -317,7 +317,11 @@ describe('la época de cada plaza (Víctor, 2026-11-16)', () => {
       expect(uno.filter((q) => q.color === COLOR.piedra && q.forma === 'caja').length, `Era ${epoca}`).toBeGreaterThanOrEqual(5);
       expect(uno.some((q) => q.color === COLOR.agua), `Era ${epoca}`).toBe(true);
       expect(alto(uno.filter((q) => q.color !== COLOR.roble && q.color !== COLOR.tronco)), `Era ${epoca}`).toBeLessThan(2.6);
-      expect(piezasDe('centroUrbano', 4, epoca, 'x-1', 12, 12).length, `Era ${epoca}`).toBeGreaterThan(uno.length);
+      expect(alto(piezasDe('centroUrbano', 4, epoca, 'x-1', 12, 12)), `Era ${epoca}`).toBeGreaterThan(alto(uno.filter((q) => q.color !== COLOR.roble && q.color !== COLOR.tronco)));
+      // al borde, lo del clan: el corral con sus ovejas y el huerto (en una huella grande); en una pequeña, solo el sitio de reunión
+      expect(uno.some((q) => q.color === COLOR.lana), `Era ${epoca}`).toBe(true);
+      expect(uno.some((q) => q.color === COLOR.cultivo), `Era ${epoca}`).toBe(true);
+      expect(piezasDe('centroUrbano', 1, epoca, 'x-1', 6, 6).some((q) => q.color === COLOR.lana), `Era ${epoca}`).toBe(false);
     }
   });
 
@@ -523,7 +527,7 @@ describe('el Albergue de caravanas', () => {
 
 describe('las puertas de muralla', () => {
   // la muralla del pueblo y la de la ciudad (anillos cerrados con su puerta), levantadas enteras en cada nivel
-  const recintos = (nombre: string, nivel: number) => plaza(nombre).c.recintos.map((r) => ({ ...r, mejorandoA: undefined, celdas: r.celdas.map((k) => ({ ...k, enPie: true, nivel })) }));
+  const recintos = (nombre: string, nivel: number, epoca?: number) => plaza(nombre).c.recintos.map((r) => ({ ...r, epoca, mejorandoA: undefined, celdas: r.celdas.map((k) => ({ ...k, enPie: true, nivel })) }));
 
   test('se dibujan de vecina en vecina aunque el motor mande las celdas en otro orden (la ciudad lleva una torre al final de la lista)', () => {
     const { a, c } = plaza('ciudad');
@@ -536,9 +540,9 @@ describe('las puertas de muralla', () => {
     expect(r.celdas.filter((k) => k.enPie).length).toBe(Math.min(a.recintos![0]!.avance, lista.length));
   });
 
-  for (const [nombre, nivel] of [['pueblo', 1], ['pueblo', 2], ['pueblo', 3], ['ciudad', 1], ['ciudad', 2], ['ciudad', 3]] as const) {
-    test(`${nombre}, nivel ${nivel}: una torre a cada lado del paso, más alta que el muro, sin salir de su celda más que un alero`, () => {
-      const rs = recintos(nombre, nivel), p = new Piezas();
+  for (const [nombre, nivel] of [['pueblo', 1], ['pueblo', 2], ['pueblo', 3], ['ciudad', 1], ['ciudad', 2], ['ciudad', 3]] as const) for (const epoca of [1, 2, 3, 4, 5]) {
+    test(`${nombre}, nivel ${nivel}, Era ${epoca}: una torre a cada lado del paso, más alta que el muro, sin salir de su celda más que un alero`, () => {
+      const rs = recintos(nombre, nivel, epoca), p = new Piezas();
       montarMurallas(p, rs);
       for (const r of rs) {
         const N = r.celdas.length, T = 3;
@@ -558,6 +562,48 @@ describe('las puertas de muralla', () => {
       }
     });
   }
+});
+
+describe('las murallas por Era (Víctor, 2026-11-16)', () => {
+  const muro = (nombre: string, nivel: number, epoca: number) => {
+    const p = new Piezas();
+    montarMurallas(p, plaza(nombre).c.recintos.map((r) => ({ ...r, epoca, mejorandoA: undefined, celdas: r.celdas.map((k) => ({ ...k, enPie: true, nivel })) })));
+    return p.lista;
+  };
+
+  test('la Era de la plaza manda entera en la muralla (sin punto); sin ella, la I', () => {
+    const { a, t } = plaza('ciudad');
+    expect(ciudadEnVista(a, t, { instante: 0 })!.recintos.every((r) => r.epoca === undefined)).toBe(true);
+    expect(ciudadEnVista(a, t, { instante: 0, epoca: { era: 4, grado: 1 } })!.recintos.every((r) => r.epoca === 4)).toBe(true);
+    expect(ciudadEnVista(a, t, { instante: 0, epoca: { era: 1, grado: 3 } })!.recintos.every((r) => r.epoca === undefined)).toBe(true);
+  });
+
+  test('ninguna Era se ve más débil que la anterior: ni más baja ni con menos piezas, nivel a nivel', () => {
+    const malos: string[] = [];
+    for (const nombre of ['pueblo', 'ciudad']) for (const nivel of [1, 2, 3]) {
+      const l = [1, 2, 3, 4, 5].map((epoca) => muro(nombre, nivel, epoca));
+      for (let k = 1; k < 5; k++) {
+        const alto = (x: Pieza[]) => Math.max(...x.map((q) => q.y + q.alto));
+        if (l[k]!.length < l[k - 1]!.length * 0.97 || alto(l[k]!) < alto(l[k - 1]!) - 0.05) malos.push(`${nombre} nivel ${nivel}: Era ${k} ${l[k - 1]!.length} piezas, Era ${k + 1} ${l[k]!.length}`);
+      }
+    }
+    expect(malos).toEqual([]);
+  });
+
+  test('cada Era con su fábrica: la II de piedra tosca sin almenas, la III de adobe con vigas de atado, la IV de sillería y la V con torres redondas', () => {
+    const de = (l: Pieza[], color: number) => l.filter((q) => q.color === color).length;
+    // la empalizada es de todas las Eras
+    expect(muro('pueblo', 1, 4)).toEqual(muro('pueblo', 1, 1));
+    const [ii, iii, iv, v] = [2, 3, 4, 5].map((e) => muro('pueblo', 2, e));
+    expect(de(ii!, COLOR.sillar) + de(ii!, COLOR.enlucido)).toBe(0);
+    expect(ii!.some((q) => q.color === COLOR.rojo && q.alto < 0.3)).toBe(false);
+    expect(de(iii!, COLOR.maderaOscura)).toBeGreaterThan(de(ii!, COLOR.maderaOscura));
+    expect(de(iv!, COLOR.sillar)).toBeGreaterThan(0);
+    expect(de(iii!, COLOR.sillar)).toBe(0);
+    const torresRedondas = (l: Pieza[]) => l.filter((q) => q.forma === 'cilindro' && q.color === COLOR.sillar && q.ancho > 2).length;
+    expect(torresRedondas(v!)).toBeGreaterThan(0);
+    expect(torresRedondas(iv!)).toBe(0);
+  });
 });
 
 /** Lo más que una pieza puede asomar fuera de su huella (un alero, un poste de la valla), en ul (0,2 ul = 60 cm). */

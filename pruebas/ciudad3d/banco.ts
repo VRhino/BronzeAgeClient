@@ -238,7 +238,7 @@ function rehacerComida(): void {
 /**
  * Una muralla de muestra con las puertas de la `LAYOUT_VERSION` 7 del motor (tanda 69: toda puerta con dos celdas de muro recto a cada lado):
  * un anillo cuadrado de 11 × 11 celdas con una puerta de una celda al sur, una de dos al norte y torres en las esquinas, y la calle que lo
- * cruza por las dos. El nivel, el del mando «Muralla» (sin él, 2).
+ * cruza por las dos. El nivel, el del mando «Muralla» (sin él, 2); la Era, la del mando «Era» (la muralla la luce entera, sin punto).
  */
 function rehacerMuralla(): void {
   actual = null;
@@ -266,13 +266,13 @@ function rehacerMuralla(): void {
   const nivel = Number($<HTMLSelectElement>('muralla').value || 2);
   const a: FuenteDeCiudad = { id: 'muestra-muralla', nivel: 3, edificios: [], recintos: [{ id: 'recinto-muestra', nivel, celdas, avance: celdas.length }], ascenso: undefined };
   const calles: RectanguloLocal[] = [{ x: 0, y: 0, ancho: 3, alto: 3 * (h + 4) }, { x: -3, y: -3 * (h + 4), ancho: 6, alto: 3 * (h + 4) }];
-  const c = ciudadEnVista(a, { calles, caminos: [], huellas: {}, murallas: [], radio: 3 * (h + 2), celda: 3 }, { instante: 0 })!;
+  const c = ciudadEnVista(a, { calles, caminos: [], huellas: {}, murallas: [], radio: 3 * (h + 2), celda: 3 }, { instante: 0, epoca: epocaElegida() })!;
   campActual = c;
   ultima = c;
   vista.fijar(c);
   vista.seleccionar(seleccion);
   const cuentas = vista.cuentas();
-  $('lectura').textContent = `Muralla de nivel ${nivel}: puertas rectas (una de una celda al sur, una de dos al norte)\npiezas: ${cuentas.murallas} muralla · ${cuentas.relleno} relleno`;
+  $('lectura').textContent = `Muralla de nivel ${nivel}, ${textoEpoca()}: puertas rectas (una de una celda al sur, una de dos al norte)\npiezas: ${cuentas.murallas} muralla · ${cuentas.relleno} relleno`;
 }
 
 /**

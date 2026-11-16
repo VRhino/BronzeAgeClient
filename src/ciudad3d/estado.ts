@@ -73,6 +73,8 @@ export interface RecintoEnVista {
   mejorandoA?: number;
   /** El lado de una celda, en ul: con él se buscan las vecinas de cada celda (`vecinasDeMuro`). */
   lado?: number;
+  /** La Era de la plaza (`EpocaDePlaza.era`, entera: en la muralla no hay turnos por punto); sin ella, la I. La fábrica del muro (`murallas.ts`). */
+  epoca?: number;
 }
 
 export type TipoRelleno = 'huerto' | 'patio' | 'arboles' | 'redil' | 'horno' | 'lena' | 'almiar' | 'vacio';
@@ -251,7 +253,7 @@ export function ciudadEnVista(a: FuenteDeCiudad, t: TrazadoAsentamiento | undefi
     }));
     const a0 = orden[0], a1 = orden[orden.length - 1];
     const cerrado = !!a0 && !!a1 && orden.length > 2 && Math.max(Math.abs(a0.col - a1.col), Math.abs(a0.row - a1.row)) <= 1;
-    return { id: r.id, nivel: r.nivel, celdas, cerrado, mejorandoA: r.mejorandoA, lado: T };
+    return { id: r.id, nivel: r.nivel, celdas, cerrado, mejorandoA: r.mejorandoA, lado: T, epoca: o.epoca && o.epoca.era > 1 ? Math.min(5, Math.floor(o.epoca.era)) : undefined };
   });
 
   // Lo que abarca todo (para el suelo y la rejilla de celdas libres).
