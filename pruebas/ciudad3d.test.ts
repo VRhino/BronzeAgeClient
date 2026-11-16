@@ -14,6 +14,7 @@ import { montarEdificio } from '../src/ciudad3d/modelos';
 import { idDeCeldaDeMuro, montarMurallas } from '../src/ciudad3d/murallas';
 import { puebloEnVista } from '../src/ciudad3d/pueblo';
 import { Piezas, type Pieza } from '../src/ciudad3d/piezas';
+import { sueloDeParcela, tierraDe } from '../src/ciudad3d/suelo';
 import { AsentamientoSchema, CampamentoMercenariosSchema, EstiloEpocaSchema, PuebloSchema } from '../src/contrato/gen/bronzeage/v1/entities_pb';
 import { escenaCampamento, escenaPueblo, plazaDeContrato } from '../src/motor/proyeccion';
 import type { Asentamiento, EscenaPueblo, TrazadoAsentamiento } from '../src/tiposDominio';
@@ -258,8 +259,81 @@ describe('la época de cada plaza (Víctor, 2026-11-16)', () => {
     expect(teja(piezasDe('maravilla', 5, 3, 'x-1', 12, 12))).toBeGreaterThan(0);
   });
 
-  test('el Centro Urbano de la Era II es el héroon: la casa larga absidal de paja con su galería de postes', () => {
-    const l = piezasDe('centroUrbano', 4, 2, 'x-1', 12, 12);
+  // cada casa con su semilla (la de `piezasDe` es fija)
+  const casa = (estilo: number, epoca: number, semilla: number): Pieza[] => {
+    const p = new Piezas();
+    montarEdificio(p, { id: `c-${semilla}`, tipo: 'vivienda', x: 0, y: 0, ancho: 6, alto: 6, estado: 'activo', avance: null, mejora: false, danado: false, nivel: 1, estilo, epoca, semilla: semilla * 7919 });
+    return p.lista;
+  };
+  const semillas = Array.from({ length: 40 }, (_, i) => i + 1);
+
+  test('la Era IV, clásica: teja a cuatro aguas en las casas ricas, lo público de sillería y la Sala del Consejo como bouleuterion', () => {
+    const cuatro = (l: Pieza[]) => l.filter((q) => q.forma === 'cuatroAguas' && (q.color === COLOR.teja || q.color === COLOR.tejaVieja)).length;
+    const sillar = (l: Pieza[]) => l.filter((q) => q.color === COLOR.sillar).length;
+    expect(semillas.filter((k) => cuatro(casa(4, 4, k)) > 0).length).toBeGreaterThan(30);
+    expect(semillas.filter((k) => cuatro(casa(4, 3, k)) > 0).length).toBe(0);
+    expect(semillas.filter((k) => casa(4, 4, k).some((q) => q.color === COLOR.encalado)).length).toBeGreaterThan(25);
+    expect(sillar(piezasDe('almacen', 4, 4, 'x-1', 6, 6))).toBeGreaterThan(0);
+    expect(sillar(piezasDe('almacen', 4, 3, 'x-1', 6, 6))).toBe(0);
+    expect(cuatro(piezasDe('salaConsejo', 4, 4, 'x-1', 9, 6))).toBeGreaterThan(0);
+    expect(cuatro(piezasDe('salaConsejo', 4, 3, 'x-1', 9, 6))).toBe(0);
+  });
+
+  test('la Era V, helenística: franjas de rojo pompeyano u ocre, casas de peristilo, el palacio con su propileo y el gran templo', () => {
+    const de = (l: Pieza[], color: number) => l.filter((q) => q.color === color).length;
+    expect(semillas.filter((k) => de(casa(5, 5, k), COLOR.rojoPompeyano) > 0).length).toBeGreaterThan(5);
+    expect(semillas.filter((k) => de(casa(5, 4, k), COLOR.rojoPompeyano) > 0).length).toBe(0);
+    // el peristilo: el impluvio de su patio porticado
+    expect(semillas.filter((k) => de(casa(5, 5, k), COLOR.agua) > 0).length).toBeGreaterThan(10);
+    expect(semillas.filter((k) => de(casa(5, 4, k), COLOR.agua) > 0).length).toBe(0);
+    const columnas = (l: Pieza[]) => l.filter((q) => q.forma === 'cilindro' && q.color === COLOR.marmol).length;
+    // el palacio con su propileo y su patio porticado (con su impluvio), desde la IV (Víctor, 2026-11-16)
+    for (const epoca of [4, 5]) {
+      expect(columnas(piezasDe('centroUrbano', 5, epoca, 'x-1', 12, 12)), `Era ${epoca}`).toBeGreaterThan(columnas(piezasDe('centroUrbano', 5, 3, 'x-1', 12, 12)) + 10);
+      expect(de(piezasDe('centroUrbano', 5, epoca, 'x-1', 12, 12), COLOR.agua), `Era ${epoca}`).toBeGreaterThan(0);
+    }
+    expect(de(piezasDe('centroUrbano', 5, 3, 'x-1', 12, 12), COLOR.agua)).toBe(0);
+    expect(piezasDe('maravilla', 5, 5, 'x-1', 12, 12).length).toBeGreaterThan(piezasDe('maravilla', 5, 4, 'x-1', 12, 12).length);
+  });
+
+  test('en cada estilo, una Era nunca se ve más pobre que la anterior (la II frente a la I y de la III a la V, tipo a tipo en las tres plazas)', () => {
+    const malos: string[] = [];
+    for (const nombre of ['aldea', 'pueblo', 'ciudad']) {
+      const { c } = plaza(nombre);
+      for (const tipo of new Set(c.edificios.map((e) => e.tipo))) for (const estilo of [1, 2, 3, 4, 5]) {
+        const n = [1, 2, 3, 4, 5].map((epoca) => c.edificios.filter((e) => e.tipo === tipo).reduce((s, e) => { const p = new Piezas(); montarEdificio(p, { ...e, estilo, epoca, estado: 'activo', avance: null }); return s + p.lista.length; }, 0));
+        for (const [a, b] of [[0, 1], [2, 3], [3, 4]] as const) if (n[b]! < n[a]! * 0.97) malos.push(`${nombre} ${tipo} estilo ${estilo}: Era ${a + 1} ${n[a]}, Era ${b + 1} ${n[b]}`);
+      }
+    }
+    expect(malos).toEqual([]);
+  }, 60_000);
+
+  test('el Centro Urbano por nivel: en el 1, el sitio de reunión con la casa pequeña; el edificio grande llega en el 4 y el palacio en el 5', () => {
+    const alto = (l: Pieza[]) => Math.max(...l.map((q) => q.y + q.alto));
+    for (const epoca of [1, 2, 3, 4, 5]) {
+      const uno = piezasDe('centroUrbano', 1, epoca, 'x-1', 12, 12);
+      // el hogar con su fuego, los bancos de piedra y el pozo (con su agua), y nada alto salvo el árbol
+      expect(uno.some((q) => q.color === COLOR.fuego), `Era ${epoca}`).toBe(true);
+      expect(uno.filter((q) => q.color === COLOR.piedra && q.forma === 'caja').length, `Era ${epoca}`).toBeGreaterThanOrEqual(5);
+      expect(uno.some((q) => q.color === COLOR.agua), `Era ${epoca}`).toBe(true);
+      expect(alto(uno.filter((q) => q.color !== COLOR.roble && q.color !== COLOR.tronco)), `Era ${epoca}`).toBeLessThan(2.6);
+      expect(piezasDe('centroUrbano', 4, epoca, 'x-1', 12, 12).length, `Era ${epoca}`).toBeGreaterThan(uno.length);
+    }
+  });
+
+  test('la Era II sin bajón: el héroon solo en los niveles 2 y 3; en el 4 y el 5, la sala grande de piedra en su recinto, sin rojo ni cuernos', () => {
+    const paja = (l: Pieza[]) => l.some((q) => q.forma === 'cono' && q.color === COLOR.paja);
+    for (const estilo of [2, 3]) expect(paja(piezasDe('centroUrbano', estilo, 2, 'x-1', 12, 12)), `estilo ${estilo}`).toBe(true);
+    for (const estilo of [4, 5]) {
+      const l = piezasDe('centroUrbano', estilo, 2, 'x-1', 12, 12);
+      expect(paja(l), `estilo ${estilo}`).toBe(false);
+      expect(l.filter((q) => q.color === COLOR.piedra).length, `estilo ${estilo}`).toBeGreaterThan(10);
+      expect(l.filter((q) => q.color === COLOR.rojo || q.color === COLOR.enlucido).length, `estilo ${estilo}`).toBe(0);
+    }
+  });
+
+  test('el Centro Urbano de la Era II en el nivel 3 es el héroon: la casa larga absidal de paja con su galería de postes', () => {
+    const l = piezasDe('centroUrbano', 3, 2, 'x-1', 12, 12);
     expect(l.some((q) => q.forma === 'cono' && q.color === COLOR.paja)).toBe(true);
     expect(l.filter((q) => q.forma === 'cilindro' && q.color === COLOR.madera).length).toBeGreaterThan(10);
   });
@@ -292,6 +366,24 @@ describe('la época de cada plaza (Víctor, 2026-11-16)', () => {
       expect(peor.fuera, peor.que).toBeLessThanOrEqual(ALERO);
     }, 60_000);
   }
+});
+
+describe('el suelo de las ciudades altas (Víctor, 2026-11-16)', () => {
+  test('hasta el nivel 2, la tierra parda de siempre; en el 3, más clara; en el 4 y el 5, cada parcela según lo que es', () => {
+    for (const nivel of [1, 2]) for (const tipo of ['vivienda', 'centroUrbano', 'fundicion']) expect(sueloDeParcela(tipo, nivel)).toEqual({ clase: 'tierra', color: COLOR.tierra, alfa: 0.55 });
+    const t3 = sueloDeParcela('vivienda', 3);
+    expect(t3.clase).toBe('tierra');
+    if (t3.clase === 'tierra') { expect(t3.color).not.toBe(COLOR.tierra); expect(t3.alfa).toBeLessThan(0.55); }
+    for (const nivel of [4, 5]) {
+      for (const tipo of ['centroUrbano', 'palacio', 'salaConsejo', 'maravilla', 'almacen', 'granero', 'barracon']) expect(sueloDeParcela(tipo, nivel).clase, tipo).toBe('losas');
+      expect(sueloDeParcela('vivienda', nivel).clase).toBe('patio');
+      expect(sueloDeParcela('fundicion', nivel).clase).toBe('tierra');
+      // en obra, tierra; los de terreno propio, como están
+      expect(sueloDeParcela('centroUrbano', nivel, false).clase).toBe('tierra');
+      for (const tipo of ['granja', 'parque', 'plaza', 'patioDeGremios']) expect(sueloDeParcela(tipo, nivel).clase).toBe('propio');
+    }
+    expect(tierraDe(5).alfa).toBeLessThan(tierraDe(3).alfa);
+  });
 });
 
 describe('los pueblos extractores y las aldeas', () => {

@@ -36,7 +36,7 @@ export const COLOR = {
   teja: 0xa9583b, tejaVieja: 0x8f5a42, estuco: 0xddd3bd, marmol: 0xece7dc, sillar: 0xcdbf9e, encalado: 0xf1ece0, estucoOcre: 0xe2c79a,
   rojoPompeyano: 0x8e3424,
   toldo: [0xd9cfb6, 0xb5553a, 0x6e7f4f, 0xc79a3c, 0x8a5a3c],
-  tierra: 0x8b6e4e, tierraOscura: 0x5e4a36, foso: 0x4c3d2c, talud: 0x8a7556, agua: 0x3e6a7a,
+  tierra: 0x8b6e4e, tierraOscura: 0x5e4a36, /** El suelo de las ciudades altas (`suelo.ts`): el albero, el patio encalado de las casas y el césped. */ albero: 0xcdb98e, patioEncalado: 0xe4d9bf, cesped: 0x86a257, foso: 0x4c3d2c, talud: 0x8a7556, agua: 0x3e6a7a,
   hoja: 0x5f7a3c, olivo: 0x7d8a58, cipres: 0x3b5634, roble: 0x56783a, tronco: 0x5a4430, seto: 0x6a7f45, heno: 0xc9a85a,
   cultivo: 0x7d9443, trigo: 0xc4a24d, rastrojo: 0xa38a58,
   /** Los talleres de la comida (tanda 69): la uva y el mosto de la bodega, la aceituna y el aceite de la prensa, el queso y el pan; y la cepa. */

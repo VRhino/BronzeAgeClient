@@ -7,8 +7,20 @@
 //   5. piedra y enlucido con franjas y columnas rojas, terrazas escalonadas (Cnosos).
 // Eso es la Era I, la de los reinos palaciales. La época (`EdificioEnVista.epoca`, la Era a la que llegó la plaza por las tecnologías de su
 // Facción, `estado.ts`; Víctor, 2026-11-16) cambia el vocabulario sin tocar el tamaño, que sigue siendo del estilo:
-//   II. crisis y adaptación: sin franjas rojas ni cuernos, postes de madera, zócalo de piedra, casas absidales y paja o terrado; el héroon;
-//   III. polis e imperios: teja de barro a dos aguas, columnas dóricas de piedra estucada, el templo con frontón, la estoa con su tejado.
+//   II. crisis y adaptación: sin franjas rojas ni cuernos, postes de madera, zócalo de piedra, casas absidales y paja (con su cumbrera) o
+//       terrado, las vigas de atado de madera en los muros; el héroon en los niveles 2 y 3, y en el 4 y el 5 la sala grande de piedra en su
+//       recinto (en el mismo nivel, la II nunca se ve más pobre que la I);
+// Una Era nunca se ve más pobre que la anterior en el mismo nivel (lo comprueba `pruebas/ciudad3d.test.ts`). El Centro Urbano va con el nivel en
+// todas las Eras: en el 1, el sitio de reunión con la casa pequeña del jefe; en el 2 y el 3, de transición; el edificio grande en el 4 y el palacio
+// en el 5 (Víctor, 2026-11-16).
+//   III. polis e imperios: teja de barro a dos aguas, columnas dóricas de piedra estucada, el templo con frontón, la estoa con su tejado;
+//   IV. clásica: casas encaladas sobre zócalo de piedra clara, teja a cuatro aguas en las ricas (estilo 4 y 5) y a dos en el resto, dos plantas
+//       como mucho; lo público de sillería con sus hiladas marcadas; jónico en lo rico y dórico en lo demás; templos y estoas de mármol; la Sala
+//       del Consejo es el bouleuterion (la sala cuadrada con tejado a cuatro aguas y su pórtico); el palacio, con su propileo y su patio
+//       porticado (de jónicas);
+//   V. helenística: estuco pintado con franjas rojo pompeyano u ocre desde el estilo 4, casas de peristilo en el 5 y hasta tres plantas;
+//       corintio en lo rico y jónico en el resto (también en el palacio); la Maravilla, el gran templo díptero o sobre
+//       un podio alto con su escalinata.
 // Y su estado: en obra, un armazón de postes y vigas que crece con el avance; en mejora, su modelo con andamios; en cola (solo la propia),
 // estacas y cuerda; dañado, ruina de muros bajos, escombro y vigas quemadas.
 import { COLOR } from './config';
@@ -67,29 +79,56 @@ class Marco {
 // ───────────────────────────── La época: lo que cambia de una Era a otra ─────────────────────────────
 // En la Era I todo sale como antes de las épocas (los mismos números, pieza a pieza): lo de aquí solo cambia algo desde la II.
 
-type Cubierta = 'paja' | 'plano' | 'teja';
+type Cubierta = 'paja' | 'plano' | 'teja' | 'cuatro';
 
 /**
  * El tejado de los cuerpos de casa de un edificio, fijo por edificio: en la Era I, paja en los estilos 1 y 2 y terrado desde el 3; en la II,
- * paja o terrado (más paja); desde la III, teja de barro, con algún terrado (y aún paja en la mitad de las casas pobres de la III).
+ * paja o terrado (más paja); desde la III, teja de barro, con algún terrado (y aún paja en la mitad de las casas pobres de la III); desde la IV,
+ * a cuatro aguas en los estilos 4 y 5.
  */
 function cubierta(m: Marco, estilo: number): Cubierta {
   if (m.era === 1) return estilo <= 2 ? 'paja' : 'plano';
   const k = m.azar(43);
-  if (m.era === 2) return estilo <= 2 || k < 0.55 ? 'paja' : 'plano';
+  if (m.era === 2) return estilo <= 2 || k < (estilo >= 4 ? 0.3 : 0.55) ? 'paja' : 'plano';
   if (m.era === 3 && estilo === 1 && k < 0.5) return 'paja';
-  return k < (m.era === 3 ? 0.1 : 0.06) ? 'plano' : 'teja';
+  if (k < 0.1) return 'plano';
+  return m.era >= 4 && estilo >= 4 ? 'cuatro' : 'teja';
 }
 
 /** El tejado de un cobertizo o un tejadillo: el de su casa, salvo en los estilos bajos, de paja hasta la Era II y de teja después. */
 function cubiertaLigera(m: Marco, estilo: number): Cubierta {
-  return estilo <= 2 ? (m.era >= 3 ? 'teja' : 'paja') : cubierta(m, estilo);
+  if (estilo <= 2) return m.era >= 3 ? 'teja' : 'paja';
+  const c = cubierta(m, estilo);
+  return c === 'cuatro' ? 'teja' : c;
 }
 
-/** La franja pintada bajo el techo, o ninguna: la roja de Cnosos en el estilo 5 de la Era I. */
+/** La franja bajo el techo, o ninguna: la roja de Cnosos en el estilo 5 de la Era I; las vigas de atado de madera desde el estilo 3 de la Era II;
+ * la del estuco helenístico (rojo pompeyano u ocre, fija por edificio) desde el estilo 4 de la Era V. */
 function franjaDe(m: Marco, estilo: number): number | undefined {
   if (m.era === 1) return estilo === 5 ? COLOR.rojo : undefined;
+  if (m.era === 5 && estilo >= 4) return m.azar(45) < 0.6 ? COLOR.rojoPompeyano : COLOR.ocre;
+  // en la Era II, las vigas de atado de madera que corren por los muros (y enmarcan las ventanas): sin el rojo de Cnosos, no más pobre
+  if (m.era === 2 && estilo >= 3) return COLOR.maderaOscura;
   return undefined;
+}
+
+/** Los edificios públicos: desde la Era IV, de sillería con sus hiladas (`bloque`). */
+const PUBLICOS = new Set(['centroUrbano', 'palacio', 'salaConsejo', 'maravilla', 'almacen', 'granero', 'barracon', 'mercado', 'patioDeGremios']);
+
+/** Las hiladas marcadas de la sillería en un cuerpo de `l` × `s`, de `y` a `y + h`. */
+function hiladas(m: Marco, u: number, v: number, l: number, s: number, y: number, h: number, paso = 0.35): void {
+  const c = oscurecer(COLOR.sillar, 0.86);
+  for (let yy = y + paso; yy < y + h - 0.12; yy += paso) m.caja(c, u, v, l + 0.02, s + 0.02, 0.025, yy);
+}
+
+/**
+ * Un tejado a cuatro aguas de `l` × `s` (`l` a lo largo de `giro`) y `h` de alto sobre `y`: la cumbrera a lo largo del lado largo (un prisma a dos
+ * aguas) y los dos faldones de los extremos (medias pirámides), o una pirámide si es cuadrado.
+ */
+function aCuatroAguas(m: Marco, color: number, u: number, v: number, l: number, s: number, h: number, y: number, giro = 0): void {
+  const a = Math.max(l, s), b = Math.min(l, s), g = giro + (l >= s ? 0 : Math.PI / 2), d = (a - b) / 2;
+  if (d > 0.03) m.forma('aguas', color, u, v, 2 * d, b, h, y, g);
+  for (const k of d > 0.03 ? [-1, 1] : [0]) m.forma('cuatroAguas', color, u + k * d * Math.cos(g), v + k * d * Math.sin(g), b, b, h, y, g);
 }
 
 /** Si la casa va sobre un zócalo de piedra: en la Era I, desde el estilo 4; después de la crisis, toda casa de muros (desde el 2). */
@@ -106,11 +145,22 @@ function colorZocalo(m: Marco, estilo: number): number {
  * Un tejado a dos aguas sobre un cuerpo de `l` × `s` cuyo techo está a la altura `y`, con la cumbrera a lo largo de u (girado `giro`): de paja,
  * alto; o de teja, bajo, y con `fronton` (un color de piedra) el frontón en los dos hastiales. Devuelve la altura de la cumbrera.
  */
-function tejado(m: Marco, cub: 'paja' | 'teja', u: number, v: number, l: number, s: number, y: number, fronton?: number, giro = 0): number {
+function tejado(m: Marco, cub: 'paja' | 'teja' | 'cuatro', u: number, v: number, l: number, s: number, y: number, fronton?: number, giro = 0): number {
+  if (cub === 'cuatro') {
+    const h = Math.min(0.75, Math.min(l, s) * 0.3);
+    aCuatroAguas(m, m.azar(44) < 0.3 ? COLOR.tejaVieja : COLOR.teja, u, v, l + 0.24, s + 0.24, h, y, giro);
+    return y + h;
+  }
   if (cub === 'paja') {
-    const h = s * 0.5;
+    const h = s * 0.5, yc = y - 0.04 + h;
     m.forma('aguas', m.azar(44) < 0.35 ? COLOR.pajaVieja : COLOR.paja, u, v, l + 0.25, s + 0.4, h, y - 0.04, giro);
-    return y - 0.04 + h;
+    // la cumbrera de madera y, en cada hastial, las dos varas cruzadas que la sujetan
+    m.forma('caja', COLOR.maderaOscura, u, v, l + 0.3, 0.12, 0.1, yc - 0.06, giro);
+    for (const k of [-1, 1]) {
+      const du = (k * (l + 0.3)) / 2, uu = u + du * Math.cos(giro), vv = v + du * Math.sin(giro);
+      for (const t of [-1, 1]) m.forma('caja', COLOR.maderaOscura, uu, vv, 0.06, 0.06, 0.4, yc - 0.2, giro, t * 0.5);
+    }
+    return yc;
   }
   const h = Math.min(0.75, s * 0.26);
   m.forma('aguas', m.azar(44) < 0.3 ? COLOR.tejaVieja : COLOR.teja, u, v, l + 0.2, s + 0.26, h, y, giro);
@@ -368,7 +418,7 @@ function fabrica(m: Marco, estilo: number): number {
   switch (m.era) {
     case 2: return k < 0.5 ? COLOR.adobe : k < 0.8 ? COLOR.adobeFresco : COLOR.barro;
     case 3: return estilo >= 4 && k < 0.35 ? COLOR.enlucidoSombra : k < 0.65 ? COLOR.adobe : COLOR.adobeClaro;
-    case 4: return k < 0.55 ? COLOR.encalado : k < 0.8 ? COLOR.enlucido : COLOR.adobeClaro;
+    case 4: return k < 0.75 ? COLOR.encalado : k < 0.92 ? COLOR.enlucido : COLOR.adobeClaro;
     default: return k < 0.4 ? COLOR.enlucido : k < 0.7 ? COLOR.encalado : COLOR.estucoOcre;
   }
 }
@@ -392,7 +442,8 @@ function bloque(m: Marco, estilo: number, u: number, v: number, l: number, s: nu
     return 0.85 + s * 0.6;
   }
   // las casas griegas, de una o dos plantas: tres solo en la Era I (Cnosos) y en la V
-  const color = o.color ?? fabrica(m, estilo), plantas = Math.max(1, Math.min(m.era === 1 || m.era === 5 ? 3 : 2, o.plantas ?? 1));
+  const sillar = o.color === undefined && m.era >= 4 && PUBLICOS.has(m.e.tipo);
+  const color = o.color ?? (sillar ? COLOR.sillar : fabrica(m, estilo)), plantas = Math.max(1, Math.min(m.era === 1 || m.era === 5 ? 3 : 2, o.plantas ?? 1));
   const franja = franjaDe(m, estilo) === undefined ? undefined : o.franja ?? franjaDe(m, estilo), cub = cubierta(m, estilo);
   if (conZocalo(m, estilo)) m.caja(colorZocalo(m, estilo), u, v, l + 0.06, s + 0.06, 0.32);
   let y = 0, arriba = { u, v, l, s };
@@ -400,6 +451,7 @@ function bloque(m: Marco, estilo: number, u: number, v: number, l: number, s: nu
     const enc = k * 0.12, lk = l - enc * l * 0.6, sk = s - enc * s;
     const uk = u + (k ? (m.azar(60 + k) - 0.5) * (l - lk) : 0), vk = v - f * enc * s * 0.5, ultima = k === plantas - 1 && cub === 'plano';
     y = casaPlana(m, uk, vk, lk, sk, P, color, { frente: f, y, pretil: ultima, trampilla: ultima, vigas: (estilo === 3 || m.era === 2) && k === 0 });
+    if (sillar) hiladas(m, uk, vk, lk, sk, y - P, P);
     if (franja !== undefined) m.caja(franja, uk, vk, lk + 0.04, sk + 0.04, 0.1, y - 0.22);
     if (estilo >= 4 && k > 0) ventanas(m, uk, vk, lk, sk, y - P * 0.62, f, franja);
     arriba = { u: uk, v: vk, l: lk, s: sk };
@@ -429,6 +481,7 @@ function vivienda(m: Marco, estilo: number): void {
     if (m.azar(8) < 0.3) almiar(m, L / 2 - 0.35, f * (S / 2 - 0.35), 0.3);
     return;
   }
+  if (m.era === 5 && estilo === 5 && Math.min(L, S) >= 4.4 && m.azar(47) < 0.6) return peristilo(m, estilo, L, S, f);
   if (estilo >= 4 && m.azar(11) < 0.68) return viviendaAlta(m, estilo, L, S, f);
   // Desde el 3: la casa al fondo y un patio delante, con su tapia, su pérgola o su horno.
   const l = L * m.entre(2, 0.62, 0.92), s = S * m.entre(3, 0.48, 0.66);
@@ -460,7 +513,7 @@ function vivienda(m: Marco, estilo: number): void {
 const TONOS_ALTOS: Record<number, [number[], number[]]> = {
   2: [[COLOR.adobe, COLOR.adobeClaro, COLOR.adobeFresco, 0xc2a37c], [COLOR.adobeClaro, COLOR.adobe, 0xd2b88f, COLOR.adobeFresco]],
   3: [[COLOR.adobe, COLOR.adobeClaro, COLOR.enlucidoSombra, 0xd6bb92], [COLOR.adobeClaro, COLOR.enlucidoSombra, COLOR.enlucido, 0xd6bb92]],
-  4: [[COLOR.encalado, COLOR.enlucido, COLOR.adobeClaro, COLOR.encalado], [COLOR.encalado, COLOR.enlucido, COLOR.encalado, 0xe8dcc4]],
+  4: [[COLOR.encalado, COLOR.encalado, COLOR.enlucido, 0xeee6d6], [COLOR.encalado, COLOR.encalado, COLOR.enlucido, 0xf3efe6]],
   5: [[COLOR.enlucido, COLOR.encalado, COLOR.estucoOcre, 0xe6d2b4], [COLOR.enlucido, COLOR.encalado, COLOR.estucoOcre, 0xeadcc0, 0xf0e8d8]],
 };
 
@@ -472,7 +525,8 @@ const TONOS_ALTOS: Record<number, [number[], number[]]> = {
 function viviendaAlta(m: Marco, estilo: number, L: number, S: number, f: number): void {
   const tonos = TONOS_ALTOS[m.era]?.[estilo === 5 ? 1 : 0] ?? (estilo === 5 ? [COLOR.enlucido, COLOR.enlucidoSombra, 0xeadcc0, 0xe6d2b4, 0xf0e8d8] : [COLOR.adobeClaro, COLOR.enlucido, COLOR.enlucidoSombra, 0xd6bb92]);
   const tono = (k: number): number => tonos[Math.floor(m.azar(k) * tonos.length)]!;
-  const fr = m.azar(13), franja = fr < 0.6 ? COLOR.rojo : fr < 0.85 ? COLOR.ocre : COLOR.azul, pintada = franjaDe(m, estilo) !== undefined;
+  const fr = m.azar(13), pintada = franjaDe(m, estilo) !== undefined;
+  const franja = m.era === 1 ? (fr < 0.6 ? COLOR.rojo : fr < 0.85 ? COLOR.ocre : COLOR.azul) : franjaDe(m, estilo) ?? COLOR.ocre;
   const alta = (k: number): number => (estilo === 4 ? (m.azar(k) < 0.5 ? 2 : 1) : m.azar(k) < 0.35 ? 3 : 2);
   // la de azotea es de terrado: con tejado de paja o de teja, la de dos cuerpos en hilera
   const plano = cubierta(m, estilo) === 'plano', lado = m.azar(14) < 0.5 ? 1 : -1;
@@ -532,39 +586,68 @@ function viviendaAlta(m: Marco, estilo: number, L: number, S: number, f: number)
   if (estilo === 5 && m.azar(10) < 0.25) cuernos(m, azoteaU, v, techo);
 }
 
+/**
+ * Un patio porticado de `l` × `s` con su centro en (u, v): enlosado, con las columnas de su época alrededor (a un paso del borde), el entablamento
+ * y el tejadillo de teja de la galería hasta el borde, y en medio el impluvio con su brocal.
+ */
+function patioPorticado(m: Marco, u: number, v: number, l: number, s: number, h: number, rica: boolean): void {
+  const p = piedraNoble(m), d = Math.min(0.6, Math.min(l, s) * 0.18), cl = l - 2 * d, cs = s - 2 * d;
+  m.losa(COLOR.losa, u, v, l, s, 0.04);
+  const nu = Math.max(2, Math.round(cl / 0.85) + 1), nv = Math.max(2, Math.round(cs / 0.85) + 1);
+  for (let i = 0; i < nu; i++) for (const b of [-1, 1]) columna(m, u - cl / 2 + (cl * i) / (nu - 1), v + (b * cs) / 2, h, 0, rica);
+  for (let j = 1; j < nv - 1; j++) for (const a of [-1, 1]) columna(m, u + (a * cl) / 2, v - cs / 2 + (cs * j) / (nv - 1), h, 0, rica);
+  for (const b of [-1, 1]) {
+    m.caja(p, u, v + (b * cs) / 2, cl + 0.3, 0.3, 0.16, h);
+    m.caja(p, u + (b * cl) / 2, v, 0.3, cs, 0.16, h);
+    m.caja(COLOR.teja, u, v + b * (cs / 2 + d / 2), l, d + 0.15, 0.07, h + 0.16);
+    m.caja(COLOR.teja, u + b * (cl / 2 + d / 2), v, d + 0.15, cs - 0.15, 0.07, h + 0.16);
+  }
+  const ai = Math.min(1.1, Math.min(cl, cs) * 0.35);
+  m.caja(COLOR.piedraClara, u, v, ai, ai, 0.12);
+  m.losa(COLOR.agua, u, v, ai - 0.16, ai - 0.16, 0.02, 0.12);
+}
+
+/** La casa de peristilo de la Era V (estilo 5): el cuerpo del fondo alto, dos alas bajas a los lados y entre ellas el patio porticado, cerrado a la
+ * calle por la tapia con su portal. */
+function peristilo(m: Marco, estilo: number, L: number, S: number, f: number): void {
+  const d = Math.min(1.6, S * 0.3), d2 = Math.min(1.3, L * 0.24);
+  bloque(m, estilo, 0, -f * (S / 2 - d / 2), L, d, { plantas: m.azar(5) < 0.4 ? 3 : 2, frente: f });
+  for (const a of [-1, 1]) bloque(m, estilo, a * (L / 2 - d2 / 2), (f * d) / 2, d2, S - d, { plantas: 1, frente: f });
+  const pl = L - 2 * d2, ps = S - d - 0.15;
+  patioPorticado(m, 0, f * (d / 2 - 0.075), pl, ps, 1.0, true);
+  const c = fabrica(m, estilo), puerta = Math.min(0.9, pl * 0.3), vt = f * (S / 2 - 0.06);
+  tapia(m, -pl / 2, vt, -puerta / 2, vt, c, 1.1);
+  tapia(m, puerta / 2, vt, pl / 2, vt, c, 1.1);
+  const franja = franjaDe(m, estilo);
+  if (franja !== undefined) for (const a of [-1, 1]) m.viga(franja, (a * puerta) / 2, vt, (a * pl) / 2, vt, 0.85, 0.14, 0.1);
+}
+
 // ───────────────────────────── El gobierno y los grandes ─────────────────────────────
 
-/** El Centro Urbano y el Palacio: de la gran choza del jefe al palacio de patio central. */
+/**
+ * El Centro Urbano y el Palacio, según el nivel (Víctor, 2026-11-16: «en nivel 1 debería ser un edificio pequeño y como una plaza donde se junta
+ * la gente»): en el 1, el sitio de reunión con la casa pequeña del jefe; en el 2 y el 3, de transición, la casa larga del jefe y la sala con su
+ * pórtico, cada una con su patio de reunión (el héroon en la Era II); el edificio grande (el megarón con sus alas) en el 4, y el palacio en el 5.
+ * Desde la Era IV, el palacio con su propileo en el 4 y el 5; en la Era II, la sala grande de piedra en su recinto (sin bajón respecto a la I).
+ */
 function palacio(m: Marco, estilo: number): void {
   const L = m.L - 0.6, S = m.S - 0.6;
-  if (estilo === 1) {
-    choza(m, 0, 0, Math.min(L, S) * 0.27, { alto: 1.0, frente: 1 });
-    for (const [a, b] of [[-1, -1], [1, -1], [-1, 1]] as const) choza(m, a * L * 0.33, b * S * 0.33, Math.min(L, S) * 0.1, { frente: -b });
-    graneroEnPilotes(m, L * 0.33, S * 0.33, 1.1, 0.9);
-    cercoPostes(m, L, S);
-    return;
-  }
+  if (estilo === 1) return lugarDeReunion(m, L, S);
+  if (m.era === 2 && estilo <= 3) return heroon(m, estilo);
   if (estilo === 2) {
-    casaLarga(m, 0, -S * 0.1, L * 0.78, S * 0.42, { muro: COLOR.madera, alto: 1.25, techo: COLOR.paja, abside: m.era === 2 });
+    casaLarga(m, 0, -S * 0.1, L * 0.78, S * 0.42, { muro: COLOR.madera, alto: 1.25, techo: COLOR.paja });
     graneroEnPilotes(m, L * 0.36, S * 0.34, 1.2, 1.0);
     choza(m, -L * 0.36, S * 0.33, Math.min(L, S) * 0.11, { muro: COLOR.barro, frente: -1 });
-    lena(m, 0, S * 0.36, 1.2, 3);
+    // delante de la casa del jefe, el hogar donde se junta la gente, con sus bancos
+    fogata(m, 0, S * 0.3, 2);
+    bancos(m, 0, S * 0.3, Math.min(L, S) * 0.16, 3, Math.PI * 0.15);
     cercoPostes(m, L, S);
     return;
   }
-  if (m.era === 2) return heroon(m, estilo);
-  if (estilo <= 4) {
-    // megarón: la sala con su pórtico de dos columnas, alas alrededor de un patio
-    const c = fabrica(m, estilo), patioL = L * 0.42, patioS = S * 0.38;
-    m.losa(estilo === 4 ? COLOR.losa : COLOR.tierra, 0, S * 0.12, patioL, patioS, 0.04);
-    bloque(m, estilo, 0, -S * 0.28, L * 0.5, S * 0.36, { plantas: estilo === 4 ? 2 : 1, frente: 1 });
-    for (const a of [-1, 1]) columna(m, a * L * 0.12, -S * 0.28 + S * 0.18 + 0.35, 1.1, 0, estilo === 4);
-    m.caja(c, 0, -S * 0.28 + S * 0.18 + 0.2, L * 0.5, 0.55, 0.14, 1.1);
-    for (const a of [-1, 1]) bloque(m, estilo, a * L * 0.36, S * 0.05, L * 0.24, S * 0.62, { plantas: 1 + (m.azar(70 + a) < 0.5 ? 1 : 0), frente: 1 });
-    bloque(m, estilo, 0, S * 0.4, L * 0.46, S * 0.18, { plantas: 1, frente: -1 });
-    if (estilo === 4) for (const a of [-1, 1]) cuernos(m, a * L * 0.15, -S * 0.32, estilo === 4 ? 2.4 : 1.3);
-    return;
-  }
+  if (estilo === 3) return salaDelJefe(m, L, S);
+  if (m.era === 2) return palacioDeEraII(m, estilo, L, S);
+  if (m.era >= 4) return palacioHelenistico(m, estilo);
+  if (estilo === 4) return megaron(m, estilo, L, S);
   // 5, Cnosos: bloques escalonados de dos y tres plantas alrededor de un patio enlosado, pórticos rojos, pozos de luz y cuernos
   const pl = L * 0.4, ps = S * 0.34;
   m.losa(COLOR.losa, 0, 0, pl, ps, 0.05);
@@ -588,8 +671,123 @@ function palacio(m: Marco, estilo: number): void {
   for (let k = 0; k < 4; k++) m.caja(COLOR.piedraClara, -pl / 2 - 0.4 + k * 0.01, ps / 2 + 0.2 + k * 0.18, 0.9, 0.2, 0.15 + k * 0.15);
 }
 
+/** El megarón con sus alas: la sala con su pórtico (de dos columnas, o de `columnas`), alas alrededor de un patio y el cuerpo del frente. */
+function megaron(m: Marco, estilo: number, L: number, S: number, o: { sala?: number; columnas?: number } = {}): void {
+  const c = fabrica(m, estilo), patioL = L * 0.42, patioS = S * 0.38, nc = o.columnas ?? 2, vc = -S * 0.28 + S * 0.18 + 0.35;
+  m.losa(estilo >= 4 ? COLOR.losa : COLOR.tierra, 0, S * 0.12, patioL, patioS, 0.04);
+  bloque(m, estilo, 0, -S * 0.28, L * 0.5, S * 0.36, { plantas: estilo >= 4 ? 2 : 1, frente: 1, color: o.sala });
+  if (nc === 2) for (const a of [-1, 1]) columna(m, a * L * 0.12, vc, 1.1, 0, estilo >= 4);
+  else for (let i = 0; i < nc; i++) columna(m, -L * 0.22 + (L * 0.44 * i) / (nc - 1), vc, 1.1, 0, estilo >= 4);
+  m.caja(m.era >= 4 ? COLOR.sillar : c, 0, -S * 0.28 + S * 0.18 + 0.2, L * 0.5, 0.55, 0.14, 1.1);
+  for (const a of [-1, 1]) bloque(m, estilo, a * L * 0.36, S * 0.05, L * 0.24, S * 0.62, { plantas: 1 + (m.azar(70 + a) < 0.5 ? 1 : 0), frente: 1 });
+  bloque(m, estilo, 0, S * 0.4, L * 0.46, S * 0.18, { plantas: 1, frente: -1 });
+  if (estilo === 4) for (const a of [-1, 1]) cuernos(m, a * L * 0.15, -S * 0.32, 2.4);
+}
+
+/** Bancos de piedra en corro de radio `r` alrededor de (u, v), `n` de ellos, empezando en el ángulo `a0`. */
+function bancos(m: Marco, u: number, v: number, r: number, n: number, a0 = 0): void {
+  for (let k = 0; k < n; k++) {
+    const a = a0 + (2 * Math.PI * k) / n;
+    m.caja(COLOR.piedra, u + Math.cos(a) * r, v + Math.sin(a) * r, 0.8, 0.28, 0.32, 0, a + Math.PI / 2);
+  }
+}
+
 /**
- * El Centro Urbano de la Era II, la de después del colapso de los palacios (el héroon de Lefkandi): la gran casa larga del jefe, absidal, de barro
+ * El Centro Urbano de nivel 1: el sitio de reunión, no un edificio. El suelo pisado, el hogar en medio con sus troncos, el corro de bancos de
+ * piedra, la casa pequeña del jefe en una esquina, el altar de piedra en otra, el pozo y, si cabe, un árbol grande. En todas las Eras (la casa,
+ * la de su época).
+ */
+function lugarDeReunion(m: Marco, L: number, S: number): void {
+  const lado = Math.min(L, S), r = Math.max(0.7, Math.min(1.2, lado * 0.15));
+  const corro = Math.min(1.9, lado * 0.27), suelo = Math.min(lado * 0.78, 2 * corro + 2.4);
+  m.forma('cilindro', mezclar(COLOR.tierra, COLOR.rocaClara, 0.25), 0, 0, suelo, suelo, 0.03);
+  fogata(m, 0, 0, 3);
+  bancos(m, 0, 0, corro, 5, 0.3);
+  choza(m, -L / 2 + r + 0.1, -S / 2 + r + 0.1, r, { frente: 1, alto: 0.85 });
+  m.caja(COLOR.piedraClara, L / 2 - 0.7, -S / 2 + 0.7, 0.7, 0.5, 0.5);
+  m.caja(COLOR.piedraClara, L / 2 - 0.7, -S / 2 + 0.7, 0.8, 0.6, 0.08, 0.5);
+  pozo(m, -L / 2 + 0.8, S / 2 - 0.8);
+  if (lado >= 6) arbol(m, L / 2 - 0.9, S / 2 - 0.9, 0.95, 1);
+}
+
+/**
+ * El Centro Urbano de nivel 3, de transición: la sala del jefe con su pórtico de dos columnas al fondo y delante el patio de reunión (con el hogar;
+ * desde la Era III, enlosado y con el altar), sus bancos, el granero, el pozo y la tapia baja alrededor.
+ */
+function salaDelJefe(m: Marco, L: number, S: number): void {
+  const v = -S * 0.24, l = L * 0.56, s = S * 0.38, c = fabrica(m, 3);
+  bloque(m, 3, 0, v, l, s, { plantas: 1, frente: 1 });
+  for (const a of [-1, 1]) columna(m, a * l * 0.25, v + s / 2 + 0.35, 1.1, 0, false);
+  m.caja(m.era >= 4 ? COLOR.sillar : c, 0, v + s / 2 + 0.2, l * 0.7, 0.55, 0.14, 1.1);
+  const vp = S * 0.18;
+  m.losa(m.era >= 3 ? COLOR.losa : COLOR.tierra, 0, vp, L * 0.5, S * 0.4, 0.04);
+  if (m.era >= 3) {
+    m.caja(piedraNoble(m), 0, vp, 0.8, 0.6, 0.5);
+    m.forma('cono', COLOR.fuego, 0, vp, 0.3, 0.3, 0.3, 0.5);
+  } else fogata(m, 0, vp, 2);
+  bancos(m, 0, vp, Math.min(L, S) * 0.16, 4, 0.8);
+  graneroEnPilotes(m, L * 0.36, S * 0.32, 1.1, 0.9);
+  pozo(m, -L * 0.36, S * 0.32);
+  cerco(m, 0, 0, L + 0.3, S + 0.3, true, c);
+}
+
+/**
+ * El palacio de la Era II (niveles 4 y 5): la sala grande de piedra con su pórtico de postes y sus alas, dentro de un recinto de piedra con
+ * torres en las esquinas y la puerta al frente; el hogar en el patio; en el 5, además, las tinajas del almacén y el pozo. Sin franjas ni cuernos.
+ */
+function palacioDeEraII(m: Marco, estilo: number, L: number, S: number): void {
+  const Li = L - 0.6, Si = S - 0.6;
+  megaron(m, estilo, Li, Si, { sala: COLOR.piedra, columnas: estilo >= 5 ? 6 : 4 });
+  fogata(m, 0, Si * 0.12, 2);
+  cerco(m, 0, 0, L + 0.3, S + 0.3, true, COLOR.piedra);
+  // la puerta del recinto: dos pilares y el dintel sobre el hueco de la cerca
+  for (const a of [-1, 1]) m.caja(COLOR.piedra, a * 0.55, (S + 0.3) / 2, 0.3, 0.3, 1.3);
+  m.caja(COLOR.piedraOscura, 0, (S + 0.3) / 2, 1.4, 0.3, 0.2, 1.3);
+  for (const [a, b] of [[-1, -1], [1, -1], [1, 1], [-1, 1]] as const) {
+    m.caja(COLOR.piedra, a * (L / 2 - 0.15), b * (S / 2 - 0.15), 0.8, 0.8, 1.2);
+    m.caja(COLOR.piedraOscura, a * (L / 2 - 0.15), b * (S / 2 - 0.15), 0.9, 0.9, 0.12, 1.2);
+  }
+  if (estilo >= 5) {
+    for (const a of [-1, 1]) tinajas(m, a * Li * 0.12 - 0.42, Si * 0.24, 4, a > 0 ? COLOR.ocre : COLOR.barro);
+    pozo(m, 0, Si * 0.02);
+    // los pórticos de postes a los lados del patio, contra las alas
+    const up = Li * 0.21, n = 4;
+    for (const a of [-1, 1]) {
+      for (let i = 0; i < n; i++) m.poste(COLOR.madera, a * up, -Si * 0.04 + (Si * 0.34 * i) / (n - 1), 1.1, 0.13);
+      m.caja(COLOR.maderaOscura, a * (up + 0.2), Si * 0.13, 0.55, Si * 0.4, 0.12, 1.1);
+    }
+  }
+}
+
+/**
+ * El palacio de las Eras IV y V (estilo 4 y 5; el de Pela o Vergina; desde la IV por Víctor, 2026-11-16): el ala del fondo de dos plantas, las de los lados y el frente alrededor de un gran
+ * patio porticado, y en medio del frente, a la calle (+v), el propileo.
+ */
+function palacioHelenistico(m: Marco, estilo: number): void {
+  const L = m.L - 0.6, S = m.S - 0.6, d = Math.min(2.4, S * 0.24), dl = Math.min(2.0, L * 0.2), df = Math.min(1.8, S * 0.18), pw = Math.min(3.2, L * 0.34);
+  bloque(m, estilo, 0, -S / 2 + d / 2, L, d, { plantas: 2, frente: 1 });
+  const ls = S - d - df, vs = -S / 2 + d + ls / 2, wf = (L - pw) / 2;
+  for (const a of [-1, 1]) bloque(m, estilo, a * (L / 2 - dl / 2), vs, dl, ls, { plantas: 1 + (m.azar(70 + a) < 0.5 ? 1 : 0), frente: 1 });
+  for (const a of [-1, 1]) bloque(m, estilo, a * (pw / 2 + wf / 2), S / 2 - df / 2, wf, df, { plantas: 1, frente: 1 });
+  patioPorticado(m, 0, vs, L - 2 * dl, ls, 1.2, true);
+  propileo(m, 0, S / 2 - df / 2, pw, df);
+}
+
+/** El propileo: la puerta monumental de `w` de ancho y `hondo` de fondo, a la calle (+v): gradas, dos filas de columnas, el muro con la puerta en
+ * medio, el entablamento y el tejado con su frontón a la calle. */
+function propileo(m: Marco, u: number, v: number, w: number, hondo: number): void {
+  const p = piedraNoble(m), h = 1.9, n = 4;
+  let y = 0;
+  for (let k = 0; k < 2; k++) { m.caja(k ? p : oscurecer(p, 0.92), u, v, w + 0.3 - k * 0.2, hondo + 0.3 - k * 0.2, 0.12, y); y += 0.12; }
+  for (const b of [-1, 1]) for (let i = 0; i < n; i++) columna(m, u - w / 2 + 0.2 + ((w - 0.4) * i) / (n - 1), v + b * (hondo / 2 - 0.2), h, y, true);
+  m.caja(COLOR.sillar, u, v, w - 0.2, 0.25, h, y);
+  m.caja(COLOR.hueco, u, v + 0.13, Math.min(1.2, w * 0.4), 0.04, h * 0.75, y);
+  m.caja(p, u, v, w, hondo, 0.24, y + h);
+  tejado(m, 'teja', u, v, hondo, w, y + h + 0.24, p, Math.PI / 2);
+}
+
+/**
+ * El Centro Urbano de la Era II en los niveles 2 y 3, la de después del colapso de los palacios (el héroon de Lefkandi): la gran casa larga del jefe, absidal, de barro
  * sobre zócalo de piedra y techo de paja, con una galería de postes alrededor; su hogar delante, el granero y, en los estilos altos, las casas
  * largas de los suyos; todo dentro de una cerca de piedra seca.
  */
@@ -608,7 +806,8 @@ function heroon(m: Marco, estilo: number): void {
   graneroEnPilotes(m, L * 0.32, S * 0.3, 1.2, 1.0);
   if (estilo >= 4) casaLarga(m, -L * 0.27, S * 0.3, L * 0.28, S * 0.2, { muro: COLOR.barro, alto: 0.95, abside: m.azar(72) < 0.5 });
   else lena(m, -L * 0.25, S * 0.34, 1.2, 3);
-  cerco(m, 0, 0, L + 0.3, S + 0.3, true, COLOR.piedra);
+  if (estilo <= 2) cercoPostes(m, L, S);
+  else cerco(m, 0, 0, L + 0.3, S + 0.3, true, COLOR.piedra);
 }
 
 /** Una empalizada de postes alrededor de la huella, con su puerta en +v. */
@@ -628,6 +827,7 @@ function cercoPostes(m: Marco, L: number, S: number): void {
 /** La Sala del Consejo: la sala con su pórtico (de postes en los bajos, de columnas en los altos). */
 function salaConsejo(m: Marco, estilo: number): void {
   const L = m.L - 0.5, S = m.S - 0.5;
+  if (m.era >= 4 && estilo >= 3) return bouleuterion(m, estilo, L, S);
   // desde la Era III, la sala con el frente de templo: el pórtico de columnas en el hastial de +u y el frontón encima
   if (m.era >= 3 && estilo >= 3) {
     templo(m, 0, 0, L * 0.92, S * 0.8, { periptero: false, alto: estilo >= 4 ? 1.9 : 1.5, muro: fabrica(m, estilo) });
@@ -650,20 +850,60 @@ function salaConsejo(m: Marco, estilo: number): void {
 }
 
 /**
+ * El bouleuterion (Eras IV y V): la sala cuadrada de sillería con sus hiladas, el tejado a cuatro aguas y delante (+u) el pórtico de columnas con su
+ * frontón, todo sobre un zócalo de piedra clara.
+ */
+function bouleuterion(m: Marco, estilo: number, L: number, S: number): void {
+  const a = Math.min(S * 0.9, L * 0.72), p = Math.max(0.8, Math.min(1.5, L - a - 0.3)), H = estilo >= 4 ? 2.2 : 1.8, base = 0.2, piedra = piedraNoble(m);
+  // la sala de −(a + p)/2 a a/2 − p/2; el pórtico de ahí a (a + p)/2
+  const us = -p / 2, up = a / 2, hc = H - 0.25, n = Math.max(4, Math.round((a - 0.4) / 0.75) + 1);
+  m.caja(oscurecer(COLOR.piedraClara, 0.92), 0, 0, a + p, a + 0.2, base * 0.5);
+  m.caja(COLOR.piedraClara, 0, 0, a + p - 0.12, a + 0.08, base);
+  m.caja(COLOR.sillar, us, 0, a, a, H, base);
+  hiladas(m, us, 0, a, a, base, H);
+  // las ventanas altas de los costados, que dan luz a las gradas de dentro
+  for (const b of [-1, 1]) for (const k of [-1, 0, 1]) m.caja(COLOR.hueco, us + k * a * 0.28, b * (a / 2 + 0.01), 0.3, 0.05, 0.36, base + H - 0.62);
+  aCuatroAguas(m, m.azar(44) < 0.3 ? COLOR.tejaVieja : COLOR.teja, us, 0, a + 0.3, a + 0.3, Math.min(1.1, a * 0.24), base + H);
+  m.caja(COLOR.hueco, us + a / 2 + 0.01, 0, 0.06, Math.min(0.9, a * 0.2), H * 0.6, base);
+  for (let i = 0; i < n; i++) columna(m, up + p / 2 - 0.2, -a / 2 + 0.2 + ((a - 0.4) * i) / (n - 1), hc, base, estilo >= 4);
+  m.caja(piedra, up, 0, p, a, 0.22, base + hc);
+  // el tejado del pórtico entra en el de la sala, que tapa su hastial de atrás
+  const dentro = Math.min(2.0, a * 0.45);
+  tejado(m, 'teja', up - dentro / 2, 0, p + dentro, a, base + hc + 0.22, piedra);
+}
+
+/**
  * Un templo griego de `l` (a lo largo de u) por `s` sobre sus tres gradas: con `periptero`, columnas por los cuatro lados alrededor de la cella;
  * sin él, solo el pórtico en el hastial de +u delante de la sala. El entablamento con la franja del friso (pintada en la Era III) y el tejado de
  * teja con sus frontones. Las columnas, las de la época (en la V, corintias). Devuelve la altura de la cumbrera.
  */
-function templo(m: Marco, u: number, v: number, l: number, s: number, o: { periptero: boolean; alto: number; muro: number }): number {
+function templo(m: Marco, u: number, v: number, l: number, s: number, o: { periptero: boolean; alto: number; muro: number; diptero?: boolean; podio?: number }): number {
   const p = piedraNoble(m);
   let y = 0;
-  for (let k = 0; k < 3; k++) { m.caja(k ? p : oscurecer(p, 0.92), u, v, l + 0.4 - k * 0.2, s + 0.4 - k * 0.2, 0.12, y); y += 0.12; }
+  if (o.podio) {
+    // sobre un podio alto (Era V): la escalinata metida en su frente (+u) y el templo encima, en lo que queda
+    const st = Math.min(1.4, l * 0.2), n = 7;
+    m.caja(oscurecer(p, 0.86), u - st / 2, v, l - st + 0.06, s + 0.06, 0.2);
+    m.caja(oscurecer(p, 0.92), u - st / 2, v, l - st, s, o.podio);
+    m.caja(oscurecer(p, 0.86), u - st / 2, v, l - st + 0.06, s + 0.06, 0.12, o.podio - 0.12);
+    for (let k = 0; k < n; k++) m.caja(k % 2 ? p : oscurecer(p, 0.96), u + l / 2 - st + (st * (k + 0.5)) / n, v, st / n + 0.01, Math.min(s * 0.7, s - 0.4), (o.podio * (n - k)) / n);
+    u -= st / 2;
+    l -= st;
+    y = o.podio;
+  } else for (let k = 0; k < 3; k++) { m.caja(k ? p : oscurecer(p, 0.92), u, v, l + 0.4 - k * 0.2, s + 0.4 - k * 0.2, 0.12, y); y += 0.12; }
   const paso = 0.62, nu = Math.max(3, Math.round(l / paso) + 1), nv = Math.max(2, Math.round(s / paso) + 1);
   const en = (i: number, n: number, a: number): number => -a / 2 + 0.16 + ((a - 0.32) * i) / (n - 1);
   if (o.periptero) {
     for (let i = 0; i < nu; i++) for (const b of [-1, 1]) columna(m, u + en(i, nu, l), v + b * (s / 2 - 0.16), o.alto, y, m.era >= 5);
     for (let j = 1; j < nv - 1; j++) for (const a of [-1, 1]) columna(m, u + a * (l / 2 - 0.16), v + en(j, nv, s), o.alto, y, m.era >= 5);
-    m.caja(o.muro, u - 0.15, v, l - 1.3, s - 1.0, o.alto, y);
+    // el díptero: una segunda fila de columnas por dentro, y la cella más estrecha
+    const di = o.diptero ? 0.6 : 0;
+    if (di) {
+      const li = l - 2 * di, si = s - 2 * di, nui = Math.max(3, Math.round(li / paso) + 1), nvi = Math.max(2, Math.round(si / paso) + 1);
+      for (let i = 0; i < nui; i++) for (const b of [-1, 1]) columna(m, u + en(i, nui, li), v + b * (si / 2 - 0.16), o.alto, y, true);
+      for (let j = 1; j < nvi - 1; j++) for (const a of [-1, 1]) columna(m, u + a * (li / 2 - 0.16), v + en(j, nvi, si), o.alto, y, true);
+    }
+    m.caja(o.muro, u - 0.15, v, l - 1.3 - 2 * di, s - 1.0 - 2 * di, o.alto, y);
     m.caja(COLOR.hueco, u + l / 2 - 0.66, v, 0.06, Math.min(0.7, s * 0.22), o.alto * 0.7, y);
   } else {
     const hondo = Math.min(1.1, l * 0.24);
@@ -683,8 +923,10 @@ function maravilla(m: Marco, estilo: number): void {
   if (m.era >= 3 && estilo >= 3) {
     // el recinto sagrado enlosado, el templo en medio, el altar delante de su puerta (en +u) y cipreses en las esquinas
     m.losa(COLOR.losa, 0, 0, L, S, 0.04);
-    const l = L * 0.66, s = Math.min(S * 0.56, l * 0.55);
-    templo(m, -L * 0.06, 0, l, s, { periptero: true, alto: Math.max(1.8, s * 0.42), muro: m.era >= 4 ? COLOR.marmol : COLOR.sillar });
+    // en la Era V, el gran templo: díptero si cabe la doble fila (y le toca), si no, sobre su podio alto
+    const grande = m.era === 5, l = L * (grande ? 0.74 : 0.66), s = Math.min(S * (grande ? 0.62 : 0.56), l * 0.55);
+    const diptero = grande && s >= 3.6 && m.azar(46) < 0.55;
+    templo(m, -L * 0.06, 0, l, s, { periptero: true, alto: Math.max(1.8, s * 0.42), muro: m.era >= 4 ? COLOR.marmol : COLOR.sillar, diptero, podio: grande && !diptero ? Math.min(1.3, s * 0.3) : 0 });
     const ua = Math.min(-L * 0.06 + l / 2 + 1.1, L / 2 - 0.6);
     m.caja(oscurecer(piedraNoble(m), 0.92), ua, 0, 0.8, 1.3, 0.5);
     m.forma('cono', COLOR.fuego, ua, 0, 0.3, 0.3, 0.3, 0.5);
@@ -1272,8 +1514,9 @@ function mercado(m: Marco, estilo: number): void {
   if (estilo >= 4) {
     // una estoa: el pórtico largo con su cubierta, y los puestos delante
     // (desde la Era II el muro es de la fábrica de su época; desde la III, el entablamento de piedra y el tejado de teja con sus frontones)
-    const s = Math.min(1.4, S * 0.3), v = -S / 2 + s / 2, muro = m.era === 1 ? COLOR.enlucido : fabrica(m, estilo);
+    const s = Math.min(1.4, S * 0.3), v = -S / 2 + s / 2, muro = m.era === 1 ? COLOR.enlucido : m.era >= 4 ? COLOR.sillar : fabrica(m, estilo);
     m.caja(muro, 0, v - s * 0.3, L, s * 0.35, 1.2);
+    if (m.era >= 4) hiladas(m, 0, v - s * 0.3, L, s * 0.35, 0, 1.2, 0.3);
     const n = Math.max(3, Math.round(L / 1.0));
     for (let i = 0; i < n; i++) columna(m, -L / 2 + 0.2 + ((L - 0.4) * i) / (n - 1), v + s / 2 - 0.12, 1.2, 0, estilo === 5);
     m.caja(m.era >= 3 ? piedraNoble(m) : muro, 0, v, L + 0.1, s + 0.1, 0.14, 1.2);
@@ -1578,6 +1821,11 @@ function plaza(m: Marco, estilo: number): void {
   m.caja(COLOR.piedraClara, 0, 0, 0.9, 0.9, 0.55);
   if (estilo >= 4) {
     cuernos(m, 0, 0, 0.55);
+    // después de Cnosos, en vez de los cuernos: el fuego del altar y dos estelas de piedra
+    if (m.era > 1) {
+      m.forma('cono', COLOR.fuego, 0, 0, 0.35, 0.35, 0.35, 0.55);
+      for (const a of [-1, 1]) m.caja(COLOR.piedraClara, a * 1.0, 0.3, 0.3, 0.16, 1.1);
+    }
     // las gradas (el teatro de Cnosos) en un lado
     for (let k = 0; k < 3; k++) m.caja(COLOR.piedraClara, 0, -S / 2 + 0.25 + k * 0.3, L * 0.7, 0.3, 0.15 + k * 0.15);
   }

@@ -3,6 +3,34 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.209.0] — 2026-11-16 · Las Eras IV y V, el suelo de las ciudades altas y el Centro Urbano por nivel · motor `810cbf1`
+
+Sin cambio de contrato (0.27.0). Lo pidió Víctor el 2026-11-16: las Eras IV y V con su propio aire, que avanzar de Era nunca se vea como
+retroceder, que una plaza recién fundada no tenga ya un gran edificio y que el suelo pardo no afee las ciudades de nivel alto. La cultura del
+asentamiento queda para más adelante.
+
+- **Era IV, clásica**: casas encaladas sobre zócalo de piedra clara, teja a cuatro aguas en las ricas (niveles 4 y 5) y a dos en el resto,
+  dos plantas como mucho; lo público de sillería con sus hiladas marcadas; jónicas en lo rico y dóricas en lo demás; templos y estoas de
+  mármol; la Sala del Consejo es el bouleuterion (sala cuadrada con tejado a cuatro aguas, ventanas altas y pórtico con frontón); el
+  palacio de los niveles 4 y 5, con su propileo a la calle y su patio porticado.
+- **Era V, helenística**: estuco con franjas de rojo pompeyano u ocre desde el nivel 4, hasta tres plantas, casas de peristilo en el 5 (patio
+  con columnas e impluvio); corintias en lo rico y jónicas en el resto; la Maravilla, el gran templo díptero o sobre un podio alto con su
+  escalinata.
+- **El Centro Urbano va con el nivel**, en todas las Eras: en el 1, el sitio de reunión (suelo pisado, hogar, corro de bancos de piedra, altar,
+  pozo, la casa pequeña del jefe y un árbol grande si cabe); en el 2 y el 3, de transición (la casa larga del jefe con su hogar delante; la
+  sala del jefe con su pórtico y su patio de reunión); el edificio grande en el 4 y el palacio en el 5.
+- **La Era II sin bajón**: en el mismo nivel nunca se ve más pobre que la I. El héroon, solo en los niveles 2 y 3; en el 4 y el 5, la sala
+  grande de piedra con su pórtico de postes, en un recinto con torres y puerta. Las vigas de atado de madera en los muros y en el marco de las
+  ventanas donde la I lleva la franja roja, la cumbrera de madera en los tejados de paja, más terrados en las casas ricas y, en la plaza, el
+  fuego del altar y dos estelas en vez de los cuernos.
+- **El suelo de las ciudades altas**: en los niveles 1 y 2 como estaba; en el 3, la tierra más clara y menos opaca; en el 4 y el 5, lo público
+  sobre enlosado claro con su bordillo, las viviendas con un patio encalado con césped y algún bancal, los talleres en tierra clara, el halo
+  y la tierra bajo las calles más suaves y las celdas libres vacías de césped (`sueloDeParcela` en `ciudad3d/suelo.ts`).
+- **La Era I**, como estaba, pieza a pieza, salvo el Centro Urbano de los niveles 1 a 3 (comprobado edificio a edificio en las tres plazas).
+- Pruebas: `pruebas/ciudad3d.test.ts`, que una Era nunca se ve más pobre que la anterior (la II frente a la I y de la III a la V, tipo a tipo y
+  nivel a nivel en las tres plazas), lo propio de la IV y la V, el Centro Urbano por nivel, el héroon solo en los niveles 2 y 3, el suelo de
+  cada parcela y las huellas en todas las Eras.
+
 ## [0.208.0] — 2026-11-16 · Los edificios de la plaza 3D por Era: la crisis y la polis · motor `810cbf1`
 
 Lo pidió Víctor el 2026-11-16: los edificios 3D solo vestían la Edad del Bronce de los palacios y el juego llega hasta Alejandro. Decidió que el
