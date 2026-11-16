@@ -13,11 +13,13 @@
 // la bodega de la cerveza y la prensa del sésamo en «muestra-comida», y la cebada y el sésamo en «Cultivo». Desde el motor 3d05872 las aldeas
 // del banco son las de su planta nueva (la de trigo, sin más corral que el del buey) y «Cultivo» tiene la ganadera, con su planta propia
 // (`pueblos/ganadera-N.json`: un Corral de ancla, los corrales de su nivel y el del buey, sin granjas).
+// Desde 0.208.0, la época (Víctor, 2026-11-16): los mandos «Era» y «Punto» visten la plaza de la Era que se elija con su punto (1 a 3: cuántas casas
+// han cambiado ya), también los pueblos y las muestras (`?era=3&grado=2`), y «muestra-eras» pone las cinco Eras en filas con los mismos edificios.
 import { fromBinary } from '@bufbuild/protobuf';
 import { AsentamientoSchema, CampamentoMercenariosSchema } from '../../src/contrato/gen/bronzeage/v1/entities_pb';
 import { campamentoEnVista } from '../../src/ciudad3d/campamento';
 import { puebloEnVista } from '../../src/ciudad3d/pueblo';
-import { ciudadEnVista, hash3, hashTexto, type CiudadEnVista, type FuenteDeCiudad } from '../../src/ciudad3d/estado';
+import { ciudadEnVista, hash3, hashTexto, type CiudadEnVista, type EpocaDePlaza, type FuenteDeCiudad } from '../../src/ciudad3d/estado';
 import { encuadreDeSvg, Minimapa } from '../../src/ciudad3d/minimapa';
 import { VistaCiudad3D } from '../../src/ciudad3d/vista';
 import { escenaCampamento, plazaDeContrato } from '../../src/motor/proyeccion';
@@ -28,6 +30,13 @@ import { svgPlanoCampamento } from '../../src/ui/planoCampamento';
 import { svgPlanoPueblo } from '../../src/ui/planoPueblo';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+/** La época de los mandos «Era» y «Punto» (la Era I, sin época: se ve como siempre). */
+function epocaElegida(): EpocaDePlaza | undefined {
+  const era = Number($<HTMLSelectElement>('era').value || 1), grado = Number($<HTMLSelectElement>('grado').value || 3);
+  return era > 1 ? { era, grado } : undefined;
+}
+const ROMANO = ['', 'I', 'II', 'III', 'IV', 'V'];
+const textoEpoca = (): string => { const e = epocaElegida(); return e ? `Era ${ROMANO[e.era]}, punto ${e.grado}` : 'Era I'; };
 /** Las horas que vivió cada ciudad en el motor: su instante de mundo al volcarla. */
 const DIAS: Record<string, number> = { aldea: 3, pueblo: 8, ciudad: 16 };
 const HORA = 3_600_000;
@@ -146,12 +155,12 @@ async function rehacerPueblo(nombre: string): Promise<void> {
     calles: j.trazado.calles, caminos: j.trazado.caminos, cultivo,
   };
   fijarPlano(svgPlanoPueblo(e));
-  const c = puebloEnVista(e, { instante: 0 });
+  const c = puebloEnVista(e, { instante: 0, epoca: epocaElegida() });
   campActual = c;
   vista.fijar(c);
   vista.seleccionar(seleccion);
   const cuentas = vista.cuentas();
-  $('lectura').textContent = `${nombre}: ${j.tipoExtractor}${e.cultivo ? ` de ${e.cultivo}` : ''}, estilo ${c?.nivel}, ${c?.edificios.length ?? 0} piezas, radio ${c?.radio} ul, ${c?.libres.length ?? 0} celdas libres\npiezas: ${cuentas.edificios} edificios · ${cuentas.relleno} relleno`;
+  $('lectura').textContent = `${nombre}: ${j.tipoExtractor}${e.cultivo ? ` de ${e.cultivo}` : ''}, estilo ${c?.nivel}, ${textoEpoca()}, ${c?.edificios.length ?? 0} piezas, radio ${c?.radio} ul, ${c?.libres.length ?? 0} celdas libres\npiezas: ${cuentas.edificios} edificios · ${cuentas.relleno} relleno`;
 }
 
 /**
@@ -175,13 +184,13 @@ function rehacerMuestra(): void {
   }
   for (let k = 0; k < 4; k++) calles.push({ x: -21 + k * 12, y: -18, ancho: 3, alto: 33 });
   const a: FuenteDeCiudad = { id: 'muestra-albergue', nivel: 3, edificios, recintos: [], ascenso: undefined };
-  const c = ciudadEnVista(a, { calles, caminos: [], huellas, murallas: [], radio: 36, celda: 3 }, { instante: 0 })!;
+  const c = ciudadEnVista(a, { calles, caminos: [], huellas, murallas: [], radio: 36, celda: 3 }, { instante: 0, epoca: epocaElegida() })!;
   for (const e of c.edificios) e.estilo = Number(/-e(\d)-/.exec(e.id)![1]);
   campActual = c;
   vista.fijar(c);
   vista.seleccionar(seleccion);
   const cuentas = vista.cuentas();
-  $('lectura').textContent = `Albergue de caravanas: estilo 1 a 5 de izquierda a derecha, nivel 1 a 3 de arriba abajo\npiezas: ${cuentas.edificios} edificios · ${cuentas.relleno} relleno`;
+  $('lectura').textContent = `Albergue de caravanas: estilo 1 a 5 de izquierda a derecha, nivel 1 a 3 de arriba abajo, ${textoEpoca()}\npiezas: ${cuentas.edificios} edificios · ${cuentas.relleno} relleno`;
 }
 
 /** Los talleres de la comida y la estatua (tanda 69), cada fila un tipo y cada columna un estilo (del 1 al 5), con su calle delante. */
@@ -216,14 +225,14 @@ function rehacerComida(): void {
   });
   for (let k = 0; k < 4; k++) calles.push({ x: -16.5 + k * 9, y: -30, ancho: 3, alto: y + 30 - 3 });
   const a: FuenteDeCiudad = { id: 'muestra-comida', nivel: 3, edificios, recintos: [], ascenso: undefined };
-  const c = ciudadEnVista(a, { calles, caminos: [], huellas, murallas: [], radio: 40, celda: 3 }, { instante: 0 })!;
+  const c = ciudadEnVista(a, { calles, caminos: [], huellas, murallas: [], radio: 40, celda: 3 }, { instante: 0, epoca: epocaElegida() })!;
   for (const e of c.edificios) e.estilo = Number(/-e(\d)-/.exec(e.id)![1]);
   campActual = c;
   ultima = c;
   vista.fijar(c);
   vista.seleccionar(seleccion);
   const cuentas = vista.cuentas();
-  $('lectura').textContent = `Talleres de la comida y estatua: estilo 1 a 5 de izquierda a derecha; molino, molino con buey, horno, quesera, bodega de vino, bodega de cerveza, prensa de aceituna, prensa de sésamo y estatua de arriba abajo\npiezas: ${cuentas.edificios} edificios · ${cuentas.relleno} relleno`;
+  $('lectura').textContent = `Talleres de la comida y estatua (${textoEpoca()}): estilo 1 a 5 de izquierda a derecha; molino, molino con buey, horno, quesera, bodega de vino, bodega de cerveza, prensa de aceituna, prensa de sésamo y estatua de arriba abajo\npiezas: ${cuentas.edificios} edificios · ${cuentas.relleno} relleno`;
 }
 
 /**
@@ -264,6 +273,46 @@ function rehacerMuralla(): void {
   vista.seleccionar(seleccion);
   const cuentas = vista.cuentas();
   $('lectura').textContent = `Muralla de nivel ${nivel}: puertas rectas (una de una celda al sur, una de dos al norte)\npiezas: ${cuentas.murallas} muralla · ${cuentas.relleno} relleno`;
+}
+
+/**
+ * Los edificios por Era (Víctor, 2026-11-16): cada fila una Era, de la I a la V de arriba abajo, entera (punto 3); cada columna un tipo, con su
+ * calle delante: dos viviendas, el Centro Urbano, la Sala del Consejo, la Maravilla, el Mercado y el Almacén. El estilo, el del mando «Estilo»
+ * (sin él, 5).
+ */
+const COLUMNAS_ERAS: { tipo: string; ancho: number; alto: number }[] = [
+  { tipo: 'vivienda', ancho: 6, alto: 6 }, { tipo: 'vivienda', ancho: 6, alto: 6 }, { tipo: 'centroUrbano', ancho: 12, alto: 12 },
+  { tipo: 'salaConsejo', ancho: 9, alto: 6 }, { tipo: 'maravilla', ancho: 12, alto: 12 }, { tipo: 'mercado', ancho: 9, alto: 9 }, { tipo: 'almacen', ancho: 6, alto: 6 },
+];
+
+function rehacerEras(): void {
+  actual = null;
+  ultima = null;
+  $('mini').hidden = true;
+  $('mini-camp').hidden = true;
+  const estilo = Number($<HTMLSelectElement>('nivel').value || 5);
+  const edificios: Asentamiento['edificios'] = [], huellas: Record<string, RectanguloLocal> = {}, calles: RectanguloLocal[] = [];
+  const anchoTotal = COLUMNAS_ERAS.reduce((t, c) => t + c.ancho + 3, -3);
+  for (let era = 1; era <= 5; era++) {
+    const y = -40 + (era - 1) * 15;
+    calles.push({ x: -anchoTotal / 2 - 3, y: y + 12, ancho: anchoTotal + 6, alto: 3 });
+    let x = -anchoTotal / 2;
+    COLUMNAS_ERAS.forEach((c, i) => {
+      const id = `${c.tipo}-era${era}-c${i}`, yy = y + 12 - c.alto;
+      edificios.push({ id, tipo: c.tipo, estado: 'activo', posicion: { x: x + c.ancho / 2, y: yy + c.alto / 2 } });
+      huellas[id] = { x, y: yy, ancho: c.ancho, alto: c.alto };
+      x += c.ancho + 3;
+    });
+  }
+  const a: FuenteDeCiudad = { id: 'muestra-eras', nivel: estilo, edificios, recintos: [], ascenso: undefined };
+  const c = ciudadEnVista(a, { calles, caminos: [], huellas, murallas: [], radio: 52, celda: 3 }, { instante: 0 })!;
+  for (const e of c.edificios) { e.estilo = estilo; e.epoca = Number(/-era(\d)-/.exec(e.id)![1]); }
+  campActual = c;
+  ultima = c;
+  vista.fijar(c);
+  vista.seleccionar(seleccion);
+  const cuentas = vista.cuentas();
+  $('lectura').textContent = `Edificios por Era, estilo ${estilo}: Era I a V de arriba abajo; dos viviendas, Centro Urbano, Sala del Consejo, Maravilla, Mercado y Almacén de izquierda a derecha\npiezas: ${cuentas.edificios} edificios · ${cuentas.relleno} relleno`;
 }
 
 /**
@@ -328,6 +377,7 @@ async function rehacer(): Promise<void> {
   if (nombre === 'muestra-albergue') return rehacerMuestra();
   if (nombre === 'muestra-comida') return rehacerComida();
   if (nombre === 'muestra-muralla') return rehacerMuralla();
+  if (nombre === 'muestra-eras') return rehacerEras();
   campActual = null;
   $('mini').hidden = false;
   $('mini-camp').hidden = true;
@@ -352,17 +402,17 @@ async function rehacer(): Promise<void> {
   };
   actual = { asentamiento: a, trazado: base.trazado };
   // las obras: la barra de «Obras» fija su avance (el banco no tiene el catálogo: toda obra dura una hora)
-  const c = ciudadEnVista(a, base.trazado, { instante, minutosDeObra: () => 60 });
+  const c = ciudadEnVista(a, base.trazado, { instante, minutosDeObra: () => 60, epoca: epocaElegida() });
   if (c) for (const e of c.edificios) if (e.avance !== null) e.avance = Math.max(0, Math.min(1, obras + (hash3(e.semilla, 1, 1) - 0.5) * 0.3));
   ultima = c;
   vista.fijar(c);
   vista.seleccionar(seleccion);
   repintarMini();
   const n = c?.edificios.length ?? 0, cuentas = vista.cuentas();
-  $('lectura').textContent = `${nombre}: nivel ${a.nivel}, radio ${c?.radio} ul, ${n} edificios, ${c?.recintos.length ?? 0} recintos, ${c?.libres.length ?? 0} celdas libres\npiezas: ${cuentas.edificios} edificios · ${cuentas.murallas} muralla · ${cuentas.relleno} relleno`;
+  $('lectura').textContent = `${nombre}: nivel ${a.nivel}, ${textoEpoca()}${epocaElegida() ? ` (${c?.edificios.filter((e) => (e.epoca ?? 1) === epocaElegida()!.era).length ?? 0} de ${n} edificios ya en ella)` : ''}, radio ${c?.radio} ul, ${n} edificios, ${c?.recintos.length ?? 0} recintos, ${c?.libres.length ?? 0} celdas libres\npiezas: ${cuentas.edificios} edificios · ${cuentas.murallas} muralla · ${cuentas.relleno} relleno`;
 }
 
-for (const id of ['ciudad', 'nivel', 'muralla', 'albergue', 'cultivo', 'obras', 'ajena', 'saqueo', 'ascenso']) $(id).addEventListener(id === 'obras' ? 'input' : 'change', () => void rehacer());
+for (const id of ['ciudad', 'nivel', 'era', 'grado', 'muralla', 'albergue', 'cultivo', 'obras', 'ajena', 'saqueo', 'ascenso']) $(id).addEventListener(id === 'obras' ? 'input' : 'change', () => void rehacer());
 setInterval(() => {
   const r = vista.rendimiento();
   const t = $('lectura').textContent?.split('\n').slice(0, 2).join('\n') ?? '';
@@ -372,7 +422,7 @@ setInterval(() => {
 // los mandos de la dirección (capturas): ?plaza=…&estilo=…&muralla=…&albergue=…&cultivo=…
 {
   const q = new URLSearchParams(location.search);
-  for (const [k, id] of [['plaza', 'ciudad'], ['estilo', 'nivel'], ['muralla', 'muralla'], ['albergue', 'albergue'], ['cultivo', 'cultivo']] as const) {
+  for (const [k, id] of [['plaza', 'ciudad'], ['estilo', 'nivel'], ['era', 'era'], ['grado', 'grado'], ['muralla', 'muralla'], ['albergue', 'albergue'], ['cultivo', 'cultivo']] as const) {
     const v = q.get(k);
     if (v !== null) $<HTMLSelectElement>(id).value = v;
   }
@@ -384,7 +434,7 @@ void rehacer();
   vista,
   rehacer,
   /** Dónde está un edificio de la plaza que se ve (su huella, en ul). */
-  huella(id: string) { const e = (ultima ?? campActual)?.edificios.find((x) => x.id === id); return e ? { x: e.x, y: e.y, ancho: e.ancho, alto: e.alto, frente: e.frente, estilo: e.estilo } : null; },
+  huella(id: string) { const e = (ultima ?? campActual)?.edificios.find((x) => x.id === id); return e ? { x: e.x, y: e.y, ancho: e.ancho, alto: e.alto, frente: e.frente, estilo: e.estilo, epoca: e.epoca } : null; },
   mirar(o: { x?: number; y?: number; distancia?: number; giro?: number; inclinacion?: number }) {
     const p = (vista.camara as unknown as { pedido: Record<string, number> }).pedido;
     Object.assign(p, Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)));

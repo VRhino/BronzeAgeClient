@@ -2,20 +2,20 @@
 // de `pruebas/ciudad3d/ciudades/`). Lo primero que se comprueba es que se respeta el trazado: cada edificio en su huella, nada fuera de ella
 // más que un alero, y las celdas libres sin pisar calles, huellas ni muralla.
 import { readFileSync } from 'node:fs';
-import { fromBinary } from '@bufbuild/protobuf';
+import { create, fromBinary } from '@bufbuild/protobuf';
 import * as THREE from 'three';
 import { describe, expect, test } from 'vitest';
 import { anillosDe, campamentoEnVista } from '../src/ciudad3d/campamento';
 import { FORMA_BASE, girarLados } from '../src/ciudad3d/calles';
 import { montarGuardacantones, teselasDe } from '../src/ciudad3d/calzada';
-import { ciudadEnVista, estiloDe, type CiudadEnVista } from '../src/ciudad3d/estado';
+import { ciudadEnVista, epocaDe, estiloDe, type CiudadEnVista } from '../src/ciudad3d/estado';
 import { COLOR } from '../src/ciudad3d/config';
 import { montarEdificio } from '../src/ciudad3d/modelos';
 import { idDeCeldaDeMuro, montarMurallas } from '../src/ciudad3d/murallas';
 import { puebloEnVista } from '../src/ciudad3d/pueblo';
 import { Piezas, type Pieza } from '../src/ciudad3d/piezas';
-import { AsentamientoSchema, CampamentoMercenariosSchema } from '../src/contrato/gen/bronzeage/v1/entities_pb';
-import { escenaCampamento, plazaDeContrato } from '../src/motor/proyeccion';
+import { AsentamientoSchema, CampamentoMercenariosSchema, EstiloEpocaSchema, PuebloSchema } from '../src/contrato/gen/bronzeage/v1/entities_pb';
+import { escenaCampamento, escenaPueblo, plazaDeContrato } from '../src/motor/proyeccion';
 import type { Asentamiento, EscenaPueblo, TrazadoAsentamiento } from '../src/tiposDominio';
 import { nombreDePiezaPueblo, svgPlanoPueblo } from '../src/ui/planoPueblo';
 
@@ -204,6 +204,94 @@ describe('el estilo de cada casa', () => {
     expect(estiloDe('ed-1', 'palacio', 3, ascenso, 500)).toBe(3);
     expect(estiloDe('ed-1', 'palacio', 3, ascenso, 1000)).toBe(4);
   });
+});
+
+describe('la época de cada plaza (Víctor, 2026-11-16)', () => {
+  const ids = Array.from({ length: 400 }, (_, i) => `ed-${i}`);
+  const piezasDe = (tipo: string, estilo: number, epoca: number, id = 'x-1', ancho = 9, alto = 9): Pieza[] => {
+    const p = new Piezas();
+    montarEdificio(p, { id, tipo, x: 0, y: 0, ancho, alto, estado: 'activo', avance: null, mejora: false, danado: false, nivel: 1, estilo, epoca, semilla: 7 });
+    return p.lista;
+  };
+
+  test('sin época, o en la Era I, todo se ve de la Era I', () => {
+    expect(ids.every((id) => epocaDe(id, 'vivienda', undefined) === 1)).toBe(true);
+    expect(ids.every((id) => epocaDe(id, 'vivienda', { era: 1, grado: 3 }) === 1)).toBe(true);
+  });
+
+  test('el punto dice cuántas casas ya cambiaron: 1 los primeros atisbos, 2 más, 3 todas; el gobierno y lo monumental, desde el primero', () => {
+    const cuantas = (grado: number) => ids.filter((id) => epocaDe(id, 'vivienda', { era: 3, grado }) === 3).length;
+    expect(cuantas(1)).toBeGreaterThan(ids.length * 0.1);
+    expect(cuantas(1)).toBeLessThan(ids.length * 0.3);
+    expect(cuantas(2)).toBeGreaterThan(ids.length * 0.5);
+    expect(cuantas(2)).toBeLessThan(ids.length * 0.7);
+    expect(cuantas(3)).toBe(ids.length);
+    expect(new Set(ids.map((id) => epocaDe(id, 'vivienda', { era: 3, grado: 1 })))).toEqual(new Set([2, 3]));
+    for (const tipo of ['centroUrbano', 'palacio', 'salaConsejo', 'maravilla', 'plaza']) expect(epocaDe('ed-1', tipo, { era: 4, grado: 1 })).toBe(4);
+    // una casa que cambia con el punto 1 sigue cambiada con el 2 y el 3
+    const conUno = ids.filter((id) => epocaDe(id, 'vivienda', { era: 2, grado: 1 }) === 2);
+    expect(conUno.every((id) => epocaDe(id, 'vivienda', { era: 2, grado: 2 }) === 2)).toBe(true);
+  });
+
+  test('del motor (810cbf1): la de la plaza por dentro y la de la madre en el pueblo; sin ella, la Era I', () => {
+    const pb = fromBinary(AsentamientoSchema, readFileSync(new URL('./ciudad3d/ciudades/aldea.bin', import.meta.url)));
+    expect(plazaDeContrato(pb, 0).asentamiento.estiloEpoca).toBeUndefined();
+    pb.estiloEpoca = create(EstiloEpocaSchema, { era: 3, grado: 2 });
+    expect(plazaDeContrato(pb, 0).asentamiento.estiloEpoca).toEqual({ era: 3, grado: 2 });
+    const pueblo = create(PuebloSchema, { id: 'p-1', tipoExtractor: 'cantera', planta: [{ id: 'e-1', tipo: 'cantera', ancho: 6, alto: 6 }], estiloEpocaMadre: { era: 2, grado: 1 } });
+    expect(escenaPueblo(pueblo)?.estiloEpocaMadre).toEqual({ era: 2, grado: 1 });
+  });
+
+  test('la proyección le pone a cada edificio la suya', () => {
+    const { a, t } = plaza('ciudad');
+    const c = ciudadEnVista(a, t, { instante: DIAS.ciudad! * DIA, epoca: { era: 3, grado: 2 } })!;
+    expect(new Set(c.edificios.map((e) => e.epoca))).toEqual(new Set([2, 3]));
+    expect(c.edificios.filter((e) => e.tipo === 'centroUrbano').every((e) => e.epoca === 3)).toBe(true);
+  });
+
+  test('desde la Era II no quedan ni franjas rojas ni cuernos de Cnosos; desde la III, la teja', () => {
+    const rojo = (l: Pieza[]) => l.filter((q) => q.color === COLOR.rojo).length, teja = (l: Pieza[]) => l.filter((q) => q.color === COLOR.teja || q.color === COLOR.tejaVieja).length;
+    expect(rojo(piezasDe('centroUrbano', 5, 1, 'x-1', 12, 12))).toBeGreaterThan(0);
+    for (const epoca of [2, 3, 4, 5]) expect(rojo(piezasDe('centroUrbano', 5, epoca, 'x-1', 12, 12)), `Era ${epoca}`).toBe(0);
+    expect(teja(piezasDe('vivienda', 4, 2, 'ed-3', 6, 6))).toBe(0);
+    expect(ids.slice(0, 40).filter((id) => teja(piezasDe('vivienda', 4, 3, id, 6, 6)) > 0).length).toBeGreaterThan(30);
+    expect(teja(piezasDe('maravilla', 5, 3, 'x-1', 12, 12))).toBeGreaterThan(0);
+  });
+
+  test('el Centro Urbano de la Era II es el héroon: la casa larga absidal de paja con su galería de postes', () => {
+    const l = piezasDe('centroUrbano', 4, 2, 'x-1', 12, 12);
+    expect(l.some((q) => q.forma === 'cono' && q.color === COLOR.paja)).toBe(true);
+    expect(l.filter((q) => q.forma === 'cilindro' && q.color === COLOR.madera).length).toBeGreaterThan(10);
+  });
+
+  test('los grandes (templo, héroon, estoa, sala con frontón) tampoco salen de su huella, sea del tamaño que sea', () => {
+    let peor = { fuera: 0, que: '' };
+    for (const tipo of ['maravilla', 'salaConsejo', 'mercado', 'centroUrbano', 'palacio', 'patioDeGremios', 'albergueCaravanas', 'granja', 'caballerizas', 'lenera'])
+      for (const [ancho, alto] of [[6, 6], [9, 6], [6, 9], [12, 9], [12, 12], [15, 12]] as const) for (const epoca of [2, 3, 4, 5]) for (const estilo of [1, 2, 3, 4, 5]) {
+        const e = { x: 0, y: 0, ancho, alto };
+        for (const q of piezasDe(tipo, estilo, epoca, `${tipo}-${ancho}`, ancho, alto)) {
+          const fuera = salida(q, e);
+          if (fuera > peor.fuera) peor = { fuera, que: `${tipo} ${ancho}×${alto} estilo ${estilo} Era ${epoca}: ${q.forma}` };
+        }
+      }
+    expect(peor.fuera, peor.que).toBeLessThanOrEqual(ALERO);
+  });
+
+  for (const nombre of ['aldea', 'pueblo', 'ciudad']) {
+    test(`${nombre}: en ninguna Era sale una pieza de su huella más que un alero`, () => {
+      const { c } = plaza(nombre);
+      let peor = { fuera: 0, que: '' };
+      for (const epoca of [2, 3, 4, 5]) for (const estilo of [1, 2, 3, 4, 5]) for (const e of c.edificios) {
+        const p = new Piezas();
+        montarEdificio(p, { ...e, estilo, epoca, estado: 'activo', avance: null });
+        for (const q of p.lista) {
+          const fuera = salida(q, e);
+          if (fuera > peor.fuera) peor = { fuera, que: `${e.tipo} estilo ${estilo} Era ${epoca}: ${q.forma}` };
+        }
+      }
+      expect(peor.fuera, peor.que).toBeLessThanOrEqual(ALERO);
+    }, 60_000);
+  }
 });
 
 describe('los pueblos extractores y las aldeas', () => {

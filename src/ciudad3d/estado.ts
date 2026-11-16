@@ -26,6 +26,12 @@ export interface EdificioEnVista {
   nivel: number;
   /** El estilo con que se dibuja, de 1 (chozas de paja) a 5 (palacio de piedra): el nivel de la plaza, con el umbral fijo de cada casa. */
   estilo: number;
+  /**
+   * La época con que se viste, de 1 (los reinos palaciales: Troya, Micenas, Cnosos) a 5 (la hegemonía macedónica): la Era más alta a la que
+   * llegó la plaza y, con su grado, si a este edificio ya le tocó (`epocaDe`). Sin ella, la 1. El estilo dice el tamaño y la riqueza; la época,
+   * los techos, los muros, las columnas y los colores (Víctor, 2026-11-16).
+   */
+  epoca?: number;
   /** Un número fijo por edificio (de su id), para el azar de su maqueta. */
   semilla: number;
   /**
@@ -119,6 +125,29 @@ export function hash3(a: number, b: number, c: number): number {
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
 
+/**
+ * La época de estilo de una plaza (Víctor, 2026-11-16): la Era más alta a la que llegó (1 a 5) y su grado (1 a 3: primeros atisbos, más
+ * cambiada, del todo), según las tecnologías adoptadas de su Facción. La Era I es la base y se ve siempre entera.
+ */
+export interface EpocaDePlaza {
+  era: number;
+  grado: number;
+}
+
+/** La parte de la ciudad que ya luce la Era nueva con cada grado: los primeros atisbos, más cambiada y del todo. */
+export const PARTE_POR_GRADO = [0, 0.2, 0.6, 1] as const;
+
+/**
+ * La época de un edificio. Cada uno tiene su turno fijo (de su id; los públicos, el primero: lo nuevo empieza por ellos): luce la Era de la plaza
+ * si su turno cae dentro de la parte que ya cambió con el grado, y si no, la anterior.
+ */
+export function epocaDe(id: string, tipo: string, p: EpocaDePlaza | undefined): number {
+  if (!p || p.era <= 1) return 1;
+  const era = Math.min(5, Math.floor(p.era)), parte = PARTE_POR_GRADO[Math.max(1, Math.min(3, Math.floor(p.grado)))]!;
+  const turno = MONUMENTALES.has(tipo) ? 0 : hashTexto(id, 23);
+  return turno < parte ? era : era - 1;
+}
+
 /** Edificios que van con el nivel de la plaza sin quedarse atrás: son su cara. */
 const MONUMENTALES = new Set(['centroUrbano', 'palacio', 'salaConsejo', 'maravilla', 'plaza']);
 
@@ -180,6 +209,8 @@ export interface OpcionesCiudad {
   minutosDeObra?: (e: Edificio) => number | null;
   /** El edificio del que parten las calles principales, si no es el centro urbano (el ancla de un pueblo). */
   centroId?: string;
+  /** La época de estilo de la plaza (`EpocaDePlaza`); sin ella, la de los reinos palaciales. */
+  epoca?: EpocaDePlaza;
 }
 
 /** Las celdas de un rectángulo en ul: columnas y filas que toca. */
@@ -203,6 +234,7 @@ export function ciudadEnVista(a: FuenteDeCiudad, t: TrazadoAsentamiento | undefi
     edificios.push({
       id: e.id, tipo: e.tipo, x: h.x, y: h.y, ancho: h.ancho, alto: h.alto, estado: e.estado, avance, completaEn: enObra ? fin : undefined,
       mejora: !!e.mejora, danado: !!e.danado, nivel: e.nivelInterno ?? 1, estilo: estiloDe(e.id, e.tipo, a.nivel, a.ascenso, o.instante),
+      epoca: epocaDe(e.id, e.tipo, o.epoca),
       semilla: Math.floor(hashTexto(e.id) * 1e9), buey: e.buey || undefined, receta: e.receta,
     });
   }

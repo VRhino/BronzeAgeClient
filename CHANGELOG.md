@@ -3,6 +3,34 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.208.0] — 2026-11-16 · Los edificios de la plaza 3D por Era: la crisis y la polis · motor `810cbf1`
+
+Lo pidió Víctor el 2026-11-16: los edificios 3D solo vestían la Edad del Bronce de los palacios y el juego llega hasta Alejandro. Decidió que el
+aspecto lo da la Facción de la plaza por sus tecnologías adoptadas: solo de la Era I, se ve de la Era I; con 1, 2 o 3 tecnologías de la Era
+siguiente, los primeros atisbos, más cambiada o del todo. El motor guarda en cada plaza la Era más alta a la que llegó y su punto, y nunca baja,
+ni al conquistarla. Contrato 0.24.0 → 0.27.0 (solo campos nuevos; los del sigilo en el ticket de batalla aún no se usan).
+
+- **La época de cada edificio** (`epocaDe` en `ciudad3d/estado.ts`): cada casa tiene un turno fijo y luce la Era de la plaza si su turno entra en
+  el punto (el 1 cambia una de cada cinco, el 2 tres de cada cinco, el 3 todas) y, si no, la anterior; el gobierno y lo monumental (Centro
+  Urbano, Palacio, Sala del Consejo, Maravilla, plaza) cambian con la primera tecnología. El nivel sigue dando el tamaño y la riqueza (`estilo`); la
+  época, el vocabulario. La vista rehace un edificio cuando cambia su época.
+- **Era I**, como estaba: ni una pieza distinta (se comprobó edificio a edificio, en todos los tipos, tamaños y estilos).
+- **Era II, crisis y adaptación**: sin franjas rojas ni cuernos de consagración; postes de madera en vez de columnas; las casas sobre zócalo de
+  piedra, de adobe y barro, con paja o terrado; las chozas sobre un anillo de piedras; las casas largas de barro, más absidales; el Centro Urbano
+  es el héroon (la gran casa larga absidal del jefe con su galería de postes, el hogar, el granero y la cerca de piedra seca).
+- **Era III, polis e imperios**: la teja de barro a dos aguas (con algún terrado, y paja aún en la mitad de las casas pobres); columnas dóricas de
+  piedra estucada; las chozas pasan a casillas cuadradas con tejado a cuatro aguas; casas de dos plantas como mucho; la Maravilla es un templo
+  con columnas alrededor, frontón y altar; la Sala del Consejo lleva frente de templo; la estoa del Mercado, entablamento y tejado de teja; los
+  cobertizos, la estoa del Patio de Gremios y los portones, teja.
+- **Eras IV y V**: ya salen con teja, muros más claros (encalado y estuco) y columnas jónicas y corintias; su propio aire, en la siguiente.
+- **Del motor** (`810cbf1`, contrato 0.27.0): `Asentamiento.estilo_epoca` (la plaza por dentro), `Pueblo.estilo_epoca_madre` y
+  `Avanzada.estilo_epoca_madre`, en `tiposDominio` como `estiloEpoca` y `estiloEpocaMadre`; la vista 3D de la plaza, del pueblo y de la avanzada
+  los usan. Sin él (la plaza avistada), la Era I.
+- **La mesa 3D** (`npm run ciudad3d`): los mandos «Era» y «Punto» (`?era=&grado=`) y la muestra «Edificios por Era».
+- Pruebas: `pruebas/ciudad3d.test.ts`, la época de cada edificio con su punto, que desde la Era II no queda rojo de Cnosos, la teja de la III, el
+  héroon, que ninguna pieza sale de su huella en ninguna Era (las tres ciudades y los edificios grandes en seis tamaños) y el campo del motor en
+  la plaza y en el pueblo.
+
 ## [0.207.1] — 2026-11-13 · Al reconectar ya no se pierden el campamento, la batalla ni la Facción · motor `4a16dab`
 
 Arreglo, sin cambio de contrato (0.24.0). Salió al portar la sesión a Conquest.

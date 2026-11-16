@@ -225,6 +225,7 @@ function asentamiento(a: pb.Asentamiento, ahora: number): d.Asentamiento {
       : undefined,
     recintos: a.recintos.map(recinto),
     ascenso: a.ascenso ? { nivelObjetivo: a.ascenso.nivelObjetivo, iniciadoEn: instante(a.ascenso.iniciadoEnMs)!, completaEn: instante(a.ascenso.completaEnMs)! } : undefined,
+    estiloEpoca: estiloEpoca(a.estiloEpoca),
     puertaCerradaA: a.puertaCerradaA.length ? a.puertaCerradaA.map((g) => GRUPO_PUERTA[g]!).filter(Boolean) : undefined,
     vetadosIds: a.vetadosIds.length ? a.vetadosIds : undefined,
     capitalDeFaccionId: a.capitalDeFaccionId,
@@ -547,7 +548,13 @@ export function escenaPueblo(x: pb.Pueblo): d.EscenaPueblo | undefined {
     calles: (x.trazado?.calles ?? []).map((r) => ({ x: r.x, y: r.y, ancho: r.ancho, alto: r.alto })),
     caminos: (x.trazado?.caminos ?? []).map((r) => ({ x: r.x, y: r.y, ancho: r.ancho, alto: r.alto })),
     cultivo: opcional(x.cultivo),
+    estiloEpocaMadre: estiloEpoca(x.estiloEpocaMadre),
   };
+}
+
+/** El estilo de época (motor 810cbf1): la Era (1 a 5) y su punto (1 a 3); `undefined` si no viene o viene vacío (se dibuja la Era I). */
+function estiloEpoca(x: pb.EstiloEpoca | undefined): d.EstiloEpoca | undefined {
+  return x && x.era >= 1 ? { era: x.era, grado: Math.max(1, Math.min(3, x.grado || 3)) } : undefined;
 }
 
 /** El mostrador del campamento donde estás (motor c5c6111): el precio por unidad de cada bien para este héroe (`precios_mercado`, millonésimas de oro;
@@ -852,7 +859,7 @@ export function proyectar(c: Contexto): ProyeccionJugador | PartidaSinHeroe {
       const propias = new Map([...deAmbito('FACCION:', 'avanzada'), ...deAmbito('ASENTAMIENTO:', 'avanzada')].map((x) => [x.id, x]));
       const de = (x: pb.Avanzada, propia: boolean): d.AvanzadaDeMapa => ({
         id: x.id, madreId: x.asentamientoMadreId, etapa: x.etapa, posicion: punto(x.posicion), enRuinas: x.estado === pb.EstadoAvanzada.AVANZADA_EN_RUINAS,
-        batallaId: opcional(x.batallaId), propia, invulnerableHasta: instante(x.invulnerableHastaMs),
+        batallaId: opcional(x.batallaId), propia, invulnerableHasta: instante(x.invulnerableHastaMs), estiloEpocaMadre: estiloEpoca(x.estiloEpocaMadre),
         ...(propia ? {
           almacen: Object.fromEntries(Object.entries(x.almacenPorRecurso).map(([r, e]) => [r, valorDeRitmo(e.cantidad, ahora)])),
           capacidad: Object.fromEntries(Object.entries(x.almacenPorRecurso).map(([r, e]) => [r, mil(e.capacidad)])),

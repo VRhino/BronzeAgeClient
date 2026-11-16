@@ -310,6 +310,9 @@ export interface Asentamiento {
   /** Obra de ascenso de nivel en curso (Doc 4.5, `solicitarAscenso`): al llegar `completaEn`, `nivel` sube a
    * `nivelObjetivo`. Ya pagada; se pierde si conquistan la plaza. Ausente = no hay obra. */
   ascenso?: { nivelObjetivo: number; iniciadoEn: number; completaEn: number };
+  /** El estilo de época (motor 810cbf1, `Asentamiento.estilo_epoca`): la Era más alta a la que llegó la plaza por las tecnologías adoptadas de su
+   * Facción y su punto (1 a 3); nunca baja, ni al conquistarla. Solo a quien la ve por dentro; sin él, la Era I. Lo usa la ciudad 3D. */
+  estiloEpoca?: EstiloEpoca;
   /** La puerta (Doc 1.10.5): grupos a los que se cierra. Ausente = el cierre por defecto (neutrales y enemigos). */
   puertaCerradaA?: GrupoPuerta[];
   /** Jugadores vetados por el Gobernador. Ausente = nadie. */
@@ -817,6 +820,8 @@ export interface AvanzadaDeMapa {
   propia: boolean;
   /** En ruinas: hasta cuándo no se la puede atacar (instante de mundo). */
   invulnerableHasta?: number;
+  /** El estilo de época de su plaza madre (motor 810cbf1, `Avanzada.estilo_epoca_madre`): a su Facción y a quien está dentro de una ajena. */
+  estiloEpocaMadre?: EstiloEpoca;
   /** Solo la propia (FACCION/ASENTAMIENTO): lo que guarda de cada recurso y su tope (fuerte y ciudadela; la atalaya no tiene almacén). */
   almacen?: Record<string, number>;
   capacidad?: Record<string, number>;
@@ -1243,6 +1248,12 @@ export interface EscenaCampamento {
   empalizada: { col: number; row: number; clase: 'muro' | 'puerta' }[];
 }
 
+/** El estilo de época de una plaza (motor 810cbf1, `EstiloEpoca`): `era` de 1 a 5 (el orden de la Era) y `grado` de 1 a 3; la Era I, (1, 3). */
+export interface EstiloEpoca {
+  era: number;
+  grado: number;
+}
+
 /** La planta de un pueblo extractor o de una aldea (motor `urbanismo::planta_de_pueblo`; solo viaja estando dentro): coordenadas locales con el origen
  * en su ancla (la cantera, la mina o la granja), `y` hacia abajo, todo en unidades locales. */
 export interface EscenaPueblo {
@@ -1260,6 +1271,8 @@ export interface EscenaPueblo {
   caminos: RectanguloLocal[];
   /** El cultivo de la aldea (tanda 69): `trigo`, `vid`, `oliva`, `cebada`, `sesamo` o `ganado` (la ganadera, motor 3d05872); ausente en un extractor. */
   cultivo?: string;
+  /** El estilo de época de su plaza madre (motor 810cbf1, `Pueblo.estilo_epoca_madre`), con la planta. */
+  estiloEpocaMadre?: EstiloEpoca;
 }
 
 /** Un evento de dominio del backend tal como lo sirve `GET .../eventos`. */

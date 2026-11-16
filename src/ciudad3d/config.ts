@@ -29,6 +29,12 @@ export const COLOR = {
   adobe: 0xc9ad84, adobeClaro: 0xd8c29b, adobeFresco: 0xbfa27a, enlucido: 0xe9dfc9, enlucidoSombra: 0xd9ccb0,
   piedra: 0xa69d8d, piedraOscura: 0x7f776b, piedraClara: 0xbdb4a2, losa: 0xc2b8a3,
   rojo: 0x9e3b2a, ocre: 0xc8963e, azul: 0x3f6f8f, negro: 0x2b2622, hueco: 0x3a2e24,
+  /**
+   * Las Eras que siguen a la I (Víctor, 2026-11-16; `modelos.ts`): la teja de barro cocido (de la Era III), la piedra estucada de las columnas
+   * dóricas, el mármol, la sillería, el encalado de las casas clásicas y el estuco pintado de las helenísticas.
+   */
+  teja: 0xa9583b, tejaVieja: 0x8f5a42, estuco: 0xddd3bd, marmol: 0xece7dc, sillar: 0xcdbf9e, encalado: 0xf1ece0, estucoOcre: 0xe2c79a,
+  rojoPompeyano: 0x8e3424,
   toldo: [0xd9cfb6, 0xb5553a, 0x6e7f4f, 0xc79a3c, 0x8a5a3c],
   tierra: 0x8b6e4e, tierraOscura: 0x5e4a36, foso: 0x4c3d2c, talud: 0x8a7556, agua: 0x3e6a7a,
   hoja: 0x5f7a3c, olivo: 0x7d8a58, cipres: 0x3b5634, roble: 0x56783a, tronco: 0x5a4430, seto: 0x6a7f45, heno: 0xc9a85a,

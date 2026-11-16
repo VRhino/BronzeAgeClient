@@ -1456,13 +1456,15 @@ export type OrdenCrearHeroe = Message<"bronzeage.v1.OrdenCrearHeroe"> & {
   classDefinitionId: string;
 
   /**
-   * masculino | femenino
+   * masculino | femenino; vacío = masculino; otro, `orden.forma_invalida` (se guarda desde el 2026-11-13)
    *
    * @generated from field: string genero = 4;
    */
   genero: string;
 
   /**
+   * Cada pieza vacía (la de por defecto) o con hasta 32 letras ASCII, cifras, `_` o `-` (`heroe.aspecto_invalido`); sin catálogo de piezas todavía.
+   *
    * @generated from field: bronzeage.v1.OrdenCrearHeroe.Avatar avatar = 5;
    */
   avatar?: OrdenCrearHeroe_Avatar | undefined;

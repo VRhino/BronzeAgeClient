@@ -703,7 +703,7 @@ function pintarCentroPueblo(p: ProyeccionJugador, pueblo: PuebloDeMapa): void {
   if (c3.plano !== plano) {
     c3.plano = plano;
     planoEl.innerHTML = plano;
-    c3.vista.fijar(puebloEnVista(escena, { instante: p.instante }));
+    c3.vista.fijar(puebloEnVista(escena, { instante: p.instante, epoca: escena.estiloEpocaMadre }));
     const encuadre = encuadreDeSvg(planoEl.querySelector('svg'));
     if (encuadre) c3.minimapa.fijarEncuadre(encuadre);
   }
@@ -873,7 +873,7 @@ function pintarCentroAvanzada(p: ProyeccionJugador, x: AvanzadaDeMapa): void {
   const planoEl = mini?.querySelector<HTMLElement>('.avanzada-plano');
   const aviso = app.querySelector<HTMLElement>('.avanzada-screen .pueblo-aviso-batalla');
   if (!mapa || !lienzo || !escenaEl || !mini || !planoEl) return;
-  const ciudad = avanzadaEnVista(x, { instante: p.instante });
+  const ciudad = avanzadaEnVista(x, { instante: p.instante, epoca: x.estiloEpocaMadre });
   const plano = ciudad ? svgPlanoAvanzada(ciudad, nombreDePiezaAvanzada) : '';
   const en3d = Boolean(ciudad) && montarAvanzada3D(mapa);
   mapa.classList.toggle('asent-mapa-3d', en3d);
@@ -3371,7 +3371,7 @@ async function dibujarPantallaSegunModo(proyeccion: ProyeccionJugador): Promise<
       const trazado = proyeccion.trazadoPorAsentamiento?.[asentamiento.id];
       const suelo = mapa ? colorDelSueloEn(mapa, asentamiento.posicion) : null;
       if (suelo) c3.vista.fijarSuelo((suelo[0] << 16) | (suelo[1] << 8) | suelo[2]);
-      c3.vista.fijar(ciudadEnVista(asentamiento, trazado, { instante: proyeccion.instante, minutosDeObra: (e) => minutosDeObra(asentamiento, e) }));
+      c3.vista.fijar(ciudadEnVista(asentamiento, trazado, { instante: proyeccion.instante, minutosDeObra: (e) => minutosDeObra(asentamiento, e), epoca: asentamiento.estiloEpoca }));
       c3.vista.seleccionar(edificioSeleccionado());
       c3.minimapa.fijarTrazado(trazado);
     }
