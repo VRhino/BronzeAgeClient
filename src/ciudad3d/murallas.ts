@@ -21,7 +21,9 @@
 // empalizada (nivel 1) es de todas las Eras. Ninguna Era se ve más débil que la anterior (`FABRICAS`).
 import { COLOR } from './config';
 import { hash3, type CeldaDeMuro, type RecintoEnVista } from './estado';
-import { mezclar, type Piezas } from './piezas';
+import { mezclar, oscurecer, type Piezas } from './piezas';
+import { colorHex } from '../sigilo/sigilo';
+import type { Sigilo } from '../tiposDominio';
 
 type V = { x: number; y: number };
 
@@ -137,9 +139,30 @@ function hoja(p: Piezas, bisagra: V, t: V, n: V, s: number, largo: number, alto:
   for (let k = 0; k < bandas; k++) p.caja(banda, x, z, largo + 0.01, 0.12, 0.08, g, y + (alto * (k + 0.5)) / bandas - 0.04);
 }
 
-/** Un pendón rojo con su franja ocre, colgado de su vara contra la cara de fuera: centrado en `q`, de `ancho` a lo largo de `g`, de `y0` a `y1`. */
-function pendon(p: Piezas, q: V, g: number, ancho: number, y0: number, y1: number): void {
-  p.caja(COLOR.rojo, q.x, q.y, ancho, 0.04, y1 - y0, g, y0);
+/**
+ * El blasón de la Facción dueña en un pendón de la puerta (Víctor, 2026-11-16): dónde va el plano con el sigilo, en la cara de fuera del paño
+ * (`n`), centrado sobre la franja ocre con su margen. `y` es su centro; `ancho` y `alto`, los del escudo (de 100 × 120, como el SVG del sigilo).
+ */
+export interface Blason { x: number; z: number; y: number; ancho: number; alto: number; nx: number; nz: number }
+
+/** Lo que llevan los pendones mientras se monta la muralla de una plaza con dueño: el color del paño y los blasones que se van anotando. */
+let estandarte: { panio: number; blasones: Blason[] } | null = null;
+
+/** El paño de los pendones de una Facción: el color de su campo, algo oscurecido, para que su escudo no se pierda. */
+export function colorDePanio(sigilo: Sigilo): number {
+  return oscurecer(parseInt(colorHex(sigilo.colorPrimarioId).slice(1, 7), 16), 0.78);
+}
+
+/**
+ * Un pendón con su franja ocre, colgado de su vara contra la cara de fuera (`n`): centrado en `q`, de `ancho` a lo largo de `g`, de `y0` a `y1`.
+ * Rojo; con la plaza de una Facción, del color de su campo, y anota dónde va su blasón (`estandarte`).
+ */
+function pendon(p: Piezas, q: V, g: number, ancho: number, y0: number, y1: number, n: V): void {
+  p.caja(estandarte?.panio ?? COLOR.rojo, q.x, q.y, ancho, 0.04, y1 - y0, g, y0);
+  if (estandarte) {
+    const b0 = y0 + 0.32, b1 = y1 - 0.08, w = Math.min(ancho * 0.8, (b1 - b0) / 1.2), fuera = 0.03;
+    estandarte.blasones.push({ x: q.x + n.x * fuera, z: q.y + n.y * fuera, y: (b0 + b1) / 2, ancho: w, alto: w * 1.2, nx: n.x, nz: n.y });
+  }
   p.caja(COLOR.ocre, q.x, q.y, ancho + 0.02, 0.06, 0.14, g, y0 + 0.14);
   p.caja(COLOR.maderaOscura, q.x, q.y, ancho + 0.18, 0.07, 0.07, g, y1);
 }
@@ -233,7 +256,7 @@ function empalizada(p: Piezas, tr: Tramo, paso: Tramo[] | null, flancos: readonl
     const q = sitioDeTorre(tr, 0.1), { g, n } = ejesDeTorre(tr);
     torreDeMadera(p, q.x, q.y, 1.5, ALTO_TORRE_PUERTA, g);
     // el pendón, colgado de la plataforma por fuera
-    pendon(p, { x: q.x + n.x * 0.8, y: q.y + n.y * 0.8 }, g, 0.62, ALTO_TORRE_PUERTA * 0.78 - 1.25, ALTO_TORRE_PUERTA * 0.78 - 0.05);
+    pendon(p, { x: q.x + n.x * 0.8, y: q.y + n.y * 0.8 }, g, 0.62, ALTO_TORRE_PUERTA * 0.78 - 1.25, ALTO_TORRE_PUERTA * 0.78 - 0.05, n);
   }
   else if (c.clase === 'torre') torreDeMadera(p, c.x - tr.n.x * 0.1, c.y - tr.n.y * 0.1, 1.2, 3.0, giroDe(tr.t));
   if (paso) {
@@ -327,7 +350,7 @@ function piedraYAdobe(p: Piezas, tr: Tramo, flanco = false): void {
       p.caja(adobe, q.x + a * 0.75 * Math.cos(gt) - b * 0.88 * Math.sin(gt), q.y + a * 0.75 * Math.sin(gt) + b * 0.88 * Math.cos(gt), 0.3, 0.3, 0.32, gt, alto);
     }
     p.caja(COLOR.hueco, q.x + n.x * 1.03, q.y + n.y * 1.03, 0.18, 0.05, 0.4, gt, alto - 1.0);
-    pendon(p, { x: q.x + n.x * 1.05, y: q.y + n.y * 1.05 }, gt, 0.75, 1.0, 2.15);
+    pendon(p, { x: q.x + n.x * 1.05, y: q.y + n.y * 1.05 }, gt, 0.75, 1.0, 2.15, n);
   }
   if (c.clase === 'puerta') {
     // el paso por el medio: el umbral enlosado, las jambas de piedra con su marco enlucido por fuera, el dintel pintado de rojo, las hojas
@@ -375,7 +398,7 @@ function ciclopea(p: Piezas, tr: Tramo, flanco = false): void {
     for (const [a, b] of [[-1, -1], [1, -1], [1, 1], [-1, 1], [0, -1], [0, 1], [-1, 0], [1, 0]] as const) {
       p.caja(color(21), x + (a * Math.cos(gt) - b * Math.sin(gt)) * 1.15, z + (a * Math.sin(gt) + b * Math.cos(gt)) * 1.15, 0.36, 0.36, 0.45, gt, alto);
     }
-    if (deLaPuerta) { const { n } = ejesDeTorre(tr); pendon(p, { x: x + n.x * 1.32, y: z + n.y * 1.32 }, gt, 0.9, 1.9, 3.75); }
+    if (deLaPuerta) { const { n } = ejesDeTorre(tr); pendon(p, { x: x + n.x * 1.32, y: z + n.y * 1.32 }, gt, 0.9, 1.9, 3.75, n); }
   }
   if (c.clase === 'puerta') {
     // la puerta de los leones: el paso enlosado, dos jambas y el dintel enorme de piedra clara (labrada, más clara que el muro), las hojas
@@ -527,7 +550,7 @@ function muroDeEra(p: Piezas, tr: Tramo, era: number, nivel: number, flanco: boo
   if (c.clase === 'torre' && !puerta) torreDeEra(p, f, nivel, c.x + tr.n.x * 0.2, c.y + tr.n.y * 0.2, g, tr.n);
   else if (flanco) {
     const q = sitioDeTorre(tr, 0.2), { g: gt, n } = ejesDeTorre(tr), alto = torreDeEra(p, f, nivel, q.x, q.y, gt, n), fuera = f.ladoTorre / 2 + 0.05;
-    pendon(p, { x: q.x + n.x * fuera, y: q.y + n.y * fuera }, gt, 0.75, alto * 0.35, alto * 0.75);
+    pendon(p, { x: q.x + n.x * fuera, y: q.y + n.y * fuera }, gt, 0.75, alto * 0.35, alto * 0.75, n);
   }
   if (puerta) {
     // el paso: umbral, jambas (de la piedra del muro), el dintel, las hojas, los braseros y el muro corrido encima (con sus almenas)
@@ -568,8 +591,12 @@ function andamioDeMuro(p: Piezas, tr: Tramo, alto: number): void {
 
 const ALTO_NIVEL = [0, 2.0, 2.5, 3.5];
 
-/** Monta todos los recintos de la plaza en `p`. */
-export function montarMurallas(p: Piezas, recintos: readonly RecintoEnVista[]): void {
+/**
+ * Monta todos los recintos de la plaza en `p`. Con el `sigilo` de la Facción dueña, los pendones de las puertas van del color de su campo y se
+ * devuelven los blasones que la vista pone encima (`Blason`); sin él, los pendones rojos de siempre y ningún blasón.
+ */
+export function montarMurallas(p: Piezas, recintos: readonly RecintoEnVista[], sigilo?: Sigilo): Blason[] {
+  estandarte = sigilo ? { panio: colorDePanio(sigilo), blasones: [] } : null;
   for (const r of recintos) {
     const ts = tramos(r), pasos = pasosDePuerta(ts), era = Math.max(1, Math.min(5, Math.floor(r.epoca ?? 1)));
     const flancos = new Set(pasos.flatMap((x) => x.flancos.flatMap((f) => (f ? [f.k] : []))));
@@ -595,6 +622,9 @@ export function montarMurallas(p: Piezas, recintos: readonly RecintoEnVista[]): 
     }
   }
   p.de = undefined;
+  const blasones = estandarte?.blasones ?? [];
+  estandarte = null;
+  return blasones;
 }
 
 /** El id de las piezas de una celda de muralla: su recinto y su sitio en el anillo. */

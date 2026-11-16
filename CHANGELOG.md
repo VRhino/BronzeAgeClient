@@ -3,6 +3,24 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.211.0] — 2026-11-16 · El blasón de la Facción dueña en los pendones de las puertas · motor `810cbf1`
+
+Sin cambio de contrato (0.27.0). Lo pidió Víctor el 2026-11-16: en las banderas de los dos lados de las puertas de la muralla, el blasón de la
+Facción dueña de la plaza.
+
+- **Los pendones de las puertas** (`ciudad3d/murallas.ts`): con la plaza de una Facción, el paño toma el color de su campo, algo oscurecido, y
+  cada pendón anota dónde va su blasón (`Blason`: en la cara de fuera, centrado sobre la franja ocre con su margen). Vale para todas las Eras y
+  todas las puertas, empalizada incluida. Sin dueño conocido, como estaba: paño rojo y sin escudo.
+- **La vista 3D** (`ciudad3d/vista.ts`) pone encima de cada pendón un plano con el sigilo completo (el SVG de `svgSigilo` como textura): un
+  material por sigilo para todas las banderas, transparente fuera del escudo, solo por delante y adelantado para no parpadear contra el paño.
+  Hasta que carga la imagen no se ve; al llegar aparece sin rehacer la ciudad. El sigilo entra en la clave de la muralla: cambia al cambiar de
+  dueño.
+- **Del cliente**: el sigilo de la dueña sale de las Facciones que ya conoce (`faccionDuena` en `main.ts`, la propia o la del directorio) y
+  llega a la plaza con `ciudadEnVista` (`CiudadEnVista.sigilo`).
+- **La mesa 3D**: el mando «Blasón» (`?blason=`): el sigilo de ejemplo, sin Facción o uno al azar, en las plazas y en las muestras.
+- Pruebas: `pruebas/ciudad3d.test.ts`, que el sigilo llega a la plaza, que cada puerta lleva sus dos escudos sobre la cara de fuera de su
+  pendón en las cinco Eras y los tres niveles, y que sin Facción no hay ninguno y con ella solo cambian de color los cuatro paños.
+
 ## [0.210.0] — 2026-11-16 · Las murallas por Era y el borde del sitio de reunión · motor `810cbf1`
 
 Sin cambio de contrato (0.27.0). Sigue a la 0.209.0: la muralla de la plaza luce también su Era, y el Centro Urbano de nivel 1 tiene lo del

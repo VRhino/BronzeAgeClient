@@ -11,7 +11,7 @@ import { montarGuardacantones, teselasDe } from '../src/ciudad3d/calzada';
 import { ciudadEnVista, epocaDe, estiloDe, type CiudadEnVista } from '../src/ciudad3d/estado';
 import { COLOR } from '../src/ciudad3d/config';
 import { montarEdificio } from '../src/ciudad3d/modelos';
-import { idDeCeldaDeMuro, montarMurallas } from '../src/ciudad3d/murallas';
+import { colorDePanio, idDeCeldaDeMuro, montarMurallas } from '../src/ciudad3d/murallas';
 import { puebloEnVista } from '../src/ciudad3d/pueblo';
 import { Piezas, type Pieza } from '../src/ciudad3d/piezas';
 import { sueloDeParcela, tierraDe } from '../src/ciudad3d/suelo';
@@ -603,6 +603,63 @@ describe('las murallas por Era (Víctor, 2026-11-16)', () => {
     const torresRedondas = (l: Pieza[]) => l.filter((q) => q.forma === 'cilindro' && q.color === COLOR.sillar && q.ancho > 2).length;
     expect(torresRedondas(v!)).toBeGreaterThan(0);
     expect(torresRedondas(iv!)).toBe(0);
+  });
+});
+
+describe('el blasón de la Facción dueña en los pendones de las puertas (Víctor, 2026-11-16)', () => {
+  const SIGILO = { formaId: 'aspis', campoId: 'partido', emblemaId: 'toro', colorPrimarioId: 'azul', colorSecundarioId: 'blanco', colorEmblemaId: 'ocre', orlaId: 'greca', colorOrlaId: 'ocre' };
+  // la muralla de muestra: dos puertas (una de una celda al sur, una de dos al norte), cada una con su torre a cada lado
+  const recinto = (nivel: number, epoca: number) => {
+    const h = 5, celdas: { col: number; row: number; clase: 'muro' | 'puerta' | 'torre' }[] = [];
+    const clase = (col: number, row: number): 'muro' | 'puerta' | 'torre' =>
+      (row === h && col === 0) || (row === -h && (col === 0 || col === -1)) ? 'puerta' : Math.abs(col) === h && Math.abs(row) === h ? 'torre' : 'muro';
+    for (let c = -h; c <= h; c++) celdas.push({ col: c, row: -h, clase: clase(c, -h) });
+    for (let r = -h + 1; r <= h; r++) celdas.push({ col: h, row: r, clase: clase(h, r) });
+    for (let c = h - 1; c >= -h; c--) celdas.push({ col: c, row: h, clase: clase(c, h) });
+    for (let r = h - 1; r > -h; r--) celdas.push({ col: -h, row: r, clase: clase(-h, r) });
+    const a = { id: 'm', nivel: 3, edificios: [], recintos: [{ id: 'r', nivel, celdas, avance: celdas.length }] };
+    return ciudadEnVista(a, { calles: [], caminos: [], huellas: {}, murallas: [], radio: 21, celda: 3 }, { instante: 0, epoca: { era: epoca, grado: 3 }, sigilo: SIGILO })!;
+  };
+
+  test('el sigilo de la dueña llega a la plaza que se dibuja', () => {
+    expect(recinto(2, 1).sigilo).toEqual(SIGILO);
+    const { a, t } = plaza('ciudad');
+    expect(ciudadEnVista(a, t, { instante: 0 })!.sigilo).toBeUndefined();
+  });
+
+  for (const epoca of [1, 2, 3, 4, 5]) test(`Era ${epoca}: cada puerta lleva sus dos escudos, en la cara de fuera de su pendón, y el paño del color de la Facción`, () => {
+    for (const nivel of [1, 2, 3]) {
+      const c = recinto(nivel, epoca), p = new Piezas();
+      const blasones = montarMurallas(p, c.recintos, c.sigilo);
+      // dos puertas, dos pendones cada una, un escudo por pendón
+      expect(blasones.length, `nivel ${nivel}`).toBe(4);
+      const panos = p.lista.filter((q) => q.color === colorDePanio(SIGILO));
+      expect(panos.length, `nivel ${nivel}`).toBe(4);
+      for (const b of blasones) {
+        // sobre su paño (cerca de él y por fuera de la plaza), más alto que ancho, como el escudo
+        const pano = panos.reduce((m, q) => (Math.hypot(q.x - b.x, q.z - b.z) < Math.hypot(m.x - b.x, m.z - b.z) ? q : m));
+        expect(Math.hypot(pano.x - b.x, pano.z - b.z), `nivel ${nivel}`).toBeLessThan(0.1);
+        expect(b.nx * b.x + b.nz * b.z, `nivel ${nivel}`).toBeGreaterThan(0);
+        expect(b.y - b.alto / 2).toBeGreaterThan(pano.y);
+        expect(b.y + b.alto / 2).toBeLessThan(pano.y + pano.alto);
+        expect(b.alto).toBeCloseTo(b.ancho * 1.2);
+      }
+    }
+  });
+
+  test('sin Facción, ningún escudo y los pendones rojos de siempre; con ella, solo cambian de color los cuatro paños', () => {
+    for (const epoca of [1, 2, 3, 4, 5]) for (const nivel of [1, 2, 3]) {
+      const c = recinto(nivel, epoca), sin = new Piezas(), con = new Piezas();
+      expect(montarMurallas(sin, c.recintos)).toEqual([]);
+      montarMurallas(con, c.recintos, c.sigilo);
+      expect(con.lista.length).toBe(sin.lista.length);
+      const distintas = sin.lista.flatMap((q, i) => (JSON.stringify(q) === JSON.stringify(con.lista[i]) ? [] : [i]));
+      expect(distintas.length, `Era ${epoca}, nivel ${nivel}`).toBe(4);
+      for (const i of distintas) {
+        expect(sin.lista[i]!.color).toBe(COLOR.rojo);
+        expect({ ...con.lista[i], color: COLOR.rojo }).toEqual(sin.lista[i]);
+      }
+    }
   });
 });
 

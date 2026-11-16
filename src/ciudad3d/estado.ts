@@ -2,7 +2,7 @@
 // estado, su obra y su estilo; los recintos de muralla celda a celda, en el orden de su anillo; y las celdas libres de la ciudad con lo que
 // las rellena (huertos, patios, árboles…). Nada se mueve ni sale de su huella: el trazado manda (Víctor, 2026-11-02).
 // Coordenadas: unidades locales del trazado (ul), x a la derecha e y hacia abajo, como el 2D; la celda del trazado mide `celda` ul.
-import type { Asentamiento, Edificio, RectanguloLocal, TrazadoAsentamiento } from '../tiposDominio';
+import type { Asentamiento, Edificio, RectanguloLocal, Sigilo, TrazadoAsentamiento } from '../tiposDominio';
 import { redDeCalles, type CeldaDeCalle } from './calles';
 
 type Punto = { x: number; y: number };
@@ -92,6 +92,9 @@ export interface Relleno {
 
 export interface CiudadEnVista {
   id: string;
+  /** El sigilo de la Facción dueña de la plaza (Víctor, 2026-11-16): su blasón va en los pendones de las puertas de la muralla. Sin dueño
+   * conocido, ninguno (el paño rojo de siempre, sin escudo). */
+  sigilo?: Sigilo;
   /** Nivel de la plaza. */
   nivel: number;
   /** Radio del disco urbano, en ul. */
@@ -213,6 +216,8 @@ export interface OpcionesCiudad {
   centroId?: string;
   /** La época de estilo de la plaza (`EpocaDePlaza`); sin ella, la de los reinos palaciales. */
   epoca?: EpocaDePlaza;
+  /** El sigilo de la Facción dueña (`CiudadEnVista.sigilo`). */
+  sigilo?: Sigilo;
 }
 
 /** Las celdas de un rectángulo en ul: columnas y filas que toca. */
@@ -359,7 +364,7 @@ export function ciudadEnVista(a: FuenteDeCiudad, t: TrazadoAsentamiento | undefi
     centro: gobierno ? { x: gobierno.x + gobierno.ancho / 2, y: gobierno.y + gobierno.alto / 2 } : undefined,
     salidas: recintos.flatMap((r) => r.celdas.filter((k) => k.clase === 'puerta')),
   });
-  return { id: a.id, nivel: a.nivel, radio, celda: T, calles: t.calles, caminos: t.caminos, edificios, recintos, libres, extension: Math.max(extension, radio), nucleo: Math.max(15, Math.min(nucleo, radio)), red };
+  return { id: a.id, sigilo: o.sigilo, nivel: a.nivel, radio, celda: T, calles: t.calles, caminos: t.caminos, edificios, recintos, libres, extension: Math.max(extension, radio), nucleo: Math.max(15, Math.min(nucleo, radio)), red };
 }
 
 /** Si un punto (ul) cae en una huella; la de encima si se pisan (no debería). */

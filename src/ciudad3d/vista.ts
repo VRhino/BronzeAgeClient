@@ -12,7 +12,9 @@ import { CIUDAD3D, COLOR } from './config';
 import { instalarEntrada, type EntradaDeCiudad } from './entrada';
 import { edificioEn, type CiudadEnVista, type ClaseCelda, type EdificioEnVista } from './estado';
 import { montarEdificio } from './modelos';
-import { idDeCeldaDeMuro, montarMurallas } from './murallas';
+import { idDeCeldaDeMuro, montarMurallas, type Blason } from './murallas';
+import { svgSigilo } from '../sigilo/sigilo';
+import type { Sigilo } from '../tiposDominio';
 import { MallasDePiezas, Piezas } from './piezas';
 import { montarRelleno } from './relleno';
 import { Suelo } from './suelo';
@@ -74,6 +76,10 @@ export class VistaCiudad3D {
   private murallas: MallasDePiezas | null = null;
   private relleno: MallasDePiezas | null = null;
   private claves = { edificios: '', murallas: '', relleno: '', seleccion: '', huella: '' };
+  /** Los blasones de la Facción dueña en los pendones de las puertas: un plano por pendón, un material (con la textura del sigilo) por sigilo. */
+  private readonly blasones = new THREE.Group();
+  private readonly planoBlason = new THREE.PlaneGeometry(1, 1);
+  private readonly materialesBlason = new Map<string, THREE.MeshLambertMaterial>();
   private ciudad: CiudadEnVista | null = null;
   private seleccion: { id: string; tipo: string } | null = null;
   private base: number;
@@ -118,7 +124,7 @@ export class VistaCiudad3D {
     this.lejano.rotation.x = -Math.PI / 2;
     this.lejano.position.y = -0.03;
     this.lejano.receiveShadow = true;
-    this.escena.add(this.lejano, this.suelo.malla, this.calzada.malla, this.resalte);
+    this.escena.add(this.lejano, this.suelo.malla, this.calzada.malla, this.resalte, this.blasones);
 
     this.entrada = instalarEntrada(this.lienzo, this.camara, { alClicar: (e) => this.clic(e), alPasar: (e) => { this.pasando = e; if (!e) this.avisarPaso(null, null); } });
     this.observador = new ResizeObserver(() => this.ajustar());
@@ -147,12 +153,13 @@ export class VistaCiudad3D {
       for (const e of c.edificios) montarEdificio(p, e);
       this.edificios = this.cambiar(this.edificios, p);
     }
-    const cm = c.recintos.map((r) => `${r.id}:${r.cerrado}:${r.mejorandoA}:${r.epoca ?? 1}:${r.celdas.map((k) => `${k.x},${k.y},${k.clase[0]}${k.enPie ? k.nivel : 0}`).join(';')}`).join('|');
+    const cm = `${c.sigilo ? JSON.stringify(c.sigilo) : '-'}#` + c.recintos.map((r) => `${r.id}:${r.cerrado}:${r.mejorandoA}:${r.epoca ?? 1}:${r.celdas.map((k) => `${k.x},${k.y},${k.clase[0]}${k.enPie ? k.nivel : 0}`).join(';')}`).join('|');
     if (cm !== this.claves.murallas) {
       this.claves.murallas = cm;
       const p = new Piezas();
-      montarMurallas(p, c.recintos);
+      const blasones = montarMurallas(p, c.recintos, c.sigilo);
       this.murallas = this.cambiar(this.murallas, p);
+      this.ponerBlasones(blasones, c.sigilo);
     }
     const cr = `${c.id}:${c.nivel}:${c.radio}:${c.extension}:${c.libres.map((r) => `${r.x},${r.y}${r.tipo[0]}`).join(';')}:${cm.length}:${ce.length}:${c.red.length}`;
     if (cr !== this.claves.relleno) {
@@ -165,6 +172,44 @@ export class VistaCiudad3D {
     this.calzada.actualizar(c);
     this.claves.seleccion = '';
     this.medir('fijar', t0);
+  }
+
+  /** Pone los blasones de los pendones (planos con la textura del sigilo, por la cara de fuera); sin sigilo, ninguno. */
+  private ponerBlasones(blasones: readonly Blason[], sigilo: Sigilo | undefined): void {
+    this.blasones.clear();
+    if (!sigilo || !blasones.length) return;
+    const material = this.materialDeBlason(sigilo);
+    for (const b of blasones) {
+      const m = new THREE.Mesh(this.planoBlason, material);
+      m.position.set(b.x, b.y, b.z);
+      m.scale.set(b.ancho, b.alto, 1);
+      m.rotation.y = Math.atan2(b.nx, b.nz);
+      this.blasones.add(m);
+    }
+  }
+
+  /**
+   * El material del blasón de un sigilo (uno por sigilo, para todos sus pendones): la textura del SVG del sigilo, transparente fuera del
+   * escudo, solo por delante y adelantado para no parpadear contra el paño. Hasta que carga la imagen no se ve; al llegar, aparece sin rehacer nada.
+   */
+  private materialDeBlason(sigilo: Sigilo): THREE.MeshLambertMaterial {
+    const clave = JSON.stringify(sigilo);
+    let m = this.materialesBlason.get(clave);
+    if (m) return m;
+    const textura = new THREE.Texture();
+    textura.colorSpace = THREE.SRGBColorSpace;
+    const material = new THREE.MeshLambertMaterial({ map: textura, transparent: true, alphaTest: 0.4, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    material.visible = false;
+    const img = new Image();
+    img.onload = () => {
+      textura.image = img;
+      textura.needsUpdate = true;
+      material.visible = true;
+    };
+    // un SVG suelto pide su espacio de nombres (como en `sigilo/lienzo.ts`)
+    img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgSigilo(sigilo, 160).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" '))}`;
+    this.materialesBlason.set(clave, (m = material));
+    return m;
   }
 
   /** El color del terreno de la plaza (cuando llega el mapa). */
@@ -389,6 +434,9 @@ export class VistaCiudad3D {
     this.observador.disconnect();
     this.entrada.destruir();
     for (const m of [this.edificios, this.murallas, this.relleno]) m?.destruir();
+    this.blasones.clear();
+    this.planoBlason.dispose();
+    for (const m of this.materialesBlason.values()) { m.map?.dispose(); m.dispose(); }
     for (const b of this.resalte.children) (b as THREE.Mesh).geometry.dispose();
     this.suelo.destruir();
     this.calzada.destruir();

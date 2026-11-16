@@ -3371,7 +3371,7 @@ async function dibujarPantallaSegunModo(proyeccion: ProyeccionJugador): Promise<
       const trazado = proyeccion.trazadoPorAsentamiento?.[asentamiento.id];
       const suelo = mapa ? colorDelSueloEn(mapa, asentamiento.posicion) : null;
       if (suelo) c3.vista.fijarSuelo((suelo[0] << 16) | (suelo[1] << 8) | suelo[2]);
-      c3.vista.fijar(ciudadEnVista(asentamiento, trazado, { instante: proyeccion.instante, minutosDeObra: (e) => minutosDeObra(asentamiento, e), epoca: asentamiento.estiloEpoca }));
+      c3.vista.fijar(ciudadEnVista(asentamiento, trazado, { instante: proyeccion.instante, minutosDeObra: (e) => minutosDeObra(asentamiento, e), epoca: asentamiento.estiloEpoca, sigilo: faccionDuena(proyeccion, asentamiento)?.sigilo }));
       c3.vista.seleccionar(edificioSeleccionado());
       c3.minimapa.fijarTrazado(trazado);
     }

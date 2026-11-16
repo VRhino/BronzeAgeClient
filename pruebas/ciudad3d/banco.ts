@@ -25,7 +25,8 @@ import { VistaCiudad3D } from '../../src/ciudad3d/vista';
 import { escenaCampamento, plazaDeContrato } from '../../src/motor/proyeccion';
 import { EDIFICIO_NOMBRE } from '../../src/paletas';
 import { pintarAsentamiento } from '../../src/render';
-import type { Asentamiento, EscenaCampamento, EscenaPueblo, RectanguloLocal, TrazadoAsentamiento } from '../../src/tiposDominio';
+import type { Asentamiento, EscenaCampamento, EscenaPueblo, RectanguloLocal, Sigilo, TrazadoAsentamiento } from '../../src/tiposDominio';
+import { sigiloAleatorio } from '../../src/sigilo/sigilo';
 import { svgPlanoCampamento } from '../../src/ui/planoCampamento';
 import { svgPlanoPueblo } from '../../src/ui/planoPueblo';
 
@@ -36,6 +37,15 @@ function epocaElegida(): EpocaDePlaza | undefined {
   return era > 1 ? { era, grado } : undefined;
 }
 const ROMANO = ['', 'I', 'II', 'III', 'IV', 'V'];
+/** El sigilo de ejemplo de la Facción dueña (el blasón de los pendones de las puertas), el del mando «Blasón»: el de ejemplo, ninguno o uno al azar. */
+const SIGILO_DE_EJEMPLO: Sigilo = { formaId: 'aspis', campoId: 'partido', emblemaId: 'toro', colorPrimarioId: 'azul', colorSecundarioId: 'blanco', colorEmblemaId: 'ocre', orlaId: 'greca', colorOrlaId: 'ocre' };
+let sigiloAlAzar: Sigilo | undefined;
+function sigiloElegido(): Sigilo | undefined {
+  const v = $<HTMLSelectElement>('blason').value;
+  if (v === 'sin') return undefined;
+  if (v === 'azar') return (sigiloAlAzar ??= sigiloAleatorio());
+  return SIGILO_DE_EJEMPLO;
+}
 const textoEpoca = (): string => { const e = epocaElegida(); return e ? `Era ${ROMANO[e.era]}, punto ${e.grado}` : 'Era I'; };
 /** Las horas que vivió cada ciudad en el motor: su instante de mundo al volcarla. */
 const DIAS: Record<string, number> = { aldea: 3, pueblo: 8, ciudad: 16 };
@@ -184,7 +194,7 @@ function rehacerMuestra(): void {
   }
   for (let k = 0; k < 4; k++) calles.push({ x: -21 + k * 12, y: -18, ancho: 3, alto: 33 });
   const a: FuenteDeCiudad = { id: 'muestra-albergue', nivel: 3, edificios, recintos: [], ascenso: undefined };
-  const c = ciudadEnVista(a, { calles, caminos: [], huellas, murallas: [], radio: 36, celda: 3 }, { instante: 0, epoca: epocaElegida() })!;
+  const c = ciudadEnVista(a, { calles, caminos: [], huellas, murallas: [], radio: 36, celda: 3 }, { instante: 0, epoca: epocaElegida(), sigilo: sigiloElegido() })!;
   for (const e of c.edificios) e.estilo = Number(/-e(\d)-/.exec(e.id)![1]);
   campActual = c;
   vista.fijar(c);
@@ -225,7 +235,7 @@ function rehacerComida(): void {
   });
   for (let k = 0; k < 4; k++) calles.push({ x: -16.5 + k * 9, y: -30, ancho: 3, alto: y + 30 - 3 });
   const a: FuenteDeCiudad = { id: 'muestra-comida', nivel: 3, edificios, recintos: [], ascenso: undefined };
-  const c = ciudadEnVista(a, { calles, caminos: [], huellas, murallas: [], radio: 40, celda: 3 }, { instante: 0, epoca: epocaElegida() })!;
+  const c = ciudadEnVista(a, { calles, caminos: [], huellas, murallas: [], radio: 40, celda: 3 }, { instante: 0, epoca: epocaElegida(), sigilo: sigiloElegido() })!;
   for (const e of c.edificios) e.estilo = Number(/-e(\d)-/.exec(e.id)![1]);
   campActual = c;
   ultima = c;
@@ -266,7 +276,7 @@ function rehacerMuralla(): void {
   const nivel = Number($<HTMLSelectElement>('muralla').value || 2);
   const a: FuenteDeCiudad = { id: 'muestra-muralla', nivel: 3, edificios: [], recintos: [{ id: 'recinto-muestra', nivel, celdas, avance: celdas.length }], ascenso: undefined };
   const calles: RectanguloLocal[] = [{ x: 0, y: 0, ancho: 3, alto: 3 * (h + 4) }, { x: -3, y: -3 * (h + 4), ancho: 6, alto: 3 * (h + 4) }];
-  const c = ciudadEnVista(a, { calles, caminos: [], huellas: {}, murallas: [], radio: 3 * (h + 2), celda: 3 }, { instante: 0, epoca: epocaElegida() })!;
+  const c = ciudadEnVista(a, { calles, caminos: [], huellas: {}, murallas: [], radio: 3 * (h + 2), celda: 3 }, { instante: 0, epoca: epocaElegida(), sigilo: sigiloElegido() })!;
   campActual = c;
   ultima = c;
   vista.fijar(c);
@@ -305,7 +315,7 @@ function rehacerEras(): void {
     });
   }
   const a: FuenteDeCiudad = { id: 'muestra-eras', nivel: estilo, edificios, recintos: [], ascenso: undefined };
-  const c = ciudadEnVista(a, { calles, caminos: [], huellas, murallas: [], radio: 52, celda: 3 }, { instante: 0 })!;
+  const c = ciudadEnVista(a, { calles, caminos: [], huellas, murallas: [], radio: 52, celda: 3 }, { instante: 0, sigilo: sigiloElegido() })!;
   for (const e of c.edificios) { e.estilo = estilo; e.epoca = Number(/-era(\d)-/.exec(e.id)![1]); }
   campActual = c;
   ultima = c;
@@ -402,7 +412,7 @@ async function rehacer(): Promise<void> {
   };
   actual = { asentamiento: a, trazado: base.trazado };
   // las obras: la barra de «Obras» fija su avance (el banco no tiene el catálogo: toda obra dura una hora)
-  const c = ciudadEnVista(a, base.trazado, { instante, minutosDeObra: () => 60, epoca: epocaElegida() });
+  const c = ciudadEnVista(a, base.trazado, { instante, minutosDeObra: () => 60, epoca: epocaElegida(), sigilo: sigiloElegido() });
   if (c) for (const e of c.edificios) if (e.avance !== null) e.avance = Math.max(0, Math.min(1, obras + (hash3(e.semilla, 1, 1) - 0.5) * 0.3));
   ultima = c;
   vista.fijar(c);
@@ -412,7 +422,7 @@ async function rehacer(): Promise<void> {
   $('lectura').textContent = `${nombre}: nivel ${a.nivel}, ${textoEpoca()}${epocaElegida() ? ` (${c?.edificios.filter((e) => (e.epoca ?? 1) === epocaElegida()!.era).length ?? 0} de ${n} edificios ya en ella)` : ''}, radio ${c?.radio} ul, ${n} edificios, ${c?.recintos.length ?? 0} recintos, ${c?.libres.length ?? 0} celdas libres\npiezas: ${cuentas.edificios} edificios · ${cuentas.murallas} muralla · ${cuentas.relleno} relleno`;
 }
 
-for (const id of ['ciudad', 'nivel', 'era', 'grado', 'muralla', 'albergue', 'cultivo', 'obras', 'ajena', 'saqueo', 'ascenso']) $(id).addEventListener(id === 'obras' ? 'input' : 'change', () => void rehacer());
+for (const id of ['ciudad', 'nivel', 'era', 'grado', 'blason', 'muralla', 'albergue', 'cultivo', 'obras', 'ajena', 'saqueo', 'ascenso']) $(id).addEventListener(id === 'obras' ? 'input' : 'change', () => { if (id === 'blason') sigiloAlAzar = undefined; void rehacer(); });
 setInterval(() => {
   const r = vista.rendimiento();
   const t = $('lectura').textContent?.split('\n').slice(0, 2).join('\n') ?? '';
@@ -422,7 +432,7 @@ setInterval(() => {
 // los mandos de la dirección (capturas): ?plaza=…&estilo=…&muralla=…&albergue=…&cultivo=…
 {
   const q = new URLSearchParams(location.search);
-  for (const [k, id] of [['plaza', 'ciudad'], ['estilo', 'nivel'], ['era', 'era'], ['grado', 'grado'], ['muralla', 'muralla'], ['albergue', 'albergue'], ['cultivo', 'cultivo']] as const) {
+  for (const [k, id] of [['plaza', 'ciudad'], ['estilo', 'nivel'], ['era', 'era'], ['grado', 'grado'], ['blason', 'blason'], ['muralla', 'muralla'], ['albergue', 'albergue'], ['cultivo', 'cultivo']] as const) {
     const v = q.get(k);
     if (v !== null) $<HTMLSelectElement>(id).value = v;
   }
