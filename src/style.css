@@ -6376,20 +6376,12 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
 }
 
 /* --- MÓVIL EN HORIZONTAL (revisión 2026-11-17) --------------------------------------------------
-   Una pantalla de 375-430 px de alto: lo que se hizo para ventanas de escritorio se compacta aquí. */
-@media (max-height: 520px) and (orientation: landscape) {
-  #app { padding: 8px; min-height: 100dvh; }
-  /* Acceso: títulos y pestañas a la izquierda, el formulario a la derecha, todo a la vista */
-  .login-container:has(.acceso-card) { align-items: center; }
-  .acceso-card { max-width: 720px; padding: 18px 22px 16px; display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr); column-gap: 26px; align-items: start; }
-  .acceso-card > .login-header { grid-column: 1; margin-bottom: 12px; }
-  .acceso-card .login-title { font-size: 1.3rem; }
-  .acceso-card > .acceso-pestanas { grid-column: 1; margin-bottom: 8px; }
-  .acceso-card > .acceso-aviso, .acceso-card > .error-banner { grid-column: 1; }
-  .acceso-card > form { grid-column: 2; grid-row: 1 / span 4; }
-  .acceso-card .form-group { margin-bottom: 6px; gap: 3px; }
-  .acceso-card .btn-primary { padding-top: 9px; padding-bottom: 9px; }
-  .acceso-card .form-input { padding-top: 6px; padding-bottom: 6px; }
-  .acceso-card .form-ayuda { display: none; }
-  .acceso-card .form-label { font-size: 0.7rem; }
+   El acceso se queda en vertical; ya dentro, el juego pide girar el móvil. */
+.pide-horizontal { display: none; }
+@media (orientation: portrait) and (max-width: 700px) {
+  body.en-juego .pide-horizontal { position: fixed; inset: 0; z-index: 100000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px; text-align: center; background: #0c0a08; color: var(--oro-claro, #e6c98a); }
+  body.en-juego .pide-horizontal .pide-icono { font-size: 3rem; animation: pide-girar 2.4s ease-in-out infinite; }
+  body.en-juego .pide-horizontal strong { font-family: 'Cinzel', serif; font-size: 1.2rem; }
+  body.en-juego .pide-horizontal span { color: var(--text-secondary); font-size: 0.9rem; }
 }
+@keyframes pide-girar { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }

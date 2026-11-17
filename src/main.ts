@@ -1660,7 +1660,11 @@ function textoPantallaCompleta(): string {
 async function alternarPantallaCompleta(): Promise<void> {
   try {
     if (document.fullscreenElement) await document.exitFullscreen();
-    else await document.documentElement.requestFullscreen();
+    else {
+      await document.documentElement.requestFullscreen();
+      // en Android, ya en pantalla completa, se puede fijar el horizontal; donde no, se ignora
+      await (screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> }).lock?.('landscape').catch(() => {});
+    }
   } catch { /* el navegador la puede negar (sin gesto, iframe): no pasa nada */ }
 }
 
@@ -3333,7 +3337,18 @@ function pantallaActual(): Pantalla {
   return 'mapa';
 }
 
+/** El aviso de «gira el móvil»: lo enseña el CSS solo en un móvil en vertical y solo con la clase `en-juego` (todo menos la pantalla de acceso). */
+function asegurarAvisoHorizontal(): void {
+  if (document.querySelector('.pide-horizontal')) return;
+  const aviso = document.createElement('div');
+  aviso.className = 'pide-horizontal';
+  aviso.innerHTML = '<div class="pide-icono" aria-hidden="true">📱</div><strong>Gira el móvil</strong><span>El juego se ve en horizontal. Ponlo apaisado para continuar.</span>';
+  document.body.appendChild(aviso);
+}
+
 function montar(pantalla: Pantalla): void {
+  asegurarAvisoHorizontal();
+  document.body.classList.toggle('en-juego', pantalla !== 'login');
   // Que un fallo al desmontar la pantalla anterior no impida montar la nueva (al entrar, eso devolvía al login).
   try { limpiarPantalla?.(); } catch (e) { console.error(e); }
   limpiarPantalla = null;

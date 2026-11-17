@@ -3,6 +3,12 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.215.0] — 2026-11-17 · El acceso vuelve a vertical y el juego pide girar el móvil · motor `810cbf1`
+
+Sin cambio de contrato (0.27.0). Víctor 2026-11-17: el acceso se queda en vertical (se deshace la versión en dos columnas de 0.214.0); una vez dentro, el juego pide poner el móvil en horizontal.
+
+- **Aviso «Gira el móvil»**: en un móvil en vertical (ancho ≤ 700 px), todas las pantallas menos el acceso quedan tapadas por un aviso hasta que se gire. En Android, «Pantalla completa» del menú intenta además fijar el horizontal.
+
 ## [0.214.0] — 2026-11-17 · Móvil en horizontal: pantalla de acceso · motor `810cbf1`
 
 Sin cambio de contrato (0.27.0). Primera pantalla de la revisión para móviles en horizontal pedida por Víctor el 2026-11-17 (probada a 844×390 y 667×375).
