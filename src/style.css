@@ -6063,7 +6063,8 @@ button.carro-hueco:hover, .carro-hueco.activo { border-color: var(--oro); box-sh
 .base-viveres { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px; border: 1px solid var(--bronce-osc); border-radius: 3px; }
 .base-viveres .form-input { width: 80px; margin: 0; }
 /* 0.206.0: la pestaña Equipo de la Base (ui/objetosHeroe.ts): los siete huecos, la mochila y el almacén de objetos por casillas, y la ficha. */
-.obj-pantalla { display: grid; grid-template-columns: minmax(230px, 0.8fr) minmax(0, 1.6fr) minmax(260px, 1fr); gap: 18px; align-items: start; }
+/* la pestaña no se desplaza: el equipo y la ficha quedan fijos y solo se mueve el centro, con un botón para la mochila y otro para el almacén */
+.obj-pantalla { display: grid; grid-template-columns: minmax(200px, 0.8fr) minmax(0, 1.6fr) minmax(230px, 1fr); grid-template-rows: minmax(0, 1fr); gap: 18px; align-items: stretch; flex: 1 1 auto; min-height: 0; }
 .obj-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .obj-lugar { margin: 0 0 10px; }
 .obj-huecos { display: grid; gap: 6px; }
@@ -6076,10 +6077,20 @@ button.carro-hueco:hover, .carro-hueco.activo { border-color: var(--oro); box-sh
 .obj-hueco.vacio strong { color: var(--text-secondary); font-weight: 400; }
 .obj-hueco.elegida, .obj-casilla.elegida { outline: 2px solid var(--oro); outline-offset: 1px; }
 .obj-rejilla { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; }
-.obj-vistas { display: none; }
-.obj-casillas-lista { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.faccion-principal:has(> .faccion-cuerpo > .obj-pantalla) { overflow: hidden; }
+.faccion-principal > .faccion-cuerpo:has(> .obj-pantalla) { flex: 1 1 auto; min-height: 0; }
+.obj-pantalla > .obj-col { min-height: 0; overflow-y: auto; overflow-x: hidden; }
+.obj-pantalla > .obj-col-casillas { overflow: hidden; }
+.obj-vistas { display: flex; gap: 6px; flex: none; }
+.obj-vista { flex: 1 1 0; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 8px; background: none; border: 1px solid var(--bronce-osc); border-radius: 3px; color: var(--text-secondary); font: inherit; cursor: pointer; }
+.obj-vista:hover { color: var(--text-primary, #f4ead2); }
+.obj-vista.activo { color: var(--text-primary, #f4ead2); border-color: var(--bronce); background: var(--marco-bg-alt); }
+.obj-casillas-lista { display: flex; flex-direction: column; gap: 10px; min-width: 0; flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-right: 4px; }
 .obj-bloque { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-.obj-extra { display: none; }
+.obj-col-casillas[data-vista="mochila"] .obj-bloque-almacen, .obj-col-casillas[data-vista="almacen"] .obj-bloque-mochila { display: none; }
+.obj-bloque > .obra-titulo { display: none; } /* el nombre y la cuenta de cada rejilla los dan los botones */
+.obj-extra { display: contents; }
+.obj-rejilla + .obj-nota { display: none; } /* «Y N casillas libres más»: se ven todas */
 .obj-casilla { position: relative; aspect-ratio: 1; min-width: 0; display: grid; place-items: center; padding: 0; border: 1px solid rgba(169, 121, 63, 0.45); border-radius: 3px; background: rgba(0, 0, 0, 0.3); color: var(--pergamino); font: inherit; cursor: pointer; }
 .obj-casilla i { font-style: normal; font-size: clamp(14px, 1.5vw, 20px); line-height: 1; }
 .obj-casilla b { position: absolute; right: 2px; bottom: 1px; font-size: 10px; font-weight: 700; text-shadow: 0 0 3px #000, 0 0 2px #000; }
@@ -6120,7 +6131,6 @@ button.carro-hueco:hover, .carro-hueco.activo { border-color: var(--oro); box-sh
 .obj-tabla abbr { text-decoration: none; }
 .obj-mover { display: inline-flex; align-items: center; gap: 6px; }
 .obj-cantidad { width: 64px; padding: 3px 6px; }
-@media (max-width: 1100px) { .obj-pantalla { grid-template-columns: 1fr; } }
 .base-slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .base-slot { display: flex; flex-direction: column; gap: 2px; padding: 8px; border: 1px solid var(--bronce-osc); border-radius: 3px; background: rgba(0, 0, 0, 0.22); }
 .base-slot span { color: var(--text-secondary); font-size: 0.75rem; }
@@ -6475,25 +6485,13 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
   .faccion-pestanas { flex-wrap: nowrap; gap: 2px; padding-right: 40px; position: sticky; top: 0; z-index: 2; background: var(--marco-bg); flex: none; }
   .faccion-pestana { padding: 4px 6px; font-size: 0.82rem; white-space: nowrap; }
   .faccion-lateral-escudo .faccion-escudo-con-nivel { width: min(84px, 60%); }
-  /* Equipo: lo que lleva puesto, la mochila y la ficha de la pieza, lado a lado como en el escritorio (la regla de los móviles verticales los apilaba) */
-  .obj-pantalla { grid-template-columns: 176px minmax(0, 1fr) 200px; grid-template-rows: minmax(0, 1fr); align-items: stretch; gap: 12px; flex: 1 1 auto; min-height: 0; }
+  /* Equipo: columnas más estrechas, ocho casillas por fila y la ficha a la derecha (los móviles verticales las apilaban) */
+  .obj-pantalla { grid-template-columns: 176px minmax(0, 1fr) 200px; gap: 12px; }
   .obj-rejilla { grid-template-columns: repeat(8, minmax(0, 1fr)); }
   .obj-casilla i { font-size: 18px; }
   .obj-col-equipo .obra-chip { display: none; } /* la clase ya sale en el lateral */
   .obj-hueco { padding: 4px 8px; }
-  /* la pestaña no se desplaza: el equipo y la ficha quedan fijos y solo se mueve el centro, con un botón para la mochila y otro para el almacén */
-  .faccion-principal:has(> .faccion-cuerpo > .obj-pantalla) { overflow: hidden; }
-  .faccion-principal > .faccion-cuerpo:has(> .obj-pantalla) { flex: 1 1 auto; min-height: 0; width: 100%; }
-  .obj-pantalla > .obj-col { min-height: 0; overflow-y: auto; overflow-x: hidden; }
-  .obj-pantalla > .obj-col-casillas { overflow: hidden; }
-  .obj-vistas { display: flex; gap: 6px; flex: none; }
-  .obj-vista { flex: 1 1 0; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 8px; background: none; border: 1px solid var(--bronce-osc); border-radius: 3px; color: var(--text-secondary); font: inherit; cursor: pointer; }
-  .obj-vista.activo { color: var(--text-primary, #f4ead2); border-color: var(--bronce); background: var(--marco-bg-alt); }
-  .obj-casillas-lista { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-right: 4px; }
-  .obj-col-casillas[data-vista="mochila"] .obj-bloque-almacen, .obj-col-casillas[data-vista="almacen"] .obj-bloque-mochila { display: none; }
-  .obj-bloque > .obra-titulo { display: none; } /* el nombre, la cuenta y la ayuda de cada rejilla los dan los botones */
-  .obj-extra { display: contents; }
-  .obj-rejilla + .obj-nota { display: none; } /* «Y N casillas libres más»: aquí se ven todas */
+  .faccion-principal > .faccion-cuerpo:has(> .obj-pantalla) { width: 100%; }
   .liga-orla { flex-wrap: wrap; max-width: 100%; box-sizing: border-box; }
   .liga-orla svg, .liga-orla .sigilo { max-width: 100%; height: auto; }
 }
