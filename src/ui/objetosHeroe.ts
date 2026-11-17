@@ -158,6 +158,8 @@ export function accionesDe(p: ProyeccionJugador, donde: DondeObjeto | 'equipo', 
 
 /** La pieza elegida para ver su ficha; se recuerda entre repintados. */
 let elegida: { donde: DondeObjeto | 'equipo'; clave: number | SlotEquipo } | null = null;
+/** Qué rejilla enseña el centro en el móvil horizontal (dos botones: Mochila y Almacén); en el escritorio se ven las dos. */
+let vistaCasillas: DondeObjeto = 'mochila';
 export function elegirObjeto(x: typeof elegida): void { elegida = x; }
 
 /** La clase CSS del color de su rareza (`r-rara`…). */
@@ -184,8 +186,11 @@ function htmlRejilla(h: HeroeProyectado, donde: DondeObjeto, e: Escapar): string
   const porFila = 12;
   const ultima = Math.max(-1, ...piezas.keys());
   const visibles = donde === 'mochila' ? total : Math.min(total, Math.max(2 * porFila, (Math.floor(ultima / porFila) + 2) * porFila));
-  const celdas = Array.from({ length: visibles }, (_, n) => htmlCasilla(piezas.get(n), donde, n, e)).join('');
-  return `<div class="obj-rejilla" data-obj-rejilla="${donde}">${celdas}</div>${visibles < total ? `<p class="obj-nota">Y ${total - visibles} casillas libres más.</p>` : ''}`;
+  const celda = (n: number): string => htmlCasilla(piezas.get(n), donde, n, e);
+  const celdas = Array.from({ length: visibles }, (_, n) => celda(n)).join('');
+  // Las casillas libres de más allá no se enseñan en el escritorio (la nota las cuenta); el móvil horizontal las enseña todas (`.obj-extra`).
+  const resto = visibles < total ? `<span class="obj-extra">${Array.from({ length: total - visibles }, (_, i) => celda(visibles + i)).join('')}</span>` : '';
+  return `<div class="obj-rejilla" data-obj-rejilla="${donde}">${celdas}${resto}</div>${visibles < total ? `<p class="obj-nota">Y ${total - visibles} casillas libres más.</p>` : ''}`;
 }
 
 function htmlHuecos(h: HeroeProyectado, e: Escapar): string {
@@ -261,11 +266,17 @@ export function htmlEquipoHeroe(p: ProyeccionJugador, e: Escapar): string {
       <div class="obra-titulo"><span class="faction-kicker">Equipo</span><span class="obra-chip" title="La clase es la del arma que llevas">${e(nombreDeClase(h.classDefinitionId))}</span>${ayuda('base:equipo', 'Lo que lleva puesto tu héroe: el arma (siempre puesta; cambiarla cambia tu clase), cinco piezas de armadura del peso que admite tu clase y la montura. Lo que da el equipo lo suma la batalla. Se cambia dentro de una plaza, un pueblo o un campamento.')}</div>
       <div class="obj-huecos">${htmlHuecos(h, e)}</div>
     </section>
-    <section class="obj-col obj-col-casillas">
-      <div class="obra-titulo"><span class="faction-kicker">Mochila</span><span class="obra-chip" title="Casillas ocupadas">🎒 ${enMochila}/${casillasDe('mochila')}</span>${ayuda('base:mochila', 'Va contigo. Lo que llega sin pedirlo (el botín, un alijo, una diaria) entra aquí; si no cabe, a tu almacén de objetos, y si tampoco, se pierde.')}</div>
-      ${htmlRejilla(h, 'mochila', e)}
-      <div class="obra-titulo"><span class="faction-kicker">Almacén de objetos</span><span class="obra-chip" title="Casillas ocupadas">🗄 ${enAlmacen}/${casillasDe('almacen')}</span>${residencia ? '' : `<small class="obj-nota">Se abre dentro de tu residencia.</small>`}</div>
-      ${htmlRejilla(h, 'almacen', e)}
+    <section class="obj-col obj-col-casillas" data-vista="${vistaCasillas}">
+      <div class="obj-vistas" role="tablist">
+        <button type="button" role="tab" class="obj-vista${vistaCasillas === 'mochila' ? ' activo' : ''}" aria-selected="${vistaCasillas === 'mochila'}" data-obj-vista="mochila">🎒 Mochila <span class="obra-chip">${enMochila}/${casillasDe('mochila')}</span></button>
+        <button type="button" role="tab" class="obj-vista${vistaCasillas === 'almacen' ? ' activo' : ''}" aria-selected="${vistaCasillas === 'almacen'}" data-obj-vista="almacen">🗄 Almacén <span class="obra-chip">${enAlmacen}/${casillasDe('almacen')}</span></button>
+      </div>
+      <div class="obj-casillas-lista">
+      <div class="obj-bloque obj-bloque-mochila"><div class="obra-titulo"><span class="faction-kicker">Mochila</span><span class="obra-chip" title="Casillas ocupadas">🎒 ${enMochila}/${casillasDe('mochila')}</span>${ayuda('base:mochila', 'Va contigo. Lo que llega sin pedirlo (el botín, un alijo, una diaria) entra aquí; si no cabe, a tu almacén de objetos, y si tampoco, se pierde.')}</div>
+      ${htmlRejilla(h, 'mochila', e)}</div>
+      <div class="obj-bloque obj-bloque-almacen"><div class="obra-titulo"><span class="faction-kicker">Almacén de objetos</span><span class="obra-chip" title="Casillas ocupadas">🗄 ${enAlmacen}/${casillasDe('almacen')}</span>${residencia ? '' : `<small class="obj-nota">Se abre dentro de tu residencia.</small>`}</div>
+      ${htmlRejilla(h, 'almacen', e)}</div>
+      </div>
     </section>
     <section class="obj-col obj-ficha">${htmlFicha(p, e)}<p class="faction-error" data-campo="error-objetos" role="alert"></p></section>
   </div>`;
@@ -273,6 +284,14 @@ export function htmlEquipoHeroe(p: ProyeccionJugador, e: Escapar): string {
 
 export function cablearEquipoHeroe(panel: HTMLElement, ejecutar: Ejecutar, repintar: () => void): void {
   const error = (m: string | null): void => { const x = panel.querySelector<HTMLElement>('[data-campo="error-objetos"]'); if (x) x.textContent = m ?? ''; };
+  panel.querySelectorAll<HTMLButtonElement>('[data-obj-vista]').forEach((b) => b.addEventListener('click', () => {
+    vistaCasillas = b.dataset.objVista as DondeObjeto;
+    const col = b.closest<HTMLElement>('.obj-col-casillas');
+    if (!col) return;
+    col.dataset.vista = vistaCasillas;
+    col.querySelectorAll<HTMLButtonElement>('[data-obj-vista]').forEach((x) => { const on = x === b; x.classList.toggle('activo', on); x.setAttribute('aria-selected', String(on)); });
+    col.querySelector<HTMLElement>('.obj-casillas-lista')?.scrollTo({ top: 0 });
+  }));
   panel.querySelectorAll<HTMLButtonElement>('[data-obj-ver]').forEach((b) => b.addEventListener('click', () => {
     const [donde, clave] = b.dataset.objVer!.split(':') as [DondeObjeto | 'equipo', string];
     const c = donde === 'equipo' ? clave as SlotEquipo : Number(clave);
