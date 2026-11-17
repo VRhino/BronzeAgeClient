@@ -3,6 +3,13 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.213.0] — 2026-11-17 · Menú de la esquina: pantalla completa y sin la interfaz anterior · motor `810cbf1`
+
+Sin cambio de contrato (0.27.0). Lo pidió Víctor el 2026-11-17.
+
+- **Menú de la esquina** (botón superior derecho): quitadas «Ver proyección (JSON)» e «Interfaz anterior»; añadida «Pantalla completa» (pasa a «Salir de pantalla completa» y sigue al Esc).
+- **Interfaz anterior fuera**: la ruta `#/legacy`, su pantalla, el panel de pestañas (`ui/panelInteraccion.ts`), el lienzo del mapa (`ui/panelMapa.ts`), la superposición del JSON (y su CSS) y el código que solo ellos usaban en `main.ts`.
+
 ## [0.212.0] — 2026-11-17 · La versión del cliente en la pantalla de acceso · motor `810cbf1`
 
 Sin cambio de contrato (0.27.0). Lo pidió Víctor el 2026-11-17, al ver que el cliente publicado en Render era uno de hace dos meses y no había

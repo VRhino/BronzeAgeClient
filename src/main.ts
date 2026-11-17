@@ -58,10 +58,8 @@ import { anchoDeParteCampamento, cablearCampamento, campamentoActual, htmlSeccio
 import { nombreDePiezaCampamento, svgPlanoCampamento } from './ui/planoCampamento';
 import { nombreDePiezaPueblo, svgPlanoPueblo } from './ui/planoPueblo';
 import type { MapaGenerado } from './terreno';
-import { estadoCliente, medirRitmoDeMundo, textoEnTiempoReal, TIPS_FUNDACION } from './ui/estadoCliente';
-import { actualizarTip, clasificadorDeParcelas, parcelasAlFundar, resumenRecursosFundacion, sitiosDeAldeaAlFundar } from './ui/pestanaAsentamientos';
-import { renderPanelInteraccion } from './ui/panelInteraccion';
-import { renderPanelMapa } from './ui/panelMapa';
+import { estadoCliente, medirRitmoDeMundo, textoEnTiempoReal } from './ui/estadoCliente';
+import { clasificadorDeParcelas, parcelasAlFundar, resumenRecursosFundacion, sitiosDeAldeaAlFundar } from './ui/pestanaAsentamientos';
 import { cablearListaDiplomacia, cablearPlazasFaccion, elegirFaccion, fijarOcultarBots, htmlLateralFaccion, htmlListaFacciones, ocultarBotsAlPedirIngreso, PESTANAS_FACCION, renderPestanaFaccion, type PestanaFaccion } from './ui/pestanaFaccion';
 import { cablearAnexion } from './ui/panelAnexion';
 import { cablearFusion } from './ui/panelFusion';
@@ -171,34 +169,6 @@ function errorDeRechazo(resultado: RespuestaComando['resultado'], porDefecto: st
   return new ApiError(409, resultado.detalleError ?? resultado.codigoError ?? porDefecto);
 }
 
-function sincronizarEstado(): void {
-  Object.assign(estadoCliente, {
-    usuarioActivo: estadoCliente.usuarioActivo,
-    gameIdActivo: estadoCliente.gameIdActivo,
-    mapaCache: estadoCliente.mapaCache,
-    modoVista: estadoCliente.modoVista,
-    proyeccionUltima: estadoCliente.proyeccionUltima,
-    modoPanelFaccion: estadoCliente.modoPanelFaccion,
-    pestanaInteraccion: estadoCliente.pestanaInteraccion,
-    modoFundacionActivo: estadoCliente.modoFundacionActivo,
-    posicionFundacion: estadoCliente.posicionFundacion,
-    puntoFundacionFijado: estadoCliente.puntoFundacionFijado,
-    indiceTip: estadoCliente.indiceTip,
-  });
-}
-
-function cambiarPestana(pestana: typeof estadoCliente.pestanaInteraccion): void {
-  estadoCliente.pestanaInteraccion = pestana;
-  estadoCliente.modoFundacionActivo = false;
-  estadoCliente.posicionFundacion = null;
-  estadoCliente.puntoFundacionFijado = false;
-  sincronizarEstado();
-  if (estadoCliente.proyeccionUltima) {
-    renderizarPanelInteraccion(estadoCliente.proyeccionUltima);
-    actualizarModoFundacion(estadoCliente.proyeccionUltima);
-  }
-}
-
 /** Ejecuta un comando y refresca; devuelve el mensaje de error si lo rechaza, o `null` si fue bien. La usan las
  * tres acciones de muralla (Consideraciones/Murallas_Definicion.md) y `crearHeroe`. */
 function ejecutarYRefrescar(tipo: string, params: object): Promise<string | null> {
@@ -227,41 +197,6 @@ async function aplicarYRefrescar(peticion: Promise<RespuestaComando>): Promise<s
   } catch (err) {
     return mensajeError(err);
   }
-}
-
-/** Cablea los botones de la pestaña Muralla (`ui/pestanaMuralla.ts`) tras cada render — mismo `#wall-error`
- * para las tres acciones, y el `asentamientoId` viaja en `data-asentamiento-id` del `.wall-panel` que las
- * envuelve, no en cada botón (uno solo por asentamiento en vista, no hace falta repetirlo). */
-function cablearAccionesMuralla(panel: HTMLDivElement): void {
-  const wallPanel = panel.querySelector<HTMLElement>('.wall-panel');
-  const asentamientoId = wallPanel?.dataset.asentamientoId;
-  const error = panel.querySelector<HTMLParagraphElement>('#wall-error');
-  if (!wallPanel || !asentamientoId) return;
-
-  // `paramsAlClic` se evalúa DENTRO del listener, nunca al cablear: el selector de nivel puede cambiar entre
-  // que se pinta el panel y que se pulsa el botón, y capturar su `.value` al cablear mandaría un nivel viejo.
-  const conBoton = (boton: HTMLButtonElement, tipo: string, paramsAlClic: () => Record<string, unknown>): void => {
-    boton.addEventListener('click', async () => {
-      boton.disabled = true;
-      const mensaje = await ejecutarYRefrescar(tipo, { asentamientoId, ...paramsAlClic() });
-      if (mensaje) {
-        boton.disabled = false;
-        if (error) error.textContent = mensaje;
-      }
-    });
-  };
-
-  const btnComprometer = wallPanel.querySelector<HTMLButtonElement>('#btn-muralla-comprometer');
-  if (btnComprometer) {
-    const nivelSelect = wallPanel.querySelector<HTMLSelectElement>('#select-muralla-nivel');
-    conBoton(btnComprometer, 'comprometerRecinto', () => ({ cargo: btnComprometer.dataset.cargo, nivel: Number(nivelSelect?.value ?? 1) }));
-  }
-  wallPanel.querySelectorAll<HTMLButtonElement>('[data-abandonar-recinto]').forEach((boton) => {
-    conBoton(boton, 'abandonarRecinto', () => ({ recintoId: boton.dataset.abandonarRecinto }));
-  });
-  wallPanel.querySelectorAll<HTMLButtonElement>('[data-mejorar-recinto]').forEach((boton) => {
-    conBoton(boton, 'mejorarRecinto', () => ({ cargo: boton.dataset.cargo, recintoId: boton.dataset.mejorarRecinto }));
-  });
 }
 
 /** Cablea el flujo crear/unirse a Facción sobre cualquier contenedor que lleve el HTML de
@@ -1036,15 +971,6 @@ function asentamientosDelMapa(proyeccion: ProyeccionJugador): AsentamientoEnMapa
  * antes de mandar la orden. El que decide es el motor. */
 const radioDeAtaque = (): number => radioDeEncuentro();
 
-/** Punto de MUNDO bajo un clic en el lienzo de `#/legacy`, que enseña el mundo entero. */
-function puntoDeMapa(evento: { clientX: number; clientY: number }, canvas: HTMLCanvasElement, mapa: MapaGenerado): { x: number; y: number } {
-  const rect = canvas.getBoundingClientRect();
-  return {
-    x: ((evento.clientX - rect.left) / rect.width) * mapa.config.ancho,
-    y: ((evento.clientY - rect.top) / rect.height) * mapa.config.alto,
-  };
-}
-
 /** Lo seleccionado en el mapa —un asentamiento o un campamento de bandidos— (abre el panel de Selección). Fuera del
  * `estadoCliente` porque solo vive mientras la pantalla Mapa está montada. */
 let seleccionMapa: { tipo: string; id: string } | null = null; // 'asentamiento' | 'campamento' | 'mercenarios' | 'alijo' | 'batalla' | 'formacion' | 'ejercito' o el `tipo` de una `FICHAS_MAPA_EXTRA`
@@ -1709,12 +1635,11 @@ function menuEsquinaHtml(): string {
     <div class="mapa-menu" hidden>
       <button data-menu="refrescar" type="button">Refrescar</button>
       <button data-menu="rejilla" type="button">${textoRejilla()}</button>
-      <button data-menu="json" type="button">Ver proyección (JSON)</button>
-      <button data-menu="legacy" type="button">Interfaz anterior</button>
+      <button data-menu="pantalla" type="button">${textoPantallaCompleta()}</button>
       <button data-menu="partidas" type="button">Cambiar de partida</button>
       <button data-menu="logout" type="button">Cerrar sesión</button>
     </div>
-    <div class="mapa-json" hidden><button class="mapa-json-cerrar" type="button" aria-label="Cerrar">×</button><pre class="mapa-json-pre"></pre></div>`;
+`;
 }
 
 /** La rejilla de movimiento del servidor sobre el 3D (menú de la esquina); se recuerda en este navegador. */
@@ -1726,6 +1651,23 @@ let vista3dActiva: VistaMundo3D | null = null;
 function textoRejilla(): string {
   return rejillaVisible ? '✓ Rejilla de movimiento' : 'Mostrar rejilla de movimiento';
 }
+
+function textoPantallaCompleta(): string {
+  return document.fullscreenElement ? 'Salir de pantalla completa' : 'Pantalla completa';
+}
+
+/** Entra o sale de la pantalla completa del navegador (menú de la esquina). */
+async function alternarPantallaCompleta(): Promise<void> {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else await document.documentElement.requestFullscreen();
+  } catch { /* el navegador la puede negar (sin gesto, iframe): no pasa nada */ }
+}
+
+// el texto del menú sigue al estado real (también al salir con Esc)
+document.addEventListener('fullscreenchange', () => {
+  document.querySelectorAll<HTMLButtonElement>('[data-menu="pantalla"]').forEach((b) => { b.textContent = textoPantallaCompleta(); });
+});
 
 function aplicarRejilla(): void {
   if (!vista3dActiva) return;
@@ -1742,7 +1684,6 @@ function sincronizarMenuEsquina(): void {
 }
 
 function cablearMenuEsquina(contenedor: HTMLElement): void {
-  const json = contenedor.querySelector<HTMLElement>('.mapa-json');
   contenedor.querySelector('.mapa-avatar')?.addEventListener('click', () => { menuEsquinaAbierto = !menuEsquinaAbierto; sincronizarMenuEsquina(); });
   contenedor.querySelector('[data-menu="refrescar"]')?.addEventListener('click', () => { menuEsquinaAbierto = false; sincronizarMenuEsquina(); void refrescarDatosJuego(); });
   contenedor.querySelector<HTMLButtonElement>('[data-menu="rejilla"]')?.addEventListener('click', (ev) => {
@@ -1753,19 +1694,13 @@ function cablearMenuEsquina(contenedor: HTMLElement): void {
     sincronizarMenuEsquina();
     aplicarRejilla();
   });
-  contenedor.querySelector('[data-menu="legacy"]')?.addEventListener('click', () => { location.hash = '#/legacy'; });
-  contenedor.querySelector('[data-menu="partidas"]')?.addEventListener('click', () => volverALasPartidas());
-  contenedor.querySelector('[data-menu="logout"]')?.addEventListener('click', () => cerrarSesionYVolverALogin());
-  contenedor.querySelector('[data-menu="json"]')?.addEventListener('click', () => {
+  contenedor.querySelector<HTMLButtonElement>('[data-menu="pantalla"]')?.addEventListener('click', () => {
     menuEsquinaAbierto = false;
     sincronizarMenuEsquina();
-    if (json) {
-      json.hidden = false;
-      const pre = json.querySelector('.mapa-json-pre');
-      if (pre) pre.textContent = JSON.stringify(estadoCliente.proyeccionUltima, null, 2);
-    }
+    void alternarPantallaCompleta();
   });
-  json?.querySelector('.mapa-json-cerrar')?.addEventListener('click', () => { if (json) json.hidden = true; });
+  contenedor.querySelector('[data-menu="partidas"]')?.addEventListener('click', () => volverALasPartidas());
+  contenedor.querySelector('[data-menu="logout"]')?.addEventListener('click', () => cerrarSesionYVolverALogin());
   sincronizarMenuEsquina();
 }
 
@@ -3207,57 +3142,6 @@ function cablearTooltipEdificios(contenedor: HTMLElement): void {
   canvas.addEventListener('mouseleave', () => { tooltip.hidden = true; });
 }
 
-function renderizarPanelInteraccion(proyeccion: ProyeccionJugador): void {
-  const panel = document.querySelector<HTMLDivElement>('#panel-interaccion');
-  if (!panel) return;
-  sincronizarEstado();
-  panel.innerHTML = renderPanelInteraccion(proyeccion, escaparHtml);
-  const animacion = panel.querySelector<HTMLElement>('.faction-panel-view');
-  animacion?.classList.add('is-entering');
-  requestAnimationFrame(() => animacion?.classList.remove('is-entering'));
-
-  panel.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((boton) => {
-    boton.addEventListener('click', () => cambiarPestana(boton.dataset.tab as typeof estadoCliente.pestanaInteraccion));
-  });
-  panel.querySelector('#btn-ir-informacion')?.addEventListener('click', () => cambiarPestana('informacion'));
-  panel.querySelector('#btn-tip-anterior')?.addEventListener('click', () => {
-    estadoCliente.indiceTip = (estadoCliente.indiceTip + TIPS_FUNDACION.length - 1) % TIPS_FUNDACION.length;
-    actualizarTip();
-  });
-  panel.querySelector('#btn-tip-siguiente')?.addEventListener('click', () => {
-    estadoCliente.indiceTip = (estadoCliente.indiceTip + 1) % TIPS_FUNDACION.length;
-    actualizarTip();
-  });
-  panel.querySelectorAll<HTMLButtonElement>('[data-settlement-detail-tab]').forEach((boton) => {
-    boton.addEventListener('click', () => {
-      const tab = boton.dataset.settlementDetailTab;
-      if (tab === 'general' || tab === 'edificios' || tab === 'almacen' || tab === 'produccion' || tab === 'militar' || tab === 'muralla') {
-        estadoCliente.asentamientoDetalleTab = tab;
-        if (estadoCliente.proyeccionUltima) renderizarPanelInteraccion(estadoCliente.proyeccionUltima);
-      }
-    });
-  });
-  panel.querySelector('#btn-fundar-asentamiento')?.addEventListener('click', () => {
-    if (!estadoCliente.modoFundacionActivo) {
-      estadoCliente.modoFundacionActivo = true;
-      estadoCliente.puntoFundacionFijado = false;
-      actualizarModoFundacion(proyeccion);
-      renderizarPanelInteraccion(proyeccion);
-    } else if (estadoCliente.posicionFundacion) {
-      void confirmarFundacion(proyeccion, estadoCliente.posicionFundacion);
-    }
-  });
-  panel.querySelector('#btn-cancelar-fundacion')?.addEventListener('click', () => {
-    estadoCliente.modoFundacionActivo = false;
-    estadoCliente.posicionFundacion = null;
-    estadoCliente.puntoFundacionFijado = false;
-    actualizarModoFundacion(proyeccion);
-    renderizarPanelInteraccion(proyeccion);
-  });
-  cablearAccionesMuralla(panel);
-  cablearFaccion(panel, proyeccion, () => renderizarPanelInteraccion(proyeccion));
-}
-
 function renderVistaLogin(errorMensaje?: string): void {
   montarAcceso(app, {
     registrar: (nick, clave, codigo) => registrarCuenta(nick, clave, codigo),
@@ -3314,27 +3198,6 @@ async function volverALasPartidas(): Promise<void> {
   enrutar();
 }
 
-/** La interfaz ANTERIOR, intacta, servida solo desde `#/legacy` (Doc `twinkly-greeting-peacock.md`). El
- * revamp de pantallas vive fuera de aquí. */
-function montarLegacy(): void {
-  app.innerHTML = `<div class="game-container"><header class="top-bar"><div class="brand-section"><span class="brand-title">Bronze Age Collapse</span><span class="brand-badge">Cliente Jugador</span></div><div class="user-section"><div class="user-info"><div class="user-avatar">${escaparHtml(estadoCliente.usuarioActivo.substring(0, 2).toUpperCase())}</div><div class="details-group"><button id="btn-toggle-proyeccion" class="user-name" type="button" aria-expanded="false" aria-controls="panel-proyeccion">${escaparHtml(estadoCliente.usuarioActivo)}</button><span class="game-id" title="${escaparHtml(estadoCliente.gameIdActivo)}">Partida: <strong>${escaparHtml(estadoCliente.nombrePartidaActiva || estadoCliente.gameIdActivo)}</strong></span></div></div><button id="btn-toggle-vista" class="btn-secondary">🏙️ Ver Ciudad</button><button id="btn-refrescar" class="btn-secondary">🔄 Refrescar</button><button id="btn-logout" class="btn-secondary">Cerrar Sesión</button></div></header><div class="main-content"><div id="panel-interaccion" class="card-panel interaction-panel"><div class="interaction-loading">Cargando opciones de interacción...</div></div><div id="panel-proyeccion" class="card-panel projection-panel" hidden><h2 class="panel-title">Proyección del Jugador (JSON / HTTP)</h2><pre id="proyeccion">Cargando proyección...</pre></div>${renderPanelMapa()}</div></div>`;
-  document.querySelector('#btn-logout')?.addEventListener('click', () => cerrarSesionYVolverALogin());
-  document.querySelector('#btn-toggle-proyeccion')?.addEventListener('click', () => {
-    const boton = document.querySelector<HTMLButtonElement>('#btn-toggle-proyeccion');
-    const panel = document.querySelector<HTMLDivElement>('#panel-proyeccion');
-    if (!boton || !panel) return;
-    panel.hidden = !panel.hidden;
-    boton.setAttribute('aria-expanded', String(!panel.hidden));
-  });
-  document.querySelector('#btn-refrescar')?.addEventListener('click', () => void refrescarDatosJuego());
-  document.querySelector('#btn-toggle-vista')?.addEventListener('click', () => {
-    estadoCliente.modoVista = estadoCliente.modoVista === 'mundo' ? 'asentamiento' : 'mundo';
-    const boton = document.querySelector<HTMLButtonElement>('#btn-toggle-vista');
-    if (boton) boton.textContent = estadoCliente.modoVista === 'mundo' ? '🏙️ Ver Ciudad' : '🗺️ Ver Mapa Mundo';
-    if (estadoCliente.proyeccionUltima) void dibujarPantallaSegunModo(estadoCliente.proyeccionUltima);
-  });
-}
-
 async function sincronizarMapa(mapaId: string): Promise<MapaGenerado> {
   if (estadoCliente.mapaCache?.id === mapaId) return estadoCliente.mapaCache.mapa;
   const mapa = await obtenerMapa(estadoCliente.gameIdActivo, mapaId);
@@ -3381,48 +3244,6 @@ async function dibujarPantallaSegunModo(proyeccion: ProyeccionJugador): Promise<
     pintarPrevisualizacionFundacion(ctx, estadoCliente.mapaCache.mapa, estadoCliente.posicionFundacion, escalaMundo, sitiosDeAldeaAlFundar(estadoCliente.posicionFundacion), parcelasAlFundar(estadoCliente.posicionFundacion));
   }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-}
-
-function actualizarModoFundacion(proyeccion: ProyeccionJugador): void {
-  const canvas = document.querySelector<HTMLCanvasElement>('#mapa');
-  if (!canvas) return;
-  if (!estadoCliente.modoFundacionActivo) { canvas.classList.remove('mapa-fundacion-activo'); canvas.onpointermove = null; canvas.onpointerleave = null; canvas.onclick = null; return; }
-  canvas.classList.add('mapa-fundacion-activo');
-  const punto = (evento: MouseEvent) => { const mapa = estadoCliente.mapaCache?.mapa; return mapa ? puntoDeMapa(evento, canvas, mapa) : { x: 0, y: 0 }; };
-  canvas.onpointermove = (evento) => { if (estadoCliente.puntoFundacionFijado) return; estadoCliente.posicionFundacion = punto(evento); actualizarPanelFundacion(); void dibujarPantallaSegunModo(proyeccion); };
-  canvas.onpointerleave = () => { if (estadoCliente.puntoFundacionFijado) return; estadoCliente.posicionFundacion = null; actualizarPanelFundacion(); };
-  canvas.onclick = (evento) => { if (estadoCliente.puntoFundacionFijado) return; estadoCliente.posicionFundacion = punto(evento); estadoCliente.puntoFundacionFijado = true; actualizarPanelFundacion(); void dibujarPantallaSegunModo(proyeccion); };
-}
-
-function actualizarPanelFundacion(): void {
-  const panel = document.querySelector<HTMLDivElement>('#panel-interaccion');
-  const boton = panel?.querySelector<HTMLButtonElement>('#btn-fundar-asentamiento');
-  const resumen = panel?.querySelector<HTMLDivElement>('#foundation-resource-summary');
-  if (!panel || !boton || !resumen) return;
-  boton.classList.toggle('is-active', estadoCliente.modoFundacionActivo && !estadoCliente.posicionFundacion);
-  boton.classList.toggle('is-confirmation', Boolean(estadoCliente.posicionFundacion));
-  boton.textContent = estadoCliente.posicionFundacion
-    ? 'Fundar'
-    : estadoCliente.modoFundacionActivo
-      ? 'Selecciona punto de fundación'
-      : 'Presiona aquí para elegir dónde quieres fundar';
-  resumen.innerHTML = resumenRecursosFundacion(escaparHtml);
-}
-
-async function confirmarFundacion(_proyeccion: ProyeccionJugador, _posicion: { x: number; y: number }): Promise<void> {
-  try {
-    // Backend 2026-10-04 (Doc 1.3): solo se funda con `fundar`, el titular con su Caravana de Fundación enganchada y donde
-    // está su columna. El punto elegido en el mapa es solo la vista previa de recursos.
-    const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'fundar', {});
-    if (!respuesta.resultado.ok) throw errorDeRechazo(respuesta.resultado, 'No se pudo fundar aquí.');
-    estadoCliente.modoFundacionActivo = false;
-    estadoCliente.posicionFundacion = null;
-    estadoCliente.puntoFundacionFijado = false;
-    await refrescarDatosJuego();
-  } catch (err) {
-    const estado = document.querySelector<HTMLParagraphElement>('#estado');
-    if (estado) estado.textContent = `Error al fundar: ${mensajeError(err)}`;
-  }
 }
 
 /** El instante de MUNDO de la partida, legible. Sustituye al `Tick: ${proyeccion.tick}` que llevaba
@@ -3487,22 +3308,17 @@ async function refrescarDatosJuego(): Promise<void> {
 // `twinkly-greeting-peacock.md`): no hay "última pantalla" guardada, así que recargar devuelve al jugador a
 // donde estaba. `#/legacy` es la válvula de escape a la interfaz anterior, intacta, y solo se llega
 // escribiéndola en la URL.
-type Pantalla = 'login' | 'partidas' | 'cargando' | 'heroe' | 'campamento' | 'mapa' | 'asentamiento' | 'pueblo' | 'avanzada' | 'legacy';
+type Pantalla = 'login' | 'partidas' | 'cargando' | 'heroe' | 'campamento' | 'mapa' | 'asentamiento' | 'pueblo' | 'avanzada';
 
 let pantallaMontada: Pantalla | null = null;
 /** Limpieza de la pantalla saliente (listeners globales, etc.). La fija quien monta una pantalla que los
  * necesite (hoy solo el Mapa: `window` resize del zoom/pan). */
 let limpiarPantalla: (() => void) | null = null;
 
-function esRutaLegacy(): boolean {
-  return location.hash.replace(/^#\/?/, '') === 'legacy';
-}
-
 function pantallaActual(): Pantalla {
   if (!estadoCliente.usuarioActivo) return 'login';
   if (!estadoCliente.gameIdActivo) return 'partidas';
   if (estadoCliente.sinHeroe) return 'heroe';
-  if (esRutaLegacy()) return 'legacy';
   const proyeccion = estadoCliente.proyeccionUltima;
   if (!proyeccion) return 'cargando';
   // Sin Facción ya no hay pantalla aparte: se nace en un campamento y desde él (o desde el riel del Mapa) se crea o se pide.
@@ -3529,7 +3345,6 @@ function montar(pantalla: Pantalla): void {
   switch (pantalla) {
     case 'login': renderVistaLogin(); break;
     case 'partidas': montarPantallaPartidas(); break;
-    case 'legacy': montarLegacy(); break;
     case 'cargando': app.innerHTML = '<div class="login-container"><div class="login-card"><p class="login-subtitle">Cargando partida…</p></div></div>'; break;
     case 'heroe': montarHeroe(); break;
     case 'campamento': montarCampamento(); break;
@@ -3557,13 +3372,6 @@ function refrescarPantalla(pantalla: Pantalla): void {
   if (pantalla === 'pueblo') { pintarPueblo(proyeccion); return; }
   if (pantalla === 'avanzada') { pintarAvanzada(proyeccion); return; }
   if (pantalla === 'asentamiento') { renderPanelEdificios(); renderPieDePlaza(); renderPanelAsent(); programarDibujoPlaza(proyeccion); return; }
-  if (pantalla !== 'legacy') return;
-  renderizarPanelInteraccion(proyeccion);
-  void dibujarPantallaSegunModo(proyeccion);
-  const salida = document.querySelector<HTMLParagraphElement>('#estado');
-  const json = document.querySelector<HTMLPreElement>('#proyeccion');
-  if (salida) salida.textContent = `Conectado a '${estadoCliente.nombrePartidaActiva || estadoCliente.gameIdActivo}' — ${fechaDeMundo(proyeccion.instante)} | Modo: ${estadoCliente.modoVista} | Facción: ${proyeccion.faccionId ?? '(Ninguna)'}`;
-  if (json) json.textContent = JSON.stringify(proyeccion, null, 2);
 }
 
 // --- PANTALLAS DE CARGA ---------------------------------------------------------------------------

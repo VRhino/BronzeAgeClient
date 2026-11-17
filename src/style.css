@@ -1368,7 +1368,6 @@ pre#proyeccion {
 .mapa-aviso[hidden],
 .mapa-panel[hidden],
 .mapa-menu[hidden],
-.mapa-json[hidden],
 .mapa-riel [data-panel][hidden] {
   display: none;
 }
@@ -1571,36 +1570,6 @@ pre#proyeccion {
 .mapa-menu button:hover {
   background: rgba(255, 255, 255, 0.08);
   color: var(--accent-gold);
-}
-
-.mapa-json {
-  position: absolute;
-  inset: 24px;
-  z-index: 7;
-  padding: 16px;
-  background: rgba(10, 14, 23, 0.96);
-  border: 1px solid var(--border-glass);
-  border-radius: var(--radius-md);
-  overflow: auto;
-}
-
-.mapa-json-cerrar {
-  position: absolute;
-  top: 10px;
-  right: 14px;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 1.3rem;
-  cursor: pointer;
-}
-
-.mapa-json pre {
-  font-family: 'Fira Code', 'Courier New', monospace;
-  font-size: 0.78rem;
-  color: #e5e7eb;
-  white-space: pre-wrap;
-  word-break: break-word;
 }
 
 .mapa-seleccion {
@@ -2196,7 +2165,6 @@ body {
 .mapa-panel,
 .mapa-seleccion,
 .mapa-menu,
-.mapa-json,
 .asent-panel,
 .login-card {
   background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg));
