@@ -96,6 +96,17 @@ body {
   animation: fadeIn 0.4s ease-out;
 }
 
+/* La versión del cliente, pequeña, en la esquina inferior derecha de la pantalla de acceso (Víctor, 2026-11-17). */
+.acceso-version {
+  position: fixed;
+  right: 10px;
+  bottom: 8px;
+  font-size: 11px;
+  opacity: 0.55;
+  pointer-events: none;
+  user-select: none;
+}
+
 .login-card {
   background: var(--bg-glass);
   backdrop-filter: blur(16px);

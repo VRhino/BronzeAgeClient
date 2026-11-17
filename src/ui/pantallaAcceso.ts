@@ -3,6 +3,8 @@
 // cifras, «_», «-» o «.»), contraseña de 8 a 128 y repetida igual. Lo que rechaza el servidor va junto al campo que toca (nick repetido →
 // nick; código que no coincide → código) y lo escrito no se pierde. Si la cuenta se crea pero el login de después falla, se pasa a «Entrar»
 // con el nick puesto y un aviso, no se vuelve al principio.
+import { version } from '../../package.json';
+
 /** El estado HTTP de un `ApiError` de `apiCliente.ts` (sin importarlo: esta pantalla no arrastra la sesión). */
 const estadoDe = (err: unknown): number | undefined => {
   const s = err instanceof Error ? (err as Error & { status?: unknown }).status : undefined;
@@ -90,7 +92,7 @@ export function montarAcceso(app: HTMLElement, a: AccionesAcceso, inicial: { nic
       ${st.aviso ? `<div class="acceso-aviso">${e(st.aviso)}</div>` : ''}
       ${st.error ? `<div class="error-banner" role="alert">⚠️ ${e(st.error)}</div>` : ''}
       ${formulario}
-    </div></div>`;
+    </div><div class="acceso-version" title="Versión del cliente">v${version}</div></div>`;
     const campoDe: Record<string, Campo> = { 'reg-clave': 'clave', 'reg-repetir': 'repetir', 'input-clave': 'clave' };
     app.querySelectorAll<HTMLInputElement>('.acceso-card input[type=password]').forEach((i) => {
       if (claves.has(i.id) && !st.errores[campoDe[i.id]!]) i.value = claves.get(i.id)!;

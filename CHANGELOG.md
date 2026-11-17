@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.212.0] — 2026-11-17 · La versión del cliente en la pantalla de acceso · motor `810cbf1`
+
+Sin cambio de contrato (0.27.0). Lo pidió Víctor el 2026-11-17, al ver que el cliente publicado en Render era uno de hace dos meses y no había
+forma de saberlo mirando la pantalla.
+
+- **Pantalla de acceso** (`ui/pantallaAcceso.ts`): abajo a la derecha, en pequeño, «v0.212.0»: la versión de `package.json` con la que se
+  construyó el cliente. Vale para «Entrar» y para «Crear cuenta».
+
 ## [0.211.0] — 2026-11-16 · El blasón de la Facción dueña en los pendones de las puertas · motor `810cbf1`
 
 Sin cambio de contrato (0.27.0). Lo pidió Víctor el 2026-11-16: en las banderas de los dos lados de las puertas de la muralla, el blasón de la
