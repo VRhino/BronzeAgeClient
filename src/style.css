@@ -6513,4 +6513,30 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
   .faccion-principal > .faccion-cuerpo:has(> .obj-pantalla) { width: 100%; }
   .liga-orla { flex-wrap: wrap; max-width: 100%; box-sizing: border-box; }
   .liga-orla svg, .liga-orla .sigilo { max-width: 100%; height: auto; }
+  /* Sin Facción (elegir, crear, pedir ingreso): aprovechan el ancho y no se desplazan; las dos opciones lado a lado, el formulario en dos columnas */
+  .jugador-panel-completo:not(.jugador-panel-faccion) > .faccion-cuerpo { padding: 0 36px 0 6px; min-height: 0; flex: 1 1 auto; overflow: hidden; }
+  .faction-empty-state, .faction-form-view { padding-top: 4px; }
+  .faction-empty-state h2, .faction-form-view h2 { font-size: 1.25rem; margin: 2px 0 4px; }
+  .faction-choice-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 16px; }
+  .faction-empty-state { display: flex; flex-direction: column; height: 100%; min-height: 0; box-sizing: border-box; padding-bottom: 12px; }
+  .faction-choice-grid { flex: 1 1 auto; min-height: 0; }
+  .faction-choice { min-height: 0; align-items: center; text-align: center; gap: 10px; }
+  .faction-choice .choice-icon { font-size: 3rem; }
+  .faction-choice strong { font-size: 1.2rem; }
+  .faction-form-view { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 8px; align-items: center; }
+  .faction-form-view > :not(.back-button):not(.faction-kicker) { grid-column: 1 / -1; }
+  .faction-form-view .back-button { align-self: center; }
+  .faction-form { margin-top: 6px; display: grid; grid-template-columns: 230px minmax(0, 1fr); grid-template-rows: auto auto auto auto 1fr; column-gap: 14px; row-gap: 4px; align-content: start; }
+  .faction-form > label, .faction-form > .form-input, .faction-form > .faction-error, .faction-form > .btn-primary { grid-column: 1; align-self: start; }
+  .faction-form > .btn-primary { margin-top: 6px; }
+  .faction-form > .sigilo-selector { grid-column: 2; grid-row: 1 / -1; margin: 0; padding: 6px 10px 8px; grid-template-columns: 150px minmax(0, 1fr) minmax(0, 1fr); gap: 10px 12px; align-content: start; }
+  .sigilo-selector #sigilo-previa { grid-column: 1; grid-row: 1 / span 4; align-self: center; }
+  .faction-form > label { font-size: 0.9rem; margin-top: 6px; }
+  .faction-form > .form-input { padding: 10px 12px; font-size: 1rem; }
+  .sigilo-selector #sigilo-previa svg { width: 130px; height: auto; }
+  .sigilo-selector label { gap: 4px; font-size: 0.78rem; }
+  .sigilo-selector select.form-input { padding: 7px 26px 7px 10px; font-size: 0.9rem; }
+  .sigilo-selector .sigilo-creditos { grid-column: 1 / -1; }
+  /* Pedir ingreso: la lista llena el resto y filas más bajas */
+  .jugador-panel-completo .faction-join-view .faction-list .faction-list-item, .jugador-panel-completo .faction-join-view .faccion-fila { padding-top: 4px; padding-bottom: 4px; }
 }

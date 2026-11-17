@@ -141,12 +141,14 @@ function pintar(): void {
   if (new URLSearchParams(location.search).get('sinFaccion')) {
     // como `renderPanelJugador` sin Facción: la cabecera y el cuerpo, con la lista que rellena `cablearFaccion`
     (p as unknown as { faccionId: null }).faccionId = null;
-    estadoCliente.modoPanelFaccion = 'unirse';
+    const modoSin = new URLSearchParams(location.search).get('sinFaccion');
+    estadoCliente.modoPanelFaccion = modoSin === 'inicio' || modoSin === 'crear' ? modoSin : 'unirse';
     panel.classList.remove('jugador-panel-faccion');
     panel.innerHTML = `<div class="faccion-cabecera"><div class="mapa-panel-jugador">Víctor</div><button class="btn-secondary" type="button">Cerrar</button></div><div class="faccion-cuerpo">${renderPestanaFaccion(p, e, 'resumen')}</div>`;
     // como `cablearFaccion` en main.ts: bots al final y, con la casilla marcada (de serie), ocultos
-    const lista = panel.querySelector<HTMLElement>('#lista-facciones')!;
-    const casilla = panel.querySelector<HTMLInputElement>('#check-sin-bots')!;
+    const lista = panel.querySelector<HTMLElement>('#lista-facciones');
+    const casilla = panel.querySelector<HTMLInputElement>('#check-sin-bots');
+    if (!lista || !casilla) return;
     const pintarLista = (): void => { lista.innerHTML = htmlListaFacciones(p, e, { accion: (f) => (f.esBot || p.directorioFacciones?.find((x) => x.id === f.id)?.esBot ? '<span class="faccion-pedido">🤖 De bots</span>' : '<button class="btn-join-faction" type="button">Pedir ingreso</button>'), botsAlFinal: true, sinBots: casilla.checked }); };
     casilla.addEventListener('change', pintarLista);
     pintarLista();
