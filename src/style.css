@@ -6492,6 +6492,11 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
   .faccion-pestanas { flex-wrap: nowrap; gap: 2px; padding-right: 40px; position: sticky; top: 0; z-index: 2; background: var(--marco-bg); flex: none; }
   .faccion-pestana { padding: 4px 6px; font-size: 0.82rem; white-space: nowrap; }
   .faccion-lateral-escudo .faccion-escudo-con-nivel { width: min(84px, 60%); }
+  /* «Salir al mundo»: la ventana ocupa toda la pantalla y, arriba, las dos columnas lado a lado (cómo sales / la carga), con la tropa abajo */
+  .salida-ventana { width: calc(100% - 12px); height: calc(100% - 12px); }
+  .salida-cuerpo { grid-template-columns: 1fr 1fr; overflow: hidden; }
+  .salida-col { overflow-y: auto; overflow-x: hidden; }
+  .salida-col + .salida-col { border-left: 1px solid var(--bronce-osc); border-top: none; }
   /* Equipo: columnas más estrechas, ocho casillas por fila y la ficha a la derecha (los móviles verticales las apilaban) */
   .obj-pantalla { grid-template-columns: 176px minmax(0, 1fr) 200px; gap: 12px; }
   .obj-rejilla { grid-template-columns: repeat(8, minmax(0, 1fr)); }
