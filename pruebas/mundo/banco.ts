@@ -3,6 +3,7 @@
 import '../../src/style.css';
 import type { ProyeccionJugador } from '../../src/apiCliente';
 import { htmlPanelEjercito } from '../../src/ui/ejercitos';
+import { htmlIndicadorVelocidad } from '../../src/ui/velocidadColumna';
 import { htmlColumna } from '../../src/ui/panelColumna';
 import { htmlCapas } from '../../src/ui/capasMapa';
 import { HTML_VENTANA_PUERTA, htmlAccionesPuerta } from '../../src/ui/accionesPuerta';
@@ -49,6 +50,9 @@ let contenidoPanel = '';
 if (panel === 'columna') contenidoPanel = htmlColumna(p, e);
 else if (panel === 'ejercito') contenidoPanel = htmlPanelEjercito(p, e);
 else if (panel === 'cosas') contenidoPanel = cosas;
+// la barra de víveres del mundo (`pintarComida` de main.ts): marcha forzada, velocidad, víveres y «desde el carro»; con columna, siempre a la vista
+const velocidad = htmlIndicadorVelocidad({ valor: 30, ritmo: 'ligera', limita: 'la milicia', ligera: 30 } as never, e);
+const comida = `<div class="mapa-comida" role="status"><button type="button" class="mapa-forzada" aria-pressed="false">» Marcha forzada</button>${velocidad}<span>🌾 Víveres</span><div class="mapa-comida-barra"><i style="width:62%"></i></div><strong>310 / 500</strong><button type="button" class="btn-secondary">＋ desde el carro</button></div>`;
 const sel = qs.get('sel');
 const tarjeta = sel ? `<aside class="mapa-seleccion"><button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>
   <span class="faction-kicker">Campamento de bandidos</span><h3>Bandidos · nivel 2</h3>
@@ -61,7 +65,7 @@ document.getElementById('app')!.innerHTML = `<div class="mapa-screen" style="bac
   ${barra}
   <aside class="mapa-panel${panel === 'ejercito' ? ' mapa-panel-ventana' : ''}"${contenidoPanel ? '' : ' hidden'}>${contenidoPanel}</aside>
   ${tarjeta}
-  <div class="mapa-abajo"><nav class="mapa-riel" aria-label="Paneles del mapa">${botonRiel('columna', '⚔')}${botonRiel('ejercito', '⚑')}${botonRiel('cosas', '📍')}${botonRiel('fundar', '⌂')}</nav></div>
+  <div class="mapa-abajo"><nav class="mapa-riel" aria-label="Paneles del mapa">${botonRiel('columna', '⚔')}${botonRiel('ejercito', '⚑')}${botonRiel('cosas', '📍')}${botonRiel('fundar', '⌂')}</nav>${comida}</div>
   ${htmlCapas('mundo', 0.3, ['trigo'])}
   <button class="mapa-avatar" type="button" aria-label="Menú de sesión">VÍ</button>
   <div class="mapa-menu"${qs.get('menu') ? '' : ' hidden'}><button type="button">Refrescar</button><button type="button">Mostrar rejilla de movimiento</button><button type="button">Pantalla completa</button><button type="button">Cambiar de partida</button><button type="button">Cerrar sesión</button></div>

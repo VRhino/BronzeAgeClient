@@ -6473,12 +6473,16 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
   .mapa-screen { right: 0; bottom: 0; width: auto; height: auto; --vw6: calc(100vw / 0.6); --vh6: calc(100vh / 0.6); }
   /* la ficha del mundo (abajo a la derecha) y la ventana de la puerta a su izquierda, con el alto de la pantalla real */
   /* el panel «Lo lleva / Mis cosas…» junto al riel: más ancho (los nombres no se parten), sin tapar el botón de capas, y se desplaza sin barra visible */
-  .mapa-screen .mapa-panel:not(.mapa-panel-ventana) { left: 12px; width: 440px; max-width: calc(var(--vw6) - 24px); top: 62px; max-height: calc(var(--vh6) - 62px - 78px); scrollbar-width: none; }
+  .mapa-screen .mapa-panel:not(.mapa-panel-ventana) { left: 12px; width: 350px; max-width: calc(var(--vw6) - 24px); top: 62px; max-height: calc(var(--vh6) - 62px - 116px); scrollbar-width: none; }
   .mapa-screen .mapa-panel:not(.mapa-panel-ventana)::-webkit-scrollbar { display: none; }
   .mapa-screen > .mapa-capas .mapa-capas-lista { max-height: calc(var(--vh6) - 76px); scrollbar-width: none; }
+  /* el riel y la barra de víveres, a la izquierda (tras el botón de capas) y en una sola fila, para no chocar con la ficha de la derecha */
+  .mapa-abajo { left: 64px; bottom: 10px; transform: none; align-items: flex-start; max-width: calc(var(--vw6) - 64px - 315px); }
+  .mapa-abajo .mapa-comida { flex-wrap: wrap; max-width: none; gap: 8px; padding: 4px 10px; }
+  .mapa-comida-barra { width: 110px; }
   .mapa-panel.mapa-panel-ventana { left: 6px; right: 6px; top: 6px; bottom: 6px; width: auto; max-height: none; transform: none; }
-  .mapa-screen > .mapa-seleccion { width: 300px; right: 10px; bottom: 10px; max-height: calc(var(--vh6) - 76px); }
-  .mapa-screen > .puerta-ventana, .mapa-screen > .puerta-ventana[data-ancho] { top: auto; left: auto; right: 320px; bottom: 10px; width: min(560px, calc(var(--vw6) - 340px)); max-height: calc(var(--vh6) - 76px); }
+  .mapa-screen > .mapa-seleccion { width: 295px; right: 10px; bottom: 10px; max-height: calc(var(--vh6) - 76px); }
+  .mapa-screen > .puerta-ventana, .mapa-screen > .puerta-ventana[data-ancho] { top: auto; left: auto; right: 315px; bottom: 10px; width: min(560px, calc(var(--vw6) - 335px)); max-height: calc(var(--vh6) - 76px); }
   /* las ventanas ocupan toda la pantalla, también donde están la barra de arriba y el riel (el ✕ las cierra) */
   .asent-ventana, .asent-ventana[data-ancho] { top: 6px; bottom: 6px; left: 6px; right: 6px; width: auto; max-height: none; transform: none; z-index: 20; animation-name: ventana-plaza-entra; }
   .asent-ventana[data-ancho="centrada"] { transform: none; }
