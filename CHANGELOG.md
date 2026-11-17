@@ -3,6 +3,19 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.216.0] — 2026-11-17 · Móvil en horizontal: todas las ventanas a pantalla completa, Equipo con almacén y arrastre, y el mundo a su medida · motor `810cbf1`
+
+Sin cambio de contrato (0.27.0). Cierra la revisión pantalla a pantalla para móviles en horizontal (667×375 y 844×390) pedida por Víctor el 2026-11-17. Las reglas de móvil solo valen con la pantalla baja, apaisada y táctil; el escritorio queda como estaba salvo lo que se indica «en todos los tamaños».
+
+- **Móvil apaisado**: la plaza, el campamento y el mundo se reducen al 60 % con `zoom`; las ventanas ocupan toda la pantalla y se cierran con la ✕; los árboles (Tropa, Reclutamiento, Tecnología) sin «Ver todas las conexiones» ni leyenda.
+- **Facción y Base personal**: a pantalla completa, con el lateral a la izquierda y las pestañas a la derecha (en una sola fila, fijas arriba mientras se desplaza el contenido).
+- **Base personal › Equipo** (en todos los tamaños): tres columnas, con equipo y ficha fijos y el centro con scroll; botones «Mochila» y «Almacén» con su cuenta (5/144…) que cambian lo que se ve debajo; las 144 casillas del almacén siempre visibles; arrastrar un objeto a esos botones lo guarda o lo saca (ratón, o pulsación larga con el dedo).
+- **Ficha del objeto** (en todos los tamaños): sin el texto de tier ni el aviso de armadura; el borde y el nombre llevan el color de la rareza; lo que la clase no puede ponerse se marca con el borde rojo de la ficha y la casilla con fondo rojo translúcido. Fuera los víveres de la barra lateral de la Base.
+- **Salir al mundo**: a pantalla completa y en dos columnas, sin scroll visible; «Cancelar la salida» y «Salir con el ejército» del mismo tamaño y alineados (en todos los tamaños).
+- **Sin Facción**: elegir, crear y pedir ingreso sin desplazamiento; en «Crear facción», las opciones (primero el nombre) a la izquierda, el blasón grande a la derecha y el botón abajo a la derecha.
+- **El mundo** (al salir del campamento): ocupa toda la pantalla; la ficha de abajo a la derecha, compacta; el panel «Lo que llevas», las capas y la ventana del Ejército a su medida; el riel centrado sobre la barra de víveres, a la izquierda y en una sola fila; «Marchar aquí» y «Atacar» del mismo alto y alineados (en todos los tamaños).
+- Bancos de pruebas nuevos o ampliados: `pruebas/mundo/` y las pestañas y vistas sin Facción de `pruebas/diplomacia/`.
+
 ## [0.215.0] — 2026-11-17 · El acceso vuelve a vertical y el juego pide girar el móvil · motor `810cbf1`
 
 Sin cambio de contrato (0.27.0). Víctor 2026-11-17: el acceso se queda en vertical (se deshace la versión en dos columnas de 0.214.0); una vez dentro, el juego pide poner el móvil en horizontal.
