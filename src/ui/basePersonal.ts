@@ -10,7 +10,7 @@
 // (`reclutarEnCampamento` para la tuya, `reponerPrestamo` gratis para las prestadas). Lo que no llega (equipo, oro, gente) va en rojo y lo apaga.
 // Aquí no se decide ninguna regla del motor: si algo cambia, el rechazo del servidor se enseña tal cual.
 import type { ProyeccionJugador } from '../apiCliente';
-import { asignarGuarnicion, capacidadDeViveres, consumoDeViveres, oroPorSoldado, radioDePuerta, retirarGuarnicion, tropasReclutables, type TropaReclutable, origenDeTropa } from '../apiCliente';
+import { asignarGuarnicion, capacidadDeViveres, oroPorSoldado, radioDePuerta, retirarGuarnicion, tropasReclutables, type TropaReclutable, origenDeTropa } from '../apiCliente';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { Asentamiento, CampamentoMercenarios, Ejercito, Escuadron, HeroeProyectado } from '../tiposDominio';
 import { ayuda } from './ayuda';
@@ -209,25 +209,6 @@ function htmlCargos(p: ProyeccionJugador, e: Escapar): string {
   }).join('')}</div>`;
 }
 
-/** Los víveres: lo que llevas, lo que cabe y, en columna personal, cuánto aguantan al paso de ahora. */
-function htmlViveres(p: ProyeccionJugador, repintar: () => void): string {
-  const col = miColumna(p);
-  const viveres = Math.floor(p.heroe.viveres ?? 0);
-  if (!col) return `<div class="faccion-lateral-dato"><span>🌾 Víveres</span><strong>${viveres}</strong></div>`;
-  const capacidad = capacidadDeViveres(repintar) * Math.max(1, col.participantes.length);
-  let dura = '';
-  // En un ejército los víveres son de todos y la proyección solo trae los tuyos: ahí no se estima.
-  if (col.participantes.length === 1) {
-    const soldados = p.heroe.escuadrones.filter((s) => s.contenedor.tipo === 'ejercito' && s.contenedor.ejercitoId === col.id).reduce((t, s) => t + s.cantidad, 0);
-    const porMinuto = consumoDeViveres(soldados, 1, col.estado !== 'estacionado', col.marchaForzada === true, repintar);
-    if (porMinuto && porMinuto > 0) {
-      const min = viveres / porMinuto;
-      dura = `<small class="base-dura" title="Al paso de ahora (${col.estado === 'estacionado' ? 'acampada' : col.marchaForzada ? 'en marcha forzada' : 'en marcha'}): ${porMinuto.toFixed(2)} de trigo por minuto">aguantan ${min >= 120 ? `${Math.floor(min / 60)} h` : `${Math.floor(min)} min`}</small>`;
-    }
-  }
-  return `<div class="faccion-lateral-dato"><span>🌾 Víveres</span><strong>${viveres} / ${capacidad}</strong></div>${dura}`;
-}
-
 /** La barra hacia el nivel siguiente: lo que lleva sobre lo que pide (motor c82d6ed). */
 function htmlExperiencia(h: HeroeProyectado, repintar: () => void): string {
   const x = progresoDeNivel(h, repintar);
@@ -253,7 +234,6 @@ function htmlLateral(p: ProyeccionJugador, e: Escapar, repintar: () => void): st
       <div class="faccion-lateral-dato"><span>Liderazgo</span><strong>${h.liderazgoBase}</strong></div>
       ${puntos > 0 ? `<button class="base-puntos" type="button" data-base-pestana="heroe">${puntos} ${puntos === 1 ? 'punto' : 'puntos'} sin gastar</button>` : ''}
       <div class="base-monedas" title="Tus monedas: las ganas combatiendo (también contra bandidos) y pagan contratos de mercenario. Aparte del oro de las plazas: 100 monedas valen 1 de oro."><span>💰 Monedas</span><strong>${h.monedas.toLocaleString('es-ES')}</strong></div>
-      ${htmlViveres(p, repintar)}
       <div class="base-residencia"><span class="base-lateral-titulo">Resides en${ayuda('base:residencia', 'La residencia se cambia o se deja desde dentro de la plaza o del campamento: en la plaza, en el blasón; en el campamento, en su Resumen.')}</span>
         ${r ? `<strong>${r.tipo === 'plaza' ? '🏠' : '🏕️'} ${e(r.nombre)}</strong>${r.posicion ? `<button class="btn-secondary" type="button" data-base-punto="${r.posicion.x},${r.posicion.y}">Ver en el mapa</button>` : ''}` : '<strong>En ningún sitio</strong>'}
       </div>

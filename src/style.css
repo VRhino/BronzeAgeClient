@@ -6099,6 +6099,14 @@ button.carro-hueco:hover, .carro-hueco.activo { border-color: var(--oro); box-sh
 .obj-ficha-cab { display: flex; gap: 10px; align-items: center; }
 .obj-ficha-cab > i { font-size: 28px; font-style: normal; }
 .obj-ficha-cab h4 { margin: 0; font-size: 1rem; color: var(--pergamino); }
+/* la ficha lleva el color de la pieza (borde y nombre); en rojo el borde si tu clase no puede ponérsela */
+.obj-ficha.r-comun { border-color: #8f897b; } .obj-ficha.r-comun h4 { color: #c9c2b0; }
+.obj-ficha.r-pocoComun { border-color: #7fc27a; } .obj-ficha.r-pocoComun h4 { color: #7fc27a; }
+.obj-ficha.r-rara { border-color: #6fa8e6; } .obj-ficha.r-rara h4 { color: #6fa8e6; }
+.obj-ficha.r-epica { border-color: #b98ae6; } .obj-ficha.r-epica h4 { color: #b98ae6; }
+.obj-ficha.r-legendaria { border-color: #e6a64a; } .obj-ficha.r-legendaria h4 { color: #e6a64a; }
+.obj-ficha.no-cabe { border-color: #d0584c; }
+.obj-casilla.no-cabe { background: rgba(208, 88, 76, 0.3); }
 .obj-ficha-cab small, .obj-ficha-tier small { color: var(--text-secondary); font-size: 0.78rem; }
 .obj-ficha-tier { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .obj-forjada { color: var(--oro); }

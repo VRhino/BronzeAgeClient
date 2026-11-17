@@ -165,6 +165,11 @@ export function elegirObjeto(x: typeof elegida): void { elegida = x; }
 /** La clase CSS del color de su rareza (`r-rara`…). */
 export const rarezaDeObjeto = (id: string): string => { const t = fichaDeObjeto(id)?.tier; return t ? `r-${claveDeRareza(t)}` : 'r-ninguna'; };
 const rareza = rarezaDeObjeto;
+/** La armadura de un peso que la clase de tu héroe no admite: no se la puede poner (la casilla y la ficha lo marcan en rojo, sin texto). */
+export function noSePuedePoner(h: HeroeProyectado, id: string): boolean {
+  const f = fichaDeObjeto(id);
+  return !!f && f.tipo === 'armadura' && !!f.tipoArmadura && !pesosDeLaClase(h).includes(f.tipoArmadura);
+}
 /** «Arma · clase Dagas · Tier II, poco común», para un `title`. */
 export function textoDeTipoDeObjeto(id: string): string {
   const f = fichaDeObjeto(id);
@@ -172,9 +177,9 @@ export function textoDeTipoDeObjeto(id: string): string {
 }
 const num = (n: number): string => (Number.isInteger(n) ? String(n) : String(+n.toFixed(2)).replace('.', ','));
 
-function htmlCasilla(item: ItemInstancia | undefined, donde: DondeObjeto, n: number, e: Escapar): string {
+function htmlCasilla(item: ItemInstancia | undefined, donde: DondeObjeto, n: number, e: Escapar, h?: HeroeProyectado): string {
   if (!item) return `<span class="obj-casilla vacia" aria-hidden="true"></span>`;
-  const sel = elegida?.donde === donde && elegida.clave === n ? ' elegida' : '';
+  const sel = (elegida?.donde === donde && elegida.clave === n ? ' elegida' : '') + (h && noSePuedePoner(h, item.itemDefinitionId) ? ' no-cabe' : '');
   const nombre = nombreDeObjeto(item.itemDefinitionId);
   return `<button type="button" class="obj-casilla ${rareza(item.itemDefinitionId)}${sel}" data-obj-ver="${donde}:${n}" title="${e(nombre)}${item.cantidad > 1 ? ` ×${item.cantidad}` : ''}${item.itemInstanceId ? ' (forjada)' : ''}"><i aria-hidden="true">${iconoDeObjeto(item.itemDefinitionId)}</i>${item.cantidad > 1 ? `<b>${item.cantidad}</b>` : ''}${item.itemInstanceId ? '<em aria-hidden="true">✦</em>' : ''}<span class="ta-sr">${e(nombre)}</span></button>`;
 }
@@ -186,7 +191,7 @@ function htmlRejilla(h: HeroeProyectado, donde: DondeObjeto, e: Escapar): string
   const porFila = 12;
   const ultima = Math.max(-1, ...piezas.keys());
   const visibles = donde === 'mochila' ? total : Math.min(total, Math.max(2 * porFila, (Math.floor(ultima / porFila) + 2) * porFila));
-  const celda = (n: number): string => htmlCasilla(piezas.get(n), donde, n, e);
+  const celda = (n: number): string => htmlCasilla(piezas.get(n), donde, n, e, h);
   const celdas = Array.from({ length: visibles }, (_, n) => celda(n)).join('');
   // Las casillas libres de más allá no se enseñan en el escritorio (la nota las cuenta); el móvil horizontal las enseña todas (`.obj-extra`).
   const resto = visibles < total ? `<span class="obj-extra">${Array.from({ length: total - visibles }, (_, i) => celda(visibles + i)).join('')}</span>` : '';
@@ -229,6 +234,14 @@ function htmlAccion(a: AccionDeObjeto, f: FichaObjeto, e: Escapar): string {
   }
 }
 
+/** El borde y el nombre de la ficha toman el color de la pieza elegida; en rojo el borde si tu clase no puede ponérsela. */
+function claseDeFicha(h: HeroeProyectado): string {
+  if (!elegida) return '';
+  const item = elegida.donde === 'equipo' ? h.equipamiento[elegida.clave as SlotEquipo] : piezasDe(h, elegida.donde).find((x) => x.casillaInventario === elegida!.clave);
+  if (!item) return '';
+  return ` ${rareza(item.itemDefinitionId)}${noSePuedePoner(h, item.itemDefinitionId) ? ' no-cabe' : ''}`;
+}
+
 /** La ficha de la pieza elegida, con lo que se puede hacer con ella. */
 function htmlFicha(p: ProyeccionJugador, e: Escapar): string {
   const h = p.heroe;
@@ -236,17 +249,14 @@ function htmlFicha(p: ProyeccionJugador, e: Escapar): string {
   const item = elegida.donde === 'equipo' ? h.equipamiento[elegida.clave as SlotEquipo] : piezasDe(h, elegida.donde).find((x) => x.casillaInventario === elegida!.clave);
   const f = item ? fichaDeObjeto(item.itemDefinitionId) : undefined;
   if (!item || !f) { elegida = null; return `<p class="mapa-lista-vacia">Elige una pieza para ver su ficha.</p>`; }
-  const tier = f.tier ? `<span class="ta-rareza r-${e(claveDeRareza(f.tier))}">${e(textoDeTier(f.tier))}</span>` : '';
   const metal = f.metal && f.metal !== 'inicio' ? ` · ${e(f.metal.replace(/_/g, ' '))}` : '';
   const forjada = item.itemInstanceId ? `<p class="obj-forjada">✦ Forjada (${e(item.itemInstanceId)}): sus cifras, por la calidad que le salió.</p>` : '';
-  const incompatible = f.tipo === 'armadura' && f.tipoArmadura && !pesosDeLaClase(h).includes(f.tipoArmadura)
-    ? `<p class="obj-aviso">Tu clase (${e(nombreDeClase(h.classDefinitionId))}) no admite armadura ${e(f.tipoArmadura)}.</p>` : '';
   const efecto = f.tipo === 'consumible' ? `<p>${e(textoDeEfecto(f))}</p>` : f.tipo === 'material' ? `<p>${f.id === 'crisol' ? 'Se gasta al forjar: cada receta pide sus crisoles.' : `Se gasta al forjar una pieza de tier ${e(String(f.tier ?? f.id.replace('plano_', '')))}.`}</p>` : '';
   const acciones = accionesDe(p, elegida.donde, elegida.clave);
   const donde = elegida.donde === 'equipo' ? 'Puesta' : elegida.donde === 'mochila' ? `En la mochila, casilla ${item.casillaInventario + 1}` : `En el almacén de objetos, casilla ${item.casillaInventario + 1}`;
   return `<div class="obj-ficha-cab"><i aria-hidden="true">${iconoDeObjeto(f.id)}</i><div><h4>${e(f.nombre)}${item.cantidad > 1 ? ` ×${item.cantidad}` : ''}</h4><small>${e(textoDeTipo(f))}${metal}</small></div></div>
-    <div class="obj-ficha-tier">${tier}<small>${e(donde)} · ${f.precio} monedas en la tienda</small></div>
-    ${forjada}${htmlCifras(cifrasDe(item))}${efecto}${incompatible}
+    <div class="obj-ficha-tier"><small>${e(donde)} · ${f.precio} monedas en la tienda</small></div>
+    ${forjada}${htmlCifras(cifrasDe(item))}${efecto}
     ${acciones.length ? `<div class="obj-acciones">${acciones.map((a) => htmlAccion(a, f, e)).join('')}</div>` : ''}`;
 }
 
@@ -278,7 +288,7 @@ export function htmlEquipoHeroe(p: ProyeccionJugador, e: Escapar): string {
       ${htmlRejilla(h, 'almacen', e)}</div>
       </div>
     </section>
-    <section class="obj-col obj-ficha">${htmlFicha(p, e)}<p class="faction-error" data-campo="error-objetos" role="alert"></p></section>
+    <section class="obj-col obj-ficha${claseDeFicha(h)}">${htmlFicha(p, e)}<p class="faction-error" data-campo="error-objetos" role="alert"></p></section>
   </div>`;
 }
 
