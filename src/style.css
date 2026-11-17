@@ -3482,7 +3482,7 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .salida-acciones .btn-primary { width: auto; padding: 8px 32px; }
 /* «Salir con el ejército» del mismo tamaño que «Cancelar la salida» (conserva el dorado) */
 .salida-acciones .btn-primary[data-conv="partir"] { font-family: inherit; text-transform: none; letter-spacing: 0; font-size: 0.85rem; padding: 8px 20px; }
-.salida-acciones [data-conv="cancelar"], .salida-acciones [data-conv="partir"] { box-sizing: border-box; width: 11.5rem; min-width: 11.5rem; height: 38px; padding: 0 12px; display: inline-flex; align-items: center; justify-content: center; text-align: center; line-height: 1.1; }
+.salida-acciones [data-conv="cancelar"], .salida-acciones [data-conv="partir"] { box-sizing: border-box; width: 11.5rem; min-width: 11.5rem; height: 38px; padding: 0 12px; display: inline-flex; align-items: center; justify-content: center; text-align: center; line-height: 1.1; margin: 0; align-self: center; }
 .salida-col .carro-fila { display: grid; grid-template-columns: 1fr auto 90px auto; align-items: center; gap: 8px; }
 .salida-col .carro-fila .form-input { width: 100%; padding: 4px 6px; }
 .salida-col .carro-fila .btn-secondary { padding: 4px 10px; font-size: 0.75rem; }
