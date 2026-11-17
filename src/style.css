@@ -6463,6 +6463,13 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
   .faccion-pestanas { flex-wrap: nowrap; gap: 2px; padding-right: 40px; position: sticky; top: 0; z-index: 2; background: var(--marco-bg); flex: none; }
   .faccion-pestana { padding: 4px 6px; font-size: 0.82rem; white-space: nowrap; }
   .faccion-lateral-escudo .faccion-escudo-con-nivel { width: min(84px, 60%); }
+  /* Equipo: lo que lleva puesto, la mochila y la ficha de la pieza, lado a lado como en el escritorio (la regla de los móviles verticales los apilaba) */
+  .obj-pantalla { grid-template-columns: 176px minmax(0, 1fr) 200px; gap: 12px; }
+  .obj-rejilla { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+  .obj-casilla i { font-size: 18px; }
+  .obj-col-equipo .obra-chip { display: none; } /* la clase ya sale en el lateral */
+  .obj-hueco { padding: 4px 8px; }
+  .obj-ficha { position: sticky; top: 44px; }
   .liga-orla { flex-wrap: wrap; max-width: 100%; box-sizing: border-box; }
   .liga-orla svg, .liga-orla .sigilo { max-width: 100%; height: auto; }
 }
