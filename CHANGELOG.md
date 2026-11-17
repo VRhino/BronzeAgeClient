@@ -3,6 +3,13 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.216.1] — 2026-11-17 · Móvil: sin rastreador de misiones y el acceso vuelve a vertical al cerrar sesión · motor `810cbf1`
+
+Sin cambio de contrato (0.27.0). Dos arreglos que pidió Víctor al probar la 0.216.0 en el móvil.
+
+- **Rastreador de misiones**: en el móvil apaisado ya no sale (la plaza, el campamento y el mundo); las misiones se miran desde su botón de la barra. En escritorio no cambia.
+- **Cerrar sesión en pantalla completa**: el acceso y las partidas fijan el vertical y el juego vuelve a fijar el horizontal; antes, al cerrar sesión se quedaba el horizontal puesto y el acceso salía de lado. Donde el navegador no deja fijar la orientación (fuera de pantalla completa, iPhone) no cambia.
+
 ## [0.216.0] — 2026-11-17 · Móvil en horizontal: todas las ventanas a pantalla completa, Equipo con almacén y arrastre, y el mundo a su medida · motor `810cbf1`
 
 Sin cambio de contrato (0.27.0). Cierra la revisión pantalla a pantalla para móviles en horizontal (667×375 y 844×390) pedida por Víctor el 2026-11-17. Las reglas de móvil solo valen con la pantalla baja, apaisada y táctil; el escritorio queda como estaba salvo lo que se indica «en todos los tamaños».

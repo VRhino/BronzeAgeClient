@@ -3347,8 +3347,19 @@ function asegurarAvisoHorizontal(): void {
   document.body.appendChild(aviso);
 }
 
+/** En un móvil ya en pantalla completa (donde el navegador deja fijar la orientación), el acceso y las partidas van en vertical y el juego en horizontal:
+ * al cerrar sesión se vuelve a vertical, y al entrar otra vez, a horizontal. Donde no se puede (fuera de pantalla completa, iOS), se ignora. */
+function ajustarOrientacion(pantalla: Pantalla): void {
+  try {
+    if (!document.fullscreenElement || !window.matchMedia('(pointer: coarse)').matches) return;
+    const o = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
+    void o.lock?.(pantalla === 'login' || pantalla === 'partidas' ? 'portrait' : 'landscape').catch(() => {});
+  } catch { /* sin API de orientación: nada que hacer */ }
+}
+
 function montar(pantalla: Pantalla): void {
   asegurarAvisoHorizontal();
+  ajustarOrientacion(pantalla);
   document.body.classList.toggle('en-juego', pantalla !== 'login' && pantalla !== 'partidas');
   // Que un fallo al desmontar la pantalla anterior no impida montar la nueva (al entrar, eso devolvía al login).
   try { limpiarPantalla?.(); } catch (e) { console.error(e); }

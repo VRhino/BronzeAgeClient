@@ -6482,6 +6482,8 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
   .mapa-abajo { left: 64px; bottom: 10px; transform: none; align-items: center; max-width: calc(var(--vw6) - 64px - 260px); }
   .mapa-abajo .mapa-comida { flex-wrap: wrap; max-width: none; gap: 8px; padding: 4px 10px; }
   .mapa-comida-barra { width: 110px; }
+  /* el rastreador de misiones (arriba a la derecha) no sale en el móvil: las misiones se miran desde su botón */
+  .misiones-rastreador { display: none !important; }
   .mapa-panel.mapa-panel-ventana { left: 6px; right: 6px; top: 6px; bottom: 6px; width: auto; max-height: none; transform: none; }
   /* la ficha: compacta (menos ancho, letra y filas más pequeñas, los datos en dos columnas) */
   .mapa-seleccion { padding: 14px 10px 8px; gap: 4px; }
