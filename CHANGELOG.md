@@ -3,6 +3,12 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.214.0] — 2026-11-17 · Móvil en horizontal: pantalla de acceso · motor `810cbf1`
+
+Sin cambio de contrato (0.27.0). Primera pantalla de la revisión para móviles en horizontal pedida por Víctor el 2026-11-17 (probada a 844×390 y 667×375).
+
+- **Pantalla de acceso**: con la pantalla baja y apaisada, título y pestañas a la izquierda y el formulario a la derecha; entra entera, también «Crear cuenta» con el código de invitación (sin las ayudas largas bajo los campos en ese tamaño).
+
 ## [0.213.0] — 2026-11-17 · Menú de la esquina: pantalla completa y sin la interfaz anterior · motor `810cbf1`
 
 Sin cambio de contrato (0.27.0). Lo pidió Víctor el 2026-11-17.
