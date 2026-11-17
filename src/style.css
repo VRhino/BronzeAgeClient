@@ -6526,17 +6526,21 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
   .faction-form-view { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 8px; align-items: center; }
   .faction-form-view > :not(.back-button):not(.faction-kicker) { grid-column: 1 / -1; }
   .faction-form-view .back-button { align-self: center; }
-  .faction-form { margin-top: 6px; display: grid; grid-template-columns: 230px minmax(0, 1fr); grid-template-rows: auto auto auto auto 1fr; column-gap: 14px; row-gap: 4px; align-content: start; }
-  .faction-form > label, .faction-form > .form-input, .faction-form > .faction-error, .faction-form > .btn-primary { grid-column: 1; align-self: start; }
-  .faction-form > .btn-primary { margin-top: 6px; }
-  .faction-form > .sigilo-selector { grid-column: 2; grid-row: 1 / -1; margin: 0; padding: 6px 10px 8px; grid-template-columns: 150px minmax(0, 1fr) minmax(0, 1fr); gap: 10px 12px; align-content: start; }
-  .sigilo-selector #sigilo-previa { grid-column: 1; grid-row: 1 / span 4; align-self: center; }
-  .faction-form > label { font-size: 0.9rem; margin-top: 6px; }
-  .faction-form > .form-input { padding: 10px 12px; font-size: 1rem; }
-  .sigilo-selector #sigilo-previa svg { width: 130px; height: auto; }
-  .sigilo-selector label { gap: 4px; font-size: 0.78rem; }
+  /* Crear facción: a la izquierda todas las opciones (el nombre el primero), a la derecha el blasón grande y «Crear facción» abajo a la derecha */
+  .faction-form { margin-top: 6px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 270px; grid-template-rows: auto auto auto auto auto auto 1fr auto; column-gap: 14px; row-gap: 8px; align-content: start; align-self: stretch; min-height: 0; }
+  .faction-form-view:has(.faction-form) { height: 100%; box-sizing: border-box; grid-template-rows: auto auto minmax(0, 1fr); padding-bottom: 12px; }
+  .faction-form > .sigilo-selector { display: contents; }
+  .faction-form > label[for="input-nombre-faccion"], .faction-form > #input-nombre-faccion { grid-column: 1 / span 2; }
+  .faction-form > label[for="input-nombre-faccion"] { font-size: 0.78rem; margin: 0 0 -4px; }
+  .faction-form > #input-nombre-faccion { padding: 8px 12px; font-size: 1rem; }
+  .sigilo-selector label { gap: 4px; font-size: 0.78rem; grid-column: auto; }
   .sigilo-selector select.form-input { padding: 7px 26px 7px 10px; font-size: 0.9rem; }
-  .sigilo-selector .sigilo-creditos { grid-column: 1 / -1; }
+  .sigilo-selector #sigilo-previa { grid-column: 3; grid-row: 1 / span 5; align-self: center; justify-self: center; }
+  .sigilo-selector #sigilo-previa svg { width: 210px; height: auto; }
+  .sigilo-selector legend { grid-column: 3; grid-row: 6; align-self: start; justify-self: center; text-align: center; padding: 0; font-size: 0.78rem; }
+  .sigilo-selector .sigilo-creditos { grid-column: 1 / span 2; grid-row: 7; align-self: start; }
+  .faction-form > .faction-error { grid-column: 1 / span 2; grid-row: 8; min-height: 0; }
+  .faction-form > .btn-primary { grid-column: 3; grid-row: 7 / span 2; align-self: end; margin: 0; }
   /* Pedir ingreso: la lista llena el resto y filas más bajas */
   .jugador-panel-completo .faction-join-view .faction-list .faction-list-item, .jugador-panel-completo .faction-join-view .faccion-fila { padding-top: 4px; padding-bottom: 4px; }
 }
