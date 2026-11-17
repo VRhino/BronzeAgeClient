@@ -6440,4 +6440,6 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
   /* las ventanas ocupan toda la pantalla, también donde están la barra de arriba y el riel (el ✕ las cierra) */
   .asent-ventana, .asent-ventana[data-ancho] { top: 6px; bottom: 6px; left: 6px; right: 6px; width: auto; max-height: none; transform: none; z-index: 20; animation-name: ventana-plaza-entra; }
   .asent-ventana[data-ancho="centrada"] { transform: none; }
+  /* los árboles (Tropa, Reclutamiento, Tecnología): fuera «Ver todas las conexiones», su ayuda y la leyenda, para ganar alto */
+  .ta-mandos, .ta-leyenda { display: none; }
 }
