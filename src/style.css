@@ -6436,10 +6436,30 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
 /* Plaza, campamento, pueblos y avanzadas en un móvil apaisado (667×375 / 844×390, pantalla completa): todo el HUD pensado para escritorio se
    reduce de golpe con `zoom` (Víctor, 2026-11-17), en vez de rehacer cada medida. */
 @media (max-height: 520px) and (orientation: landscape) and (pointer: coarse) {
-  .plaza-3d { zoom: 0.6; }
+  .plaza-3d, .mapa-screen { zoom: 0.6; }
   /* las ventanas ocupan toda la pantalla, también donde están la barra de arriba y el riel (el ✕ las cierra) */
   .asent-ventana, .asent-ventana[data-ancho] { top: 6px; bottom: 6px; left: 6px; right: 6px; width: auto; max-height: none; transform: none; z-index: 20; animation-name: ventana-plaza-entra; }
   .asent-ventana[data-ancho="centrada"] { transform: none; }
   /* los árboles (Tropa, Reclutamiento, Tecnología): fuera «Ver todas las conexiones», su ayuda y la leyenda, para ganar alto */
   .ta-mandos, .ta-leyenda { display: none; }
+  /* Facción y Base personal: a toda la pantalla, con el lateral a la izquierda y las pestañas a la derecha (no apilados como en un móvil vertical) */
+  .jugador-panel.jugador-panel-completo { top: 6px; bottom: 6px; left: 6px; right: 6px; z-index: 20; padding: 12px; }
+  .jugador-panel.jugador-panel-faccion { overflow: hidden; }
+  .faccion-marco { flex-direction: row; gap: 12px; }
+  .faccion-lateral { flex: 0 0 24%; min-width: 0; padding: 8px; }
+  .faccion-lateral-escudo .faccion-escudo-con-nivel .sigilo { width: 100%; }
+  .faccion-lateral-nombre { font-size: 1rem; }
+  /* sin el título (redundante) y con «✕» como las otras ventanas: el contenido sube a ocupar la cabecera */
+  .jugador-panel.jugador-panel-completo { padding-top: 6px; }
+  .jugador-panel-completo > .faccion-cabecera { position: absolute; top: 6px; right: 8px; z-index: 3; margin: 0; }
+  .jugador-panel-completo > .faccion-cabecera .mapa-panel-jugador { display: none; }
+  .jugador-panel-completo > .faccion-cabecera .btn-secondary { font-size: 0; width: 28px; height: 28px; padding: 0; display: grid; place-items: center; }
+  .jugador-panel-completo > .faccion-cabecera .btn-secondary::after { content: '✕'; font-size: 0.9rem; }
+  .faccion-lateral { overflow-x: hidden; }
+  /* las nueve pestañas en una sola fila (dejan sitio a la ✕) y un escudo algo menor, para que el lateral enseñe más */
+  .faccion-pestanas { flex-wrap: nowrap; gap: 2px; padding-right: 40px; }
+  .faccion-pestana { padding: 4px 6px; font-size: 0.82rem; white-space: nowrap; }
+  .faccion-lateral-escudo .faccion-escudo-con-nivel { width: min(84px, 60%); }
+  .liga-orla { flex-wrap: wrap; max-width: 100%; box-sizing: border-box; }
+  .liga-orla svg, .liga-orla .sigilo { max-width: 100%; height: auto; }
 }

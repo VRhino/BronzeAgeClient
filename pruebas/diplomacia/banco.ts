@@ -13,6 +13,11 @@ import { cablearTecnologia, htmlTecnologia } from '../../src/ui/panelTecnologia'
 import { catalogoDeTecnologia } from '../../src/apiCliente';
 import { cablearDiplomacia } from '../../src/ui/panelDiplomacia';
 import { cablearAnexion } from '../../src/ui/panelAnexion';
+import { htmlMiembrosFaccion } from '../../src/ui/participacion';
+import { htmlTablon } from '../../src/ui/tablon';
+import { htmlListaMisiones } from '../../src/ui/misiones';
+import { htmlMercenariosFaccion } from '../../src/ui/mercenarios';
+import { htmlEjercitosFaccion } from '../../src/ui/ejercitos';
 
 const AHORA = Date.parse('2026-11-03T12:00:00Z');
 const H = 3_600_000;
@@ -102,6 +107,33 @@ if (new URLSearchParams(location.search).get('tope')) {
   Object.assign(p.facciones[0]!, { prestigio: 60, topeAlianzas: 1 });
   p.propuestasRelacion = [{ id: 'prop-3', tipo: 'alianza', faccionAId: 'fac-4', faccionBId: 'fac-1', expiraEn: AHORA + 40 * H } as never];
 }
+
+// Datos para las pestañas Miembros, Tablón, Misiones y Mercenarios (copiados de los bancos de misiones y de mercenarios).
+{
+  const cond = (contador: string, avance: number, umbral: number) => ({ contador, avance, umbral });
+  const def = (id: string, tipo: string, duracion: string, titulo: string, texto: string, x: object) => ({ id, duracion, tipo, limiteSemanal: tipo === 'individual' ? 10 : 0, condiciones: [cond('victorias', 0, 5)], experiencia: 0, participacion: 10, recompensas: [], titulo, texto, explicacion: '', ...x });
+  const cat = [
+    def('PD1', 'individual', 'diaria', 'Limpiar los caminos', 'Gana cinco combates cerca de la plaza.', { recompensas: [{ tipo: 'xp', cantidad: 10 }, { tipo: 'recurso', clave: 'madera', cantidad: 300 }, { tipo: 'oro', cantidad: 5 }] }),
+    def('PD2', 'grupal', 'diaria', 'Llenar el granero', 'Entre todos, lleva trigo a la plaza.', { participacion: 30, recompensas: [{ tipo: 'recurso', clave: 'trigo', cantidad: 500 }] }),
+    def('PS1', 'individual', 'semanal', 'Jinetes para la frontera', 'Patrulla la frontera durante la semana.', { recompensas: [{ tipo: 'tropa', clave: 'exploradores_caballo', cantidad: 10 }, { tipo: 'oro', cantidad: 20 }] }),
+  ];
+  const rec = (d: any, estado: string, avance: number) => ({ definicion: d, desde: AHORA - 2 * H, hasta: AHORA + 20 * H, aceptadasSemana: 3,
+    aceptaciones: d.tipo === 'individual' ? [{ heroeId: 'heroe-1', estado, condiciones: [cond('victorias', avance, 5)] }] : [],
+    ...(d.tipo === 'grupal' ? { estado } : {}), condiciones: [cond('victorias', avance, 5)], aportes: d.tipo === 'grupal' ? { 'heroe-1': 3, 'heroe-9': 1 } : {} });
+  (p.facciones[0] as any).tablon = { misiones: [rec(cat[0], 'cumplida', 5), rec(cat[1], 'en_curso', 3), rec(cat[2], 'en_curso', 1)], diariasIds: ['PD1', 'PD2'], semanalesIds: ['PS1'], conEleccion: true, elegidasDiariasIds: [], elegidasSemanalesIds: [], renovacionDiaria: AHORA + 5 * H, renovacionSemanal: AHORA + 50 * H, catalogo: cat };
+  const mision = (id: string, estado: string, m: object) => ({ id, estado, condiciones: [cond('victorias', 3, 5)], recompensaExperiencia: 0, participacion: 0, recompensas: [], ...m });
+  (p as any).misiones = { heroe: [mision('H3', 'activa', { recompensas: [{ tipo: 'recurso', clave: 'trigo', cantidad: 200 }] })], plaza: [], plazaId: 'as-1',
+    faccion: [mision('F3', 'activa', { recompensaExperiencia: 40, recompensas: [{ tipo: 'oro', cantidad: 50 }, { tipo: 'recurso', clave: 'cobre', cantidad: 120 }] }), mision('F4', 'cumplida', { recompensas: [{ tipo: 'oro', cantidad: 20 }] })] };
+  Object.assign(p.facciones[0] as any, { contratos: [
+    { mercenarioId: 'heroe-21', faccionId: 'fac-1', asentamientoId: 'as-1', trabajo: 'defender', objetivo: { campo: 'puebloId', id: 'pu-3' }, plazoDias: 3, firmadoPorId: 'heroe-1', puestoFirma: 'gobernador@as-1', firmadoEn: AHORA - 60 * H, venceEn: AHORA + 12 * H, renombre: 3 },
+    { mercenarioId: 'heroe-23', faccionId: 'fac-1', trabajo: 'permanente', objetivo: { campo: 'faccionId', id: 'fac-1' }, firmadoPorId: 'heroe-1', puestoFirma: 'rey', firmadoEn: AHORA - 400 * H, renombre: 0 },
+  ] });
+  (p as any).heroesVisibles = [
+    { heroeId: 'heroe-21', displayName: 'Ninsun de Uruk', classDefinitionId: 'guerrero', nivel: 14, escuadrasQueLleva: [{ tropaId: 'milicia_lanceros', cantidad: 40, nivel: 3 }], equipamiento: {}, contratado: 'temporal' },
+    { heroeId: 'heroe-23', displayName: 'Sharru el Viejo', classDefinitionId: 'guerrero', nivel: 11, escuadrasQueLleva: [], equipamiento: {}, contratado: 'permanente' },
+  ];
+  (p as any).pueblos = [{ id: 'pu-3', madreId: 'as-1', propio: true, tipo: 'minaCobre', posicion: { x: 430, y: 290 } }];
+}
 estadoCliente.proyeccionUltima = p;
 
 const panel = document.querySelector<HTMLElement>('.jugador-panel')!;
@@ -124,7 +156,13 @@ function pintar(): void {
   // `?pestana=tecnologia`: la pestaña de Tecnología (0.123.0), como la pinta main.ts
   const pestana = new URLSearchParams(location.search).get('pestana') ?? 'diplomacia';
   const pestanas = `<nav class="faccion-pestanas" role="tablist">${PESTANAS_FACCION.map(([id, nombre]) => `<button type="button" class="faccion-pestana${id === pestana ? ' activo' : ''}">${nombre}</button>`).join('')}</nav>`;
-  const cuerpo = pestana === 'plazas' ? renderPestanaFaccion(p, e, 'plazas', '', true) : pestana === 'tecnologia' ? `<section class="faccion-tecnologia">${htmlTecnologia(p, e, false)}</section>` : renderPestanaFaccion(p, e, 'diplomacia', '', true);
+  const cuerpo = pestana === 'miembros' ? renderPestanaFaccion(p, e, 'miembros', htmlMiembrosFaccion(p, p.facciones[0]!, e), true)
+    : pestana === 'tablon' ? `<section class="faccion-tablon">${htmlTablon(p, { tipo: 'faccion', id: 'fac-1', tablon: (p.facciones[0] as any).tablon }, e)}</section>`
+    : pestana === 'misiones' ? `<section class="faccion-misiones" data-dueno="faccion">${htmlListaMisiones(p, 'faccion', e)}</section>`
+    : pestana === 'mercenarios' ? htmlMercenariosFaccion(p, e)
+    : pestana === 'ejercitos' ? htmlEjercitosFaccion(p, e)
+    : pestana === 'ajustes' ? renderPestanaFaccion(p, e, 'ajustes', '', true)
+    : pestana === 'plazas' ? renderPestanaFaccion(p, e, 'plazas', '', true) : pestana === 'tecnologia' ? `<section class="faccion-tecnologia">${htmlTecnologia(p, e, false)}</section>` : renderPestanaFaccion(p, e, 'diplomacia', '', true);
   panel.innerHTML = `<div class="faccion-cabecera"><div class="mapa-panel-jugador">Facción</div><button class="btn-secondary" type="button">Cerrar</button></div><div class="faccion-marco">${htmlLateralFaccion(p, e)}<div class="faccion-principal">${pestanas}<div class="faccion-cuerpo${pestana === 'diplomacia' ? ' faccion-cuerpo-diplomacia' : pestana === 'plazas' || pestana === 'tecnologia' ? ' faccion-cuerpo-ancho' : ''}">${cuerpo}</div></div></div>`;
   cablearPlazasFaccion(panel, pintar);
   cablearListaDiplomacia(panel, pintar);
