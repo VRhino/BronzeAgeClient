@@ -177,21 +177,25 @@ export function textoDeTipoDeObjeto(id: string): string {
 }
 const num = (n: number): string => (Number.isInteger(n) ? String(n) : String(+n.toFixed(2)).replace('.', ','));
 
-function htmlCasilla(item: ItemInstancia | undefined, donde: DondeObjeto, n: number, e: Escapar, h?: HeroeProyectado): string {
+function htmlCasilla(item: ItemInstancia | undefined, donde: DondeObjeto, n: number, e: Escapar, p?: ProyeccionJugador): string {
+  const h = p?.heroe;
   if (!item) return `<span class="obj-casilla vacia" aria-hidden="true"></span>`;
   const sel = (elegida?.donde === donde && elegida.clave === n ? ' elegida' : '') + (h && noSePuedePoner(h, item.itemDefinitionId) ? ' no-cabe' : '');
+  // arrastrable al botón del otro sitio (Mochila ↔ Almacén) solo si el motor lo aceptaría: lo mismo que el botón de la ficha
+  const mover = p ? accionesDe(p, donde, n).find((a) => a.accion === 'guardar' || a.accion === 'sacar') : undefined;
   const nombre = nombreDeObjeto(item.itemDefinitionId);
-  return `<button type="button" class="obj-casilla ${rareza(item.itemDefinitionId)}${sel}" data-obj-ver="${donde}:${n}" title="${e(nombre)}${item.cantidad > 1 ? ` ×${item.cantidad}` : ''}${item.itemInstanceId ? ' (forjada)' : ''}"><i aria-hidden="true">${iconoDeObjeto(item.itemDefinitionId)}</i>${item.cantidad > 1 ? `<b>${item.cantidad}</b>` : ''}${item.itemInstanceId ? '<em aria-hidden="true">✦</em>' : ''}<span class="ta-sr">${e(nombre)}</span></button>`;
+  return `<button type="button" class="obj-casilla ${rareza(item.itemDefinitionId)}${sel}" data-obj-ver="${donde}:${n}"${mover ? ` data-obj-arrastrar="${mover.accion}" data-obj-casilla="${n}" data-obj-cuantas="${item.cantidad}"` : ''} title="${e(nombre)}${item.cantidad > 1 ? ` ×${item.cantidad}` : ''}${item.itemInstanceId ? ' (forjada)' : ''}"><i aria-hidden="true">${iconoDeObjeto(item.itemDefinitionId)}</i>${item.cantidad > 1 ? `<b>${item.cantidad}</b>` : ''}${item.itemInstanceId ? '<em aria-hidden="true">✦</em>' : ''}<span class="ta-sr">${e(nombre)}</span></button>`;
 }
 
 /** Una rejilla de casillas: la mochila entera; el almacén, hasta la última fila con algo y una más (lo demás, libre). */
-function htmlRejilla(h: HeroeProyectado, donde: DondeObjeto, e: Escapar): string {
+function htmlRejilla(p: ProyeccionJugador, donde: DondeObjeto, e: Escapar): string {
+  const h = p.heroe;
   const total = casillasDe(donde);
   const piezas = new Map(piezasDe(h, donde).map((x) => [x.casillaInventario, x]));
   const porFila = 12;
   const ultima = Math.max(-1, ...piezas.keys());
   const visibles = donde === 'mochila' ? total : Math.min(total, Math.max(2 * porFila, (Math.floor(ultima / porFila) + 2) * porFila));
-  const celda = (n: number): string => htmlCasilla(piezas.get(n), donde, n, e, h);
+  const celda = (n: number): string => htmlCasilla(piezas.get(n), donde, n, e, p);
   const celdas = Array.from({ length: visibles }, (_, n) => celda(n)).join('');
   // Las casillas libres de más allá no se enseñan en el escritorio (la nota las cuenta); el móvil horizontal las enseña todas (`.obj-extra`).
   const resto = visibles < total ? `<span class="obj-extra">${Array.from({ length: total - visibles }, (_, i) => celda(visibles + i)).join('')}</span>` : '';
@@ -283,13 +287,87 @@ export function htmlEquipoHeroe(p: ProyeccionJugador, e: Escapar): string {
       </div>
       <div class="obj-casillas-lista">
       <div class="obj-bloque obj-bloque-mochila"><div class="obra-titulo"><span class="faction-kicker">Mochila</span><span class="obra-chip" title="Casillas ocupadas">🎒 ${enMochila}/${casillasDe('mochila')}</span>${ayuda('base:mochila', 'Va contigo. Lo que llega sin pedirlo (el botín, un alijo, una diaria) entra aquí; si no cabe, a tu almacén de objetos, y si tampoco, se pierde.')}</div>
-      ${htmlRejilla(h, 'mochila', e)}</div>
+      ${htmlRejilla(p, 'mochila', e)}</div>
       <div class="obj-bloque obj-bloque-almacen"><div class="obra-titulo"><span class="faction-kicker">Almacén de objetos</span><span class="obra-chip" title="Casillas ocupadas">🗄 ${enAlmacen}/${casillasDe('almacen')}</span>${residencia ? '' : `<small class="obj-nota">Se abre dentro de tu residencia.</small>`}</div>
-      ${htmlRejilla(h, 'almacen', e)}</div>
+      ${htmlRejilla(p, 'almacen', e)}</div>
       </div>
     </section>
     <section class="obj-col obj-ficha${claseDeFicha(h)}">${htmlFicha(p, e)}<p class="faction-error" data-campo="error-objetos" role="alert"></p></section>
   </div>`;
+}
+
+/** Arrastrar una pieza al botón del otro sitio (Mochila ↔ Almacén): con el ratón al mover unos píxeles; con el dedo, tras mantener pulsado
+ * (si no, es desplazarse). Hace lo mismo que el botón de la ficha: `guardarObjeto` / `sacarObjeto` con la pila entera. */
+function cablearArrastre(panel: HTMLElement, ejecutar: Ejecutar, error: (m: string | null) => void, repintar: () => void): void {
+  panel.querySelectorAll<HTMLButtonElement>('[data-obj-arrastrar]').forEach((celda) => {
+    const orden = celda.dataset.objArrastrar as 'guardar' | 'sacar';
+    const destino = orden === 'guardar' ? 'almacen' : 'mochila';
+    let id = -1, x0 = 0, y0 = 0, listo = false, arrastrando = false, espera = 0;
+    let fantasma: HTMLElement | null = null;
+    const botonDestino = (): HTMLElement | null => panel.querySelector<HTMLElement>(`[data-obj-vista="${destino}"]`);
+    const mover = (x: number, y: number): void => { if (fantasma) { fantasma.style.left = `${x}px`; fantasma.style.top = `${y}px`; } };
+    const empezar = (x: number, y: number): void => {
+      arrastrando = true;
+      celda.classList.add('arrastrando');
+      fantasma = document.createElement('div');
+      fantasma.className = 'obj-fantasma';
+      fantasma.innerHTML = celda.querySelector('i')?.outerHTML ?? '';
+      document.body.appendChild(fantasma);
+      mover(x, y);
+      botonDestino()?.classList.add('soltar-aqui');
+    };
+    const limpiar = (): void => {
+      clearTimeout(espera);
+      fantasma?.remove(); fantasma = null;
+      celda.classList.remove('arrastrando');
+      panel.querySelectorAll('.soltar-aqui').forEach((b) => b.classList.remove('soltar-aqui'));
+      document.removeEventListener('pointermove', alMover);
+      document.removeEventListener('pointerup', alSoltar);
+      document.removeEventListener('pointercancel', alCancelar);
+      arrastrando = false; listo = false; id = -1;
+    };
+    const alMover = (ev: PointerEvent): void => {
+      if (ev.pointerId !== id) return;
+      if (!arrastrando) {
+        const lejos = Math.hypot(ev.clientX - x0, ev.clientY - y0) > (ev.pointerType === 'mouse' ? 6 : 10);
+        if (!lejos) return;
+        // con el dedo, moverse antes de la espera es desplazar la lista, no arrastrar
+        if (ev.pointerType !== 'mouse' && !listo) { limpiar(); return; }
+        empezar(ev.clientX, ev.clientY);
+      }
+      mover(ev.clientX, ev.clientY);
+      const sobre = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('[data-obj-vista]');
+      botonDestino()?.classList.toggle('soltar-sobre', sobre === botonDestino());
+    };
+    const alSoltar = async (ev: PointerEvent): Promise<void> => {
+      if (ev.pointerId !== id) return;
+      const fue = arrastrando;
+      const sobre = fue ? document.elementFromPoint(ev.clientX, ev.clientY)?.closest('[data-obj-vista]') : null;
+      botonDestino()?.classList.remove('soltar-sobre');
+      limpiar();
+      if (!fue) return;
+      // el clic que sigue a soltar no debe elegir la pieza
+      const frenar = (c: Event): void => { c.stopImmediatePropagation(); c.preventDefault(); };
+      window.addEventListener('click', frenar, { capture: true, once: true });
+      setTimeout(() => window.removeEventListener('click', frenar, true), 80);
+      if (sobre !== botonDestino()) return;
+      error(null);
+      const m = await ejecutar(orden === 'guardar' ? 'guardarObjeto' : 'sacarObjeto', { casilla: Number(celda.dataset.objCasilla), cantidad: Number(celda.dataset.objCuantas) || 1 });
+      if (m !== null) error(m); else { elegida = null; repintar(); }
+    };
+    const alCancelar = (ev: PointerEvent): void => { if (ev.pointerId === id) limpiar(); };
+    celda.addEventListener('pointerdown', (ev) => {
+      if (ev.button !== 0 || id !== -1) return;
+      id = ev.pointerId; x0 = ev.clientX; y0 = ev.clientY;
+      document.addEventListener('pointermove', alMover);
+      document.addEventListener('pointerup', alSoltar);
+      document.addEventListener('pointercancel', alCancelar);
+      if (ev.pointerType !== 'mouse') espera = window.setTimeout(() => { listo = true; if (navigator.vibrate) navigator.vibrate(15); }, 350);
+    });
+    // ya arrastrando con el dedo, que la lista no se desplace
+    celda.addEventListener('touchmove', (ev) => { if (arrastrando) ev.preventDefault(); }, { passive: false });
+    celda.addEventListener('contextmenu', (ev) => { if (arrastrando || listo) ev.preventDefault(); });
+  });
 }
 
 export function cablearEquipoHeroe(panel: HTMLElement, ejecutar: Ejecutar, repintar: () => void): void {
@@ -302,6 +380,7 @@ export function cablearEquipoHeroe(panel: HTMLElement, ejecutar: Ejecutar, repin
     col.querySelectorAll<HTMLButtonElement>('[data-obj-vista]').forEach((x) => { const on = x === b; x.classList.toggle('activo', on); x.setAttribute('aria-selected', String(on)); });
     col.querySelector<HTMLElement>('.obj-casillas-lista')?.scrollTo({ top: 0 });
   }));
+  cablearArrastre(panel, ejecutar, error, repintar);
   panel.querySelectorAll<HTMLButtonElement>('[data-obj-ver]').forEach((b) => b.addEventListener('click', () => {
     const [donde, clave] = b.dataset.objVer!.split(':') as [DondeObjeto | 'equipo', string];
     const c = donde === 'equipo' ? clave as SlotEquipo : Number(clave);

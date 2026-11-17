@@ -6116,6 +6116,13 @@ button.carro-hueco:hover, .carro-hueco.activo { border-color: var(--oro); box-sh
 .obj-ficha.r-rara { border-color: #6fa8e6; } .obj-ficha.r-rara h4 { color: #6fa8e6; }
 .obj-ficha.r-epica { border-color: #b98ae6; } .obj-ficha.r-epica h4 { color: #b98ae6; }
 .obj-ficha.r-legendaria { border-color: #e6a64a; } .obj-ficha.r-legendaria h4 { color: #e6a64a; }
+.obj-casilla[data-obj-arrastrar] { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; cursor: grab; }
+.obj-casilla.arrastrando { opacity: .35; }
+.obj-fantasma { position: fixed; z-index: 99999; pointer-events: none; transform: translate(14px, 10px); padding: 5px 7px; border: 1px solid var(--oro); border-radius: 4px; background: rgba(25, 20, 16, 0.92); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6); font-size: 18px; line-height: 1; }
+.obj-fantasma i { font-style: normal; }
+.obj-vista.soltar-aqui { border-color: var(--oro); box-shadow: 0 0 0 1px var(--oro) inset; animation: obj-soltar 0.9s ease-in-out infinite alternate; }
+.obj-vista.soltar-sobre { background: rgba(201, 162, 39, 0.28); color: var(--text-primary, #f4ead2); }
+@keyframes obj-soltar { from { box-shadow: 0 0 0 1px var(--oro) inset; } to { box-shadow: 0 0 8px 1px var(--oro), 0 0 0 1px var(--oro) inset; } }
 .obj-ficha.no-cabe { border-color: #d0584c; }
 .obj-casilla.no-cabe { background: rgba(208, 88, 76, 0.3); }
 .obj-ficha-cab small, .obj-ficha-tier small { color: var(--text-secondary); font-size: 0.78rem; }

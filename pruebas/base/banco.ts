@@ -90,7 +90,7 @@ elegirPestanaBase((qs.get('pestana') ?? 'tropas') as PestanaBase);
 const panel = document.querySelector<HTMLElement>('.jugador-panel')!;
 function pintar(): void {
   panel.innerHTML = htmlBasePersonal(p, e, pintar);
-  cablearBasePersonal(panel, p, { ejecutar: async () => null, aplicar: async () => null, repintar: pintar, cerrar: () => {}, abrirInforme: () => {}, abrirFaccion: () => {}, verEnMapa: () => {} });
+  cablearBasePersonal(panel, p, { ejecutar: async (tipo: string, params: object) => { ((window as unknown as { __enviadas?: unknown[] }).__enviadas ??= []).push({ tipo, params }); return null; }, aplicar: async () => null, repintar: pintar, cerrar: () => {}, abrirInforme: () => {}, abrirFaccion: () => {}, verEnMapa: () => {} });
 }
 pintar();
 // el catálogo de tropas llega en segundo plano: se repinta hasta tenerlo
