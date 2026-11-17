@@ -6457,7 +6457,10 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
   .jugador-panel-completo > .faccion-cabecera .btn-secondary::after { content: '✕'; font-size: 0.9rem; }
   .faccion-lateral { overflow-x: hidden; }
   /* las nueve pestañas en una sola fila (dejan sitio a la ✕) y un escudo algo menor, para que el lateral enseñe más */
-  .faccion-pestanas { flex-wrap: nowrap; gap: 2px; padding-right: 40px; }
+  /* la columna de la derecha se desplaza por su cuenta (la regla de los móviles verticales la dejaba sin scroll) y las pestañas se quedan arriba */
+  .faccion-marco { min-height: 0; }
+  .faccion-principal { overflow-y: auto; overflow-x: hidden; }
+  .faccion-pestanas { flex-wrap: nowrap; gap: 2px; padding-right: 40px; position: sticky; top: 0; z-index: 2; background: var(--marco-bg); flex: none; }
   .faccion-pestana { padding: 4px 6px; font-size: 0.82rem; white-space: nowrap; }
   .faccion-lateral-escudo .faccion-escudo-con-nivel { width: min(84px, 60%); }
   .liga-orla { flex-wrap: wrap; max-width: 100%; box-sizing: border-box; }
