@@ -6378,10 +6378,66 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
 /* --- MÓVIL EN HORIZONTAL (revisión 2026-11-17) --------------------------------------------------
    El acceso se queda en vertical; ya dentro, el juego pide girar el móvil. */
 .pide-horizontal { display: none; }
-@media (orientation: portrait) and (max-width: 700px) {
+@media (orientation: portrait) and (max-width: 700px) and (pointer: coarse) {
   body.en-juego .pide-horizontal { position: fixed; inset: 0; z-index: 100000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px; text-align: center; background: #0c0a08; color: var(--oro-claro, #e6c98a); }
   body.en-juego .pide-horizontal .pide-icono { font-size: 3rem; animation: pide-girar 2.4s ease-in-out infinite; }
   body.en-juego .pide-horizontal strong { font-family: 'Cinzel', serif; font-size: 1.2rem; }
   body.en-juego .pide-horizontal span { color: var(--text-secondary); font-size: 0.9rem; }
+  body.en-juego .pide-horizontal .pide-pantalla-completa { width: auto; padding: 10px 28px; margin-top: 6px; }
 }
 @keyframes pide-girar { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
+
+/* Elegir dónde nace el héroe, en un móvil apaisado: vista resumida (Víctor, 2026-11-17). Solo lo necesario: la lista de campamentos (nombres), el mapa,
+   la clase, el nombre y el botón. Fuera la ficha larga, la comparación, la leyenda y los textos de ayuda. */
+@media (max-height: 520px) and (orientation: landscape) and (pointer: coarse) {
+  .elegir-screen { position: fixed; inset: 0 0 28px 0; }
+  .elegir-pie { height: 28px; font-size: 0.75rem; padding: 0 12px; }
+  .elegir-barra { padding: 5px 12px; gap: 10px; }
+  .elegir-titulo h1 { font-size: 1.05rem; }
+  .elegir-titulo p, .elegir-leyenda, .elegir-ficha-cuerpo, .elegir-comparacion, .elegir-comparar, .elegir-tarjeta-linea, .elegir-suelo { display: none !important; }
+  .elegir-barra-acciones .btn-secondary { padding: 4px 10px; font-size: 0.78rem; }
+  .elegir-cuerpo { grid-template-columns: 150px minmax(0, 1fr) 270px; grid-template-rows: minmax(0, 1fr); }
+  .elegir-lista { padding: 6px; gap: 5px; flex-direction: column; overflow-x: hidden; overflow-y: auto; border-right: 1px solid var(--bronce-osc); }
+  .elegir-tarjeta { flex: none; min-width: 0; padding: 6px 8px; }
+  .elegir-tarjeta-cabeza strong { font-size: 0.8rem; }
+  .elegir-recomendado { font-size: 0.58rem; padding: 1px 5px; margin-left: 0; }
+  .elegir-mapa { min-height: 0; }
+  .elegir-minimapa { width: 96px; right: 6px; bottom: 6px; }
+  .elegir-ficha { overflow: hidden; }
+  .elegir-form { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 10px; display: flex; flex-direction: column; }
+  .elegir-clase { margin-bottom: 6px; padding-bottom: 6px; }
+  .clase-botones { gap: 4px; }
+  .clase-boton { flex: 1 1 calc(50% - 4px); padding: 4px 6px; font-size: 0.7rem; }
+  .elegir-clase .clase-ficha { display: none; }
+  .elegir-form .form-label { font-size: 0.7rem; }
+  .elegir-form .form-input { margin-top: 2px; padding: 5px 8px; }
+  .elegir-form .btn-primary { margin-top: auto; padding: 8px; flex: none; position: sticky; bottom: 0; }
+  .elegir-form #error-heroe { font-size: 0.72rem; margin: 2px 0 0; }
+}
+
+/* y en el móvil más estrecho (667×375): paneles laterales más delgados, letra más pequeña y la lista solo con los nombres */
+@media (max-height: 520px) and (max-width: 740px) and (orientation: landscape) and (pointer: coarse) {
+  .elegir-titulo h1 { font-size: 0.95rem; }
+  .elegir-cuerpo { grid-template-columns: 112px minmax(0, 1fr) 215px; }
+  .elegir-tarjeta { padding: 5px 6px; }
+  .elegir-tarjeta-cabeza { flex-wrap: nowrap; gap: 5px; }
+  .elegir-tarjeta-cabeza strong { font-size: 0.7rem; line-height: 1.15; }
+  .elegir-tarjeta .elegir-recomendado { display: none; }
+  .elegir-tarjeta.elegida .elegir-tarjeta-cabeza strong::after { content: ' ★'; color: #f6d77e; }
+  .elegir-tarjeta .elegir-banderin { width: 8px; height: 11px; }
+  .elegir-form { padding: 6px 8px; }
+  .elegir-form .form-label { font-size: 0.62rem; }
+  .clase-boton { font-size: 0.62rem; padding: 3px 5px; }
+  .elegir-form .form-input { font-size: 0.8rem; padding: 4px 7px; }
+  .elegir-form .btn-primary { font-size: 0.8rem; padding: 7px; }
+  .elegir-minimapa { width: 80px; }
+}
+
+/* Plaza, campamento, pueblos y avanzadas en un móvil apaisado (667×375 / 844×390, pantalla completa): todo el HUD pensado para escritorio se
+   reduce de golpe con `zoom` (Víctor, 2026-11-17), en vez de rehacer cada medida. */
+@media (max-height: 520px) and (orientation: landscape) and (pointer: coarse) {
+  .plaza-3d { zoom: 0.6; }
+  /* las ventanas ocupan toda la pantalla, también donde están la barra de arriba y el riel (el ✕ las cierra) */
+  .asent-ventana, .asent-ventana[data-ancho] { top: 6px; bottom: 6px; left: 6px; right: 6px; width: auto; max-height: none; transform: none; z-index: 20; animation-name: ventana-plaza-entra; }
+  .asent-ventana[data-ancho="centrada"] { transform: none; }
+}

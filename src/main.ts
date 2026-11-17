@@ -3337,18 +3337,19 @@ function pantallaActual(): Pantalla {
   return 'mapa';
 }
 
-/** El aviso de «gira el móvil»: lo enseña el CSS solo en un móvil en vertical y solo con la clase `en-juego` (todo menos la pantalla de acceso). */
+/** El aviso de «gira el móvil»: lo enseña el CSS solo en un móvil en vertical y solo con la clase `en-juego` (todo menos el acceso y las partidas). */
 function asegurarAvisoHorizontal(): void {
   if (document.querySelector('.pide-horizontal')) return;
   const aviso = document.createElement('div');
   aviso.className = 'pide-horizontal';
-  aviso.innerHTML = '<div class="pide-icono" aria-hidden="true">📱</div><strong>Gira el móvil</strong><span>El juego se ve en horizontal. Ponlo apaisado para continuar.</span>';
+  aviso.innerHTML = '<div class="pide-icono" aria-hidden="true">📱</div><strong>Gira el móvil</strong><span>El juego se ve en horizontal. Ponlo apaisado para continuar.</span><button type="button" class="btn-primary pide-pantalla-completa">Pantalla completa</button>';
+  aviso.querySelector('.pide-pantalla-completa')?.addEventListener('click', () => { if (!document.fullscreenElement) void alternarPantallaCompleta(); });
   document.body.appendChild(aviso);
 }
 
 function montar(pantalla: Pantalla): void {
   asegurarAvisoHorizontal();
-  document.body.classList.toggle('en-juego', pantalla !== 'login');
+  document.body.classList.toggle('en-juego', pantalla !== 'login' && pantalla !== 'partidas');
   // Que un fallo al desmontar la pantalla anterior no impida montar la nueva (al entrar, eso devolvía al login).
   try { limpiarPantalla?.(); } catch (e) { console.error(e); }
   limpiarPantalla = null;
