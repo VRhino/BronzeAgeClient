@@ -3469,6 +3469,8 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .salida-hueco small { font-size: 0.72rem; color: var(--text-secondary); }
 .salida-hueco-quitar { position: absolute; top: 2px; right: 3px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.75rem; padding: 2px; }
 .salida-hueco-quitar:hover { color: #d9534f; }
+.salida-hueco.quitable { cursor: pointer; }
+.salida-hueco.quitable:hover { border-color: #d9534f; }
 .salida-hueco.vacio { border-style: dashed; border-color: rgba(169, 121, 63, 0.35); background: rgba(20, 16, 11, 0.35); }
 .salida-hueco.mas { display: grid; place-items: center; grid-template-columns: 1fr; border-style: dashed; background: rgba(20, 16, 11, 0.45); color: var(--oro); font-size: 1.8rem; cursor: pointer; }
 .salida-hueco.mas:hover, .salida-hueco.mas.activo { border-color: var(--oro); color: var(--oro-claro); background: rgba(169, 121, 63, 0.16); }

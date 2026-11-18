@@ -3,6 +3,12 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.219.2] — 2026-11-18 · Escuadras elegidas: tocar para quitar, sin ✕ · motor `810cbf1`
+
+Sin cambio de contrato (0.27.0).
+
+- **Salir al mundo y convocatoria de ejército**: las escuadras elegidas ya no llevan la ✕ pequeña de la esquina; se quitan tocándolas (en la convocatoria, las flechas ‹ › siguen solo moviéndolas). Las ayudas ⓘ lo dicen así. En guarniciones y escoltas la ✕ sigue como estaba.
+
 ## [0.219.1] — 2026-11-18 · El Liderazgo no deja colocar de más y la ventana de Avisos se cierra con ✕ · motor `810cbf1`
 
 Sin cambio de contrato (0.27.0). Arreglos que pidió Víctor.

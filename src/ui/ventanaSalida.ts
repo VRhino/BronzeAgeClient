@@ -107,11 +107,12 @@ function excesoDeLiderazgo(p: ProyeccionJugador, l: LugarDeSalida): number | nul
 const avisoExceso = (usado: number, tope: number): string => `Te pasas de Liderazgo (${usado} / ${tope}): quita escuadras para poder salir.`;
 
 function htmlHueco(s: Escuadron, quitar: boolean, e: Escapar): string {
-  return `<div class="salida-hueco lleno" title="${e(`${s.nombre} · ${s.cantidad} hombres · nivel ${s.nivel}`)}">
+  // Con `quitar`, tocar la escuadra elegida la quita de la salida (antes era una ✕ pequeña en la esquina).
+  const gesto = quitar ? ` quitable" role="button" tabindex="0" data-salida-quitar="${e(s.id)}` : '';
+  return `<div class="salida-hueco lleno${gesto}" title="${e(`${s.nombre} · ${s.cantidad} hombres · nivel ${s.nivel}${quitar ? ' · toca para quitarla de esta salida' : ''}`)}">
     <span class="salida-hueco-icono">${iconoTropa(s.tropaId, 34)}</span>
     <span class="salida-hueco-nombre">${e(s.nombre)}</span>
     <small>${s.cantidad} hombres ${chipLiderazgo(s)}</small>
-    ${quitar ? `<button class="salida-hueco-quitar" type="button" data-salida-quitar="${e(s.id)}" title="Quitar de esta salida" aria-label="Quitar ${e(s.nombre)}">✕</button>` : ''}
   </div>`;
 }
 
@@ -150,7 +151,7 @@ function htmlTropa(p: ProyeccionJugador, l: LugarDeSalida, e: Escapar): string {
     : `<p class="asent-lado-nota">${elegidas.length ? 'Sales con la columna con la que entraste, tal cual.' : 'Tu columna no lleva escuadras.'}</p>`;
   return `${htmlLineaVelocidad(velocidadDeSalida(p, l), e)}
     <div class="salida-tropa-cab">
-      <strong class="heroe-sub">Tropa${ayuda('salida:tropa', editable ? 'Sale cargado tu loadout activo. Quita escuadras con ✕ o añade con «+»: vale solo para esta salida, salvo que pulses «Guardar loadout», que lo guarda en el loadout elegido.' : 'De visita sales con la columna con la que entraste: no se cambia nada.')}</strong>
+      <strong class="heroe-sub">Tropa${ayuda('salida:tropa', editable ? 'Sale cargado tu loadout activo. Toca una escuadra para quitarla o añade con «+»: vale solo para esta salida, salvo que pulses «Guardar loadout», que lo guarda en el loadout elegido.' : 'De visita sales con la columna con la que entraste: no se cambia nada.')}</strong>
       <span class="salida-liderazgo${libre < 0 ? ' excedido' : ''}">Liderazgo ${usado} / ${h.liderazgoBase}</span>
       ${loadouts}
     </div>
@@ -261,11 +262,15 @@ export function pintarVentanaSalida(raiz: HTMLElement, p: ProyeccionJugador, l: 
       sel.eligiendo = tropaDe(p, l).some((s) => !sel.ids.includes(s.id));
       repintar();
     }));
-    raiz.querySelectorAll<HTMLButtonElement>('[data-salida-quitar]').forEach((b) => b.addEventListener('click', () => {
-      if (!sel) return;
-      sel.ids = sel.ids.filter((id) => id !== b.dataset.salidaQuitar);
-      repintar();
-    }));
+    raiz.querySelectorAll<HTMLElement>('[data-salida-quitar]').forEach((b) => {
+      const quitar = (): void => {
+        if (!sel) return;
+        sel.ids = sel.ids.filter((id) => id !== b.dataset.salidaQuitar);
+        repintar();
+      };
+      b.addEventListener('click', quitar);
+      b.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); quitar(); } });
+    });
     raiz.querySelector<HTMLSelectElement>('[data-salida-loadout]')?.addEventListener('change', (ev) => {
       if (!sel) return;
       sel.loadoutId = (ev.target as HTMLSelectElement).value;

@@ -79,7 +79,7 @@ function idsDentroDelLiderazgo(p: ProyeccionJugador, ids: string[]): string[] {
 }
 
 /**
- * TU tropa, en los espacios de la ventana de salida: la que sale, en el orden en que entra en combate (‹ › la mueven), con ✕ para quitar y «+» para
+ * TU tropa, en los espacios de la ventana de salida: la que sale, en el orden en que entra en combate (‹ › la mueven), tocándola se quita y «+» para
  * añadir (`cambiarSeleccionDeConvocatoria`). Los cambios se aplican al guardar.
  */
 function htmlMiTropa(p: ProyeccionJugador, c: Convocatoria, e: Escapar): string {
@@ -97,12 +97,11 @@ function htmlMiTropa(p: ProyeccionJugador, c: Convocatoria, e: Escapar): string 
   const libre = p.heroe.liderazgoBase - usado;
   const caben = libres.filter((s) => s.costeLiderazgo <= libre);
   const espacios = Math.max(ESPACIOS, elegidas.length + (caben.length > 0 ? 1 : 0));
-  const hueco = (s: (typeof propias)[number], pos: number): string => `<div class="salida-hueco lleno" title="${e(`Puesto ${pos + 1} · ${s.nombre} · ${s.cantidad} hombres · nivel ${s.nivel} · moral ${Math.round(s.moral)}`)}">
+  const hueco = (s: (typeof propias)[number], pos: number): string => `<div class="salida-hueco lleno quitable" role="button" tabindex="0" data-conv-quitar="${e(s.id)}" title="${e(`Puesto ${pos + 1} · ${s.nombre} · ${s.cantidad} hombres · nivel ${s.nivel} · moral ${Math.round(s.moral)} · toca para quitarla`)}">
       <span class="salida-hueco-icono">${iconoTropa(s.tropaId, 34)}</span>
       <span class="salida-hueco-nombre">${pos + 1}. ${e(s.nombre)}</span>
       <small>${s.cantidad} hombres ${chipLiderazgo(s)}</small>
       <span class="salida-hueco-mover"><button type="button" data-conv-mover="${e(s.id)}" data-dir="-1"${pos === 0 ? ' disabled' : ''} aria-label="Antes">‹</button><button type="button" data-conv-mover="${e(s.id)}" data-dir="1"${pos === elegidas.length - 1 ? ' disabled' : ''} aria-label="Después">›</button></span>
-      <button class="salida-hueco-quitar" type="button" data-conv-quitar="${e(s.id)}" title="Quitar" aria-label="Quitar ${e(s.nombre)}">✕</button>
     </div>`;
   const huecos = Array.from({ length: espacios }, (_, i) => {
     const s = elegidas[i];
@@ -117,7 +116,7 @@ function htmlMiTropa(p: ProyeccionJugador, c: Convocatoria, e: Escapar): string 
     }).join('')}</div>`
     : '';
   return `<div class="salida-tropa-cab">
-      <strong class="heroe-sub">Tu tropa${ayuda('convocatoria:tropa', 'La primera entra primero en combate: muévela con ‹ ›. Quita con ✕ o añade con «+»; los cambios se aplican al pulsar «Guardar cambios».')}</strong>
+      <strong class="heroe-sub">Tu tropa${ayuda('convocatoria:tropa', 'La primera entra primero en combate: muévela con ‹ ›. Toca una para quitarla o añade con «+»; los cambios se aplican al pulsar «Guardar cambios».')}</strong>
       <span class="salida-liderazgo${libre < 0 ? ' excedido' : ''}">Liderazgo ${usado} / ${p.heroe.liderazgoBase}</span>
       <span class="salida-loadout"><button class="btn-secondary salida-guardar" type="button" data-conv="guardar-tropa"${cambiado && elegidas.length > 0 && libre >= 0 ? '' : ' disabled'}>Guardar cambios</button><button class="btn-secondary salida-guardar" type="button" data-conv="descartar-tropa"${cambiado ? '' : ' disabled'}>Descartar</button></span>
     </div>
@@ -254,7 +253,12 @@ export function cablearPreparacion(raiz: ParentNode, p: ProyeccionJugador, ejecu
   const mio = c.integrantes.find((x) => x.heroeId === p.heroeId);
   const idsActuales = (): string[] => idsDentroDelLiderazgo(p, borrador?.convocatoriaId === c.id ? borrador.ids : mio?.escuadronIds ?? []);
   const cambiarBorrador = (ids: string[]): void => { borrador = { convocatoriaId: c.id, ids }; repintar(); };
-  raiz.querySelectorAll<HTMLButtonElement>('[data-conv-quitar]').forEach((b) => b.addEventListener('click', () => cambiarBorrador(idsActuales().filter((x) => x !== b.dataset.convQuitar))));
+  // Tocar la escuadra la quita (las flechas ‹ › de dentro solo la mueven).
+  raiz.querySelectorAll<HTMLElement>('[data-conv-quitar]').forEach((b) => {
+    const quitar = (): void => cambiarBorrador(idsActuales().filter((x) => x !== b.dataset.convQuitar));
+    b.addEventListener('click', (ev) => { if (!(ev.target as HTMLElement).closest('[data-conv-mover]')) quitar(); });
+    b.addEventListener('keydown', (ev) => { if ((ev.key === 'Enter' || ev.key === ' ') && ev.target === b) { ev.preventDefault(); quitar(); } });
+  });
   raiz.querySelector<HTMLButtonElement>('[data-conv-mas]')?.addEventListener('click', () => { eligiendo = !eligiendo; repintar(); });
   raiz.querySelectorAll<HTMLButtonElement>('[data-conv-anadir]').forEach((b) => b.addEventListener('click', () => { eligiendo = false; cambiarBorrador([...idsActuales(), b.dataset.convAnadir!]); }));
   raiz.querySelectorAll<HTMLButtonElement>('[data-conv-mover]').forEach((b) => b.addEventListener('click', () => {
