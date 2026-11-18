@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.218.0] — 2026-11-18 · Cerrar sesión suelta la pantalla completa, reponer las prestadas desde el Campamento e iconos de clase al nacer · motor `810cbf1`
+
+Sin cambio de contrato (0.27.0). Cambios que pidió Víctor al probar la 0.217.0 en el móvil.
+
+- **Cerrar sesión**: el acceso se pintaba sin pasar por el ajuste de orientación, y el bloqueo de la 0.216.1 nunca se aplicaba. Ahora sale de la pantalla completa y suelta la orientación fijada.
+- **Campamento → Tropa**: botón «Reponer las prestadas · N hombres, gratis» en la cabecera y en la ficha de la tropa prestada a medias (`reponerPrestamo`, como en la Base personal); solo sale si se puede reponer donde estás. La carta de la prestada dice N/M hombres.
+- **Dónde nace tu héroe**: cada botón de clase lleva a la izquierda el icono de su arma (nuevas, dos dagas cruzadas).
+
 ## [0.217.0] — 2026-11-18 · Móvil apaisado: Armería con tienda de casillas y Forja nueva, visitas a plazas, Territorio de plazas ajenas y sin nodos de ganado · motor `810cbf1`
 
 Sin cambio de contrato (0.27.0). Cambios de la revisión pantalla a pantalla del móvil apaisado (Reclutamiento, Taberna, Aedas, Misiones, Avisos, Crónica, visitas a plazas, pueblos y Armería).
