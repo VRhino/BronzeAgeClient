@@ -164,6 +164,13 @@ export function cablearHeroe(panel: HTMLElement, h: HeroeProyectado, aplicar: Ap
     if (texto) texto.innerHTML = `Liderazgo <strong>${suma} / ${h.liderazgoBase}</strong>${excede ? ' — no cabe' : ''}`;
     const guardar = panel.querySelector<HTMLButtonElement>('[data-accion="guardar"]');
     if (guardar) guardar.disabled = excede || !borrador?.displayName.trim();
+    // Las escuadras sin marcar que harían pasarse del Liderazgo no se pueden marcar.
+    panel.querySelectorAll<HTMLInputElement>('input[data-squad]').forEach((c) => {
+      const s = h.escuadrones.find((x) => x.id === c.dataset.squad);
+      const noCabe = !c.checked && !!s && suma + s.costeLiderazgo > h.liderazgoBase;
+      c.disabled = noCabe;
+      c.title = noCabe ? `No cabe: te quedan ${Math.max(0, h.liderazgoBase - suma)} de Liderazgo` : '';
+    });
   };
   panel.querySelector<HTMLInputElement>('[data-campo="nombre"]')?.addEventListener('input', (evento) => {
     if (borrador) borrador.displayName = (evento.target as HTMLInputElement).value;

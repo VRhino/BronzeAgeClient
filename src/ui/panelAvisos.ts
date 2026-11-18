@@ -37,8 +37,11 @@ function htmlEntrada(a: EntradaAviso, i: number, e: (s: string) => string): stri
       <span>${e(cuando)}${a.informe ? ' · ver informe' : ''}</span></button>`;
 }
 
+/** La cabecera de la ventana: el título y la ✕ arriba a la derecha, como las demás ventanas. */
+const CABECERA = '<header class="avisos-ventana-cab"><span class="avisos-ventana-titulo">Avisos</span><button class="diario-cerrar" type="button" data-avisos-cerrar title="Cerrar" aria-label="Cerrar">✕</button></header>';
+
 export function htmlAvisos(entradas: readonly EntradaAviso[], e: (s: string) => string): string {
-  if (entradas.length === 0) return `<p class="mapa-lista-vacia">Nada que contar todavía.${ayuda('jugador:avisos', 'Aquí quedan tus combates, quién te ha mirado y los movimientos de ejércitos, agrupados por categoría.')}</p>`;
+  if (entradas.length === 0) return `${CABECERA}<p class="mapa-lista-vacia">Nada que contar todavía.${ayuda('jugador:avisos', 'Aquí quedan tus combates, quién te ha mirado y los movimientos de ejércitos, agrupados por categoría.')}</p>`;
   const con = entradas.map((a, i) => [a, i] as const);
   const urgentes = con.filter(([a]) => a.urgente);
   const secciones = [];
@@ -57,11 +60,12 @@ export function htmlAvisos(entradas: readonly EntradaAviso[], e: (s: string) => 
       <div class="avisos-cab"><button type="button" class="avisos-plegar" data-plegar="${cat}" aria-expanded="${!plegada}">${plegada ? '▸' : '▾'} ${nombre} (${lineas.length}${sin ? `, ${sin} sin leer` : ''})</button>${sin ? `<button type="button" class="btn-secondary avisos-leer" data-leer="${cat}">Marcar leído</button>` : ''}${ayuda(`avisos:${cat}`, AYUDA_CATEGORIA[cat])}</div>
       ${plegada ? '' : `<div class="mapa-lista">${lineas.map(([a, i]) => htmlEntrada(a, i, e)).join('')}</div>`}</section>`);
   }
-  return `<div class="avisos-grupos">${secciones.join('')}</div>`;
+  return `${CABECERA}<div class="avisos-grupos">${secciones.join('')}</div>`;
 }
 
 /** Cablea el panel recién pintado: informes, plegar/desplegar y marcar leído. Lo urgente se da por visto al abrir el panel; lo demás, solo al marcarlo. */
-export function cablearAvisos(panel: HTMLElement, repintar: () => void, abrirInforme: (informe: NonNullable<EntradaAviso['informe']>) => void): void {
+export function cablearAvisos(panel: HTMLElement, repintar: () => void, abrirInforme: (informe: NonNullable<EntradaAviso['informe']>) => void, cerrar?: () => void): void {
+  panel.querySelector('[data-avisos-cerrar]')?.addEventListener('click', () => cerrar?.());
   panel.querySelectorAll<HTMLButtonElement>('[data-aviso]').forEach((b) => b.addEventListener('click', () => {
     const informe = historialDeAvisos()[Number(b.dataset.aviso)]?.informe;
     if (informe) abrirInforme(informe);

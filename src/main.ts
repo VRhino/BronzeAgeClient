@@ -1755,7 +1755,7 @@ function renderPanelJugador(forzar = false): void {
     return;
   }
   if (panelJugador === 'avisos') {
-    pintar(panel, htmlAvisos(historialDeAvisos(), escaparHtml), () => cablearAvisos(panel, () => renderPanelJugador(), mostrarInforme), panelJugador);
+    pintar(panel, htmlAvisos(historialDeAvisos(), escaparHtml), () => cablearAvisos(panel, () => renderPanelJugador(), mostrarInforme, () => { panelJugador = null; renderPanelJugador(true); }), panelJugador);
     return;
   }
   if (panelJugador === 'base') {

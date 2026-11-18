@@ -15,8 +15,20 @@ import { iconoEnFila } from './iconosTropa';
 
 type Escapar = (valor: string) => string;
 
-/** Las escuadras que NO has marcado (por defecto, todas van): sobrevive a los repintados. */
+/** Las escuadras que NO has marcado (por defecto, las que caben en tu Liderazgo): sobrevive a los repintados. */
 const desmarcadas = new Set<string>();
+
+/** Qué escuadras van marcadas: las que tú marcaste, o las que no desmarcaste y caben en el Liderazgo, en orden. */
+function marcadasPorDefecto(p: ProyeccionJugador, tropa: ReturnType<typeof tropaLibre>): Set<string> {
+  let libre = p.heroe.liderazgoBase;
+  const dentro = new Set<string>();
+  for (const s of tropa) {
+    if (desmarcadas.has(s.id) || s.costeLiderazgo > libre) continue;
+    libre -= s.costeLiderazgo;
+    dentro.add(s.id);
+  }
+  return dentro;
+}
 
 const resideAqui = (p: ProyeccionJugador, a: Asentamiento): boolean => [...(a.heroesFundadoresIds ?? []), ...(a.casasCompradas ?? [])].includes(p.heroeId);
 
@@ -34,13 +46,15 @@ export function ejercitosParaUnirse(p: ProyeccionJugador, a: Asentamiento) {
 export function htmlUnirseDesdePlaza(p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
   const radio = radioDeReabastecimiento();
   const tropa = tropaLibre(p);
+  const puestas = marcadasPorDefecto(p, tropa);
+  const libreTras = p.heroe.liderazgoBase - tropa.filter((s) => puestas.has(s.id)).reduce((t, s) => t + s.costeLiderazgo, 0);
   const filas = ejercitosParaUnirse(p, a).map((c) => `<div class="ejercito-fila"><div><strong>Ejército de ${e(c.liderId ? nombreDeHeroe(p, c.liderId) : c.id)}</strong>
         <span>${c.participantes.length} héroe(s) · a ${distancia(c, a)} de la plaza · ${POLITICA[c.politicaDeUnion ?? 'rechazar']}</span></div>
       <button class="btn-primary" type="button" data-unirse-desde-plaza="${e(c.id)}">Unirme con esta tropa</button></div>`);
   return `<span class="faction-kicker">Unirse a un ejército${ayuda('plaza:unirse', `Cuando un ejército de tu Facción pasa cerca de tu plaza (a ${radio} o menos) puedes sumarte a él con tropa fresca de tu campamento. Pasas a ir donde lo dirija su Líder. Unirse en campo, con lo que ya llevas encima, se hace desde el mapa. Un ejército se convoca dentro de un campamento o de una plaza (botón «Salir»), o con «Organizar ejército» en el mapa.`)}</span>
     <strong class="heroe-sub">Tropa que aportas</strong>
     ${tropa.length > 0
-      ? `<div class="mapa-lista">${tropa.map((s) => `<label class="mapa-lista-item con-tropa">${iconoEnFila(s.tropaId)}<div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres</span></div><input type="checkbox" data-aporta="${e(s.id)}"${desmarcadas.has(s.id) ? '' : ' checked'} /></label>`).join('')}</div>`
+      ? `<div class="mapa-lista">${tropa.map((s) => `<label class="mapa-lista-item con-tropa">${iconoEnFila(s.tropaId)}<div><strong>${e(s.nombre)}</strong> ${chipLiderazgo(s)}<span>${s.cantidad} hombres</span></div><input type="checkbox" data-aporta="${e(s.id)}"${puestas.has(s.id) ? ' checked' : s.costeLiderazgo > libreTras ? ' disabled title="No cabe en tu Liderazgo"' : ''} /></label>`).join('')}</div>`
       : '<p class="asent-lado-nota">No tienes tropa libre en el campamento (la de guarnición no sale).</p>'}
     <strong class="heroe-sub">Ejércitos que pasan cerca</strong>
     ${filas.length > 0 ? filas.join('') : '<p class="mapa-lista-vacia">Ya no hay ninguno a tu alcance.</p>'}
@@ -49,8 +63,17 @@ export function htmlUnirseDesdePlaza(p: ProyeccionJugador, a: Asentamiento, e: E
 
 export function cablearUnirseDesdePlaza(raiz: ParentNode, p: ProyeccionJugador, a: Asentamiento, ejecutar: Ejecutar): void {
   const error = raiz.querySelector<HTMLElement>('[data-campo="error-unirse-plaza"]');
+  // Las sin marcar que se pasarían del Liderazgo no se pueden marcar; al desmarcar otra, vuelven a poder.
+  const actualizarCupo = (): void => {
+    const casillas = Array.from(raiz.querySelectorAll<HTMLInputElement>('input[data-aporta]'));
+    const coste = (i: HTMLInputElement): number => p.heroe.escuadrones.find((s) => s.id === i.dataset.aporta)?.costeLiderazgo ?? 0;
+    const libre = p.heroe.liderazgoBase - casillas.filter((i) => i.checked).reduce((t, i) => t + coste(i), 0);
+    casillas.forEach((i) => { i.disabled = !i.checked && coste(i) > libre; i.title = i.disabled ? 'No cabe en tu Liderazgo' : ''; });
+  };
+  actualizarCupo();
   raiz.querySelectorAll<HTMLInputElement>('input[data-aporta]').forEach((i) => i.addEventListener('change', () => {
     if (i.checked) desmarcadas.delete(i.dataset.aporta!); else desmarcadas.add(i.dataset.aporta!);
+    actualizarCupo();
   }));
   raiz.querySelectorAll<HTMLButtonElement>('[data-unirse-desde-plaza]').forEach((b) => b.addEventListener('click', async () => {
     const escuadronIds = Array.from(raiz.querySelectorAll<HTMLInputElement>('input[data-aporta]:checked')).map((i) => i.dataset.aporta!);

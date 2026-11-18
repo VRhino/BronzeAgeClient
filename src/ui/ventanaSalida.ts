@@ -65,8 +65,14 @@ function tropaDe(p: ProyeccionJugador, l: LugarDeSalida): Escuadron[] {
 /** Las escuadras de un loadout que están aquí; si el loadout no tiene ninguna, todas. */
 function idsDelLoadout(p: ProyeccionJugador, loadoutId: string | null, disponibles: Escuadron[]): string[] {
   const l = p.heroe.loadouts.find((x) => x.id === loadoutId);
-  if (!l || l.squadIds.length === 0) return disponibles.map((s) => s.id);
-  return disponibles.filter((s) => l.squadIds.includes(s.id)).map((s) => s.id);
+  if (!l || l.squadIds.length === 0) return queCaben(p, disponibles).map((s) => s.id);
+  return queCaben(p, disponibles.filter((s) => l.squadIds.includes(s.id))).map((s) => s.id);
+}
+
+/** De una lista, en orden, las que caben en el Liderazgo del héroe: la que se pasaría no entra (y las siguientes que sí quepan, sí). */
+function queCaben(p: ProyeccionJugador, lista: Escuadron[]): Escuadron[] {
+  let libre = p.heroe.liderazgoBase;
+  return lista.filter((s) => { if (s.costeLiderazgo > libre) return false; libre -= s.costeLiderazgo; return true; });
 }
 
 function prepararEleccion(p: ProyeccionJugador, l: LugarDeSalida): NonNullable<typeof eleccion> {
@@ -78,6 +84,9 @@ function prepararEleccion(p: ProyeccionJugador, l: LugarDeSalida): NonNullable<t
   }
   // Lo que ya no está (se fue a la guarnición, se perdió) sale de la elección.
   eleccion.ids = eleccion.ids.filter((id) => disponibles.some((s) => s.id === id));
+  // Y lo que ya no cabe en el Liderazgo (si bajó, o venía pasado) tampoco se queda puesto.
+  const dentro = queCaben(p, eleccion.ids.flatMap((id) => disponibles.filter((s) => s.id === id))).map((s) => s.id);
+  if (dentro.length !== eleccion.ids.length) eleccion.ids = dentro;
   return eleccion;
 }
 

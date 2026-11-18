@@ -3,6 +3,13 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.219.1] — 2026-11-18 · El Liderazgo no deja colocar de más y la ventana de Avisos se cierra con ✕ · motor `810cbf1`
+
+Sin cambio de contrato (0.27.0). Arreglos que pidió Víctor.
+
+- **Liderazgo**: ningún cuadro de tropa deja colocar escuadras que pasen del Liderazgo disponible. «Salir al mundo» ya no se rellena sola con todas las escuadras: solo precarga, en orden, las que caben (también al cambiar de loadout). En el editor de loadouts y en «Unirse a un ejército» las casillas que harían pasarse quedan deshabilitadas, y la convocatoria recorta a lo que cabe lo ya guardado. El préstamo del campamento sigue libre: tenerlas disponibles no gasta Liderazgo, equiparlas sí.
+- **Avisos**: la ventana tiene título y una ✕ arriba a la derecha, como las demás.
+
 ## [0.219.0] — 2026-11-18 · Móvil apaisado: el cajón de Construcción y su ventana «Construidos» se ven bien · motor `810cbf1`
 
 Sin cambio de contrato (0.27.0). Dos arreglos que pidió Víctor al seguir la revisión del móvil apaisado.

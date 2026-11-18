@@ -67,6 +67,17 @@ function mismaCarga(a: Record<string, number>, b: Record<string, number>): boole
 /** Si la lista para añadir escuadras (el «+») está abierta. Vive entre repintados. */
 let eligiendo = false;
 
+/** De las escuadras elegidas, en orden, las que caben en el Liderazgo del héroe: la que se pasaría no se queda puesta. */
+function idsDentroDelLiderazgo(p: ProyeccionJugador, ids: string[]): string[] {
+  let libre = p.heroe.liderazgoBase;
+  return ids.filter((id) => {
+    const coste = p.heroe.escuadrones.find((s) => s.id === id)?.costeLiderazgo ?? 0;
+    if (coste > libre) return false;
+    libre -= coste;
+    return true;
+  });
+}
+
 /**
  * TU tropa, en los espacios de la ventana de salida: la que sale, en el orden en que entra en combate (‹ › la mueven), con ✕ para quitar y «+» para
  * añadir (`cambiarSeleccionDeConvocatoria`). Los cambios se aplican al guardar.
@@ -76,7 +87,7 @@ function htmlMiTropa(p: ProyeccionJugador, c: Convocatoria, e: Escapar): string 
   if (!mio) return '';
   if (!resideEnElLugar(p, c)) return `<p class="asent-lado-nota">No resides aquí.${ayuda('convocatoria:visita', 'Sales de visita, con tu columna aparcada en la puerta, y tu selección no cuenta.')}</p>`;
   const guardados = mio.escuadronIds;
-  const ids = borrador?.convocatoriaId === c.id ? borrador.ids : guardados;
+  const ids = idsDentroDelLiderazgo(p, borrador?.convocatoriaId === c.id ? borrador.ids : guardados);
   const propias = p.heroe.escuadrones;
   const candidatas = propias.filter((s) => ids.includes(s.id) || (s.contenedor.tipo === 'campamento' && !s.enGuarnicion && s.cantidad > 0));
   const elegidas = ids.map((id) => candidatas.find((s) => s.id === id)).filter((s): s is NonNullable<typeof s> => s !== undefined);
@@ -241,7 +252,7 @@ export function cablearPreparacion(raiz: ParentNode, p: ProyeccionJugador, ejecu
     if (mensaje) { boton.disabled = false; if (error) error.textContent = mensaje; else avisar(mensaje); }
   };
   const mio = c.integrantes.find((x) => x.heroeId === p.heroeId);
-  const idsActuales = (): string[] => (borrador?.convocatoriaId === c.id ? borrador.ids : mio?.escuadronIds ?? []);
+  const idsActuales = (): string[] => idsDentroDelLiderazgo(p, borrador?.convocatoriaId === c.id ? borrador.ids : mio?.escuadronIds ?? []);
   const cambiarBorrador = (ids: string[]): void => { borrador = { convocatoriaId: c.id, ids }; repintar(); };
   raiz.querySelectorAll<HTMLButtonElement>('[data-conv-quitar]').forEach((b) => b.addEventListener('click', () => cambiarBorrador(idsActuales().filter((x) => x !== b.dataset.convQuitar))));
   raiz.querySelector<HTMLButtonElement>('[data-conv-mas]')?.addEventListener('click', () => { eligiendo = !eligiendo; repintar(); });
