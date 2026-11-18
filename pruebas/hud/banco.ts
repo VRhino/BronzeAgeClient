@@ -22,7 +22,10 @@ import { cablearProduccionYRecetas, cablearVistaCiudad, elegirEdificio, htmlExtr
 import { cablearPanelObras, cuantosConstruidos, elegirGrupoDe, htmlConstruidosVentana, htmlConstruir } from '../../src/ui/panelObras';
 import { cablearCaravanas, cablearRutas, htmlCaravanas, htmlRutas } from '../../src/ui/panelMercado';
 import { SUBPESTANA_GUARNICION } from '../../src/ui/panelGuarnicion';
+import { SUBPESTANA_MURALLA } from '../../src/ui/panelMuralla';
+import { SUBPESTANA_PUERTA } from '../../src/ui/panelPuerta';
 import { FICHA_OBRA, SUBPESTANA_PUEBLOS } from '../../src/ui/pueblos';
+import { SUBPESTANAS_CENTRO_EXTRA } from '../../src/ui/ganchos';
 import { ahora as ahoraJuego } from '../../src/ui/juegoVisual';
 import { cablearTesoreria, htmlPoliticas, htmlReservaRecursos } from '../../src/ui/panelTesoreria';
 import { cablearPausarConsumo, htmlPausarConsumo } from '../../src/ui/consumoPausado';
@@ -40,7 +43,15 @@ import { fundacionLista } from '../../src/ui/panelFundacionDePlaza';
 import { cablearReclutamiento, htmlReclutamiento } from '../../src/ui/reclutamiento';
 import { cablearVentanaAedas, htmlVentanaAedas } from '../../src/ui/ventanaAedas';
 import { htmlCarro } from '../../src/ui/panelCarro';
+import { cablearPanelIntel, renderPanelIntel } from '../../src/ui/panelIntel';
+import { htmlMercenariosDeRegion } from '../../src/ui/tabernaRegion';
 import { catalogoDeTecnologia } from '../../src/apiCliente';
+import { elegirPestanaMisiones, htmlPanelMisiones } from '../../src/ui/misiones';
+import { anotarCalidadDeForja, cablearArmeria, htmlArmeria, pestanasDeArmeria } from '../../src/ui/armeria';
+import { catalogoDeObjetos } from '../../src/ui/clasesHeroe';
+import { htmlMercadoDePlaza } from '../../src/ui/mercadoDePlaza';
+import { htmlAvisos } from '../../src/ui/panelAvisos';
+import { fijarCronica, htmlCronica } from '../../src/ui/cronica';
 
 import { instalarMenuJugadorMovil } from '../../src/ui/menuJugadorMovil';
 instalarMenuJugadorMovil();
@@ -51,9 +62,13 @@ const e = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const RIEL: [string, string, string, boolean?][] = [
   ['construccion', 'Construcción', ICONO_RIEL.construccion], ['gobierno', 'Gobierno', ICONO_RIEL.gobierno], ['defensa', 'Defensa', iconoEdificio('muralla', 28)],
   ['territorio', 'Territorio', ICONO_RIEL.territorio], ['reclutamiento', 'Reclutamiento', iconoEdificio('barracon', 28)],
-  ['taberna', 'Taberna', iconoEdificio('taberna', 28), true], ['mercado', 'Mercado', iconoEdificio('mercado', 28)],
+  ['taberna', 'Taberna', iconoEdificio('taberna', 28), new URLSearchParams(location.search).get('ventana') !== 'taberna'], ['mercado', 'Mercado', iconoEdificio('mercado', 28)],
   ['aedas', 'Aedas', ICONO_RIEL.aedas, new URLSearchParams(location.search).get('ventana') !== 'aedas'],
+  ['armeria', 'Armería', iconoEdificio('armeria', 28), true],
 ];
+// `?ajena=1`: de visita en una plaza de otra Facción (main.ts `RIEL.deVisita`): solo Territorio, Mercado y Armería; sin obras, sin renombrar, sin casa ni corona
+const AJENA = new URLSearchParams(location.search).get('ajena') === '1';
+if (AJENA) for (const x of RIEL) x[3] = !['territorio', 'mercado', 'armeria'].includes(x[0]);
 const ventana = new URLSearchParams(location.search).get('ventana');
 const qs0 = new URLSearchParams(location.search);
 // `?obrasMapa=1`: «Obras» del panel izquierdo con una aldea esperando materiales y un pueblo levantándose (0.149.0).
@@ -128,15 +143,15 @@ document.getElementById('app')!.innerHTML = `<div class="asent-screen plaza-3d${
   <div class="asent-cuerpo">
     <div class="asent-centro"><div class="asent-mapa asent-mapa-3d"><div class="ciudad3d-escena"></div></div></div>
     <aside class="asent-izq">
-      <div class="asent-blason">${htmlBlasonHud({ nombre: a.nombre ?? 'Pesinunte', faccion: 'Casa de Micenas', escudo: svgSigilo(undefined, 64), nivel: a.nivel, renombrar: true, editando: false, residencia: 'dentro', capital: 'si', abierto: null, ascenso: new URLSearchParams(location.search).get('ascenso') === 'listo' ? 'listo' : 'abrir' }, e)}</div>
-      <div class="asent-obras-hud">${htmlObrasHud(a, e, true, obrasMapa())}</div>
+      <div class="asent-blason">${htmlBlasonHud({ nombre: a.nombre ?? 'Pesinunte', faccion: AJENA ? 'Los Lobos' : 'Casa de Micenas', escudo: svgSigilo(undefined, 64), nivel: a.nivel, renombrar: !AJENA, editando: false, residencia: AJENA ? null : 'dentro', capital: AJENA ? null : 'si', abierto: null, ascenso: new URLSearchParams(location.search).get('ascenso') === 'listo' ? 'listo' : 'abrir' }, e)}</div>
+      <div class="asent-obras-hud"${AJENA ? ' hidden' : ''}>${AJENA ? '' : htmlObrasHud(a, e, true, obrasMapa())}</div>
     </aside>
     <aside class="asent-der">${new URLSearchParams(location.search).get('ficha') ? '' : '<div class="misiones-rastreador en-columna" style="padding:10px;border:1px solid var(--bronce);background:rgba(18,13,8,.9);color:var(--pergamino)">Misiones 3/3</div>'}</aside>
     <div class="asent-pie">${htmlPieDePlaza(a, e)}</div>
     <nav class="asent-riel${construir ? ' asent-riel-cajon' : ''}">${construir ? '' : riel}</nav>
     <div class="asent-lienzo asent-minimapa"><canvas id="mapa" width="900" height="900"></canvas></div>
     <header class="asent-barra"><div class="asent-barra-acciones"><button id="btn-salir-mundo" class="btn-primary" type="button">Salir al mundo</button></div></header>
-    ${ventana ? `<section class="asent-ventana" data-ancho="${ventana === 'mercado' || ventana === 'taberna' || ventana === 'almacen' || ventana === 'caravanas' || ventana === 'territorio' || ventana === 'reclutamiento' ? 'completa' : ''}"><header class="asent-ventana-cab"><div class="asent-ventana-titulo"><h2>${ventana}</h2></div><button class="asent-ventana-cerrar">✕</button></header><div class="asent-edif-cuerpo">${ventana === 'almacen' || ventana === 'caravanas' || ventana === 'reclutamiento' ? '' : '<p>Contenido de la ventana.</p>'.repeat(40)}</div></section>` : ''}
+    ${ventana ? `<section class="asent-ventana" data-ancho="${ventana === 'mercado' || ventana === 'taberna' || ventana === 'almacen' || ventana === 'caravanas' || ventana === 'territorio' || ventana === 'reclutamiento' || ventana === 'armeria' ? 'completa' : ''}"><header class="asent-ventana-cab"><div class="asent-ventana-titulo"><h2>${ventana}</h2></div><button class="asent-ventana-cerrar">✕</button></header><div class="asent-edif-cuerpo">${ventana === 'almacen' || ventana === 'caravanas' || ventana === 'reclutamiento' || ventana === 'taberna' || ventana === 'armeria' ? '' : '<p>Contenido de la ventana.</p>'.repeat(40)}</div></section>` : ''}
   </div>
 </div>`;
 vigilarPieArriba(document.querySelector<HTMLElement>('.plaza-3d'));
@@ -219,21 +234,23 @@ if (ventana === 'gobierno' || ventana === 'mercado') {
 // `?ventana=caravanas`: la vista de flota de verdad (`htmlCaravanas`) con una flota de mentira: una en la plaza, una de camino, una en una aldea.
 let subMercado = qs.get('sub') ?? (ventana === 'mercado' ? 'ordenes' : 'caravanas');
 function pintarCaravanas(): void {
+  if (AJENA && ventana === 'mercado') return; // el Mercado de una plaza ajena lo pinta su propio bloque, más abajo
   const cuerpo = document.querySelector<HTMLElement>('.asent-edif-cuerpo');
   if ((ventana !== 'caravanas' && ventana !== 'mercado') || !cuerpo) return;
   // `?ventana=mercado`: la ventana del Mercado con sus pestañas de verdad (Órdenes · Caravanas · Rutas); `&sub=` elige cuál.
   const subs: [string, string][] = [['ordenes', 'Órdenes'], ['caravanas', 'Caravanas'], ['rutas', 'Rutas']];
   const tabs = ventana === 'mercado' ? `<div class="asent-tabs asent-subtabs">${subs.map(([id, nombre]) => `<button class="asent-tab${id === subMercado ? ' activo' : ''}" type="button" data-sub="${id}">${nombre}</button>`).join('')}</div>` : '';
-  const html = subMercado === 'rutas' ? htmlRutas(p, a, e, pintarCaravanas) : subMercado === 'ordenes' ? htmlOrdenes(p, a, e) : htmlCaravanas(p, a, e, pintarCaravanas);
+  const visitante = Boolean(qs.get('visita'));
+  const html = subMercado === 'rutas' ? htmlRutas(p, a, e, pintarCaravanas) : subMercado === 'ordenes' ? (visitante ? htmlMercadoDePlaza(p, a.id, e) || '<p class="asent-lado-nota">No hay órdenes abiertas.</p>' : htmlOrdenes(p, a, e)) : htmlCaravanas(p, a, e, pintarCaravanas);
   cuerpo.innerHTML = `${tabs}<div class="asent-lado-cuerpo">${html}</div>`;
   cuerpo.querySelectorAll<HTMLButtonElement>('[data-sub]').forEach((b) => b.addEventListener('click', () => { subMercado = b.dataset.sub!; pintarCaravanas(); }));
   if (subMercado === 'rutas') cablearRutas(cuerpo, p, async () => null, pintarCaravanas);
-  else if (subMercado === 'ordenes') cablearOrdenes(cuerpo, a, async () => null);
+  else if (subMercado === 'ordenes') { if (!visitante) cablearOrdenes(cuerpo, a, async () => null); }
   else cablearCaravanas(cuerpo, p, a, async () => null, pintarCaravanas);
 }
 if (ventana === 'caravanas' || ventana === 'mercado') {
   const q = p as unknown as Record<string, unknown>;
-  a.heroesFundadoresIds = ['h'];
+  a.heroesFundadoresIds = qs.get('visita') ? [] : ['h'];
   for (const x of a.edificios) if (x.tipo === 'mercado') x.nivelInterno = 3;
   if (!a.edificios.some((x) => x.tipo === 'mercado')) a.edificios.push({ id: 'm1', tipo: 'mercado', estado: 'activo', nivelInterno: 3 } as Edificio);
   const aldea = { x: a.posicion.x + 30, y: a.posicion.y + 12 };
@@ -365,8 +382,8 @@ if (camp) {
 }
 // El «!» de Territorio (0.136.0) con la cuenta de verdad (`fundacionLista`): se repinta cuando llegan los datos del coste.
 function avisoFundacion(): void {
-  if (camp || construir || qs.get('visita')) return;
-  a.heroesFundadoresIds = ['h'];
+  if (camp || construir || (qs.get('visita') && ventana !== 'territorio')) return;
+  a.heroesFundadoresIds = qs.get('visita') ? [] : ['h'];
   const q = p as unknown as { caravanas?: unknown[] };
   q.caravanas ??= [];
   const fs = p.facciones as unknown as { id: string; nivel: number }[];
@@ -418,20 +435,37 @@ function avisoFundacion(): void {
     a.cargos = { ...(a.cargos ?? {}), gobernadorId: 'h' } as typeof a.cargos;
     a.faccionId = a.faccionId || 'fac-1';
     (p as unknown as { faccionId: string }).faccionId = a.faccionId;
-    const c = { proyeccion: p, asentamiento: a, cuerpo, ejecutar: async () => null, refrescar: avisoFundacion, cargo: 'gobernador', resideAqui: true, escapar: e } as unknown as ContextoPlaza;
-    cuerpo.innerHTML = `<div class="asent-tabs asent-subtabs"><button class="asent-tab activo" type="button">Pueblos y aldeas</button><button class="asent-tab" type="button">Fundación${lista ? '<b class="asent-aviso-atencion">!</b>' : ''}</button></div>${SUBPESTANA_PUEBLOS.html(c)}`;
+    // de visita (`&visita=1`: plaza de tu Facción sin residir) o en plaza ajena (`?ajena=1`): sin cargo ni residencia, como `contextoPlaza` de main.ts
+    const visitante = Boolean(qs.get('visita')) || AJENA;
+    if (AJENA) a.faccionId = 'f-otra';
+    if (visitante) a.heroesFundadoresIds = [];
+    const c = { proyeccion: p, asentamiento: a, cuerpo, ejecutar: async () => null, refrescar: avisoFundacion, cargo: visitante ? null : 'gobernador', resideAqui: !visitante, escapar: e } as unknown as ContextoPlaza;
+    // las dos pestañas de verdad (`&sub=fundacion` abre la segunda)
+    let subTer = qs.get('sub') ?? 'pueblos';
+    const pintarTerritorio = (): void => {
+      const sp = subTer === 'fundacion' ? SUBPESTANAS_CENTRO_EXTRA.find((x) => x.id === 'fundacion')! : SUBPESTANA_PUEBLOS;
+      const tabs = [['pueblos', 'Pueblos y aldeas'], ['fundacion', 'Fundación']].filter(([id]) => !visitante || id === 'pueblos').map(([id, n]) => `<button class="asent-tab${id === subTer ? ' activo' : ''}" type="button" data-sub="${id}">${n}${id === 'fundacion' && lista ? '<b class="asent-aviso-atencion">!</b>' : ''}</button>`).join('');
+      cuerpo.innerHTML = `${visitante ? '' : `<div class="asent-tabs asent-subtabs">${tabs}</div>`}<div class="asent-lado-cuerpo">${sp.html(c)}</div>`;
+      cuerpo.querySelectorAll<HTMLButtonElement>('[data-sub]').forEach((b) => b.addEventListener('click', () => { subTer = b.dataset.sub!; pintarTerritorio(); }));
+      sp.cablear?.(c);
+    };
+    pintarTerritorio();
     // con su cableado (tanda 69): el cultivo de la aldea nueva repinta la carta
-    SUBPESTANA_PUEBLOS.cablear?.(c);
   }
 }
 avisoFundacion();
 // `?ventana=defensa`: la Guarnición de verdad (0.138.0): dos tuyas dentro, una de otro residente y las del campamento para dejar.
+let subDefensa = qs.get('sub') ?? 'guarnicion';
 function pintarDefensa(): void {
   const cuerpo = document.querySelector<HTMLElement>('.asent-edif-cuerpo');
   if (ventana !== 'defensa' || !cuerpo) return;
   const c = { proyeccion: p, asentamiento: a, cuerpo, ejecutar: async () => null, refrescar: pintarDefensa, cargo: null, resideAqui: !qs.get('visita'), escapar: e } as unknown as ContextoPlaza;
-  cuerpo.innerHTML = `<div class="asent-tabs asent-subtabs"><button class="asent-tab activo" type="button">Guarnición</button><button class="asent-tab" type="button">Muralla</button><button class="asent-tab" type="button">Puerta</button></div>${SUBPESTANA_GUARNICION.html(c)}`;
-  SUBPESTANA_GUARNICION.cablear?.(c);
+  // las tres pestañas de verdad (`&sub=muralla|puerta` abre otra)
+  const subs = [SUBPESTANA_GUARNICION, SUBPESTANA_MURALLA, SUBPESTANA_PUERTA];
+  const sp = subs.find((x) => x.id === subDefensa) ?? subs[0]!;
+  cuerpo.innerHTML = `<div class="asent-tabs asent-subtabs">${subs.map((x) => `<button class="asent-tab${x.id === sp.id ? ' activo' : ''}" type="button" data-sub="${x.id}">${x.etiqueta}</button>`).join('')}</div><div class="asent-lado-cuerpo">${sp.html(c)}</div>`;
+  cuerpo.querySelectorAll<HTMLButtonElement>('[data-sub]').forEach((b) => b.addEventListener('click', () => { subDefensa = b.dataset.sub!; pintarDefensa(); }));
+  sp.cablear?.(c);
 }
 if (ventana === 'defensa') {
   const q = p as unknown as Record<string, unknown>;
@@ -504,6 +538,139 @@ if (ventana === 'reclutamiento') {
     cablearReclutamiento(cuerpo, p, a, async () => null, pintarRecl);
   };
   pintarRecl();
+}
+// `?ventana=taberna`: la Taberna de verdad (Intel: Mirada, Informe de plaza, informe de la región, rumores y lo comprado); `&vacia=1` sin plazas conocidas ni compras.
+if (ventana === 'taberna') {
+  const q = p as unknown as Record<string, unknown>;
+  const cuerpo = document.querySelector<HTMLElement>('.asent-edif-cuerpo');
+  if (cuerpo) {
+    const vacia = Boolean(qs.get('vacia'));
+    q.faccionId = a.faccionId;
+    q.facciones = [{ id: a.faccionId, nombre: 'Casa de Micenas', reyId: 'h', miembros: [{ heroeId: 'h', cargos: [] }] }];
+    a.edificios = [...(a.edificios ?? []).filter((x) => x.tipo !== 'taberna'), { id: 'r-taberna', tipo: 'taberna', estado: 'activo', nivelInterno: 2 } as Edificio];
+    a.almacen = { ...(a.almacen ?? {}), oro: { cantidad: 340 } } as unknown as typeof a.almacen;
+    q.heroe = { ...(p.heroe as object), ubicacion: { tipo: 'asentamiento', asentamientoId: a.id } };
+    q.instante = Date.now();
+    // un mundo de mentira con una sola región (id 1) que lo cubre todo, para que el informe de plazas de la región tenga plazas
+    (estadoCliente as unknown as { mapaCache: unknown }).mapaCache = { mapa: { regiones: [{ id: 1, nombre: 'Altiplano interior' }], rasters: { region: { celda: 10000, columnas: 1, filas: 1, datos: [1] } } } };
+    q.tarifasIntel = { mirada: { radio: 60, duracionMinutos: 360, oroBase: 20, oroPorUnidad: 0.5, cooldownMinutos: 0 }, informe: { oroPorNivel: 15, cooldownMinutos: 120 }, cupoMiradas: { porNivelDeTaberna: [1, 2, 3], campamento: 1 }, region: { oro: 60, cooldownMinutos: 240, caducidadMinutos: 720 }, rumores: { vetasEstano: { oro: 80, radio: 120 } } };
+    q.asentamientosAvistados = vacia ? [] : [{ id: 'aj-1', nombre: 'Tirinto', faccionId: 'f-otra', nivel: 3, posicion: { x: a.posicion.x + 90, y: a.posicion.y + 40 } }, { id: 'aj-2', nombre: 'Pilos', faccionId: 'f-otra', nivel: 2, posicion: { x: a.posicion.x - 150, y: a.posicion.y + 80 } }];
+    q.asentamientosConocidos = vacia ? [] : [{ asentamientoId: 'aj-3', nombre: 'Argos', faccionId: 'f-tercera', nivel: 4, posicion: { x: a.posicion.x + 300, y: a.posicion.y - 120 }, conocidoEn: Date.now() - 26 * 3_600_000 }]; q.ordenes = [{ id: 'o1', asentamientoId: 'aj-1', tipo: 'venta', recurso: 'madera', cantidad: 300, cantidadCumplida: 120, precioUnitario: 2.5, estado: 'activa', expiraEn: Date.now() + 3_600_000 }, { id: 'o2', asentamientoId: 'aj-1', tipo: 'compra', recurso: 'trigo', cantidad: 200, cantidadCumplida: 0, precioUnitario: 1.2, estado: 'activa', expiraEn: Date.now() + 3_600_000 }]; q.campamentosMercenarios = []; q.ejercitos = [];
+    q.miradasIntel = vacia ? [] : [{ id: 'm1', origenId: a.id, centro: { x: a.posicion.x + 90, y: a.posicion.y + 40 }, radio: 60, expiraEn: Date.now() + 3 * 3_600_000, creadaEn: Date.now() }];
+    const ahora = Date.now();
+    q.informesPlaza = vacia ? [] : [
+      { asentamientoId: 'aj-1', faccionId: 'f-otra', nombre: 'Tirinto', nivel: 3, conocidoEn: ahora - 50 * 60_000, heroesIds: ['x1', 'x2'],
+        edificios: [['palacio', 4, 4], ['barracon', 8, 4], ['mercado', 4, 9], ['taberna', 9, 9], ['granja', 14, 5], ['almacen', 13, 11], ['galeriaDeTiro', 1, 8]].map(([tipo, x, y]) => ({ tipo, posicion: { x, y }, estado: 'activo', nivelInterno: 2 })),
+        recintos: [{ nivel: 2, avance: 17, celdas: Array.from({ length: 24 }, (_, i) => ({ col: i, row: 0, clase: i % 8 === 0 ? 'puerta' : i % 5 === 0 ? 'torre' : 'muro' })) }],
+        guarnicion: [{ tropaId: 'milicia_lanceros', cantidad: 25, heroeId: 'x1' }, { tropaId: 'honderos', cantidad: 30, heroeId: 'x2' }] },
+      { asentamientoId: 'aj-2', faccionId: 'f-otra', nombre: 'Pilos', nivel: 2, conocidoEn: ahora - 5 * 3_600_000, heroesIds: [], edificios: [{ tipo: 'granja', posicion: { x: 3, y: 3 }, estado: 'activo' }], recintos: [], guarnicion: [] },
+    ];
+    (q.facciones as { informesRegion?: unknown[] }[])[0]!.informesRegion = vacia ? [] : [{ region: 1, tipo: 'plazas', compradoEn: ahora - 3_600_000, libreEn: ahora + 3 * 3_600_000 }, { region: 1, tipo: 'ordenes', compradoEn: ahora - 3_600_000, caducaEn: ahora + 11 * 3_600_000, libreEn: ahora + 3 * 3_600_000 }];
+    const sub = qs.get('sub') ?? 'intel';
+    const pintarTab = (): void => {
+      const tabs = `<div class="asent-tabs asent-subtabs">${[['intel', 'Intel'], ['mercenarios', 'Mercenarios de la región']].map(([id, n]) => `<button class="asent-tab${id === sub ? ' activo' : ''}" type="button" data-sub="${id}">${n}</button>`).join('')}</div>`;
+      cuerpo.innerHTML = `${tabs}${sub === 'mercenarios' ? htmlMercenariosDeRegion(p, a, e) : renderPanelIntel(p, e)}`;
+      if (sub !== 'mercenarios') cablearPanelIntel(cuerpo, p, async () => null, pintarTab);
+    };
+    pintarTab();
+  }
+}
+// `?panel=misiones|avisos|cronica`: los tres paneles de la barra del jugador (`.jugador-panel`) con datos de mentira, como los pinta `renderPanelJugador` de main.ts.
+const panelJugadorQs = qs.get('panel');
+if (panelJugadorQs === 'misiones' || panelJugadorQs === 'avisos' || panelJugadorQs === 'cronica') {
+  const q = p as unknown as Record<string, unknown>;
+  const aside = document.createElement('aside');
+  aside.className = 'jugador-panel';
+  document.querySelector('.plaza-3d')!.appendChild(aside);
+  if (panelJugadorQs === 'misiones') {
+    aside.classList.add('jugador-panel-diario');
+    const cond = (contador: string, avance: number, umbral: number) => ({ contador, avance, umbral });
+    const mision = (id: string, estado: string, m: object) => ({ id, estado, condiciones: [cond('victorias', 3, 5)], recompensaExperiencia: 0, participacion: 0, recompensas: [], ...m });
+    q.faccionId = a.faccionId; q.heroeId = 'h';
+    q.misiones = { plazaId: a.id,
+      heroe: [mision('H2', 'cumplida', { recompensas: [{ tipo: 'recurso', clave: 'madera', cantidad: 300 }, { tipo: 'oro', cantidad: 5 }, { tipo: 'xp', cantidad: 2.5 }] }), mision('H3', 'activa', { recompensas: [{ tipo: 'recurso', clave: 'trigo', cantidad: 200 }] })],
+      plaza: [mision('A4', 'activa', { participacion: 10, recompensas: [{ tipo: 'recurso', clave: 'piedra', cantidad: 400 }, { tipo: 'xp', cantidad: 15 }] })],
+      faccion: [mision('F3', 'activa', { recompensaExperiencia: 40, recompensas: [{ tipo: 'oro', cantidad: 50 }, { tipo: 'recurso', clave: 'cobre', cantidad: 120 }] })] };
+    elegirPestanaMisiones('heroe', 'H2');
+    aside.innerHTML = htmlPanelMisiones(p, e);
+  } else if (panelJugadorQs === 'avisos') {
+    const ahora = Date.now();
+    const av = (texto: string, clase: string, categoria: string, urgente: boolean, leido: boolean, min: number, extra: object = {}) =>
+      ({ version: 1, texto, clase, categoria, urgente, leido, veces: 1, desde: ahora - min * 60_000, hasta: ahora - min * 60_000, ...extra });
+    aside.innerHTML = htmlAvisos([
+      av('Un ejército de Los Lobos ataca Pesinunte.', 'peligro', 'combate', true, false, 4, { titulo: 'Te atacan' }),
+      av('Batalla ganada contra los bandidos del paso.', 'combate', 'combate', false, false, 38),
+      av('Alguien te ha mirado desde cerca de Tirinto.', 'mirada', 'inteligencia', false, true, 95, { titulo: 'Te observaron' }),
+      av('La caravana Ánfora llega a Pilos.', 'combate', 'movimientos', false, true, 160),
+      av('Se completa la Granja nivel 3.', 'combate', 'economia', false, true, 300),
+    ] as never, e);
+  } else {
+    fijarCronica([
+      { version: 1, en: Date.now() - 3_600_000, tipo: 'era.comienza', datos: { orden: 2 } },
+      { version: 2, en: Date.now() - 2 * 3_600_000, tipo: 'diplomacia.guerra_declarada', datos: { faccionIds: [a.faccionId, 'f-otra'] } },
+      { version: 3, en: Date.now() - 5 * 3_600_000, tipo: 'fundacion.asentamiento_fundado', datos: { faccionIds: ['f-otra'], asentamientoId: 'aj-1' } },
+      { version: 4, en: Date.now() - 9 * 3_600_000, tipo: 'asentamiento.ruinas', datos: { asentamientoId: 'aj-2' } },
+      { version: 5, en: Date.now() - 20 * 3_600_000, tipo: 'tecnologia.logro', datos: { contador: 'victorias', umbral: 5000 } },
+    ], true);
+    aside.innerHTML = htmlCronica(p, e);
+  }
+}
+// `?ventana=mercado&ajena=1`: el Mercado de una plaza ajena: sus órdenes abiertas, que se toman con tu carro (`htmlMercadoDePlaza`).
+if (ventana === 'mercado' && AJENA) {
+  const cuerpo = document.querySelector<HTMLElement>('.asent-edif-cuerpo');
+  if (cuerpo) {
+    const q = p as unknown as Record<string, unknown>;
+    q.ordenes = [{ id: 'o1', asentamientoId: a.id, tipo: 'venta', recurso: 'madera', cantidad: 300, cantidadCumplida: 120, precioUnitario: 2.5, estado: 'activa', expiraEn: Date.now() + 3_600_000 }, { id: 'o2', asentamientoId: a.id, tipo: 'compra', recurso: 'trigo', cantidad: 200, cantidadCumplida: 0, precioUnitario: 1.2, estado: 'activa', expiraEn: Date.now() + 5_400_000 }, { id: 'o3', asentamientoId: a.id, tipo: 'venta', recurso: 'cobre', cantidad: 80, cantidadCumplida: 0, precioUnitario: 4, estado: 'activa', expiraEn: Date.now() + 7_200_000 }];
+    q.instante = Date.now();
+    q.heroeId = 'h';
+    q.ejercitos = qs.get('sinColumna') ? [] : [{ id: 'ej-1', liderId: 'h', participantes: [{ heroeId: 'h' }], posicionActual: a.posicion, estado: 'estacionado' }];
+    q.asentamientosAvistados = [{ id: a.id, nombre: a.nombre, faccionId: 'f-otra', posicion: a.posicion, mercadoActivo: true }];
+    cuerpo.innerHTML = `${htmlMercadoDePlaza(p, a.id, e)}<p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`;
+  }
+}
+// `?ventana=armeria`: la Tienda y la Forja de verdad (0.207.0); `&sub=forja`, `&visita=1` (plaza de tu Facción sin residir), `?ajena=1` (otra Facción, forja abierta a aliados).
+if (ventana === 'armeria') {
+  const q = p as unknown as Record<string, unknown>;
+  const cuerpo = document.querySelector<HTMLElement>('.asent-edif-cuerpo');
+  if (cuerpo) {
+    const visitante = Boolean(qs.get('visita')) || AJENA;
+    q.faccionId = 'fac-1'; a.faccionId = AJENA ? 'f-otra' : 'fac-1';
+    q.relaciones = AJENA ? [{ estado: 'activa', tipo: 'alianza', faccionAId: 'fac-1', faccionBId: 'f-otra' }] : [];
+    a.heroesFundadoresIds = visitante ? [] : ['h'];
+    a.edificios = [...(a.edificios ?? []).filter((x) => x.tipo !== 'armeria'), { id: 'r-armeria', tipo: 'armeria', estado: 'activo', nivelInterno: 2 } as Edificio];
+    (a as unknown as Record<string, unknown>).armeriaActiva = true;
+    (a as unknown as Record<string, unknown>).metalesArmeria = ['inicio', 'cobre', 'bronce'];
+    (a as unknown as Record<string, unknown>).forja = { fondo: 420, aliados: { abierta: true, recargoPct: 100 }, neutrales: { abierta: false, recargoPct: 100 }, enemigos: { abierta: false, recargoPct: 100 } };
+    q.ejercitos = [{ id: 'ej-1', liderId: 'h', participantes: [{ heroeId: 'h' }], posicionActual: a.posicion, estado: 'estacionado', suministro: qs.get('justo') ? { lingoteCobre: 2, cueroCurtido: 3, cuero: 10, madera: 200, lingoteBronce: 4 } : { lingoteCobre: 24, cueroCurtido: 20, cuero: 10, madera: 200 } }];
+    // `&era=<clave>`: la Era del mundo, para ver tiers más altos en la forja; `&justo=1`: pocos materiales, para ver lo que falta
+    if (qs.get('era')) q.tecnologia = { ...((p.tecnologia ?? {}) as object), era: qs.get('era') };
+    q.heroe = { ...(p.heroe as object), ubicacion: { tipo: 'asentamiento', asentamientoId: a.id }, monedas: 640, classDefinitionId: 'espada_escudo_mediano', equipamiento: {},
+      inventario: [{ itemDefinitionId: 'crisol', casillaInventario: 0, cantidad: 6 }, { itemDefinitionId: 'plano_2', casillaInventario: 1, cantidad: 3 }, { itemDefinitionId: 'torso_ligera_inicio', casillaInventario: 2, cantidad: 1 }] };
+    const sub = qs.get('sub') ?? 'tienda';
+    const pintarArm = (): void => {
+      const subs = pestanasDeArmeria(p, a, !visitante);
+      const tabs = subs.length > 1 ? `<div class="asent-tabs asent-subtabs">${subs.map(([id, n]) => `<button class="asent-tab${id === sub ? ' activo' : ''}" type="button" data-sub="${id}">${n}</button>`).join('')}</div>` : '';
+      cuerpo.innerHTML = `${tabs}${htmlArmeria(p, a, !visitante, sub, e)}`;
+      // forjar de mentira: la pieza entra en la mochila con sus cifras al 107 % y llega su hecho con la calidad
+      cablearArmeria(cuerpo, a, async (tipo, params) => {
+        if (tipo !== 'forjarObjeto') return null;
+        const h = (p as unknown as { heroe: { inventario: Record<string, unknown>[] } }).heroe;
+        const f = catalogoDeObjetos()?.objetos.find((o) => o.id === params.objeto);
+        const c = (f?.combate ?? {}) as Record<string, unknown>;
+        const est: { nombre: string; valor: number }[] = [];
+        const x107 = (n: number): number => Math.floor(n * 1.07);
+        for (const [k, v] of Object.entries((c.atributos ?? {}) as Record<string, number>)) est.push({ nombre: k, valor: x107(v) });
+        for (const pre of ['dano', 'penetracion', 'defensa']) for (const [g, v] of Object.entries((c[pre] ?? {}) as Record<string, number>)) est.push({ nombre: `${pre}${g[0]!.toUpperCase()}${g.slice(1)}`, valor: x107(v) });
+        if (typeof c.salud === 'number') est.push({ nombre: 'salud', valor: x107(c.salud) });
+        const n = 900 + h.inventario.length;
+        h.inventario = [...h.inventario, { itemDefinitionId: params.objeto, tipo: f?.tipo, cantidad: 1, itemInstanceId: `obj-${n}`, estadisticas: est, precio: f?.precio ?? 0, casillaInventario: h.inventario.length }];
+        anotarCalidadDeForja(n, 107);
+        return null;
+      }, pintarArm);
+    };
+    pintarArm();
+    bloqueDeDatos('OBJETOS', pintarArm);
+  }
 }
 // `?ventana=aedas`: la ventana de los Aedas de la plaza (0.170.0): un itinerante parado que vende dos reveladas y dos residentes, uno cantando su
 // épica y otro sin ella. `&sinCargo=1`: sin ser Rey ni Gobernador (se ve lo que vende, sin comprar). `&solo=itinerante|residente`: solo uno de los dos.

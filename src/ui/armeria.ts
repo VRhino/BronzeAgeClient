@@ -13,8 +13,8 @@ import type { AperturaForja, Asentamiento, GrupoForja, ItemInstancia } from '../
 import { ayuda } from './ayuda';
 import { catalogoDeObjetos, nombreDeClase, type FichaObjeto } from './clasesHeroe';
 import { columnaQuePaga } from './columnaQuePaga';
-import { claveDeRareza, textoDeTier } from './fichaCombate';
-import { cifrasDe, htmlCifras, iconoDeObjeto, libresEn, nombreDeObjeto, pesosDeLaClase, textoDeTipo } from './objetosHeroe';
+import { claveDeRareza } from './fichaCombate';
+import { cifrasDe, htmlCifras, htmlFichaDePieza, iconoDeObjeto, libresEn, nombreDeObjeto, pesosDeLaClase, textoDeTipo } from './objetosHeroe';
 
 type Escapar = (valor: string) => string;
 export type Ejecutar = (tipo: string, params: Record<string, unknown>) => Promise<string | null>;
@@ -166,10 +166,9 @@ const ordenar = (x: FichaObjeto, y: FichaObjeto): number =>
 
 /** El nombre de la pieza con su icono, su rareza y lo que es; debajo, sus cifras plegadas. */
 function htmlPieza(f: FichaObjeto, e: Escapar, extra = ''): string {
-  const tier = f.tier ? `<span class="ta-rareza r-${e(claveDeRareza(f.tier))}">${e(textoDeTier(f.tier))}</span>` : '';
   const metal = f.metal && f.metal !== 'inicio' ? ` · ${e(f.metal.replace(/_/g, ' '))}` : '';
   return `<span class="arm-pieza-icono r-${f.tier ? e(claveDeRareza(f.tier)) : 'ninguna'}" aria-hidden="true">${iconoDeObjeto(f.id)}</span>
-    <span class="arm-pieza-texto"><strong>${e(f.nombre)}</strong><small>${e(textoDeTipo(f))}${metal}</small>${tier}${extra}
+    <span class="arm-pieza-texto"><strong>${e(f.nombre)}</strong><small>${e(textoDeTipo(f))}${metal}</small>${extra}
       <details class="arm-cifras"><summary>Cifras</summary>${htmlCifras(cifrasDe({ itemDefinitionId: f.id }))}</details></span>`;
 }
 
@@ -208,39 +207,148 @@ function htmlTienda(p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
     </div>`;
 }
 
-/** Un coste de la receta: icono, cifra y nombre; en rojo si falta. */
-const chip = (icono: string, n: number | string, nombre: string, falta: boolean, e: Escapar): string =>
-  `<span class="arm-coste${falta ? ' falta' : ''}" title="${e(nombre)}">${icono} ${typeof n === 'number' ? miles(n) : e(n)}<span class="ta-sr"> ${e(nombre)}</span></span>`;
+// ── La forja: un banco de trabajo, no una lista ──
+// A la izquierda, el estante: una casilla por pieza, agrupadas por hueco, encendidas las que ya puedes forjar. A la derecha, el banco: la receta de
+// la pieza elegida en ranuras (lo que pide y lo que tienes), el yunque con la pieza que sale, su calidad, sus cifras y el martillo.
+
+/** La pieza elegida en el banco y hasta dónde bajaste el estante; se recuerdan entre repintados. */
+let elegidaEnForja: string | null = null;
+let scrollDeForja = 0;
+
+// Forjar se ve (0.217.0): al pulsar «Forjar» el banco trabaja `DURACION_FORJA_MS` con su barra y solo entonces sale la orden; cuando la pieza llega
+// a la mochila, su ficha tapa la pestaña hasta pulsar «Continuar». El estado vive aquí para que un repintado a medias no lo pierda.
+export const DURACION_FORJA_MS = 3000;
+/** La pieza que el banco está forjando y desde cuándo. */
+let enCurso: { objeto: string; desde: number } | null = null;
+/** La orden ya salió: la pieza nueva es la forjada de ese objeto que no estaba en `antes`. */
+let esperando: { objeto: string; antes: Set<string> } | null = null;
+/** La pieza recién forjada, a la vista hasta «Continuar». */
+let premio: Pick<ItemInstancia, 'itemDefinitionId' | 'itemInstanceId' | 'estadisticas'> | null = null;
+/** Las forjadas que había en la mochila en el último pintado. */
+let forjadasVistas = new Set<string>();
+/** La calidad que le salió a cada pieza forjada (`heroe.objeto_forjado`), por su `itemInstanceId`. */
+const calidadDeForjada = new Map<string, number>();
+/** La ventana pintada ahora, para acabar la forja aunque se haya repintado entretanto. */
+let ventanaViva: { root: HTMLElement; ejecutar: Ejecutar; repintar: () => void } | null = null;
+
+const textoDeCalidad = (c: number): string => `✦ Forjada con una calidad del ${c}\u00a0%`;
+/** El hecho `heroe.objeto_forjado` dice la calidad de la pieza `pieza` (`obj-N`): se apunta y, si su ficha está a la vista, se escribe. */
+export function anotarCalidadDeForja(pieza: number | string, calidad: number): void {
+  const id = String(pieza).startsWith('obj-') ? String(pieza) : `obj-${pieza}`;
+  calidadDeForjada.set(id, calidad);
+  if (typeof document === 'undefined') return;
+  document.querySelectorAll<HTMLElement>('[data-fj-calidad]').forEach((x) => { if (x.dataset.fjCalidad === id) x.textContent = `${textoDeCalidad(calidad)}.`; });
+}
+
+/** La ficha de la pieza recién forjada, centrada sobre la pestaña, con «Continuar». */
+function htmlPremio(e: Escapar): string {
+  if (!premio) return '';
+  const f = catalogoDeObjetos()?.objetos.find((o) => o.id === premio!.itemDefinitionId);
+  const id = premio.itemInstanceId ?? '';
+  const c = calidadDeForjada.get(id);
+  const nota = `<p class="obj-forjada" data-fj-calidad="${e(id)}">${c !== undefined ? `${textoDeCalidad(c)}.` : '✦ Forjada.'}</p>`;
+  return `<div class="fj-premio r-${f?.tier ? e(claveDeRareza(f.tier)) : 'ninguna'}" role="dialog" aria-label="Pieza forjada">
+    <span class="fj-premio-rotulo">Pieza forjada</span>
+    ${htmlFichaDePieza(premio, e, nota)}
+    <small class="fj-premio-donde">Ya está en tu mochila.</small>
+    <button class="btn-primary fj-continuar" type="button" data-arm-continuar>Continuar</button></div>`;
+}
+const ROMANO = ['', 'I', 'II', 'III', 'IV', 'V'];
+const NOMBRE_GRUPO_HUECO: Record<string, string> = { arma: 'Armas', casco: 'Cascos', torso: 'Torso', guantes: 'Guantes', pantalones: 'Pantalones', botas: 'Botas', montura: 'Monturas' };
+
+/** Una ranura de la receta: el icono, cuánto pide y cuánto tienes; en rojo si no llega. */
+const ranura = (icono: string, pide: number, hay: number, nombre: string, e: Escapar): string =>
+  `<span class="fj-ranura${hay < pide ? ' falta' : ''}" title="${e(nombre)}: pide ${miles(pide)}, tienes ${miles(hay)}"><i aria-hidden="true">${icono}</i><b>×${miles(pide)}</b><small>${e(nombre)}</small><em>tienes ${miles(hay)}</em></span>`;
 
 function htmlForja(p: ProyeccionJugador, a: Asentamiento, resideAqui: boolean, e: Escapar): string {
   const g = grupoEnPlaza(p, a);
   const ap = aperturaPara(a, g);
   const mano = materialesAMano(p, resideAqui);
   const inv = p.heroe.inventario;
+  const monedas = p.heroe.monedas ?? 0;
+  const hay = (m: string): number => Math.floor(mano.recursos[m] ?? 0);
   const recetas = recetasDeForja(p, a, resideAqui).filter((r) => !soloMiClase || deMiClase(p, r.f)).sort((x, y) => ordenar(x.f, y.f));
-  const fila = (r: RecetaEnForja): string => {
-    const x = r.f.forja!;
-    const plano = `plano_${x.plano}`;
-    const costes = [
-      chip('📜', 1, nombreDeObjeto(plano), enMochila(inv, plano) < 1, e),
-      chip('🏺', x.crisoles, x.crisoles === 1 ? 'crisol' : 'crisoles', enMochila(inv, 'crisol') < x.crisoles, e),
-      ...Object.entries(x.materiales).map(([m, n]) => chip(RECURSO_ICONO[m] ?? '📦', n, RECURSO_NOMBRE[m] ?? m, Math.floor(mano.recursos[m] ?? 0) < n, e)),
-      chip('💰', r.impuesto, 'monedas de impuesto', (p.heroe.monedas ?? 0) < r.impuesto, e),
-    ].join('');
-    const calidad = `<small class="arm-calidad">calidad ${x.calidad[0]} a ${x.calidad[1]} %</small>`;
-    const accion = r.faltan.length === 0 ? `<button class="btn-primary btn-chico" type="button" data-arm-forjar="${e(r.f.id)}">Forjar</button>` : `<small class="arm-falta">Te ${r.faltan.length === 1 && /^(un|una|1) /.test(r.faltan[0]!) ? 'falta' : 'faltan'} ${e(r.faltan.join(', '))}.</small>`;
-    return `<li class="arm-fila arm-fila-forja">${htmlPieza(r.f, e, calidad)}<span class="arm-costes">${costes}</span><span class="arm-accion">${accion}</span></li>`;
-  };
-  const listas = recetas.filter((r) => r.faltan.length === 0), faltan = recetas.filter((r) => r.faltan.length > 0);
+  const listas = recetas.filter((r) => r.faltan.length === 0);
+  // la forja en marcha: la pieza nueva de la mochila es el premio; mientras, el banco se queda en la que se está forjando
+  const forjadas = inv.filter((x) => x.itemInstanceId);
+  if (esperando) {
+    const nueva = forjadas.find((x) => x.itemDefinitionId === esperando!.objeto && !esperando!.antes.has(x.itemInstanceId!));
+    if (nueva) { premio = nueva; esperando = null; enCurso = null; }
+  }
+  forjadasVistas = new Set(forjadas.map((x) => x.itemInstanceId!));
+  if (enCurso && recetas.some((r) => r.f.id === enCurso!.objeto)) elegidaEnForja = enCurso.objeto;
+  if (!recetas.some((r) => r.f.id === elegidaEnForja)) elegidaEnForja = (listas[0] ?? recetas[0])?.f.id ?? null;
   const era = ordenDeEraDelMundo(p);
   const tiers = [2, 3, 4, 5].filter((t) => eraDelTier(t) <= era);
-  const recargo = ap.recargoPct ? ` con un recargo del ${ap.recargoPct} %` : '';
-  return `<div class="arm-cab"><span class="arm-saldo">💰 <strong>${miles(p.heroe.monedas ?? 0)}</strong> monedas</span>
-      <p class="asent-lado-nota">Forjas aquí como ${NOMBRE_GRUPO[g]}: pagas el impuesto ${ap.recargoPct ? `base${recargo}` : 'base'}, que va al fondo de la plaza. Los materiales salen ${e(mano.donde)}. La Era del mundo abre ${tiers.length > 1 ? `los tiers ${tiers.map((t) => textoDeTier(t).split(',')[0]!.replace('Tier ', '')).join(', ')}` : 'el tier II'}.</p></div>
-    <label class="arm-solo"><input type="checkbox" data-arm-solo${soloMiClase ? ' checked' : ''}> Solo lo de tu clase (${e(nombreDeClase(claseDeArma(p)))})</label>
-    <div class="obra-titulo"><span class="faction-kicker">Lo que puedes forjar ya</span>${ayuda('armeria:forja', 'Gasta un plano de su tier y sus crisoles de tu mochila, los materiales de la receta y el impuesto. La pieza sale con una calidad al azar en su rango, que multiplica todas sus cifras, y va a tu mochila.')}</div>
-    <ul class="arm-lista">${listas.map(fila).join('') || '<li class="mapa-lista-vacia">Ninguna todavía: mira abajo lo que te falta para cada una.</li>'}</ul>
-    ${faltan.length ? `<details class="arm-faltan"><summary>Las que aún no puedes forjar (${faltan.length})</summary><ul class="arm-lista">${faltan.map(fila).join('')}</ul></details>` : ''}`;
+
+  // lo que tienes a mano para forjar: monedas, crisoles, los planos y los materiales que piden estas recetas
+  const planos = [...new Set(recetas.map((r) => r.f.forja!.plano))].sort((x, y) => x - y);
+  const materiales = [...new Set(recetas.flatMap((r) => Object.keys(r.f.forja!.materiales)))];
+  const tengo = (icono: string, n: number, nombre: string): string => `<span class="fj-tengo${n > 0 ? '' : ' nada'}" title="${e(nombre)}">${icono} <strong>${miles(n)}</strong><span class="ta-sr"> ${e(nombre)}</span></span>`;
+  const aMano = [
+    tengo('💰', monedas, 'monedas'),
+    ...planos.map((n) => tengo(`📜<sub>${ROMANO[n] ?? n}</sub>`, enMochila(inv, `plano_${n}`), nombreDeObjeto(`plano_${n}`))),
+    tengo('🏺', enMochila(inv, 'crisol'), 'crisoles'),
+    ...materiales.map((m) => tengo(RECURSO_ICONO[m] ?? '📦', hay(m), RECURSO_NOMBRE[m] ?? m)),
+  ].join('');
+  const recargo = ap.recargoPct ? `, con un recargo del ${ap.recargoPct} % por forjar como ${NOMBRE_GRUPO[g]}` : '';
+  const explicacion = `Elige una pieza del estante y mira su receta en el banco. Forjar gasta un plano de su tier y sus crisoles de tu mochila, los materiales de la receta y el impuesto en monedas${recargo}, que va al fondo de la plaza. Los materiales salen ${mano.donde}. La pieza sale con una calidad al azar en su rango, que multiplica todas sus cifras, y va a tu mochila. La Era del mundo abre ${tiers.length > 1 ? `los tiers ${tiers.map((t) => ROMANO[t]).join(', ')}` : 'el tier II'}.`;
+
+  // el estante: una casilla por pieza, por hueco
+  const casilla = (r: RecetaEnForja): string => {
+    const lista = r.faltan.length === 0;
+    return `<button type="button" class="fj-pieza r-${e(claveDeRareza(r.tier))}${lista ? ' lista' : ''}${r.f.id === elegidaEnForja ? ' elegida' : ''}" data-arm-elegir="${e(r.f.id)}" aria-pressed="${r.f.id === elegidaEnForja}" title="${e(r.f.nombre)}${lista ? '' : ` · te falta: ${e(r.faltan.join(', '))}`}">
+      <b class="fj-tier">${ROMANO[r.tier] ?? r.tier}</b><i aria-hidden="true">${iconoDeObjeto(r.f.id)}</i><span>${e(r.f.nombre)}</span></button>`;
+  };
+  const grupos = HUECO_ORDEN.map((h) => [h, recetas.filter((r) => (r.f.hueco ?? r.f.tipo) === h)] as const).filter(([, rs]) => rs.length)
+    .map(([h, rs]) => `<div class="fj-grupo"><span class="fj-grupo-nombre">${NOMBRE_GRUPO_HUECO[h] ?? h}</span><div class="fj-rejilla">${rs.map(casilla).join('')}</div></div>`).join('');
+
+  // el banco: la receta en ranuras, el yunque con la pieza que sale, sus cifras y el martillo
+  const banco = (r: RecetaEnForja): string => {
+    const x = r.f.forja!;
+    const plano = `plano_${x.plano}`;
+    const rz = e(claveDeRareza(r.tier));
+    const lista = r.faltan.length === 0;
+    const metal = r.f.metal && r.f.metal !== 'inicio' ? ` · ${e(r.f.metal.replace(/_/g, ' '))}` : '';
+    const ranuras = [
+      ranura(`📜<sub>${ROMANO[x.plano] ?? x.plano}</sub>`, 1, enMochila(inv, plano), `Plano ${ROMANO[x.plano] ?? x.plano}`, e),
+      ...(x.crisoles > 0 ? [ranura('🏺', x.crisoles, enMochila(inv, 'crisol'), x.crisoles === 1 ? 'Crisol' : 'Crisoles', e)] : []),
+      ...Object.entries(x.materiales).map(([m, n]) => ranura(RECURSO_ICONO[m] ?? '📦', n, hay(m), RECURSO_NOMBRE[m] ?? m, e)),
+    ].join('');
+    const [min, max] = x.calidad;
+    const forjando = enCurso?.objeto === r.f.id;
+    const pie = forjando
+      ? `<div class="fj-progreso" role="progressbar" aria-label="Forjando"><span style="animation-duration:${DURACION_FORJA_MS}ms;animation-delay:-${Math.min(DURACION_FORJA_MS, Date.now() - enCurso!.desde)}ms"></span><b>Forjando…</b></div>`
+      : lista
+      ? `<button class="btn-primary fj-martillo" type="button" data-arm-forjar="${e(r.f.id)}"><span aria-hidden="true">⚒️</span> Forjar <em>💰 ${miles(r.impuesto)}</em></button>`
+      : `<p class="fj-falta">Te ${r.faltan.length === 1 && /^(un|una|1) /.test(r.faltan[0]!) ? 'falta' : 'faltan'} ${e(r.faltan.join(', '))}.</p><span class="fj-impuesto${monedas < r.impuesto ? ' falta' : ''}">Impuesto 💰 ${miles(r.impuesto)}</span>`;
+    return `<section class="fj-banco r-${rz}${lista ? ' lista' : ''}${forjando ? ' forjando' : ''}" data-fj-banco="${e(r.f.id)}"${r.f.id === elegidaEnForja ? '' : ' hidden'}>
+      <header class="fj-banco-cab"><h3>${e(r.f.nombre)}</h3><small>${e(textoDeTipo(r.f))}${metal}</small></header>
+      <div class="fj-escena">
+        <div class="fj-ranuras">${ranuras}</div>
+        <span class="fj-golpe" aria-hidden="true"><i>⚒️</i></span>
+        <div class="fj-sale">
+          <div class="fj-sale-pieza"><span class="fj-resultado"><i aria-hidden="true">${iconoDeObjeto(r.f.id)}</i><b class="fj-tier">${ROMANO[r.tier] ?? r.tier}</b></span>
+            <span class="fj-calidad" title="La calidad sale al azar en este rango y multiplica todas las cifras de la pieza. La de tienda es del 100\u00a0%."><span class="fj-calidad-barra" aria-hidden="true"></span>calidad ${min} a ${max}\u00a0%</span></div>
+          <div class="fj-cifras">${htmlCifras(cifrasDe({ itemDefinitionId: r.f.id }))}</div>
+        </div>
+      </div>
+      <footer class="fj-pie">${pie}</footer>
+    </section>`;
+  };
+
+  if (!recetas.length) {
+    return `<div class="fj">${htmlPremio(e)}<div class="fj-barra"><div class="fj-a-mano">${aMano}</div>
+        <label class="arm-solo"><input type="checkbox" data-arm-solo${soloMiClase ? ' checked' : ''}> Solo lo de tu clase (${e(nombreDeClase(claseDeArma(p)))})</label>${ayuda('armeria:forja', explicacion)}</div>
+      <p class="mapa-lista-vacia">Esta forja no tiene recetas ${soloMiClase ? 'para tu clase' : 'todavía'}.</p></div>`;
+  }
+  return `<div class="fj${enCurso ? ' forjando' : ''}">${htmlPremio(e)}
+    <div class="fj-barra"><div class="fj-a-mano" aria-label="Lo que tienes a mano">${aMano}</div>
+      <span class="fj-cuenta">Puedes forjar <strong>${listas.length}</strong> de ${recetas.length}</span>
+      <label class="arm-solo"><input type="checkbox" data-arm-solo${soloMiClase ? ' checked' : ''}> Solo lo de tu clase (${e(nombreDeClase(claseDeArma(p)))})</label>${ayuda('armeria:forja', explicacion)}</div>
+    ${mano.donde.startsWith('de ningún sitio') ? `<p class="fj-falta">Los materiales salen ${e(mano.donde)}.</p>` : ''}
+    <div class="fj-mesa"><div class="fj-estante">${grupos}</div><div class="fj-bancos">${recetas.map(banco).join('')}</div></div>
+  </div>`;
 }
 
 const textoRecargo = (r: number): string => (r === 0 ? 'sin recargo' : `+${r} % (×${(100 + r) / 100})`);
@@ -289,7 +397,36 @@ export function cablearArmeria(root: HTMLElement, a: Asentamiento, ejecutar: Eje
     const cantidad = x ? Math.max(1, Math.min(Number(x.max) || 1, Math.floor(Number(x.value) || 1))) : 1;
     return { casilla: Number(b.dataset.armVender), cantidad };
   });
-  orden('[data-arm-forjar]', 'forjarObjeto', (b) => ({ objeto: b.dataset.armForjar }));
+  // forjar: el banco trabaja unos segundos con su barra y entonces sale la orden; la ficha de lo forjado la pinta `htmlForja` al llegar la pieza
+  ventanaViva = { root, ejecutar, repintar };
+  root.querySelectorAll<HTMLButtonElement>('[data-arm-forjar]').forEach((b) => b.addEventListener('click', () => {
+    if (enCurso || esperando) return;
+    const objeto = b.dataset.armForjar ?? '';
+    enCurso = { objeto, desde: Date.now() };
+    repintar();
+    setTimeout(() => void (async () => {
+      esperando = { objeto, antes: new Set(forjadasVistas) };
+      const m = await (ventanaViva?.ejecutar ?? ejecutar)('forjarObjeto', { objeto });
+      const fallo = m !== null;
+      if (fallo) esperando = null;
+      enCurso = null;
+      // lo normal es que el refresco ya haya pintado la ficha; si la pieza no vino en la mochila, se enseña la de su ficha de catálogo
+      ventanaViva?.repintar();
+      if (!fallo && esperando) { esperando = null; premio = { itemDefinitionId: objeto }; ventanaViva?.repintar(); }
+      if (fallo) { const x = ventanaViva?.root.querySelector<HTMLElement>('[data-campo="error-armeria"]'); if (x) x.textContent = m; }
+    })(), DURACION_FORJA_MS);
+  }));
+  root.querySelectorAll<HTMLButtonElement>('[data-arm-continuar]').forEach((b) => b.addEventListener('click', () => { premio = null; repintar(); }));
+  // el estante de la forja: elegir una pieza cambia el banco sin repintar la ventana; el desplazamiento se recuerda entre repintados
+  const tapada = Boolean(root.querySelector('.fj-premio'));
+  if (root.querySelector('.fj')) root.scrollTop = tapada ? 0 : scrollDeForja;
+  root.onscroll = () => { if (root.querySelector('.fj') && !root.querySelector('.fj-premio')) scrollDeForja = root.scrollTop; };
+  root.querySelectorAll<HTMLButtonElement>('[data-arm-elegir]').forEach((b) => b.addEventListener('click', () => {
+    elegidaEnForja = b.dataset.armElegir ?? null;
+    root.querySelectorAll<HTMLButtonElement>('[data-arm-elegir]').forEach((x) => { const es = x === b; x.classList.toggle('elegida', es); x.setAttribute('aria-pressed', String(es)); });
+    root.querySelectorAll<HTMLElement>('[data-fj-banco]').forEach((x) => { x.hidden = x.dataset.fjBanco !== elegidaEnForja; });
+    error(null);
+  }));
   root.querySelectorAll<HTMLButtonElement>('[data-arm-tipo]').forEach((b) => b.addEventListener('click', () => { tipoTienda = b.dataset.armTipo as typeof tipoTienda; repintar(); }));
   root.querySelectorAll<HTMLInputElement>('[data-arm-solo]').forEach((x) => x.addEventListener('change', () => { soloMiClase = x.checked; repintar(); }));
   root.querySelectorAll<HTMLElement>('[data-arm-grupo]').forEach((fila) => {

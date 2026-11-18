@@ -2705,7 +2705,8 @@ function contenidoDeVentana(v: VentanaPlaza, c: ContextoPlaza, ajena: boolean): 
     }
     case 'defensa': return deExtras(['guarnicion', 'muralla', 'puerta']);
     // a ventana completa (Víctor, 2026-11-06)
-    case 'territorio': return { ...deExtras(ajena ? ['pueblos'] : ['pueblos', 'fundacion'], { pueblos: 'Pueblos y aldeas' }), ancho: 'completa', avisos: !ajena && fundacionListaEn(p, a) ? ['fundacion'] : [] };
+    // de visita (plaza ajena o de tu Facción sin residir) solo se mira lo que hay: sin Fundación, sin catálogo de lo que se podría marcar (Víctor, 2026-11-18)
+    case 'territorio': { const reside = !ajena && resideEnLaPlaza(p, a); return { ...deExtras(reside ? ['pueblos', 'fundacion'] : ['pueblos'], { pueblos: 'Pueblos y aldeas' }), ancho: 'completa', avisos: reside && fundacionListaEn(p, a) ? ['fundacion'] : [] }; }
     case 'almacen':
       // a pantalla completa: qué va en la barra de arriba, el almacén con su neto por minuto, la extracción y la reserva de recursos del Tesorero
       // a la izquierda (la reserva vino de Gobierno → Tesorería, Víctor 2026-11-04); los talleres a la derecha
@@ -2754,11 +2755,15 @@ function contenidoDeVentana(v: VentanaPlaza, c: ContextoPlaza, ajena: boolean): 
       const subs: [string, string][] = [['ordenes', 'Órdenes'], ['caravanas', 'Caravanas'], ['rutas', 'Rutas'], ...extras.map((s) => [s.id, s.etiqueta] as [string, string])];
       const sub = elegir(subs);
       const s = extras.find((x) => x.id === sub);
+      // sin residir (de visita en una plaza de tu Facción) no hay boleta: las órdenes abiertas se toman con tu carro, como en una plaza ajena (Víctor, 2026-11-18)
+      const tomarOrdenes = sub === 'ordenes' && !s && !c.resideAqui;
       return {
         ...base, ancho: 'completa', subs, sub,
-        html: s ? s.html(c) : sub === 'caravanas' ? htmlCaravanas(p, a, escaparHtml, renderPanelEdificios) : sub === 'rutas' ? htmlRutas(p, a, escaparHtml, renderPanelEdificios) : htmlOrdenes(p, a, escaparHtml),
+        html: tomarOrdenes ? `${htmlMercadoDePlaza(p, a.id, escaparHtml) || '<p class="asent-lado-nota">No hay órdenes abiertas de compra ni de venta a la vista.</p>'}<p id="mapa-seleccion-error" class="faction-error" role="alert"></p>`
+          : s ? s.html(c) : sub === 'caravanas' ? htmlCaravanas(p, a, escaparHtml, renderPanelEdificios) : sub === 'rutas' ? htmlRutas(p, a, escaparHtml, renderPanelEdificios) : htmlOrdenes(p, a, escaparHtml),
         cablear: () => {
           if (s) s.cablear?.(c);
+          else if (tomarOrdenes) cablearMercadoDePlaza(cuerpo, a.id, { ejecutarConDatos: ejecutarConDatosYRefrescar, aviso: avisoMapa }, p.heroeId);
           else if (sub === 'caravanas') cablearCaravanas(cuerpo, p, a, ejecutarYRefrescar, renderPanelEdificios);
           else if (sub === 'rutas') cablearRutas(cuerpo, p, ejecutarYRefrescar, renderPanelEdificios);
           else cablearOrdenes(cuerpo, a, ejecutarYRefrescar);

@@ -249,8 +249,10 @@ function colocar(s: EstadoTablero, ev: MouseEvent | FocusEvent | null, id: strin
   }
   if (x + r.width > vw - 8) x = 8;
   if (y + r.height > vh - 8) y = Math.max(8, vh - r.height - 8);
-  t.style.left = `${x}px`;
-  t.style.top = `${y}px`;
+  // con `zoom` (móvil apaisado) left/top se escalan: se dan en unidades sin zoom
+  const z = parseFloat(getComputedStyle(t).zoom) || 1;
+  t.style.left = `${x / z}px`;
+  t.style.top = `${y / z}px`;
 }
 
 function cerrarFicha(s: EstadoTablero): void { s.fijado = null; resaltar(s, null); ocultarTip(); }

@@ -3,7 +3,7 @@
 // (el tope real sale de la orden, el almacén de la plaza, su oro, tu carro y lo que llevas) y devuelve `{ cantidad, valor, comision }`.
 // Aquí solo se avisa de lo evidente (sin columna, lejos, no Líder, caducada): el que decide es el servidor y su rechazo se enseña tal cual.
 import { radioDePuerta, type ProyeccionJugador } from '../apiCliente';
-import { RECURSO_NOMBRE } from '../paletas';
+import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import { ayuda } from './ayuda';
 
 type Escapar = (valor: string) => string;
@@ -36,23 +36,33 @@ export function htmlMercadoDePlaza(p: ProyeccionJugador, plazaId: string, e: Esc
   const ordenes = (p.ordenes ?? []).filter((o) => o.asentamientoId === plazaId && o.estado === 'activa');
   if (ordenes.length === 0) return '';
   const general = motivoGeneral(p, plazaId);
-  const filas = ordenes.map((o) => {
-    const pendiente = o.cantidad - o.cantidadCumplida;
+  // Una fila por orden: icono, qué y cuánto (con la barra de lo cumplido), cantidad a tomar y el botón. Rediseño 2026-11-18: antes, una tarjeta por
+  // orden con la cantidad y el botón a todo el ancho (dos órdenes por pantalla en un móvil).
+  const fila = (o: (typeof ordenes)[number]): string => {
+    const pendiente = Math.max(0, o.cantidad - o.cantidadCumplida);
     const caducada = p.instante >= o.expiraEn;
     const motivo = general || (caducada ? 'La orden ha caducado.' : '');
     const titulo = motivo ? ` title="${e(motivo)}"` : '';
     const nombre = e(RECURSO_NOMBRE[o.recurso] ?? o.recurso);
-    return `<div class="mapa-lista-item" data-orden-fila="${e(o.id)}">
-      <div><strong>${o.tipo === 'venta' ? 'Vende' : 'Compra'} ${nombre}</strong><br><span>${num(pendiente)} pendientes · ${o.precioUnitario.toFixed(2)} de oro c/u · caduca en ${falta(o.expiraEn - p.instante)}</span></div>
-      <input class="form-input" type="number" min="1" step="1" value="${Math.max(1, Math.floor(pendiente))}" data-orden-cantidad="${e(o.id)}" aria-label="Cantidad" ${motivo ? 'disabled' : ''}${titulo} />
-      <button class="btn-primary" type="button" data-orden-tomar="${e(o.id)}"${motivo ? ' disabled' : ''}${titulo}>${o.tipo === 'venta' ? 'Comprar' : 'Vender'}</button>
-      ${motivo && !general ? `<p class="mapa-lista-vacia">${e(motivo)}</p>` : ''}
+    const hecho = o.cantidad > 0 ? Math.min(1, o.cantidadCumplida / o.cantidad) : 0;
+    const venta = o.tipo === 'venta';
+    return `<div class="mp-fila ${o.tipo}" data-orden-fila="${e(o.id)}">
+      <span class="orden-ficha-icono">${RECURSO_ICONO[o.recurso] ?? '📦'}<i>${venta ? '▲' : '▼'}</i></span>
+      <span class="mp-cuerpo"><b>${nombre}</b><small>${Math.floor(pendiente)} de ${Math.floor(o.cantidad)} · 🪙 ${o.precioUnitario.toFixed(2)} c/u · ${caducada ? 'caducada' : `caduca en ${falta(o.expiraEn - p.instante)}`}</small><span class="obra-barra"><i style="width:${(hecho * 100).toFixed(1)}%"></i></span></span>
+      <input class="form-input mp-cantidad" type="number" min="1" step="1" value="${Math.max(1, Math.floor(pendiente))}" data-orden-cantidad="${e(o.id)}" aria-label="Cantidad de ${nombre}" ${motivo ? 'disabled' : ''}${titulo} />
+      <button class="btn-primary mp-tomar" type="button" data-orden-tomar="${e(o.id)}"${motivo ? ' disabled' : ''}${titulo}>${venta ? 'Comprar' : 'Vender'}</button>
+      ${motivo && !general ? `<span class="mp-motivo">${e(motivo)}</span>` : ''}
     </div>`;
-  }).join('');
+  };
+  const columna = (tipo: 'venta' | 'compra', titulo: string, nota: string, vacio: string): string => {
+    const lista = ordenes.filter((o) => o.tipo === tipo);
+    return `<section class="mp-col"><div class="obra-titulo"><span class="faction-kicker">${titulo}</span><span class="obra-chip">${lista.length}</span><small class="mp-nota">${nota}</small></div>
+      ${lista.length ? lista.map(fila).join('') : `<p class="mapa-lista-vacia">${vacio}</p>`}</section>`;
+  };
   // El motivo general (el mismo para todas las órdenes) sale una vez, no en cada fila.
   return `<strong class="heroe-sub">Mercado de la plaza${ayuda('mapa:mercado-plaza', 'Tomas la orden en persona con tu carro: pagas o cobras en oro del carro, más la comisión de la plaza. Se sirve lo que se pueda.')}</strong>
     ${general ? `<p class="mapa-lista-vacia">${e(general)}</p>` : ''}
-    <div class="mapa-lista">${filas}</div>`;
+    <div class="mp-cols">${columna('venta', 'Venden', 'tú compras', 'Nadie vende ahora.')}${columna('compra', 'Piden', 'tú vendes', 'Nadie pide ahora.')}</div>`;
 }
 
 export function cablearMercadoDePlaza(cont: HTMLElement, plazaId: string, ctx: ContextoMercado, heroeId: string): void {

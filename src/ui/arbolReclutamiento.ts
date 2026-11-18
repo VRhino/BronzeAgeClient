@@ -8,7 +8,7 @@
 //   - Solo recluta: reponer va aparte (Víctor, 2026-11-06). Con la escuadra ya hecha, la carta lo dice y no hay botón (una por tropa y héroe).
 //   - Solo sale lo que se puede reclutar aquí (Víctor, 2026-11-07; 0.181.0): las tropas listas y las que ya tienes. Las que piden tecnología,
 //     edificio, nivel o una Era que aún no empieza no salen, ni los carriles sin tropa que reclutar ni las Eras sin ninguna.
-import { htmlFichaCombate } from './fichaCombate';
+import { claveDeRareza, htmlFichaCombate } from './fichaCombate';
 import { bloqueDeDatos, oroPorSoldado, type ProyeccionJugador, type TropaReclutable, origenDeTropa } from '../apiCliente';
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { Asentamiento } from '../tiposDominio';
@@ -353,7 +353,7 @@ export function htmlArbolDeLugar(D: DatosArbol, L: LugarDeReclutamiento, e: Esca
     const cruces = n.preds.filter((x) => G.nodos.get(x.de)!.carril !== n.carril && enCarta.has(x.de));
     const porTipo = (['hito', 'implicita', 'logro'] as const).map((tp) => [tp, cruces.filter((x) => x.tipo === tp)] as const).filter(([, l]) => l.length);
     const edificio = t.edificio === 'centroUrbano' ? EI(L.centro.icono, null, L.centro.nombre) : EI(t.edificio, t.nivelRequerido);
-    cartas.push({ carril: n.carril, col: n.col!, fila: n.fila!, html: (estilo) => `<button type="button" class="ta-carta ta-tropa ${est}" data-nodo="${e(id)}" style="${estilo}" aria-label="${e(t.nombre)}">
+    cartas.push({ carril: n.carril, col: n.col!, fila: n.fila!, html: (estilo) => `<button type="button" class="ta-carta ta-tropa ${est}${t.tier ? ` r-${claveDeRareza(t.tier)}` : ''}" data-nodo="${e(id)}" style="${estilo}" aria-label="${e(t.nombre)}">
       <span class="ta-carta-cab"><span class="ta-carta-ico">${iconoTropa(t.id, 30)}</span><span class="ta-carta-nombre">${e(t.nombre)}</span><span class="ta-medalla" aria-hidden="true">${MEDALLA[est] ?? ''}</span></span>
       <span class="ta-carta-datos">${edificio}<span>escalón ${t.escalon}</span><span>${t.unidadesPorDefecto} ${ORIGEN_ICONO[origenDeTropa(t)]}</span></span>
       <span class="ta-carta-stats">${stats(t)}</span>
@@ -413,11 +413,12 @@ function tipTropa(d: Dibujo, id: string): string {
   const oroEsc = oroPorSoldado(t);
   const centro = t.edificio === 'centroUrbano';
   let h = `<div class="ta-tip-cab">${iconoTropa(t.id, 34)}<div><h3>${e(t.nombre)}</h3><div class="ta-meta">${e(centro ? L.centro.nombre : `${nombreEdificio(t.edificio)} ${t.nivelRequerido}`)} · Era ${ROMANO[n.era]} · escalón ${t.escalon} · escuadra de ${t.unidadesPorDefecto} ${ORIGEN_ICONO[origen]}</div></div></div>`;
-  h += `<div class="ta-estado-caja ${est}"><span class="ta-meta">En ${L.donde}</span><br>${L.caja(id, pz)}</div>`;
+  // «Lista para reclutar» ya lo dice la medalla de la carta: la caja solo sale cuando explica qué falta.
+  if (est !== 'lista') h += `<div class="ta-estado-caja ${est}">${L.caja(id, pz)}</div>`;
   // Sin Facción no hay tecnologías adoptadas que marcar.
   if (E.adoptadas.length) h += `<h4>Tecnologías de tu Facción</h4><ul class="ta-marcadas">${tecs}</ul>`;
   const conTec = [...a.eds.keys()].filter((x) => D.edificios[x]?.construir.tec).map((x) => `${EI(x)} pide <span class="ta-tec">${e(TN(D.edificios[x]!.construir.tec!))}</span> para construirse`);
-  if (!L.sinEdificios) h += `<h4>Edificios y pueblos</h4><div class="ta-fichas">${EI('plaza', a.plaza, 'Plaza')}${centro ? EI('centroUrbano', null, 'Centro Urbano (lo tiene toda plaza)') : ''}${[...a.eds.entries()].map(([x, nv]) => EI(x, nv)).join('')}${[...a.pueblos].map(PI).join('')}</div>${conTec.length ? `<div class="ta-nota">${conTec.join('; ')}.</div>` : ''}`;
+  if (!L.sinEdificios) h += `<div class="ta-seg-edificios"><h4>Edificios y pueblos</h4><div class="ta-fichas">${EI('plaza', a.plaza, 'Plaza')}${centro ? EI('centroUrbano', null, 'Centro Urbano (lo tiene toda plaza)') : ''}${[...a.eds.entries()].map(([x, nv]) => EI(x, nv)).join('')}${[...a.pueblos].map(PI).join('')}</div>${conTec.length ? `<div class="ta-nota">${conTec.join('; ')}.</div>` : ''}</div>`;
   const propio = L.porSoldado?.(id, pz);
   if (propio !== undefined && propio !== null) h += propio;
   else {

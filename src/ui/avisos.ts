@@ -25,7 +25,7 @@ import { TEXTO_DE_RECETA } from './recetasUnicas';
 import { textoDeHechoAeda } from './aedas';
 import { textoDeNivelSubido } from './progresionHeroe';
 import { textoDeBotinDeObjetos, textoDeObjetoUsado } from './objetosHeroe';
-import { textoDeHechoArmeria } from './armeria';
+import { anotarCalidadDeForja, textoDeHechoArmeria } from './armeria';
 
 /** Los eventos de «alguien te ha mirado»: el backend los emite sin decir quién. */
 const CODIGOS_DE_AVISO = new Set(['asentamiento.observado', 'columna.observada', 'caravana.observada', 'asentamiento.informe_pedido']);
@@ -302,7 +302,10 @@ export function procesar(e: EventoDominio, heroeId: string, modo: Modo): void {
       const id = n.startsWith('as-') ? n : `as-${n}`;
       return proy?.asentamientos.find((x) => x.id === id)?.nombre ?? proy?.asentamientosAvistados.find((x) => x.id === id)?.nombre ?? proy?.asentamientosConocidos.find((x) => x.asentamientoId === id)?.nombre ?? id;
     };
-    const texto = textoDeHechoArmeria(e.codigo, (e.payload ?? {}) as Record<string, unknown>, nombrePlaza);
+    const datos = (e.payload ?? {}) as Record<string, unknown>;
+    // la calidad que salió, para la ficha de la pieza recién forjada (la pieza no la lleva: solo sus cifras ya multiplicadas)
+    if (e.codigo === 'heroe.objeto_forjado' && datos.pieza !== undefined && datos.calidad !== undefined) anotarCalidadDeForja(String(datos.pieza), Number(datos.calidad));
+    const texto = textoDeHechoArmeria(e.codigo, datos, nombrePlaza);
     if (texto) anotar({ ...base, texto, clase: 'mirada', titulo: e.codigo === 'asentamiento.forja_configurada' ? 'Forja' : 'Armería', categoria: 'economia', urgente: false, clave: `${e.codigo}|${e.version}` }, modo);
     return;
   }

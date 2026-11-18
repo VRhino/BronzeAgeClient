@@ -264,6 +264,16 @@ function htmlFicha(p: ProyeccionJugador, e: Escapar): string {
     ${acciones.length ? `<div class="obj-acciones">${acciones.map((a) => htmlAccion(a, f, e)).join('')}</div>` : ''}`;
 }
 
+/** La ficha de una pieza suelta, como la del panel derecho de Equipo pero sin acciones (la Armería enseña así lo recién forjado): `nota` va
+ * entre la cabecera y las cifras. */
+export function htmlFichaDePieza(item: Pick<ItemInstancia, 'itemDefinitionId' | 'estadisticas'>, e: Escapar, nota = ''): string {
+  const f = fichaDeObjeto(item.itemDefinitionId);
+  if (!f) return '';
+  const metal = f.metal && f.metal !== 'inicio' ? ` · ${e(f.metal.replace(/_/g, ' '))}` : '';
+  return `<section class="obj-col obj-ficha ${rareza(f.id)}"><div class="obj-ficha-cab"><i aria-hidden="true">${iconoDeObjeto(f.id)}</i><div><h4>${e(f.nombre)}</h4><small>${e(textoDeTipo(f))}${metal}</small></div></div>
+    ${nota}${htmlCifras(cifrasDe(item))}</section>`;
+}
+
 /** Por qué no salen las acciones, en una línea arriba (lo que no se puede no se ofrece, pero se dice dónde sí). */
 function htmlNotaDeLugar(p: ProyeccionJugador, e: Escapar): string {
   const m = motivoDeLugar(p);

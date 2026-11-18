@@ -84,8 +84,9 @@ function colocar(ev: MouseEvent | FocusEvent | null): void {
     if (x + r.width > vw - 8) x = Math.max(8, vw - r.width - 8);
   }
   if (y + r.height > vh - 8) y = Math.max(8, vh - r.height - 8);
-  t.style.left = `${Math.round(x)}px`;
-  t.style.top = `${Math.round(y)}px`;
+  const z = parseFloat(getComputedStyle(t).zoom) || 1; // móvil apaisado: left/top se escalan con el zoom
+  t.style.left = `${Math.round(x / z)}px`;
+  t.style.top = `${Math.round(y / z)}px`;
 }
 
 const conTip = (x: EventTarget | null): HTMLElement | null => (x instanceof Element ? x.closest<HTMLElement>('[data-tip]') : null);

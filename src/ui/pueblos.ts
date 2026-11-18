@@ -510,7 +510,7 @@ function htmlPueblos(c: ContextoPlaza): string {
     ${ids.size === 0 && !puedeMarcar ? '<p class="mapa-lista-vacia">Esta plaza aún no tiene pueblos.</p>' : ''}
     ${detalle ? `<div class="pueblo-detalle">${detalle}</div>` : ''}
     ${gestiona ? (lleno && abierto === null ? '<p class="asent-lado-nota">🏘 Cupo lleno: para marcar otro pueblo, sube la plaza de nivel o destruye uno.</p>' : '')
-      : '<p class="asent-lado-nota">Los pueblos los marca, mejora y destruye el Gobernador o el Maestro de Obras, residente y dentro de la plaza.</p>'}
+      : ''}
     </div>${avanzadas ? `<div class="col-completa">${avanzadas}</div>` : ''}</div>`;
 }
 
@@ -1203,13 +1203,13 @@ function htmlAvanzadasDeLaPlaza(p: ProyeccionJugador, a: Asentamiento, gestiona:
   return `<div class="obra-titulo"><span class="faction-kicker">Avanzadas</span>${total !== null ? `<span class="obra-chip${usados >= total ? ' lleno' : ''}" title="Cupo de avanzadas por el nivel de la plaza">🗼 ${usados} / ${total}${total ? casillas(usados, total) : ''}</span>` : ''}${ayuda('plaza:avanzadas', 'Un puesto fortificado de la plaza en su zona: atalaya, fuerte y ciudadela. Ve a lo lejos, guarda un almacén y tiene guarnición propia.')}</div>
     ${avanzadas.length + obras.length === 0 ? '<p class="mapa-lista-vacia">Esta plaza aún no tiene avanzadas.</p>'
       : `<div class="pueblo-cartas">${tarjetas.join('')}${obras.map((o) => tarjetaObra(p, a, o, gestiona, e)).join('')}</div>`}
-    ${atalaya?.costo ? `<div class="avanzada-coste"><span>🗼 Atalaya</span>${costeLlano(atalaya.costo, e)}${atalaya.minutos ? `<small>⏱ ${atalaya.minutos >= 60 ? `${n0(atalaya.minutos / 60)} h` : `${atalaya.minutos} min`} de obra</small>` : ''}${nivel ? `<small>· plaza a nivel ${nivel}</small>` : ''}</div>` : ''}
+    ${gestiona && atalaya?.costo ? `<div class="avanzada-coste"><span>🗼 Atalaya</span>${costeLlano(atalaya.costo, e)}${atalaya.minutos ? `<small>⏱ ${atalaya.minutos >= 60 ? `${n0(atalaya.minutos / 60)} h` : `${atalaya.minutos} min`} de obra</small>` : ''}${nivel ? `<small>· plaza a nivel ${nivel}</small>` : ''}</div>` : ''}
     ${gestiona ? (() => {
       // Como la aldea (Víctor, 2026-11-04): desde la plaza se elige el sitio en el mapa, ahí queda la obra y se le llevan los materiales.
       const motivo = nivel !== undefined && (a.nivelActual ?? a.nivel) < nivel ? `La plaza tiene que estar a nivel ${nivel}.`
         : total !== null && usados >= total ? `Cupo lleno (${usados} / ${total}): sube la plaza de nivel o destruye una.` : '';
       return `<div class="mapa-seleccion-acciones"><button class="pueblo-boton principal" type="button" data-pueblo-accion="elegir-avanzada"${motivo ? ` disabled title="${e(motivo)}"` : ''}>🗺 Elegir el sitio de la atalaya</button></div>
         <p class="asent-lado-nota">${motivo ? e(motivo) : 'Dentro de la zona, fuera de la ciudad y sin pisar otro pueblo, avanzada o campamento. Lo que pide se lleva a su puerta con una columna.'}</p>`;
-    })() : '<p class="asent-lado-nota">Las coloca el Gobernador o el Maestro de Obras, residente y dentro de la plaza.</p>'}`;
+    })() : ''}`;
 }
 

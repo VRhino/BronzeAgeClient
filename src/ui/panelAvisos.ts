@@ -45,7 +45,7 @@ export function htmlAvisos(entradas: readonly EntradaAviso[], e: (s: string) => 
   if (urgentes.length) {
     const sin = urgentes.filter(([a]) => !a.leido).length;
     secciones.push(`<section class="avisos-seccion avisos-urgentes" data-seccion="urgentes">
-      <div class="avisos-cab"><strong>Urgentes (${urgentes.length}${sin ? `, ${sin} sin leer` : ''})</strong>${sin ? '<button type="button" class="avisos-leer" data-leer="urgentes">Marcar leído</button>' : ''}${ayuda('avisos:urgentes', 'Lo grave o lo que pide una decisión (te atacan, combates tuyos, deserción, peticiones de unirse a tu ejército, propuestas). Hacen aviso propio y no se agrupan.')}</div>
+      <div class="avisos-cab"><strong>Urgentes (${urgentes.length}${sin ? `, ${sin} sin leer` : ''})</strong>${sin ? '<button type="button" class="btn-secondary avisos-leer" data-leer="urgentes">Marcar leído</button>' : ''}${ayuda('avisos:urgentes', 'Lo grave o lo que pide una decisión (te atacan, combates tuyos, deserción, peticiones de unirse a tu ejército, propuestas). Hacen aviso propio y no se agrupan.')}</div>
       <div class="mapa-lista">${urgentes.map(([a, i]) => `<div class="aviso-fila">${htmlEntrada(a, i, e)}<button type="button" class="aviso-borrar" data-borrar-aviso="${i}" title="Borrar este aviso" aria-label="Borrar este aviso">×</button></div>`).join('')}</div></section>`);
   }
   for (const [cat, nombre] of CATEGORIAS) {
@@ -54,7 +54,7 @@ export function htmlAvisos(entradas: readonly EntradaAviso[], e: (s: string) => 
     const sin = lineas.filter(([a]) => !a.leido).length;
     const plegada = plegadas.has(cat);
     secciones.push(`<section class="avisos-seccion" data-seccion="${cat}">
-      <div class="avisos-cab"><button type="button" class="avisos-plegar" data-plegar="${cat}" aria-expanded="${!plegada}">${plegada ? '▸' : '▾'} ${nombre} (${lineas.length}${sin ? `, ${sin} sin leer` : ''})</button>${sin ? `<button type="button" class="avisos-leer" data-leer="${cat}">Marcar leído</button>` : ''}${ayuda(`avisos:${cat}`, AYUDA_CATEGORIA[cat])}</div>
+      <div class="avisos-cab"><button type="button" class="avisos-plegar" data-plegar="${cat}" aria-expanded="${!plegada}">${plegada ? '▸' : '▾'} ${nombre} (${lineas.length}${sin ? `, ${sin} sin leer` : ''})</button>${sin ? `<button type="button" class="btn-secondary avisos-leer" data-leer="${cat}">Marcar leído</button>` : ''}${ayuda(`avisos:${cat}`, AYUDA_CATEGORIA[cat])}</div>
       ${plegada ? '' : `<div class="mapa-lista">${lineas.map(([a, i]) => htmlEntrada(a, i, e)).join('')}</div>`}</section>`);
   }
   return `<div class="avisos-grupos">${secciones.join('')}</div>`;

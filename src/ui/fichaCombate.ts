@@ -34,7 +34,8 @@ const num = (n: number): string => (Number.isInteger(n) ? String(n) : String(+n.
 export function htmlFichaCombate(t: Pick<TropaReclutable, 'tier' | 'combate'>, e: Escapar): string {
   const c = t.combate;
   if (!c) return '';
-  const tier = t.tier ? `<span class="ta-rareza r-${e(claveDeRareza(t.tier))}">${e(textoDeTier(t.tier))}</span>` : '';
+  // La rareza ya no se escribe: la lleva el borde del tooltip (`.ta-tip:has(.ta-tip-marca)`) y el de la carta de la tropa.
+  const marca = t.tier ? `<i class="ta-tip-marca r-${e(claveDeRareza(t.tier))}" hidden></i>` : '';
   const filas = FILAS.filter(([k]) => TIPOS.some(([x]) => (c[k]?.[x] ?? 0) !== 0))
     .map(([k, nombre, titulo]) => `<tr><th scope="row" title="${e(titulo)}">${nombre}</th>${TIPOS.map(([x]) => `<td>${c[k][x] ? `${num(c[k][x])}${k === 'dano' ? '' : ' %'}` : '·'}</td>`).join('')}</tr>`).join('');
   const sueltas = [
@@ -46,5 +47,5 @@ export function htmlFichaCombate(t: Pick<TropaReclutable, 'tier' | 'combate'>, e
     ...(c.municion !== undefined ? [['➶', num(c.municion), 'Munición']] : []),
   ].map(([i, v, titulo]) => `<span class="ta-rec" title="${e(titulo!)}"><i aria-hidden="true">${i}</i><b>${e(v!)}</b><span class="ta-sr">${e(titulo!)}</span></span>`).join('');
   const tabla = filas ? `<table class="ta-combate"><thead><tr><td></td>${TIPOS.map(([, i, n]) => `<th scope="col" title="${n}"><span aria-hidden="true">${i}</span> ${n}</th>`).join('')}</tr></thead><tbody>${filas}</tbody></table>` : '';
-  return `<h4>Combate ${tier}</h4><div class="ta-fichas">${sueltas}</div>${tabla}`;
+  return `<h4>Combate${marca}</h4><div class="ta-fichas">${sueltas}</div>${tabla}`;
 }
