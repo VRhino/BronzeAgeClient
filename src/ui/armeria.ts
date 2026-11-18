@@ -191,7 +191,7 @@ function htmlTienda(p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
       ? `<small class="arm-falta">Te faltan ${miles(falta)}</small>`
       : `<button class="btn-primary" type="button" data-arm-comprar="${e(f.id)}">Comprar</button>`;
     const pie = `<div class="arm-ficha-pie"><span class="arm-precio${falta > 0 ? ' caro' : ''}">💰 ${miles(f.precio)}</span>${accion}</div>`;
-    return `<div class="arm-detalle" data-arm-detalle="${e(f.id)}"${f.id === elegidaTienda ? '' : ' hidden'}>${htmlFichaDePieza({ itemDefinitionId: f.id }, e, '', pie)}</div>`;
+    return `<div class="arm-detalle" role="dialog" data-arm-detalle="${e(f.id)}"${f.id === elegidaTienda ? '' : ' hidden'}><button type="button" class="arm-cerrar" data-arm-cerrar aria-label="Cerrar">✕</button>${htmlFichaDePieza({ itemDefinitionId: f.id }, e, '', pie)}</div>`;
   }).join('');
   const NOMBRE_TIPO = { arma: 'Armas', armadura: 'Armaduras', montura: 'Monturas' } as const;
   const filtros = `<div class="arm-filtros">${tipos.map((t) => `<button type="button" class="obra-chip arm-chip${t === tipoTienda ? ' activo' : ''}" data-arm-tipo="${t}" aria-pressed="${t === tipoTienda}">${NOMBRE_TIPO[t]}</button>`).join('')}
@@ -201,9 +201,7 @@ function htmlTienda(p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
   const total = catalogoDeObjetos()?.casillasMochila ?? 72;
   const porCasilla = new Map(p.heroe.inventario.map((it) => [it.casillaInventario, it]));
   if (elegidaVenta !== null && !porCasilla.has(elegidaVenta)) elegidaVenta = null;
-  // hasta la última fila con algo y una más; las demás casillas libres se cuentan en una línea
-  const visibles = Math.min(total, Math.max(24, (Math.floor(Math.max(-1, ...porCasilla.keys()) / 12) + 2) * 12));
-  const casillasVenta = Array.from({ length: visibles }, (_, n) => {
+  const casillasVenta = Array.from({ length: total }, (_, n) => {
     const it = porCasilla.get(n);
     const f = it ? catalogoDeObjetos()?.objetos.find((o) => o.id === it.itemDefinitionId) : undefined;
     return it && f ? casilla('data-arm-ver-venta', String(n), f.id, f.nombre, n === elegidaVenta, e, it.cantidad, Boolean(it.itemInstanceId)) : '<span class="obj-casilla vacia" aria-hidden="true"></span>';
@@ -214,18 +212,17 @@ function htmlTienda(p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
     const cuantas = it.cantidad > 1 ? `<input class="form-input obj-cantidad" type="number" min="1" max="${it.cantidad}" value="1" data-arm-cantidad aria-label="Cuántas" />` : '';
     const nota = it.itemInstanceId ? '<p class="obj-forjada">✦ Forjada: sus cifras, por la calidad que le salió.</p>' : '';
     const pie = `<div class="arm-ficha-pie"><span class="arm-precio">💰 ${miles(precioDeVenta(f))}${it.cantidad > 1 ? ' c/u' : ''}</span><span class="obj-mover">${cuantas}<button class="btn-secondary" type="button" data-arm-vender="${it.casillaInventario}">Vender</button></span></div>`;
-    return `<div class="arm-detalle" data-arm-detalle="${it.casillaInventario}"${it.casillaInventario === elegidaVenta ? '' : ' hidden'}>${htmlFichaDePieza(it, e, nota, pie)}</div>`;
+    return `<div class="arm-detalle" role="dialog" data-arm-detalle="${it.casillaInventario}"${it.casillaInventario === elegidaVenta ? '' : ' hidden'}><button type="button" class="arm-cerrar" data-arm-cerrar aria-label="Cerrar">✕</button>${htmlFichaDePieza(it, e, nota, pie)}</div>`;
   }).join('');
-  const pista = (elegida: boolean, texto: string): string => `<p class="mapa-lista-vacia arm-pista"${elegida ? ' hidden' : ''}>${texto}</p>`;
   return `<div class="arm-tienda"><div class="arm-cab"><span class="arm-saldo">💰 <strong>${miles(monedas)}</strong> monedas</span><span class="arm-saldo">🎒 ${p.heroe.inventario.length}/${total}</span>
       ${libres < 1 ? '<p class="asent-lado-nota">La mochila está llena: vende algo o guárdalo en tu almacén de objetos antes de comprar.</p>' : ''}</div>
     <div class="cols-completa arm-cols">
       <section class="col-completa arm-panel" data-arm-panel="comprar"><div class="obra-titulo"><span class="faction-kicker">Comprar</span>${ayuda('armeria:tienda', `Al 100\u00a0%, con tus monedas, y a tu mochila. Vende armas, armaduras y monturas hasta el tier ${catalogoDeObjetos()?.tiendaHastaTier ?? 2}, con los metales que abre la tecnología de la Facción de esta plaza. Lo mejor se forja.`)}</div>
         ${filtros}<div class="arm-rejilla">${casillasCompra || '<p class="mapa-lista-vacia">Nada de esto a la venta aquí.</p>'}</div>
-        ${lista.length ? pista(elegidaTienda !== null, 'Toca una pieza para ver su ficha y comprarla.') : ''}${detallesCompra}</section>
+        ${detallesCompra}</section>
       <section class="col-completa arm-panel" data-arm-panel="vender"><div class="obra-titulo"><span class="faction-kicker">Vender</span>${ayuda('armeria:vender', `Cualquier cosa de tu mochila, al ${catalogoDeObjetos()?.ventaPct ?? 50}\u00a0% del precio de su ficha. Una pieza forjada vale lo mismo que la de tienda. Lo que llevas puesto no se vende: quítatelo antes.`)}</div>
-        <div class="arm-rejilla">${casillasVenta}</div>${visibles < total ? `<p class="obj-nota">Y ${total - visibles} casillas libres más.</p>` : ''}
-        ${p.heroe.inventario.length ? pista(elegidaVenta !== null, 'Toca una pieza de tu mochila para ver su ficha y venderla.') : '<p class="mapa-lista-vacia">Tu mochila está vacía.</p>'}${detallesVenta}</section>
+        <div class="arm-rejilla">${casillasVenta}</div>
+        ${detallesVenta}</section>
     </div></div>`;
 }
 
@@ -454,22 +451,69 @@ export function cablearArmeria(root: HTMLElement, a: Asentamiento, ejecutar: Eje
   }));
   // la tienda: tocar una casilla enseña su ficha sin repintar (la ventana no salta); el desplazamiento se recuerda entre repintados
   if (root.querySelector('.arm-tienda')) root.scrollTop = scrollDeTienda;
+  // la ficha de la casilla tocada sale como un tooltip a su lado (dentro de la tienda, con su zoom), con Comprar o Vender; una sola a la vez
+  const tienda = root.querySelector<HTMLElement>('.arm-tienda');
+  /** Dónde está `el` dentro de la tienda, en sus píxeles (los de `left`/`top`, también con el zoom del móvil). */
+  const posEnTienda = (el: HTMLElement): { x: number; y: number } => {
+    let x = 0, y = 0;
+    for (let n: HTMLElement | null = el; n && n !== tienda; n = n.offsetParent as HTMLElement | null) { x += n.offsetLeft; y += n.offsetTop; }
+    return { x, y };
+  };
+  const colocarFicha = (ficha: HTMLElement, junto: HTMLElement): void => {
+    if (!tienda) return;
+    const c = posEnTienda(junto), w = ficha.offsetWidth, h = ficha.offsetHeight, ancho = tienda.clientWidth;
+    // a la derecha de la casilla si cabe; si no, a su izquierda
+    let x = c.x + junto.offsetWidth + 8;
+    if (x + w > ancho - 4) x = Math.max(4, c.x - w - 8);
+    // a la altura de la casilla, sin salirse por abajo de lo que se ve de la ventana ni por arriba de la tienda
+    // lo que se ve de la ventana, en píxeles de la tienda (`k` deshace el zoom del móvil en las medidas de pantalla)
+    const rt = tienda.getBoundingClientRect(), rr = root.getBoundingClientRect();
+    const k = tienda.offsetWidth / (rt.width || 1);
+    const visibleDesde = (rr.top - rt.top) * k + 4, visibleHasta = (rr.bottom - rt.top) * k - 8;
+    const y = Math.max(0, visibleDesde, Math.min(c.y - 6, visibleHasta - h, tienda.scrollHeight - h));
+    ficha.style.left = `${x}px`;
+    ficha.style.top = `${y}px`;
+  };
+  const cerrarFichas = (): void => {
+    root.querySelectorAll<HTMLElement>('[data-arm-detalle]').forEach((x) => { x.hidden = true; });
+    root.querySelectorAll<HTMLButtonElement>('[data-arm-ver], [data-arm-ver-venta]').forEach((x) => { x.classList.remove('elegida'); x.setAttribute('aria-pressed', 'false'); });
+    elegidaTienda = null; elegidaVenta = null;
+  };
+  const abrirFicha = (b: HTMLButtonElement, atributo: string): void => {
+    const panel = b.closest<HTMLElement>('.arm-panel');
+    const clave = b.getAttribute(atributo);
+    const ficha = panel && clave !== null ? panel.querySelector<HTMLElement>(`[data-arm-detalle="${CSS.escape(clave)}"]`) : null;
+    if (!ficha) return;
+    b.classList.add('elegida'); b.setAttribute('aria-pressed', 'true');
+    ficha.hidden = false;
+    colocarFicha(ficha, b);
+  };
   const elegirEnPanel = (atributo: string, guardar: (c: string | null) => void): void => {
-    root.querySelectorAll<HTMLButtonElement>(`[${atributo}]`).forEach((b) => b.addEventListener('click', () => {
-      const panel = b.closest<HTMLElement>('.arm-panel');
-      if (!panel) return;
+    root.querySelectorAll<HTMLButtonElement>(`[${atributo}]`).forEach((b) => b.addEventListener('click', (ev) => {
+      ev.stopPropagation();
       const ya = b.classList.contains('elegida');
-      const nueva = ya ? null : b.getAttribute(atributo);
-      panel.querySelectorAll<HTMLButtonElement>(`[${atributo}]`).forEach((x) => { const es = x === b && !ya; x.classList.toggle('elegida', es); x.setAttribute('aria-pressed', String(es)); });
-      panel.querySelectorAll<HTMLElement>('[data-arm-detalle]').forEach((x) => { x.hidden = x.dataset.armDetalle !== nueva; });
-      panel.querySelectorAll<HTMLElement>('.arm-pista').forEach((x) => { x.hidden = nueva !== null; });
-      guardar(nueva);
+      cerrarFichas();
       error(null);
-      if (nueva !== null) panel.querySelector<HTMLElement>(`[data-arm-detalle="${CSS.escape(nueva)}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      if (ya) return;
+      guardar(b.getAttribute(atributo));
+      abrirFicha(b, atributo);
     }));
   };
   elegirEnPanel('data-arm-ver', (c) => { elegidaTienda = c; });
   elegirEnPanel('data-arm-ver-venta', (c) => { elegidaVenta = c === null ? null : Number(c); });
+  // tras un repintado (comprar, vender, el refresco), la que estaba abierta vuelve a su sitio
+  const abierta = root.querySelector<HTMLElement>('[data-arm-detalle]:not([hidden])');
+  if (abierta) {
+    const atributo = abierta.closest('[data-arm-panel="vender"]') ? 'data-arm-ver-venta' : 'data-arm-ver';
+    const b = root.querySelector<HTMLButtonElement>(`[${atributo}="${CSS.escape(abierta.dataset.armDetalle ?? '')}"]`);
+    if (b) requestAnimationFrame(() => colocarFicha(abierta, b)); else abierta.hidden = true;
+  }
+  // se cierra con su ✕, tocando fuera de ella o con Esc
+  root.querySelectorAll<HTMLButtonElement>('[data-arm-cerrar]').forEach((b) => b.addEventListener('click', () => cerrarFichas()));
+  if (tienda) {
+    tienda.addEventListener('click', (ev) => { if (!(ev.target as HTMLElement).closest('.arm-detalle')) cerrarFichas(); });
+    tienda.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') cerrarFichas(); });
+  }
   root.querySelectorAll<HTMLButtonElement>('[data-arm-tipo]').forEach((b) => b.addEventListener('click', () => { tipoTienda = b.dataset.armTipo as typeof tipoTienda; repintar(); }));
   root.querySelectorAll<HTMLInputElement>('[data-arm-solo]').forEach((x) => x.addEventListener('change', () => { soloMiClase = x.checked; repintar(); }));
   root.querySelectorAll<HTMLElement>('[data-arm-grupo]').forEach((fila) => {

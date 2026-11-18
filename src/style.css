@@ -6406,18 +6406,23 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
 .arm-faltan[open] > summary { margin-bottom: 6px; }
 .arm-campo { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 0.72rem; color: var(--text-secondary); }
 .arm-campo select.form-input { padding: 3px 6px; font-size: 0.82rem; }
-/* La tienda (0.217.0): a cada lado, casillas como las de la mochila; tocar una enseña debajo su ficha con el precio y Comprar o Vender */
-.arm-tienda { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+/* La tienda (0.217.0): a cada lado, casillas como las de la mochila; tocar una saca a su lado su ficha, como un tooltip, con Comprar o Vender */
+.arm-tienda { position: relative; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .arm-rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 5px; }
 .arm-rejilla .obj-casilla i { font-size: 24px; }
+/* la mochila entera, en filas de 12 como en Equipo, para que quepan sus 72 casillas sin bajar */
+[data-arm-panel="vender"] .arm-rejilla { grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; }
+[data-arm-panel="vender"] .arm-rejilla .obj-casilla i { font-size: 20px; }
 .arm-rejilla .obj-casilla b { font-size: 11px; }
 .arm-panel { min-width: 0; }
-.arm-detalle[hidden], .arm-pista[hidden] { display: none; }
-.arm-detalle .obj-ficha { box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35); }
+.arm-detalle { position: absolute; z-index: 6; width: min(360px, calc(100% - 8px)); }
+.arm-detalle[hidden] { display: none; }
+.arm-detalle .obj-ficha { padding-right: 34px; background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg)); box-shadow: var(--placa-sutil), 0 10px 24px rgba(0, 0, 0, 0.55); }
+.arm-cerrar { position: absolute; top: 6px; right: 6px; z-index: 1; width: 26px; height: 26px; display: grid; place-items: center; padding: 0; border: 1px solid var(--bronce-osc); border-radius: 3px; background: rgba(0, 0, 0, 0.35); color: var(--pergamino); font: inherit; font-size: 13px; cursor: pointer; }
+.arm-cerrar:hover { border-color: var(--oro); color: var(--oro-claro); }
 .arm-ficha-pie { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding-top: 8px; border-top: 1px solid rgba(169, 121, 63, 0.3); }
 .arm-ficha-pie .btn-primary, .arm-ficha-pie .btn-secondary { width: auto; margin: 0; padding: 6px 18px; white-space: nowrap; }
 .arm-ficha-pie .arm-precio { font-size: 1rem; }
-.arm-pista { margin: 2px 0 0; }
 
 /* La forja (0.217.0): un banco de trabajo, no una lista. A la izquierda el estante con una casilla por pieza (encendidas las que ya puedes forjar);
    a la derecha el banco con la receta en ranuras, el yunque con la pieza que sale, sus cifras y el martillo. */
