@@ -3,6 +3,13 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.219.0] — 2026-11-18 · Móvil apaisado: el cajón de Construcción y su ventana «Construidos» se ven bien · motor `810cbf1`
+
+Sin cambio de contrato (0.27.0). Dos arreglos que pidió Víctor al seguir la revisión del móvil apaisado.
+
+- **«Construidos»**: la ventana salía aplastada sobre la cabecera del cajón (su alto máximo se medía sin el zoom del móvil y daba negativo); ahora se ve entera, con la lista de edificios agrupada.
+- **Cajón de Construcción**: baja a una sola fila de botones de edificio (212 en vez de 270 unidades, como en escritorio), sin el hueco vacío de abajo; el resto de edificios se alcanza con scroll y la ventana «Construidos» gana ese alto.
+
 ## [0.218.0] — 2026-11-18 · Cerrar sesión suelta la pantalla completa, reponer las prestadas desde el Campamento e iconos de clase al nacer · motor `810cbf1`
 
 Sin cambio de contrato (0.27.0). Cambios que pidió Víctor al probar la 0.217.0 en el móvil.
