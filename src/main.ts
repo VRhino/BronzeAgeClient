@@ -3156,6 +3156,8 @@ function cablearTooltipEdificios(contenedor: HTMLElement): void {
 }
 
 function renderVistaLogin(errorMensaje?: string): void {
+  // el acceso no pasa por `montar` (el cierre de sesión lo pinta directo): aquí se suelta la pantalla completa y la orientación fijada
+  ajustarOrientacion('login');
   montarAcceso(app, {
     registrar: (nick, clave, codigo) => registrarCuenta(nick, clave, codigo),
     entrar: async (nick, clave) => {
@@ -3358,13 +3360,18 @@ function asegurarAvisoHorizontal(): void {
   document.body.appendChild(aviso);
 }
 
-/** En un móvil ya en pantalla completa (donde el navegador deja fijar la orientación), el acceso y las partidas van en vertical y el juego en horizontal:
- * al cerrar sesión se vuelve a vertical, y al entrar otra vez, a horizontal. Donde no se puede (fuera de pantalla completa, iOS), se ignora. */
+/** En un móvil ya en pantalla completa (donde el navegador deja fijar la orientación), las partidas van en vertical y el juego en horizontal; el acceso (al cerrar sesión) sale de la pantalla completa y suelta la orientación. Donde no se puede (fuera de pantalla completa, iOS), se ignora. */
 function ajustarOrientacion(pantalla: Pantalla): void {
   try {
+    // al cerrar sesión (Víctor, 2026-11-18) el acceso sale de la pantalla completa y suelta la orientación fijada: el móvil vuelve a su postura normal
+    if (pantalla === 'login') {
+      if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+      (screen.orientation as ScreenOrientation & { unlock?: () => void }).unlock?.();
+      return;
+    }
     if (!document.fullscreenElement || !window.matchMedia('(pointer: coarse)').matches) return;
     const o = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
-    void o.lock?.(pantalla === 'login' || pantalla === 'partidas' ? 'portrait' : 'landscape').catch(() => {});
+    void o.lock?.(pantalla === 'partidas' ? 'portrait' : 'landscape').catch(() => {});
   } catch { /* sin API de orientación: nada que hacer */ }
 }
 

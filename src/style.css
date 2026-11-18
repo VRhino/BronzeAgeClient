@@ -6775,3 +6775,5 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
 .mp-fila .form-input.mp-cantidad { width: 100%; padding: 5px 6px; text-align: right; }
 .mp-fila .btn-primary.mp-tomar { width: auto; padding: 6px 12px; font-size: 0.78rem; }
 .mp-motivo { grid-column: 1 / -1; font-size: 0.7rem; color: var(--text-secondary); }
+/* Campamento → Tropa: «Reponer las prestadas» en la cabecera, pequeño, a la derecha */
+.camp-reponer-prestadas { width: auto; flex: none; margin-left: auto; padding: 4px 12px; font-size: 0.8rem; }

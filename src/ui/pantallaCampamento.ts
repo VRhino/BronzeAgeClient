@@ -4,7 +4,8 @@
 // tal cual en `#camp-error`. Los menús del jugador (héroe, escuadras, Facción) están en la barra superior (`barraJugador.ts`).
 import { ayuda } from './ayuda';
 import { chipLiderazgo } from './liderazgo';
-import { costoDeRefundacion, unidadesDeTropa, type ProyeccionJugador } from '../apiCliente';
+import { costoDeRefundacion, tropasReclutables, unidadesDeTropa, type ProyeccionJugador } from '../apiCliente';
+import { comoReponer, prestadasPorReponer } from './basePersonal';
 import { datosDeReclutamiento, grafoDe, htmlArbolDeLugar, montarArbolReclutamiento, nombreEdificio, ultimoDibujo, type EstadoPlaza, type EstadoTropa, type LugarDeReclutamiento } from './arbolReclutamiento';
 import { eraOrd, ultimaEraVisible, type DatosArbol } from './arbolTecnologias';
 import { iconoDeParte } from './hudInterior';
@@ -158,7 +159,7 @@ function lugarCampamento(D: DatosArbol, p: ProyeccionJugador, c: CampamentoMerce
     estado,
     carta: (id, { EI }) => {
       const tr = G.nodos.get(id)!.d, est = estado(id), o = oferta.get(id);
-      if (tr.edificio === 'centroUrbano') return est === 'tuya' ? `Prestada: <b>${prestadas[id]!.cantidad}</b> hombres` : 'Te la prestan gratis';
+      if (tr.edificio === 'centroUrbano') return est === 'tuya' ? `Prestada: <b>${prestadas[id]!.cantidad}</b>/${tr.unidadesPorDefecto} hombres` : 'Te la prestan gratis';
       if (est === 'lista') return `Lista · ${oro(o!.precioPorSoldado)} por soldado`;
       if (est === 'tuya') return `Tu escuadra <b>${escuadras[id]}</b>/${tr.unidadesPorDefecto}`;
       if (est === 'edificio') return `Falta ${EI(tr.edificio, tr.nivelRequerido)} en el campamento`;
@@ -198,7 +199,12 @@ function accionesCampamento(p: ProyeccionJugador, e: Escapar, id: string): strin
   const nota = (txt: string): string => `<p class="ta-ficha-nota">${txt}</p>`;
   const est = d.L.estado(id);
   if (tr.edificio === 'centroUrbano') {
-    if (est === 'tuya') return '';
+    if (est === 'tuya') {
+      // la prestada a medias se repone aquí mismo, gratis (como en la Base personal): `reponerPrestamo` repone todas las que se puedan
+      const mia = p.heroe.escuadrones.find((x) => x.prestada && x.tropaId === id);
+      const r = mia ? comoReponer(p, mia, tropasReclutables() ?? []) : null;
+      return r?.tipo === 'prestada' ? `<button class="btn-primary ta-ficha-boton" type="button" data-camp-reponer-prestadas>Reponer la prestada · ${r.faltan} hombres, gratis</button>` : '';
+    }
     return `<button class="btn-primary ta-ficha-boton" type="button" data-ficha-prestamo="${e(id)}">Pedir prestada · ${unidadesDeTropa(id) ?? tr.unidadesPorDefecto} hombres, gratis</button>`;
   }
   if (est === 'tuya') return nota(`Ya tienes una escuadra de ${e(tr.nombre)}.`);
@@ -227,13 +233,15 @@ function tropa(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): stri
   const oroAlmacen = Math.floor(heroe.almacenPersonal?.['oro'] ?? 0);
   const oroCarro = Math.floor(columna?.suministro?.['oro'] ?? 0);
   const info = ayuda('camp:reclutar', 'Todas las tropas, en carriles por el edificio del campamento donde se reclutan; si el campamento no lo tiene, su carril se pliega. En el carril del Campamento, las que te presta gratis (no ganan experiencia y se retiran si dejas de residir aquí). Lo demás se paga solo con oro, con el equipo dentro, y con los reclutas del campamento. Un héroe tiene una escuadra por tropa.');
+  const faltan = prestadasPorReponer(p);
+  const reponer = faltan > 0 ? `<button class="btn-primary camp-reponer-prestadas" type="button" data-camp-reponer-prestadas title="Las que te prestó este campamento vuelven a su tamaño, gratis.">Reponer las prestadas · ${faltan} hombres, gratis</button>` : '';
   return `<div class="obra-titulo"><span class="faction-kicker">Tropa</span>
       <span class="obra-chip" title="Reclutas del campamento">🧑 ${Math.floor(oferta.poblacion)}/${Math.floor(oferta.topePoblacion)} reclutas</span>
       <label class="camp-pagar-con"><span>Pagar con</span>
         <select class="form-input" id="reclutar-pagar-con">
           <option value="almacenPersonal"${pagarConElegido === 'almacenPersonal' ? ' selected' : ''}>Mi almacén personal (${oroAlmacen} de oro)</option>
           ${columna ? `<option value="carro"${pagarConElegido === 'carro' ? ' selected' : ''}>El carro de mi columna (${oroCarro} de oro; a la puerta)</option>` : ''}
-        </select></label>${info}</div>
+        </select></label>${reponer}${info}</div>
     <div class="tec-arbol recl-arbol">${htmlArbolDeLugar(D, lugarCampamento(D, p, c), e)}</div>`;
 }
 
@@ -251,6 +259,7 @@ function cablearTropa(root: HTMLElement, p: ProyeccionJugador, ejecutar: Ejecuta
         const campo = caja.querySelector<HTMLElement>(`[data-campo="error-ficha-${CLAVE_ARBOL}"]`);
         if (mensaje !== null) { b.disabled = false; if (campo) campo.textContent = mensaje; }
       }));
+      accion('[data-camp-reponer-prestadas]', 'reponerPrestamo', () => ({}));
       accion('[data-ficha-prestamo]', 'pedirPrestamo', (b) => ({ tropaIds: [b.dataset.fichaPrestamo!] }));
       accion('[data-ficha-reclutar-camp]', 'reclutarEnCampamento', (b) => ({ tropaId: b.dataset.fichaReclutarCamp!, pagarCon: pagarConElegido }));
     },
@@ -504,6 +513,7 @@ export function cablearCampamento(root: HTMLElement, p: ProyeccionJugador, c: Ca
   conBoton('#btn-residir', 'residirEnCampamento', () => ({ heroeId, campamentoId: c.id }));
   root.querySelector<HTMLSelectElement>('#reclutar-pagar-con')?.addEventListener('change', (ev) => { pagarConElegido = (ev.target as HTMLSelectElement).value as typeof pagarConElegido; opciones.repintar(); });
   cablearTropa(root, p, ejecutar);
+  conBoton('.camp-reponer-prestadas', 'reponerPrestamo', () => ({}));
   cablearMercado(root, c, opciones);
   cablearTablonMercenarios(root, ejecutar, (m) => { if (error) error.textContent = m; }, opciones.repintar);
   for (const tipo of ['aportarARefundacion', 'retirarDeRefundacion']) {

@@ -355,7 +355,7 @@ if (camp) {
   // `&camp=tropa`: el árbol de la Tropa (0.160.0) con un campamento de Barracón y Galería de tiro, una tropa prestada y lo que ofrece al empezar
   if (camp === 'tropa') {
     c.edificios = ['taberna', 'mercado', 'barracon', 'galeriaDeTiro'];
-    (q.heroe as { escuadrones: unknown[] }).escuadrones = [{ id: 's1', nombre: 'Milicia de lanceros', tropaId: 'milicia_lanceros', cantidad: 25, nivel: 1, prestada: true, contenedor: { tipo: 'campamento' } }];
+    (q.heroe as { escuadrones: unknown[] }).escuadrones = [{ id: 's1', nombre: 'Milicia de lanceros', tropaId: 'milicia_lanceros', cantidad: 18, nivel: 1, prestada: { campamentoId: 'mc-1' }, contenedor: { tipo: 'campamento' } }];
     q.tecnologia = { era: 'reinos_palaciales', capitalId: null, reveladas: [], logros: [], epicasPosibles: [], propias: qs.get('faccion') ? { adoptadas: ['leva_comunal', 'hostigamiento_tribal'], aparecidas: [] } : null };
     (q.mercadoCampamento as { reclutamiento: unknown }).reclutamiento = { poblacion: 80, topePoblacion: 120, tropas: [
       { tropaId: 'lanceros_mimbre', precioPorSoldado: 3.5, desbloqueada: true }, { tropaId: 'espadachines_cobre', precioPorSoldado: 4, desbloqueada: false },
