@@ -14,7 +14,7 @@ import { ayuda } from './ayuda';
 import { catalogoDeObjetos, nombreDeClase, type FichaObjeto } from './clasesHeroe';
 import { columnaQuePaga } from './columnaQuePaga';
 import { claveDeRareza } from './fichaCombate';
-import { cifrasDe, htmlCifras, htmlFichaDePieza, iconoDeObjeto, libresEn, nombreDeObjeto, pesosDeLaClase, textoDeTipo } from './objetosHeroe';
+import { cifrasDe, htmlCifras, htmlFichaDePieza, iconoDeObjeto, libresEn, nombreDeObjeto, pesosDeLaClase, rarezaDeObjeto, textoDeTipo } from './objetosHeroe';
 
 type Escapar = (valor: string) => string;
 export type Ejecutar = (tipo: string, params: Record<string, unknown>) => Promise<string | null>;
@@ -164,12 +164,15 @@ const ordenar = (x: FichaObjeto, y: FichaObjeto): number =>
   (x.tier ?? 0) - (y.tier ?? 0) || HUECO_ORDEN.indexOf(x.hueco ?? x.tipo) - HUECO_ORDEN.indexOf(y.hueco ?? y.tipo)
   || PESO_ORDEN.indexOf(x.tipoArmadura ?? '') - PESO_ORDEN.indexOf(y.tipoArmadura ?? '') || x.nombre.localeCompare(y.nombre);
 
-/** El nombre de la pieza con su icono, su rareza y lo que es; debajo, sus cifras plegadas. */
-function htmlPieza(f: FichaObjeto, e: Escapar, extra = ''): string {
-  const metal = f.metal && f.metal !== 'inicio' ? ` · ${e(f.metal.replace(/_/g, ' '))}` : '';
-  return `<span class="arm-pieza-icono r-${f.tier ? e(claveDeRareza(f.tier)) : 'ninguna'}" aria-hidden="true">${iconoDeObjeto(f.id)}</span>
-    <span class="arm-pieza-texto"><strong>${e(f.nombre)}</strong><small>${e(textoDeTipo(f))}${metal}</small>${extra}
-      <details class="arm-cifras"><summary>Cifras</summary>${htmlCifras(cifrasDe({ itemDefinitionId: f.id }))}</details></span>`;
+/** La pieza que miras en cada lado de la tienda (la de la venta, por su casilla); se recuerdan entre repintados. */
+let elegidaTienda: string | null = null;
+let elegidaVenta: number | null = null;
+/** Hasta dónde bajaste la ventana de la tienda, para no volver arriba al comprar o filtrar. */
+let scrollDeTienda = 0;
+
+/** Una casilla de la rejilla: el icono con el borde del color de su rareza, como en la mochila; `cuantas` y `forjada` son sus marcas. */
+function casilla(atributo: string, valorAtributo: string, id: string, nombre: string, elegida: boolean, e: Escapar, cuantas = 1, forjada = false): string {
+  return `<button type="button" class="obj-casilla ${rarezaDeObjeto(id)}${elegida ? ' elegida' : ''}" ${atributo}="${e(valorAtributo)}" aria-pressed="${elegida}" title="${e(nombre)}${cuantas > 1 ? ` ×${cuantas}` : ''}${forjada ? ' (forjada)' : ''}"><i aria-hidden="true">${iconoDeObjeto(id)}</i>${cuantas > 1 ? `<b>${cuantas}</b>` : ''}${forjada ? '<em aria-hidden="true">✦</em>' : ''}<span class="ta-sr">${e(nombre)}</span></button>`;
 }
 
 function htmlTienda(p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
@@ -179,32 +182,51 @@ function htmlTienda(p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
   const tipos = (['arma', 'armadura', 'montura'] as const).filter((t) => todas.some((f) => f.tipo === t));
   if (!tipos.includes(tipoTienda)) tipoTienda = tipos[0] ?? 'armadura';
   const lista = todas.filter((f) => f.tipo === tipoTienda && (!soloMiClase || deMiClase(p, f))).sort(ordenar);
-  const filas = lista.map((f) => {
+  // lo que vende: una casilla por pieza y, escondida hasta tocarla, su ficha con el precio y Comprar
+  if (!lista.some((f) => f.id === elegidaTienda)) elegidaTienda = null;
+  const casillasCompra = lista.map((f) => casilla('data-arm-ver', f.id, f.id, f.nombre, f.id === elegidaTienda, e)).join('');
+  const detallesCompra = lista.map((f) => {
     const falta = f.precio - monedas;
-    const accion = libres < 1 ? '' : falta > 0
-      ? `<small class="arm-falta">te faltan ${miles(falta)}</small>`
-      : `<button class="btn-primary btn-chico" type="button" data-arm-comprar="${e(f.id)}">Comprar</button>`;
-    return `<li class="arm-fila">${htmlPieza(f, e)}<span class="arm-precio${falta > 0 ? ' caro' : ''}">💰 ${miles(f.precio)}</span><span class="arm-accion">${accion}</span></li>`;
+    const accion = libres < 1 ? '<small class="arm-falta">La mochila está llena.</small>' : falta > 0
+      ? `<small class="arm-falta">Te faltan ${miles(falta)}</small>`
+      : `<button class="btn-primary" type="button" data-arm-comprar="${e(f.id)}">Comprar</button>`;
+    const pie = `<div class="arm-ficha-pie"><span class="arm-precio${falta > 0 ? ' caro' : ''}">💰 ${miles(f.precio)}</span>${accion}</div>`;
+    return `<div class="arm-detalle" data-arm-detalle="${e(f.id)}"${f.id === elegidaTienda ? '' : ' hidden'}>${htmlFichaDePieza({ itemDefinitionId: f.id }, e, '', pie)}</div>`;
   }).join('');
   const NOMBRE_TIPO = { arma: 'Armas', armadura: 'Armaduras', montura: 'Monturas' } as const;
   const filtros = `<div class="arm-filtros">${tipos.map((t) => `<button type="button" class="obra-chip arm-chip${t === tipoTienda ? ' activo' : ''}" data-arm-tipo="${t}" aria-pressed="${t === tipoTienda}">${NOMBRE_TIPO[t]}</button>`).join('')}
     ${tipoTienda !== 'montura' ? `<label class="arm-solo"><input type="checkbox" data-arm-solo${soloMiClase ? ' checked' : ''}> Solo lo de tu clase (${e(nombreDeClase(claseDeArma(p)))})</label>` : ''}</div>`;
-  const vender = p.heroe.inventario.slice().sort((x, y) => x.casillaInventario - y.casillaInventario).map((it) => {
+
+  // lo que vendes: tu mochila entera en casillas, cada una en su sitio; la ficha trae la cantidad y Vender
+  const total = catalogoDeObjetos()?.casillasMochila ?? 72;
+  const porCasilla = new Map(p.heroe.inventario.map((it) => [it.casillaInventario, it]));
+  if (elegidaVenta !== null && !porCasilla.has(elegidaVenta)) elegidaVenta = null;
+  // hasta la última fila con algo y una más; las demás casillas libres se cuentan en una línea
+  const visibles = Math.min(total, Math.max(24, (Math.floor(Math.max(-1, ...porCasilla.keys()) / 12) + 2) * 12));
+  const casillasVenta = Array.from({ length: visibles }, (_, n) => {
+    const it = porCasilla.get(n);
+    const f = it ? catalogoDeObjetos()?.objetos.find((o) => o.id === it.itemDefinitionId) : undefined;
+    return it && f ? casilla('data-arm-ver-venta', String(n), f.id, f.nombre, n === elegidaVenta, e, it.cantidad, Boolean(it.itemInstanceId)) : '<span class="obj-casilla vacia" aria-hidden="true"></span>';
+  }).join('');
+  const detallesVenta = p.heroe.inventario.map((it) => {
     const f = catalogoDeObjetos()?.objetos.find((o) => o.id === it.itemDefinitionId);
     if (!f) return '';
     const cuantas = it.cantidad > 1 ? `<input class="form-input obj-cantidad" type="number" min="1" max="${it.cantidad}" value="1" data-arm-cantidad aria-label="Cuántas" />` : '';
-    return `<li class="arm-fila arm-fila-venta"><span class="arm-pieza-icono r-${f.tier ? e(claveDeRareza(f.tier)) : 'ninguna'}" aria-hidden="true">${iconoDeObjeto(f.id)}</span>
-      <span class="arm-pieza-texto"><strong>${e(f.nombre)}${it.cantidad > 1 ? ` ×${it.cantidad}` : ''}${it.itemInstanceId ? ' <em title="Forjada">✦</em>' : ''}</strong><small>casilla ${it.casillaInventario + 1}</small></span>
-      <span class="arm-precio">💰 ${miles(precioDeVenta(f))}${it.cantidad > 1 ? ' c/u' : ''}</span><span class="arm-accion obj-mover">${cuantas}<button class="btn-secondary btn-chico" type="button" data-arm-vender="${it.casillaInventario}">Vender</button></span></li>`;
+    const nota = it.itemInstanceId ? '<p class="obj-forjada">✦ Forjada: sus cifras, por la calidad que le salió.</p>' : '';
+    const pie = `<div class="arm-ficha-pie"><span class="arm-precio">💰 ${miles(precioDeVenta(f))}${it.cantidad > 1 ? ' c/u' : ''}</span><span class="obj-mover">${cuantas}<button class="btn-secondary" type="button" data-arm-vender="${it.casillaInventario}">Vender</button></span></div>`;
+    return `<div class="arm-detalle" data-arm-detalle="${it.casillaInventario}"${it.casillaInventario === elegidaVenta ? '' : ' hidden'}>${htmlFichaDePieza(it, e, nota, pie)}</div>`;
   }).join('');
-  return `<div class="arm-cab"><span class="arm-saldo">💰 <strong>${miles(monedas)}</strong> monedas</span><span class="arm-saldo">🎒 ${p.heroe.inventario.length}/${catalogoDeObjetos()?.casillasMochila ?? 72}</span>
+  const pista = (elegida: boolean, texto: string): string => `<p class="mapa-lista-vacia arm-pista"${elegida ? ' hidden' : ''}>${texto}</p>`;
+  return `<div class="arm-tienda"><div class="arm-cab"><span class="arm-saldo">💰 <strong>${miles(monedas)}</strong> monedas</span><span class="arm-saldo">🎒 ${p.heroe.inventario.length}/${total}</span>
       ${libres < 1 ? '<p class="asent-lado-nota">La mochila está llena: vende algo o guárdalo en tu almacén de objetos antes de comprar.</p>' : ''}</div>
     <div class="cols-completa arm-cols">
-      <section class="col-completa"><div class="obra-titulo"><span class="faction-kicker">Comprar</span>${ayuda('armeria:tienda', `Al 100\u00a0%, con tus monedas, y a tu mochila. Vende armas, armaduras y monturas hasta el tier ${catalogoDeObjetos()?.tiendaHastaTier ?? 2}, con los metales que abre la tecnología de la Facción de esta plaza. Lo mejor se forja.`)}</div>
-        ${filtros}<ul class="arm-lista">${filas || '<li class="mapa-lista-vacia">Nada de esto a la venta aquí.</li>'}</ul></section>
-      <section class="col-completa"><div class="obra-titulo"><span class="faction-kicker">Vender</span>${ayuda('armeria:vender', `Cualquier cosa de tu mochila, al ${catalogoDeObjetos()?.ventaPct ?? 50}\u00a0% del precio de su ficha. Una pieza forjada vale lo mismo que la de tienda. Lo que llevas puesto no se vende: quítatelo antes.`)}</div>
-        <ul class="arm-lista">${vender || '<li class="mapa-lista-vacia">Tu mochila está vacía.</li>'}</ul></section>
-    </div>`;
+      <section class="col-completa arm-panel" data-arm-panel="comprar"><div class="obra-titulo"><span class="faction-kicker">Comprar</span>${ayuda('armeria:tienda', `Al 100\u00a0%, con tus monedas, y a tu mochila. Vende armas, armaduras y monturas hasta el tier ${catalogoDeObjetos()?.tiendaHastaTier ?? 2}, con los metales que abre la tecnología de la Facción de esta plaza. Lo mejor se forja.`)}</div>
+        ${filtros}<div class="arm-rejilla">${casillasCompra || '<p class="mapa-lista-vacia">Nada de esto a la venta aquí.</p>'}</div>
+        ${lista.length ? pista(elegidaTienda !== null, 'Toca una pieza para ver su ficha y comprarla.') : ''}${detallesCompra}</section>
+      <section class="col-completa arm-panel" data-arm-panel="vender"><div class="obra-titulo"><span class="faction-kicker">Vender</span>${ayuda('armeria:vender', `Cualquier cosa de tu mochila, al ${catalogoDeObjetos()?.ventaPct ?? 50}\u00a0% del precio de su ficha. Una pieza forjada vale lo mismo que la de tienda. Lo que llevas puesto no se vende: quítatelo antes.`)}</div>
+        <div class="arm-rejilla">${casillasVenta}</div>${visibles < total ? `<p class="obj-nota">Y ${total - visibles} casillas libres más.</p>` : ''}
+        ${p.heroe.inventario.length ? pista(elegidaVenta !== null, 'Toca una pieza de tu mochila para ver su ficha y venderla.') : '<p class="mapa-lista-vacia">Tu mochila está vacía.</p>'}${detallesVenta}</section>
+    </div></div>`;
 }
 
 // ── La forja: un banco de trabajo, no una lista ──
@@ -420,13 +442,34 @@ export function cablearArmeria(root: HTMLElement, a: Asentamiento, ejecutar: Eje
   // el estante de la forja: elegir una pieza cambia el banco sin repintar la ventana; el desplazamiento se recuerda entre repintados
   const tapada = Boolean(root.querySelector('.fj-premio'));
   if (root.querySelector('.fj')) root.scrollTop = tapada ? 0 : scrollDeForja;
-  root.onscroll = () => { if (root.querySelector('.fj') && !root.querySelector('.fj-premio')) scrollDeForja = root.scrollTop; };
+  root.onscroll = () => {
+    if (root.querySelector('.fj') && !root.querySelector('.fj-premio')) scrollDeForja = root.scrollTop;
+    if (root.querySelector('.arm-tienda')) scrollDeTienda = root.scrollTop;
+  };
   root.querySelectorAll<HTMLButtonElement>('[data-arm-elegir]').forEach((b) => b.addEventListener('click', () => {
     elegidaEnForja = b.dataset.armElegir ?? null;
     root.querySelectorAll<HTMLButtonElement>('[data-arm-elegir]').forEach((x) => { const es = x === b; x.classList.toggle('elegida', es); x.setAttribute('aria-pressed', String(es)); });
     root.querySelectorAll<HTMLElement>('[data-fj-banco]').forEach((x) => { x.hidden = x.dataset.fjBanco !== elegidaEnForja; });
     error(null);
   }));
+  // la tienda: tocar una casilla enseña su ficha sin repintar (la ventana no salta); el desplazamiento se recuerda entre repintados
+  if (root.querySelector('.arm-tienda')) root.scrollTop = scrollDeTienda;
+  const elegirEnPanel = (atributo: string, guardar: (c: string | null) => void): void => {
+    root.querySelectorAll<HTMLButtonElement>(`[${atributo}]`).forEach((b) => b.addEventListener('click', () => {
+      const panel = b.closest<HTMLElement>('.arm-panel');
+      if (!panel) return;
+      const ya = b.classList.contains('elegida');
+      const nueva = ya ? null : b.getAttribute(atributo);
+      panel.querySelectorAll<HTMLButtonElement>(`[${atributo}]`).forEach((x) => { const es = x === b && !ya; x.classList.toggle('elegida', es); x.setAttribute('aria-pressed', String(es)); });
+      panel.querySelectorAll<HTMLElement>('[data-arm-detalle]').forEach((x) => { x.hidden = x.dataset.armDetalle !== nueva; });
+      panel.querySelectorAll<HTMLElement>('.arm-pista').forEach((x) => { x.hidden = nueva !== null; });
+      guardar(nueva);
+      error(null);
+      if (nueva !== null) panel.querySelector<HTMLElement>(`[data-arm-detalle="${CSS.escape(nueva)}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }));
+  };
+  elegirEnPanel('data-arm-ver', (c) => { elegidaTienda = c; });
+  elegirEnPanel('data-arm-ver-venta', (c) => { elegidaVenta = c === null ? null : Number(c); });
   root.querySelectorAll<HTMLButtonElement>('[data-arm-tipo]').forEach((b) => b.addEventListener('click', () => { tipoTienda = b.dataset.armTipo as typeof tipoTienda; repintar(); }));
   root.querySelectorAll<HTMLInputElement>('[data-arm-solo]').forEach((x) => x.addEventListener('change', () => { soloMiClase = x.checked; repintar(); }));
   root.querySelectorAll<HTMLElement>('[data-arm-grupo]').forEach((fila) => {

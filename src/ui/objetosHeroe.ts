@@ -264,14 +264,15 @@ function htmlFicha(p: ProyeccionJugador, e: Escapar): string {
     ${acciones.length ? `<div class="obj-acciones">${acciones.map((a) => htmlAccion(a, f, e)).join('')}</div>` : ''}`;
 }
 
-/** La ficha de una pieza suelta, como la del panel derecho de Equipo pero sin acciones (la Armería enseña así lo recién forjado): `nota` va
- * entre la cabecera y las cifras. */
-export function htmlFichaDePieza(item: Pick<ItemInstancia, 'itemDefinitionId' | 'estadisticas'>, e: Escapar, nota = ''): string {
+/** La ficha de una pieza suelta, como la del panel derecho de Equipo: `nota` va entre la cabecera y las cifras y `pie` (precio, botones) al final.
+ * La usa la Armería (lo recién forjado, lo que vende la tienda y lo que vendes). */
+export function htmlFichaDePieza(item: Pick<ItemInstancia, 'itemDefinitionId' | 'estadisticas'> & { cantidad?: number }, e: Escapar, nota = '', pie = ''): string {
   const f = fichaDeObjeto(item.itemDefinitionId);
   if (!f) return '';
   const metal = f.metal && f.metal !== 'inicio' ? ` · ${e(f.metal.replace(/_/g, ' '))}` : '';
-  return `<section class="obj-col obj-ficha ${rareza(f.id)}"><div class="obj-ficha-cab"><i aria-hidden="true">${iconoDeObjeto(f.id)}</i><div><h4>${e(f.nombre)}</h4><small>${e(textoDeTipo(f))}${metal}</small></div></div>
-    ${nota}${htmlCifras(cifrasDe(item))}</section>`;
+  const efecto = f.tipo === 'consumible' ? `<p>${e(textoDeEfecto(f))}</p>` : f.tipo === 'material' ? `<p>${f.id === 'crisol' ? 'Se gasta al forjar: cada receta pide sus crisoles.' : `Se gasta al forjar una pieza de tier ${e(String(f.tier ?? f.id.replace('plano_', '')))}.`}</p>` : '';
+  return `<section class="obj-col obj-ficha ${rareza(f.id)}"><div class="obj-ficha-cab"><i aria-hidden="true">${iconoDeObjeto(f.id)}</i><div><h4>${e(f.nombre)}${(item.cantidad ?? 1) > 1 ? ` ×${item.cantidad}` : ''}</h4><small>${e(textoDeTipo(f))}${metal}</small></div></div>
+    ${nota}${htmlCifras(cifrasDe(item))}${efecto}${pie}</section>`;
 }
 
 /** Por qué no salen las acciones, en una línea arriba (lo que no se puede no se ofrece, pero se dice dónde sí). */
