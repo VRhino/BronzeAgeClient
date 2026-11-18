@@ -48,10 +48,12 @@ export function vigilarPieArriba(pantalla: HTMLElement | null): void {
   const medir = (): void => {
     if (!pantalla.isConnected) return;
     const arriba = pantalla.getBoundingClientRect();
+    // con `zoom` (móvil apaisado) las medidas del navegador son de pantalla y las del CSS, de dentro: se pasan a las de dentro
+    const zoom = parseFloat(getComputedStyle(pantalla).zoom) || 1;
     // los letreros de las placas cuelgan 9 px por debajo de la barra
     const fin = pie.hidden ? (barra?.getBoundingClientRect().bottom ?? arriba.top) : pie.getBoundingClientRect().bottom + 10;
-    raiz.setProperty('--pie-fin', `${Math.ceil(fin - arriba.top)}px`);
-    if (botones) raiz.setProperty('--botones-ancho', `${Math.ceil(arriba.right - botones.getBoundingClientRect().left)}px`);
+    raiz.setProperty('--pie-fin', `${Math.ceil((fin - arriba.top) / zoom)}px`);
+    if (botones) raiz.setProperty('--botones-ancho', `${Math.ceil((arriba.right - botones.getBoundingClientRect().left) / zoom)}px`);
   };
   const vigia = new ResizeObserver(medir);
   vigia.observe(pie);
@@ -238,15 +240,20 @@ export function htmlEleccionBarra(a: Asentamiento, esc: Escapar): string {
     return `<button type="button" class="barra-eleccion${dentro ? ' elegido' : ''}${!dentro && lleno ? ' sin-sitio' : ''}" data-barra-recurso="${esc(r)}" aria-pressed="${dentro}"${atributoTip('recurso', r, esc)} data-tip-nota="${esc(titulo)}" aria-label="${esc(`${RECURSO_NOMBRE[r] ?? r}: ${titulo}`)}">`
       + `<span aria-hidden="true">${RECURSO_ICONO[r] ?? '📦'}</span><span class="barra-eleccion-nombre">${esc(RECURSO_NOMBRE[r] ?? r)}</span><small>${miles(cantidad)}</small></button>`;
   };
-  const nota = sola
-    ? `Ahora va sola: enseña lo que tiene la plaza, hasta ${MAX_BARRA_ALMACEN}, y lo nuevo entra si queda sitio. Si pones o quitas uno, manda tu elección.`
-    : `La has elegido tú (hasta ${MAX_BARRA_ALMACEN}, la misma en todas tus plazas). Se guarda en este navegador.`;
   const verTodos = ocultos || eleccionConTodos
     ? `<button type="button" class="btn-secondary barra-todos" data-barra-todos aria-pressed="${eleccionConTodos}">${eleccionConTodos ? 'Solo los que hay' : 'Mostrar todos'}</button>` : '';
   return `<div class="obra-titulo"><span class="faction-kicker">En la barra de arriba</span><span class="obra-chip${lleno ? ' activa' : ''}">${lista.length}/${MAX_BARRA_ALMACEN}</span>`
-    + `${sola ? '<span class="obra-chip">Automática</span>' : '<button type="button" class="btn-secondary barra-sola" data-barra-sola>Que vaya sola</button>'}${verTodos}</div>
-    <p class="asent-lado-nota">${nota}</p>
+    + `${sola ? `<span class="obra-chip" title="Enseña lo que tiene la plaza, hasta ${MAX_BARRA_ALMACEN}, y lo nuevo entra si queda sitio. Si pones o quitas uno, manda tu elección.">Automática</span>` : `<button type="button" class="btn-secondary barra-sola" data-barra-sola title="La has elegido tú (hasta ${MAX_BARRA_ALMACEN}, la misma en todas tus plazas, guardada en este navegador). Pulsa para que vaya sola.">Que vaya sola</button>`}${verTodos}</div>
+    ${htmlInterruptorEstado()}
     <div class="barra-elecciones">${recursos.map(chip).join('') || '<span class="asent-pie-vacio">El almacén está vacío.</span>'}</div>`;
+}
+
+/** El interruptor de la placa de Estado, en la ventana del Almacén. */
+function htmlInterruptorEstado(): string {
+  const si = estadoVisible();
+  const ayuda = `Mantenimiento y nutrición. Vale para todas tus pantallas${esMovil() ? '; en el móvil va apagado de serie' : ''}.`;
+  return `<div class="barra-estado"><button type="button" class="btn-secondary barra-estado-boton${si ? ' activo' : ''}" data-barra-estado role="switch" aria-checked="${si}" title="${ayuda}">`
+    + `<span aria-hidden="true">🛠️🍞</span> Estado en la barra: ${si ? 'sí' : 'no'}</button></div>`;
 }
 
 /** Cablea la elección: cada clic pone o quita y repinta (`alCambiar`); con la barra llena, `avisar`. «Que vaya sola» borra la elección. */
@@ -255,12 +262,40 @@ export function cablearEleccionBarra(raiz: HTMLElement, a: Asentamiento, alCambi
     if (alternarRecursoDeLaBarra(a, b.dataset.barraRecurso!)) alCambiar();
     else avisar(`La barra ya lleva ${MAX_BARRA_ALMACEN} recursos: quita uno antes de poner otro.`);
   }));
+  raiz.querySelector('[data-barra-estado]')?.addEventListener('click', () => { fijarEstadoVisible(!estadoVisible()); alCambiar(); });
   raiz.querySelector('[data-barra-sola]')?.addEventListener('click', () => { guardarBarra(null); alCambiar(); });
   raiz.querySelector('[data-barra-todos]')?.addEventListener('click', () => { eleccionConTodos = !eleccionConTodos; alCambiar(); });
 }
 
+// La placa de Estado se puede apagar (Víctor, 2026-11-18) desde la ventana del Almacén, y vale para todas las pantallas donde sale. De serie, encendida
+// en escritorio y apagada en el móvil (donde falta sitio). Se guarda en este navegador.
+const CLAVE_ESTADO = 'bronzeage:barra-estado';
+let estadoMemoria: boolean | undefined;
+
+/** ¿Es un móvil (pantalla táctil y pequeña)? */
+function esMovil(): boolean {
+  try { return window.matchMedia('(pointer: coarse)').matches && Math.min(window.innerWidth, window.innerHeight) <= 520; } catch { return false; }
+}
+
+/** ¿Se enseña la placa de Estado? Lo que eligió el jugador o, si no ha elegido, sí en escritorio y no en el móvil. */
+export function estadoVisible(): boolean {
+  if (estadoMemoria !== undefined) return estadoMemoria;
+  try {
+    const guardado = localStorage.getItem(CLAVE_ESTADO);
+    if (guardado === 'si') return true;
+    if (guardado === 'no') return false;
+  } catch { /* sin almacenamiento: la de serie */ }
+  return !esMovil();
+}
+
+function fijarEstadoVisible(si: boolean): void {
+  try { localStorage.setItem(CLAVE_ESTADO, si ? 'si' : 'no'); } catch { /* dura hasta recargar */ }
+  estadoMemoria = si;
+}
+
 /** Estado: mantenimiento y nutrición de 0 a 100, en verde, ámbar o rojo, con su palabra y qué los mueve en el letrero. */
 export function htmlEstadoPie(a: Asentamiento, esc: Escapar): string {
+  if (!estadoVisible()) return '';
   const medida = (icono: string, nombre: string, valor: number, palabras: Record<Tono, string>, ayuda: string[]): string => {
     const tono = tonoDe(valor);
     return pieza(icono, String(Math.round(valor)), valor, nombre, [`${palabras[tono]}: ${Math.round(valor)} de 100`, ...ayuda], `tono-${tono}`, esc);

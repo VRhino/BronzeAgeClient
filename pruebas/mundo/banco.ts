@@ -11,6 +11,8 @@ import { htmlBarraJugador } from '../../src/ui/barraJugador';
 
 const qs = new URLSearchParams(location.search);
 const AHORA = Date.parse('2026-11-04T09:00:00Z');
+import { instalarMenuJugadorMovil } from '../../src/ui/menuJugadorMovil';
+instalarMenuJugadorMovil();
 const e = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const solo = Boolean(qs.get('solo'));
 const lider = qs.get('lider') ? 'heroe-1' : 'heroe-9';

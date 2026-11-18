@@ -5093,7 +5093,10 @@ button.asent-blason-medallon:hover .medallon-nivel, button.asent-blason-medallon
 .asent-pie-almacen[data-abrir-almacen] { cursor: pointer; }
 .asent-pie-almacen[data-abrir-almacen]:hover, .asent-pie-almacen[data-abrir-almacen]:focus-visible { border-color: var(--oro); outline: none; box-shadow: inset 0 2px 0 var(--acento), 0 0 10px rgba(255, 210, 74, 0.25), var(--placa); }
 .asent-pie-vacio { padding: 6px 10px; font-size: 0.78rem; color: var(--text-secondary); }
-/* Ventana del Almacén: elegir qué recursos van en la barra (hasta 8). */
+/* Ventana del Almacén: elegir qué recursos van en la barra (hasta 8) y si va la placa de Estado. */
+.barra-estado { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 8px; }
+.barra-estado-boton.activo { color: var(--oro-claro); border-color: var(--oro); }
+.barra-estado .asent-lado-nota { margin: 0; }
 .barra-elecciones { display: grid; grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 6px; }
 .barra-eleccion { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 5px 8px; font: inherit; font-size: 0.8rem; text-align: left; color: var(--text-secondary); background: rgba(0, 0, 0, 0.3); border: 1px solid var(--bronce-osc); border-radius: 3px; cursor: pointer; }
 .barra-eleccion:hover { border-color: var(--bronce); color: var(--pergamino); }
@@ -5266,14 +5269,14 @@ body:has(.asent-ocupacion:not([hidden])) .eleccion-clic { top: calc(var(--pie-fi
    cabe, en dos filas si no y, si ni así, baja a una fila suya bajo Población y Estado. */
 .plaza-3d .asent-pie-grupo { flex: none; display: flex; flex-direction: column; justify-content: center; }
 .plaza-3d .asent-pie-grupo .asent-pie-piezas { flex-wrap: nowrap; }
-.plaza-3d .asent-pie-almacen .asent-pie-piezas { display: grid; grid-template-columns: repeat(var(--n, 8), auto); }
-.plaza-3d .asent-pie-almacen .asent-recurso { justify-content: center; }
-@container (max-width: 980px) {
-  .plaza-3d .asent-pie-almacen .asent-pie-piezas { grid-template-columns: repeat(var(--n2, 4), minmax(0, 1fr)); }
-}
+.plaza-3d .asent-pie-grupo { max-width: 100%; }
+/* el Almacén en una sola fila siempre que quepa (Víctor, 2026-11-18); si no cabe ni él solo, sus recursos pasan a una segunda fila */
+.plaza-3d .asent-pie-almacen .asent-pie-piezas { flex-wrap: wrap; }
+.plaza-3d .asent-pie-almacen .asent-recurso { flex: 1 0 66px; justify-content: center; }
 @container (max-width: 640px) {
   .plaza-3d .asent-pie-almacen { order: 1; }
 }
+
 @media (max-width: 1440px) {
   .plaza-3d .asent-pie .asent-recurso { padding: 2px 4px 6px; font-size: 0.72rem; }
   .plaza-3d .asent-pie-raya { margin: 2px 1px; }
@@ -6308,7 +6311,7 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
 .ta-ficha-nota.falta { color: #e58a6f; }
 
 /* Pausar consumo (0.199.0): un interruptor por bien de consumo en el Almacén; en la ventana de Facción, la pieza del bien pausado lleva ⏸. */
-.almacen-consumo { display: grid; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(169, 121, 63, 0.25); }
+.almacen-consumo { display: grid; gap: 8px; margin-bottom: 12px; }
 .consumo-pausas { display: grid; grid-template-columns: repeat(auto-fill, minmax(225px, 1fr)); gap: 4px 12px; }
 .consumo-pausa { margin-bottom: 0; }
 .consumo-pausa small { white-space: nowrap; }
@@ -6467,10 +6470,33 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
   .elegir-minimapa { width: 80px; }
 }
 
+/* El menú de la barra del jugador en el móvil apaisado: un solo botón que abre una ventana pequeña al centro (Víctor, 2026-11-18). Fuera del móvil, el botón no sale. */
+.jugador-menu-boton { display: none !important; }
+.menu-jugador-velo { position: fixed; inset: 0; z-index: 400; display: grid; place-items: center; background: rgba(8, 6, 4, 0.55); }
+.menu-jugador { display: grid; gap: 2px; min-width: 200px; max-width: calc(100vw - 32px); max-height: calc(100vh - 20px); overflow-y: auto; padding: 8px; background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg)); border: 1px solid var(--bronce); border-radius: 4px; box-shadow: var(--placa); scrollbar-width: none; }
+.menu-jugador::-webkit-scrollbar { display: none; }
+.menu-jugador-fila { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 12px; padding: 4px 12px; min-height: 28px; color: var(--pergamino); font-size: 0.86rem; border: 1px solid transparent; border-radius: 3px; cursor: pointer; }
+.menu-jugador-fila:hover, .menu-jugador-fila:focus-visible { background: rgba(169, 121, 63, 0.2); border-color: var(--bronce); }
+.menu-jugador-fila.activo { color: var(--oro-claro); border-color: var(--oro); }
+.menu-jugador-icono { flex: none; width: 22px; height: 22px; display: grid; place-items: center; color: var(--oro); }
+.menu-jugador-icono svg { width: 20px; height: 20px; }
+.menu-jugador-glifo { display: grid; place-items: center; width: 22px; height: 22px; border: 1px solid var(--oro); border-radius: 50%; font-family: var(--fuente-titulo); font-size: 0.85rem; color: var(--oro-claro); }
+.menu-jugador-nombre { flex: 1; min-width: 0; }
+.menu-jugador-aviso { flex: none; min-width: 18px; padding: 0 5px; line-height: 18px; text-align: center; font-size: 0.72rem; color: #1a130c; background: var(--oro); border-radius: 9px; }
+
 /* Plaza, campamento, pueblos y avanzadas en un móvil apaisado (667×375 / 844×390, pantalla completa): todo el HUD pensado para escritorio se
    reduce de golpe con `zoom` (Víctor, 2026-11-17), en vez de rehacer cada medida. */
 @media (max-height: 520px) and (orientation: landscape) and (pointer: coarse) {
   .plaza-3d, .mapa-screen { zoom: 0.6; }
+  /* la barra del jugador: un solo botón con el menú; los demás siguen ahí, escondidos, y el menú les hace clic */
+  .jugador-botones > button:not(.jugador-menu-boton) { display: none !important; }
+  .jugador-botones > .jugador-menu-boton { display: inline-flex !important; position: relative; }
+  .jugador-botones:has(.jugador-badge:not([hidden])) > .jugador-menu-boton::after { content: ""; position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; border-radius: 50%; background: #ffd24a; border: 1px solid #1a130c; }
+  /* con el zoom hay sitio de sobra: el HUD vuelve a la disposición de escritorio, pegado a los bordes de la pantalla (los cambios de «estrecho»
+     por ancho de ventana midieron la pantalla sin zoom y lo despegaban) */
+  .plaza-3d .asent-pie { top: 8px; left: calc(16px + var(--col-izq) + 12px); right: calc(var(--botones-ancho, 460px) + 12px); }
+  .plaza-3d .asent-izq { top: 8px; max-height: calc(100% - 8px - var(--pie-alto) - 50px); }
+  .plaza-3d .asent-barra { bottom: 12px; left: 16px; }
   /* con el zoom, 100vw y 100vh quedarían al 60 %: el mundo se estira a la pantalla con los bordes */
   .mapa-screen { right: 0; bottom: 0; width: auto; height: auto; --vw6: calc(100vw / 0.6); --vh6: calc(100vh / 0.6); }
   /* la ficha del mundo (abajo a la derecha) y la ventana de la puerta a su izquierda, con el alto de la pantalla real */

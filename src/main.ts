@@ -139,6 +139,7 @@ import { cablearTablon, htmlTablon } from './ui/tablon';
 import { cablearMercenariosFaccion, htmlMercenariosFaccion, mercenariosQuePidenAtencion } from './ui/mercenarios';
 import { actualizarSeguimiento, cablearMisiones, elegirPestanaMisiones, htmlListaMisiones, htmlPanelMisiones, misionesPorReclamar, pintarRastreador } from './ui/misiones';
 import { confirmar } from './ui/dialogo';
+import { instalarMenuJugadorMovil } from './ui/menuJugadorMovil';
 import { abrirCarga, cargaAbierta, cargarCatalogoDeCarga, cerrarCarga, type VistaDeCarga } from './ui/pantallaCarga';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
@@ -562,6 +563,7 @@ function abrirPartePueblo(parte: PestanaPueblo | null): void {
 }
 
 // Esc cierra la ventana abierta del campamento o del pueblo (la de la plaza tiene su propio Esc).
+instalarMenuJugadorMovil();
 document.addEventListener('keydown', (ev) => {
   if (ev.key !== 'Escape' || ventanaSalidaAbierta || document.querySelector('.dialogo-velo, .eleccion-clic')) return;
   if (ventanaCamp && document.querySelector('.camp-screen')) abrirParteCampamento(null);
@@ -2719,7 +2721,7 @@ function contenidoDeVentana(v: VentanaPlaza, c: ContextoPlaza, ajena: boolean): 
       }
       return {
         titulo: 'Almacén', icono: iconoEdificio('almacen', 28), subs: subsAlmacen, sub: 'almacen', ancho: 'completa',
-        html: `<div class="cols-completa"><div class="col-completa">${htmlEleccionBarra(a, escaparHtml)}${htmlExtraccion(c)}<div class="almacen-reserva">${htmlReservaRecursos(c)}</div>${htmlPausarConsumo(p, a, escaparHtml)}</div><div class="col-completa">${htmlRecetas(c)}</div></div>`,
+        html: `<div class="cols-completa"><div class="col-completa">${htmlEleccionBarra(a, escaparHtml)}${htmlExtraccion(c)}<div class="almacen-reserva">${htmlReservaRecursos(c)}</div></div><div class="col-completa">${htmlPausarConsumo(p, a, escaparHtml)}${htmlRecetas(c)}</div></div>`,
         cablear: () => {
           cablearEleccionBarra(cuerpo, a, () => { renderPieDePlaza(); renderPanelEdificios(); }, (m) => mostrarAviso(m, true));
           cablearProduccionYRecetas(c);

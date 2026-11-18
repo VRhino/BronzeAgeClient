@@ -24,7 +24,7 @@ import { cablearCaravanas, cablearRutas, htmlCaravanas, htmlRutas } from '../../
 import { SUBPESTANA_GUARNICION } from '../../src/ui/panelGuarnicion';
 import { FICHA_OBRA, SUBPESTANA_PUEBLOS } from '../../src/ui/pueblos';
 import { ahora as ahoraJuego } from '../../src/ui/juegoVisual';
-import { cablearTesoreria, htmlReservaRecursos } from '../../src/ui/panelTesoreria';
+import { cablearTesoreria, htmlPoliticas, htmlReservaRecursos } from '../../src/ui/panelTesoreria';
 import { cablearPausarConsumo, htmlPausarConsumo } from '../../src/ui/consumoPausado';
 import { htmlAutoConstruccion } from '../../src/ui/panelCentro';
 import { bloqueDeDatos, nivelesDeEdificio } from '../../src/apiCliente';
@@ -42,6 +42,11 @@ import { cablearVentanaAedas, htmlVentanaAedas } from '../../src/ui/ventanaAedas
 import { htmlCarro } from '../../src/ui/panelCarro';
 import { catalogoDeTecnologia } from '../../src/apiCliente';
 
+import { instalarMenuJugadorMovil } from '../../src/ui/menuJugadorMovil';
+instalarMenuJugadorMovil();
+import { htmlCargosPlaza, cablearCargosPlaza } from '../../src/ui/panelCentro';
+import { htmlResidentesPlaza } from '../../src/ui/participacion';
+import { htmlOrdenes, cablearOrdenes } from '../../src/ui/panelMercado';
 const e = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const RIEL: [string, string, string, boolean?][] = [
   ['construccion', 'Construcción', ICONO_RIEL.construccion], ['gobierno', 'Gobierno', ICONO_RIEL.gobierno], ['defensa', 'Defensa', iconoEdificio('muralla', 28)],
@@ -104,6 +109,11 @@ if (qs0.get('vacios')) {
   const quedan = new Set(['madera', 'piedra', 'trigo', 'oro', 'cobre', 'livestock', 'harina', 'pan']);
   a.almacen = Object.fromEntries(Object.entries(a.almacen ?? {}).map(([r, x]) => [r, quedan.has(r) ? x : { ...x, cantidad: 0 }])) as typeof a.almacen;
 }
+// `?pocos=4`: la plaza recién empezada, con solo N recursos con existencias (la barra automática enseña solo esos)
+if (qs0.get('pocos')) {
+  const quedan = Object.keys(a.almacen ?? {}).slice(0, Number(qs0.get('pocos')));
+  a.almacen = Object.fromEntries(Object.entries(a.almacen ?? {}).map(([r, x]) => [r, quedan.includes(r) ? x : { ...x, cantidad: 0 }])) as typeof a.almacen;
+}
 const construir = new URLSearchParams(location.search).get('construir');
 
 let barra = '';
@@ -121,7 +131,7 @@ document.getElementById('app')!.innerHTML = `<div class="asent-screen plaza-3d${
       <div class="asent-blason">${htmlBlasonHud({ nombre: a.nombre ?? 'Pesinunte', faccion: 'Casa de Micenas', escudo: svgSigilo(undefined, 64), nivel: a.nivel, renombrar: true, editando: false, residencia: 'dentro', capital: 'si', abierto: null, ascenso: new URLSearchParams(location.search).get('ascenso') === 'listo' ? 'listo' : 'abrir' }, e)}</div>
       <div class="asent-obras-hud">${htmlObrasHud(a, e, true, obrasMapa())}</div>
     </aside>
-    <aside class="asent-der">${new URLSearchParams(location.search).get('ficha') ? '' : '<div class="misiones-rastreador" style="padding:10px;border:1px solid var(--bronce);background:rgba(18,13,8,.9);color:var(--pergamino)">Misiones 3/3</div>'}</aside>
+    <aside class="asent-der">${new URLSearchParams(location.search).get('ficha') ? '' : '<div class="misiones-rastreador en-columna" style="padding:10px;border:1px solid var(--bronce);background:rgba(18,13,8,.9);color:var(--pergamino)">Misiones 3/3</div>'}</aside>
     <div class="asent-pie">${htmlPieDePlaza(a, e)}</div>
     <nav class="asent-riel${construir ? ' asent-riel-cajon' : ''}">${construir ? '' : riel}</nav>
     <div class="asent-lienzo asent-minimapa"><canvas id="mapa" width="900" height="900"></canvas></div>
@@ -176,27 +186,52 @@ function pintarAlmacen(): void {
     cuerpo.innerHTML = `<div class="asent-tabs asent-subtabs"><button class="asent-tab" type="button">Almacén</button><button class="asent-tab activo" type="button">Tu carga</button></div><div class="asent-lado-cuerpo"><div class="almacen-carga">${htmlCarro(p, e, false, true, true)}</div></div>`;
     return;
   }
-  cuerpo.innerHTML = `<div class="cols-completa"><div class="col-completa">${htmlEleccionBarra(a, e)}${htmlExtraccion(c)}<div class="almacen-reserva">${htmlReservaRecursos(c)}</div>${htmlPausarConsumo(p, a, e)}</div><div class="col-completa">${htmlRecetas(c)}</div></div>`;
+  cuerpo.innerHTML = `<div class="cols-completa"><div class="col-completa">${htmlEleccionBarra(a, e)}${htmlExtraccion(c)}<div class="almacen-reserva">${htmlReservaRecursos(c)}</div></div><div class="col-completa">${htmlPausarConsumo(p, a, e)}${htmlRecetas(c)}</div></div>`;
   cablearEleccionBarra(cuerpo, a, pintarAlmacen, (m) => alert(m));
   cablearProduccionYRecetas(c);
   cablearTesoreria(c);
   cablearPausarConsumo(cuerpo, a, async (_t, x) => { const q = x as { recurso: string; pausado: boolean }; a.consumoPausado = [...new Set([...(a.consumoPausado ?? []).filter((r) => r !== q.recurso), ...(q.pausado ? [q.recurso] : [])])]; pintarAlmacen(); return null; });
 }
 pintarAlmacen();
+// `?ventana=gobierno` (Cargos con los residentes) y `?ventana=mercado` (la pestaña Órdenes): sus ventanas de verdad.
+if (ventana === 'gobierno' || ventana === 'mercado') {
+  const cuerpo = document.querySelector<HTMLElement>('.asent-edif-cuerpo');
+  if (cuerpo) {
+    const q = p as unknown as Record<string, unknown>;
+    q.faccionId = a.faccionId; q.facciones = [{ id: a.faccionId, nombre: 'Casa de Micenas', reyId: 'h', miembros: [{ heroeId: 'h', cargos: [`gobernador@${a.id}`] }] }];
+    a.heroesFundadoresIds = ['h', 'heroe-12'];
+    q.heroesVisibles ??= []; q.ordenes = [{ id: 'o1', asentamientoId: a.id, tipo: 'venta', recurso: 'madera', cantidad: 300, cantidadCumplida: 120, precioUnitario: 2.5, estado: 'activa', expiraEn: Date.now() + 3_600_000 }, { id: 'o2', asentamientoId: a.id, tipo: 'compra', recurso: 'trigo', cantidad: 500, cantidadCumplida: 0, precioUnitario: 1.2, estado: 'activa', expiraEn: Date.now() + 7_200_000 }];
+    q.nombresDeCompaneros = { ...(q.nombresDeCompaneros ?? {}), 'heroe-12': 'Ariadna' };
+    q.heroe = { ...(p.heroe as object), ubicacion: { tipo: 'asentamiento', asentamientoId: a.id } };
+    a.cargos = { gobernadorId: 'h', maestroObrasId: null, maestroCaravanasId: null, tesoreroId: 'heroe-12', generalId: null, sacerdoteId: null } as typeof a.cargos;
+    const c = { proyeccion: p, asentamiento: a, cuerpo, ejecutar: async () => null, refrescar: () => { if (ventana === 'gobierno') pintarGobierno(); }, cargo: 'gobernador', resideAqui: true, escapar: e } as unknown as ContextoPlaza;
+    // Gobierno con sus pestañas de verdad: Cargos (con los residentes) y Políticas; `&sub=politicas` abre la segunda
+    let subGob = qs.get('sub') ?? 'cargos';
+    const pintarGobierno = (): void => {
+      const tabs = `<div class="asent-tabs asent-subtabs">${[['cargos', 'Cargos'], ['politicas', 'Políticas']].map(([id, n]) => `<button class="asent-tab${id === subGob ? ' activo' : ''}" type="button" data-sub="${id}">${n}</button>`).join('')}</div>`;
+      cuerpo.innerHTML = `${tabs}<div class="asent-lado-cuerpo">${subGob === 'politicas' ? htmlPoliticas(c) : htmlCargosPlaza(c, htmlResidentesPlaza(p, a, e))}</div>`;
+      cuerpo.querySelectorAll<HTMLButtonElement>('[data-sub]').forEach((b) => b.addEventListener('click', () => { subGob = b.dataset.sub!; pintarGobierno(); }));
+      if (subGob === 'politicas') cablearTesoreria(c); else cablearCargosPlaza(c);
+    };
+    if (ventana === 'gobierno') pintarGobierno();
+  }
+}
 // `?ventana=caravanas`: la vista de flota de verdad (`htmlCaravanas`) con una flota de mentira: una en la plaza, una de camino, una en una aldea.
+let subMercado = qs.get('sub') ?? (ventana === 'mercado' ? 'ordenes' : 'caravanas');
 function pintarCaravanas(): void {
   const cuerpo = document.querySelector<HTMLElement>('.asent-edif-cuerpo');
-  if (ventana !== 'caravanas' || !cuerpo) return;
-  // `&sub=rutas`: la pestaña Rutas del Mercado (0.138.0) con la misma flota.
-  if (qs.get('sub') === 'rutas') {
-    cuerpo.innerHTML = `<div class="asent-lado-cuerpo">${htmlRutas(p, a, e, pintarCaravanas)}</div>`;
-    cablearRutas(cuerpo, p, async () => null, pintarCaravanas);
-    return;
-  }
-  cuerpo.innerHTML = `<div class="asent-lado-cuerpo">${htmlCaravanas(p, a, e, pintarCaravanas)}</div>`;
-  cablearCaravanas(cuerpo, p, a, async () => null, pintarCaravanas);
+  if ((ventana !== 'caravanas' && ventana !== 'mercado') || !cuerpo) return;
+  // `?ventana=mercado`: la ventana del Mercado con sus pestañas de verdad (Órdenes · Caravanas · Rutas); `&sub=` elige cuál.
+  const subs: [string, string][] = [['ordenes', 'Órdenes'], ['caravanas', 'Caravanas'], ['rutas', 'Rutas']];
+  const tabs = ventana === 'mercado' ? `<div class="asent-tabs asent-subtabs">${subs.map(([id, nombre]) => `<button class="asent-tab${id === subMercado ? ' activo' : ''}" type="button" data-sub="${id}">${nombre}</button>`).join('')}</div>` : '';
+  const html = subMercado === 'rutas' ? htmlRutas(p, a, e, pintarCaravanas) : subMercado === 'ordenes' ? htmlOrdenes(p, a, e) : htmlCaravanas(p, a, e, pintarCaravanas);
+  cuerpo.innerHTML = `${tabs}<div class="asent-lado-cuerpo">${html}</div>`;
+  cuerpo.querySelectorAll<HTMLButtonElement>('[data-sub]').forEach((b) => b.addEventListener('click', () => { subMercado = b.dataset.sub!; pintarCaravanas(); }));
+  if (subMercado === 'rutas') cablearRutas(cuerpo, p, async () => null, pintarCaravanas);
+  else if (subMercado === 'ordenes') cablearOrdenes(cuerpo, a, async () => null);
+  else cablearCaravanas(cuerpo, p, a, async () => null, pintarCaravanas);
 }
-if (ventana === 'caravanas') {
+if (ventana === 'caravanas' || ventana === 'mercado') {
   const q = p as unknown as Record<string, unknown>;
   a.heroesFundadoresIds = ['h'];
   for (const x of a.edificios) if (x.tipo === 'mercado') x.nivelInterno = 3;

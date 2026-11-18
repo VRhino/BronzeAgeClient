@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.216.2] — 2026-11-18 · Móvil apaisado: HUD de la plaza pegado a los bordes, menú único de la barra del jugador y ventana del Almacén más limpia · motor `810cbf1`
+
+Sin cambio de contrato (0.27.0). Cambios que pidió Víctor al seguir la revisión pantalla a pantalla del móvil apaisado.
+
+- **Bordes de la plaza**: el panel de arriba al centro, el del blasón y «Salir al mundo» vuelven a ir pegados a los bordes de la pantalla; las reglas de pantalla estrecha medían sin el zoom y los despegaban. `--pie-fin` y `--botones-ancho` se miden ahora dentro del zoom.
+- **Menú de la barra del jugador** (solo móvil apaisado): los botones de arriba a la derecha se juntan en uno (☰) que abre una ventana pequeña al centro, con icono a la izquierda y nombre a la derecha; al elegir una opción se cierra y se abre su ventana. Sale un punto dorado si hay avisos o misiones por reclamar.
+- **Placa de Estado** (todas las pantallas): se puede apagar desde la ventana del Almacén («Estado en la barra: sí/no»); de serie va encendida en escritorio y apagada en el móvil. Se guarda en el navegador.
+- **Ventana del Almacén** (todas las pantallas): «Pausar consumo» pasa encima de Talleres, en la columna derecha; se quitan los textos «Ahora va sola…» y «Mantenimiento y nutrición…» (la explicación queda en el `title` de «Automática», «Que vaya sola» y del botón de Estado) y la línea que sobraba sobre «Pausar consumo».
+- Pruebas: el banco del HUD enseña Gobierno (Cargos y Políticas) y Mercado (Órdenes, Caravanas y Rutas) con sus pestañas reales, y `?pocos=N` simula una plaza con N recursos.
+
 ## [0.216.1] — 2026-11-17 · Móvil: sin rastreador de misiones y el acceso vuelve a vertical al cerrar sesión · motor `810cbf1`
 
 Sin cambio de contrato (0.27.0). Dos arreglos que pidió Víctor al probar la 0.216.0 en el móvil.

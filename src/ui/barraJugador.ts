@@ -4,6 +4,7 @@
 import type { ProyeccionJugador } from '../apiCliente';
 import { nombreDePueblo } from './pueblos';
 import { avanzadaActual, madreDe, nombreDeEtapa } from './avanzadas';
+import { BOTON_MENU_JUGADOR } from './menuJugadorMovil';
 
 // Tecnología ya no tiene botón: es una pestaña de la Facción (Víctor, 2026-11-03: «las tecnologías afectan al jugador a través de la Facción»).
 // Héroe, Escuadras y Carro son desde la 0.161.0 una sola ventana, la Base personal (`basePersonal.ts`; también con la tecla B).
@@ -61,6 +62,7 @@ export function htmlBarraJugador(p: ProyeccionJugador, e: (valor: string) => str
     <nav class="jugador-botones" aria-label="Menús del jugador">${extra}
       ${BOTONES.map(([id, nombre]) => `<button type="button" data-panel-jugador="${id}" title="${id === 'base' ? 'Base personal (B)' : nombre}" aria-label="${nombre}">${icono(id)}<span class="jugador-nombre">${nombre}</span>${id === 'avisos' ? '<b class="jugador-badge" hidden></b>' : id === 'misiones' ? '<b class="jugador-badge misiones-badge" hidden title="Misiones cumplidas por reclamar"></b>' : ''}</button>`).join('')}
       <button type="button" data-ver-mapa title="Mapa: la visión que tienes, con zoom libre (solo para mirar)" aria-label="Mapa">${icono('mapa')}<span class="jugador-nombre">Mapa</span></button>
+      ${BOTON_MENU_JUGADOR}
     </nav>
   </header>`;
 }
