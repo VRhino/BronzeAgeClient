@@ -3,6 +3,10 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.220.1] — 2026-11-18 · Zoom del mundo en móvil: el botón + acerca · motor `810cbf1`
+
+Sin cambio de contrato (0.27.0). Arreglo: el botón + del zoom del mundo (0.220.0) alejaba igual que el −, porque el atributo `data-zoom-3d` no da la clave `zoom3d` en `dataset` (un guion seguido de un número no se convierte). Pasa a `data-zoom-mundo`.
+
 ## [0.220.0] — 2026-11-18 · Móvil: zoom del mundo con botones, ficha de bandidos que no desborda y reparto de atributos rediseñado · motor `810cbf1`
 
 Sin cambio de contrato (0.27.0). Cosas que pidió Víctor al probar en su móvil.

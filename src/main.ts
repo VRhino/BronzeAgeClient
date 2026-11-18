@@ -2274,18 +2274,18 @@ function montarMapa(): void {
       </nav>
       <div class="mapa-comida" role="status" hidden></div>
     </div>
-    <div class="mapa-zoom-movil" role="group" aria-label="Zoom del mapa"><button type="button" data-zoom-3d="in" aria-label="Acercar" title="Acercar">+</button><button type="button" data-zoom-3d="out" aria-label="Alejar" title="Alejar">−</button></div>
+    <div class="mapa-zoom-movil" role="group" aria-label="Zoom del mapa"><button type="button" data-zoom-mundo="in" aria-label="Acercar" title="Acercar">+</button><button type="button" data-zoom-mundo="out" aria-label="Alejar" title="Alejar">−</button></div>
     ${htmlCapas('mundo', reglasDeAldea().fertilidadMinima, cultivosDeLasCapas())}
     ${menuEsquinaHtml()}
   </div>`;
   const contenedor = document.querySelector<HTMLElement>('.mapa-screen')!;
   cablearCapas(contenedor, aplicarCapas, cultivosDeLasCapas);
   // Zoom con botones (solo se ven en el móvil, donde no hay rueda): un paso hacia el de cerca o el alejado; el botón del tope se apaga.
-  contenedor.querySelectorAll<HTMLButtonElement>('[data-zoom-3d]').forEach((b) => b.addEventListener('click', () => {
-    const zoom = vista3dActiva?.pasoDeZoom(b.dataset.zoom3d === 'in' ? -1 : 1);
+  contenedor.querySelectorAll<HTMLButtonElement>('[data-zoom-mundo]').forEach((b) => b.addEventListener('click', () => {
+    const zoom = vista3dActiva?.pasoDeZoom(b.dataset.zoomMundo === 'in' ? -1 : 1);
     if (!zoom) return;
-    contenedor.querySelector<HTMLButtonElement>('[data-zoom-3d="in"]')!.disabled = zoom === 'cerca';
-    contenedor.querySelector<HTMLButtonElement>('[data-zoom-3d="out"]')!.disabled = zoom === 'alejado';
+    contenedor.querySelector<HTMLButtonElement>('[data-zoom-mundo="in"]')!.disabled = zoom === 'cerca';
+    contenedor.querySelector<HTMLButtonElement>('[data-zoom-mundo="out"]')!.disabled = zoom === 'alejado';
   }));
   const lienzo = document.querySelector<HTMLElement>('.mapa-lienzo')!;
   // Un clic en el terreno (la vista 3D da el punto del mapa bajo el ratón y los centros de lo que tiene debajo): lo que hay se selecciona y la
