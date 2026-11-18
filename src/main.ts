@@ -3213,7 +3213,9 @@ async function volverALasPartidas(): Promise<void> {
 
 async function sincronizarMapa(mapaId: string): Promise<MapaGenerado> {
   if (estadoCliente.mapaCache?.id === mapaId) return estadoCliente.mapaCache.mapa;
-  const mapa = await obtenerMapa(estadoCliente.gameIdActivo, mapaId);
+  const bajado = await obtenerMapa(estadoCliente.gameIdActivo, mapaId);
+  // los nodos de ganado ya no existen en el motor (el ganado sale de las aldeas ganaderas, 2026-10-27): un mundo viejo aún los trae y no se enseñan
+  const mapa = { ...bajado, nodos: bajado.nodos.filter((n) => n.tipo !== 'livestock') };
   estadoCliente.mapaCache = { id: mapaId, mapa };
   return mapa;
 }

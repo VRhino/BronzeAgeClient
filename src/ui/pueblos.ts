@@ -212,7 +212,7 @@ function nodosLibres(p: ProyeccionJugador, a: Asentamiento): { id: string; tipo:
 
 // ---------------------------------------------------------------- plaza: lo que hay en su zona
 
-const NOMBRE_NODO: Record<string, string> = { piedra: 'Piedra', cobre: 'Cobre', estano: 'Estaño', hierro: 'Hierro', oro: 'Oro', ganado: 'Ganado' };
+const NOMBRE_NODO: Record<string, string> = { piedra: 'Piedra', cobre: 'Cobre', estano: 'Estaño', hierro: 'Hierro', oro: 'Oro' };
 
 /** Lo que ocupa un nodo o una parcela: los edificios que lo explotan (`fuenteId`, de las plazas que el cliente ve por dentro) y los pueblos y obras. */
 export function fuentesOcupadas(p: ProyeccionJugador): Set<string> {
@@ -231,8 +231,8 @@ export function parcelasEn(p: ProyeccionJugador, dentroDe: (q: Point) => boolean
   return { libres: todas.length - usadas, ocupadas: usadas };
 }
 
-/** El icono de lo que hay en un nodo (su recurso; el ganado, un buey). */
-const iconoNodo = (t: string): string => (t === 'ganado' ? '🐂' : RECURSO_ICONO[t] ?? '⛏️');
+/** El icono de lo que hay en un nodo (su recurso). */
+const iconoNodo = (t: string): string => RECURSO_ICONO[t] ?? '⛏️';
 const coma = (n: number): string => n.toFixed(2).replace('.', ',');
 /** Un coste en fichas con icono, sin comparar con el almacén (lo que se lleva al sitio). */
 const costeLlano = (coste: Record<string, number>, e: Escapar): string =>
@@ -268,7 +268,7 @@ function htmlZona(p: ProyeccionJugador, a: Asentamiento, e: Escapar): string {
       <span class="zona-libres"><b>${libres}</b><small>libre${libres === 1 ? '' : 's'} de ${total}</small></span>${sitios}</div>`;
   };
   const fichas = [...porTipo.entries()].sort(([x], [y]) => x.localeCompare(y))
-    .map(([t, n]) => ficha(iconoNodo(t), NOMBRE_NODO[t] ?? t, n.libres, n.ocupados, t === 'ganado' ? 'un edificio' : 'un pueblo o un edificio'));
+    .map(([t, n]) => ficha(iconoNodo(t), NOMBRE_NODO[t] ?? t, n.libres, n.ocupados, 'un pueblo o un edificio'));
   fichas.push(ficha('🌲', 'Bosque', parcelas.libres, parcelas.ocupadas, 'una Leñera'));
   return `${titulo}<div class="zona-fichas">${fichas.join('')}</div>`;
 }

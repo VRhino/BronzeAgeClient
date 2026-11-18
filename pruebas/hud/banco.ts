@@ -445,7 +445,7 @@ function avisoFundacion(): void {
       (a as unknown as { zonaReal: unknown }).zonaReal = [cerca(-r, -r), cerca(r, -r), cerca(r, r), cerca(-r, r)];
       (estadoCliente as unknown as { mapaCache: unknown }).mapaCache = { mapa: { parcelas: [], nodos: [
         { id: 'n1', tipo: 'piedra', posicion: cerca(9, -4) }, { id: 'n2', tipo: 'piedra', posicion: cerca(-12, 6) }, { id: 'n3', tipo: 'estano', posicion: cerca(-7, 8) },
-        { id: 'n4', tipo: 'cobre', posicion: cerca(14, 12) }, { id: 'n5', tipo: 'ganado', posicion: cerca(3, -15) }, { id: 'n6', tipo: 'piedra', posicion: cerca(90, 90) },
+        { id: 'n4', tipo: 'cobre', posicion: cerca(14, 12) }, { id: 'n5', tipo: 'hierro', posicion: cerca(3, -15) }, { id: 'n6', tipo: 'piedra', posicion: cerca(90, 90) },
       ] } };
       (p as unknown as { pueblos: unknown[] }).pueblos = [
         { id: 'pu-1', tipo: 'cantera', madreId: a.id, propio: false, nodoId: 'n1', posicion: cerca(9, -4), almacen: {}, capacidad: 0 },
