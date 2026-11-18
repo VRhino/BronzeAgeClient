@@ -437,7 +437,26 @@ function avisoFundacion(): void {
     (p as unknown as { faccionId: string }).faccionId = a.faccionId;
     // de visita (`&visita=1`: plaza de tu Facción sin residir) o en plaza ajena (`?ajena=1`): sin cargo ni residencia, como `contextoPlaza` de main.ts
     const visitante = Boolean(qs.get('visita')) || AJENA;
-    if (AJENA) a.faccionId = 'f-otra';
+    if (AJENA) { a.faccionId = 'f-otra'; (p as unknown as { faccionId: string }).faccionId = 'fac-1'; }
+    // `?ajena=1`: lo que el motor manda de una plaza de otra Facción (vista.rs): su zona, los pueblos y avanzadas avistados solo con dónde están y qué son, y los nodos del mapa;
+    // `&vacia=1`: la misma plaza sin zona, sin pueblos ni avanzadas (no debería salir Territorio)
+    if (AJENA && !qs.get('vacia')) {
+      const r = 20, cerca = (dx: number, dy: number) => ({ x: a.posicion.x + dx, y: a.posicion.y + dy });
+      (a as unknown as { zonaReal: unknown }).zonaReal = [cerca(-r, -r), cerca(r, -r), cerca(r, r), cerca(-r, r)];
+      (estadoCliente as unknown as { mapaCache: unknown }).mapaCache = { mapa: { parcelas: [], nodos: [
+        { id: 'n1', tipo: 'piedra', posicion: cerca(9, -4) }, { id: 'n2', tipo: 'piedra', posicion: cerca(-12, 6) }, { id: 'n3', tipo: 'estano', posicion: cerca(-7, 8) },
+        { id: 'n4', tipo: 'cobre', posicion: cerca(14, 12) }, { id: 'n5', tipo: 'ganado', posicion: cerca(3, -15) }, { id: 'n6', tipo: 'piedra', posicion: cerca(90, 90) },
+      ] } };
+      (p as unknown as { pueblos: unknown[] }).pueblos = [
+        { id: 'pu-1', tipo: 'cantera', madreId: a.id, propio: false, nodoId: 'n1', posicion: cerca(9, -4), almacen: {}, capacidad: 0 },
+        { id: 'pu-2', tipo: 'minaEstano', madreId: a.id, propio: false, nodoId: 'n3', posicion: cerca(-7, 8), almacen: {}, capacidad: 0, batallaId: 'b-1' },
+        { id: 'pu-3', tipo: 'aldeaAgricola', madreId: a.id, propio: false, posicion: cerca(6, 13), almacen: {}, capacidad: 0 },
+      ];
+      (p as unknown as { avanzadas: unknown[] }).avanzadas = [
+        { id: 'av-1', madreId: a.id, etapa: 2, posicion: cerca(-16, -12), enRuinas: false, propia: false },
+        { id: 'av-2', madreId: a.id, etapa: 1, posicion: cerca(15, -10), enRuinas: true, propia: false },
+      ];
+    }
     if (visitante) a.heroesFundadoresIds = [];
     const c = { proyeccion: p, asentamiento: a, cuerpo, ejecutar: async () => null, refrescar: avisoFundacion, cargo: visitante ? null : 'gobernador', resideAqui: !visitante, escapar: e } as unknown as ContextoPlaza;
     // las dos pestañas de verdad (`&sub=fundacion` abre la segunda)

@@ -10,7 +10,7 @@ vi.stubGlobal('location', { protocol: 'http:', host: 'localhost' });
 vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => datos })));
 
 const { bloqueDeDatos } = await import('../src/apiCliente');
-const { SUBPESTANA_PUEBLOS } = await import('../src/ui/pueblos');
+const { SUBPESTANA_PUEBLOS, hayTerritorioQueVer } = await import('../src/ui/pueblos');
 
 beforeAll(async () => {
   await new Promise<void>((listo) => { if (bloqueDeDatos('PUEBLOS_EXTRACTORES', listo)) listo(); });
@@ -97,5 +97,39 @@ describe('Territorio: los pueblos en botones', () => {
     const html = SUBPESTANA_PUEBLOS.html(contexto([aldea, otra], [], { nivel: 1, id: 'as-5' }));
     expect(botones(html).map(([x]) => x)).toEqual(['pueblo-1', 'pueblo-2']);
     expect(html).toContain('Cupo lleno');
+  });
+
+  // la plaza de otra Facción (Víctor, 2026-11-18): se ve lo que el motor manda de fuera, solo para mirar
+  describe('plaza de otra Facción', () => {
+    const ajeno = { id: 'pu-9', tipo: 'cantera', madreId: 'as-7', propio: false, posicion: { x: 55, y: 50 }, almacen: {}, capacidad: 0, batallaId: 'b-1' } as PuebloDeMapa;
+    const avanzadaAjena = { id: 'av-9', madreId: 'as-7', etapa: 2, posicion: { x: 45, y: 50 }, enRuinas: false, propia: false };
+    const ctx = (o: { pueblos?: PuebloDeMapa[]; avanzadas?: unknown[] }): ContextoPlaza => {
+      const a = { id: 'as-7', faccionId: 'f-otra', nivel: 3, nivelActual: 3, posicion: { x: 50, y: 50 }, edificios: [] } as unknown as Asentamiento;
+      const proyeccion = { heroeId: 'h', faccionId: 'f-1', facciones: [], asentamientos: [a], asentamientosAvistados: [], pueblos: o.pueblos ?? [], obrasDeMapa: [], avanzadas: o.avanzadas ?? [], caravanas: [] } as unknown as ProyeccionJugador;
+      return { proyeccion, asentamiento: a, cargo: null, resideAqui: false, escapar: esc, refrescar: () => {} } as unknown as ContextoPlaza;
+    };
+
+    test('enseña sus pueblos y sus avanzadas, sin cupo ni nivel ni almacén', () => {
+      const c = ctx({ pueblos: [ajeno], avanzadas: [avanzadaAjena] });
+      const html = SUBPESTANA_PUEBLOS.html(c);
+      expect(botones(html)).toEqual([['pu-9', false]]);
+      expect(html).toContain('Fuerte');
+      expect(html).not.toContain('aún no tiene');
+      expect(html).not.toContain('Almacén');
+      expect(html).not.toContain('pueblo-icono-nivel');
+      expect(html).not.toContain('🏘 0');
+      expect(hayTerritorioQueVer(c.proyeccion, c.asentamiento)).toBe(true);
+    });
+
+    test('sin nada a la vista no hay Territorio que abrir', () => {
+      const c = ctx({});
+      expect(hayTerritorioQueVer(c.proyeccion, c.asentamiento)).toBe(false);
+      expect(SUBPESTANA_PUEBLOS.html(c)).not.toContain('aún no tiene');
+    });
+
+    test('los pueblos de otra plaza no cuentan', () => {
+      const c = ctx({ pueblos: [{ ...ajeno, madreId: 'as-otra' } as PuebloDeMapa] });
+      expect(hayTerritorioQueVer(c.proyeccion, c.asentamiento)).toBe(false);
+    });
   });
 });

@@ -126,7 +126,7 @@ import { motivosParaCrearFaccion } from './ui/validarFaccion';
 import { nombreDeHeroe } from './ui/nombres';
 import { htmlEstados } from './ui/estados';
 import { htmlFilaProteccion, motivoProtegida } from './ui/proteccionPlaza';
-import { cablearInteriorPueblo, cultivosDesbloqueados, htmlCuerpoPueblo, htmlTrazadoPueblo, nombreDePueblo, pestanasDePueblo, puebloActual, reglasDeAldea, selectorDePunto, type PestanaPueblo } from './ui/pueblos';
+import { cablearInteriorPueblo, cultivosDesbloqueados, hayTerritorioQueVer, htmlCuerpoPueblo, htmlTrazadoPueblo, nombreDePueblo, pestanasDePueblo, puebloActual, reglasDeAldea, selectorDePunto, type PestanaPueblo } from './ui/pueblos';
 import { pintarSitiosDeAldea, type Cultivo, type SitiosDeAldea } from './mundo/fertilidad';
 import { htmlMiembrosFaccion, htmlResidentesPlaza } from './ui/participacion';
 import { ascensoPosible, cablearCargosPlaza, htmlAscensoPlaza, htmlAutoConstruccion, htmlCargosPlaza } from './ui/panelCentro';
@@ -2557,6 +2557,8 @@ function ventanaDisponible(v: VentanaPlaza, p: ProyeccionJugador, a: Asentamient
   if (v === 'aedas') return hayAedasEnPlaza(p, a);
   // la Armería activa: lo dice la plaza (`armeriaActiva`, también la ajena) o, si no llega, sus edificios
   if (v === 'armeria') return Boolean(a.armeriaActiva) || a.edificios.some((e) => e.tipo === 'armeria' && e.estado === 'activo');
+  // de visita en una plaza ajena, Territorio solo sale si hay algo que ver (su zona con nodos, pueblos o avanzadas a la vista)
+  if (v === 'territorio' && ajena) return hayTerritorioQueVer(p, a);
   const def = RIEL.find((x) => x.id === v);
   if (!def || (ajena && !def.deVisita)) return false;
   return !def.requiere || a.edificios.some((e) => e.tipo === def.requiere!.tipo && e.estado === 'activo');

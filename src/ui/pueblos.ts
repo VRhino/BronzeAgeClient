@@ -469,7 +469,96 @@ function botonPueblo(id: string, icono: string, nombre: string, tono: string, di
     + `<span class="pueblo-emblema" aria-hidden="true">${icono}</span>${distintivo}</button>`;
 }
 
+// ---------------------------------------------------------------- Territorio de una plaza ajena: solo lo que se ve de fuera
+
+/** Lo que se ve de una plaza ajena: sus pueblos y sus avanzadas, solo con dónde están y qué son (el motor no manda su almacén, guarnición ni nivel). */
+function deFueraDe(p: ProyeccionJugador, a: Asentamiento): { pueblos: PuebloDeMapa[]; avanzadas: AvanzadaDeMapa[] } {
+  return {
+    pueblos: (p.pueblos ?? []).filter((x) => !x.propio && x.madreId === a.id),
+    avanzadas: (p.avanzadas ?? []).filter((x) => !x.propia && x.madreId === a.id),
+  };
+}
+
+/** Los nodos del mapa que caen dentro de la zona de la plaza; vacío si aún no llegó su zona o el mapa. */
+function nodosDeLaZona(a: Asentamiento): { id: string; tipo: string }[] {
+  const zona = a.zonaReal;
+  const nodos = estadoCliente.mapaCache?.mapa.nodos;
+  if (!zona || zona.length < 3 || !nodos) return [];
+  return nodos.filter((n) => dentro(n.posicion, zona));
+}
+
+/** ¿Hay algo que enseñar en el Territorio de esta plaza? Siempre en la de tu Facción; en una ajena, solo con nodos en su zona, pueblos o avanzadas a la vista. */
+export function hayTerritorioQueVer(p: ProyeccionJugador, a: Asentamiento): boolean {
+  if (esDeMiFaccion(p, a)) return true;
+  const f = deFueraDe(p, a);
+  return f.pueblos.length > 0 || f.avanzadas.length > 0 || nodosDeLaZona(a).length > 0;
+}
+
+/** La zona de una plaza ajena: cuántos nodos de cada tipo caen dentro y en cuántos se ve un pueblo. No dice «libres»: lo que explota un edificio de dentro no se ve. */
+function htmlZonaAjena(f: { pueblos: PuebloDeMapa[] }, a: Asentamiento, e: Escapar): string {
+  const nodos = nodosDeLaZona(a);
+  if (!nodos.length) return '';
+  const conPueblo = new Set(f.pueblos.map((x) => x.nodoId).filter(Boolean));
+  const porTipo = new Map<string, { total: number; con: number }>();
+  for (const n of nodos) {
+    const t = porTipo.get(n.tipo) ?? { total: 0, con: 0 };
+    t.total++;
+    if (conPueblo.has(n.id)) t.con++;
+    porTipo.set(n.tipo, t);
+  }
+  const fichas = [...porTipo.entries()].sort(([x], [y]) => x.localeCompare(y)).map(([t, n]) => {
+    const nombre = NOMBRE_NODO[t] ?? t;
+    const sub = `nodo${n.total === 1 ? '' : 's'}`;
+    return `<div class="zona-ficha" title="${e(`${nombre}: ${n.total} nodo${n.total === 1 ? '' : 's'} en su zona${n.con ? `, ${n.con} con un pueblo a la vista` : ''}.`)}">
+      <span class="zona-icono" aria-hidden="true">${iconoNodo(t)}</span><span class="zona-nombre">${e(nombre)}</span>
+      <span class="zona-libres"><b>${n.total}</b><small>${sub}</small></span>${n.con ? `<small class="zona-con-pueblo">${n.con} con pueblo</small>` : ''}</div>`;
+  });
+  return `<div class="obra-titulo"><span class="faction-kicker">Zona de influencia</span>${ayuda('plaza:zona-ajena', 'Los nodos que caen dentro de la zona de esa plaza. Desde fuera se ven los pueblos que has avistado; lo que explotan sus edificios no se sabe.')}</div>
+    <div class="zona-fichas">${fichas.join('')}</div>`;
+}
+
+/** Un pueblo ajeno como tarjeta: qué es, sobre qué nodo, a cuánto de su plaza y si lo asedian. Nada más llega de fuera. */
+function tarjetaPuebloAjeno(a: Asentamiento, x: PuebloDeMapa, e: Escapar): string {
+  const aldea = esAldea(x);
+  const nodo = x.nodoId ? estadoCliente.mapaCache?.mapa.nodos.find((n) => n.id === x.nodoId) : undefined;
+  const sub = `${nodo ? `${NOMBRE_NODO[nodo.tipo] ?? nodo.tipo} · ` : ''}a ${n0(distancia(x.posicion, a.posicion))} u de la plaza`;
+  return `<div class="pueblo-tarjeta ${aldea ? 'aldea' : 'extractor'}${x.batallaId ? ' atacado' : ''}">
+    <div class="anillo-cab"><span class="pueblo-emblema" aria-hidden="true">${iconoDePuebloAjeno(x, 26)}</span>
+      <span class="anillo-titulo"><strong>${e(nombreDePuebloAjeno(x))}</strong><small>${e(sub)}</small></span>
+      ${x.batallaId ? '<span class="pueblo-alerta">⚔ ¡Atacado!</span>' : ''}</div></div>`;
+}
+const nombreDePuebloAjeno = (x: PuebloDeMapa): string => (esAldea(x) ? 'Aldea agrícola' : EDIFICIO_NOMBRE[x.tipo] ?? x.tipo);
+const iconoDePuebloAjeno = (x: PuebloDeMapa, tam: number): string => (esAldea(x) ? '🏘️' : iconoEdificio(x.tipo, tam));
+
+/** Una avanzada ajena como tarjeta: su etapa, a cuánto de su plaza y si está en ruinas o la asedian. */
+function tarjetaAvanzadaAjena(a: Asentamiento, x: AvanzadaDeMapa, e: Escapar): string {
+  return `<div class="pueblo-tarjeta avanzada${x.enRuinas ? ' ruinas' : ''}${x.batallaId ? ' atacado' : ''}">
+    <div class="anillo-cab"><span class="pueblo-emblema avanzada" aria-hidden="true">${iconoDeAvanzada(x.etapa, 26)}</span>
+      <span class="anillo-titulo"><strong>${e(nombreDeEtapa(x.etapa))}</strong><small>a ${n0(distancia(x.posicion, a.posicion))} u de la plaza</small></span>
+      ${x.batallaId ? '<span class="pueblo-alerta">⚔ ¡Atacada!</span>' : x.enRuinas ? '<span class="pueblo-alerta ruinas">🏚 En ruinas</span>' : ''}</div></div>`;
+}
+
+/** El Territorio de una plaza ajena, solo para mirar: su zona, los pueblos y las avanzadas que se ven. Sin cupos, sin obras ni nada que gestionar. */
+function htmlPueblosAjenos(c: ContextoPlaza): string {
+  const { proyeccion: p, asentamiento: a, escapar: e } = c;
+  const f = deFueraDe(p, a);
+  if (plazaDeTerritorio !== a.id) { plazaDeTerritorio = a.id; abiertoEnTerritorio = undefined; }
+  const abierto = abiertoEnTerritorio && f.pueblos.some((x) => x.id === abiertoEnTerritorio) ? abiertoEnTerritorio : null;
+  const botones = f.pueblos.map((x) => botonPueblo(x.id, iconoDePuebloAjeno(x, 22), `${nombreDePuebloAjeno(x)}${x.batallaId ? ' · ¡atacado!' : ''}`, x.batallaId ? 'atacado' : '',
+    x.batallaId ? '<b class="pueblo-icono-alerta" aria-hidden="true">⚔</b>' : '', abierto === x.id, e)).join('');
+  const abierta = f.pueblos.find((x) => x.id === abierto);
+  const izquierda = [
+    htmlZonaAjena(f, a, e),
+    f.pueblos.length ? `<div class="obra-titulo"><span class="faction-kicker">Pueblos</span></div><div class="pueblo-iconos">${botones}</div>${abierta ? `<div class="pueblo-detalle">${tarjetaPuebloAjeno(a, abierta, e)}</div>` : ''}` : '',
+  ].join('');
+  const derecha = f.avanzadas.length
+    ? `<div class="obra-titulo"><span class="faction-kicker">Avanzadas</span></div><div class="pueblo-cartas">${f.avanzadas.map((x) => tarjetaAvanzadaAjena(a, x, e)).join('')}</div>` : '';
+  if (!izquierda && !derecha) return '<p class="mapa-lista-vacia">No se ve nada en su territorio.</p>';
+  return `<div class="cols-completa territorio-cols">${izquierda ? `<div class="col-completa">${izquierda}</div>` : ''}${derecha ? `<div class="col-completa">${derecha}</div>` : ''}</div>`;
+}
+
 function htmlPueblos(c: ContextoPlaza): string {
+  if (!esDeMiFaccion(c.proyeccion, c.asentamiento)) return htmlPueblosAjenos(c);
   const { proyeccion: p, asentamiento: a, escapar: e } = c;
   const { pueblos, obras } = deLaPlaza(p, a);
   const gestiona = c.cargo !== null && c.resideAqui;
