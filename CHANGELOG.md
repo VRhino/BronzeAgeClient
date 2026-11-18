@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.220.0] — 2026-11-18 · Móvil: zoom del mundo con botones, ficha de bandidos que no desborda y reparto de atributos rediseñado · motor `810cbf1`
+
+Sin cambio de contrato (0.27.0). Cosas que pidió Víctor al probar en su móvil.
+
+- **Zoom del mundo en el móvil**: botones + y − encima del de capas (un paso entre cerca, normal y alejado; se apaga el del tope). Solo en el mundo y solo en móvil; en escritorio sigue la rueda.
+- **Ficha de bandidos**: ya no desborda en horizontal (los datos van en dos columnas que caben; el botín, el tiempo hasta allí y «Acosa» ocupan la fila entera).
+- **Base personal, pestaña Héroe**: el reparto de puntos de atributo pasa de casillas numéricas a tarjetas con icono, valor, barra y botones − y +, una gema con los puntos por repartir y «Confirmar» / «Deshacer» (no se manda nada hasta confirmar).
+
 ## [0.219.2] — 2026-11-18 · Escuadras elegidas: tocar para quitar, sin ✕ · motor `810cbf1`
 
 Sin cambio de contrato (0.27.0).

@@ -193,8 +193,9 @@ export class VistaMundo3D {
   }
 
   /** Un paso de zoom (los botones + y −): −1 acerca, 1 aleja. */
-  pasoDeZoom(sentido: -1 | 1): void {
+  pasoDeZoom(sentido: -1 | 1): Zoom {
     this.camara.pasoDeZoom(sentido);
+    return this.camara.zoom;
   }
 
   /** Enseña u oculta la rejilla de movimiento del servidor alrededor del héroe. */

@@ -1179,7 +1179,7 @@ function renderSeleccionMapaCuerpo(): void {
       ${asentamiento.recordado === null ? htmlFilaProteccion(asentamiento, proyeccion.instante, escaparHtml, renderSeleccionMapa) : ''}
       ${asentamiento.recordado !== null ? `<div><span>Visto</span><strong>${escaparHtml(fechaDeMundo(asentamiento.recordado))}</strong></div>` : ''}
       ${ataque?.distancia != null ? `<div><span>Distancia</span><strong>${ataque.distancia}</strong></div>` : ''}
-      ${((t) => t ? `<div><span>Tiempo hasta allí</span><strong>${escaparHtml(t)}</strong></div>` : '')(textoTiempoHasta(proyeccion, asentamiento.posicion))}
+      ${((t) => t ? `<div class="dato-largo"><span>Tiempo hasta allí</span><strong>${escaparHtml(t)}</strong></div>` : '')(textoTiempoHasta(proyeccion, asentamiento.posicion))}
     </div>
     ${htmlAccionesPuerta(puerta.acciones, escaparHtml)}
     ${!propio ? htmlInformeDeInspeccion(proyeccion, 'asentamiento', asentamiento.id, escaparHtml) : ''}
@@ -1378,10 +1378,10 @@ function renderSeleccionCampamento(cont: HTMLElement, proyeccion: ProyeccionJuga
     <div class="mapa-seleccion-datos">
       <div><span>Nivel</span><strong>${campamento.nivel}</strong></div>
       <div><span>Poder</span><strong>${campamento.poder}</strong></div>
-      ${nivel ? `<div><span>Defensores</span><strong>${nivel.unidades}</strong></div>${nivel.botinPorHeroe !== undefined || nivel.monedasPorHeroe !== undefined ? `<div><span>Botín por héroe</span><strong>${escaparHtml(textoDeBotin({ madera: nivel.botinPorHeroe ?? 0, piedra: nivel.botinPorHeroe ?? 0, trigo: nivel.botinPorHeroe ?? 0 }, nivel.monedasPorHeroe ?? 0, 1, '') ?? 'nada')}</strong></div>` : ''}` : ''}
+      ${nivel ? `<div><span>Defensores</span><strong>${nivel.unidades}</strong></div>${nivel.botinPorHeroe !== undefined || nivel.monedasPorHeroe !== undefined ? `<div class="dato-largo"><span>Botín por héroe</span><strong>${escaparHtml(textoDeBotin({ madera: nivel.botinPorHeroe ?? 0, piedra: nivel.botinPorHeroe ?? 0, trigo: nivel.botinPorHeroe ?? 0 }, nivel.monedasPorHeroe ?? 0, 1, '') ?? 'nada')}</strong></div>` : ''}` : ''}
       ${distancia !== null ? `<div><span>Distancia</span><strong>${distancia}</strong></div>` : ''}
-      ${((t) => t ? `<div><span>Tiempo hasta allí</span><strong>${escaparHtml(t)}</strong></div>` : '')(textoTiempoHasta(proyeccion, campamento.posicion))}
-      ${acosa ? `<div><span>Acosa</span><strong>${acosa}</strong></div>` : ''}
+      ${((t) => t ? `<div class="dato-largo"><span>Tiempo hasta allí</span><strong>${escaparHtml(t)}</strong></div>` : '')(textoTiempoHasta(proyeccion, campamento.posicion))}
+      ${acosa ? `<div class="dato-largo"><span>Acosa</span><strong>${acosa}</strong></div>` : ''}
     </div>
     ${htmlAccionesPuerta([{ id: 'marchar', etiqueta: 'Marchar aquí', icono: '➜' }, { id: 'atacar', etiqueta: 'Atacar', icono: '⚔', principal: true, motivo: impide || undefined }], escaparHtml)}
     ${impide && impide.length <= 70 ? `<p class="mapa-lista-vacia">${escaparHtml(impide)}</p>` : ''}
@@ -1431,7 +1431,7 @@ function renderSeleccionMercenarios(cont: HTMLElement, proyeccion: ProyeccionJug
     <div class="mapa-seleccion-datos">
       <div><span>Residentes</span><strong>${campamento.residentesIds.length}</strong></div>
       ${distancia !== null ? `<div><span>Distancia</span><strong>${distancia}</strong></div>` : ''}
-      ${((t) => t ? `<div><span>Tiempo hasta allí</span><strong>${escaparHtml(t)}</strong></div>` : '')(textoTiempoHasta(proyeccion, campamento.posicion))}
+      ${((t) => t ? `<div class="dato-largo"><span>Tiempo hasta allí</span><strong>${escaparHtml(t)}</strong></div>` : '')(textoTiempoHasta(proyeccion, campamento.posicion))}
     </div>
     ${htmlAccionesPuerta(puerta.acciones, escaparHtml)}
     ${entraEjercito && !soyLider ? '<p class="mapa-lista-vacia">Solo el Líder hace entrar al ejército.</p>' : ''}
@@ -2274,11 +2274,19 @@ function montarMapa(): void {
       </nav>
       <div class="mapa-comida" role="status" hidden></div>
     </div>
+    <div class="mapa-zoom-movil" role="group" aria-label="Zoom del mapa"><button type="button" data-zoom-3d="in" aria-label="Acercar" title="Acercar">+</button><button type="button" data-zoom-3d="out" aria-label="Alejar" title="Alejar">−</button></div>
     ${htmlCapas('mundo', reglasDeAldea().fertilidadMinima, cultivosDeLasCapas())}
     ${menuEsquinaHtml()}
   </div>`;
   const contenedor = document.querySelector<HTMLElement>('.mapa-screen')!;
   cablearCapas(contenedor, aplicarCapas, cultivosDeLasCapas);
+  // Zoom con botones (solo se ven en el móvil, donde no hay rueda): un paso hacia el de cerca o el alejado; el botón del tope se apaga.
+  contenedor.querySelectorAll<HTMLButtonElement>('[data-zoom-3d]').forEach((b) => b.addEventListener('click', () => {
+    const zoom = vista3dActiva?.pasoDeZoom(b.dataset.zoom3d === 'in' ? -1 : 1);
+    if (!zoom) return;
+    contenedor.querySelector<HTMLButtonElement>('[data-zoom-3d="in"]')!.disabled = zoom === 'cerca';
+    contenedor.querySelector<HTMLButtonElement>('[data-zoom-3d="out"]')!.disabled = zoom === 'alejado';
+  }));
   const lienzo = document.querySelector<HTMLElement>('.mapa-lienzo')!;
   // Un clic en el terreno (la vista 3D da el punto del mapa bajo el ratón y los centros de lo que tiene debajo): lo que hay se selecciona y la
   // columna marcha hacia ello; si son varias cosas, primero se elige una en la lista; en el suelo, se marcha allí. Con la lista abierta, un

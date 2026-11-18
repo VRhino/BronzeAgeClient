@@ -2552,6 +2552,29 @@ body {
   border-radius: 2px;
   color: var(--pergamino);
 }
+/* El reparto de puntos de atributo, como en un juego (tarjetas con icono, valor y barra) */
+.atr-panel { display: flex; flex-direction: column; gap: 8px; }
+.atr-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.atr-gema { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; font-size: 0.8rem; color: var(--oro-claro); border: 1px solid var(--oro); background: radial-gradient(ellipse at 30% 20%, rgba(216, 184, 120, 0.28), rgba(60, 44, 26, 0.6)); box-shadow: 0 0 12px rgba(216, 184, 120, 0.35); }
+.atr-gema strong { font-family: var(--fuente-titulo); font-size: 1.05rem; color: #fff1c9; }
+.atr-gema.vacia { color: var(--text-muted); border-color: var(--bronce-osc); background: none; box-shadow: none; }
+.atr-fila { display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); gap: 10px; }
+.atr-tarjeta { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 8px 8px; border: 1px solid var(--bronce); border-radius: 4px; background: linear-gradient(180deg, rgba(60, 44, 26, 0.9), rgba(24, 18, 12, 0.95)); box-shadow: var(--placa-sutil); }
+.atr-tarjeta.con-extra { border-color: var(--oro); box-shadow: 0 0 14px rgba(216, 184, 120, 0.25); }
+.atr-icono { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; color: var(--oro-claro); border: 1px solid var(--bronce); background: radial-gradient(circle at 35% 30%, rgba(169, 121, 63, 0.45), rgba(20, 16, 11, 0.9)); }
+.atr-nombre { font-family: var(--fuente-titulo); font-size: 0.82rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pergamino); }
+.atr-valor { font-family: var(--fuente-titulo); font-size: 1.5rem; line-height: 1; color: var(--oro-claro); display: inline-flex; align-items: baseline; gap: 4px; }
+.atr-valor em { font-style: normal; font-size: 0.9rem; color: #8fd68f; }
+.atr-barra { display: flex; width: 100%; height: 8px; border-radius: 4px; overflow: hidden; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--bronce-osc); }
+.atr-barra i { display: block; height: 100%; background: linear-gradient(180deg, #d8b878, #a9793f); }
+.atr-barra i.extra { background: linear-gradient(180deg, #b6f0b6, #4fa86a); }
+.atr-botones { display: flex; gap: 8px; }
+.atr-botones button { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; padding: 0; font-size: 1.5rem; line-height: 1; cursor: pointer; color: var(--oro-claro); border: 1px solid var(--bronce); background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg)); box-shadow: var(--placa-sutil); }
+.atr-botones button.atr-mas { border-color: var(--oro); background: radial-gradient(circle at 35% 30%, rgba(216, 184, 120, 0.4), rgba(60, 44, 26, 0.9)); }
+.atr-botones button:hover:not(:disabled) { color: #fff1c9; border-color: var(--oro); }
+.atr-botones button:disabled { opacity: 0.35; cursor: default; }
+.atr-pie { display: flex; justify-content: flex-end; gap: 10px; }
+.atr-pie button { padding: 6px 16px; }
 .heroe-fila {
   flex-direction: row;
   align-items: center;
@@ -5402,6 +5425,15 @@ body:has(.eleccion-clic) .aviso-global { visibility: hidden; }
 
 /* Botón de capas del mapa (0.109.0), encima del zoom: nombres de los nodos; en el modo mapa también fertilidad y parcelas de bosque. */
 .mapa-capas { position: absolute; right: 16px; bottom: 108px; z-index: 3; }
+/* Zoom del mundo con botones, solo en el móvil (encima del de capas); en el resto, la rueda */
+.mapa-zoom-movil { display: none; position: absolute; left: 16px; bottom: 64px; z-index: 3; flex-direction: column; gap: 4px; }
+.mapa-zoom-movil button {
+  width: 40px; height: 40px; display: grid; place-items: center; cursor: pointer; border-radius: 3px; font-size: 1.4rem; line-height: 1; padding: 0;
+  background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg)); border: 1px solid var(--bronce); color: var(--pergamino);
+  box-shadow: var(--placa-sutil); transition: var(--transition);
+}
+.mapa-zoom-movil button:hover:not(:disabled) { color: var(--oro-claro); border-color: var(--oro); }
+.mapa-zoom-movil button:disabled { opacity: 0.4; cursor: default; }
 .mapa-capas-boton {
   width: 40px; height: 40px; display: grid; place-items: center; cursor: pointer; border-radius: 3px;
   background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg)); border: 1px solid var(--bronce); color: var(--pergamino);
@@ -6655,9 +6687,10 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
   .mapa-screen { right: 0; bottom: 0; width: auto; height: auto; --vw6: calc(100vw / 0.6); --vh6: calc(100vh / 0.6); }
   /* la ficha del mundo (abajo a la derecha) y la ventana de la puerta a su izquierda, con el alto de la pantalla real */
   /* el panel «Lo lleva / Mis cosas…» junto al riel: más ancho (los nombres no se parten), sin tapar el botón de capas, y se desplaza sin barra visible */
-  .mapa-screen .mapa-panel:not(.mapa-panel-ventana) { left: 12px; width: 350px; max-width: calc(var(--vw6) - 24px); top: 62px; max-height: calc(var(--vh6) - 62px - 116px); scrollbar-width: none; }
+  .mapa-screen .mapa-panel:not(.mapa-panel-ventana) { left: 12px; width: 350px; max-width: calc(var(--vw6) - 24px); top: 62px; max-height: calc(var(--vh6) - 62px - 164px); scrollbar-width: none; }
   .mapa-screen .mapa-panel:not(.mapa-panel-ventana)::-webkit-scrollbar { display: none; }
   .mapa-screen > .mapa-capas .mapa-capas-lista { max-height: calc(var(--vh6) - 76px); scrollbar-width: none; }
+  .mapa-screen > .mapa-zoom-movil { display: flex; }
   /* el riel y la barra de víveres, a la izquierda (tras el botón de capas) y en una sola fila, para no chocar con la ficha de la derecha */
   .mapa-abajo { left: 64px; bottom: 10px; transform: none; align-items: center; max-width: calc(var(--vw6) - 64px - 260px); }
   .mapa-abajo .mapa-comida { flex-wrap: wrap; max-width: none; gap: 8px; padding: 4px 10px; }
@@ -6670,8 +6703,11 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
   .mapa-seleccion h3 { font-size: 0.9rem; }
   .mapa-seleccion .faction-kicker { font-size: 0.6rem; letter-spacing: 0.08em; }
   .mapa-seleccion-cerrar { top: 8px; right: 8px; }
-  .mapa-seleccion-datos { display: grid; grid-template-columns: repeat(2, max-content); justify-content: space-between; gap: 2px 14px; }
-  .mapa-seleccion-datos div { font-size: 0.7rem; gap: 8px; white-space: nowrap; }
+  /* dos columnas que caben en la ficha (antes `max-content`: con un botín largo desbordaba); lo largo ocupa la fila entera y, si aun así no cabe, baja de línea */
+  .mapa-seleccion-datos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 14px; }
+  .mapa-seleccion-datos div { font-size: 0.7rem; gap: 8px; min-width: 0; }
+  .mapa-seleccion-datos div.dato-largo { grid-column: 1 / -1; }
+  .mapa-seleccion-datos strong { text-align: right; overflow-wrap: anywhere; }
   .bandidos-nivel { font-size: 0.66rem; gap: 3px; }
   .bandidos-nivel i { width: 10px; height: 10px; }
   .puerta-acciones { gap: 4px; margin-top: 0; }

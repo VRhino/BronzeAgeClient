@@ -21,10 +21,56 @@ export const DONDE = { campamento: 'Campamento', ejercito: 'En columna', escolta
  * repinta la ventana: se llevaría por delante lo escrito. */
 let borrador: { loadoutId?: string; displayName: string; squadIds: Set<string>; activo: boolean } | null = null;
 
+/** Los puntos de atributo que vas poniendo (aún sin confirmar). Vive entre repintados; se suelta al confirmar, al deshacer o al cambiar de pestaña. */
+let reparto: Partial<Record<AtributoHeroe, number>> = {};
+const puestos = (): number => Object.values(reparto).reduce((t, n) => t + (n ?? 0), 0);
+
+/** Un dibujo por atributo (trazo, 24×24), del color del texto. */
+const ICONO_ATRIBUTO: Record<AtributoHeroe, string> = {
+  fuerza: '<path d="M14 5l6-1-1 6-9 9-5-5z"/><path d="M5 15l4 4M3 21l3-3"/>',
+  destreza: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.8"/>',
+  armadura: '<path d="M12 3l7 3v5c0 4.500-3 8-7 10-4-2-7-5.500-7-10V6z"/>',
+  vitalidad: '<path d="M12 20s-7-4.500-7-10a4 4 0 0 1 7-2.500A4 4 0 0 1 19 10c0 5.500-7 10-7 10z"/>',
+};
+const svgAtributo = (id: AtributoHeroe): string => `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONO_ATRIBUTO[id]}</svg>`;
+
+/** El reparto de puntos como en un juego: una tarjeta por atributo (icono, valor, barra y ± si quedan puntos) y «Confirmar» abajo. */
+function htmlAtributos(h: HeroeProyectado): string {
+  const puntos = h.puntosDeAtributoSinGastar;
+  if (puestos() > puntos) reparto = {};
+  const quedan = puntos - puestos();
+  const tope = Math.max(20, Math.ceil((Math.max(...ATRIBUTOS.map(([id]) => h.atributosBase[id] + (reparto[id] ?? 0))) + 4) / 5) * 5);
+  const tarjetas = ATRIBUTOS.map(([id, nombre]) => {
+    const base = h.atributosBase[id];
+    const extra = reparto[id] ?? 0;
+    const botones = puntos > 0
+      ? `<span class="atr-botones"><button type="button" class="atr-menos" data-atr-menos="${id}" aria-label="Quitar un punto de ${nombre}"${extra > 0 ? '' : ' disabled'}>−</button><button type="button" class="atr-mas" data-atr-mas="${id}" aria-label="Poner un punto en ${nombre}"${quedan > 0 ? '' : ' disabled'}>+</button></span>`
+      : '';
+    return `<div class="atr-tarjeta${extra > 0 ? ' con-extra' : ''}">
+      <span class="atr-icono">${svgAtributo(id)}</span>
+      <span class="atr-nombre">${nombre}</span>
+      <span class="atr-valor">${base + extra}${extra > 0 ? `<em>+${extra}</em>` : ''}</span>
+      <span class="atr-barra" role="presentation"><i style="width:${(base / tope) * 100}%"></i><i class="extra" style="width:${(extra / tope) * 100}%"></i></span>
+      ${botones}
+    </div>`;
+  }).join('');
+  const gema = puntos > 0
+    ? `<span class="atr-gema" title="Puntos de atributo que puedes repartir">◆ <strong>${quedan}</strong> ${quedan === 1 ? 'punto' : 'puntos'} por repartir</span>`
+    : '<span class="atr-gema vacia">Sin puntos por repartir</span>';
+  const pie = puestos() > 0
+    ? `<div class="atr-pie"><button type="button" class="btn-secondary" data-atr-deshacer>Deshacer</button><button type="button" class="btn-primary" data-accion="repartir">Confirmar${quedan > 0 ? ` (${quedan} sin poner)` : ''}</button></div>`
+    : '';
+  return `<div class="atr-panel">
+    <div class="atr-cab"><strong class="heroe-sub">Atributos</strong>${gema}</div>
+    <div class="atr-fila">${tarjetas}</div>
+    ${pie}
+  </div>`;
+}
+
 /** ¿Hay un loadout a medio editar? La Base no se repinta sola mientras tanto. */
 export const editandoLoadout = (): boolean => borrador !== null;
 /** Suelta el loadout a medio editar (al cambiar de pestaña o cerrar la Base). */
-export function soltarBorrador(): void { borrador = null; }
+export function soltarBorrador(): void { borrador = null; reparto = {}; }
 
 /** Minutos que le quedan de Herido a tu héroe (Doc 5.16.4), o `null` si está sano. */
 export function minutosHerido(proyeccion: ProyeccionJugador): number | null {
@@ -51,15 +97,10 @@ export function dondeEsta(heroe: HeroeProyectado, proyeccion: ProyeccionJugador)
 
 /** La pestaña «Héroe» de la Base: herido, los atributos con su reparto y, si es mercenario, su ficha. Nivel, Liderazgo y monedas van en el lateral. */
 export function htmlFichaHeroe(h: HeroeProyectado, proyeccion: ProyeccionJugador, e: Escapar): string {
-  const puntos = h.puntosDeAtributoSinGastar;
   const herido = minutosHerido(proyeccion);
   return `
     ${herido !== null ? `<p class="heroe-herido">Herido: ${herido} min. No atacas, no persigues y tus escuadras no combaten.</p>` : ''}
-    <strong class="heroe-sub">Atributos · ${puntos} ${puntos === 1 ? 'punto' : 'puntos'} sin gastar</strong>
-    <div class="heroe-atributos">
-      ${ATRIBUTOS.map(([id, nombre]) => `<label><span>${nombre}</span><strong>${h.atributosBase[id]}</strong>${puntos > 0 ? `<input type="number" min="0" max="${puntos}" value="0" data-atributo="${id}" />` : ''}</label>`).join('')}
-    </div>
-    ${puntos > 0 ? '<button type="button" class="btn-secondary" data-accion="repartir">Repartir puntos</button>' : ''}
+    ${htmlAtributos(h)}
     ${htmlHeroeMercenario(proyeccion, e)}
     <p class="faction-error" data-campo="error" role="alert"></p>`;
 }
@@ -120,15 +161,30 @@ export function cablearHeroe(panel: HTMLElement, h: HeroeProyectado, aplicar: Ap
   const loadout = (id: string | undefined): Loadout | undefined => h.loadouts.find((l) => l.id === id);
   cablearHeroeMercenario(panel, async (tipo, params) => { const m = await aplicar(ejecutarComando(gameId, tipo, params)); if (!m) repintar(); return m; });
 
+  // Los puntos se van poniendo con + y − (nada se manda hasta «Confirmar»).
+  panel.querySelectorAll<HTMLButtonElement>('[data-atr-mas]').forEach((b) => b.addEventListener('click', () => {
+    if (puestos() >= h.puntosDeAtributoSinGastar) return;
+    const id = b.dataset.atrMas as AtributoHeroe;
+    reparto[id] = (reparto[id] ?? 0) + 1;
+    repintar();
+  }));
+  panel.querySelectorAll<HTMLButtonElement>('[data-atr-menos]').forEach((b) => b.addEventListener('click', () => {
+    const id = b.dataset.atrMenos as AtributoHeroe;
+    if ((reparto[id] ?? 0) > 0) reparto[id] = (reparto[id] ?? 0) - 1;
+    repintar();
+  }));
+  panel.querySelector('[data-atr-deshacer]')?.addEventListener('click', () => { reparto = {}; repintar(); });
   panel.querySelectorAll<HTMLButtonElement>('[data-accion]').forEach((boton) => boton.addEventListener('click', () => {
     const elegido = loadout(boton.dataset.loadout);
     switch (boton.dataset.accion) {
       case 'repartir': {
-        const atributos = Object.fromEntries(
-          Array.from(panel.querySelectorAll<HTMLInputElement>('[data-atributo]')).map((i) => [i.dataset.atributo, Number(i.value)] as const).filter(([, n]) => n > 0)
-        );
+        const atributos = Object.fromEntries(Object.entries(reparto).filter(([, n]) => (n ?? 0) > 0));
         if (Object.keys(atributos).length === 0) { mostrarError('Pon al menos un punto en algún atributo.'); return; }
-        void accion(boton, () => repartirPuntos(gameId, { atributos }));
+        void accion(boton, async () => {
+          const respuesta = await repartirPuntos(gameId, { atributos });
+          if (respuesta.ok) reparto = {};
+          return respuesta;
+        });
         return;
       }
       case 'activar':
