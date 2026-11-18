@@ -88,7 +88,8 @@ describe('Territorio: los pueblos en botones', () => {
   test('quien no gestiona ve los pueblos, sin «+»', () => {
     const html = SUBPESTANA_PUEBLOS.html(contexto([aldea], [], { cargo: null, id: 'as-4' }));
     expect(botones(html)).toEqual([['pueblo-1', false]]);
-    expect(html).toContain('Los pueblos los marca');
+    // el visitante no ve la nota de quién los marca (Víctor, 2026-11-18): lo que no puede hacer no se explica
+    expect(html).not.toContain('Los pueblos los marca');
   });
 
   test('con el cupo lleno no sale el «+», y se dice', () => {

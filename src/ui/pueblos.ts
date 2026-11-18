@@ -960,7 +960,7 @@ function htmlCargaDelPueblo(p: ProyeccionJugador, x: PuebloDeMapa, e: Escapar): 
   const enCarro = Math.floor(Object.values(carro).reduce((t, n) => t + n, 0));
   const nombre = (r: string): string => RECURSO_NOMBRE[r] ?? r;
   const linea = (r: string, n: number, accion: 'cargar' | 'dejar', etiqueta: string): string =>
-    `<div class="carro-fila"><span>${e(nombre(r))}</span><strong>${n0(n)}</strong><input class="form-input" type="number" min="1" max="${n0(n)}" value="${n0(n)}" data-pueblo-cantidad="${accion}:${e(r)}" /><button class="btn-secondary" type="button" data-pueblo-dentro="${accion}" data-recurso="${e(r)}">${etiqueta}</button></div>`;
+    `<div class="carro-fila"><span>${RECURSO_ICONO[r] ?? '📦'} ${e(nombre(r))}</span><strong>${n0(n)}</strong><input class="form-input" type="number" min="1" max="${n0(n)}" value="${n0(n)}" data-pueblo-cantidad="${accion}:${e(r)}" /><button class="btn-secondary" type="button" data-pueblo-dentro="${accion}" data-recurso="${e(r)}">${etiqueta}</button></div>`;
   const cargar = Object.entries(x.almacen).filter(([r, n]) => r && n >= 1);
   const dejar = produce(x).map((r) => [r, carro[r] ?? 0] as const).filter(([, n]) => n >= 1);
   return `<div class="carro-ocupacion"><strong class="heroe-sub">Carro de tu columna${ayuda('pueblo:carga', 'Carga lo que guarda el pueblo hasta donde quepa en el carro, o déjale lo que produce (en la aldea, lo de su cultivo y, en la de trigo, ganado, carne y leche) hasta su capacidad. Si el almacén se llena con su carro de acarreo en casa, el carro sale hacia la plaza.')}</strong>${columna.capacidadCarga ? `<span>${enCarro} / ${Math.floor(columna.capacidadCarga)}</span>` : ''}</div>
