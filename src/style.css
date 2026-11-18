@@ -6636,6 +6636,8 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
   /* el cajón de Construcción: con el zoom cabe mucho más alto, y empieza a la derecha de «Salir al mundo» sin pisarlo */
   .plaza-3d.construyendo { --riel-alto: 270px; }
   .plaza-3d .asent-riel.asent-riel-cajon { left: 260px; max-width: none; margin: 0; }
+  /* la ventana «Construidos» sube desde el cajón: su alto máximo se medía con 100vh sin zoom (375 - 270 - 150 < 0) y quedaba aplastada; aquí, el alto de la pantalla en unidades del cajón */
+  .construidos-ventana { max-height: calc(100vh / 0.6 - var(--riel-alto) - 80px); }
   /* 667 de ancho (Víctor, 2026-11-18): un paso más pequeños la barra de arriba, el blasón con sus obras, «Salir al mundo», el riel y el cajón; el minimapa se queda.
      Lo que se mide contra algo que no se reduce (los botones de la derecha, el minimapa) se divide por el zoom, porque los `right`/`left` también se reducen. */
   @media (max-width: 760px) {
@@ -6643,6 +6645,7 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
     .plaza-3d .asent-pie, .plaza-3d .asent-izq, .plaza-3d .asent-barra, .plaza-3d .asent-riel { zoom: 0.8; }
     .plaza-3d .asent-pie { right: calc((var(--botones-ancho, 460px) + 12px) / 0.8); }
     .plaza-3d .asent-riel.asent-riel-cajon { right: calc((var(--minimapa) + 28px) / 0.8); }
+    .construidos-ventana { max-height: calc(100vh / 0.48 - var(--riel-alto) - 80px); }
   }
   /* con el zoom, 100vw y 100vh quedarían al 60 %: el mundo se estira a la pantalla con los bordes */
   .mapa-screen { right: 0; bottom: 0; width: auto; height: auto; --vw6: calc(100vw / 0.6); --vh6: calc(100vh / 0.6); }
