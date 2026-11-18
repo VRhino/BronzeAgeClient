@@ -3,6 +3,18 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.217.0] — 2026-11-18 · Móvil apaisado: Armería con tienda de casillas y Forja nueva, visitas a plazas, Territorio de plazas ajenas y sin nodos de ganado · motor `810cbf1`
+
+Sin cambio de contrato (0.27.0). Cambios de la revisión pantalla a pantalla del móvil apaisado (Reclutamiento, Taberna, Aedas, Misiones, Avisos, Crónica, visitas a plazas, pueblos y Armería).
+
+- **Armería, tienda**: casillas con el borde del color de su rareza, a los dos lados (comprar a la izquierda, vender a la derecha con la mochila entera); al tocar una sale su ficha junto a la casilla como tooltip, con precio, cantidad y Comprar o Vender. Sin rótulo de Tier.
+- **Armería, Forja**: banco de trabajo (estante por hueco, ranuras de receta, yunque y botón Forjar). Forjar dura 3 s con una barra y la ficha de la pieza forjada sale centrada hasta «Continuar».
+- **Territorio de otra Facción** (solo lectura): enseña la zona (nodos por tipo y cuántos tienen pueblo a la vista), los pueblos que se ven (qué son, sobre qué nodo, a cuánto, si los asedian) y las avanzadas (etapa, distancia, ruinas, asedio). Sin cupo, nivel, almacén ni textos de vacío; el botón del riel solo sale si hay algo que ver. De visita en una plaza de tu Facción, Territorio sigue en solo lectura.
+- **Nodos de ganado**: ya no se enseñan (ni en la zona de Territorio ni en el mapa); un mundo viejo aún los trae y se descartan al bajar el mapa.
+- **Mercado de visita** en dos columnas (Venden / Piden); Avisos y Crónica centrados en móvil; tooltips con zoom propio y borde por rareza.
+- **Pueblo por dentro**: la ventana Carga enseña el icono de cada recurso.
+- Pruebas: bancos del HUD con `?ventana=armeria` (`&sub=forja`, `&justo=1`, `&era=`), `?ajena=1&ventana=territorio` (`&vacia=1`) y `pruebas/pueblos/`.
+
 ## [0.216.2] — 2026-11-18 · Móvil apaisado: HUD de la plaza pegado a los bordes, menú único de la barra del jugador y ventana del Almacén más limpia · motor `810cbf1`
 
 Sin cambio de contrato (0.27.0). Cambios que pidió Víctor al seguir la revisión pantalla a pantalla del móvil apaisado.
