@@ -6634,7 +6634,7 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
   .plaza-3d .asent-izq { top: 8px; max-height: calc(100% - 8px - var(--pie-alto) - 50px); }
   .plaza-3d .asent-barra { bottom: 12px; left: 16px; }
   /* el cajón de Construcción: con el zoom cabe mucho más alto, y empieza a la derecha de «Salir al mundo» sin pisarlo */
-  .plaza-3d.construyendo { --riel-alto: 270px; }
+  .plaza-3d.construyendo { --riel-alto: 212px; }
   .plaza-3d .asent-riel.asent-riel-cajon { left: 260px; max-width: none; margin: 0; }
   /* la ventana «Construidos» sube desde el cajón: su alto máximo se medía con 100vh sin zoom (375 - 270 - 150 < 0) y quedaba aplastada; aquí, el alto de la pantalla en unidades del cajón */
   .construidos-ventana { max-height: calc(100vh / 0.6 - var(--riel-alto) - 80px); }
