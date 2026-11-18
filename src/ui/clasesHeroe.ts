@@ -4,6 +4,7 @@
 // casco) y el caballo de tiro (`montura_tiro`). La clase real del héroe es la del arma que lleva puesta (`Heroe.class_definition_id`).
 // Las fichas de los objetos salen de `OBJETOS` (`GET /v1/datos`): aquí no se copia ninguna cifra.
 import { bloqueDeDatos } from '../apiCliente';
+import { iconoTropa } from './iconosTropa';
 
 type Escapar = (valor: string) => string;
 
@@ -105,6 +106,13 @@ export function equipoInicial(c: ClaseHeroe, objetos: readonly FichaObjeto[]): F
   return [arma, ...armadura, montura].filter((o): o is FichaObjeto => Boolean(o));
 }
 
+/** Qué dibujo de `iconosTropa` lleva cada clase (el arma que la define); una clase nueva, la lanza y el escudo de serie. */
+const ICONO_DE_CLASE: Record<string, string> = {
+  lanza_escudo_redondo: 'hoplitas_ciudadanos', espada_escudo_mediano: 'espadachines_bronce', arco_lanza: 'arqueros_compuesto', hacha_dos_manos: 'hacheros_armados', dagas: 'dagas_cruzadas',
+};
+/** El icono de una clase, para ir a la izquierda de su nombre. */
+export const iconoDeClase = (id: string, lado = 28): string => `<span class="clase-icono" aria-hidden="true">${iconoTropa(ICONO_DE_CLASE[id] ?? '', lado)}</span>`;
+
 /** Los atributos como puntos (●●●○○), sobre el más alto de todas las clases. */
 function puntos(valor: number, tope: number): string {
   return `<span class="clase-puntos" aria-label="${valor}">${'●'.repeat(valor)}<span class="tenue">${'○'.repeat(Math.max(0, tope - valor))}</span></span>`;
@@ -117,7 +125,7 @@ function puntos(valor: number, tope: number): string {
 export function htmlSelectorDeClase(clases: readonly ClaseHeroe[], objetos: readonly FichaObjeto[] | null, elegida: string | null, e: Escapar): string {
   const tope = Math.max(1, ...clases.flatMap((c) => ORDEN_DE_ATRIBUTOS.map((a) => c.atributosBase[a] ?? 0)));
   const c = clases.find((x) => x.id === elegida);
-  const botones = clases.map((x) => `<button type="button" class="clase-boton${x.id === elegida ? ' elegida' : ''}" data-clase="${e(x.id)}" aria-pressed="${x.id === elegida}">${e(x.nombre)}</button>`).join('');
+  const botones = clases.map((x) => `<button type="button" class="clase-boton${x.id === elegida ? ' elegida' : ''}" data-clase="${e(x.id)}" aria-pressed="${x.id === elegida}">${iconoDeClase(x.id)}<span class="clase-nombre">${e(x.nombre)}</span></button>`).join('');
   const ficha = c
     ? `<div class="clase-ficha">
         <p class="clase-armadura">Armadura ${e(textoDeArmaduras(c))}; empieza con la ${e(c.armaduraInicial)}.</p>

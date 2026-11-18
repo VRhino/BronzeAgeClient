@@ -67,6 +67,8 @@ const DIBUJOS: Record<string, string> = {
   jinetes_asirios: `${caballo}<path ${T} d="M25 3c5 3 5 11 0 14M25 3v14"/>`,
   jinetes_escitas: `${caballo}<path ${R} d="M22 9c0-4 2-7 6-8-1 3 0 6 1 8Z"/>`,
   caballeria_asiria: `${caballo}${lanza(15, 30, 30, 2)}`,
+  // clases del héroe sin tropa equivalente: dos dagas cruzadas
+  dagas_cruzadas: `<g transform="rotate(-40 16 16)"><path ${R} d="M16 2l2.6 4.5v11.5h-5.2V6.5Z"/><path ${T} d="M12 18h8M16 18v7M14.5 26h3"/></g><g transform="rotate(40 16 16)"><path ${R} d="M16 2l2.6 4.5v11.5h-5.2V6.5Z"/><path ${T} d="M12 18h8M16 18v7M14.5 26h3"/></g>`,
 };
 
 /** El icono SVG de una tropa (una lanza y un escudo genéricos si no tiene dibujo). */
