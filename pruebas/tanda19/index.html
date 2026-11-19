@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Banco de la tanda del 19</title>
+    <style>
+      body { background: radial-gradient(circle at 40% 40%, #5d7340, #26301b); margin: 0; min-height: 100vh; font-family: system-ui; }
+      #escena { display: flex; gap: 16px; padding: 20px; align-items: flex-start; }
+      #escena .mapa-seleccion, #escena .asent-ventana { position: static !important; inset: auto !important; transform: none !important; margin: 0 !important; }
+      #escena .mapa-seleccion { flex: 0 0 280px; }
+      #escena .asent-ventana { flex: 0 0 480px; width: 480px !important; max-height: none !important; }
+    </style>
+  </head>
+  <body>
+    <div id="escena"></div>
+    <script type="module" src="./banco.ts"></script>
+  </body>
+</html>

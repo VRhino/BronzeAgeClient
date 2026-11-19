@@ -28,7 +28,7 @@ import { FICHA_OBRA, SUBPESTANA_PUEBLOS } from '../../src/ui/pueblos';
 import { SUBPESTANAS_CENTRO_EXTRA } from '../../src/ui/ganchos';
 import { ahora as ahoraJuego } from '../../src/ui/juegoVisual';
 import { cablearTesoreria, htmlPoliticas, htmlReservaRecursos } from '../../src/ui/panelTesoreria';
-import { cablearPausarConsumo, htmlPausarConsumo } from '../../src/ui/consumoPausado';
+import { cablearPausarConsumo, htmlComidaDePlaza, htmlPausarConsumo } from '../../src/ui/consumoPausado';
 import { htmlAutoConstruccion } from '../../src/ui/panelCentro';
 import { bloqueDeDatos, nivelesDeEdificio } from '../../src/apiCliente';
 import type { Edificio } from '../../src/tiposDominio';
@@ -47,7 +47,7 @@ import { cablearPanelIntel, renderPanelIntel } from '../../src/ui/panelIntel';
 import { htmlMercenariosDeRegion } from '../../src/ui/tabernaRegion';
 import { catalogoDeTecnologia } from '../../src/apiCliente';
 import { elegirPestanaMisiones, htmlPanelMisiones } from '../../src/ui/misiones';
-import { anotarCalidadDeForja, cablearArmeria, htmlArmeria, pestanasDeArmeria } from '../../src/ui/armeria';
+import { anotarCalidadDeForja, armeriaDeCampamento, cablearArmeria, htmlArmeria, htmlArmeriaDeCampamento, pestanasDeArmeria } from '../../src/ui/armeria';
 import { catalogoDeObjetos } from '../../src/ui/clasesHeroe';
 import { htmlMercadoDePlaza } from '../../src/ui/mercadoDePlaza';
 import { htmlAvisos } from '../../src/ui/panelAvisos';
@@ -76,6 +76,8 @@ const obrasMapa = (): never[] => new URLSearchParams(location.search).get('obras
   { id: 'obra-7', tipo: 'aldea', madreId: a.id, propia: true, posicion: a.posicion, requerido: { madera: 300, trigo: 200 }, entregado: { madera: 300, trigo: 40 } },
   { id: 'obra-8', tipo: 'pueblo', madreId: a.id, propia: true, posicion: a.posicion, requerido: { madera: 400 }, entregado: { madera: 400 }, terminaEn: ahoraJuego() + 26 * 60_000 },
   { id: 'obra-9', tipo: 'avanzada', madreId: a.id, propia: true, posicion: a.posicion, requerido: { madera: 200, piedra: 100 }, entregado: { madera: 120 } },
+  // `&mejora=1` (0.221.0): la subida de nivel de la aldea pueblo-1, que ya se cancela
+  ...(new URLSearchParams(location.search).get('mejora') ? [{ id: 'obra-1', tipo: 'mejoraAldea', madreId: a.id, propia: true, posicion: a.posicion, destinoId: 'pueblo-1', requerido: { madera: 180, piedra: 60 }, entregado: { madera: 90, piedra: 60 } }] : []),
 ] as never[] : [];
 
 const binario = new Uint8Array(await (await fetch(new URL('../ciudad3d/ciudades/ciudad.bin', import.meta.url).href)).arrayBuffer());
@@ -201,11 +203,17 @@ function pintarAlmacen(): void {
     cuerpo.innerHTML = `<div class="asent-tabs asent-subtabs"><button class="asent-tab" type="button">Almacén</button><button class="asent-tab activo" type="button">Tu carga</button></div><div class="asent-lado-cuerpo"><div class="almacen-carga">${htmlCarro(p, e, false, true, true)}</div></div>`;
     return;
   }
-  cuerpo.innerHTML = `<div class="cols-completa"><div class="col-completa">${htmlEleccionBarra(a, e)}${htmlExtraccion(c)}<div class="almacen-reserva">${htmlReservaRecursos(c)}</div></div><div class="col-completa">${htmlPausarConsumo(p, a, e)}${htmlRecetas(c)}</div></div>`;
+  cuerpo.innerHTML = `<div class="cols-completa"><div class="col-completa">${htmlEleccionBarra(a, e)}${htmlExtraccion(c)}<div class="almacen-reserva">${htmlReservaRecursos(c)}</div></div><div class="col-completa">${htmlComidaDePlaza(a, e)}${htmlPausarConsumo(p, a, e)}${htmlRecetas(c)}</div></div>`;
   cablearEleccionBarra(cuerpo, a, pintarAlmacen, (m) => alert(m));
   cablearProduccionYRecetas(c);
   cablearTesoreria(c);
   cablearPausarConsumo(cuerpo, a, async (_t, x) => { const q = x as { recurso: string; pausado: boolean }; a.consumoPausado = [...new Set([...(a.consumoPausado ?? []).filter((r) => r !== q.recurso), ...(q.pausado ? [q.recurso] : [])])]; pintarAlmacen(); return null; });
+}
+// `&comidaPlaza=1` (0.221.0): lo que come la plaza (población y guarnición, por minuto como lo da el motor)
+if (qs0.get('comidaPlaza')) {
+  a.comidaPoblacion = { trigo: 1.85, carne: 0.4, pan: 0.6, queso: 0.15 };
+  a.comidaGuarnicion = { carne: 0.2, trigo: 0.35 };
+  a.guarnicion = [{ tropaId: 'milicia_lanceros', cantidad: 40, heroeId: 'h' }];
 }
 pintarAlmacen();
 // `?ventana=gobierno` (Cargos con los residentes) y `?ventana=mercado` (la pestaña Órdenes): sus ventanas de verdad.
@@ -377,6 +385,16 @@ if (camp) {
       <div class="asent-edif-cuerpo">${htmlSeccionCampamento(camp, p, c, e)}</div></section>`);
     const cuerpo = document.querySelector<HTMLElement>('.asent-edif-cuerpo')!;
     const repintar = (): void => { cuerpo.innerHTML = htmlSeccionCampamento(camp, p, c, e); cablearCampamento(cuerpo, p, c, async () => null, { ejecutarConDatos: async () => ({ error: null }), repintar }); };
+    // `?camp=armeria` (0.221.0): la Armería del campamento, solo tienda
+    if (camp === 'armeria') {
+      (q.heroe as Record<string, unknown>).monedas = 900;
+      (q.heroe as Record<string, unknown>).inventario = [{ itemDefinitionId: 'torso_ligera_inicio', casillaInventario: 0, cantidad: 1 }];
+      (q.heroe as Record<string, unknown>).classDefinitionId = 'espada_escudo_mediano';
+      (q.heroe as Record<string, unknown>).equipamiento = {};
+      const pintarArm = (): void => { cuerpo.innerHTML = htmlArmeriaDeCampamento(p, c.id, e); cablearArmeria(cuerpo, armeriaDeCampamento(c.id), async () => null, pintarArm); };
+      pintarArm();
+      bloqueDeDatos('OBJETOS', pintarArm);
+    }
     if (camp === 'tropa') { repintar(); const vigia = setInterval(() => { if (cuerpo.querySelector('.ta-carta')) clearInterval(vigia); else repintar(); }, 300); }
   }
 }
