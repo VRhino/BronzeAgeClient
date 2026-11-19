@@ -5,7 +5,7 @@ commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend
 
 ## [0.224.0] — 2026-11-19 · Cancelar tu solicitud de ingreso y el enfriamiento de 24 h para entrar · motor `b8f8254`
 
-Contrato 0.31.0 (motor nucleo 0.51.0): orden `cancelar_solicitud` (campo 203) y el rechazo `faccion.cooldown_ingreso`, que sustituye a `faccion.cooldown_creacion`.
+Contrato 0.31.0 (motor nucleo 0.52.0): orden `cancelar_solicitud` (campo 203) y el rechazo `faccion.cooldown_ingreso`, que sustituye a `faccion.cooldown_creacion`.
 
 - **Cancelar la solicitud**: en la lista de Facciones, junto a «Pedido: decide su Rey», un botón «Cancelar» retira tu solicitud de esa Facción (`cancelarSolicitud`); las que tengas en otras siguen.
 - **Enfriamiento al salir**: dejar una Facción ya no impide crear otra. Durante 24 horas no puedes pedir el ingreso en ninguna, tampoco volver a la que dejaste; lo dicen la ayuda de «Abandonar» y el aviso del rechazo.
