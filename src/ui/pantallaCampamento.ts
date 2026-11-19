@@ -20,9 +20,9 @@ import { cablearTablonMercenarios, htmlTablonMercenarios } from './mercenarios';
 export type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
 type Escapar = (valor: string) => string;
 
-export type SeccionCampamento = 'resumen' | 'tropa' | 'mercado' | 'mercenarios' | 'fondo' | 'taberna';
+export type SeccionCampamento = 'resumen' | 'tropa' | 'mercado' | 'armeria' | 'mercenarios' | 'fondo' | 'taberna';
 
-const ETIQUETA: Record<SeccionCampamento, string> = { resumen: 'Resumen', tropa: 'Tropa', mercado: 'Mercado', mercenarios: 'Mercenarios', fondo: 'Fondo', taberna: 'Taberna' };
+const ETIQUETA: Record<SeccionCampamento, string> = { resumen: 'Resumen', tropa: 'Tropa', mercado: 'Mercado', armeria: 'Armería', mercenarios: 'Mercenarios', fondo: 'Fondo', taberna: 'Taberna' };
 
 /** Las tres tropas de leva comunal que presta el campamento (backend `TROPAS_RECLUTABLES`, tecnología `leva_comunal`). */
 const TROPAS_PRESTAMO: [string, string][] = [['milicia_lanceros', 'Milicia de lanceros'], ['lenadores', 'Leñadores'], ['granjeros', 'Granjeros']];
@@ -55,11 +55,11 @@ function faccionConPlaza(p: ProyeccionJugador): boolean {
   return p.asentamientos.length > 0 || [...p.asentamientosAvistados, ...p.asentamientosConocidos].some((a) => a.faccionId === p.faccionId);
 }
 
-/** Las subpestañas que hay ahora (solo lo que se puede usar): el Fondo de refundación mientras tu Facción no tiene plaza; Mercenarios
- * solo si alguien se ofrece en el tablón de este campamento; la Taberna solo con Facción. */
+/** Las subpestañas que hay ahora (solo lo que se puede usar): el Fondo de refundación mientras tu Facción no tiene plaza; la Armería
+ * (solo tienda, motor 2026-11-19); Mercenarios solo si alguien se ofrece en el tablón de este campamento; la Taberna solo con Facción. */
 export function seccionesDeCampamento(p: ProyeccionJugador, c: Pick<CampamentoMercenarios, 'tablon'>): { id: SeccionCampamento; etiqueta: string }[] {
   const ids: SeccionCampamento[] = [
-    'resumen', 'tropa', 'mercado',
+    'resumen', 'tropa', 'mercado', 'armeria',
     ...((c.tablon?.length ?? 0) > 0 ? ['mercenarios' as const] : []),
     ...(p.faccionId !== null && !faccionConPlaza(p) ? ['fondo' as const] : []),
     ...(p.faccionId !== null ? ['taberna' as const] : []),
@@ -70,7 +70,7 @@ export function seccionesDeCampamento(p: ProyeccionJugador, c: Pick<CampamentoMe
 /** El ancho de la ventana de cada parte (`.asent-ventana[data-ancho]`): Mercenarios y Taberna a pantalla completa; Tropa y Mercado en una ventana
  * centrada como la de Misiones (0.129.0: al empezar la partida hay poco que poner en ellas); el resto, la normal. */
 export function anchoDeParteCampamento(parte: SeccionCampamento): 'completa' | 'centrada' | 'normal' {
-  return parte === 'mercenarios' || parte === 'taberna' || parte === 'tropa' ? 'completa' : parte === 'mercado' ? 'centrada' : 'normal';
+  return parte === 'mercenarios' || parte === 'taberna' || parte === 'tropa' || parte === 'armeria' ? 'completa' : parte === 'mercado' ? 'centrada' : 'normal';
 }
 
 function listaRecursos(recursos: Record<string, number>, e: Escapar): string {
@@ -421,6 +421,7 @@ export function htmlSeccionCampamento(seccion: SeccionCampamento, p: ProyeccionJ
     case 'mercenarios': return htmlTablonMercenarios(p, c.tablon, e, c);
     case 'fondo': return fondo(p, c, e);
     case 'taberna': return '<div id="camp-taberna"></div>';
+    case 'armeria': return '<div id="camp-armeria"></div>';
   }
 }
 

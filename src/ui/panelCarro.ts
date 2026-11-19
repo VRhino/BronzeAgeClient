@@ -101,12 +101,14 @@ export function htmlCarro(p: ProyeccionJugador, e: Escapar, cabecera = true, con
   const ciudadano = Boolean(plaza?.faccionId) && plaza?.faccionId === p.faccionId;
   const yo = p.facciones.find((f) => f.id === p.faccionId)?.miembros?.find((m) => m.heroeId === p.heroeId);
   const gobernador = Boolean(plaza && yo?.cargos.includes(`gobernador@${plaza.id}`));
+  // con el almacén cerrado sacan el Gobernador y el Tesorero (motor 2026-11-19); cerrarlo sigue siendo del Gobernador
+  const sacaCerrado = gobernador || Boolean(plaza && yo?.cargos.includes(`tesorero@${plaza.id}`));
   const motivoLider = columna && !esLider ? 'Solo el Líder de la columna mueve lo del carro.' : null;
 
   const accionesCarro: AccionDeFila[] = [];
   if (aMano) accionesCarro.push({ accion: 'guardar', etiqueta: 'Al almacén personal', motivo: motivoLider });
   if (plaza) accionesCarro.push({ accion: 'aPlaza', etiqueta: 'A la plaza' });
-  const motivoSacar = (plaza?.cerrado && !gobernador ? 'El Gobernador ha cerrado el almacén a los ciudadanos.' : libre === 0 ? 'El carro está lleno.' : null);
+  const motivoSacar = (plaza?.cerrado && !sacaCerrado ? 'El Gobernador ha cerrado el almacén a los ciudadanos.' : libre === 0 ? 'El carro está lleno.' : null);
 
   const nota = !columna
     ? 'Dentro de tu residencia el carro sigue contigo: entrar no lo vacía. Pásalo a tu almacén personal o al de la plaza recurso a recurso, o todo de una vez con «Todo al almacén personal». Al salir, lo que haya en el carro sale contigo y en la ventana de salida eliges qué más cargas.'
@@ -117,7 +119,7 @@ export function htmlCarro(p: ProyeccionJugador, e: Escapar, cabecera = true, con
         : 'Guarda en tu almacén personal lo que quieras conservar. Al entrar en tu campamento se guarda solo. El carro es solo carga: la columna come de tus víveres (barra de abajo del mapa), y de aquí se les pasa trigo.';
   const almacenPlaza = plaza && ciudadano && plaza.almacen
     ? `${ocupacion(`Almacén de ${e(plaza.nombre)}`, {}, undefined)}
-      ${plaza.cerrado ? `<p class="asent-lado-nota">${gobernador ? 'Lo tienes cerrado: los ciudadanos no sacan al carro (dejar sigue abierto).' : 'El Gobernador lo ha cerrado: no se saca al carro, pero se puede dejar.'}</p>` : ''}
+      ${plaza.cerrado ? `<p class="asent-lado-nota">${gobernador ? 'Lo tienes cerrado: los ciudadanos no sacan al carro (dejar sigue abierto).' : sacaCerrado ? 'El Gobernador lo ha cerrado a los ciudadanos; como Tesorero tú sigues sacando al carro.' : 'El Gobernador lo ha cerrado: no se saca al carro, pero se puede dejar.'}</p>` : ''}
       ${filas(plaza.almacen, 'plaza', [{ accion: 'dePlaza', etiqueta: 'Al carro', motivo: motivoSacar, tope: libre }], e, plaza.id)}`
     : plaza && !ciudadano ? '<p class="asent-lado-nota">El almacén de esta plaza solo lo usan sus ciudadanos; si es de una Facción aliada o vasalla puedes dejarle lo del carro.</p>' : '';
   const cierre = plaza && gobernador
@@ -140,6 +142,25 @@ export function htmlCarro(p: ProyeccionJugador, e: Escapar, cabecera = true, con
     ${cabecera ? `<div class="mapa-panel-jugador">${e(p.heroe.displayName)} · carro y almacén</div>` : ''}
     ${mio}
     ${almacenPlaza}${cierre}
+    <p class="faction-error" data-campo="error-carro" role="alert"></p>`;
+}
+
+/** La ventana «Al carro» de la puerta de una plaza de tu Facción (motor 2026-11-19, Víctor: «desde la ficha de la plaza parado en la puerta»): el carro de
+ * tu columna y el almacén de la plaza con «Al carro» (`cargarDePlaza`, solo el Líder; cerrado, solo el Gobernador o el Tesorero). Dejar es solo dentro. */
+export function htmlAlmacenALaPuerta(p: ProyeccionJugador, plaza: { id: string; nombre?: string | null; almacen?: Record<string, { cantidad: number }>; almacenCerradoACiudadanos?: boolean; cargos?: { gobernadorId?: string | null; tesoreroId?: string | null } }, e: Escapar): string {
+  const columna = miColumna(p);
+  const carro = columna?.suministro ?? {};
+  const capacidad = columna ? capacidadDeCarga(columna) : undefined;
+  const libre = capacidad !== undefined ? Math.max(0, Math.floor(capacidad - Object.values(carro).reduce((t, n) => t + n, 0))) : undefined;
+  const conCargo = [plaza.cargos?.gobernadorId, plaza.cargos?.tesoreroId].includes(p.heroeId);
+  const cerrado = Boolean(plaza.almacenCerradoACiudadanos);
+  const motivo = cerrado && !conCargo ? 'El Gobernador ha cerrado el almacén a los ciudadanos.' : libre === 0 ? 'El carro está lleno.' : null;
+  const almacen = Object.fromEntries(Object.entries(plaza.almacen ?? {}).map(([r, v]) => [r, v.cantidad]));
+  return `${ocupacion('Carro de tu columna', carro, capacidad)}${filas(carro, 'carro', [], e)}
+    ${ocupacion(`Almacén de ${e(plaza.nombre ?? plaza.id)}`, {}, undefined)}
+    ${cerrado ? `<p class="asent-lado-nota">${conCargo ? 'Cerrado a los ciudadanos; con tu cargo sigues sacando al carro.' : 'El Gobernador lo ha cerrado: no se saca al carro.'}</p>` : ''}
+    ${filas(almacen, 'plaza', [{ accion: 'dePlaza', etiqueta: 'Al carro', motivo, tope: libre }], e, plaza.id)}
+    <p class="asent-lado-nota">Dejar en el almacén de la plaza se hace dentro.</p>
     <p class="faction-error" data-campo="error-carro" role="alert"></p>`;
 }
 

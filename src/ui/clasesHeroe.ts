@@ -34,6 +34,8 @@ export interface FichaObjeto {
   clase?: string;
   tipoArmadura?: PesoDeArmadura;
   metal?: string;
+  /** `false`: la tienda no la vende, aunque la compra (las armaduras de inicio desde el catálogo `bronzeage-objetos-2`, motor 2026-11-19). Ausente, sí. */
+  enTienda?: boolean;
   /** Las cifras al 100 %: un arma, atributos, daño y penetración; una armadura, atributos, defensa y salud; una montura, vida, trote, galope y aguante. */
   combate?: CombateDeObjeto;
   /** Lo que hace un consumible al usarlo (Objetos_Del_Heroe §3.5). */
@@ -101,7 +103,7 @@ export function textoDeArmaduras(c: ClaseHeroe): string {
 /** El equipo con el que nace un héroe de la clase `c`, como lo pone el motor (`Equipo::inicial`): arma, torso, guantes, pantalones, botas y montura. */
 export function equipoInicial(c: ClaseHeroe, objetos: readonly FichaObjeto[]): FichaObjeto[] {
   const arma = objetos.find((o) => o.tipo === 'arma' && o.clase === c.id && o.tier === 1);
-  const armadura = HUECOS_INICIALES.map((h) => objetos.find((o) => o.tipo === 'armadura' && o.hueco === h && o.tipoArmadura === c.armaduraInicial && o.tier === 1));
+  const armadura = HUECOS_INICIALES.map((h) => objetos.find((o) => o.tipo === 'armadura' && o.hueco === h && o.tipoArmadura === c.armaduraInicial && o.tier === 1 && (o.metal ?? 'inicio') === 'inicio'));
   const montura = objetos.find((o) => o.id === 'montura_tiro');
   return [arma, ...armadura, montura].filter((o): o is FichaObjeto => Boolean(o));
 }

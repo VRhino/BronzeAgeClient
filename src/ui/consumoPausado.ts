@@ -71,3 +71,36 @@ export function cablearPausarConsumo(raiz: ParentNode, a: Asentamiento, ejecutar
     if (mensaje !== null) { c.checked = !c.checked; mostrarAviso(mensaje, true); }
   }));
 }
+
+// Lo que come la plaza (motor 2026-11-19, contrato 0.30.0; cliente 0.221.0, pedido de Víctor: «se vea el consumo de alimentos de una plaza»). Llega en
+// `comidaPoblacion` y `comidaGuarnicion` por minuto; aquí se enseña por hora, la población y la guarnición en líneas aparte.
+
+/** «🌾 Trigo 120/h, 🥩 Carne 30/h», o `''` si no come nada. */
+export function textoComida(c: Record<string, number> | undefined): string {
+  const l = Object.entries(c ?? {}).filter(([, n]) => n > 0).map(([r, n]) => `${icono(r)} ${nombre(r)} ${Math.round(n * 60)}/h`);
+  return l.join(', ');
+}
+
+/** Las líneas del letrero de la Nutrición: qué come la población y qué la guarnición. */
+export function lineasDeComida(a: Asentamiento): string[] {
+  const poblacion = textoComida(a.comidaPoblacion);
+  const guarnicion = textoComida(a.comidaGuarnicion);
+  return [
+    ...(poblacion ? [`Come la población: ${poblacion}.`] : []),
+    ...(guarnicion ? [`Come la guarnición: ${guarnicion}.`] : []),
+  ];
+}
+
+/** El bloque «Lo que come la plaza» de la ventana del Almacén (todos los de dentro lo ven); `''` si no llega. */
+export function htmlComidaDePlaza(a: Asentamiento, e: Escapar): string {
+  if (a.comidaPoblacion === undefined && a.comidaGuarnicion === undefined) return '';
+  const fila = (titulo: string, c: Record<string, number> | undefined): string => {
+    const lista = Object.entries(c ?? {}).filter(([, n]) => n > 0);
+    return `<div class="carro-fila"><span>${titulo}</span><strong>${lista.length ? lista.map(([r, n]) => `${icono(r)} ${e(nombre(r))} ${Math.round(n * 60)}/h`).join(' · ') : 'nada'}</strong></div>`;
+  };
+  const info = ayuda('plaza:lo-que-come', 'Lo que se come en la hora siguiente al ritmo de ahora. Cada tipo de población come primero lo suyo y el trigo pone lo que falta: si no hay trigo bastante, la cifra del trigo dice lo que pide. La guarnición come carne primero y trigo para el resto de su ración.');
+  return `<div class="almacen-consumo">
+      <div class="obra-titulo"><span class="faction-kicker">Lo que come la plaza</span>${info}</div>
+      ${fila('Población', a.comidaPoblacion)}${(a.guarnicion?.length || Object.keys(a.comidaGuarnicion ?? {}).length) ? fila('Guarnición', a.comidaGuarnicion) : ''}
+    </div>`;
+}

@@ -3,6 +3,17 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.221.0] — 2026-11-19 · Al carro a la puerta, cancelar obras de pueblo, armaduras de recluta, Armería en los campamentos y lo que come la plaza · motor `ca67e25`
+
+Contrato 0.30.0 (motor PR #33): `Asentamiento.comida_poblacion` (59) y `comida_guarnicion` (60), y `cancelar_obra` vale sobre la obra de un pueblo. La tanda del 19 de Víctor, motor y cliente a la vez.
+
+- **Al carro sin entrar**: la ficha de una plaza de tu Facción, con tu columna a la puerta, tiene «Al carro» (el Líder): su almacén con un botón por recurso (`cargarDePlaza`). La ficha de un pueblo de tu Facción, igual (`cargarDePueblo`). Dejar sigue siendo de dentro.
+- **Tesorero**: con el almacén de la plaza cerrado a los ciudadanos, el Tesorero también saca al carro (dentro y a la puerta).
+- **Cancelar la obra de un pueblo o su mejora**: en Territorio, la subida de nivel en obra tiene «Cancelar la mejora» (`cancelarObra`); y a la puerta de la obra, junto a «Entregar materiales», «Cancelar la obra» o «Cancelar la mejora» para el Gobernador o el Maestro de Obras de la madre, también mientras se levanta. Lo entregado no se devuelve.
+- **Armaduras de recluta**: la tienda vende las 15 de recluta (tier I, con casco) y ya no las de inicio (`enTienda: false`); se siguen vendiendo a la tienda.
+- **Armería en los campamentos de mercenarios**: una parte nueva del campamento, solo tienda (recluta, armas de inicio y monturas I-II); sin forja.
+- **Lo que come la plaza**: en la ventana del Almacén, «Lo que come la plaza» con la población y la guarnición por hora; y en el letrero de la Nutrición, las mismas líneas.
+
 ## [0.220.1] — 2026-11-18 · Zoom del mundo en móvil: el botón + acerca · motor `810cbf1`
 
 Sin cambio de contrato (0.27.0). Arreglo: el botón + del zoom del mundo (0.220.0) alejaba igual que el −, porque el atributo `data-zoom-3d` no da la clave `zoom3d` en `dataset` (un guion seguido de un número no se convierte). Pasa a `data-zoom-mundo`.

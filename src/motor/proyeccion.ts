@@ -213,6 +213,8 @@ function asentamiento(a: pb.Asentamiento, ahora: number): d.Asentamiento {
     almacenCerradoACiudadanos: a.almacenCerradoACiudadanos,
     reclutamientoCerradoACiudadanos: a.reclutamientoCerradoACiudadanos || undefined,
     consumoPausado: a.consumoPausado.length ? a.consumoPausado : undefined,
+    comidaPoblacion: a.comidaPoblacion ? cantidades(a.comidaPoblacion) : undefined,
+    comidaGuarnicion: a.comidaGuarnicion ? cantidades(a.comidaGuarnicion) : undefined,
     insolvenciaAscenso: a.insolvenciaAscenso.length ? a.insolvenciaAscenso.map((x) => ({ recurso: x.recurso, llega: mil(x.llega), pide: mil(x.pide) })) : undefined,
     // la Armería (motor 457c278): si está activa (siempre) y, de dentro, su forja y los metales que abre
     armeriaActiva: a.armeriaActiva || undefined,
