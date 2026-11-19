@@ -3,6 +3,15 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.222.0] — 2026-11-19 · La ventana «Almacén» a la puerta, en los dos sentidos · motor `0e2efa1`
+
+Sin cambio de contrato (0.30.0). El motor (nucleo 0.50.0) deja ya `dejarEnPlaza` y `dejarEnPueblo` con la columna a la puerta, con las mismas reglas que sacar.
+
+- **«Al carro» pasa a «Almacén»** (📦) a la puerta de una plaza o un pueblo de tu Facción, para el Líder de la columna. Es una ventana centrada en escritorio y a pantalla completa en móvil.
+- **Dos lados**: a la izquierda el almacén del sitio y a la derecha el carro de la columna. Cada bien es una ficha con su icono a la izquierda, y solo salen los que tienen algo y se pueden pasar.
+- **Cada clic pasa 10 al otro lado** (o lo que quede, o lo que quepa), en los dos sentidos. Nada se manda hasta «Confirmar», que deja primero y saca después; «Deshacer» lo vuelve todo atrás.
+- Con el almacén de la plaza cerrado a los ciudadanos, sin cargo no se saca, pero sí se deja. Al pueblo solo se le deja lo que produce, hasta su capacidad.
+
 ## [0.221.0] — 2026-11-19 · Al carro a la puerta, cancelar obras de pueblo, armaduras de recluta, Armería en los campamentos y lo que come la plaza · motor `ca67e25`
 
 Contrato 0.30.0 (motor PR #33): `Asentamiento.comida_poblacion` (59) y `comida_guarnicion` (60), y `cancelar_obra` vale sobre la obra de un pueblo. La tanda del 19 de Víctor, motor y cliente a la vez.

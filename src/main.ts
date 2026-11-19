@@ -111,7 +111,8 @@ import { htmlInforme, textoDeBotin, type InformeDeCombate } from './ui/informeCo
 import { cablearAvisos, htmlAvisos } from './ui/panelAvisos';
 import { cablearTecnologia, htmlTecnologia } from './ui/panelTecnologia';
 import { cablearColumna, htmlColumna } from './ui/panelColumna';
-import { cablearCarro, htmlAlmacenALaPuerta, htmlCarro } from './ui/panelCarro';
+import { cablearCarro, htmlCarro } from './ui/panelCarro';
+import { cablearAlmacenPuerta, htmlAlmacenPuerta, sitioDePlaza } from './ui/almacenPuerta';
 import { cablearPanelIntel, renderPanelIntel } from './ui/panelIntel';
 import { cablearMercenariosDeRegion, htmlMercenariosDeRegion, tabernaActiva } from './ui/tabernaRegion';
 import { cablearMercadoDePlaza, htmlMercadoDePlaza } from './ui/mercadoDePlaza';
@@ -1273,10 +1274,12 @@ function puertaDePlaza(p: ProyeccionJugador, a: AsentamientoEnMapa, x: { propio:
       };
     };
   }
-  // Del almacén de tu plaza al carro sin entrar (motor 2026-11-19): el Líder de la columna; el almacén lo da la plaza propia vista a la puerta
+  // «Almacén» (0.222.0): entre el almacén de tu plaza y el carro de tu columna sin entrar, en los dos sentidos (motor 2026-11-19, nucleo 0.50.0);
+  // el Líder de la columna; el almacén lo da la plaza propia vista a la puerta
   if (interior && lider && interior.almacen) {
-    acciones.push({ id: 'alCarro', etiqueta: 'Al carro', icono: '🛒', ventana: true, titulo: 'Saca del almacén de la plaza al carro de tu columna sin entrar.' });
-    ventanas.alCarro = () => ({ titulo: 'Del almacén al carro', icono: '🛒', ancho: 'normal', html: htmlAlmacenALaPuerta(p, interior, escaparHtml), cablear: (cuerpo) => cablearCarro(cuerpo, ejecutarYRefrescar, p.heroeId) });
+    const sitio = sitioDePlaza(p, interior);
+    acciones.push({ id: 'almacen', etiqueta: 'Almacén', icono: '📦', ventana: true, titulo: 'Pasa bienes entre el almacén de la plaza y el carro de tu columna sin entrar.' });
+    ventanas.almacen = () => ({ titulo: 'Almacén', icono: '📦', ancho: 'centrada', html: htmlAlmacenPuerta(p, sitio, escaparHtml), cablear: (cuerpo) => cablearAlmacenPuerta(cuerpo, p, sitio, ejecutarYRefrescar, escaparHtml) });
   }
   if (interior) {
     acciones.push({ id: 'guarnicion', etiqueta: 'Guarnición', icono: '🛡', ventana: true, titulo: 'Deja o recoge tropa de tu columna sin entrar.' });

@@ -24,7 +24,7 @@ export interface AccionPuerta {
 export interface VentanaPuerta {
   titulo: string;
   icono: string;
-  ancho?: 'estrecha' | 'normal' | 'ancha';
+  ancho?: 'estrecha' | 'normal' | 'ancha' | 'centrada';
   html: string;
   cablear: (cuerpo: HTMLElement) => void;
 }

@@ -36,6 +36,7 @@ import { ICONO_CARRETA, barraAvance, chipsDeCoste, medallonNivel } from './juego
 import { mostrar as mostrarAviso } from './avisos';
 import { cablearPuertaDeAvanzada, claveDeEtapa, faccionAmiga, iconoDeAvanzada, htmlEleccionDeTropa, madreDe, nombreDeEtapa, puertaDeAvanzada, reglasDeObra as reglasDeObraDeAvanzada } from './avanzadas';
 import { htmlAccionesPuerta, type AccionPuerta, type VentanaPuerta } from './accionesPuerta';
+import { cablearAlmacenPuerta, htmlAlmacenPuerta, sitioDePueblo } from './almacenPuerta';
 import { tieneCargoEnPlaza } from './cargosPlaza';
 import { recursoDeExtractor } from '../motor/proyeccion';
 
@@ -877,7 +878,7 @@ export const FICHA_PUEBLO: FichaMapaExtra = {
     const entrar = puertaDePueblo(p, x);
     const obra = puertaDeObra(p, obraSobre(p, x.id), c);
     const guarnicion: AccionPuerta[] = x.propio && columnaALaPuerta(p, x.posicion) ? [{ id: 'guarnicion', etiqueta: 'Guarnición', icono: '🛡', ventana: true, titulo: 'Deja o recoge tropa de tu columna sin entrar.' }] : [];
-    if (cargaALaPuerta(p, x)) guarnicion.push({ id: 'alCarro', etiqueta: 'Al carro', icono: '🛒', ventana: true, titulo: 'Saca del almacén del pueblo al carro de tu columna sin entrar.' });
+    if (cargaALaPuerta(p, x)) guarnicion.push({ id: 'almacen', etiqueta: 'Almacén', icono: '📦', ventana: true, titulo: 'Pasa bienes entre el almacén del pueblo y el carro de tu columna sin entrar.' });
     const acciones = [...entrar.acciones, ...(obra.accion ? [obra.accion] : []), ...guarnicion, ...puertaDeAtaque(p, x, x.propio, c)];
     return `<span class="faction-kicker">${x.propio ? 'Pueblo de tu Facción' : 'Pueblo ajeno'}</span>
       <h3>${e(nombreDePueblo(x))}</h3>
@@ -909,21 +910,24 @@ export const FICHA_PUEBLO: FichaMapaExtra = {
       });
     }
     if (cargaALaPuerta(p, x)) {
-      ventanas.alCarro = () => ({
-        titulo: 'Del almacén al carro', icono: '🛒', ancho: 'normal',
-        html: `${htmlCargaDelPueblo(p, x, c.escapar, true)}<p class="faction-error" data-pueblo-dentro-error role="alert"></p>`,
-        cablear: (cuerpo) => cablearInteriorPueblo(cuerpo, p, x, c.ejecutar, c.repintar),
+      const sitio = sitioDePueblo(x, nombreDePueblo(x), produce(x));
+      ventanas.almacen = () => ({
+        titulo: 'Almacén', icono: '📦', ancho: 'centrada',
+        html: htmlAlmacenPuerta(p, sitio, c.escapar),
+        cablear: (cuerpo) => cablearAlmacenPuerta(cuerpo, p, sitio, c.ejecutar, c.escapar),
       });
     }
     return ventanas;
   },
 };
 
-/** ¿Carga del pueblo al carro sin entrar? En uno de tu Facción con algo en su almacén, el Líder de su columna a la puerta (motor 2026-11-19). */
+/** ¿«Almacén» a la puerta del pueblo? En uno de tu Facción, el Líder de su columna a la puerta, con algo que sacar o algo que dejarle (lo que
+ * produce, en el carro) (motor 2026-11-19, nucleo 0.50.0). */
 function cargaALaPuerta(p: ProyeccionJugador, x: PuebloDeMapa): boolean {
   const mi = miColumna(p);
-  return x.propio && mi !== undefined && (mi.participantes.length === 1 || mi.liderId === p.heroeId) && columnaALaPuerta(p, x.posicion)
-    && Object.values(x.almacen).some((n) => n >= 1);
+  if (!x.propio || mi === undefined || !(mi.participantes.length === 1 || mi.liderId === p.heroeId) || !columnaALaPuerta(p, x.posicion)) return false;
+  const suyos = produce(x);
+  return Object.values(x.almacen).some((n) => n >= 1) || Object.entries(mi.suministro ?? {}).some(([r, n]) => n >= 1 && suyos.includes(r));
 }
 
 /** «Entrar» en el pueblo: con tu columna a su puerta, en uno de tu Facción o de una aliada o vasalla (el acceso es el de la plaza madre). Entra

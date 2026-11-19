@@ -145,25 +145,6 @@ export function htmlCarro(p: ProyeccionJugador, e: Escapar, cabecera = true, con
     <p class="faction-error" data-campo="error-carro" role="alert"></p>`;
 }
 
-/** La ventana «Al carro» de la puerta de una plaza de tu Facción (motor 2026-11-19, Víctor: «desde la ficha de la plaza parado en la puerta»): el carro de
- * tu columna y el almacén de la plaza con «Al carro» (`cargarDePlaza`, solo el Líder; cerrado, solo el Gobernador o el Tesorero). Dejar es solo dentro. */
-export function htmlAlmacenALaPuerta(p: ProyeccionJugador, plaza: { id: string; nombre?: string | null; almacen?: Record<string, { cantidad: number }>; almacenCerradoACiudadanos?: boolean; cargos?: { gobernadorId?: string | null; tesoreroId?: string | null } }, e: Escapar): string {
-  const columna = miColumna(p);
-  const carro = columna?.suministro ?? {};
-  const capacidad = columna ? capacidadDeCarga(columna) : undefined;
-  const libre = capacidad !== undefined ? Math.max(0, Math.floor(capacidad - Object.values(carro).reduce((t, n) => t + n, 0))) : undefined;
-  const conCargo = [plaza.cargos?.gobernadorId, plaza.cargos?.tesoreroId].includes(p.heroeId);
-  const cerrado = Boolean(plaza.almacenCerradoACiudadanos);
-  const motivo = cerrado && !conCargo ? 'El Gobernador ha cerrado el almacén a los ciudadanos.' : libre === 0 ? 'El carro está lleno.' : null;
-  const almacen = Object.fromEntries(Object.entries(plaza.almacen ?? {}).map(([r, v]) => [r, v.cantidad]));
-  return `${ocupacion('Carro de tu columna', carro, capacidad)}${filas(carro, 'carro', [], e)}
-    ${ocupacion(`Almacén de ${e(plaza.nombre ?? plaza.id)}`, {}, undefined)}
-    ${cerrado ? `<p class="asent-lado-nota">${conCargo ? 'Cerrado a los ciudadanos; con tu cargo sigues sacando al carro.' : 'El Gobernador lo ha cerrado: no se saca al carro.'}</p>` : ''}
-    ${filas(almacen, 'plaza', [{ accion: 'dePlaza', etiqueta: 'Al carro', motivo, tope: libre }], e, plaza.id)}
-    <p class="asent-lado-nota">Dejar en el almacén de la plaza se hace dentro.</p>
-    <p class="faction-error" data-campo="error-carro" role="alert"></p>`;
-}
-
 export function cablearCarro(raiz: HTMLElement, ejecutar: Ejecutar, heroeId?: string): void {
   const error = raiz.querySelector<HTMLElement>('[data-campo="error-carro"]');
   raiz.querySelector<HTMLButtonElement>('[data-vaciar-carro]')?.addEventListener('click', async (ev) => {

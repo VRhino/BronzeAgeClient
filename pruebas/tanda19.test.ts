@@ -1,4 +1,4 @@
-// La tanda del 19-11 (cliente 0.221.0, motor ca67e25): lo que come la plaza, «Al carro» a la puerta de tu plaza y el Tesorero con el almacén cerrado.
+// La tanda del 19-11 (cliente 0.221.0, motor ca67e25): lo que come la plaza, la ventana «Almacén» a la puerta (0.222.0) y el Tesorero con el almacén cerrado.
 import { describe, expect, test, vi } from 'vitest';
 import { create } from '@bufbuild/protobuf';
 import datos from './plaza/datos.json';
@@ -12,7 +12,7 @@ vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => datos })
 
 const { plazaDeContrato } = await import('../src/motor/proyeccion');
 const { htmlComidaDePlaza, lineasDeComida, textoComida } = await import('../src/ui/consumoPausado');
-const { htmlAlmacenALaPuerta } = await import('../src/ui/panelCarro');
+const { PASO_ALMACEN, deshacerAlmacen, ordenesDelBorrador, htmlAlmacenPuerta, pasar, sitioDePlaza, sitioDePueblo } = await import('../src/ui/almacenPuerta');
 
 const e = (t: string): string => t;
 
@@ -48,19 +48,71 @@ describe('lo que come la plaza', () => {
   });
 });
 
-describe('al carro a la puerta de tu plaza', () => {
-  const plaza = (x: Partial<Asentamiento> = {}) => ({ id: 'as-1', nombre: 'Micenas', almacen: { trigo: { cantidad: 40 } }, ...x }) as unknown as Asentamiento;
+describe('la ventana «Almacén» a la puerta', () => {
+  const plaza = (x: Partial<Asentamiento> = {}) => ({ id: 'as-1', nombre: 'Micenas', almacen: { trigo: { cantidad: 40 }, cobre: { cantidad: 0 } }, ...x }) as unknown as Asentamiento;
 
-  test('saca del almacén al carro; dejar es de dentro', () => {
-    const html = htmlAlmacenALaPuerta(proy(), plaza(), e);
-    expect(html).toContain('data-carro="dePlaza"');
-    expect(html).not.toContain('data-carro="aPlaza"');
-    expect(html).not.toMatch(/data-carro="dePlaza"[^>]*disabled/);
+  test('solo salen los bienes con algo, cada uno con su icono a la izquierda; sin borrador no se confirma', () => {
+    const s = sitioDePlaza(proy(), plaza());
+    deshacerAlmacen(s.clave);
+    const html = htmlAlmacenPuerta(proy(), s, e);
+    expect(html).toMatch(/data-alm-lado="almacen" data-recurso="trigo"[\s\S]*?alm-icono/);
+    expect(html).toContain('data-alm-lado="carro" data-recurso="madera"');
+    expect(html).not.toContain('data-recurso="cobre"');
+    expect(html).toMatch(/data-alm-confirmar disabled/);
   });
 
-  test('cerrado a los ciudadanos: saca el Tesorero, no un ciudadano sin cargo', () => {
+  test('cada clic pasa 10 al otro lado, en los dos sentidos, y no más de lo que hay', () => {
+    const p = proy();
+    const s = sitioDePlaza(p, plaza());
+    deshacerAlmacen(s.clave);
+    expect(PASO_ALMACEN).toBe(10);
+    expect(pasar(p, s, 'trigo', 'almacen')).toBe(10);
+    expect(pasar(p, s, 'madera', 'carro')).toBe(10);
+    expect(pasar(p, s, 'madera', 'carro')).toBe(0); // ya no queda madera en el carro
+    expect(pasar(p, s, 'trigo', 'carro')).toBe(10); // y se puede devolver lo pasado
+    pasar(p, s, 'trigo', 'almacen'); pasar(p, s, 'trigo', 'almacen');
+    const html = htmlAlmacenPuerta(p, s, e);
+    expect(html).toMatch(/data-alm-lado="carro" data-recurso="trigo"[\s\S]*?<b>20<\/b><small class="alm-delta">\+20/);
+    expect(html).toMatch(/data-alm-lado="almacen" data-recurso="madera"[\s\S]*?<b>10<\/b><small class="alm-delta">\+10/);
+    expect(html).not.toMatch(/data-alm-confirmar disabled/);
+    deshacerAlmacen(s.clave);
+  });
+
+  test('«Confirmar» deja primero y saca después; «Deshacer» vacía el borrador', () => {
+    const p = proy();
+    const s = sitioDePlaza(p, plaza());
+    deshacerAlmacen(s.clave);
+    pasar(p, s, 'trigo', 'almacen');
+    pasar(p, s, 'madera', 'carro');
+    expect(ordenesDelBorrador(s)).toEqual([
+      ['dejarEnPlaza', { asentamientoId: 'as-1', recurso: 'madera', cantidad: 10 }],
+      ['cargarDePlaza', { asentamientoId: 'as-1', recurso: 'trigo', cantidad: 10 }],
+    ]);
+    deshacerAlmacen(s.clave);
+    expect(ordenesDelBorrador(s)).toEqual([]);
+    expect(htmlAlmacenPuerta(p, s, e)).toMatch(/data-alm-confirmar disabled/);
+  });
+
+  test('cerrado a los ciudadanos: no se saca sin cargo (sí el Tesorero), pero se deja', () => {
     const cerrada = { almacenCerradoACiudadanos: true };
-    expect(htmlAlmacenALaPuerta(proy(), plaza(cerrada), e)).toMatch(/data-carro="dePlaza"[^>]*disabled/);
-    expect(htmlAlmacenALaPuerta(proy(), plaza({ ...cerrada, cargos: { tesoreroId: 'heroe-1' } } as Partial<Asentamiento>), e)).not.toMatch(/data-carro="dePlaza"[^>]*disabled/);
+    const s = sitioDePlaza(proy(), plaza(cerrada));
+    deshacerAlmacen(s.clave);
+    expect(pasar(proy(), s, 'trigo', 'almacen')).toBe(0);
+    expect(htmlAlmacenPuerta(proy(), s, e)).not.toContain('data-alm-lado="almacen" data-recurso="trigo"');
+    expect(pasar(proy(), s, 'madera', 'carro')).toBe(10);
+    deshacerAlmacen(s.clave);
+    const t = sitioDePlaza(proy(), plaza({ ...cerrada, cargos: { tesoreroId: 'heroe-1' } } as Partial<Asentamiento>));
+    expect(pasar(proy(), t, 'trigo', 'almacen')).toBe(10);
+    deshacerAlmacen(t.clave);
+  });
+
+  test('en un pueblo solo se deja lo que produce, hasta su capacidad', () => {
+    const s = sitioDePueblo({ id: 'pueblo-4', almacen: { cobre: 25 }, capacidad: 30 }, 'Cobre de Micenas', ['cobre']);
+    deshacerAlmacen(s.clave);
+    expect(pasar(proy(), s, 'madera', 'carro')).toBe(0);
+    expect(s.sacar('cobre', 10)).toEqual(['cargarDePueblo', { puebloId: 'pueblo-4', recurso: 'cobre', cantidad: 10 }]);
+    expect(s.dejar('cobre', 5)).toEqual(['dejarEnPueblo', { puebloId: 'pueblo-4', recurso: 'cobre', cantidad: 5 }]);
+    expect(pasar(proy(), s, 'cobre', 'almacen')).toBe(10);
+    deshacerAlmacen(s.clave);
   });
 });

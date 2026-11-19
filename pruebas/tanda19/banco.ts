@@ -1,5 +1,6 @@
-// Banco de la tanda del 19-11 (0.221.0): las fichas del mapa con «Al carro» a la puerta de tu plaza y de tu pueblo, y «Cancelar la obra / la mejora»
-// a la puerta de una obra de pueblo, con los paneles de verdad y datos de mentira. `?ver=plaza|plaza-cerrada|pueblo|obra|mejora`.
+// Banco de la tanda del 19-11 (0.221.0; 0.222.0, la ventana «Almacén»): las fichas del mapa con «Almacén» a la puerta de tu plaza y de tu pueblo,
+// en la pantalla del mundo y con los clics de verdad (las órdenes van a la consola), y «Cancelar la obra / la mejora» a la puerta de una obra de
+// pueblo, con los paneles de verdad y datos de mentira. `?ver=plaza|plaza-cerrada|pueblo|obra|mejora`.
 import datos from '../plaza/datos.json';
 const fetchReal = window.fetch.bind(window);
 window.fetch = ((url: RequestInfo | URL, init?: RequestInit) =>
@@ -8,7 +9,7 @@ import '../../src/style.css';
 import type { ProyeccionJugador } from '../../src/apiCliente';
 import { estadoCliente } from '../../src/ui/estadoCliente';
 import { htmlAccionesPuerta } from '../../src/ui/accionesPuerta';
-import { htmlAlmacenALaPuerta } from '../../src/ui/panelCarro';
+import { cablearAlmacenPuerta, htmlAlmacenPuerta, sitioDePlaza } from '../../src/ui/almacenPuerta';
 import { FICHA_OBRA, FICHA_PUEBLO } from '../../src/ui/pueblos';
 import type { ContextoFicha } from '../../src/ui/ganchos';
 
@@ -44,25 +45,38 @@ const c: ContextoFicha = {
   alcance: () => ({ distancia: 0, impide: '' }), verBatalla: () => {},
 };
 const escena = document.querySelector<HTMLElement>('#escena')!;
+const mundo = document.querySelector<HTMLElement>('#mundo')!;
+const ejecutar = async (tipo: string, params: object): Promise<string | null> => { console.log('orden', tipo, JSON.stringify(params)); return null; };
+/** La ficha y la ventana «Almacén» en la pantalla del mundo, como en el juego (la ventana centrada). */
+function enElMundo(ficha: string, titulo: string, icono: string, html: string, cablear: (cuerpo: HTMLElement) => void): void {
+  mundo.hidden = false;
+  escena.hidden = true;
+  mundo.innerHTML = `<div class="asent-ventana mapa-seleccion">${ficha}</div>
+    <section class="asent-ventana puerta-ventana" role="dialog" data-ancho="centrada">
+    <header class="asent-ventana-cab"><div class="asent-ventana-titulo"><span class="asent-ventana-icono" aria-hidden="true">${icono}</span><h2>${titulo}</h2></div><button class="asent-ventana-cerrar" type="button">✕</button></header>
+    <div class="asent-edif-cuerpo"><div class="asent-lado-cuerpo">${html}</div></div></section>`;
+  cablear(mundo.querySelector<HTMLElement>('.asent-edif-cuerpo')!);
+}
 const ventana = (titulo: string, icono: string, html: string): string => `<section class="asent-ventana puerta-ventana" role="dialog" data-ancho="normal">
   <header class="asent-ventana-cab"><div class="asent-ventana-titulo"><span class="asent-ventana-icono" aria-hidden="true">${icono}</span><h2>${titulo}</h2></div><button class="asent-ventana-cerrar" type="button">✕</button></header>
   <div class="asent-edif-cuerpo"><div class="asent-lado-cuerpo">${html}</div></div></section>`;
 
 function pintar(): void {
   if (ver === 'plaza' || ver === 'plaza-cerrada') {
-    // la ficha de la plaza como la pinta main.ts (`puertaDePlaza`): las acciones a la puerta de tu plaza, con la ventana «Al carro» abierta
+    // la ficha de la plaza como la pinta main.ts (`puertaDePlaza`): las acciones a la puerta de tu plaza, con la ventana «Almacén» abierta
     const acciones = htmlAccionesPuerta([
       { id: 'marchar', etiqueta: 'Marchar aquí', icono: '➜' }, { id: 'entrar', etiqueta: 'Entrar', icono: '🚪', principal: true },
-      { id: 'alCarro', etiqueta: 'Al carro', icono: '🛒', ventana: true }, { id: 'guarnicion', etiqueta: 'Guarnición', icono: '🛡', ventana: true },
-    ], e).replace('data-puerta="alCarro"', 'data-puerta="alCarro" aria-pressed="true"').replace(/(<button class="[^"]*)("[^>]*data-puerta="alCarro")/, '$1 activo$2');
-    escena.innerHTML = `<div class="mapa-seleccion"><span class="faction-kicker">Tu asentamiento</span><h3>Micenas</h3>
-      <div class="mapa-seleccion-datos"><div><span>Facción</span><strong>Casa de Micenas</strong></div><div><span>Nivel</span><strong>3</strong></div><div><span>Distancia</span><strong>0</strong></div></div>${acciones}</div>
-      ${ventana('Del almacén al carro', '🛒', htmlAlmacenALaPuerta(p, plaza as never, e))}`;
+      { id: 'almacen', etiqueta: 'Almacén', icono: '📦', ventana: true }, { id: 'guarnicion', etiqueta: 'Guarnición', icono: '🛡', ventana: true },
+    ], e).replace(/(<button class="[^"]*)("[^>]*data-puerta="almacen")/, '$1 activo$2');
+    const sitio = sitioDePlaza(p, plaza as never);
+    enElMundo(`<span class="faction-kicker">Tu asentamiento</span><h3>Micenas</h3>
+      <div class="mapa-seleccion-datos"><div><span>Facción</span><strong>Casa de Micenas</strong></div><div><span>Nivel</span><strong>3</strong></div><div><span>Distancia</span><strong>0</strong></div></div>${acciones}`,
+      'Almacén', '📦', htmlAlmacenPuerta(p, sitio, e), (cuerpo) => cablearAlmacenPuerta(cuerpo, p, sitio, ejecutar, e));
     return;
   }
   if (ver === 'pueblo') {
-    const v = FICHA_PUEBLO.ventanas!(p, pueblo as never, c).alCarro!();
-    escena.innerHTML = `<div class="mapa-seleccion">${FICHA_PUEBLO.html(p, pueblo as never, c)}</div>${ventana(v.titulo, v.icono, v.html)}`;
+    const v = FICHA_PUEBLO.ventanas!(p, pueblo as never, { ...c, ejecutar }).almacen!();
+    enElMundo(FICHA_PUEBLO.html(p, pueblo as never, c).replace(/(<button class="[^"]*)("[^>]*data-puerta="almacen")/, '$1 activo$2'), v.titulo, v.icono, v.html, v.cablear);
     return;
   }
   const o = ver === 'obra' ? obras[0]! : obras[1]!;
@@ -74,4 +88,5 @@ function pintar(): void {
   escena.innerHTML = `<div class="mapa-seleccion">${FICHA_OBRA.html(p, o as never, c)}</div>`;
 }
 pintar();
-setTimeout(pintar, 600);
+// el repintado de las fichas (para cuando llega el balance) solo en las vistas sin clics
+if (ver === 'obra' || ver === 'mejora') setTimeout(pintar, 600);
