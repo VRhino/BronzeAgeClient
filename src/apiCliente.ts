@@ -712,7 +712,7 @@ export interface AnimalDelCatalogo { factorCarga: number; velocidad: number; cos
 /** El balance público (`GET /v1/balance`): se pide una vez, en segundo plano, y avisa con `alCargar` cuando llega. */
 interface BalancePublico {
   catalogos?: { EDIFICIO_CATALOGO?: Record<string, { costo?: Record<string, number>; niveles?: Record<string, NivelDeEdificio> }>; TROPAS_RECLUTABLES?: TropaReclutable[]; POLITICA_CATALOGO?: PoliticaDelCatalogo[] };
-  cuposYNiveles?: { POLITICAS?: ReglasDePoliticas; CAP_FUNDACION_POR_NIVEL?: number[]; CIUDADANIA?: { cooldownCambioResidenciaDias?: number; cooldownCreacionFaccionDias?: number } };
+  cuposYNiveles?: { POLITICAS?: ReglasDePoliticas; CAP_FUNDACION_POR_NIVEL?: number[]; CIUDADANIA?: { cooldownCambioResidenciaDias?: number; cooldownIngresoFaccionHoras?: number } };
   caravanas?: { CARAVANA_COOLDOWN?: { cooldownMinutos?: number }; CARRO_CATALOGO?: Record<string, CarroDelCatalogo>; ANIMAL_CATALOGO?: Record<string, AnimalDelCatalogo>; CARAVANA_PREPARACION?: { kPorCarro?: number; maxProgramacionDias?: number }; CARAVANA_ESCOLTA?: { liderazgoPorNivelMercado?: number[] } };
   politica?: { PUERTA?: { cerradaAPorDefecto?: string[] }; CAPITAL?: { cooldownDias?: number } };
   mundoYMilitar?: { LOGISTICA?: { capacidadViveresPorHeroe?: number; bonusViveres?: { tecnologia: string; factor: number }; capacidadCarroPorJugador?: number; radioEncuentro?: number; radioReabastecimiento?: number; factorConsumoEnMarcha?: number; factorConsumoEstacionado?: number }; MILITAR?: { racionPorSoldadoPorMinuto?: number }; FUNDACION?: { materialesIniciales?: Record<string, number>; viviendasIniciales?: number; costoMaderaExtraCaravana?: number }; MERCENARIOS?: { refundacion?: { porcentajeCoste?: number; excluir?: string[] }; radioProteccion?: number; edificiosMilitares?: string[]; nivelEdificios?: number }; MOVIMIENTO?: { radioPuerta?: number; radioInspeccion?: number; consumoPorParticipante?: number; factorConsumoMarchaForzada?: number }; RECLUTAMIENTO_ORO_POR_ESCALON?: Record<string, number>; ORO_POR_CABALLO?: number };
@@ -833,9 +833,10 @@ export function diasDeEnfriamientoDeCapital(): number {
   return balance()?.politica?.CAPITAL?.cooldownDias ?? 14;
 }
 
-/** Días de mundo sin poder crear otra Facción tras dejar o crear una (`CIUDADANIA.cooldownCreacionFaccionDias`); 7 mientras no llegue el balance. */
-export function diasDeEnfriamientoDeCreacionDeFaccion(): number {
-  return balance()?.cuposYNiveles?.CIUDADANIA?.cooldownCreacionFaccionDias ?? 7;
+/** Horas de mundo sin poder pedir el ingreso en ninguna Facción (tampoco en la que se deja) tras dejar una (`CIUDADANIA.cooldownIngresoFaccionHoras`, motor 2026-11-19); 24 mientras no llegue
+ * el balance. Crear una Facción no lleva enfriamiento. */
+export function horasDeEnfriamientoDeIngresoEnFaccion(): number {
+  return balance()?.cuposYNiveles?.CIUDADANIA?.cooldownIngresoFaccionHoras ?? 24;
 }
 
 /** A quién se le cierra una plaza que no fijó su puerta (`PUERTA.cerradaAPorDefecto`); neutrales y enemigos mientras no llegue el balance. */
