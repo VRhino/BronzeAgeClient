@@ -1139,7 +1139,7 @@ export type CiudadaniaCambiada = Message<"bronzeage.v1.CiudadaniaCambiada"> & {
   faccionId: string;
 
   /**
-   * creada | ingreso | denegada | abandono
+   * creada | ingreso | denegada | cancelada (2026-11-19) | abandono
    *
    * @generated from field: string como = 3;
    */

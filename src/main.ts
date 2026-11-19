@@ -269,7 +269,7 @@ function cablearFaccion(root: ParentNode, proyeccion: ProyeccionJugador, rerende
     const pintarLista = (): void => {
       const deBots = (faccion: Faccion): boolean => !!(faccion.esBot || proyeccion.directorioFacciones?.find((x) => x.id === faccion.id)?.esBot);
       const pedir = (faccion: Faccion): string => (faccion.solicitudesIds ?? []).includes(proyeccion.heroeId)
-        ? '<span class="faccion-pedido">Pedido: decide su Rey</span>'
+        ? `<span class="faccion-pedido-acciones"><span class="faccion-pedido">Pedido: decide su Rey</span><button class="btn-secondary btn-cancelar-solicitud" type="button" data-cancelar-solicitud="${escaparHtml(faccion.id)}">Cancelar</button></span>`
         : deBots(faccion) ? '<span class="faccion-pedido" title="Un jugador no entra en una Facción de bots">🤖 De bots</span>'
         : `<button class="btn-join-faction" type="button" data-faccion-id="${escaparHtml(faccion.id)}">Pedir ingreso</button>`;
       lista.innerHTML = htmlListaFacciones(proyeccion, escaparHtml, { termino: busqueda.value, accion: pedir, botsAlFinal: true, sinBots: ocultarBotsAlPedirIngreso });
@@ -284,6 +284,23 @@ function cablearFaccion(root: ParentNode, proyeccion: ProyeccionJugador, rerende
         } catch (err) {
           boton.disabled = false;
           boton.textContent = 'Pedir ingreso';
+          const aviso = document.createElement('p');
+          aviso.className = 'faction-error';
+          aviso.textContent = mensajeError(err);
+          boton.parentElement?.appendChild(aviso);
+        }
+      }));
+      // El solicitante retira su solicitud (motor, 2026-11-19); las que tenga en otras siguen.
+      lista.querySelectorAll<HTMLButtonElement>('[data-cancelar-solicitud]').forEach((boton) => boton.addEventListener('click', async () => {
+        boton.disabled = true;
+        boton.textContent = 'Cancelando...';
+        try {
+          const respuesta = await ejecutarComando(estadoCliente.gameIdActivo, 'cancelarSolicitud', { faccionId: boton.dataset.cancelarSolicitud });
+          if (!respuesta.resultado.ok) throw errorDeRechazo(respuesta.resultado, 'El servidor rechazó la operación.');
+          await refrescarDatosJuego();
+        } catch (err) {
+          boton.disabled = false;
+          boton.textContent = 'Cancelar';
           const aviso = document.createElement('p');
           aviso.className = 'faction-error';
           aviso.textContent = mensajeError(err);

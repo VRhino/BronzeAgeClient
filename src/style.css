@@ -3289,6 +3289,8 @@ svg.partida-emblema { width: 36px; } /* el símbolo suelto (respuesta antigua de
 .faccion-lejana { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 5px 10px; border-bottom: 1px solid rgba(169, 121, 63, 0.12); color: var(--text-secondary); font-size: 0.88rem; }
 .faccion-publica .btn-join-faction, .faccion-publica .faccion-pedido { flex: 0 0 auto; }
 .faccion-pedido { font-size: 0.78rem; color: var(--text-muted); }
+.faccion-pedido-acciones { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
+.faccion-pedido-acciones .btn-cancelar-solicitud { padding: 4px 10px; font-size: 0.78rem; }
 @media (max-width: 900px) {
   .jugador-panel.jugador-panel-faccion { overflow-y: auto; }
   .faccion-marco { flex-direction: column; }
