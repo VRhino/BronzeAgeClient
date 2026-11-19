@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.223.0] — 2026-11-19 · La ventana «Almacén» también por dentro · motor `0e2efa1`
+
+Sin cambio de contrato (0.30.0). Víctor: reutilizar la transferencia de la puerta dentro de la plaza, con un selector arriba (opción 2).
+
+- **Dentro de la plaza** (Almacén → Tu carga): la misma ventana de la puerta. En tu residencia, un selector arriba: «Plaza ↔ carro» y «Personal ↔ carro»; cada uno guarda su borrador hasta «Confirmar». El Gobernador sigue teniendo «Cerrar el almacén a los ciudadanos» debajo.
+- **Dentro del pueblo** (Carga): la misma ventana con el almacén del pueblo.
+- **En tu residencia** (Bienes) y a la puerta de tu campamento: la misma ventana con tu almacén personal; «Carga» pasa a «Almacén». A la puerta de tu plaza de residencia, «Almacén» lleva el selector y ya no hay «Carga» aparte. Sin columna, «Todo al almacén personal» sigue debajo.
+
 ## [0.222.0] — 2026-11-19 · La ventana «Almacén» a la puerta, en los dos sentidos · motor `0e2efa1`
 
 Sin cambio de contrato (0.30.0). El motor (nucleo 0.50.0) deja ya `dejarEnPlaza` y `dejarEnPueblo` con la columna a la puerta, con las mismas reglas que sacar.

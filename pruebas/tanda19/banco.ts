@@ -1,6 +1,7 @@
 // Banco de la tanda del 19-11 (0.221.0; 0.222.0, la ventana «Almacén»): las fichas del mapa con «Almacén» a la puerta de tu plaza y de tu pueblo,
 // en la pantalla del mundo y con los clics de verdad (las órdenes van a la consola), y «Cancelar la obra / la mejora» a la puerta de una obra de
-// pueblo, con los paneles de verdad y datos de mentira. `?ver=plaza|plaza-cerrada|pueblo|obra|mejora`.
+// pueblo, con los paneles de verdad y datos de mentira. 0.223.0: la misma ventana por dentro (`dentro-plaza`, con el selector; `dentro-pueblo`;
+// `residencia`). `?ver=plaza|plaza-cerrada|pueblo|obra|mejora|dentro-plaza|dentro-pueblo|residencia`.
 import datos from '../plaza/datos.json';
 const fetchReal = window.fetch.bind(window);
 window.fetch = ((url: RequestInfo | URL, init?: RequestInit) =>
@@ -9,7 +10,7 @@ import '../../src/style.css';
 import type { ProyeccionJugador } from '../../src/apiCliente';
 import { estadoCliente } from '../../src/ui/estadoCliente';
 import { htmlAccionesPuerta } from '../../src/ui/accionesPuerta';
-import { cablearAlmacenPuerta, htmlAlmacenPuerta, sitioDePlaza } from '../../src/ui/almacenPuerta';
+import { cablearAlmacenes, htmlAlmacenes, sitioDePlaza, sitioDePueblo, sitioPersonal } from '../../src/ui/almacenPuerta';
 import { FICHA_OBRA, FICHA_PUEBLO } from '../../src/ui/pueblos';
 import type { ContextoFicha } from '../../src/ui/ganchos';
 
@@ -32,7 +33,7 @@ const obras = [
 const enPunto = ver === 'pueblo' ? pueblo.posicion : ver === 'obra' ? obras[0]!.posicion : ver === 'mejora' ? aldea.posicion : pos;
 const p = {
   instante: Date.now(), heroeId: 'h', faccionId: 'f-1',
-  heroe: { id: 'h', displayName: 'Víctor', ubicacion: { tipo: 'ejercito' }, escuadrones: [], viveres: 999 },
+  heroe: { id: 'h', displayName: 'Víctor', ubicacion: { tipo: 'ejercito' }, escuadrones: [], viveres: 999, residenciaId: 'as-1', almacenPersonal: { cobre: 40, estano: 12, pan: 30, vino: 25 }, capacidadAlmacenPersonal: 300 },
   facciones: [{ id: 'f-1', nombre: 'Casa de Micenas', reyId: 'h', miembros: [{ heroeId: 'h', cargos: ver === 'obra' || ver === 'mejora' ? ['gobernador@as-1'] : [] }] }],
   ejercitos: [{ id: 'ej-1', liderId: 'h', tipo: 'personal', participantes: [{ heroeId: 'h' }], posicionActual: enPunto, estado: 'estacionado', capacidadCarga: 400, suministro: { madera: 60, trigo: 20 } }],
   asentamientos: [plaza], plazasPropias: [plaza], asentamientosAvistados: [], asentamientosConocidos: [], campamentosMercenarios: [],
@@ -62,16 +63,26 @@ const ventana = (titulo: string, icono: string, html: string): string => `<secti
   <div class="asent-edif-cuerpo"><div class="asent-lado-cuerpo">${html}</div></div></section>`;
 
 function pintar(): void {
+  if (ver === 'dentro-plaza' || ver === 'dentro-pueblo' || ver === 'residencia') {
+    // el panel de dentro (Almacén → Tu carga de la plaza, Carga del pueblo, Bienes de la residencia) a lo ancho, como en el juego
+    const sitios = ver === 'dentro-plaza' ? [sitioDePlaza(p, plaza as never), sitioPersonal(p)] : ver === 'dentro-pueblo' ? [sitioDePueblo(pueblo, 'Mina de cobre (nivel 1)', ['cobre'])] : [sitioPersonal(p)];
+    const titulo = ver === 'dentro-plaza' ? 'Almacén · Tu carga' : ver === 'dentro-pueblo' ? 'Mina de cobre · Carga' : 'Tu residencia · Bienes';
+    escena.innerHTML = `<section class="asent-ventana" style="flex: 1 1 auto; width: auto !important; max-width: none;">
+      <header class="asent-ventana-cab"><div class="asent-ventana-titulo"><h2>${titulo}</h2></div></header>
+      <div class="asent-edif-cuerpo"><div class="asent-lado-cuerpo"><div class="alm-dentro">${htmlAlmacenes(p, sitios, e)}</div></div></div></section>`;
+    cablearAlmacenes(escena, p, sitios, ejecutar, e);
+    return;
+  }
   if (ver === 'plaza' || ver === 'plaza-cerrada') {
     // la ficha de la plaza como la pinta main.ts (`puertaDePlaza`): las acciones a la puerta de tu plaza, con la ventana «Almacén» abierta
     const acciones = htmlAccionesPuerta([
       { id: 'marchar', etiqueta: 'Marchar aquí', icono: '➜' }, { id: 'entrar', etiqueta: 'Entrar', icono: '🚪', principal: true },
       { id: 'almacen', etiqueta: 'Almacén', icono: '📦', ventana: true }, { id: 'guarnicion', etiqueta: 'Guarnición', icono: '🛡', ventana: true },
     ], e).replace(/(<button class="[^"]*)("[^>]*data-puerta="almacen")/, '$1 activo$2');
-    const sitio = sitioDePlaza(p, plaza as never);
+    const sitios = [sitioDePlaza(p, plaza as never), sitioPersonal(p)];
     enElMundo(`<span class="faction-kicker">Tu asentamiento</span><h3>Micenas</h3>
       <div class="mapa-seleccion-datos"><div><span>Facción</span><strong>Casa de Micenas</strong></div><div><span>Nivel</span><strong>3</strong></div><div><span>Distancia</span><strong>0</strong></div></div>${acciones}`,
-      'Almacén', '📦', htmlAlmacenPuerta(p, sitio, e), (cuerpo) => cablearAlmacenPuerta(cuerpo, p, sitio, ejecutar, e));
+      'Almacén', '📦', htmlAlmacenes(p, sitios, e), (cuerpo) => cablearAlmacenes(cuerpo, p, sitios, ejecutar, e));
     return;
   }
   if (ver === 'pueblo') {

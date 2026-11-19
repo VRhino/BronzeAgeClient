@@ -12,7 +12,7 @@ vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => datos })
 
 const { plazaDeContrato } = await import('../src/motor/proyeccion');
 const { htmlComidaDePlaza, lineasDeComida, textoComida } = await import('../src/ui/consumoPausado');
-const { PASO_ALMACEN, deshacerAlmacen, ordenesDelBorrador, htmlAlmacenPuerta, pasar, sitioDePlaza, sitioDePueblo } = await import('../src/ui/almacenPuerta');
+const { PASO_ALMACEN, deshacerAlmacen, htmlAlmacenes, ordenesDelBorrador, sitioPersonal, htmlAlmacenPuerta, pasar, sitioDePlaza, sitioDePueblo } = await import('../src/ui/almacenPuerta');
 
 const e = (t: string): string => t;
 
@@ -115,4 +115,45 @@ describe('la ventana «Almacén» a la puerta', () => {
     expect(pasar(proy(), s, 'cobre', 'almacen')).toBe(10);
     deshacerAlmacen(s.clave);
   });
+});
+
+describe('la ventana «Almacén» por dentro (0.223.0)', () => {
+  const conPersonal = (o: { lider?: boolean } = {}): ProyeccionJugador => {
+    const p = proy(o) as unknown as { heroe: Record<string, unknown> };
+    p.heroe.almacenPersonal = { cobre: 30, trigo: 0 };
+    p.heroe.capacidadAlmacenPersonal = 35;
+    return p as unknown as ProyeccionJugador;
+  };
+
+  test('el almacén personal: sacar y guardar, hasta su capacidad', () => {
+    const p = conPersonal();
+    const s = sitioPersonal(p);
+    deshacerAlmacen(s.clave);
+    expect(pasar(p, s, 'cobre', 'almacen')).toBe(10);
+    expect(pasar(p, s, 'madera', 'carro')).toBe(10); // 30 − 10 + 10 = 30 de 35
+    expect(ordenesDelBorrador(s)).toEqual([
+      ['guardarEnAlmacenPersonal', { recurso: 'madera', cantidad: 10 }],
+      ['sacarDelAlmacenPersonal', { recurso: 'cobre', cantidad: 10 }],
+    ]);
+    deshacerAlmacen(s.clave);
+  });
+
+  test('solo el Líder de la columna mueve el carro con el almacén personal', () => {
+    const p = conPersonal({ lider: false });
+    const s = sitioPersonal(p);
+    expect(pasar(p, s, 'cobre', 'almacen')).toBe(0);
+    expect(pasar(p, s, 'madera', 'carro')).toBe(0);
+  });
+
+  test('con dos almacenes sale el selector; con uno, no', () => {
+    const p = conPersonal();
+    const plaza = sitioPlaza();
+    const dos = htmlAlmacenes(p, [plaza, sitioPersonal(p)], e);
+    expect(dos).toContain('data-alm-sitio="plaza:as-1"');
+    expect(dos).toContain('Personal ↔ carro');
+    expect(dos).toMatch(/data-alm-sitio="plaza:as-1" aria-pressed="true"/);
+    expect(htmlAlmacenes(p, [sitioPersonal(p)], e)).not.toContain('data-alm-sitio');
+  });
+
+  const sitioPlaza = () => sitioDePlaza(proy(), { id: 'as-1', nombre: 'Micenas', almacen: { trigo: { cantidad: 40 } } } as unknown as Asentamiento);
 });

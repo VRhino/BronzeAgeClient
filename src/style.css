@@ -6863,3 +6863,8 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
 .alm-pie { display: flex; justify-content: flex-end; gap: 8px; }
 .alm-pie button { flex: 0 0 auto; width: auto; margin: 0; min-height: 38px; padding: 6px 18px; }
 @media (max-width: 520px) { .alm-lados { grid-template-columns: 1fr; } }
+/* 0.223.0: la misma ventana por dentro (plaza, pueblo, residencia), centrada en el panel; el selector «Plaza ↔ carro» / «Personal ↔ carro» arriba */
+.alm-dentro { max-width: 820px; margin: 0 auto; width: 100%; }
+.alm-varios { display: flex; flex-direction: column; gap: 10px; }
+.alm-selector { margin: 0; }
+.alm-extra { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }

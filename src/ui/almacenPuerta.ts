@@ -3,13 +3,17 @@
 // final»; «la transferencia debería ser bidireccional»). A la puerta de una plaza o un pueblo de tu Facción, con tu columna parada y siendo su
 // Líder: a la izquierda el almacén del sitio, a la derecha el carro de la columna. Cada clic en un bien pasa 10 (o lo que quede, o lo que quepa)
 // al otro lado; no se manda nada hasta «Confirmar», que primero deja (libera sitio en el carro) y luego saca. Solo salen los bienes que hay.
+// 0.223.0 (Víctor 2026-11-19, «reutilizar en la interfaz de dentro de la plaza», opción 2): la misma ventana por dentro, con un selector arriba
+// cuando hay más de un almacén a mano: «Plaza ↔ carro» y «Personal ↔ carro» (`htmlAlmacenes`). Dentro del pueblo (Carga), el del pueblo; en tu
+// residencia y a su puerta, el personal (`guardarEnAlmacenPersonal` / `sacarDelAlmacenPersonal { recurso, cantidad }`, solo el Líder).
 // Órdenes (motor 2026-11-19, nucleo 0.50.0): plaza `cargarDePlaza` / `dejarEnPlaza { asentamientoId, recurso, cantidad }`; pueblo
 // `cargarDePueblo` / `dejarEnPueblo { puebloId, recurso, cantidad }` (en el pueblo solo se deja lo que produce).
 import type { ProyeccionJugador } from '../apiCliente';
 import { capacidadDeCarga } from '../apiCliente';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import { aplicarAyudas, ayuda } from './ayuda';
-import { ocupacion } from './panelCarro';
+import { almacenPersonalAMano, ocupacion } from './panelCarro';
+import { CAPACIDAD_CARRO_SALIDA } from './cargaDeSalida';
 
 type Escapar = (valor: string) => string;
 type Ejecutar = (tipo: string, params: object) => Promise<string | null>;
@@ -22,6 +26,8 @@ export interface SitioAlmacen {
   /** `plaza:as-1` o `pueblo:pueblo-4`: el borrador de cada sitio va aparte. */
   clave: string;
   nombre: string;
+  /** El texto de su botón en el selector, cuando hay varios (`Plaza ↔ carro`). */
+  etiqueta?: string;
   almacen: Record<string, number>;
   /** Lo que cabe aún de `r` en el almacén (la plaza, por recurso; el pueblo, en total). */
   hueco: (r: string, almacen: Record<string, number>) => number;
@@ -51,16 +57,22 @@ function columnaDe(p: ProyeccionJugador) {
   return p.ejercitos.find((c) => c.participantes.some((x) => x.heroeId === p.heroeId));
 }
 
-/** El almacén y el carro como quedarían con el borrador, en unidades enteras. */
-function conBorrador(p: ProyeccionJugador, s: SitioAlmacen): { almacen: Record<string, number>; carro: Record<string, number>; capacidad?: number; d: Record<string, number> } {
+/** El carro: el de tu columna o, dentro de tu residencia sin ella, el que traes contigo (`heroe.carro`, entrar no lo vacía). */
+function carroDe(p: ProyeccionJugador): { bienes: Record<string, number>; capacidad: number; titulo: string } {
   const col = columnaDe(p);
+  return col ? { bienes: col.suministro ?? {}, capacidad: capacidadDeCarga(col), titulo: 'Carro de tu columna' } : { bienes: p.heroe.carro ?? {}, capacidad: CAPACIDAD_CARRO_SALIDA, titulo: 'Tu carro' };
+}
+
+/** El almacén y el carro como quedarían con el borrador, en unidades enteras. */
+function conBorrador(p: ProyeccionJugador, s: SitioAlmacen): { almacen: Record<string, number>; carro: Record<string, number>; capacidad?: number; titulo: string; d: Record<string, number> } {
+  const c = carroDe(p);
   const d = borrador(s.clave);
   const almacen: Record<string, number> = {};
   const carro: Record<string, number> = {};
   for (const [r, n] of Object.entries(s.almacen)) almacen[r] = Math.floor(n);
-  for (const [r, n] of Object.entries(col?.suministro ?? {})) carro[r] = Math.floor(n);
+  for (const [r, n] of Object.entries(c.bienes)) carro[r] = Math.floor(n);
   for (const [r, n] of Object.entries(d)) { almacen[r] = (almacen[r] ?? 0) - n; carro[r] = (carro[r] ?? 0) + n; }
-  return { almacen, carro, capacidad: col ? capacidadDeCarga(col) : undefined, d };
+  return { almacen, carro, capacidad: c.capacidad, titulo: c.titulo, d };
 }
 
 /** Un clic: pasa hasta `PASO_ALMACEN` de `r` del lado `de` al otro, sin pasar de lo que hay ni de lo que cabe. Devuelve lo que pasó. */
@@ -102,13 +114,13 @@ function fichas(lado: 'almacen' | 'carro', bienes: Record<string, number>, d: Re
 export function htmlAlmacenPuerta(p: ProyeccionJugador, s: SitioAlmacen, e: Escapar): string {
   const x = conBorrador(p, s);
   const hay = Object.keys(x.d).length > 0;
-  const info = ayuda('puerta:almacen', `Cada clic en un bien pasa ${PASO_ALMACEN} al otro lado (o lo que quede, o lo que quepa). No se mueve nada hasta «Confirmar». Solo mueve el carro el Líder de la columna.`);
+  const info = ayuda('puerta:almacen', `Cada clic en un bien pasa ${PASO_ALMACEN} al otro lado (o lo que quede, o lo que quepa). No se mueve nada hasta «Confirmar».`);
   return `<div class="alm-puerta" data-alm-clave="${e(s.clave)}">
     <div class="alm-lados">
       <section class="alm-lado"><div class="alm-cab">${ocupacion(e(s.nombre), {}, undefined)}${info}</div>
         ${s.motivoSacar ? `<p class="asent-lado-nota">${e(s.motivoSacar)}</p>` : ''}
         ${fichas('almacen', x.almacen, x.d, () => s.motivoSacar, e)}</section>
-      <section class="alm-lado">${ocupacion('Carro de tu columna', x.carro, x.capacidad)}
+      <section class="alm-lado">${ocupacion(x.titulo, x.carro, x.capacidad)}
         ${s.notaDejar && Object.entries(x.carro).some(([r, n]) => n >= 1 && s.motivoDejar(r)) ? `<p class="asent-lado-nota">${e(s.notaDejar)}</p>` : ''}
         ${fichas('carro', x.carro, x.d, s.motivoDejar, e)}</section>
     </div>
@@ -153,15 +165,20 @@ export function cablearAlmacenPuerta(raiz: HTMLElement, p: ProyeccionJugador, s:
 }
 
 /** El sitio de una plaza de tu Facción vista a la puerta. Sacar: ciudadano; cerrado, el Gobernador o el Tesorero. Dejar: hasta su capacidad. */
-export function sitioDePlaza(p: ProyeccionJugador, a: { id: string; nombre?: string | null; almacen?: Record<string, { cantidad: number; capacidad?: number }>; almacenCerradoACiudadanos?: boolean; cargos?: { gobernadorId?: string | null; tesoreroId?: string | null } }): SitioAlmacen {
-  const conCargo = [a.cargos?.gobernadorId, a.cargos?.tesoreroId].includes(p.heroeId);
+export function sitioDePlaza(p: ProyeccionJugador, a: { id: string; nombre?: string | null; faccionId?: string | null; almacen?: Record<string, { cantidad: number; capacidad?: number }>; almacenCerradoACiudadanos?: boolean; cargos?: { gobernadorId?: string | null; tesoreroId?: string | null } }): SitioAlmacen {
+  // el cargo, por la ficha de la plaza o por los cargos de tu Facción (`gobernador@as-1`, `tesorero@as-1`)
+  const yo = p.facciones.find((f) => f.id === p.faccionId)?.miembros?.find((m) => m.heroeId === p.heroeId);
+  const conCargo = [a.cargos?.gobernadorId, a.cargos?.tesoreroId].includes(p.heroeId) || Boolean(yo?.cargos.some((c) => c === `gobernador@${a.id}` || c === `tesorero@${a.id}`));
+  const ciudadano = !a.faccionId || a.faccionId === p.faccionId;
   const capacidad = (r: string): number => a.almacen?.[r]?.capacidad ?? Infinity;
   return {
     clave: `plaza:${a.id}`,
     nombre: `Almacén de ${a.nombre ?? a.id}`,
+    etiqueta: 'Plaza ↔ carro',
     almacen: Object.fromEntries(Object.entries(a.almacen ?? {}).map(([r, v]) => [r, v.cantidad])),
     hueco: (r, almacen) => capacidad(r) - (almacen[r] ?? 0),
-    motivoSacar: a.almacenCerradoACiudadanos && !conCargo ? 'El Gobernador ha cerrado el almacén a los ciudadanos: no se saca al carro, pero se puede dejar.' : null,
+    motivoSacar: !ciudadano ? 'Solo sus ciudadanos sacan de este almacén; si es de una Facción aliada o vasalla, puedes dejarle lo del carro.'
+      : a.almacenCerradoACiudadanos && !conCargo ? 'El Gobernador ha cerrado el almacén a los ciudadanos: no se saca al carro, pero se puede dejar.' : null,
     motivoDejar: (r) => (a.almacen?.[r] || r in RECURSO_NOMBRE ? null : 'Este almacén no guarda eso.'),
     sacar: (r, n) => ['cargarDePlaza', { asentamientoId: a.id, recurso: r, cantidad: n }],
     dejar: (r, n) => ['dejarEnPlaza', { asentamientoId: a.id, recurso: r, cantidad: n }],
@@ -181,4 +198,89 @@ export function sitioDePueblo(x: { id: string; almacen: Record<string, number>; 
     sacar: (r, n) => ['cargarDePueblo', { puebloId: x.id, recurso: r, cantidad: n }],
     dejar: (r, n) => ['dejarEnPueblo', { puebloId: x.id, recurso: r, cantidad: n }],
   };
+}
+
+/** Tu almacén personal (en tu residencia, o con tu columna a su puerta): solo el Líder de la columna mueve el carro; hasta su capacidad, compartida. */
+export function sitioPersonal(p: ProyeccionJugador): SitioAlmacen {
+  const col = columnaDe(p);
+  const motivo = col && col.liderId !== p.heroeId ? 'Solo el Líder de la columna mueve lo del carro.' : null;
+  const capacidad = p.heroe.capacidadAlmacenPersonal ?? Infinity;
+  return {
+    clave: 'personal',
+    nombre: 'Almacén personal',
+    etiqueta: 'Personal ↔ carro',
+    almacen: p.heroe.almacenPersonal ?? {},
+    hueco: (_r, almacen) => capacidad - suma(almacen),
+    motivoSacar: motivo,
+    motivoDejar: () => motivo,
+    sacar: (r, n) => ['sacarDelAlmacenPersonal', { recurso: r, cantidad: n }],
+    dejar: (r, n) => ['guardarEnAlmacenPersonal', { recurso: r, cantidad: n }],
+  };
+}
+
+/** Los almacenes a mano dentro de una plaza: el suyo y, en tu residencia, el personal. */
+export function sitiosDentroDePlaza(p: ProyeccionJugador, a: Parameters<typeof sitioDePlaza>[1]): SitioAlmacen[] {
+  return [sitioDePlaza(p, a), ...(almacenPersonalAMano(p) ? [sitioPersonal(p)] : [])];
+}
+
+/** El almacén elegido en el selector, por grupo de sitios. */
+const elegidos = new Map<string, string>();
+const grupo = (sitios: SitioAlmacen[]): string => sitios.map((s) => s.clave).join('|');
+function elegido(sitios: SitioAlmacen[]): SitioAlmacen {
+  const k = elegidos.get(grupo(sitios));
+  return sitios.find((s) => s.clave === k) ?? sitios[0]!;
+}
+
+/** Lo de debajo de la ventana según el sitio: en la plaza, cerrar el almacén (el Gobernador); en el personal sin columna, «Todo al almacén personal». */
+function pieDe(p: ProyeccionJugador, s: SitioAlmacen, e: Escapar): string {
+  if (s.clave.startsWith('plaza:')) {
+    const id = s.clave.slice('plaza:'.length);
+    const a = p.asentamientos.find((x) => x.id === id);
+    const yo = p.facciones.find((f) => f.id === p.faccionId)?.miembros?.find((m) => m.heroeId === p.heroeId);
+    if (!a || !yo?.cargos.includes(`gobernador@${id}`)) return '';
+    return `<label class="asent-toggle"><input type="checkbox" data-almacen-cerrar="${e(id)}"${a.almacenCerradoACiudadanos ? ' checked' : ''} /> Cerrar el almacén a los ciudadanos (no sacan al carro)</label>`;
+  }
+  if (s.clave === 'personal' && !columnaDe(p) && Object.values(p.heroe.carro ?? {}).some((n) => n >= 1)) {
+    return '<button class="btn-secondary" type="button" data-vaciar-carro>Todo al almacén personal</button>';
+  }
+  return '';
+}
+
+/** La ventana con el selector arriba («Plaza ↔ carro», «Personal ↔ carro») si hay más de un almacén a mano; con uno, la de la puerta tal cual. */
+export function htmlAlmacenes(p: ProyeccionJugador, sitios: SitioAlmacen[], e: Escapar): string {
+  if (!sitios.length) return '';
+  const s = elegido(sitios);
+  const selector = sitios.length > 1
+    ? `<div class="asent-tabs alm-selector">${sitios.map((x) => `<button class="asent-tab${x === s ? ' activo' : ''}" type="button" data-alm-sitio="${e(x.clave)}"${x === s ? ' aria-pressed="true"' : ''}>${e(x.etiqueta ?? x.nombre)}</button>`).join('')}</div>`
+    : '';
+  const pie = pieDe(p, s, e);
+  return `<div class="alm-varios">${selector}${htmlAlmacenPuerta(p, s, e)}${pie ? `<div class="alm-extra">${pie}</div>` : ''}</div>`;
+}
+
+/** Los clics de `htmlAlmacenes`: el selector cambia de almacén (cada uno guarda su borrador) y el resto, como en la puerta. */
+export function cablearAlmacenes(raiz: HTMLElement, p: ProyeccionJugador, sitios: SitioAlmacen[], ejecutar: Ejecutar, e: Escapar): void {
+  const caja = raiz.querySelector<HTMLElement>('.alm-varios');
+  if (!caja || !sitios.length) return;
+  const cablearDentro = (): void => {
+    cablearAlmacenPuerta(caja, p, elegido(sitios), ejecutar, e);
+    const error = (m: string | null): void => { const x = caja.querySelector<HTMLElement>('[data-alm-error]'); if (x) x.textContent = m ?? ''; };
+    caja.querySelector<HTMLButtonElement>('[data-vaciar-carro]')?.addEventListener('click', async (ev) => {
+      (ev.currentTarget as HTMLButtonElement).disabled = true;
+      error(await ejecutar('vaciarCarro', { heroeId: p.heroeId }));
+    });
+    caja.querySelector<HTMLInputElement>('[data-almacen-cerrar]')?.addEventListener('change', async (ev) => {
+      const c = ev.currentTarget as HTMLInputElement;
+      error(await ejecutar('cerrarAlmacenACiudadanos', { asentamientoId: c.dataset.almacenCerrar!, cerrado: c.checked }));
+    });
+  };
+  caja.querySelector('.alm-selector')?.addEventListener('click', (ev) => {
+    const b = (ev.target as HTMLElement).closest<HTMLButtonElement>('[data-alm-sitio]');
+    if (!b) return;
+    elegidos.set(grupo(sitios), b.dataset.almSitio!);
+    caja.innerHTML = new DOMParser().parseFromString(htmlAlmacenes(p, sitios, e), 'text/html').querySelector('.alm-varios')!.innerHTML;
+    aplicarAyudas(caja);
+    // el selector es nuevo: se vuelve a cablear todo
+    cablearAlmacenes(raiz, p, sitios, ejecutar, e);
+  });
+  cablearDentro();
 }

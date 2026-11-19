@@ -179,3 +179,8 @@ export function cablearCarro(raiz: HTMLElement, ejecutar: Ejecutar, heroeId?: st
     if (mensaje !== null) { c.checked = !c.checked; if (error) error.textContent = mensaje; }
   }));
 }
+
+/** ¿Tu almacén personal está a mano? Dentro de tu residencia o con tu columna a su puerta (para la ventana «Almacén», 0.223.0). */
+export function almacenPersonalAMano(p: ProyeccionJugador): boolean {
+  return almacenAMano(p, miColumna(p));
+}
