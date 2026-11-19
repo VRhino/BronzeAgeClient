@@ -96,11 +96,26 @@ describe('la tienda', () => {
     const piezas = arm.piezasDeTienda(plaza());
     expect(piezas.length).toBeGreaterThan(0);
     expect(piezas.every((f) => ['arma', 'armadura', 'montura'].includes(f.tipo) && f.tier !== null && f.tier <= 2)).toBe(true);
-    expect(piezas.every((f) => f.tipo === 'montura' || !f.metal || ['inicio', 'cobre'].includes(f.metal))).toBe(true);
+    expect(piezas.every((f) => f.tipo === 'montura' || !f.metal || ['inicio', 'recluta', 'cobre'].includes(f.metal))).toBe(true);
     expect(piezas.some((f) => f.id === 'casco_ligera_cobre')).toBe(true);
     expect(piezas.some((f) => f.id === 'casco_ligera_hierro_temprano')).toBe(false);
     expect(piezas.some((f) => f.tipo === 'montura')).toBe(true);
     expect(arm.piezasDeTienda(plaza({ metalesArmeria: ['inicio', 'cobre', 'hierro_temprano'] })).some((f) => f.id === 'casco_ligera_hierro_temprano')).toBe(true);
+  });
+
+  test('las armaduras de inicio ya no se venden; las de recluta, con casco, sí y sin tecnología (motor 2026-11-19)', () => {
+    const piezas = arm.piezasDeTienda(plaza({ metalesArmeria: [] }));
+    expect(piezas.some((f) => f.id === 'torso_ligera_inicio')).toBe(false);
+    expect(piezas.some((f) => f.metal === 'inicio' && f.tipo === 'armadura')).toBe(false);
+    expect(['torso', 'casco', 'pantalones', 'guantes', 'botas'].every((h) => ['ligera', 'media', 'pesada'].every((w) => piezas.some((f) => f.id === `${h}_${w}_recluta`)))).toBe(true);
+    expect(piezas.some((f) => f.metal === 'cobre')).toBe(false);
+  });
+
+  test('la Armería de un campamento solo vende lo que no pide tecnología y no tiene forja', () => {
+    const html = arm.htmlArmeriaDeCampamento(proy({ era: 3 }), 'camp-1', (x: string) => x);
+    expect(html).toContain('recluta');
+    expect(html).not.toContain('Forja');
+    expect(arm.piezasDeTienda(arm.armeriaDeCampamento('camp-1')).every((f) => f.tipo === 'montura' || !f.metal || f.metal === 'inicio' || f.metal === 'recluta')).toBe(true);
   });
 
   test('paga la mitad de la ficha, hacia abajo', () => {

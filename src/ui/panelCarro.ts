@@ -101,12 +101,14 @@ export function htmlCarro(p: ProyeccionJugador, e: Escapar, cabecera = true, con
   const ciudadano = Boolean(plaza?.faccionId) && plaza?.faccionId === p.faccionId;
   const yo = p.facciones.find((f) => f.id === p.faccionId)?.miembros?.find((m) => m.heroeId === p.heroeId);
   const gobernador = Boolean(plaza && yo?.cargos.includes(`gobernador@${plaza.id}`));
+  // con el almacén cerrado sacan el Gobernador y el Tesorero (motor 2026-11-19); cerrarlo sigue siendo del Gobernador
+  const sacaCerrado = gobernador || Boolean(plaza && yo?.cargos.includes(`tesorero@${plaza.id}`));
   const motivoLider = columna && !esLider ? 'Solo el Líder de la columna mueve lo del carro.' : null;
 
   const accionesCarro: AccionDeFila[] = [];
   if (aMano) accionesCarro.push({ accion: 'guardar', etiqueta: 'Al almacén personal', motivo: motivoLider });
   if (plaza) accionesCarro.push({ accion: 'aPlaza', etiqueta: 'A la plaza' });
-  const motivoSacar = (plaza?.cerrado && !gobernador ? 'El Gobernador ha cerrado el almacén a los ciudadanos.' : libre === 0 ? 'El carro está lleno.' : null);
+  const motivoSacar = (plaza?.cerrado && !sacaCerrado ? 'El Gobernador ha cerrado el almacén a los ciudadanos.' : libre === 0 ? 'El carro está lleno.' : null);
 
   const nota = !columna
     ? 'Dentro de tu residencia el carro sigue contigo: entrar no lo vacía. Pásalo a tu almacén personal o al de la plaza recurso a recurso, o todo de una vez con «Todo al almacén personal». Al salir, lo que haya en el carro sale contigo y en la ventana de salida eliges qué más cargas.'
@@ -117,7 +119,7 @@ export function htmlCarro(p: ProyeccionJugador, e: Escapar, cabecera = true, con
         : 'Guarda en tu almacén personal lo que quieras conservar. Al entrar en tu campamento se guarda solo. El carro es solo carga: la columna come de tus víveres (barra de abajo del mapa), y de aquí se les pasa trigo.';
   const almacenPlaza = plaza && ciudadano && plaza.almacen
     ? `${ocupacion(`Almacén de ${e(plaza.nombre)}`, {}, undefined)}
-      ${plaza.cerrado ? `<p class="asent-lado-nota">${gobernador ? 'Lo tienes cerrado: los ciudadanos no sacan al carro (dejar sigue abierto).' : 'El Gobernador lo ha cerrado: no se saca al carro, pero se puede dejar.'}</p>` : ''}
+      ${plaza.cerrado ? `<p class="asent-lado-nota">${gobernador ? 'Lo tienes cerrado: los ciudadanos no sacan al carro (dejar sigue abierto).' : sacaCerrado ? 'El Gobernador lo ha cerrado a los ciudadanos; como Tesorero tú sigues sacando al carro.' : 'El Gobernador lo ha cerrado: no se saca al carro, pero se puede dejar.'}</p>` : ''}
       ${filas(plaza.almacen, 'plaza', [{ accion: 'dePlaza', etiqueta: 'Al carro', motivo: motivoSacar, tope: libre }], e, plaza.id)}`
     : plaza && !ciudadano ? '<p class="asent-lado-nota">El almacén de esta plaza solo lo usan sus ciudadanos; si es de una Facción aliada o vasalla puedes dejarle lo del carro.</p>' : '';
   const cierre = plaza && gobernador
@@ -176,4 +178,9 @@ export function cablearCarro(raiz: HTMLElement, ejecutar: Ejecutar, heroeId?: st
     const mensaje = await ejecutar('cerrarAlmacenACiudadanos', { asentamientoId: c.dataset.almacenCerrar!, cerrado: c.checked });
     if (mensaje !== null) { c.checked = !c.checked; if (error) error.textContent = mensaje; }
   }));
+}
+
+/** ¿Tu almacén personal está a mano? Dentro de tu residencia o con tu columna a su puerta (para la ventana «Almacén», 0.223.0). */
+export function almacenPersonalAMano(p: ProyeccionJugador): boolean {
+  return almacenAMano(p, miColumna(p));
 }

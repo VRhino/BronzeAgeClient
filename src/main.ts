@@ -72,9 +72,9 @@ import { ayuda } from './ui/ayuda';
 import { htmlInformeDeInspeccion } from './ui/interaccionAjena';
 import { cablearPanelObras, construidoAlClicar, cuantosConstruidos, elegirGrupoDe, htmlConstruidosVentana, htmlConstruir, minutosDeObra } from './ui/panelObras';
 import { cablearTesoreria, htmlReservaRecursos } from './ui/panelTesoreria';
-import { cablearPausarConsumo, htmlPausarConsumo } from './ui/consumoPausado';
+import { cablearPausarConsumo, htmlComidaDePlaza, htmlPausarConsumo } from './ui/consumoPausado';
 import { montarPanelRendimiento } from './ui/panelRendimiento';
-import { cablearArmeria, htmlArmeria, pestanasDeArmeria } from './ui/armeria';
+import { armeriaDeCampamento, cablearArmeria, htmlArmeria, htmlArmeriaDeCampamento, pestanasDeArmeria } from './ui/armeria';
 import { cablearProduccionYRecetas, cablearVistaCiudad, confirmarCancelarObra, edificioSeleccionado, elegirEdificio, htmlExtraccion, htmlRecetas, htmlTooltipEdificio, repintarFicha } from './ui/vistaCiudad';
 import { campamentoEnVista } from './ciudad3d/campamento';
 import { puebloEnVista } from './ciudad3d/pueblo';
@@ -111,7 +111,7 @@ import { htmlInforme, textoDeBotin, type InformeDeCombate } from './ui/informeCo
 import { cablearAvisos, htmlAvisos } from './ui/panelAvisos';
 import { cablearTecnologia, htmlTecnologia } from './ui/panelTecnologia';
 import { cablearColumna, htmlColumna } from './ui/panelColumna';
-import { cablearCarro, htmlCarro } from './ui/panelCarro';
+import { cablearAlmacenes, htmlAlmacenes, sitioDePlaza, sitioPersonal, sitiosDentroDePlaza } from './ui/almacenPuerta';
 import { cablearPanelIntel, renderPanelIntel } from './ui/panelIntel';
 import { cablearMercenariosDeRegion, htmlMercenariosDeRegion, tabernaActiva } from './ui/tabernaRegion';
 import { cablearMercadoDePlaza, htmlMercadoDePlaza } from './ui/mercadoDePlaza';
@@ -932,6 +932,12 @@ function pintarCampamento(p: ProyeccionJugador, campamento: CampamentoMercenario
   }, abierta);
   const taberna = lado.querySelector<HTMLElement>('#camp-taberna');
   if (taberna) pintarIntel(taberna, p, () => pintarCampamento(p, campamento));
+  // la Armería del campamento (solo tienda): su ventana se repinta sola con `pintar`, que conserva lo elegido
+  const armeria = lado.querySelector<HTMLElement>('#camp-armeria');
+  if (armeria) {
+    const repintarArmeria = (): void => { invalidar(armeria); const q = estadoCliente.proyeccionUltima; if (q) pintarCampamento(q, campamento); };
+    pintar(armeria, htmlArmeriaDeCampamento(p, campamento.id, escaparHtml), () => cablearArmeria(armeria, armeriaDeCampamento(campamento.id), ejecutarYRefrescar, repintarArmeria), 'armeria-camp');
+  }
 }
 
 /** La columna en la que MARCHA el jugador (Doc 5.12.2) — su posición en el mundo. `undefined` mientras esté
@@ -1267,6 +1273,17 @@ function puertaDePlaza(p: ProyeccionJugador, a: AsentamientoEnMapa, x: { propio:
       };
     };
   }
+  // «Almacén» (0.222.0): entre el almacén de tu plaza y el carro de tu columna sin entrar, en los dos sentidos (motor 2026-11-19, nucleo 0.50.0),
+  // el Líder de la columna; el almacén lo da la plaza propia vista a la puerta. 0.223.0: en tu residencia, con el selector «Personal ↔ carro»
+  // (la que antes era «Carga»)
+  const sitiosPuerta = [
+    ...(interior && lider && interior.almacen ? [sitioDePlaza(p, interior)] : []),
+    ...(aLaPuerta && p.heroe.residenciaId === a.id ? [sitioPersonal(p)] : []),
+  ];
+  if (sitiosPuerta.length) {
+    acciones.push({ id: 'almacen', etiqueta: 'Almacén', icono: '📦', ventana: true, titulo: 'Pasa bienes entre un almacén y el carro de tu columna sin entrar.' });
+    ventanas.almacen = () => ({ titulo: 'Almacén', icono: '📦', ancho: 'centrada', html: htmlAlmacenes(p, sitiosPuerta, escaparHtml), cablear: (cuerpo) => cablearAlmacenes(cuerpo, p, sitiosPuerta, ejecutarYRefrescar, escaparHtml) });
+  }
   if (interior) {
     acciones.push({ id: 'guarnicion', etiqueta: 'Guarnición', icono: '🛡', ventana: true, titulo: 'Deja o recoge tropa de tu columna sin entrar.' });
     ventanas.guarnicion = () => ({
@@ -1290,10 +1307,6 @@ function puertaDePlaza(p: ProyeccionJugador, a: AsentamientoEnMapa, x: { propio:
   if (x.propio && tabernasDisponibles(p).some((t) => t.origen.tipo === 'asentamiento' && t.origen.id === a.id)) {
     acciones.push({ id: 'taberna', etiqueta: 'Taberna', icono: iconoEdificio('taberna', 18), ventana: true });
     ventanas.taberna = () => ({ titulo: 'Taberna', icono: iconoEdificio('taberna', 28), ancho: 'ancha', html: renderPanelIntel(p, escaparHtml, a.id), cablear: (cuerpo) => cablearPanelIntel(cuerpo, p, ejecutarYRefrescar, () => { olvidarEdicion(cuerpo); invalidar(cuerpo); renderSeleccionMapa(); }) });
-  }
-  if (aLaPuerta && p.heroe.residenciaId === a.id) {
-    acciones.push({ id: 'carga', etiqueta: 'Carga', icono: '📦', ventana: true, titulo: 'Tu carro y tu almacén personal.' });
-    ventanas.carga = () => ({ titulo: 'Tu carga', icono: '📦', ancho: 'normal', html: htmlCarro(p, escaparHtml, false, false), cablear: (cuerpo) => cablearCarro(cuerpo, ejecutarYRefrescar, p.heroeId) });
   }
   return { acciones, ventanas, batallaId: batalla?.battleId };
 }
@@ -1479,8 +1492,10 @@ function puertaDeCampamento(p: ProyeccionJugador, c: CampamentoMercenarios, dist
     ventanas.mercado = seccion('mercado', 'Mercado del campamento', iconoEdificio('mercado', 28), 'normal');
   }
   if (p.heroe.residenciaId === c.id || c.residentesIds.includes(p.heroeId)) {
-    acciones.push({ id: 'carga', etiqueta: 'Carga', icono: '📦', ventana: true, titulo: 'Tu carro y tu almacén personal.' });
-    ventanas.carga = () => ({ titulo: 'Tu carga', icono: '📦', ancho: 'normal', html: htmlCarro(p, escaparHtml, false, false), cablear: (cuerpo) => cablearCarro(cuerpo, ejecutarYRefrescar, p.heroeId) });
+    // «Almacén» (0.223.0, antes «Carga»): tu almacén personal y el carro, la misma ventana que la de la plaza
+    const sitios = [sitioPersonal(p)];
+    acciones.push({ id: 'almacen', etiqueta: 'Almacén', icono: '📦', ventana: true, titulo: 'Pasa bienes entre tu almacén personal y el carro.' });
+    ventanas.almacen = () => ({ titulo: 'Almacén', icono: '📦', ancho: 'centrada', html: htmlAlmacenes(p, sitios, escaparHtml), cablear: (cuerpo) => cablearAlmacenes(cuerpo, p, sitios, ejecutarYRefrescar, escaparHtml) });
   }
   return { acciones, ventanas };
 }
@@ -2721,18 +2736,20 @@ function contenidoDeVentana(v: VentanaPlaza, c: ContextoPlaza, ajena: boolean): 
       // a pantalla completa: qué va en la barra de arriba, el almacén con su neto por minuto, la extracción y la reserva de recursos del Tesorero
       // a la izquierda (la reserva vino de Gobierno → Tesorería, Víctor 2026-11-04); los talleres a la derecha
       // «Tu carga» (Víctor, 2026-11-07: se perdió al hacer la Base personal en 0.161.0): el carro y el almacén personal con el de la plaza, para
-      // pasar de uno a otro (`htmlCarro` con la plaza)
+      // pasar de uno a otro. 0.223.0 (Víctor 2026-11-19, opción 2): la ventana «Almacén» de la puerta, con el selector «Plaza ↔ carro» /
+      // «Personal ↔ carro» cuando estás en tu residencia
       const subsAlmacen: [string, string][] = [['almacen', 'Almacén'], ['carga', 'Tu carga']];
       if (elegir(subsAlmacen) === 'carga') {
+        const sitios = sitiosDentroDePlaza(p, a);
         return {
           titulo: 'Almacén', icono: iconoEdificio('almacen', 28), subs: subsAlmacen, sub: 'carga', ancho: 'completa',
-          html: `<div class="almacen-carga">${htmlCarro(p, escaparHtml, false, true, true)}</div>`,
-          cablear: () => cablearCarro(cuerpo, ejecutarYRefrescar, p.heroeId),
+          html: `<div class="alm-dentro">${htmlAlmacenes(p, sitios, escaparHtml)}</div>`,
+          cablear: () => cablearAlmacenes(cuerpo, p, sitios, ejecutarYRefrescar, escaparHtml),
         };
       }
       return {
         titulo: 'Almacén', icono: iconoEdificio('almacen', 28), subs: subsAlmacen, sub: 'almacen', ancho: 'completa',
-        html: `<div class="cols-completa"><div class="col-completa">${htmlEleccionBarra(a, escaparHtml)}${htmlExtraccion(c)}<div class="almacen-reserva">${htmlReservaRecursos(c)}</div></div><div class="col-completa">${htmlPausarConsumo(p, a, escaparHtml)}${htmlRecetas(c)}</div></div>`,
+        html: `<div class="cols-completa"><div class="col-completa">${htmlEleccionBarra(a, escaparHtml)}${htmlExtraccion(c)}<div class="almacen-reserva">${htmlReservaRecursos(c)}</div></div><div class="col-completa">${htmlComidaDePlaza(a, escaparHtml)}${htmlPausarConsumo(p, a, escaparHtml)}${htmlRecetas(c)}</div></div>`,
         cablear: () => {
           cablearEleccionBarra(cuerpo, a, () => { renderPieDePlaza(); renderPanelEdificios(); }, (m) => mostrarAviso(m, true));
           cablearProduccionYRecetas(c);

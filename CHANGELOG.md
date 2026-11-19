@@ -3,6 +3,34 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.223.0] — 2026-11-19 · La ventana «Almacén» también por dentro · motor `0e2efa1`
+
+Sin cambio de contrato (0.30.0). Víctor: reutilizar la transferencia de la puerta dentro de la plaza, con un selector arriba (opción 2).
+
+- **Dentro de la plaza** (Almacén → Tu carga): la misma ventana de la puerta. En tu residencia, un selector arriba: «Plaza ↔ carro» y «Personal ↔ carro»; cada uno guarda su borrador hasta «Confirmar». El Gobernador sigue teniendo «Cerrar el almacén a los ciudadanos» debajo.
+- **Dentro del pueblo** (Carga): la misma ventana con el almacén del pueblo.
+- **En tu residencia** (Bienes) y a la puerta de tu campamento: la misma ventana con tu almacén personal; «Carga» pasa a «Almacén». A la puerta de tu plaza de residencia, «Almacén» lleva el selector y ya no hay «Carga» aparte. Sin columna, «Todo al almacén personal» sigue debajo.
+
+## [0.222.0] — 2026-11-19 · La ventana «Almacén» a la puerta, en los dos sentidos · motor `0e2efa1`
+
+Sin cambio de contrato (0.30.0). El motor (nucleo 0.50.0) deja ya `dejarEnPlaza` y `dejarEnPueblo` con la columna a la puerta, con las mismas reglas que sacar.
+
+- **«Al carro» pasa a «Almacén»** (📦) a la puerta de una plaza o un pueblo de tu Facción, para el Líder de la columna. Es una ventana centrada en escritorio y a pantalla completa en móvil.
+- **Dos lados**: a la izquierda el almacén del sitio y a la derecha el carro de la columna. Cada bien es una ficha con su icono a la izquierda, y solo salen los que tienen algo y se pueden pasar.
+- **Cada clic pasa 10 al otro lado** (o lo que quede, o lo que quepa), en los dos sentidos. Nada se manda hasta «Confirmar», que deja primero y saca después; «Deshacer» lo vuelve todo atrás.
+- Con el almacén de la plaza cerrado a los ciudadanos, sin cargo no se saca, pero sí se deja. Al pueblo solo se le deja lo que produce, hasta su capacidad.
+
+## [0.221.0] — 2026-11-19 · Al carro a la puerta, cancelar obras de pueblo, armaduras de recluta, Armería en los campamentos y lo que come la plaza · motor `ca67e25`
+
+Contrato 0.30.0 (motor PR #33): `Asentamiento.comida_poblacion` (59) y `comida_guarnicion` (60), y `cancelar_obra` vale sobre la obra de un pueblo. La tanda del 19 de Víctor, motor y cliente a la vez.
+
+- **Al carro sin entrar**: la ficha de una plaza de tu Facción, con tu columna a la puerta, tiene «Al carro» (el Líder): su almacén con un botón por recurso (`cargarDePlaza`). La ficha de un pueblo de tu Facción, igual (`cargarDePueblo`). Dejar sigue siendo de dentro.
+- **Tesorero**: con el almacén de la plaza cerrado a los ciudadanos, el Tesorero también saca al carro (dentro y a la puerta).
+- **Cancelar la obra de un pueblo o su mejora**: en Territorio, la subida de nivel en obra tiene «Cancelar la mejora» (`cancelarObra`); y a la puerta de la obra, junto a «Entregar materiales», «Cancelar la obra» o «Cancelar la mejora» para el Gobernador o el Maestro de Obras de la madre, también mientras se levanta. Lo entregado no se devuelve.
+- **Armaduras de recluta**: la tienda vende las 15 de recluta (tier I, con casco) y ya no las de inicio (`enTienda: false`); se siguen vendiendo a la tienda.
+- **Armería en los campamentos de mercenarios**: una parte nueva del campamento, solo tienda (recluta, armas de inicio y monturas I-II); sin forja.
+- **Lo que come la plaza**: en la ventana del Almacén, «Lo que come la plaza» con la población y la guarnición por hora; y en el letrero de la Nutrición, las mismas líneas.
+
 ## [0.220.1] — 2026-11-18 · Zoom del mundo en móvil: el botón + acerca · motor `810cbf1`
 
 Sin cambio de contrato (0.27.0). Arreglo: el botón + del zoom del mundo (0.220.0) alejaba igual que el −, porque el atributo `data-zoom-3d` no da la clave `zoom3d` en `dataset` (un guion seguido de un número no se convierte). Pasa a `data-zoom-mundo`.

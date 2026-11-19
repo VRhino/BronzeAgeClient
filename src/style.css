@@ -6824,3 +6824,47 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
 .mp-motivo { grid-column: 1 / -1; font-size: 0.7rem; color: var(--text-secondary); }
 /* Campamento → Tropa: «Reponer las prestadas» en la cabecera, pequeño, a la derecha */
 .camp-reponer-prestadas { width: auto; flex: none; margin-left: auto; padding: 4px 12px; font-size: 0.8rem; }
+
+/* La ventana «Almacén» de la puerta (0.222.0, Víctor 2026-11-19): centrada en escritorio, a pantalla completa en móvil. A la izquierda el almacén
+   del sitio y a la derecha el carro; cada ficha, con su icono a la izquierda, pasa 10 al otro lado; «Confirmar» al final. */
+.mapa-screen > .puerta-ventana[data-ancho="centrada"] {
+  top: 50%; left: 50%; right: auto; bottom: auto; transform: translate(-50%, -50%);
+  width: min(760px, calc(100vw - 32px)); max-height: min(640px, calc(100vh - 48px)); z-index: 6;
+  animation-name: ventana-almacen-entra;
+}
+@keyframes ventana-almacen-entra { from { opacity: 0; transform: translate(-50%, -48%); } }
+@media (max-width: 760px) {
+  .mapa-screen > .puerta-ventana[data-ancho="centrada"] { inset: 6px; width: auto; max-height: none; transform: none; z-index: 20; animation-name: none; }
+}
+@media (max-height: 520px) and (orientation: landscape) and (pointer: coarse) {
+  .mapa-screen > .puerta-ventana[data-ancho="centrada"] { inset: 6px; width: auto; max-height: none; transform: none; z-index: 20; animation-name: none; }
+}
+.alm-puerta { display: flex; flex-direction: column; gap: 10px; }
+.alm-lados { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.alm-lado { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 8px; background: rgba(20, 15, 10, 0.35); border: 1px solid var(--bronce-osc); border-radius: 3px; }
+.alm-cab { display: flex; align-items: flex-start; gap: 6px; }
+.alm-cab > :first-child { flex: 1; min-width: 0; }
+.alm-fichas { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.alm-ficha {
+  display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: auto auto; align-items: center; column-gap: 8px;
+  min-height: 44px; padding: 5px 8px; margin: 0; text-align: left; cursor: pointer;
+  background: rgba(20, 15, 10, 0.55); border: 1px solid var(--bronce-osc); border-radius: 3px; color: var(--pergamino, #e8dcc0); font: inherit;
+}
+.alm-ficha .alm-icono { grid-row: 1 / span 2; font-size: 1.4rem; line-height: 1; }
+.alm-ficha .alm-nombre { font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.alm-ficha b { grid-column: 3; grid-row: 1 / span 2; font-variant-numeric: tabular-nums; color: var(--oro); }
+.alm-ficha .alm-delta { grid-column: 2; font-size: 0.72rem; font-variant-numeric: tabular-nums; }
+.alm-ficha.sube { border-color: #7fa65a; }
+.alm-ficha.sube .alm-delta { color: #a9d27f; }
+.alm-ficha.baja { border-color: #b0703f; }
+.alm-ficha.baja .alm-delta { color: #e0a070; }
+.alm-ficha:hover:not(:disabled) { border-color: var(--oro); }
+.alm-ficha:disabled { opacity: 0.5; cursor: not-allowed; }
+.alm-pie { display: flex; justify-content: flex-end; gap: 8px; }
+.alm-pie button { flex: 0 0 auto; width: auto; margin: 0; min-height: 38px; padding: 6px 18px; }
+@media (max-width: 520px) { .alm-lados { grid-template-columns: 1fr; } }
+/* 0.223.0: la misma ventana por dentro (plaza, pueblo, residencia), centrada en el panel; el selector «Plaza ↔ carro» / «Personal ↔ carro» arriba */
+.alm-dentro { max-width: 820px; margin: 0 auto; width: 100%; }
+.alm-varios { display: flex; flex-direction: column; gap: 10px; }
+.alm-selector { margin: 0; }
+.alm-extra { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }

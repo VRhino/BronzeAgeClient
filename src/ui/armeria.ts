@@ -59,16 +59,23 @@ export function ordenDeEraDelMundo(p: ProyeccionJugador): number {
 /** La Era que pide forjar una pieza de ese tier (0: ninguna). */
 export const eraDelTier = (tier: number): number => catalogoDeObjetos()?.forja?.eraPorTier[String(tier)] ?? 0;
 
-/** ¿Abre la Armería de esta plaza el metal de la pieza? `inicio` y las monturas no piden tecnología. */
-export function metalAbierto(a: Pick<Asentamiento, 'metalesArmeria'>, f: FichaObjeto): boolean {
-  return f.tipo === 'montura' || !f.metal || f.metal === 'inicio' || (a.metalesArmeria ?? []).includes(f.metal);
+/** Los metales que no piden tecnología (`metales` del catálogo a `null`): `inicio` y, desde el motor 2026-11-19, `recluta`. */
+function metalesLibres(): string[] {
+  const m = catalogoDeObjetos()?.metales;
+  return m ? Object.entries(m).filter(([, t]) => t === null).map(([k]) => k) : ['inicio', 'recluta'];
 }
 
-/** Lo que vende la tienda de esta plaza: armas, armaduras y monturas hasta `tiendaHastaTier`, con su metal abierto. */
+/** ¿Abre la Armería de esta plaza el metal de la pieza? Las monturas y los metales sin tecnología (inicio, recluta) siempre. */
+export function metalAbierto(a: Pick<Asentamiento, 'metalesArmeria'>, f: FichaObjeto): boolean {
+  return f.tipo === 'montura' || !f.metal || metalesLibres().includes(f.metal) || (a.metalesArmeria ?? []).includes(f.metal);
+}
+
+/** Lo que vende la tienda de esta plaza: armas, armaduras y monturas hasta `tiendaHastaTier`, con su metal abierto y sin las que no se venden
+ * (`enTienda: false`, las armaduras de inicio). En un campamento de mercenarios `a` no abre metales: solo lo que no pide tecnología. */
 export function piezasDeTienda(a: Pick<Asentamiento, 'metalesArmeria'>): FichaObjeto[] {
   const cat = catalogoDeObjetos();
   const hasta = cat?.tiendaHastaTier ?? 2;
-  return (cat?.objetos ?? []).filter((f) => (f.tipo === 'arma' || f.tipo === 'armadura' || f.tipo === 'montura') && f.tier !== null && f.tier <= hasta && metalAbierto(a, f));
+  return (cat?.objetos ?? []).filter((f) => (f.tipo === 'arma' || f.tipo === 'armadura' || f.tipo === 'montura') && f.tier !== null && f.tier <= hasta && f.enTienda !== false && metalAbierto(a, f));
 }
 
 /** Lo que te paga la tienda por una unidad: `ventaPct` del precio de su ficha, hacia abajo. */
@@ -399,6 +406,14 @@ export function htmlArmeria(p: ProyeccionJugador, a: Asentamiento, resideAqui: b
   const cerrada = !aperturaPara(a, g).abierta ? `<p class="asent-lado-nota">La forja de esta plaza está cerrada a los ${g}: aquí solo se compra y se vende.</p>` : '';
   const html = pestana === 'forja' ? htmlForja(p, a, resideAqui, e) : pestana === 'abrir' ? htmlAbrirForja(a) : `${cerrada}${htmlTienda(p, a, e)}`;
   return `<div class="arm-ventana">${html}<p class="faction-error" data-campo="error-armeria" role="alert"></p></div>`;
+}
+
+/** La Armería de un campamento de mercenarios (motor 2026-11-19): solo tienda, con lo que no pide tecnología (inicio, recluta y monturas I-II); allí
+ * no se forja. Se cablea con `cablearArmeria` y la plaza de mentira que da `armeriaDeCampamento`. */
+export const armeriaDeCampamento = (id: string): Asentamiento => ({ id, metalesArmeria: [] } as unknown as Asentamiento);
+export function htmlArmeriaDeCampamento(p: ProyeccionJugador, campamentoId: string, e: Escapar): string {
+  if (!catalogoDeObjetos()) return '<p class="asent-lado-nota">Cargando el catálogo de objetos…</p>';
+  return `<div class="arm-ventana"><p class="asent-lado-nota">La Armería del campamento solo compra y vende: armaduras de recluta, armas y monturas que no piden tecnología. Lo mejor está en las plazas.</p>${htmlTienda(p, armeriaDeCampamento(campamentoId), e)}<p class="faction-error" data-campo="error-armeria" role="alert"></p></div>`;
 }
 
 /** Los botones de la ventana: comprar, vender, forjar, los filtros y abrir la forja. `repintar` vuelve a pintar la ventana. */

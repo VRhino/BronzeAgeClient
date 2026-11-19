@@ -21,7 +21,8 @@ import { iconoEnFila } from './iconosTropa';
 import { chipsDeCoste } from './juegoVisual';
 import { chipLiderazgo } from './liderazgo';
 import { estadoCliente } from './estadoCliente';
-import { cablearCarro, htmlCarro, type Ejecutar } from './panelCarro';
+import { type Ejecutar } from './panelCarro';
+import { cablearAlmacenes, htmlAlmacenes, sitioPersonal } from './almacenPuerta';
 import { cablearHeroe, dentroDeSuResidencia, dondeEsta, editandoLoadout, htmlFichaHeroe, htmlLoadouts, minutosHerido, soltarBorrador, type Aplicar } from './panelHeroe';
 import { detalleInforme, hace } from './panelIntel';
 import { nombreDeAvanzada, nombreDePueblo } from './pueblos';
@@ -312,7 +313,8 @@ function htmlPasarAViveres(p: ProyeccionJugador, repintar: () => void): string {
 }
 
 function htmlBienes(p: ProyeccionJugador, e: Escapar, repintar: () => void): string {
-  return `<div class="base-bienes"><div class="base-bienes-carga">${htmlPasarAViveres(p, repintar)}${htmlCarro(p, e, false, false)}</div></div>`;
+  // 0.223.0: tu almacén personal y el carro en la ventana «Almacén» de la puerta (Víctor 2026-11-19, opción 2)
+  return `<div class="base-bienes"><div class="base-bienes-carga">${htmlPasarAViveres(p, repintar)}<div class="alm-dentro">${htmlAlmacenes(p, [sitioPersonal(p)], e)}</div></div></div>`;
 }
 
 // ── Historial ──
@@ -416,7 +418,7 @@ export function cablearBasePersonal(panel: HTMLElement, p: ProyeccionJugador, ct
   }));
 
   // Bienes
-  if (pestana === 'bienes') cablearCarro(panel, ctx.ejecutar, p.heroeId);
+  if (pestana === 'bienes') cablearAlmacenes(panel, p, [sitioPersonal(p)], ctx.ejecutar, (t) => t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`));
   if (pestana === 'equipo') cablearEquipoHeroe(panel, ctx.ejecutar, ctx.repintar);
   boton('[data-base-viveres]', () => {
     const n = Math.floor(Number(panel.querySelector<HTMLInputElement>('[data-base-viveres-cantidad]')?.value ?? 0));

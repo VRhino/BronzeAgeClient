@@ -284,6 +284,10 @@ export interface Asentamiento {
   /** Los bienes de consumo cuyo consumo pausó el Gobernador o el Tesorero (`pausarConsumo`, contrato 0.21.0), en el orden del catálogo: la población no
    * los come y la guarnición no come la carne. Ausente = ninguno. */
   consumoPausado?: string[];
+  /** Lo que come la plaza el minuto siguiente (contrato 0.30.0, motor 2026-11-19), en unidades por minuto: la población, bien a bien (lo que hay; el trigo, lo
+   * que pide aunque falte), y aparte la guarnición (carne primero y trigo para el resto de la ración). Solo de dentro o de tu plaza a la puerta. */
+  comidaPoblacion?: Record<string, number>;
+  comidaGuarnicion?: Record<string, number>;
   /** La advertencia de solvencia del nivel siguiente (contrato 0.21.0): cada recurso del mantenimiento de ese nivel que lo que llega por minuto no cubre.
    * No bloquea el ascenso. Ausente = lo cubre todo o está en el nivel máximo. */
   insolvenciaAscenso?: { recurso: string; llega: number; pide: number }[];
