@@ -3,6 +3,14 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.224.1] — 2026-11-20 · El Fondo del campamento, como una interfaz de juego · motor `b8f8254`
+
+Solo cliente, sin cambios de contrato.
+
+- **Aportar con «+10»**: se quitan el combo, la cantidad y los botones «Aportar», «Lo que falta» y «Retirar». Cada material del precio de la caravana es una carta con su barra y un botón redondo «+10» que suma 10 si los tienes; si falta menos o tienes menos, suma solo eso (el botón lo muestra: «+8», «+5»). Sale del almacén si resides allí y después del carro.
+- **Retirar**: un «−10» redondo por material, solo si hay algo puesto; los materiales que no pide el precio salen como carta aparte.
+- **Aspecto de juego**: cartas de bronce con medallón de icono, cifra grande, barra de oro (verde al completar) y barra total con «reunido / total»; en móvil caben las cuatro cartas en una fila sin scroll.
+
 ## [0.224.0] — 2026-11-19 · Cancelar tu solicitud de ingreso y el enfriamiento de 24 h para entrar · motor `b8f8254`
 
 Contrato 0.31.0 (motor nucleo 0.52.0): orden `cancelar_solicitud` (campo 203) y el rechazo `faccion.cooldown_ingreso`, que sustituye a `faccion.cooldown_creacion`.

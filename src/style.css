@@ -2979,13 +2979,29 @@ kbd {
 [data-carga-total].excedido { color: #e8806f; }
 
 /* Fondo de refundación: precio de la caravana con barras por material. */
-.fondo-fila { display: grid; grid-template-columns: 1fr 90px auto; align-items: center; gap: 4px 8px; font-size: 0.85rem; margin: 6px 0; }
-.fondo-fila small { grid-column: 1 / -1; color: var(--text-secondary); }
-.fondo-fila.listo small { color: #8bc48a; }
-.fondo-barra { height: 8px; background: #3a362b; border-radius: 4px; overflow: hidden; }
-.fondo-barra i { display: block; height: 100%; background: #d9b44a; transition: width 0.4s; }
-.fondo-fila.listo .fondo-barra i { background: #6fae6e; }
-.fondo-barra-total { height: 12px; margin: 6px 0 10px; }
+.fondo-titulo { font-family: var(--fuente-titulo); letter-spacing: 0.08em; text-transform: uppercase; color: var(--pergamino); }
+.fondo-cartas { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 10px; margin: 10px 0; }
+.fondo-fila { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 8px; border: 1px solid var(--bronce); border-radius: 4px; background: linear-gradient(180deg, rgba(60, 44, 26, 0.9), rgba(24, 18, 12, 0.95)); box-shadow: var(--placa-sutil); text-align: center; }
+.fondo-fila.con-algo { border-color: var(--oro); }
+.fondo-fila.listo { border-color: #7fa65a; box-shadow: 0 0 14px rgba(127, 166, 90, 0.28); }
+.fondo-icono { width: 42px; height: 42px; display: grid; place-items: center; font-size: 1.35rem; line-height: 1; border-radius: 50%; border: 1px solid var(--bronce); background: radial-gradient(circle at 35% 30%, rgba(169, 121, 63, 0.45), rgba(20, 16, 11, 0.9)); }
+.fondo-fila.listo .fondo-icono { border-color: #7fa65a; }
+.fondo-nombre { font-family: var(--fuente-titulo); font-size: 0.82rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pergamino); }
+.fondo-valor { font-family: var(--fuente-titulo); font-size: 1.45rem; line-height: 1; color: var(--oro-claro); display: inline-flex; align-items: baseline; gap: 4px; font-variant-numeric: tabular-nums; }
+.fondo-valor em { font-style: normal; font-size: 0.85rem; color: var(--text-secondary); }
+.fondo-estado { font-size: 0.72rem; color: var(--text-secondary); }
+.fondo-fila.listo .fondo-estado { color: #a9d27f; }
+.fondo-barra { position: relative; width: 100%; height: 9px; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--bronce-osc); border-radius: 5px; overflow: hidden; }
+.fondo-barra i { display: block; height: 100%; background: linear-gradient(180deg, #e6c98a, #a9793f); transition: width 0.4s; }
+.fondo-fila.listo .fondo-barra i, .fondo-barra-total.listo i { background: linear-gradient(180deg, #b6f0b6, #4fa86a); }
+.fondo-barra-total { height: 20px; margin: 6px 0 4px; border-color: var(--bronce); box-shadow: var(--placa-sutil); }
+.fondo-barra-total b { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--fuente-titulo); font-size: 0.8rem; letter-spacing: 0.06em; color: #fff1c9; text-shadow: 0 1px 2px #000; }
+.fondo-botones { display: flex; gap: 8px; margin-top: 2px; }
+.fondo-botones button { width: 46px; height: 46px; padding: 0; margin: 0; border-radius: 50%; display: grid; place-items: center; font-family: var(--fuente-titulo); font-size: 0.95rem; line-height: 1; cursor: pointer; color: var(--oro-claro); border: 1px solid var(--bronce); background: linear-gradient(180deg, var(--marco-bg-alt), var(--marco-bg)); box-shadow: var(--placa-sutil); font-variant-numeric: tabular-nums; }
+.fondo-botones .fondo-mas { border-color: var(--oro); background: radial-gradient(circle at 35% 30%, rgba(216, 184, 120, 0.4), rgba(60, 44, 26, 0.9)); }
+.fondo-botones .fondo-menos { width: 40px; height: 40px; align-self: center; font-size: 0.8rem; color: #e0a070; border-color: #b0703f; }
+.fondo-botones button:hover:not(:disabled) { color: #fff1c9; border-color: var(--oro); }
+.fondo-botones button:disabled { opacity: 0.35; cursor: default; }
 
 /* Coste de Liderazgo de una escuadra: marca pequeña junto al nombre. */
 .lid-chip { display: inline-block; margin-left: 6px; padding: 0 6px; font-size: 0.68rem; line-height: 1.5; color: #d9b44a; border: 1px solid #6b5a2c; border-radius: 8px; vertical-align: middle; white-space: nowrap; }

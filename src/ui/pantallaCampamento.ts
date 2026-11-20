@@ -345,6 +345,9 @@ function mercado(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): st
     </section>`;
 }
 
+/** Lo que suma cada clic de «+» en el fondo de refundación (como el paso del almacén de la puerta). */
+const PASO_FONDO = 10;
+
 /** «1.3» con un decimal si lo tiene; los precios del campamento salen de la economía y no son enteros. */
 function formatoPrecio(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
@@ -371,16 +374,32 @@ function fondo(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): stri
     ...(resides ? [{ lado: 'almacen' as const, de: 'almacén', recursos: almacen }] : []),
     ...(carro ? [{ lado: 'carro' as const, de: 'carro', recursos: carro.recursos }] : []),
   ];
-  const opciones = origenes.flatMap((o) => Object.entries(o.recursos).filter(([, n]) => n >= 1).map(([r, n]) => ({ lado: o.lado, de: o.de, r, tienes: Math.floor(n) })));
+  // De dónde sale cada +10: del primer lado con algo de ese material (el almacén si resides aquí, luego el carro); cuando se agota pasa al siguiente.
+  const deDonde = (r: string): { lado: 'almacen' | 'carro'; tienes: number } | null => {
+    for (const o of origenes) { const n = Math.floor(o.recursos[r] ?? 0); if (n >= 1) return { lado: o.lado, tienes: n }; }
+    return null;
+  };
+  const ladoRetirar = resides ? 'almacen' : 'carro';
 
   const necesidad = precio
     ? Object.entries(precio).map(([r, n]) => {
         const hay = Math.floor(fondoDeFaccion[r] ?? 0);
         const listo = hay >= n;
-        return `<div class="fondo-fila${listo ? ' listo' : ''}"><span>${RECURSO_ICONO[r] ?? '📦'} ${e(nombreRecurso(r))}</span>
+        const origen = deDonde(r);
+        // Cada clic suma 10; si falta menos (8, 4…) o tienes menos, suma solo eso.
+        const cant = origen ? Math.min(PASO_FONDO, falta(r), origen.tienes) : 0;
+        const motivo = listo ? 'Ya está completo' : !origen ? 'No tienes de este material' : `Aportar ${cant} de ${nombreRecurso(r)} del ${origen.lado === 'almacen' ? 'almacén' : 'carro'}`;
+        const ret = Math.min(PASO_FONDO, hay);
+        return `<div class="fondo-fila${listo ? ' listo' : ''}${hay >= 1 ? ' con-algo' : ''}">
+          <span class="fondo-icono" aria-hidden="true">${RECURSO_ICONO[r] ?? '📦'}</span>
+          <span class="fondo-nombre">${e(nombreRecurso(r))}</span>
+          <span class="fondo-valor">${Math.min(hay, n)}<em>/ ${n}</em></span>
           <div class="fondo-barra"><i style="width:${Math.min(100, (hay / n) * 100).toFixed(1)}%"></i></div>
-          <strong>${Math.min(hay, n)} / ${n}</strong>
-          <small>${listo ? '✓ completo' : `faltan ${n - hay}`}</small></div>`;
+          <small class="fondo-estado">${listo ? '✓ completo' : `faltan ${n - hay}`}</small>
+          <div class="fondo-botones">
+            ${hay >= 1 ? `<button class="fondo-menos" type="button" data-fondo-retirar="${e(r)}" data-cantidad="${ret}" data-lado="${ladoRetirar}" title="Retirar ${ret} de lo que pusiste tú" aria-label="Retirar ${ret} de ${e(nombreRecurso(r))}">−${ret}</button>` : ''}
+            <button class="fondo-mas" type="button" data-fondo-aportar="${e(r)}" data-cantidad="${cant}" data-lado="${origen?.lado ?? ''}" title="${e(motivo)}" aria-label="${e(motivo)}"${cant < 1 ? ' disabled' : ''}>+${cant || PASO_FONDO}</button>
+          </div></div>`;
       }).join('')
     : '<p class="asent-lado-nota">Cargando el precio de la caravana…</p>';
   const total = precio ? Object.values(precio).reduce((x, y) => x + y, 0) : 0;
@@ -391,21 +410,12 @@ function fondo(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): stri
   const sobrante = Object.entries(fondoDeFaccion).filter(([r, n]) => n > 0 && !(precio && r in precio));
 
   return `
-    <strong class="heroe-sub">Precio de la caravana${precio ? ` · reunido ${reunido} / ${total}` : ''}${ayuda('camp:fondo', 'La Caravana de Fundación se compra aquí entre todos los ciudadanos de tu Facción: cada uno aporta lo que quiere a un fondo común. Lo tuyo se puede retirar mientras no se gaste. El fondo se llena con lo de tu almacén personal o del carro que llevas aquí (el de tu columna o, si resides aquí, tu propio carro). Cuando el fondo está completo, la caravana espera aquí dentro: sal como ejército (Salir › Convocar ejército) y, al partir, el Líder elige llevársela; luego funda donde quieras (panel ⌂).')}</strong>
-    ${precio ? `<div class="fondo-barra fondo-barra-total"><i style="width:${total > 0 ? ((reunido / total) * 100).toFixed(1) : 0}%"></i></div>` : ''}
-    ${necesidad}
-    ${sobrante.length > 0 ? `<p class="asent-lado-nota">Además en el fondo: ${sobrante.map(([r, n]) => `${Math.floor(n)} de ${e(nombreRecurso(r))}`).join(', ')}.</p>` : ''}
-    <strong class="heroe-sub">Aportar</strong>
-    ${opciones.length === 0
-      ? '<p class="asent-lado-nota">No tienes nada que aportar.</p>'
-      : `<div class="campamento-fila">
-      <select class="form-input" id="fondo-recurso">${opciones.map((o) => `<option value="${e(o.r)}" data-lado="${o.lado}" data-tienes="${o.tienes}" data-falta="${falta(o.r)}">${e(nombreRecurso(o.r))}, del ${o.de} (tienes ${o.tienes}${precio && falta(o.r) > 0 ? `, faltan ${falta(o.r)}` : ''})</option>`).join('')}</select>
-      <input class="form-input" id="fondo-cantidad" type="number" min="1" value="10" />
-      <button class="btn-secondary" type="button" id="fondo-lo-que-falta" title="Rellena la cantidad con lo que falta de ese material (o con lo que tienes, si es menos)">Lo que falta</button>
-    </div>`}
+    <strong class="heroe-sub fondo-titulo">Precio de la caravana${ayuda('camp:fondo', 'La Caravana de Fundación se compra aquí entre todos los ciudadanos de tu Facción: cada uno aporta lo que quiere a un fondo común. Lo tuyo se puede retirar mientras no se gaste. El fondo se llena con lo de tu almacén personal o del carro que llevas aquí (el de tu columna o, si resides aquí, tu propio carro). Cuando el fondo está completo, la caravana espera aquí dentro: sal como ejército (Salir › Convocar ejército) y, al partir, el Líder elige llevársela; luego funda donde quieras (panel ⌂).')}</strong>
+    ${precio ? `<div class="fondo-barra fondo-barra-total${completo ? ' listo' : ''}"><i style="width:${total > 0 ? ((reunido / total) * 100).toFixed(1) : 0}%"></i><b>${reunido} / ${total}</b></div>` : ''}
+    <div class="fondo-cartas">${necesidad}
+    ${sobrante.map(([r, n]) => `<div class="fondo-fila con-algo"><span class="fondo-icono" aria-hidden="true">${RECURSO_ICONO[r] ?? '📦'}</span><span class="fondo-nombre">${e(nombreRecurso(r))}</span><span class="fondo-valor">${Math.floor(n)}</span>
+      <small class="fondo-estado">además en el fondo</small><div class="fondo-botones"><button class="fondo-menos" type="button" data-fondo-retirar="${e(r)}" data-cantidad="${Math.min(PASO_FONDO, Math.floor(n))}" data-lado="${ladoRetirar}" title="Retirar de lo que pusiste tú">−${Math.min(PASO_FONDO, Math.floor(n))}</button></div></div>`).join('')}</div>
     <div class="mapa-seleccion-acciones">
-      <button class="btn-secondary" type="button" data-fondo="aportarARefundacion"${opciones.length === 0 ? ' disabled' : ''}>Aportar</button>
-      <button class="btn-secondary" type="button" data-fondo="retirarDeRefundacion">Retirar</button>
       <button class="btn-primary" type="button" id="btn-comprar-caravana"${caravana || !completo ? ' disabled' : ''}>Comprar caravana</button>
     </div>
     ${!caravana && precio && !completo ? `<p class="asent-lado-nota">Aún no se puede comprar: faltan ${faltantes}.</p>` : ''}
@@ -517,20 +527,11 @@ export function cablearCampamento(root: HTMLElement, p: ProyeccionJugador, c: Ca
   conBoton('.camp-reponer-prestadas', 'reponerPrestamo', () => ({}));
   cablearMercado(root, c, opciones);
   cablearTablonMercenarios(root, ejecutar, (m) => { if (error) error.textContent = m; }, opciones.repintar);
-  for (const tipo of ['aportarARefundacion', 'retirarDeRefundacion']) {
-    conBoton(`[data-fondo="${tipo}"]`, tipo, () => ({
-      recurso: root.querySelector<HTMLSelectElement>('#fondo-recurso')?.value ?? '',
-      cantidad: Number(root.querySelector<HTMLInputElement>('#fondo-cantidad')?.value ?? 0),
-      lado: root.querySelector<HTMLSelectElement>('#fondo-recurso')?.selectedOptions[0]?.dataset.lado ?? (c.residentesIds.includes(heroeId) ? 'almacen' : 'carro'),
-    }));
-  }
+  const delFondo = function (this: HTMLButtonElement): { recurso: string; cantidad: number; lado: string } {
+    return { recurso: this.dataset.fondoAportar ?? this.dataset.fondoRetirar ?? '', cantidad: Number(this.dataset.cantidad ?? 0), lado: this.dataset.lado ?? '' };
+  };
+  conBoton('[data-fondo-aportar]', 'aportarARefundacion', delFondo);
+  conBoton('[data-fondo-retirar]', 'retirarDeRefundacion', delFondo);
   conBoton('[data-vaciar-carro]', 'vaciarCarro', () => ({ heroeId }));
   conBoton('#btn-comprar-caravana', 'comprarCaravanaDeRefundacion', () => ({}));
-  root.querySelector<HTMLButtonElement>('#fondo-lo-que-falta')?.addEventListener('click', () => {
-    const opcion = root.querySelector<HTMLSelectElement>('#fondo-recurso')?.selectedOptions[0];
-    const cantidad = root.querySelector<HTMLInputElement>('#fondo-cantidad');
-    if (!opcion || !cantidad) return;
-    const falta = Number(opcion.dataset.falta);
-    cantidad.value = String(Math.max(1, Math.min(Number(opcion.dataset.tienes), falta > 0 ? falta : Number(opcion.dataset.tienes))));
-  });
 }

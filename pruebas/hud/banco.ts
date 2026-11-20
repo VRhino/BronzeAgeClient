@@ -30,7 +30,7 @@ import { ahora as ahoraJuego } from '../../src/ui/juegoVisual';
 import { cablearTesoreria, htmlPoliticas, htmlReservaRecursos } from '../../src/ui/panelTesoreria';
 import { cablearPausarConsumo, htmlComidaDePlaza, htmlPausarConsumo } from '../../src/ui/consumoPausado';
 import { htmlAutoConstruccion } from '../../src/ui/panelCentro';
-import { bloqueDeDatos, nivelesDeEdificio } from '../../src/apiCliente';
+import { bloqueDeDatos, costoDeRefundacion, nivelesDeEdificio } from '../../src/apiCliente';
 import type { Edificio } from '../../src/tiposDominio';
 import { estadoCliente } from '../../src/ui/estadoCliente';
 import type { ContextoPlaza } from '../../src/ui/ganchos';
@@ -348,6 +348,8 @@ if (camp) {
   q.heroe = { id: 'h', displayName: 'Víctor', ubicacion: { tipo: 'mercenarios', campamentoId: c.id }, escuadrones: [], loadouts: [], almacenPersonal: { oro: 120, trigo: 40 } };
   q.ejercitos = []; q.caravanas = []; q.heroesVisibles = [{ id: 'bot07', displayName: 'Perdicas' }]; q.campamentosBandidos = []; q.ejercitosAvistados = []; q.nombresDeCompaneros = { bot07: 'Suppiluliuma II', bot08: 'Telipinu', bot09: 'Thariyelli' }; q.asentamientos = []; q.asentamientosAvistados = []; q.asentamientosConocidos = [];
   q.campamentosMercenarios = [c];
+  // `&fondos=1` (con `&faccion=1`): el Fondo con algo reunido y poco en el almacén: madera falta 8 (suma 8), piedra falta 6 y solo tienes 5 (suma 5), trigo suma 10.
+  if (qs.get('fondos')) { c.fondos = { f1: { madera: 56, piedra: 2, cobre: 4 } }; (q.heroe as { almacenPersonal: Record<string, number> }).almacenPersonal = { oro: 120, trigo: 200, madera: 40, piedra: 5 }; }
   // `&rey=1`: con Facción y siendo su Rey, con una plaza, una caravana, una columna y bandidos a la vista: los cinco trabajos del tablón se pueden firmar.
   if (qs.get('rey')) {
     const pos = (dx: number) => ({ x: a.posicion.x + dx, y: a.posicion.y });
@@ -395,6 +397,7 @@ if (camp) {
       pintarArm();
       bloqueDeDatos('OBJETOS', pintarArm);
     }
+    if (camp === 'fondo') costoDeRefundacion(repintar);
     if (camp === 'tropa') { repintar(); const vigia = setInterval(() => { if (cuerpo.querySelector('.ta-carta')) clearInterval(vigia); else repintar(); }, 300); }
   }
 }
