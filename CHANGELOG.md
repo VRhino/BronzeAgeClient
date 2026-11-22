@@ -3,6 +3,13 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.226.0] — 2026-11-22 · Las misiones «Tu primera plaza» · motor rama `claude/project-thread-vs03s2` (nucleo 0.53.0)
+
+Para el motor con la cadena de héroe H14 a H18 (Facción, bandidos, aportar 20 al Fondo, comprar la caravana, fundar; recompensas en medallas y 5 de trigo). Sus textos llegan del motor en `/v1/datos`.
+
+- **Siempre en el rastreador**: las misiones de la cadena entran en el rastreador aunque esté lleno, sacando a la última seguida que no sea de ella; un héroe nuevo empieza siguiéndola.
+- Textos de reserva de H14 a H18 y nombres de los contadores `aportes` y `caravanas`.
+
 ## [0.225.0] — 2026-11-22 · Guía hasta la primera plaza · motor `e5be579`
 
 Solo cliente, sin cambios de contrato. En las pruebas de juego muchos jugadores nuevos no encontraban cómo fundar su primera plaza y lo dejaban a la hora (Víctor, ideas 1, 3 y 4).

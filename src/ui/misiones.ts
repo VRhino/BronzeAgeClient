@@ -24,6 +24,19 @@ export type DuenoMision = 'heroe' | 'plaza' | 'faccion';
 /** Lo que se sigue como mucho a la vez (decisión de Víctor del 2026-10-27). */
 const MAX_SEGUIDAS = 3;
 
+/** La cadena «Tu primera plaza» (motor H14 a H18, 2026-11-22): sus misiones se siguen siempre, aunque el rastreador esté lleno. */
+const CADENA_PRIMERA_PLAZA = new Set(['H14', 'H15', 'H16', 'H17', 'H18']);
+const deLaCadena = (k: string): boolean => k.startsWith('heroe:') && CADENA_PRIMERA_PLAZA.has(k.slice('heroe:'.length));
+
+/** Mete `k` en las seguidas; si es de la cadena y no cabe, sale la última seguida que no sea de ella. */
+export function seguirEnRastreador(seguidas: string[], k: string): string[] {
+  if (seguidas.includes(k)) return seguidas;
+  if (seguidas.length < MAX_SEGUIDAS) return [...seguidas, k];
+  if (!deLaCadena(k)) return seguidas;
+  const fuera = [...seguidas].reverse().find((x) => !deLaCadena(x));
+  return fuera === undefined ? seguidas : [...seguidas.filter((x) => x !== fuera), k];
+}
+
 /** Textos de reserva mientras el motor no publique su catálogo en `GET /v1/datos` (pedido el 2026-10-27; allí mandan los suyos). */
 const TEXTOS: Record<string, { titulo: string; texto: string }> = {
   H1: { titulo: 'Primeros pasos', texto: 'Sal al mundo desde tu plaza o tu campamento.' },
@@ -39,6 +52,11 @@ const TEXTOS: Record<string, { titulo: string; texto: string }> = {
   H11: { titulo: 'Tesoro escondido', texto: 'Abre un alijo.' },
   H12: { titulo: 'Manos a la obra', texto: 'Entrega materiales a la obra de un pueblo o de una avanzada.' },
   H13: { titulo: 'Forjar al héroe', texto: 'Reparte tus puntos de atributo.' },
+  H14: { titulo: 'Tu primera plaza: una Facción', texto: 'Funda una Facción o entra en una.' },
+  H15: { titulo: 'Tu primera plaza: el botín', texto: 'Destruye un campamento de bandidos.' },
+  H16: { titulo: 'Tu primera plaza: el Fondo', texto: 'Aporta 20 al Fondo del campamento.' },
+  H17: { titulo: 'Tu primera plaza: la caravana', texto: 'Compra la Caravana de Fundación.' },
+  H18: { titulo: 'Tu primera plaza', texto: 'Funda tu plaza.' },
   A1: { titulo: 'La aldea', texto: 'Funda una aldea agrícola.' },
   A2: { titulo: 'Abrir el mercado', texto: 'Ten un Mercado activo.' },
   A3: { titulo: 'Primer barracón', texto: 'Ten un Barracón activo.' },
@@ -70,7 +88,7 @@ const CONTADOR: Record<string, string> = {
   infanteria: 'infantería', tiro: 'tiro', caballeria: 'caballería', uniones: 'uniones', batallas: 'batallas', bandidos: 'campamentos de bandidos',
   alijos: 'alijos', entregas: 'entregas', atributos: 'repartos de atributos', mercado: 'Mercado', barracon: 'Barracón', nivel: 'nivel', pueblos: 'pueblos',
   artesanos: 'artesanos', nobles: 'nobles', recintos: 'recintos', avanzadas: 'avanzadas', asedios: 'asedios resistidos', aldeas: 'aldeas', capital: 'capital',
-  cargos: 'cargos', fundaciones: 'fundaciones', tecnologias: 'tecnologías', politicas: 'políticas', trueques: 'trueques', aliados: 'alianzas',
+  cargos: 'cargos', fundaciones: 'fundaciones', aportes: 'aportado al Fondo', caravanas: 'caravanas compradas', tecnologias: 'tecnologías', politicas: 'políticas', trueques: 'trueques', aliados: 'alianzas',
   conquistas: 'conquistas', epicas: 'épicas',
 };
 
@@ -156,7 +174,9 @@ export function actualizarSeguimiento(p: ProyeccionJugador, avisar: (texto: stri
   const previo = cargarSeguimiento(p);
   const vivas = PESTANAS.flatMap(([d]) => delDueno(p, d).misiones.filter((m) => m.estado !== 'reclamada').map((m) => ({ d, m })));
   if (!previo) {
-    seguimiento = { seguidas: vivas.filter((x) => x.d === 'heroe').slice(0, MAX_SEGUIDAS).map((x) => claveDe(x.d, x.m.id)), conocidas: vivas.map((x) => claveDe(x.d, x.m.id)), nuevas: [], plegado: false };
+    const mias = vivas.filter((x) => x.d === 'heroe').map((x) => claveDe(x.d, x.m.id));
+    const seguidas = [...mias.filter(deLaCadena), ...mias.filter((k) => !deLaCadena(k))].slice(0, MAX_SEGUIDAS);
+    seguimiento = { seguidas, conocidas: vivas.map((x) => claveDe(x.d, x.m.id)), nuevas: [], plegado: false };
     guardarSeguimiento();
     return;
   }
@@ -166,7 +186,7 @@ export function actualizarSeguimiento(p: ProyeccionJugador, avisar: (texto: stri
     if (previo.conocidas.includes(k)) continue;
     previo.conocidas.push(k);
     previo.nuevas.push(k);
-    if (d === 'heroe' && previo.seguidas.length < MAX_SEGUIDAS) previo.seguidas.push(k);
+    if (d === 'heroe') previo.seguidas = seguirEnRastreador(previo.seguidas, k);
     avisar(`Nueva misión: ${textoDeMision(m.id).titulo}`);
     cambio = true;
   }
