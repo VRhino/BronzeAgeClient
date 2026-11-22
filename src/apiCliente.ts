@@ -579,7 +579,7 @@ function pedirVistaEntera(s: Sesion): void {
 
 /** El archivo común de datos de juego del motor (`GET /v1/datos`, el vigente): los bloques de parámetros de `Docs/Mechanics`, por documento. Se pide una vez. */
 let datosDeJuego: Promise<DatosDeJuego | null> | null = null;
-interface DatosDeJuego { documentos?: Record<string, Record<string, unknown>>; reglas?: { territorio?: { radio_inicial?: number; techos?: number[] } } }
+interface DatosDeJuego { documentos?: Record<string, Record<string, unknown>>; reglas?: { territorio?: { radio_inicial?: number; techos?: number[]; separacion_plazas?: number; exclusion_campamento?: number } } }
 /** `reglas` de `/v1/datos` (territorio en milésimas), guardadas al llegar el balance. */
 let reglasDePartida: DatosDeJuego['reglas'] | null = null;
 
@@ -762,6 +762,18 @@ function balance(alCargar?: () => void): BalancePublico | null {
   return balancePublico;
 }
 
+
+/** Las distancias de fundar (`reglas.territorio` de `/v1/datos`, en milésimas): a cuánto de otra plaza (`separacion_plazas`) y de un campamento de
+ * mercenarios (`exclusion_campamento`). Sin el dato, las de los bloques `FUNDACION.separacionPlazas` y `MERCENARIOS.radioExclusionFundar`; si no, 20. */
+export function distanciasDeFundar(alCargar?: () => void): { plazas: number; campamentos: number } {
+  const b = balance(alCargar)?.catalogos as Record<string, { separacionPlazas?: number; radioExclusionFundar?: number } | undefined> | undefined;
+  const t = reglasDePartida?.territorio;
+  const deReglas = (v: number | undefined): number | null => (Number(v) > 0 ? Number(v) / 1000 : null);
+  return {
+    plazas: deReglas(t?.separacion_plazas) ?? b?.FUNDACION?.separacionPlazas ?? 20,
+    campamentos: deReglas(t?.exclusion_campamento) ?? b?.MERCENARIOS?.radioExclusionFundar ?? 20,
+  };
+}
 
 /** Radio con el que nace la zona de una plaza (`reglas.territorio.radio_inicial` de `/v1/datos`); 6, la cifra de hoy, mientras no llegue. */
 export function radioZonaInicial(alCargar?: () => void): number {

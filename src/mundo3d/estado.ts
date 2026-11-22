@@ -73,6 +73,10 @@ export interface FundacionEnVista {
   radio: number;
   sitios: SitiosDeAldea | null;
   parcelas: { centro: Punto; estado: 'libre' | 'ocupada' | 'ajena' }[];
+  /** ¿Se puede fundar en el centro? El aro sale verde o rojo (`ui/sitioDeFundacion.ts`). Sin el dato, del color de siempre. */
+  valido?: boolean;
+  /** Los círculos cercanos donde no se funda (campamentos de mercenarios y plazas), en rojo. */
+  prohibidos?: { centro: Punto; radio: number }[];
 }
 /** Lo seleccionado en el mapa: un aro alrededor. */
 export interface SeleccionEnVista { posicion: Punto; radio: number }

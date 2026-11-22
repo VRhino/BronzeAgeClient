@@ -1,5 +1,9 @@
 // (mundo: copia ampliada del banco del ejército) Banco de la ventana «Ejército» del mapa (`/pruebas/ejercito/`, 0.132.0) y de la pestaña «Ejércitos» de la Facción (`?faccion=1`): una partida de
 // mentira, sin servidor, con la misma estructura que pinta main.ts. `?lider=1`: tú diriges; `?solo=1`: vas por tu cuenta; `?fondo=<url>`: imagen detrás.
+import datos from '../plaza/datos.json';
+const fetchReal = window.fetch.bind(window);
+window.fetch = ((url: RequestInfo | URL, init?: RequestInit) =>
+  String(url).endsWith('/v1/datos') ? Promise.resolve(new Response(JSON.stringify(datos), { status: 200, headers: { 'Content-Type': 'application/json' } })) : fetchReal(url, init)) as typeof fetch;
 import '../../src/style.css';
 import type { ProyeccionJugador } from '../../src/apiCliente';
 import { htmlPanelEjercito } from '../../src/ui/ejercitos';
@@ -8,6 +12,8 @@ import { htmlColumna } from '../../src/ui/panelColumna';
 import { htmlCapas } from '../../src/ui/capasMapa';
 import { HTML_VENTANA_PUERTA, htmlAccionesPuerta } from '../../src/ui/accionesPuerta';
 import { htmlBarraJugador } from '../../src/ui/barraJugador';
+import { pintarCamino } from '../../src/ui/caminoPrimeraPlaza';
+import { costoDeRefundacion } from '../../src/apiCliente';
 
 const qs = new URLSearchParams(location.search);
 const AHORA = Date.parse('2026-11-04T09:00:00Z');
@@ -73,4 +79,11 @@ document.getElementById('app')!.innerHTML = `<div class="mapa-screen" style="bac
   <div class="mapa-menu"${qs.get('menu') ? '' : ' hidden'}><button type="button">Refrescar</button><button type="button">Mostrar rejilla de movimiento</button><button type="button">Pantalla completa</button><button type="button">Cambiar de partida</button><button type="button">Cerrar sesión</button></div>
 </div>`;
 if (qs.get('capas')) { document.querySelector<HTMLElement>('.mapa-capas-lista')?.removeAttribute('hidden'); document.querySelector('.mapa-capas-boton')?.classList.add('activo'); }
+// `?camino=1` (0.225.0): la tarjeta «Tu primera plaza» arriba a la derecha, sin plaza en tu Facción y con madera en el carro: toca volver a aportarla
+if (qs.get('camino')) {
+  const q = p as unknown as Record<string, unknown>;
+  q.campamentosMercenarios = [{ id: 'camp-1', posicion: { x: 300, y: 300 }, residentesIds: ['heroe-1'], fondos: { 'fac-1': { madera: 30, piedra: 8, trigo: 40 } } }];
+  const pintarCaminoBanco = (): void => pintarCamino(p, {}, costoDeRefundacion(pintarCaminoBanco), () => {}, e);
+  pintarCaminoBanco();
+}
 (window as unknown as { __listo: boolean }).__listo = true;

@@ -6,6 +6,7 @@
 import type { ProyeccionJugador } from '../apiCliente';
 import type { Convocatoria } from '../tiposDominio';
 import { ayuda } from './ayuda';
+import { faccionConPlaza } from './caminoPrimeraPlaza';
 import { esPeticionNueva, POLITICA } from './ejercitos';
 import { chipLiderazgo } from './liderazgo';
 import { textoEnTiempoReal } from './estadoCliente';
@@ -136,9 +137,16 @@ function caravanasQueEsperan(p: ProyeccionJugador, c: Convocatoria): { id: strin
 /** Qué Caravana de Fundación eligió llevarse el Líder ('' = ninguna), por convocatoria. Vive entre repintados. */
 const caravanaElegida = new Map<string, string>();
 
+/** Lo elegido para esa convocatoria; sin elegir aún, si tu Facción no tiene plaza (va a por la primera) se la lleva, y si no, se queda (Víctor, 2026-11-22). */
+function eleccionDeCaravana(p: ProyeccionJugador, c: Convocatoria): string {
+  const elegida = caravanaElegida.get(c.id);
+  if (elegida !== undefined) return elegida;
+  return faccionConPlaza(p) ? '' : caravanasQueEsperan(p, c)[0]?.id ?? '';
+}
+
 /** La caravana que se llevará el ejército al partir, si el Líder eligió una y aún espera aquí. */
 function caravanaQueSeLleva(p: ProyeccionJugador, c: Convocatoria): string | undefined {
-  const id = caravanaElegida.get(c.id);
+  const id = eleccionDeCaravana(p, c);
   return id && caravanasQueEsperan(p, c).some((x) => x.id === id) ? id : undefined;
 }
 
@@ -172,7 +180,7 @@ const PUERTA = `<svg viewBox="0 0 40 28" width="40" height="28" aria-hidden="tru
 function htmlPreguntaCaravana(p: ProyeccionJugador, c: Convocatoria, e: Escapar): string {
   const esperan = caravanasQueEsperan(p, c);
   if (!c.soyLider || esperan.length === 0) return '';
-  const elegida = caravanaElegida.get(c.id) ?? '';
+  const elegida = eleccionDeCaravana(p, c);
   const ritmo = (v: VelocidadEstimada): string => `<span class="conv-caravana-ritmo ritmo-${v.ritmo ?? 'ligera'}">${iconoRitmo(v, 14)} ${cifraVelocidad(v.valor)} u/min</span>`;
   const sin = velocidadDelEjercito(p, c, false);
   const con = velocidadDelEjercito(p, c, true);

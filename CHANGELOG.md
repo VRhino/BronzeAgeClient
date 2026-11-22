@@ -3,6 +3,17 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.225.0] — 2026-11-22 · Guía hasta la primera plaza · motor `e5be579`
+
+Solo cliente, sin cambios de contrato. En las pruebas de juego muchos jugadores nuevos no encontraban cómo fundar su primera plaza y lo dejaban a la hora (Víctor, ideas 1, 3 y 4).
+
+- **Tarjeta «Tu primera plaza»** (`ui/caminoPrimeraPlaza.ts`): mientras tu Facción no tiene plaza, arriba a la derecha (encima del rastreador de misiones; en el campamento, en su columna derecha) dice en qué paso de los seis estás (Facción, materiales, aportar, comprar, salir con la caravana, fundar), con una barra de progreso y un botón que lo hace o te lleva allí: «Abrir Facción», «Pedir tropa», «Salir al mundo», «Ir a por los bandidos» (selecciona su ficha y marcha), «Volver al campamento», «Entrar en el campamento», «Aportar al Fondo», «Ir al Fondo», «Salir con la caravana», «Elegir dónde fundar». Se pliega y lo recuerda.
+- **Aportar todo lo que llevas**: en el Fondo, un botón que aporta de una vez lo que llevas de cada material que falta, del almacén y después del carro.
+- **Salir con la caravana**: al salir del campamento donde espera la Caravana de Fundación de tu Facción, una carta «Llevarme la Caravana de Fundación», marcada de serie si tu Facción aún no tiene plaza, que sustituye a «Cómo sales»: sales ya como ejército abierto llevándola, con un solo clic (`salirDelCampamento` con `politicaDeUnion` y `caravanaFundacionId`). En un ejército convocado, el Líder la tiene elegida de serie en el mismo caso.
+- **Fundar sin adivinar** (`ui/sitioDeFundacion.ts`): llevando la caravana, el mundo y el modo mapa enseñan siempre, siguiendo a la columna, el aro de la zona en verde donde se puede fundar y en rojo donde no, con los círculos rojos de los campamentos de mercenarios (20) y de las plazas conocidas (20). El panel ⌂ se abre solo la primera vez, dice «Aquí se puede fundar» o el porqué en lenguaje de juego (agua, pendiente, bosque cerrado, orilla del río, territorio ajeno, cerca de una plaza o de un campamento, cuánto alejarse) y solo enseña «Fundar aquí» donde vale. El motor sigue decidiendo.
+- Arreglos de texto: la ayuda de fundar decía «a menos de 100 de un campamento» (son 20) y la ficha de los bandidos decía que su oro va al carro (desde la tanda 69 es madera, piedra, trigo y monedas).
+- Bancos: `pruebas/hud/?camp=…&camino=1`, `&caravana=espera`, `&tropa=1`, `&salida=1`; `pruebas/mundo/?camino=1`.
+
 ## [0.224.1] — 2026-11-20 · El Fondo del campamento, como una interfaz de juego · motor `b8f8254`
 
 Solo cliente, sin cambios de contrato.

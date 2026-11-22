@@ -52,6 +52,8 @@ import { catalogoDeObjetos } from '../../src/ui/clasesHeroe';
 import { htmlMercadoDePlaza } from '../../src/ui/mercadoDePlaza';
 import { htmlAvisos } from '../../src/ui/panelAvisos';
 import { fijarCronica, htmlCronica } from '../../src/ui/cronica';
+import { pintarCamino } from '../../src/ui/caminoPrimeraPlaza';
+import { pintarVentanaSalida } from '../../src/ui/ventanaSalida';
 
 import { instalarMenuJugadorMovil } from '../../src/ui/menuJugadorMovil';
 instalarMenuJugadorMovil();
@@ -399,6 +401,22 @@ if (camp) {
     }
     if (camp === 'fondo') costoDeRefundacion(repintar);
     if (camp === 'tropa') { repintar(); const vigia = setInterval(() => { if (cuerpo.querySelector('.ta-carta')) clearInterval(vigia); else repintar(); }, 300); }
+  }
+  // `&caravana=espera` (0.225.0): la Caravana de Fundación de tu Facción espera dentro; `&tropa=1` con una escuadra prestada
+  if (qs.get('caravana') === 'espera') q.caravanas = [{ id: 'car-7', tipo: 'construccion', estado: 'disponible', faccionId: 'f1', origenCampamentoId: c.id, titularId: 'h', posicionActual: c.posicion, contenido: { madera: 64, piedra: 8, trigo: 40 } }];
+  if (qs.get('tropa')) (q.heroe as { escuadrones: unknown[] }).escuadrones = [{ id: 's1', nombre: 'Milicia de lanceros', tropaId: 'milicia_lanceros', cantidad: 18, nivel: 1, costeLiderazgo: 18, prestada: { campamentoId: 'mc-1' }, contenedor: { tipo: 'campamento' } }];
+  (q.heroe as Record<string, unknown>).liderazgoBase ??= 60;
+  // `&camino=1` (0.225.0): la tarjeta «Tu primera plaza» en el paso que toque con lo de arriba
+  if (qs.get('camino')) {
+    const pintarCaminoBanco = (): void => pintarCamino(p, { campamento: c }, costoDeRefundacion(pintarCaminoBanco), () => {}, e);
+    pintarCaminoBanco();
+  }
+  // `&salida=1` (0.225.0): la ventana «Salir al mundo» de este campamento
+  if (qs.get('salida')) {
+    document.body.insertAdjacentHTML('beforeend', '<div class="salida-velo"><section class="salida-ventana" role="dialog"></section></div>');
+    const ventanaSalida = document.querySelector<HTMLElement>('.salida-ventana')!;
+    const pintarSalida = (): void => pintarVentanaSalida(ventanaSalida, p, { tipo: 'campamento', campamento: c }, async () => null, () => {}, pintarSalida, e);
+    pintarSalida();
   }
 }
 // El «!» de Territorio (0.136.0) con la cuenta de verdad (`fundacionLista`): se repinta cuando llegan los datos del coste.

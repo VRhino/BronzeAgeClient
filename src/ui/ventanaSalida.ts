@@ -25,8 +25,10 @@ import { cablearCargaDeSalida, htmlCargaDeSalida, leerCarga } from './cargaDeSal
 import { cablearPreparacion, htmlPreparacion } from './convocatoria';
 import { actualizarConvocatorias, cablearSalidaComoEjercito, htmlSalidaComoEjercito } from './salidaComoEjercito';
 import { cablearCarro, htmlCarro, type Ejecutar } from './panelCarro';
-import { htmlLineaVelocidad, piezaDeTropa, velocidadDePiezas, type VelocidadEstimada } from './velocidadColumna';
+import { htmlLineaVelocidad, piezaDeFundacion, piezaDeTropa, velocidadDePiezas, type VelocidadEstimada } from './velocidadColumna';
 import { velocidadEstimadaDeColumna } from '../mundo/tiempoDeMarcha';
+import { faccionConPlaza } from './caminoPrimeraPlaza';
+import { ICONO_CARRETA } from './juegoVisual';
 
 type Escapar = (valor: string) => string;
 
@@ -167,7 +169,8 @@ function velocidadDeSalida(p: ProyeccionJugador, l: LugarDeSalida): VelocidadEst
   }
   const disponibles = tropaDe(p, l);
   const ids = seElige(p, l) ? prepararEleccion(p, l).ids : disponibles.map((s) => s.id);
-  return velocidadDePiezas(ids.flatMap((id) => disponibles.filter((s) => s.id === id && s.cantidad > 0)).map((s) => piezaDeTropa(s.tropaId)));
+  const tropa = ids.flatMap((id) => disponibles.filter((s) => s.id === id && s.cantidad > 0)).map((s) => piezaDeTropa(s.tropaId));
+  return velocidadDePiezas(teLaLlevas(p, l) ? [...tropa, piezaDeFundacion()] : tropa);
 }
 
 /** Si la tropa elegida no es la del loadout elegido (las escuadras de ese loadout que están aquí). */
@@ -203,6 +206,35 @@ function htmlCarga(p: ProyeccionJugador, l: LugarDeSalida, valores: Record<strin
     ${carga.length ? carga.map(([r, n]) => `<div class="carro-fila"><span>${RECURSO_ICONO[r] ?? '📦'} ${e(RECURSO_NOMBRE[r] ?? r)}</span><strong>${Math.floor(n)}</strong></div>`).join('') : '<p class="asent-lado-nota">Vacío.</p>'}`;
 }
 
+/** La Caravana de Fundación de tu Facción que espera en este campamento: al salir te la puedes llevar (`salirDelCampamento.caravanaFundacionId`). */
+function caravanaQueEspera(p: ProyeccionJugador, l: LugarDeSalida) {
+  if (l.tipo !== 'campamento' || !p.faccionId) return undefined;
+  return p.caravanas.find((x) => x.tipo === 'construccion' && x.estado === 'disponible' && x.origenCampamentoId === l.campamento.id && x.faccionId === p.faccionId);
+}
+
+/** ¿Te la llevas? Sin tocarlo, sí si tu Facción va a por su primera plaza (Víctor, 2026-11-22: era un cepo, una columna personal no la lleva). */
+let llevarCaravana: { clave: string; si: boolean } | null = null;
+function teLaLlevas(p: ProyeccionJugador, l: LugarDeSalida): boolean {
+  if (!caravanaQueEspera(p, l)) return false;
+  if (llevarCaravana?.clave !== claveDe(l)) llevarCaravana = { clave: claveDe(l), si: !faccionConPlaza(p) };
+  return llevarCaravana.si;
+}
+
+function htmlCaravanaQueEspera(p: ProyeccionJugador, l: LugarDeSalida, e: Escapar): string {
+  const k = caravanaQueEspera(p, l);
+  if (!k) return '';
+  const si = teLaLlevas(p, l);
+  const carga = Object.entries(k.contenido ?? {}).filter(([, n]) => n >= 1)
+    .map(([r, n]) => `<span title="${e(RECURSO_NOMBRE[r] ?? r)}">${RECURSO_ICONO[r] ?? '📦'} ${Math.floor(n)}</span>`).join('');
+  return `<label class="salida-caravana${si ? ' elegida' : ''}">
+      <input type="checkbox" data-salida-caravana${si ? ' checked' : ''} />
+      <span class="salida-caravana-icono" aria-hidden="true">${ICONO_CARRETA}</span>
+      <span class="salida-caravana-cuerpo"><strong>Llevarme la Caravana de Fundación</strong>
+        <small>${si ? 'Sales como ejército, el único que puede llevarla, abierto a los de tu Facción. Marcháis a su paso, más despacio. Desmárcala para salir de otra forma.' : 'Se queda aquí dentro esperando.'}</small>
+        ${carga ? `<span class="salida-caravana-carga">${carga}</span>` : ''}</span>
+    </label>`;
+}
+
 function htmlModo(p: ProyeccionJugador, l: LugarDeSalida, e: Escapar): string {
   const viveres = Math.floor(p.heroe.viveres ?? 0);
   const donde = l.tipo === 'pueblo'
@@ -211,10 +243,13 @@ function htmlModo(p: ProyeccionJugador, l: LugarDeSalida, e: Escapar): string {
     : l.tipo === 'plazaAjena' ? (intercambia(p, l) ? 'No resides aquí: retomas tu columna, aparcada a la puerta, con su tropa y su carro. Es una plaza de tu Facción: antes de salir, pasa lo que quieras entre su almacén y tu carro.' : 'No resides aquí: retomas tu columna, aparcada a la puerta, con su tropa y su carro.')
     : l.tipo === 'campamento' && !resideEnCampamento(p, l) ? 'No resides aquí: sales con la columna con la que entraste.'
     : 'Sales al mapa por la puerta. Tus víveres van siempre contigo.';
-  return `<p class="diario-texto">${e(donde)}</p>
+  return `${htmlCaravanaQueEspera(p, l, e)}<p class="diario-texto">${e(donde)}</p>
     <p class="asent-lado-nota">Víveres: ${viveres} de trigo.</p>
-    ${admiteEjercito(l) ? htmlSalidaComoEjercito(p, e) : ''}`;
+    ${admiteEjercito(l) && !teLaLlevas(p, l) ? htmlSalidaComoEjercito(p, e) : ''}`;
 }
+
+/** El botón principal, con la caravana si te la llevas. */
+const textoDelBoton = (p: ProyeccionJugador, l: LugarDeSalida): string => (teLaLlevas(p, l) ? 'Salir con la caravana' : textoSalir(l));
 
 /** El botón principal según el sitio. */
 const textoSalir = (l: LugarDeSalida): string => (l.tipo === 'pueblo' || l.tipo === 'avanzada' ? 'Salir al mapa' : l.tipo === 'plazaAjena' ? 'Salir y retomar mi columna' : 'Salir');
@@ -244,10 +279,11 @@ export function pintarVentanaSalida(raiz: HTMLElement, p: ProyeccionJugador, l: 
     </div>
     <footer class="salida-pie">
       ${htmlTropa(p, l, e)}
-      <div class="salida-acciones"><p class="faction-error" data-salida-error role="alert"></p><button class="btn-primary" type="button" data-salida-ir${excesoDeLiderazgo(p, l) !== null ? ' disabled' : ''}>${textoSalir(l)}</button></div>
+      <div class="salida-acciones"><p class="faction-error" data-salida-error role="alert"></p><button class="btn-primary" type="button" data-salida-ir${excesoDeLiderazgo(p, l) !== null ? ' disabled' : ''}>${textoDelBoton(p, l)}</button></div>
     </footer>
   </div>`;
   const elegidas = (): string[] => (seElige(p, l) ? prepararEleccion(p, l).ids : []);
+  const conCaravana = (): object => { const k = caravanaQueEspera(p, l); return k && teLaLlevas(p, l) ? { politicaDeUnion: 'aceptar', caravanaFundacionId: k.id } : {}; };
   const leerSeleccion = () => ({ escuadronIds: elegidas(), carga: seCarga(p, l) ? leerCarga(raiz) : {} });
   const bloqueo = (): string | null => { const usado = excesoDeLiderazgo(p, l); return usado === null ? null : avisoExceso(usado, p.heroe.liderazgoBase); };
   pintar(raiz, html, () => {
@@ -302,7 +338,7 @@ export function pintarVentanaSalida(raiz: HTMLElement, p: ProyeccionJugador, l: 
       const { escuadronIds, carga } = leerSeleccion();
       const [tipo, params]: [string, object] =
         l.tipo === 'residencia' ? ['salirAlMundo', { asentamientoId: l.asentamiento.id, heroeId: p.heroeId, escuadronIds, carga }]
-        : l.tipo === 'campamento' ? ['salirDelCampamento', { campamentoId: l.campamento.id, heroeId: p.heroeId, escuadronIds, carga }]
+        : l.tipo === 'campamento' ? ['salirDelCampamento', { campamentoId: l.campamento.id, heroeId: p.heroeId, escuadronIds, carga, ...conCaravana() }]
         : l.tipo === 'plazaAjena' ? ['salirDeAsentamiento', { asentamientoId: l.asentamiento.id, heroeId: p.heroeId }]
         : l.tipo === 'avanzada' ? ['salirDeAvanzada', { heroeId: p.heroeId, avanzadaId: l.avanzada.id }]
         : ['salirDePueblo', { heroeId: p.heroeId, puebloId: l.pueblo.id }];
@@ -312,7 +348,13 @@ export function pintarVentanaSalida(raiz: HTMLElement, p: ProyeccionJugador, l: 
       eleccion = null;
       cerrar(); // el router lleva al mapa
     });
-    if (admiteEjercito(l)) cablearSalidaComoEjercito(raiz, p, ir, textoSalir(l), leerSeleccion, ejecutar, avisar, bloqueo);
+    // llevarse la caravana sale ya como ejército, abierto: un solo clic (motor: `salir_del_campamento` con `politica_de_union` y `caravana_fundacion_id`)
+    raiz.querySelector<HTMLInputElement>('[data-salida-caravana]')?.addEventListener('change', (ev) => {
+      llevarCaravana = { clave: claveDe(l), si: (ev.target as HTMLInputElement).checked };
+      repintar();
+    });
+    // con la caravana, la carta sustituye a «Cómo sales»: se sale ya como ejército (desmárcala para elegir otra cosa)
+    if (admiteEjercito(l) && !teLaLlevas(p, l)) cablearSalidaComoEjercito(raiz, p, ir, textoDelBoton(p, l), leerSeleccion, ejecutar, avisar, bloqueo);
   }, `salida:${claveDe(l)}`);
   if (admiteEjercito(l)) actualizarConvocatorias(raiz, p, leerSeleccion, ejecutar, avisar, e, bloqueo);
 }

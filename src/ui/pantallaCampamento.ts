@@ -402,6 +402,15 @@ function fondo(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): stri
           </div></div>`;
       }).join('')
     : '<p class="asent-lado-nota">Cargando el precio de la caravana…</p>';
+  // «Aportar todo» (Víctor, 2026-11-22): lo que llevas de cada material que falta, hasta lo que falta, del almacén y luego del carro
+  const todo: { recurso: string; cantidad: number; lado: 'almacen' | 'carro' }[] = [];
+  if (precio) for (const r of Object.keys(precio)) {
+    let queda = falta(r);
+    for (const o of origenes) {
+      const n = Math.min(queda, Math.floor(o.recursos[r] ?? 0));
+      if (n >= 1) { todo.push({ recurso: r, cantidad: n, lado: o.lado }); queda -= n; }
+    }
+  }
   const total = precio ? Object.values(precio).reduce((x, y) => x + y, 0) : 0;
   const reunido = precio ? Object.entries(precio).reduce((x, [r, n]) => x + Math.min(n, Math.floor(fondoDeFaccion[r] ?? 0)), 0) : 0;
   const completo = precio !== null && Object.keys(precio).every((r) => falta(r) === 0);
@@ -416,6 +425,7 @@ function fondo(p: ProyeccionJugador, c: CampamentoMercenarios, e: Escapar): stri
     ${sobrante.map(([r, n]) => `<div class="fondo-fila con-algo"><span class="fondo-icono" aria-hidden="true">${RECURSO_ICONO[r] ?? '📦'}</span><span class="fondo-nombre">${e(nombreRecurso(r))}</span><span class="fondo-valor">${Math.floor(n)}</span>
       <small class="fondo-estado">además en el fondo</small><div class="fondo-botones"><button class="fondo-menos" type="button" data-fondo-retirar="${e(r)}" data-cantidad="${Math.min(PASO_FONDO, Math.floor(n))}" data-lado="${ladoRetirar}" title="Retirar de lo que pusiste tú">−${Math.min(PASO_FONDO, Math.floor(n))}</button></div></div>`).join('')}</div>
     <div class="mapa-seleccion-acciones">
+      ${!caravana && !completo && todo.length > 0 ? `<button class="btn-secondary" type="button" data-fondo-todo="${e(JSON.stringify(todo))}" title="${e(todo.map((x) => `${x.cantidad} de ${nombreRecurso(x.recurso)}`).join(', '))}">Aportar todo lo que llevas</button>` : ''}
       <button class="btn-primary" type="button" id="btn-comprar-caravana"${caravana || !completo ? ' disabled' : ''}>Comprar caravana</button>
     </div>
     ${!caravana && precio && !completo ? `<p class="asent-lado-nota">Aún no se puede comprar: faltan ${faltantes}.</p>` : ''}
@@ -534,4 +544,14 @@ export function cablearCampamento(root: HTMLElement, p: ProyeccionJugador, c: Ca
   conBoton('[data-fondo-retirar]', 'retirarDeRefundacion', delFondo);
   conBoton('[data-vaciar-carro]', 'vaciarCarro', () => ({ heroeId }));
   conBoton('#btn-comprar-caravana', 'comprarCaravanaDeRefundacion', () => ({}));
+  // «Aportar todo lo que llevas»: una orden por material y lado, en fila; para en el primer rechazo
+  root.querySelector<HTMLButtonElement>('[data-fondo-todo]')?.addEventListener('click', async (ev) => {
+    const boton = ev.currentTarget as HTMLButtonElement;
+    const lista = JSON.parse(boton.dataset.fondoTodo ?? '[]') as { recurso: string; cantidad: number; lado: string }[];
+    boton.disabled = true;
+    for (const x of lista) {
+      const mensaje = await ejecutar('aportarARefundacion', x);
+      if (mensaje) { boton.disabled = false; if (error) error.textContent = mensaje; return; }
+    }
+  });
 }

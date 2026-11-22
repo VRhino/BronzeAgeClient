@@ -23,6 +23,7 @@ import {
   capacidadDeViveres,
   radioDePuerta,
   costoDeRefundacion,
+  distanciasDeFundar,
   nivelesBandidos,
   registrarCuenta,
   radioDeVision,
@@ -138,6 +139,8 @@ import { cablearResidencia, htmlCapital, htmlResidencia } from './ui/panelReside
 import { cablearTablon, htmlTablon } from './ui/tablon';
 import { cablearMercenariosFaccion, htmlMercenariosFaccion, mercenariosQuePidenAtencion } from './ui/mercenarios';
 import { actualizarSeguimiento, cablearMisiones, elegirPestanaMisiones, htmlListaMisiones, htmlPanelMisiones, misionesPorReclamar, pintarRastreador } from './ui/misiones';
+import { pintarCamino, type AccionCamino } from './ui/caminoPrimeraPlaza';
+import { sitioDeFundacion, type SitioDeFundacion } from './ui/sitioDeFundacion';
 import { confirmar } from './ui/dialogo';
 import { instalarMenuJugadorMovil } from './ui/menuJugadorMovil';
 import { abrirCarga, cargaAbierta, cargarCatalogoDeCarga, cerrarCarga, type VistaDeCarga } from './ui/pantallaCarga';
@@ -1401,7 +1404,7 @@ function renderSeleccionCampamento(cont: HTMLElement, proyeccion: ProyeccionJuga
     : campamento.campamentoMercenariosId ? `al campamento ${escaparHtml(campamento.campamentoMercenariosId)}` : '';
   if (!pintar(cont, `
     <button class="mapa-seleccion-cerrar" type="button" aria-label="Cerrar selección">×</button>
-    <span class="faction-kicker">Campamento de bandidos${ayuda('mapa:ficha-bandidos', `Plano esquemático: el servidor no publica el trazado de los campamentos de bandidos. El botín decrece si se destruyen muchos en un día. ${impide.length > 70 ? `${escaparHtml(impide)} ` : ''}Si cae, su oro va al carro de tu columna (lo que no quepa se pierde). Si aguanta, quedas herido y pierdes la mitad del carro.`)}</span>
+    <span class="faction-kicker">Campamento de bandidos${ayuda('mapa:ficha-bandidos', `Plano esquemático: el servidor no publica el trazado de los campamentos de bandidos. El botín decrece si se destruyen muchos en un día. ${impide.length > 70 ? `${escaparHtml(impide)} ` : ''}Si cae, su botín (madera, piedra, trigo y monedas) va al carro de tu columna (lo que no quepa se pierde); mientras tu Facción no tiene plaza, es lo que llena el Fondo de la Caravana de Fundación. Si aguanta, quedas herido y pierdes la mitad del carro.`)}</span>
     <h3>Bandidos · nivel ${campamento.nivel}</h3>
     <div class="bandidos-nivel" title="Nivel ${campamento.nivel} de 3">${[1, 2, 3].map((n) => `<i${n <= campamento.nivel ? ' class="on"' : ''}></i>`).join('')}<span>Nivel ${campamento.nivel} de 3</span></div>
     ${svgPlanoBandidos(campamento)}
@@ -1429,7 +1432,7 @@ function renderSeleccionCampamento(cont: HTMLElement, proyeccion: ProyeccionJuga
       return;
     }
     const sigue = estadoCliente.proyeccionUltima?.campamentosBandidos.some((c) => c.id === campamento.id);
-    avisoMapa(sigue ? 'El campamento aguanta: quedas herido y pierdes la mitad del carro.' : 'Campamento destruido: su oro va a tu carro.');
+    avisoMapa(sigue ? 'El campamento aguanta: quedas herido y pierdes la mitad del carro.' : 'Campamento destruido: su botín va a tu carro.');
   });
 }
 
@@ -1556,12 +1559,22 @@ let radiosDeVision: RadiosDeVision = { solo: 15, ejercito: 30 };
 let fundacion3d: { clave: string; valor: FundacionEnVista | null } = { clave: '', valor: null };
 function fundacionEnVista(): FundacionEnVista | null {
   const pos = estadoCliente.modoFundacionActivo ? estadoCliente.posicionFundacion : null;
-  const clave = pos ? `${pos.x.toFixed(1)},${pos.y.toFixed(1)}:${estadoCliente.proyeccionUltima?.version ?? 0}` : '';
+  const clave = pos ? `${pos.x.toFixed(1)},${pos.y.toFixed(1)}:${estadoCliente.proyeccionUltima?.version ?? 0}:${estadoCliente.mapaCache?.mapa ? 1 : 0}` : '';
   if (clave !== fundacion3d.clave) {
-    fundacion3d = { clave, valor: pos ? { centro: pos, radio: radioZonaInicial(), sitios: sitiosDeAldeaAlFundar(pos), parcelas: parcelasAlFundar(pos) } : null };
+    const sitio = pos ? sitioAqui(pos) : null;
+    fundacion3d = { clave, valor: pos ? { centro: pos, radio: radioZonaInicial(), sitios: sitiosDeAldeaAlFundar(pos), parcelas: parcelasAlFundar(pos), ...(sitio ? { valido: sitio.motivo === null, prohibidos: sitio.prohibidos } : {}) } : null };
   }
   return fundacion3d.valor;
 }
+
+/** ¿Se puede fundar en `pos`, y dónde no se funda alrededor? (`ui/sitioDeFundacion.ts`). `null` mientras no estén el mapa y la proyección. */
+function sitioAqui(pos: { x: number; y: number }): SitioDeFundacion | null {
+  const p = estadoCliente.proyeccionUltima, mapa = estadoCliente.mapaCache?.mapa;
+  return p && mapa ? sitioDeFundacion(p, mapa, pos) : null;
+}
+
+/** La Caravana de Fundación por la que ya se abrió solo el panel ⌂ (una vez por caravana: si lo cierras, no vuelve a abrirse). */
+let panelFundarAbiertoPor: string | null = null;
 
 /** El último estado que se dio a la vista 3D: de qué proyección salió y con qué selección, vista previa y reglas. */
 let estado3d: { p: ProyeccionJugador; clave: string; estado: EstadoVista } | null = null;
@@ -2128,6 +2141,12 @@ async function pintarVistaMapaYa(centrar: boolean | { x: number; y: number }): P
     ctx.setLineDash([]);
   }
   if (eleccionEnMapa?.sitios) pintarSitiosDeAldea(ctx, eleccionEnMapa.sitios, escala);
+  // con la Caravana de Fundación (o el panel ⌂ abierto), dónde se fundaría y dónde no: a esta escala se ven los círculos de los campamentos
+  const pos = estadoCliente.modoFundacionActivo ? estadoCliente.posicionFundacion : null;
+  if (pos) {
+    const sitio = sitioDeFundacion(p, mapa, pos);
+    pintarPrevisualizacionFundacion(ctx, mapa, pos, escala, sitiosDeAldeaAlFundar(pos), parcelasAlFundar(pos), { valido: sitio.motivo === null, prohibidos: sitio.prohibidos });
+  }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
@@ -2141,6 +2160,12 @@ function renderPanelRiel(): void {
 
   const columna = miColumna(proyeccion);
   const puedeFundar = Boolean(columna);
+  // Llevando la Caravana de Fundación, el mapa enseña siempre dónde se puede fundar, siguiendo a la columna, y el panel ⌂ se abre solo la
+  // primera vez (Víctor, 2026-11-22: «fundar sin adivinar»).
+  const llevada = columna?.caravanaFundacionId;
+  if (llevada && panelFundarAbiertoPor !== llevada) { panelFundarAbiertoPor = llevada; panelMapaAbierto = 'fundar'; }
+  estadoCliente.modoFundacionActivo = Boolean(columna) && (panelMapaAbierto === 'fundar' || Boolean(llevada));
+  estadoCliente.posicionFundacion = estadoCliente.modoFundacionActivo && columna ? columna.posicionActual : null;
   riel.querySelector('[data-panel="fundar"]')?.toggleAttribute('hidden', !puedeFundar);
   riel.querySelectorAll<HTMLButtonElement>('[data-panel]').forEach((boton) => {
     boton.classList.toggle('activo', boton.dataset.panel === panelMapaAbierto);
@@ -2181,22 +2206,24 @@ function renderPanelRiel(): void {
   } else {
     // fundar: solo con una Caravana de Fundación enganchada, y donde se está (Doc 1.3, 1.8)
     // La de fundación va en `caravanaFundacionId` de la columna (motor d8ef09c), no en `caravanasAdjuntasIds`; funda el Líder de la columna.
-    const llevada = columna?.caravanaFundacionId;
     const caravana = (llevada ? proyeccion.caravanas.find((c) => c.id === llevada) : undefined) ?? caravanaDeFundacion(proyeccion);
     const enganchada = Boolean(llevada || (caravana && columna?.caravanasAdjuntasIds?.includes(caravana.id)));
     const esLider = !columna?.liderId || columna.liderId === proyeccion.heroeId;
     const htmlFundar = `
       <span class="faction-kicker">Fundar asentamiento${!caravana && !enganchada
         ? ayuda('mapa:fundar', 'Una Facción sin plaza la compra en un campamento de mercenarios con el fondo de sus héroes; con plaza, se lanza desde Centro urbano › Fundación. Quien la compra o la lanza la lleva.')
-        : enganchada ? ayuda('mapa:fundar', 'Se funda donde está ahora tu columna, no en agua ni a menos de 100 de un campamento.') : ''}</span>
+        : enganchada ? ayuda('mapa:fundar', `Se funda donde está ahora tu columna: en tierra firme y llana, fuera del bosque cerrado y de la orilla del río, fuera del territorio de otra plaza, a ${distanciasDeFundar().plazas} o más de cualquier plaza y a ${distanciasDeFundar().campamentos} o más de cualquier campamento de mercenarios. El aro de la zona sale verde donde se puede y rojo donde no; los círculos rojos son donde no se funda.`) : ''}</span>
       ${!caravana && !enganchada
         ? '<p>Se funda con una Caravana de Fundación.</p>'
         : enganchada && !esLider
           ? `<p>Tu ejército lleva la Caravana de Fundación. Funda su Líder, ${escaparHtml(nombreDeHeroe(proyeccion, columna!.liderId!))}, donde esté la columna.</p>`
         : enganchada
-          ? `<p>Se funda donde está ahora tu columna. Estos son los recursos a tu alcance:</p>
-            <div id="mapa-fundar-recursos">${resumenRecursosFundacion(escaparHtml)}</div>
-            <button id="btn-fundar-aqui" class="btn-primary" type="button">Fundar aquí</button>`
+          ? `${((sitio) => sitio?.motivo
+              ? `<p class="fundacion-gate falta fundar-aqui-no">Aquí no: ${escaparHtml(sitio.motivo)}</p><p class="asent-lado-nota">Marcha con tu columna hasta que el aro se ponga verde.</p>`
+              : `<p class="fundacion-gate ok fundar-aqui-si">Aquí se puede fundar.</p>`)(estadoCliente.posicionFundacion ? sitioAqui(estadoCliente.posicionFundacion) : null)}
+            <p>Estos son los recursos a tu alcance:</p>
+            <div id="mapa-fundar-recursos">${resumenRecursosFundacion(escaparHtml, false)}</div>
+            ${estadoCliente.posicionFundacion && sitioAqui(estadoCliente.posicionFundacion)?.motivo ? '' : '<button id="btn-fundar-aqui" class="btn-primary" type="button">Fundar aquí</button>'}`
           : `<p>Tu Caravana de Fundación espera en ${caravana!.origenCampamentoId ? 'su campamento' : 'su plaza'}. Para llevártela, sal de allí como ejército y, al partir, elige llevarla; o lleva tu ejército a la puerta y engánchala.</p>
             <button id="btn-enganchar-caravana" class="btn-primary" type="button">Enganchar caravana</button>`}
       <p id="mapa-fundar-error" class="faction-error" role="alert"></p>`;
@@ -3445,12 +3472,42 @@ function montar(pantalla: Pantalla): void {
 /** Rellena los trozos dinámicos de la pantalla ya montada (el DOM se monta una vez, guard de
  * `pantallaMontada`; aquí se le vuelca la proyección en cada refresco): Mapa vuelve a pintar el canvas,
  * legacy repinta panel + canvas + JSON como hacía antes. */
+/** La tarjeta «Tu primera plaza» (`ui/caminoPrimeraPlaza.ts`) en el campamento y en el mundo, mientras tu Facción no tiene plaza. */
+function pintarCaminoPrimeraPlaza(p: ProyeccionJugador): void {
+  const campamento = pantallaMontada === 'campamento' ? campamentoActual(p) : undefined;
+  const precio = costoDeRefundacion(() => { const q = estadoCliente.proyeccionUltima; if (q) pintarCaminoPrimeraPlaza(q); });
+  pintarCamino(p, campamento ? { campamento } : {}, precio, hacerPasoDelCamino, escaparHtml);
+}
+
+/** Lo que hace el botón de la tarjeta del camino, con lo de la pantalla montada. */
+function hacerPasoDelCamino(a: AccionCamino): void {
+  const p = estadoCliente.proyeccionUltima;
+  if (!p) return;
+  switch (a.tipo) {
+    case 'faccion': panelJugador = 'faccion'; renderPanelJugador(true); return;
+    case 'parte': abrirParteCampamento(a.parte); return;
+    case 'salir': abrirVentanaSalida(); return;
+    case 'bandidos':
+      // se selecciona su ficha (con «Atacar») y la columna marcha hacia él
+      seleccionMapa = { tipo: 'campamento', id: a.id };
+      renderSeleccionMapa();
+      void marcharAObjetivo({ tipo: 'punto', punto: a.posicion });
+      return;
+    case 'marchar': void marcharAObjetivo({ tipo: 'punto', punto: a.posicion }); return;
+    case 'entrar':
+      void ejecutarYRefrescar('entrarEnCampamento', { campamentoId: a.campamentoId, heroeId: p.heroeId }).then((m) => { if (m) avisoMapa(m); });
+      return;
+    case 'fundar': if (panelMapaAbierto !== 'fundar') abrirPanelRiel('fundar'); return;
+  }
+}
+
 function refrescarPantalla(pantalla: Pantalla): void {
   const proyeccion = estadoCliente.proyeccionUltima;
   if (!proyeccion) return;
   if (pantalla === 'mapa' || pantalla === 'campamento' || pantalla === 'asentamiento' || pantalla === 'pueblo' || pantalla === 'avanzada') {
     renderPanelJugador();
     pintarRastreador(proyeccion, abrirMisiones, escaparHtml);
+    pintarCaminoPrimeraPlaza(proyeccion);
     if (vistaMapaAbierta) void pintarVistaMapa();
   }
   if (pantalla === 'mapa') { pintarComida(proyeccion); renderSeleccionMapa(); renderPanelRiel(); return; }

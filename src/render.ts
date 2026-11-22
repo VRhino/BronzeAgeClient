@@ -1170,7 +1170,8 @@ export function pintarPrevisualizacionFundacion(
   posicion: Point,
   escalaCanvas: number,
   sitiosAldea?: SitiosDeAldea | null,
-  parcelas: { centro: Point; estado: 'libre' | 'ocupada' | 'ajena' }[] = []
+  parcelas: { centro: Point; estado: 'libre' | 'ocupada' | 'ajena' }[] = [],
+  sitio?: { valido: boolean; prohibidos: { centro: Point; radio: number }[] }
 ): void {
   const x = posicion.x * escalaCanvas;
   const y = posicion.y * escalaCanvas;
@@ -1178,12 +1179,25 @@ export function pintarPrevisualizacionFundacion(
   const radio = radioZona * escalaCanvas;
 
   ctx.save();
+  // donde no se funda (Víctor, 2026-11-22): los círculos de los campamentos y de las plazas cercanas, en rojo
+  for (const q of sitio?.prohibidos ?? []) {
+    ctx.beginPath();
+    ctx.arc(q.centro.x * escalaCanvas, q.centro.y * escalaCanvas, q.radio * escalaCanvas, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(200, 70, 50, 0.12)';
+    ctx.fill();
+    ctx.setLineDash([6, 4]);
+    ctx.strokeStyle = 'rgba(224, 87, 60, 0.9)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  const color = !sitio ? '#f1d38b' : sitio.valido ? '#5fd46f' : '#e0573c';
   ctx.beginPath();
   ctx.arc(x, y, radio, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(200, 170, 110, 0.18)';
+  ctx.fillStyle = !sitio ? 'rgba(200, 170, 110, 0.18)' : sitio.valido ? 'rgba(95, 212, 111, 0.16)' : 'rgba(224, 87, 60, 0.18)';
   ctx.fill();
   ctx.setLineDash([8, 5]);
-  ctx.strokeStyle = '#f1d38b';
+  ctx.strokeStyle = color;
   ctx.lineWidth = 2;
   ctx.stroke();
   ctx.setLineDash([]);
@@ -1200,7 +1214,7 @@ export function pintarPrevisualizacionFundacion(
   }
   ctx.beginPath();
   ctx.arc(x, y, 5, 0, Math.PI * 2);
-  ctx.fillStyle = '#f1d38b';
+  ctx.fillStyle = color;
   ctx.fill();
   ctx.strokeStyle = '#1b1a17';
   ctx.lineWidth = 1.5;

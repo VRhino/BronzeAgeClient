@@ -7,7 +7,7 @@ import type { ColumnaEnVista, FundacionEnVista, MiradaEnVista, SeleccionEnVista 
 import { cinta, circulo } from './lineas';
 import type { SueloPintado } from './terreno';
 
-const COLOR = { mirada: 0x7cc4ea, caducada: 0xb4b4b4, seleccion: 0xf4ead2, fundacion: 0xf1d38b, valido: 0x46c85a, cerca: 0xa0a096, libre: 0x78dc6e, ocupada: 0xc85a46 };
+const COLOR = { mirada: 0x7cc4ea, caducada: 0xb4b4b4, seleccion: 0xf4ead2, fundacion: 0xf1d38b, valido: 0x46c85a, cerca: 0xa0a096, libre: 0x78dc6e, ocupada: 0xc85a46, prohibido: 0xd8543a, mal: 0xe0573c };
 
 export interface Marcas {
   columnas: readonly ColumnaEnVista[];
@@ -56,7 +56,7 @@ export class MarcasEnSuelo {
       ...formaciones.map((c) => `F${c.id}:${f(c.posicion.x)},${f(c.posicion.y)}:${c.color}`),
       ...m.miradas.map((x) => `M${x.id}:${x.abierta}:${x.radio}`),
       `S${this.suelo.version}`,
-      fun ? `U${f(fun.centro.x)},${f(fun.centro.y)}:${fun.radio}:${fun.sitios?.validos.length ?? 0}:${fun.sitios?.cerca.length ?? 0}:${fun.parcelas.map((q) => q.estado).join('')}` : '',
+      fun ? `U${f(fun.centro.x)},${f(fun.centro.y)}:${fun.radio}:${fun.sitios?.validos.length ?? 0}:${fun.sitios?.cerca.length ?? 0}:${fun.parcelas.map((q) => q.estado).join('')}:${fun.valido ?? ''}:${(fun.prohibidos ?? []).map((x) => `${f(x.centro.x)},${f(x.centro.y)},${x.radio}`).join(';')}` : '',
     ].join('|');
     if (clave !== this.clave) {
       this.clave = clave;
@@ -75,8 +75,11 @@ export class MarcasEnSuelo {
   }
 
   private fundar(fun: FundacionEnVista): void {
-    this.aro(this.grupo, fun.centro, fun.radio, 0.12, this.material(COLOR.fundacion, 1), true);
-    this.aro(this.grupo, fun.centro, 0.25, 0.08, this.material(COLOR.fundacion, 1));
+    // el aro de la zona: verde si aquí se puede fundar, rojo si no (sin el dato, dorado); los círculos prohibidos cercanos, en rojo discontinuo
+    const color = fun.valido === undefined ? COLOR.fundacion : fun.valido ? COLOR.valido : COLOR.mal;
+    for (const x of fun.prohibidos ?? []) this.aro(this.grupo, x.centro, x.radio, 0.22, this.material(COLOR.prohibido, 0.85), true);
+    this.aro(this.grupo, fun.centro, fun.radio, 0.16, this.material(color, 1), true);
+    this.aro(this.grupo, fun.centro, 0.25, 0.08, this.material(color, 1));
     // los sitios de aldea: cuadros planos del paso de la rejilla con que se buscaron
     const s = fun.sitios;
     if (s && s.validos.length + s.cerca.length) {

@@ -16,6 +16,7 @@ import { cablearPlegables, plegable } from './plegable';
 import type { Ejecutar } from './panelCarro';
 import type { SubpestanaPlaza } from './ganchos';
 import { mostrar as mostrarAviso } from './avisos';
+import { columnaDeGuias } from './caminoPrimeraPlaza';
 
 type Escapar = (valor: string) => string;
 export type DuenoMision = 'heroe' | 'plaza' | 'faccion';
@@ -381,9 +382,9 @@ export const SUBPESTANA_MISIONES: SubpestanaPlaza = {
  */
 export function pintarRastreador(p: ProyeccionJugador, abrir: (d: DuenoMision, id?: string) => void, e: Escapar): void {
   // en la plaza va al borde derecho (`.asent-der`); en el campamento, al principio de su columna izquierda
+  // en el mundo va en la columna de guías de arriba a la derecha, debajo de la tarjeta «Tu primera plaza» (`ui/caminoPrimeraPlaza.ts`)
   const izq = document.querySelector<HTMLElement>('.asent-der') ?? document.querySelector<HTMLElement>('.asent-izq');
-  const mundo = document.querySelector<HTMLElement>('.mapa-screen:not(.mapa-interior)');
-  const sitio = izq ?? mundo;
+  const sitio = izq ?? columnaDeGuias();
   let el = document.querySelector<HTMLElement>('.misiones-rastreador');
   if (!sitio) { el?.remove(); return; }
   const s = cargarSeguimiento(p);
@@ -396,8 +397,10 @@ export function pintarRastreador(p: ProyeccionJugador, abrir: (d: DuenoMision, i
   if (!el || el.parentElement !== sitio) {
     el?.remove();
     el = document.createElement('aside');
-    el.className = `misiones-rastreador${izq ? ' en-columna' : ''}`;
-    sitio.prepend(el);
+    el.className = 'misiones-rastreador en-columna';
+    // en una columna, detrás de la tarjeta del camino si está
+    const camino = sitio.querySelector(':scope > .camino-plaza');
+    if (camino) camino.after(el); else sitio.prepend(el);
   }
   const html = `<button class="rastreador-cab" type="button" data-rastreador-plegar aria-expanded="${s?.plegado ? 'false' : 'true'}">Misiones ${seguidas.length}/${MAX_SEGUIDAS} <span>${s?.plegado ? '▸' : '▾'}</span></button>
     ${s?.plegado ? '' : seguidas.map(({ d, m }) => `<button class="rastreador-item${m.estado === 'cumplida' ? ' cumplida' : ''}" type="button" data-rastreador-abrir="${d}" data-rastreador-mision="${e(m.id)}"><strong>${e(textoDeMision(m.id).titulo)}</strong>${m.estado === 'cumplida' ? '<small>¡Cumplida! Reclámala</small>' : barras(m, e, true)}</button>`).join('')}`;

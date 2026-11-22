@@ -63,7 +63,8 @@ export function htmlParcelasAlFundar(parcelas: ParcelaAlFundar[]): string {
   return `<span class="fundacion-gate ${libres ? 'ok' : 'falta'}">${libres} parcela${libres === 1 ? '' : 's'} de bosque libre${libres === 1 ? '' : 's'} en la zona inicial: ${libres === 1 ? 'cabe 1 Leñera' : `caben ${libres} Leñeras`}${otras ? ` (${otras} más ocupada${otras === 1 ? '' : 's'} o en la zona de otra plaza)` : ''}.${libres ? '' : ` ${sinMadera}`} En verde en el mapa.</span>`;
 }
 
-export function resumenRecursosFundacion(escaparHtml: (valor: string) => string): string {
+/** `conTerreno` = false cuando quien lo pinta ya dice si el sitio vale (el panel ⌂ del mundo, con `ui/sitioDeFundacion.ts`). */
+export function resumenRecursosFundacion(escaparHtml: (valor: string) => string, conTerreno = true): string {
   const posicion = estadoCliente.posicionFundacion;
   const mapa = estadoCliente.mapaCache?.mapa;
   if (!posicion || !mapa) return '';
@@ -89,8 +90,8 @@ export function resumenRecursosFundacion(escaparHtml: (valor: string) => string)
   const empinado = pendiente !== null && pendiente > pendienteMaxima;
   return `
     <div class="foundation-resources">
-      ${empinado ? `<span class="fundacion-gate falta">Demasiada pendiente (${Math.round(Math.atan(pendiente!) * 180 / Math.PI)}°): aquí no se puede fundar. Busca un sitio más llano.</span>` : ''}
-      ${enBosqueCerrado ? '<span class="fundacion-gate falta">Bosque cerrado: aquí no se puede fundar. Busca la orilla o un claro.</span>' : ''}
+      ${conTerreno && empinado ? `<span class="fundacion-gate falta">Demasiada pendiente (${Math.round(Math.atan(pendiente!) * 180 / Math.PI)}°): aquí no se puede fundar. Busca un sitio más llano.</span>` : ''}
+      ${conTerreno && enBosqueCerrado ? '<span class="fundacion-gate falta">Bosque cerrado: aquí no se puede fundar. Busca la orilla o un claro.</span>' : ''}
       ${htmlAldeaAlFundar(sitiosDeAldeaAlFundar(posicion))}
       ${htmlParcelasAlFundar(parcelasAlFundar(posicion))}
       <strong>Recursos en la zona inicial</strong>
