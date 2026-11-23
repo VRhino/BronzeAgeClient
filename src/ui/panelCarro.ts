@@ -12,7 +12,8 @@ import type { ProyeccionJugador } from '../apiCliente';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import { ayuda } from './ayuda';
 import { CAPACIDAD_CARRO_SALIDA } from './cargaDeSalida';
-import { capacidadDeCarga, radioDePuerta } from '../apiCliente';
+import { capacidadDeCarga } from '../apiCliente';
+import { aLaPuerta } from './puerta';
 import type { Point } from '../terreno';
 
 type Escapar = (valor: string) => string;
@@ -42,7 +43,7 @@ function puertaDeResidencia(p: ProyeccionJugador): Point | undefined {
 function almacenAMano(p: ProyeccionJugador, columna: ReturnType<typeof miColumna>): boolean {
   if (!columna) return p.heroe.ubicacion.tipo === 'asentamiento' || p.heroe.ubicacion.tipo === 'mercenarios';
   const puerta = puertaDeResidencia(p);
-  return Boolean(puerta && Math.hypot(columna.posicionActual.x - puerta.x, columna.posicionActual.y - puerta.y) <= radioDePuerta());
+  return Boolean(puerta && aLaPuerta(p, columna.posicionActual, puerta));
 }
 
 function miColumna(p: ProyeccionJugador) {

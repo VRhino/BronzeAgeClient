@@ -403,3 +403,16 @@ describe('las aldeas de viñas y de olivos en su plano y su vista (tanda 5)', ()
     expect(svgPlanoPueblo(escena())).toContain('<title>Granja</title>');
   });
 });
+
+describe('la aldea guarda una distancia a las plazas y otra a los pueblos (23-11)', () => {
+  const mapa = { rasters: { terreno: { columnas: 10, filas: 10, celda: 1, datos: new Uint8Array(100).fill(3) }, fertilidad: { columnas: 10, filas: 10, celda: 1, datos: new Uint8Array(100).fill(200) } } } as unknown as import('../src/terreno').MapaGenerado;
+  const zona = { centro: { x: 5, y: 5 }, radio: 4 };
+  test('un punto a 6 u de un pueblo sirve si se pide 5 al pueblo, aunque se pidan 15 a la plaza', () => {
+    const sitios = sitiosDeAldea(mapa, zona, { plazas: [{ x: 100, y: 100 }], pueblos: [{ x: 3, y: 5 }] }, 0.3, { plaza: 15, pueblo: 5 })!;
+    expect(sitios.validos.some((q) => Math.hypot(q.x - 3, q.y - 5) >= 5)).toBe(true);
+    expect(sitios.cerca.every((q) => Math.hypot(q.x - 3, q.y - 5) < 5)).toBe(true);
+  });
+  test('a 15 de una plaza no sirve nada de una zona de 4', () => {
+    expect(sitiosDeAldea(mapa, zona, { plazas: [{ x: 5, y: 5 }], pueblos: [] }, 0.3, { plaza: 15, pueblo: 5 })!.validos).toHaveLength(0);
+  });
+});

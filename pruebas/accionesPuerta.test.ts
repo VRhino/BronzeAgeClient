@@ -20,7 +20,7 @@ function proyeccion(columnaEn: { x: number; y: number }): ProyeccionJugador {
       ],
     },
     ejercitos: [{ id: 'ej-1', liderId: 'h', participantes: [{ heroeId: 'h' }], posicionActual: columnaEn }],
-    facciones: [], heroes: [],
+    asentamientos: [plaza], facciones: [], heroes: [],
   } as unknown as ProyeccionJugador;
 }
 

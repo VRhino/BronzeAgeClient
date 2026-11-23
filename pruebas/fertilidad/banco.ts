@@ -78,7 +78,7 @@ function pintar(): void {
   const deLaAldea = qs.get('sitios');
   if (esCultivo(deLaAldea)) {
     const centro = { x: x0 + ancho / 2, y: y0 + (ancho * canvas.height) / canvas.width / 2 };
-    const sitios = sitiosDeAldea(mapa, { centro, radio: ancho / 6 }, [], reglasDeAldea().fertilidadMinima, reglasDeAldea().separacionMinima, deLaAldea);
+    const sitios = sitiosDeAldea(mapa, { centro, radio: ancho / 6 }, [], reglasDeAldea().fertilidadMinima, { plaza: reglasDeAldea().separacionAPlaza, pueblo: reglasDeAldea().separacionAPueblo }, deLaAldea);
     if (sitios) pintarSitiosDeAldea(ctx, sitios, escala);
   }
 }

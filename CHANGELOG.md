@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.226.0] — 2026-11-23 · Tamaños y distancias del mapa, tandas 1 y 2: fundar, aldea y puerta por el contorno · motor `3cd9a30`
+
+Sin cambio de contrato; va con el mundo nuevo y la partida nueva del motor (PR #42, nucleo 0.55.0).
+
+- **Fundar**: las cifras de hoy como respaldo son las nuevas (60 u a otra plaza y a un campamento, zona inicial de 24 u, techos de 30 a 90). Regla nueva: a menos de `FUNDACION.distanciaMinimaANodo` (12 u) de un nodo de recurso no se funda; el aro lo pone en rojo con el motivo «Muy cerca de un yacimiento» y `fundacion.cerca_de_nodo` tiene su texto. El río mira ahora el radio de la plaza (15 u).
+- **La aldea**: dos separaciones en vez de una, 15 u a una plaza y 7,5 u a otro pueblo o aldea (`separacionAPlaza` y `separacionAPueblo`); los sitios del mapa, las ayudas y el aviso de «tierra fértil a menos de…» las usan. Los anillos de las aldeas siguen los techos nuevos.
+- **La puerta es todo el contorno** (`ui/puerta.ts`): estar a la puerta de una plaza, un pueblo, una aldea, una avanzada o un campamento es estar a 1 u o menos de su borde, por cualquier lado, con el radio de `TAMANOS_MAPA` (la plaza por nivel y muralla, la aldea por nivel, la avanzada por etapa). Vale para Entrar, Llenar víveres, la Armería, el mostrador, la taberna, el almacén de la puerta, dejar y recoger guarnición, la entrega de materiales y los avisos «Acércate…» (que dicen la distancia al borde).
+- **Atacar** una plaza, un pueblo, una avanzada o un campamento de bandidos se mide desde el borde del objetivo.
+- Los textos del camino a la primera plaza leen la distancia de fundar del motor en vez de «20».
+
 ## [0.225.0] — 2026-11-22 · Guía hasta la primera plaza · motor `e5be579`
 
 Solo cliente, sin cambios de contrato. En las pruebas de juego muchos jugadores nuevos no encontraban cómo fundar su primera plaza y lo dejaban a la hora (Víctor, ideas 1, 3 y 4).

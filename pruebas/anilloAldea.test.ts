@@ -1,5 +1,5 @@
-// El anillo de la siguiente aldea (motor 5907aa6): con el cupo 2/3/4/5/6 y los techos 10/15/20/25/30 u (los de sin datos), las dos primeras
-// hasta 10 u, la tercera de 10 a 15 u, la cuarta de 15 a 20 u.
+// El anillo de la siguiente aldea (motor 5907aa6): con el cupo 2/3/4/5/6 y los techos 30/50/70/80/90 u (los de sin datos, del 23-11), las dos primeras
+// hasta 30 u, la tercera de 30 a 50 u, la cuarta de 50 a 70 u.
 import { describe, expect, it } from 'vitest';
 
 (globalThis as Record<string, unknown>).location = { protocol: 'http:', host: 'x', hostname: 'x', search: '' };
@@ -13,14 +13,14 @@ const con = (aldeas: number, obras = 0) => ({
 });
 
 describe('anillo de la siguiente aldea', () => {
-  it('las dos primeras hasta 10 u', () => {
-    expect(anilloDeAldea(con(0) as never, plaza as never)).toEqual({ desde: 0, hasta: 10 });
-    expect(anilloDeAldea(con(1) as never, plaza as never)).toEqual({ desde: 0, hasta: 10 });
+  it('las dos primeras hasta 30 u', () => {
+    expect(anilloDeAldea(con(0) as never, plaza as never)).toEqual({ desde: 0, hasta: 30 });
+    expect(anilloDeAldea(con(1) as never, plaza as never)).toEqual({ desde: 0, hasta: 30 });
   });
-  it('la tercera de 10 a 15 u, contando las obras', () => {
-    expect(anilloDeAldea(con(1, 1) as never, plaza as never)).toEqual({ desde: 10, hasta: 15 });
+  it('la tercera de 30 a 50 u, contando las obras', () => {
+    expect(anilloDeAldea(con(1, 1) as never, plaza as never)).toEqual({ desde: 30, hasta: 50 });
   });
-  it('la cuarta de 15 a 20 u', () => {
-    expect(anilloDeAldea(con(3) as never, plaza as never)).toEqual({ desde: 15, hasta: 20 });
+  it('la cuarta de 50 a 70 u', () => {
+    expect(anilloDeAldea(con(3) as never, plaza as never)).toEqual({ desde: 50, hasta: 70 });
   });
 });

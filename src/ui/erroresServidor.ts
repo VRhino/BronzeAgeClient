@@ -89,6 +89,7 @@ const MENSAJES: Record<string, string> = {
   'fundacion.bosque_denso': 'No se puede fundar en bosque cerrado: busca la orilla o un claro.',
   'fundacion.dentro_de_zona': 'Aquí es zona de otra plaza: aléjate de ella para fundar.',
   'fundacion.cerca_de_plaza': 'Demasiado cerca de otra plaza: aléjate más para fundar.',
+  'fundacion.cerca_de_nodo': 'Demasiado cerca de un yacimiento o recurso: aléjate de él para fundar.',
   'fundacion.cerca_de_campamento': 'Demasiado cerca de un campamento: aléjate más para fundar.',
   'fundacion.cap_alcanzado': 'Tu Facción ya tiene todas las plazas que su nivel permite.',
   'fundacion.sin_fundadores': 'Nadie de la columna es ciudadano de su Facción: no hay quien funde.',
@@ -111,7 +112,7 @@ const MENSAJES: Record<string, string> = {
   // Aldea agrícola (motor 7086ebc)
   'pueblo.fertilidad_insuficiente': 'Tierra poco fértil para una aldea de ese cultivo (hace falta al menos 0,3).',
   'pueblo.demasiado_cerca': 'Demasiado cerca de la plaza o de otro pueblo (al menos 3).',
-  'pueblo.fuera_de_su_anillo': 'La siguiente aldea va en su anillo de la zona: las dos primeras hasta el techo del nivel 1 (10 u), la tercera en el anillo que añade el nivel 2, y así.',
+  'pueblo.fuera_de_su_anillo': 'La siguiente aldea va en su anillo de la zona: las dos primeras hasta el techo del nivel 1, la tercera en el anillo que añade el nivel 2, y así.',
   'obra.solo_por_pueblo': 'Ese extractor ya no se construye en la plaza: la Cantera y las minas van en un pueblo extractor (pestaña Territorio).',
   'faccion.de_bots': 'Es una Facción de bots: un jugador no puede entrar en ella.',
   'faccion.no_es_de_bots': 'Un bot solo entra en una Facción de bots.',

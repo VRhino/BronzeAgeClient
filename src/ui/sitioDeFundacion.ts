@@ -74,7 +74,7 @@ function motivo(p: ProyeccionJugador, mapa: MapaGenerado, punto: Punto, plazas: 
   const { ancho, alto } = mapa.config;
   if (punto.x < 0 || punto.y < 0 || punto.x > ancho || punto.y > alto) return 'Fuera del mapa.';
   if (terrenoEn(mapa, punto) === 1) return 'Sobre el agua no se funda: busca tierra firme.';
-  const fundacion = bloqueDeDatos<{ pendienteMaximaParaFundar?: number; densidadBosqueMaximaParaFundar?: number }>('FUNDACION');
+  const fundacion = bloqueDeDatos<{ pendienteMaximaParaFundar?: number; densidadBosqueMaximaParaFundar?: number; distanciaMinimaANodo?: number }>('FUNDACION');
   const pendiente = pendienteEn(mapa, punto);
   if (pendiente !== null && pendiente > Number(fundacion?.pendienteMaximaParaFundar ?? 0.3)) {
     return `Demasiada pendiente (${Math.round((Math.atan(pendiente) * 180) / Math.PI)}°): busca un sitio más llano.`;
@@ -83,7 +83,7 @@ function motivo(p: ProyeccionJugador, mapa: MapaGenerado, punto: Punto, plazas: 
   if (densidad !== null && densidad >= Number(fundacion?.densidadBosqueMaximaParaFundar ?? 0.7)) return 'Bosque cerrado: busca la orilla o un claro.';
   // la ciudad más grande que puede tener la plaza no puede entrar en el cauce (`ORILLA_RIO`, 2026-11-18)
   const orilla = bloqueDeDatos<OrillaRio>('ORILLA_RIO');
-  const radioPlaza = Number(orilla?.radio?.plaza ?? 4.8);
+  const radioPlaza = Number(orilla?.radio?.plaza ?? 15);
   for (const r of mapa.rios ?? []) {
     const limite = (r.navegable ? Number(orilla?.mediaAnchuraNavegable ?? 1.5) : Number(orilla?.mediaAnchura ?? 0.75)) + radioPlaza;
     for (let k = 1; k < r.puntos.length; k++) if (aSegmento(punto, r.puntos[k - 1]!, r.puntos[k]!) < limite) return 'Demasiado pegado al río: la ciudad no cabría. Apártate un poco de la orilla.';
@@ -93,5 +93,12 @@ function motivo(p: ProyeccionJugador, mapa: MapaGenerado, punto: Punto, plazas: 
   if (plaza !== undefined) return `Muy cerca de otra plaza: aléjate ${Math.ceil(d.plazas - plaza)} más.`;
   const camp = camps.map((c) => distancia(c, punto)).filter((x) => x < d.campamentos).sort((a, b) => a - b)[0];
   if (camp !== undefined) return `Muy cerca de un campamento de mercenarios: aléjate ${Math.max(1, Math.ceil(d.campamentos - camp))} más (hace falta ${d.campamentos} o más).`;
+  // Desde el 23-11 (Tamaños y distancias): a `FUNDACION.distanciaMinimaANodo` (12) o más de todo nodo de recurso.
+  const minimaANodo = Number(fundacion?.distanciaMinimaANodo ?? 12);
+  if (minimaANodo > 0) {
+    let cercano = Infinity;
+    for (const n of mapa.nodos ?? []) { const d = distancia(n.posicion, punto); if (d < cercano) cercano = d; }
+    if (cercano < minimaANodo) return `Muy cerca de un yacimiento: aléjate ${Math.max(1, Math.ceil(minimaANodo - cercano))} más (hace falta ${minimaANodo} o más de todo nodo de recurso).`;
+  }
   return null;
 }

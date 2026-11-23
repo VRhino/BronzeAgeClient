@@ -13,9 +13,9 @@ export function sitiosDeAldeaAlFundar(posicion: { x: number; y: number }): Sitio
   const mapa = estadoCliente.mapaCache?.mapa;
   const p = estadoCliente.proyeccionUltima;
   if (!mapa || !p) return null;
-  const { fertilidadMinima, separacionMinima } = reglasDeAldea();
-  // La plaza nueva también ocupa: la aldea va a `separacionMinima` de ella.
-  return sitiosDeAldea(mapa, { centro: posicion, radio: radioZonaInicial() }, [...ocupadosParaAldea(p), posicion], fertilidadMinima, separacionMinima);
+  const { fertilidadMinima, separacionAPlaza, separacionAPueblo } = reglasDeAldea();
+  // La plaza nueva también ocupa: la aldea va a `separacionAPlaza` de ella.
+  return sitiosDeAldea(mapa, { centro: posicion, radio: radioZonaInicial() }, { ...ocupadosParaAldea(p), plazas: [...ocupadosParaAldea(p).plazas, posicion] }, fertilidadMinima, { plaza: separacionAPlaza, pueblo: separacionAPueblo });
 }
 
 export type EstadoParcela = 'libre' | 'ocupada' | 'ajena';

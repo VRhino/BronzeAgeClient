@@ -3,6 +3,7 @@
 // (el tope real sale de la orden, el almacén de la plaza, su oro, tu carro y lo que llevas) y devuelve `{ cantidad, valor, comision }`.
 // Aquí solo se avisa de lo evidente (sin columna, lejos, no Líder, caducada): el que decide es el servidor y su rechazo se enseña tal cual.
 import { radioDePuerta, type ProyeccionJugador } from '../apiCliente';
+import { aLaPuerta, distanciaAlBorde } from './puerta';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import { ayuda } from './ayuda';
 
@@ -26,8 +27,8 @@ function motivoGeneral(p: ProyeccionJugador, plazaId: string): string {
   // Sin Mercado activo no hay órdenes que servir: desde fuera solo se sabe eso (`mercadoActivo`, motor 0e283fb); dentro, por sus edificios.
   const conMercado = 'mercadoActivo' in plaza && plaza.mercadoActivo !== undefined ? plaza.mercadoActivo : plaza.edificios?.some((x) => x.tipo === 'mercado' && x.estado === 'activo');
   if (conMercado === false) return 'Esa plaza no tiene un Mercado activo.';
-  const d = Math.round(Math.hypot(columna.posicionActual.x - plaza.posicion.x, columna.posicionActual.y - plaza.posicion.y));
-  if (d > radioDePuerta()) return `Acércate a la puerta: estás a ${d} y se comercia a ${radioDePuerta()}.`;
+  const d = Math.ceil(distanciaAlBorde(p, columna.posicionActual, plaza.posicion));
+  if (!aLaPuerta(p, columna.posicionActual, plaza.posicion)) return `Acércate a la puerta: estás a ${d} del borde de la plaza y se comercia a ${radioDePuerta()}.`;
   if (columna.liderId !== p.heroeId) return 'Solo el Líder de la columna comercia con su carro.';
   return '';
 }

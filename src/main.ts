@@ -141,6 +141,7 @@ import { cablearMercenariosFaccion, htmlMercenariosFaccion, mercenariosQuePidenA
 import { actualizarSeguimiento, cablearMisiones, elegirPestanaMisiones, htmlListaMisiones, htmlPanelMisiones, misionesPorReclamar, pintarRastreador } from './ui/misiones';
 import { pintarCamino, type AccionCamino } from './ui/caminoPrimeraPlaza';
 import { sitioDeFundacion, type SitioDeFundacion } from './ui/sitioDeFundacion';
+import { aLaPuerta as estaALaPuerta, distanciaAlBorde } from './ui/puerta';
 import { confirmar } from './ui/dialogo';
 import { instalarMenuJugadorMovil } from './ui/menuJugadorMovil';
 import { abrirCarga, cargaAbierta, cargarCatalogoDeCarga, cerrarCarga, type VistaDeCarga } from './ui/pantallaCarga';
@@ -1247,7 +1248,7 @@ function puertaDePlaza(p: ProyeccionJugador, a: AsentamientoEnMapa, x: { propio:
   const acciones: AccionPuerta[] = [{ id: 'marchar', etiqueta: 'Marchar aquí', icono: '➜' }];
   const ventanas: Record<string, () => VentanaPuerta> = {};
   const col = miColumna(p);
-  const aLaPuerta = col !== undefined && Math.hypot(col.posicionActual.x - a.posicion.x, col.posicionActual.y - a.posicion.y) <= radioDePuerta();
+  const aLaPuerta = col !== undefined && estaALaPuerta(p, col.posicionActual, a.posicion);
   const lider = col !== undefined && (col.participantes.length === 1 || col.liderId === p.heroeId);
   // Entrar sale solo cuando se puede (Víctor 2026-11-10): con la columna a la puerta, sin formación, en una plaza que te abre (tuya, aliada o tu residencia);
   // un ejército, solo en una de tu Facción y por su Líder.
@@ -1359,6 +1360,8 @@ function subsDeMercadoALaPuerta(p: ProyeccionJugador, a: Asentamiento): [string,
 function alcanceDeAtaque(proyeccion: ProyeccionJugador, punto: { x: number; y: number }, conSoldados = false): { distancia: number | null; impide: string } {
   const columna = miColumna(proyeccion);
   const distancia = columna ? Math.round(Math.hypot(columna.posicionActual.x - punto.x, columna.posicionActual.y - punto.y)) : null;
+  // Desde el 23-11 se ataca desde el BORDE del objetivo (`radioEncuentro` de su contorno), no desde su centro.
+  const alBorde = columna ? Math.ceil(distanciaAlBorde(proyeccion, columna.posicionActual, punto) - 1e-9) : null;
   const herido = minutosHerido(proyeccion);
   // Yendo solo, sin soldados vivos en la columna no hay con qué atacar (en un ejército pueden ponerlos los demás).
   const sinSoldados = conSoldados && columna !== undefined && columna.participantes.length === 1
@@ -1368,7 +1371,7 @@ function alcanceDeAtaque(proyeccion: ProyeccionJugador, punto: { x: number; y: n
   const impide =
     herido !== null ? `Estás herido (${herido} min): no puedes atacar.`
       : distancia === null ? 'Sal al mundo con tu columna para atacar.'
-        : distancia > radioDeAtaque() ? `Acércate: estás a ${distancia} y se ataca a ${radioDeAtaque()}.`
+        : alBorde! > radioDeAtaque() ? `Acércate: estás a ${alBorde} del borde y se ataca a ${radioDeAtaque()}.`
           : sinSoldados ? 'Tu columna no lleva soldados vivos: sal del campamento con tropa para atacar.'
             : protegido ? `Estás a menos de ${radioDeProteccionMercenarios()} del campamento de mercenarios ${protegido.id}: a su lado nadie inicia un combate.`
               : '';
@@ -1451,7 +1454,7 @@ function cablearAccionSeleccion(cont: HTMLElement, selector: string, tipo: strin
 /** Ficha de un campamento de mercenarios (Doc 1.9b): enclave neutral, cualquiera entra con su columna a la puerta. */
 function renderSeleccionMercenarios(cont: HTMLElement, proyeccion: ProyeccionJugador, campamento: CampamentoMercenarios): void {
   const columna = miColumna(proyeccion);
-  const distancia = columna ? Math.round(Math.hypot(columna.posicionActual.x - campamento.posicion.x, columna.posicionActual.y - campamento.posicion.y)) : null;
+  const distancia = columna ? distanciaAlBorde(proyeccion, columna.posicionActual, campamento.posicion) : null;
   const tuyo = campamento.residentesIds.includes(proyeccion.heroeId);
   const entraEjercito = columna !== undefined && (columna.tipo === 'ejercito' || columna.participantes.length > 1);
   const soyLider = columna?.liderId === proyeccion.heroeId;

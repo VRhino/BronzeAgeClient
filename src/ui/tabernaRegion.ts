@@ -8,7 +8,8 @@
 //  - en «Tus informes de región», cada informe con algo que ver abre lo que trae (0.198.0): sus plazas con un buscador y, en el de órdenes, las
 //    órdenes de compra y de venta de cada plaza.
 // Quien valida es el motor; aquí se enseña solo lo que el jugador puede hacer (regla de Víctor).
-import { radioDePuerta, type ProyeccionJugador } from '../apiCliente';
+import type { ProyeccionJugador } from '../apiCliente';
+import { aLaPuerta } from './puerta';
 import { svgSigilo } from '../sigilo/sigilo';
 import { nombreDeRegion, regionEn, type Region } from '../mundo/region';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
@@ -41,8 +42,8 @@ export function compraIntelEn(p: ProyeccionJugador, a: Asentamiento, puertaVale 
   const dentro = u.tipo === 'asentamiento' && u.asentamientoId === a.id;
   // con la columna a su puerta también (`resolver_compra` del motor; 0.193.0)
   const columna = puertaVale ? (p.ejercitos ?? []).find((c) => c.participantes.some((x) => x.heroeId === p.heroeId)) : undefined;
-  const aLaPuerta = columna !== undefined && Math.hypot(a.posicion.x - columna.posicionActual.x, a.posicion.y - columna.posicionActual.y) <= radioDePuerta();
-  if (!dentro && !aLaPuerta) return false;
+  const aLaPuertaDeLaPlaza = columna !== undefined && aLaPuerta(p, columna.posicionActual, a.posicion);
+  if (!dentro && !aLaPuertaDeLaPlaza) return false;
   const f = miFaccion(p);
   const gobernador = a.cargos?.gobernadorId === p.heroeId || Boolean(f?.miembros?.find((m) => m.heroeId === p.heroeId)?.cargos.includes(`gobernador@${a.id}`));
   return f?.reyId === p.heroeId || f?.embajadorId === p.heroeId || gobernador;

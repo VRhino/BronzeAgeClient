@@ -10,7 +10,8 @@
 // (`reclutarEnCampamento` para la tuya, `reponerPrestamo` gratis para las prestadas). Lo que no llega (equipo, oro, gente) va en rojo y lo apaga.
 // Aquí no se decide ninguna regla del motor: si algo cambia, el rechazo del servidor se enseña tal cual.
 import type { ProyeccionJugador } from '../apiCliente';
-import { asignarGuarnicion, capacidadDeViveres, oroPorSoldado, radioDePuerta, retirarGuarnicion, tropasReclutables, type TropaReclutable, origenDeTropa } from '../apiCliente';
+import { asignarGuarnicion, capacidadDeViveres, oroPorSoldado, retirarGuarnicion, tropasReclutables, type TropaReclutable, origenDeTropa } from '../apiCliente';
+import { aLaPuerta as aLaPuertaDe } from './puerta';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { Asentamiento, CampamentoMercenarios, Ejercito, Escuadron, HeroeProyectado } from '../tiposDominio';
 import { ayuda } from './ayuda';
@@ -66,7 +67,6 @@ export interface ContextoBase {
 const ROMANO = ['', 'I', 'II', 'III', 'IV', 'V'];
 const nombreRec = (r: string): string => RECURSO_NOMBRE[r] ?? r;
 const iconoRec = (r: string): string => RECURSO_ICONO[r] ?? '📦';
-const distancia = (a: { x: number; y: number }, b: { x: number; y: number }): number => Math.hypot(a.x - b.x, a.y - b.y);
 const ORIGEN_ICONO: Record<string, string> = { pesants: '🌾', artesanos: '⚒️', nobleza: '👑' };
 
 function miColumna(p: ProyeccionJugador): Ejercito | undefined {
@@ -112,10 +112,10 @@ type Reponer =
   | { tipo: 'campamento'; faltan: number; oro: number; motivo: string }
   | { tipo: 'prestada'; faltan: number };
 
-/** ¿Está esta columna a la puerta de ese punto (`radioPuerta`)? */
+/** ¿Está esta columna a la puerta del lugar de ese punto (a `radioPuerta` de su borde)? */
 function aLaPuerta(p: ProyeccionJugador, ejercitoId: string, puerta: { x: number; y: number }): boolean {
   const col = p.ejercitos.find((x) => x.id === ejercitoId);
-  return Boolean(col && distancia(col.posicionActual, puerta) <= radioDePuerta());
+  return Boolean(col && aLaPuertaDe(p, col.posicionActual, puerta));
 }
 
 /** El campamento de mercenarios donde resides si estás en él (dentro o con tu columna a su puerta), como `esta_en_el_campamento` del motor. */
