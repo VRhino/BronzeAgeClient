@@ -3,6 +3,10 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.227.1] — 2026-11-23 · Encargo: paradas en columna y cantidades con −10 / +10
+
+En el formulario del encargo las paradas van una debajo de otra, y cada recurso que se recoge o se deja lleva botones −10 / +10 en vez del campo de texto (en «Deja», sin tope se lee «Todo»). Los precios de las plazas ajenas siguen siendo un campo.
+
 ## [0.227.0] — 2026-11-23 · Rutas compuestas, escalas y lanzamiento de 2 min (tandas 3 a 5 de «Tamaños y distancias del mapa») · motor `32e13bf`
 
 Contrato 0.32.0 regenerado (`ParadaEncargoEn`, `mas_paradas` y `tramo`). Va con la partida nueva del motor.

@@ -3019,7 +3019,7 @@ kbd {
 .caravana-seccion-cab { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
 .caravana-seccion-cab .heroe-sub { margin: 0; }
 .encargo-form { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
-.encargo-paradas { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 6px; }
+.encargo-paradas { display: flex; flex-direction: column; gap: 8px; }
 .encargo-parada { border: 1px solid var(--borde, rgba(255,255,255,.15)); border-radius: 6px; padding: 4px 8px 8px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .encargo-parada legend { font-weight: 600; padding: 0 4px; }
 .encargo-linea { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 4px; }
@@ -5823,8 +5823,12 @@ button.carro-hueco:hover, .carro-hueco.activo { border-color: var(--oro); box-sh
 .encargo-recurso small { font-size: 0.68rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .encargo-recurso:hover { border-color: var(--oro); }
 .encargo-recurso.puesto { border-color: var(--oro); background: rgba(216, 184, 120, 0.18); box-shadow: inset 0 0 0 1px rgba(216, 184, 120, 0.4); }
-.encargo-fila { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(70px, 1fr) auto; gap: 4px; align-items: center; }
-.encargo-fila:has(> input + input) { grid-template-columns: minmax(0, 1.3fr) minmax(70px, 1fr) minmax(70px, 1fr) auto; }
+.encargo-fila { display: grid; grid-template-columns: minmax(0, 1.3fr) auto auto; gap: 4px; align-items: center; }
+.encargo-fila:has(> input) { grid-template-columns: minmax(0, 1.3fr) auto minmax(70px, 1fr) auto; }
+.encargo-paso { display: inline-flex; align-items: center; gap: 4px; justify-content: center; }
+.encargo-paso b { min-width: 3ch; text-align: center; color: var(--oro-claro); font-variant-numeric: tabular-nums; }
+.encargo-mas-menos { min-width: 38px; height: 30px; padding: 0 6px; font: inherit; font-weight: 700; font-size: 0.85rem; color: var(--oro-claro); background: rgba(0,0,0,.35); border: 1px solid var(--bronce-osc); border-radius: 15px; cursor: pointer; }
+.encargo-mas-menos:hover { border-color: var(--oro); background: rgba(216,184,120,.18); }
 .encargo-fila .form-input { min-width: 0; height: 30px; padding: 0 6px; }
 .encargo-fila-recurso { display: inline-flex; align-items: center; gap: 5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.82rem; color: var(--pergamino); }
 .encargo-fila-recurso i { font-style: normal; }

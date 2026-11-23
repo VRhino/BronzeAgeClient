@@ -200,6 +200,7 @@ function textoSituacion(c: Caravana, k: Encargo, p: ProyeccionJugador): string {
 // dejar algo que nadie recoge: `encargo.deja_sin_recoger`). El borrador de cada caravana vive aquí, así que el repintado del sondeo no lo pierde.
 // El circuito: `paradas[0]` es el origen y `paradas[i]`, la plaza `plazas[i - 1]` (el destino y luego las de `masParadas`).
 
+const PASO_ENCARGO = 10;
 interface Borrador { paradas: ParadaEncargo[]; plazas: string[] }
 const vacia = (): ParadaEncargo => ({ recoger: [], esperarExistencias: false, dejar: [], desecharSobrante: false });
 const copia = (x: ParadaEncargo | undefined): ParadaEncargo => (x ? { recoger: x.recoger.map((l) => ({ ...l })), esperarExistencias: x.esperarExistencias, dejar: x.dejar.map((l) => ({ ...l })), desecharSobrante: x.desecharSobrante } : vacia());
@@ -236,19 +237,20 @@ function htmlParada(c: Caravana, p: ProyeccionJugador, a: Asentamiento, indice: 
   const enRecoger = new Set(x.recoger.map((l) => l.recurso));
   const enDejar = new Set(x.dejar.map((l) => l.recurso));
   const boton = (recurso: string, puesto: boolean, accion: string, extra: string): string => `<button type="button" class="encargo-recurso${puesto ? ' puesto' : ''}" ${d(accion, recurso)} aria-pressed="${puesto}" title="${e(`${nombre(recurso)}${extra}${puesto ? ' · quitar' : ' · añadir'}`)}"><span aria-hidden="true">${icono(recurso)}</span>${extra ? `<small>${e(extra.replace(/^ · hay /, ''))}</small>` : ''}</button>`;
+  const paso = (valor: string, menos: string, mas: string, titulo = ''): string => `<span class="encargo-paso"${titulo ? ` title="${e(titulo)}"` : ''}><button type="button" class="encargo-mas-menos" ${menos} aria-label="Quitar ${PASO_ENCARGO}">−${PASO_ENCARGO}</button><b>${e(valor)}</b><button type="button" class="encargo-mas-menos" ${mas} aria-label="Añadir ${PASO_ENCARGO}">+${PASO_ENCARGO}</button></span>`;
   const quitar = (accion: string, recurso: string): string => `<button type="button" class="encargo-quitar" ${d(accion, recurso)} aria-label="Quitar ${e(nombre(recurso))}">✕</button>`;
   // Recoge
   const disponibles = recogibles(p, a, indice, plazaId, ajena);
   const botonesRecoger = disponibles.map((r) => boton(r.recurso, enRecoger.has(r.recurso), 'rec-poner', r.hay !== undefined ? ` · hay ${r.hay}` : '')).join('');
   const filasRecoger = x.recoger.map((l) => `<div class="encargo-fila"><span class="encargo-fila-recurso"><i aria-hidden="true">${icono(l.recurso)}</i>${e(nombre(l.recurso))}</span>
-      <input class="form-input" type="number" min="1" step="1" placeholder="Cantidad" value="${l.cantidad ? cifra(l.cantidad) : ''}" ${d('rec-cantidad', l.recurso)} />
+      ${paso(l.cantidad ? cifra(l.cantidad) : '—', d('rec-menos', l.recurso), d('rec-mas', l.recurso))}
       ${ajena ? `<input class="form-input" type="number" min="0" step="0.1" placeholder="Precio máx." value="${l.precioMax !== undefined ? cifra(l.precioMax) : ''}" ${d('rec-precio', l.recurso)} />` : ''}
       ${quitar('rec-quitar', l.recurso)}</div>`).join('');
   // Deja: lo que se recoge en alguna parada del circuito
   const dejables = [...new Set(b.paradas.flatMap((q) => q.recoger.map((l) => l.recurso)))];
   const botonesDejar = dejables.map((r) => boton(r, enDejar.has(r), 'dej-poner', '')).join('');
   const filasDejar = x.dejar.map((l) => `<div class="encargo-fila"><span class="encargo-fila-recurso"><i aria-hidden="true">${icono(l.recurso)}</i>${e(nombre(l.recurso))}</span>
-      <input class="form-input" type="number" min="1" step="1" placeholder="Todo" title="Tope: vacío = todo lo que lleve" value="${l.tope !== undefined ? cifra(l.tope) : ''}" ${d('dej-tope', l.recurso)} />
+      ${paso(l.tope !== undefined ? cifra(l.tope) : 'Todo', d('dej-menos', l.recurso), d('dej-mas', l.recurso), 'Tope: «Todo» = todo lo que lleve')}
       ${ajena ? `<input class="form-input" type="number" min="0" step="0.1" placeholder="Precio mín." value="${l.precioMin !== undefined ? cifra(l.precioMin) : ''}" ${d('dej-precio', l.recurso)} />` : ''}
       ${quitar('dej-quitar', l.recurso)}</div>`).join('');
   const plazas = destinos(p, a.id);
@@ -303,9 +305,11 @@ function cablearParadas(caja: HTMLElement, c: Caravana, p: ProyeccionJugador, a:
   });
   al('dej-quitar', (i, recurso) => { b.paradas[i]!.dejar = b.paradas[i]!.dejar.filter((l) => l.recurso !== recurso); repintar(); });
   const linea = <T extends { recurso: string }>(lista: T[], recurso: string): T | undefined => lista.find((l) => l.recurso === recurso);
-  al('rec-cantidad', (i, recurso, el) => { const l = linea(b.paradas[i]!.recoger, recurso); if (l) l.cantidad = num((el as HTMLInputElement).value) ?? 0; }, 'input');
+  al('rec-mas', (i, recurso) => { const l = linea(b.paradas[i]!.recoger, recurso); if (l) { l.cantidad = (l.cantidad || 0) + PASO_ENCARGO; repintar(); } });
+  al('rec-menos', (i, recurso) => { const l = linea(b.paradas[i]!.recoger, recurso); if (l) { l.cantidad = Math.max(0, (l.cantidad || 0) - PASO_ENCARGO); repintar(); } });
   al('rec-precio', (i, recurso, el) => { const l = linea(b.paradas[i]!.recoger, recurso); if (l) l.precioMax = num((el as HTMLInputElement).value); }, 'input');
-  al('dej-tope', (i, recurso, el) => { const l = linea(b.paradas[i]!.dejar, recurso); if (l) l.tope = num((el as HTMLInputElement).value); }, 'input');
+  al('dej-mas', (i, recurso) => { const l = linea(b.paradas[i]!.dejar, recurso); if (l) { l.tope = (l.tope ?? 0) + PASO_ENCARGO; repintar(); } });
+  al('dej-menos', (i, recurso) => { const l = linea(b.paradas[i]!.dejar, recurso); if (l && l.tope !== undefined) { l.tope = l.tope - PASO_ENCARGO > 0 ? l.tope - PASO_ENCARGO : undefined; repintar(); } });
   al('dej-precio', (i, recurso, el) => { const l = linea(b.paradas[i]!.dejar, recurso); if (l) l.precioMin = num((el as HTMLInputElement).value); }, 'input');
   al('desechar', (i, _r, el) => { b.paradas[i]!.desecharSobrante = (el as HTMLInputElement).checked; }, 'change');
   al('esperar', (i, _r, el) => { b.paradas[i]!.esperarExistencias = (el as HTMLInputElement).checked; }, 'change');
