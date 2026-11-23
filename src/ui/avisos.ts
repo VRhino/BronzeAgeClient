@@ -444,7 +444,7 @@ export function procesar(e: EventoDominio, heroeId: string, modo: Modo): void {
   if (!silencioso) alInforme?.(informe);
 }
 
-const CODIGOS_DE_ENCARGO = new Set(['comercio.encargo_dado', 'comercio.caravana_espera', 'comercio.caravana_carga', 'comercio.caravana_descarga', 'comercio.encargo_terminado']);
+const CODIGOS_DE_ENCARGO = new Set(['comercio.encargo_dado', 'comercio.caravana_espera', 'comercio.caravana_carga', 'comercio.caravana_descarga', 'comercio.encargo_terminado', 'comercio.parada_saltada']);
 const DATOS_DE_ENCARGO = new Set(['caravana', 'plaza', 'destino', 'modo', 'carros', 'finPaso', 'tirado', 'aBordo', 'comision', 'motivo', 'volcado', 'perdido']);
 
 /** El texto de un hecho del encargo de una caravana; las cifras llegan en milésimas y los recursos, como claves sueltas del payload. */
@@ -471,6 +471,7 @@ export function textoDeEncargo(codigo: string, p: Record<string, unknown>): stri
       const tirado = num('tirado'), comision = num('comision');
       return `${caravana} ${ajena('plaza') ? 'vende' : 'descarga'} en ${plaza('plaza')}${recursos ? ` ${recursos}` : ''}${tirado > 0 ? ` (tira ${cifra(tirado)} que no cabe)` : ''}${comision > 0 ? ` · comisión ${cifra(comision)} oro` : ''}.`;
     }
+    case 'comercio.parada_saltada': return `${caravana} se salta la parada en ${plaza('plaza')}: ya no vale.`;
     case 'comercio.encargo_terminado': {
       const motivo = ['cumplido', 'cancelado', 'su destino se perdió', 'la caravana fue destruida'][Number(p.motivo ?? 0)] ?? 'terminado';
       const volcado = num('volcado'), perdido = num('perdido');

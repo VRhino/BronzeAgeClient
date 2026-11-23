@@ -3,6 +3,16 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.227.0] — 2026-11-23 · Rutas compuestas, escalas y lanzamiento de 2 min (tandas 3 a 5 de «Tamaños y distancias del mapa») · motor `32e13bf`
+
+Contrato 0.32.0 regenerado (`ParadaEncargoEn`, `mas_paradas` y `tramo`). Va con la partida nueva del motor.
+
+- **El encargo es un circuito de hasta 5 paradas** (origen → destino → hasta tres más → vuelta al origen): la ventana del encargo pasa a una lista de paradas, cada una con su plaza, su «Deja» y su «Recoge», y un botón para añadir (hasta 5, el origen incluido) y quitar paradas. Las plazas solo cambian con la caravana esperando en su origen; las líneas, siempre. «Deja» ofrece lo que se recoge en cualquier parada del circuito.
+- **Una ruta ya puede ir a plazas de otra Facción**, como un envío (con precios en cada línea); sobra el aviso de «una ruta solo va entre plazas tuyas».
+- **La ruta** con más de dos paradas se dibuja como una cadena de plazas con la actual marcada, la fase y lo que hace en cada parada; con dos paradas, el dibujo de siempre.
+- **Rechazos nuevos con texto**: `encargo.demasiadas_paradas`, `encargo.parada_repetida` y `encargo.deja_sin_recoger`; `encargo.supera_capacidad` dice que se mira la vuelta entera; desaparece `encargo.destino_ajeno`. El hecho `comercio.parada_saltada` avisa de una parada que ya no vale.
+- **Lanzar una caravana a mano** tarda como mínimo 2 minutos (`ENCARGO.paradaMinimaMinutos`), también con un solo carro: el botón y la ficha lo dicen.
+
 ## [0.226.0] — 2026-11-23 · Tamaños y distancias del mapa, tandas 1 y 2: fundar, aldea y puerta por el contorno · motor `3cd9a30`
 
 Sin cambio de contrato; va con el mundo nuevo y la partida nueva del motor (PR #42, nucleo 0.55.0).

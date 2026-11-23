@@ -3,7 +3,13 @@
 // `cancelarCaravana`), la escolta de cada caravana (`asignarEscolta`, `quitarEscolta`: Doc 3.13.4) y las caravanas aparcadas aquí por un ejército
 // (`moverCargaCaravanaAparcada`, `enviarCaravanaAlOrigen`: Doc 3.13.7), todo en la misma tarjeta por caravana. Costes de carros y animales, capacidad, velocidad, preparación y cupos salen del balance; quien valida es el servidor y su rechazo sale flotando.
 // Tomar una orden AJENA es otra cosa (`comerciarEnPlaza`: con una columna tuya a la puerta de esa plaza) y no se hace desde dentro de la tuya.
-import { catalogoDeCaravanas, catalogoDePoliticas, cupoDeFlota, type ProyeccionJugador } from '../apiCliente';
+import { bloqueDeDatos, catalogoDeCaravanas, catalogoDePoliticas, cupoDeFlota, type ProyeccionJugador } from '../apiCliente';
+
+/** Lo que tarda en salir una caravana a mano: el tiempo de preparar los carros y, como mínimo, la parada mínima del encargo (2 min desde el 23-11, también con 1 carro). */
+function msDePreparacion(preparacionKPorCarro: number, carros: number): number {
+  const minimo = bloqueDeDatos<{ paradaMinimaMinutos?: number }>('ENCARGO')?.paradaMinimaMinutos ?? 2;
+  return Math.max(minimo, preparacionKPorCarro * Math.max(0, carros - 1)) * 60_000;
+}
 import { EDIFICIO_NOMBRE, RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { Asentamiento, Caravana, Escuadron } from '../tiposDominio';
 import { ayuda } from './ayuda';
@@ -470,12 +476,12 @@ function seccionViaje(c: Caravana, p: ProyeccionJugador, a: Asentamiento, almace
   const destinos = [...p.asentamientosAvistados.map((x) => ({ id: x.id, nombre: x.nombre, faccionId: x.faccionId })), ...p.asentamientosConocidos.map((x) => ({ id: x.asentamientoId, nombre: x.nombre, faccionId: x.faccionId }))]
     .filter((x, i, l) => x.id !== a.id && l.findIndex((y) => y.id === x.id) === i);
   const filas = Object.entries(almacen).filter(([r, n]) => n >= 1 && r !== 'oro');
-  const preparacion = textoEnTiempoReal((catalogoDeCaravanas()?.preparacionKPorCarro ?? 0) * Math.max(0, carros.length - 1) * 60_000);
+  const preparacion = textoEnTiempoReal(msDePreparacion(catalogoDeCaravanas()?.preparacionKPorCarro ?? 0, carros.length));
   return `<div class="caravana-seccion">
       <div class="caravana-seccion-cab"><strong class="heroe-sub">Destino</strong><select class="form-input viaje-destino" data-viaje-destino="${e(c.id)}">${destinos.length === 0 ? '<option value="">— no conoces otra plaza —</option>' : destinos.map((x) => `<option value="${e(x.id)}">${e(x.nombre ?? x.id)}${x.faccionId === p.faccionId ? ' (tuya)' : ''}</option>`).join('')}</select></div>
       ${filas.length === 0 ? '<p class="asent-lado-nota">No hay nada que cargar en el almacén.</p>' : `<div class="carga-grid">${filas.map(([r, n]) => `<label class="carga-celda" title="${e(RECURSO_NOMBRE[r] ?? r)}: hay ${Math.floor(n)} en el almacén"><span>${RECURSO_ICONO[r] ?? '📦'} ${e(RECURSO_NOMBRE[r] ?? r)}</span><input class="form-input" type="number" min="0" max="${Math.floor(n)}" value="0" data-viaje-carga="${e(c.id)}:${e(r)}" /><small>/${Math.floor(n)}</small></label>`).join('')}</div>`}
       <div class="carga-total" data-carga-total="${e(c.id)}" data-capacidad="${capacidad}"><div class="escolta-barra"><i style="width:0%"></i></div><small class="escolta-cifras"><strong>0/${capacidad}</strong> de carga</small></div>
-      <button class="btn-primary btn-chico" type="button" data-preparar="${e(c.id)}"${destinos.length === 0 ? ' disabled title="No conoces otra plaza"' : ''}>${carros.length > 1 ? `Preparar (${preparacion}) y lanzar` : 'Lanzar ya'}</button>
+      <button class="btn-primary btn-chico" type="button" data-preparar="${e(c.id)}"${destinos.length === 0 ? ' disabled title="No conoces otra plaza"' : ''}>Preparar (${preparacion}) y lanzar</button>
     </div>`;
 }
 
@@ -504,12 +510,12 @@ function detalleFlota(c: Caravana, p: ProyeccionJugador, a: Asentamiento, reside
   const capacidad = capacidadDe(c, d) ?? 0;
   const velocidad = d && tira.length > 0 ? Math.min(...tira.map((r) => d.cat.animales[r.animal!]!.velocidad)) * d.fVelocidad : 0;
   const ritmo = tira.length > 0 ? velocidadDePiezas([{ nombre: 'la caravana', velocidad }]) : null;
-  const preparacion = d ? textoEnTiempoReal(d.cat.preparacionKPorCarro * Math.max(0, carros.length - 1) * 60_000) : '';
+  const preparacion = d ? textoEnTiempoReal(msDePreparacion(d.cat.preparacionKPorCarro, carros.length)) : '';
   const politicas = d && (d.fCapacidad !== 1 || d.fVelocidad !== 1) ? ' title="Con las políticas de la plaza"' : '';
   const chips = `<div class="caravana-chips"${politicas}>
       <span title="Lo que puede llevar: solo cuentan los carros con animal"><i>📦</i><strong>${d ? capacidad : '?'}</strong><small>carga</small></span>
       <span class="ritmo-${ritmo?.ritmo ?? 'ligera'}" title="Velocidad: la del animal más lento"><i>${ritmo ? iconoRitmo(ritmo, 12) : '🐾'}</i><strong>${tira.length > 0 ? Math.round(velocidad * 10) / 10 : '—'}</strong><small>velocidad</small></span>
-      <span title="Tiempo de preparación antes de salir"><i>⏱</i><strong>${carros.length > 1 ? preparacion : 'ya'}</strong><small>preparar</small></span>
+      <span title="Tiempo de preparación antes de salir"><i>⏱</i><strong>${preparacion}</strong><small>preparar</small></span>
     </div>`;
   // Abajo, Viaje o Encargo: con encargo, el encargo; parada y sin él, las dos (se ve una u otra); preparándose, la espera.
   let abajo = '';
