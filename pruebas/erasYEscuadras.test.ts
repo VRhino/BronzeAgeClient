@@ -65,8 +65,11 @@ describe('la ficha de combate', () => {
   });
 
   test('vida, cadencia y alcance; las filas a cero no salen; las de % llevan %', () => {
-    const milicia = sinEtiquetas(htmlFichaCombate(tropa('milicia_lanceros'), esc));
-    expect(milicia).toContain('Tier II, poco común');
+    const html = htmlFichaCombate(tropa('milicia_lanceros'), esc);
+    const milicia = sinEtiquetas(html);
+    // la rareza ya no se escribe (Víctor, 2026-11-17: sin rótulo de Tier): la lleva el borde del tooltip, por la marca oculta con su clase
+    expect(milicia).not.toContain('Tier');
+    expect(html).toMatch(/<i class="ta-tip-marca r-pocoComun" hidden><\/i>/);
     expect(milicia).toContain('800');
     expect(milicia).toContain('1,5 s');
     expect(milicia).toContain('Daño');

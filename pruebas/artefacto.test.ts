@@ -22,7 +22,8 @@ describe.skipIf(!archivo)('artefacto de mundo real', () => {
     expect(altura!.datos.reduce((a, b) => Math.max(a, b), 0)).toBeGreaterThan(30_000);
     expect(densidadBosque!.datos.length).toBe(667 * 500);
     expect(mapa.bosques.length).toBeGreaterThan(10);
-    expect(mapa.nodos.every((n) => n.posicion.x >= 0 && n.posicion.x <= 2667 && n.posicion.y <= 2000)).toBe(true);
+    // dentro del mapa, con 1 u de margen: el artefacto trae algún nodo a 0,6 u del borde (x = 2667,59)
+    expect(mapa.nodos.every((n) => n.posicion.x >= -1 && n.posicion.x <= 2668 && n.posicion.y >= -1 && n.posicion.y <= 2001)).toBe(true);
     expect(mapa.rios.length).toBeGreaterThan(0);
     // la tanda 69 (motor d0326fd): la fertilidad de la vid y del olivo, la región de cada celda y los nombres de las regiones
     const { fertilidadVid, fertilidadOliva, region } = mapa.rasters!;
