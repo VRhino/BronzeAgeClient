@@ -6947,3 +6947,8 @@ button.pob-vivienda:hover { border-color: var(--oro); background: rgba(255, 176,
 .alm-varios { display: flex; flex-direction: column; gap: 10px; }
 .alm-selector { margin: 0; }
 .alm-extra { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* Campamentos cerrados en el playtest (2026-11-25): se ven, pero apagados. */
+.elegir-tarjeta.desactivada { opacity: 0.5; filter: grayscale(0.7); }
+.elegir-tarjeta.desactivada.elegida { opacity: 0.8; }
+.elegir-cerrado { margin-left: auto; font-size: 0.7rem; color: var(--text-muted); white-space: nowrap; }

@@ -3,6 +3,10 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.227.2] — 2026-11-25 · Playtest: solo se nace en «Claro fluvial» (camp-3)
+
+En «Elige dónde nace tu héroe» solo el camp-3 queda activo; los demás campamentos salen apagados, con «Cerrado en esta prueba», y se pueden mirar pero no elegir para nacer. «Elegir por mí» y «Recomendado» solo cuentan el abierto. Se quita con `CAMPAMENTOS_ABIERTOS` en `eleccionCampamento.ts`.
+
 ## [0.227.1] — 2026-11-23 · Encargo: paradas en columna y cantidades con −10 / +10
 
 En el formulario del encargo las paradas van una debajo de otra, y cada recurso que se recoge o se deja lleva botones −10 / +10 en vez del campo de texto (en «Deja», sin tope se lee «Todo»). Los precios de las plazas ajenas siguen siendo un campo.
