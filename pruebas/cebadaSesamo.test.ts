@@ -112,7 +112,8 @@ describe('la tierra de la cebada y del sésamo', () => {
 
   test('en Territorio, los cuadritos de la aldea nueva son los de su cultivo, y sin su capa se dice (0.194.0)', () => {
     const a = { ...plaza(3), posicion: { x: 5, y: 5 }, zonaReal: [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 }] } as Asentamiento;
-    const p = { heroeId: 'h', faccionId: 'f-1', facciones: [], asentamientos: [a], asentamientosAvistados: [], pueblos: [], obrasDeMapa: [], avanzadas: [], caravanas: [] } as unknown as ProyeccionJugador;
+    // la plaza no cuenta como ocupada: la zona del banco es de 10 u y la aldea guarda 15 a una plaza (23-11)
+    const p = { heroeId: 'h', faccionId: 'f-1', facciones: [], asentamientos: [], asentamientosAvistados: [], pueblos: [], obrasDeMapa: [], avanzadas: [], caravanas: [] } as unknown as ProyeccionJugador;
     estadoCliente.mapaCache = { mapa } as never;
     const cebada = sitiosDeLaPlaza(p, a, 'cebada')!;
     expect(cebada.validos.length).toBeGreaterThan(0);

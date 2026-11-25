@@ -7,11 +7,12 @@
 //   3 aportar   llevar lo del carro (o del almacén) al Fondo de refundación del campamento donde resides
 //   4 comprar   con el Fondo completo, comprar la Caravana de Fundación
 //   5 llevar    salir del campamento como ejército llevándosela (una columna personal no lleva caravanas)
-//   6 fundar    a 20 o más del campamento, en un sitio que valga, «Fundar aquí» (panel ⌂)
+//   6 fundar    a 60 o más del campamento, en un sitio que valga, «Fundar aquí» (panel ⌂)
 import type { ProyeccionJugador } from '../apiCliente';
 import type { CampamentoMercenarios, Ejercito } from '../tiposDominio';
 import { RECURSO_NOMBRE } from '../paletas';
-import { radioDePuerta } from '../apiCliente';
+import { distanciasDeFundar } from '../apiCliente';
+import { aLaPuerta } from './puerta';
 
 type Escapar = (valor: string) => string;
 type Punto = { x: number; y: number };
@@ -115,7 +116,7 @@ export function pasoDelCamino(p: ProyeccionJugador, donde: DondeEstas, precio: R
   if (columna?.caravanaFundacionId) {
     const lider = !columna.liderId || columna.liderId === p.heroeId;
     return paso('fundar', lider
-      ? 'Llévala a un buen sitio, a 20 o más de cualquier campamento y lejos de otras plazas, y funda. El círculo te dice si allí se puede.'
+      ? `Llévala a un buen sitio, a ${distanciasDeFundar().campamentos} o más de cualquier campamento y de otras plazas, y funda. El círculo te dice si allí se puede.`
       : 'Tu ejército lleva la caravana: funda su Líder, donde esté la columna.', lider ? { etiqueta: 'Elegir dónde fundar', accion: { tipo: 'fundar' } } : undefined);
   }
 
@@ -128,8 +129,8 @@ export function pasoDelCamino(p: ProyeccionJugador, donde: DondeEstas, precio: R
       return paso('llevar', 'La caravana espera aquí dentro. Sal como ejército y llévatela: una columna personal no puede.', { etiqueta: 'Salir con la caravana', accion: { tipo: 'salir' } });
     }
     if (suyo && columna) {
-      const aLaPuerta = distancia(columna.posicionActual, suyo.posicion) <= radioDePuerta();
-      return paso('llevar', 'La caravana espera dentro del campamento. Entra y sal de nuevo como ejército para llevártela.', aLaPuerta
+      const enLaPuerta = aLaPuerta(p, columna.posicionActual, suyo.posicion);
+      return paso('llevar', 'La caravana espera dentro del campamento. Entra y sal de nuevo como ejército para llevártela.', enLaPuerta
         ? { etiqueta: 'Entrar en el campamento', accion: { tipo: 'entrar', campamentoId: suyo.id } }
         : { etiqueta: 'Volver al campamento', accion: { tipo: 'marchar', posicion: suyo.posicion } });
     }
@@ -143,10 +144,10 @@ export function pasoDelCamino(p: ProyeccionJugador, donde: DondeEstas, precio: R
   const fondo = fondoDe(p, c);
   const falta = faltas(precio, fondo);
   const enElCampamento = dentro?.id === c.id;
-  const aLaPuerta = !enElCampamento && columna !== undefined && distancia(columna.posicionActual, c.posicion) <= radioDePuerta();
+  const enLaPuerta = !enElCampamento && columna !== undefined && aLaPuerta(p, columna.posicionActual, c.posicion);
   const irAlCampamento = (etiquetaDentro: string, parte: 'fondo'): Paso['boton'] => enElCampamento
     ? { etiqueta: etiquetaDentro, accion: { tipo: 'parte', parte } }
-    : aLaPuerta ? { etiqueta: 'Entrar en el campamento', accion: { tipo: 'entrar', campamentoId: c.id } }
+    : enLaPuerta ? { etiqueta: 'Entrar en el campamento', accion: { tipo: 'entrar', campamentoId: c.id } }
     : { etiqueta: 'Volver al campamento', accion: { tipo: 'marchar', posicion: c.posicion } };
 
   // 4: el Fondo ya cubre el precio

@@ -2,7 +2,8 @@
 // plaza ajena (foto con fecha de su layout y su defensa). Se compra en la taberna de una plaza propia —estando dentro— o en la de un
 // campamento de mercenarios —dentro, o con la columna a la puerta—; y rumores (0.199.0, `rumores.ts`). Aquí no se decide ninguna regla: el precio es una cotización con
 // `tarifasIntel` y quien valida es el backend, cuyo rechazo sale flotando (`mostrarAviso`).
-import { radioDePuerta, tropasReclutables, type ProyeccionJugador } from '../apiCliente';
+import { tropasReclutables, type ProyeccionJugador } from '../apiCliente';
+import { aLaPuerta } from './puerta';
 import { ayuda } from './ayuda';
 import { EDIFICIO_COLOR, EDIFICIO_NOMBRE, RECURSO_ICONO } from '../paletas';
 import type { Asentamiento, InformePlaza, MiradaIntel, OrigenDeIntel, Point } from '../tiposDominio';
@@ -43,7 +44,7 @@ export function plazaPropiaALaPuerta(p: ProyeccionJugador): Asentamiento | undef
   if (!columna || !p.faccionId) return undefined;
   return (p.plazasPropias ?? []).find((a) => a.faccionId === p.faccionId && compraIntelEn(p, a, true)
     && a.edificios.some((e) => e.tipo === 'taberna' && e.estado === 'activo')
-    && Math.hypot(a.posicion.x - columna.posicionActual.x, a.posicion.y - columna.posicionActual.y) <= radioDePuerta());
+    && aLaPuerta(p, columna.posicionActual, a.posicion));
 }
 
 export function tabernasDisponibles(p: ProyeccionJugador): TabernaDisponible[] {
@@ -68,7 +69,7 @@ export function tabernasDisponibles(p: ProyeccionJugador): TabernaDisponible[] {
     u.tipo === 'mercenarios'
       ? p.campamentosMercenarios.find((c) => c.id === u.campamentoId)
       : columna
-        ? p.campamentosMercenarios.find((c) => Math.hypot(c.posicion.x - columna.posicionActual.x, c.posicion.y - columna.posicionActual.y) <= radioDePuerta())
+        ? p.campamentosMercenarios.find((c) => aLaPuerta(p, columna.posicionActual, c.posicion))
         : undefined;
   if (campamento && p.faccionId !== null) {
     // En el campamento paga el héroe: el residente con el oro de su almacén, el visitante con el de su carro.

@@ -21,8 +21,8 @@ describe('Fundar sin adivinar', () => {
   });
 
   it('pegado al río (media anchura + radio de la plaza) no; fuera del mapa tampoco', () => {
-    expect(sitioDeFundacion(proy(), mapa, { x: 150, y: 44 }).motivo).toContain('río');
-    expect(sitioDeFundacion(proy(), mapa, { x: 150, y: 46 }).motivo).toBeNull();
+    expect(sitioDeFundacion(proy(), mapa, { x: 150, y: 50 }).motivo).toContain('río');
+    expect(sitioDeFundacion(proy(), mapa, { x: 150, y: 57 }).motivo).toBeNull();
     expect(sitioDeFundacion(proy(), mapa, { x: -1, y: 150 }).motivo).toBe('Fuera del mapa.');
   });
 
@@ -31,5 +31,11 @@ describe('Fundar sin adivinar', () => {
     expect(sitioDeFundacion(conPlaza, mapa, { x: 150, y: 160 }).motivo).toContain('otra plaza');
     const conZona = proy({ zonasFusionadas: [{ faccionId: 'f-2', contornos: [[{ x: 140, y: 140 }, { x: 190, y: 140 }, { x: 190, y: 190 }, { x: 140, y: 190 }]] }] });
     expect(sitioDeFundacion(conZona, mapa, { x: 170, y: 170 }).motivo).toContain('territorio');
+  });
+
+  it('a menos de 12 de un nodo de recurso no; a 12 justos, sí (fundacion.cerca_de_nodo, 23-11)', () => {
+    const conNodo = { ...mapa, nodos: [{ id: 'n-1', tipo: 'piedra', rareza: 'comun', posicion: { x: 150, y: 150 }, cantidadInicial: 100 }] } as unknown as MapaGenerado;
+    expect(sitioDeFundacion(proy(), conNodo, { x: 150, y: 160 }).motivo).toContain('yacimiento');
+    expect(sitioDeFundacion(proy(), conNodo, { x: 150, y: 162 }).motivo).toBeNull();
   });
 });

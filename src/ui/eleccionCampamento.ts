@@ -35,6 +35,9 @@ export interface OpcionesEleccion {
   alCargarDatos?: (f: () => void) => void;
 }
 
+/** Playtest (Víctor, 2026-11-25): con pocos jugadores solo se nace en un campamento, «Claro fluvial»; los demás salen desactivados. Si el mundo no trae ese, valen todos. */
+const CAMPAMENTOS_ABIERTOS: readonly string[] = ['camp-3'];
+
 const EDIFICIO_NOMBRE: Record<string, string> = { barracon: 'Barracón', galeriaDeTiro: 'Galería de tiro', caballerizas: 'Caballerizas' };
 const EDIFICIO_LEMA: Record<string, string> = { barracon: 'infantería', galeriaDeTiro: 'arqueros y honderos', caballerizas: 'jinetes y carros' };
 /** Colores de estandarte, uno por campamento. */
@@ -117,6 +120,9 @@ export function montarEleccionCampamento(raiz: HTMLElement, o: OpcionesEleccion)
   let comparar: number[] = [];
   let recomendado = -1;
   let vivo = true;
+  const hayAbiertos = (): boolean => fichas.some((f) => CAMPAMENTOS_ABIERTOS.includes(f.c.id));
+  /** ¿Se puede nacer en el campamento `i`? */
+  const abierto = (i: number): boolean => { const f = fichas[i]; return !!f && (!hayAbiertos() || CAMPAMENTOS_ABIERTOS.includes(f.c.id)); };
 
   raiz.innerHTML = `<div class="elegir-screen">
     <header class="elegir-barra">
@@ -170,7 +176,8 @@ export function montarEleccionCampamento(raiz: HTMLElement, o: OpcionesEleccion)
     const notas = valorarCampamentos(conAnalisis, fichas.filter((_, i) => delCamp[i]).map((f) => f.c.residentes + f.c.eligieronComoInicial));
     let k = 0;
     fichas = fichas.map((f, i) => ({ ...f, nombre: nombres[i]!, analisis: delCamp[i] ?? null, valoracion: delCamp[i] ? notas[k++]! : null }));
-    recomendado = fichas.reduce((m, f, i) => ((f.valoracion?.nota ?? -1) > (fichas[m]?.valoracion?.nota ?? -1) ? i : m), 0);
+    const primero = fichas.findIndex((_, i) => abierto(i));
+    recomendado = fichas.reduce((m, f, i) => (abierto(i) && (f.valoracion?.nota ?? -1) > (fichas[m]?.valoracion?.nota ?? -1) ? i : m), Math.max(0, primero));
   }
 
   // ─────────── lista ───────────
@@ -183,8 +190,9 @@ export function montarEleccionCampamento(raiz: HTMLElement, o: OpcionesEleccion)
   function pintarLista(): void {
     lista.innerHTML = fichas.map((f, i) => {
       const gente = f.c.residentes + f.c.eligieronComoInicial;
-      return `<div class="elegir-tarjeta${i === elegido ? ' elegida' : ''}${comparar.includes(i) ? ' comparada' : ''}" data-i="${i}" role="button" tabindex="0" aria-pressed="${i === elegido}" style="--estandarte:${f.color}">
-        <div class="elegir-tarjeta-cabeza"><span class="elegir-banderin" aria-hidden="true"></span><strong>${e(f.nombre)}</strong>${i === recomendado ? '<span class="elegir-recomendado">★ Recomendado</span>' : ''}</div>
+      const cerrado = !abierto(i);
+      return `<div class="elegir-tarjeta${i === elegido ? ' elegida' : ''}${comparar.includes(i) ? ' comparada' : ''}${cerrado ? ' desactivada' : ''}" data-i="${i}" role="button" tabindex="0" aria-pressed="${i === elegido}"${cerrado ? ' aria-disabled="true" title="Cerrado en esta prueba: con pocos jugadores se nace todos en el mismo campamento"' : ''} style="--estandarte:${f.color}">
+        <div class="elegir-tarjeta-cabeza"><span class="elegir-banderin" aria-hidden="true"></span><strong>${e(f.nombre)}</strong>${cerrado ? '<span class="elegir-cerrado">🔒 Cerrado en esta prueba</span>' : i === recomendado ? '<span class="elegir-recomendado">★ Recomendado</span>' : ''}</div>
         <div class="elegir-tarjeta-linea">${f.edificio ? `${iconoEdificio(f.edificio, 18)}<span>${e(EDIFICIO_NOMBRE[f.edificio] ?? f.edificio)}</span>` : '<span>…</span>'}<span class="elegir-gente" title="Residen ${f.c.residentes} · lo eligieron ${f.c.eligieronComoInicial}">👥 ${gente === 0 ? 'Vacío' : gente}</span></div>
         ${htmlBarraSuelo(f.analisis)}
         <label class="elegir-comparar"><input type="checkbox" data-comparar="${i}"${comparar.includes(i) ? ' checked' : ''}/> Comparar</label>
@@ -264,7 +272,8 @@ export function montarEleccionCampamento(raiz: HTMLElement, o: OpcionesEleccion)
 
   function pintarBoton(): void {
     botonCrear.textContent = !clase ? 'Elige tu clase' : fichas[elegido] ? `Nacer en ${fichas[elegido]!.nombre}` : 'Nacer aquí';
-    botonCrear.disabled = !fichas[elegido] || !clase;
+    botonCrear.disabled = !fichas[elegido] || !clase || !abierto(elegido);
+    if (fichas[elegido] && !abierto(elegido)) botonCrear.textContent = 'Campamento cerrado en esta prueba';
   }
 
   function pintarClase(): void {
@@ -633,6 +642,7 @@ export function montarEleccionCampamento(raiz: HTMLElement, o: OpcionesEleccion)
 
   function elegir(i: number, volar = true): void {
     if (!fichas[i]) return;
+    // Los cerrados se pueden mirar (ficha y mapa) pero no se elige nacer en ellos: el botón de crear queda desactivado.
     elegido = i;
     pintarLista();
     pintarFicha();
@@ -692,7 +702,7 @@ export function montarEleccionCampamento(raiz: HTMLElement, o: OpcionesEleccion)
   });
   raiz.querySelector('#elegir-por-mi')?.addEventListener('click', () => {
     // Al azar entre los tres mejor valorados, con más peso cuanto mejor.
-    const mejores = fichas.map((f, i) => ({ i, nota: f.valoracion?.nota ?? 0.5 })).sort((a, b) => b.nota - a.nota).slice(0, 3);
+    const mejores = fichas.map((f, i) => ({ i, nota: f.valoracion?.nota ?? 0.5 })).filter((m) => abierto(m.i)).sort((a, b) => b.nota - a.nota).slice(0, 3);
     const total = mejores.reduce((s, m) => s + m.nota + 0.05, 0);
     let r = Math.random() * total;
     const elegidoAzar = mejores.find((m) => (r -= m.nota + 0.05) <= 0) ?? mejores[0];
@@ -742,7 +752,7 @@ export function montarEleccionCampamento(raiz: HTMLElement, o: OpcionesEleccion)
     ev.preventDefault();
     const f = fichas[elegido];
     const nombre = raiz.querySelector<HTMLInputElement>('#input-nombre-heroe')?.value.trim() ?? '';
-    if (!f || !clase) return;
+    if (!f || !clase || !abierto(elegido)) return;
     botonCrear.disabled = true;
     const mensaje = await o.crear(nombre, f.c.id, clase);
     if (!mensaje || !vivo) return;

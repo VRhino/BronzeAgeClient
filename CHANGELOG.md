@@ -3,6 +3,42 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.228.0] — 2026-11-25 · Ríos del mapa de mundo, rehechos · motor `ea24360`
+
+Contrato 0.33.0 regenerado (`Rio` lleva `caudal` y `anchos` por punto y su `orden`). Va con el mundo nuevo del motor: los ríos salen de su generador nuevo (meandros en proporción, brazos muertos, trenzas y un cauce que siempre baja).
+
+- **Los ríos son parte del suelo, como el mar y los lagos** (`src/mundo3d/rios.ts`): cada tesela del modo mundo talla el cauce en su suelo y pone el agua en la misma lámina que el mar y los lagos. La orilla es donde el suelo corta el agua; las juntas de dos ríos y la boca de un río en un lago o en el mar se unen solas; las olas bajan con la corriente; la tierra junto al agua sale mojada. Fuera las cintas de agua y las orillas en tiras, que se solapaban en las juntas y se doblaban en las curvas. Los vados siguen igual.
+- **Cada río tiene su ancho**, que crece aguas abajo con el caudal: en el modo mundo, en el mapa 2D (y su orden en la vista general) y en los árboles, que no crecen en el cauce.
+- **La mesa del campo de batalla** (`npm run campo3d`): el mundo a escala del héroe y, con un clic, el campo de batalla que saldría ahí (el ticket del lugar de `Docs/Design/Campo_De_Batalla_Del_Lugar.md` de Conquest). Es una herramienta de pruebas; no cambia el juego.
+
+## [0.227.2] — 2026-11-25 · Playtest: solo se nace en «Claro fluvial» (camp-3)
+
+En «Elige dónde nace tu héroe» solo el camp-3 queda activo; los demás campamentos salen apagados, con «Cerrado en esta prueba», y se pueden mirar pero no elegir para nacer. «Elegir por mí» y «Recomendado» solo cuentan el abierto. Se quita con `CAMPAMENTOS_ABIERTOS` en `eleccionCampamento.ts`.
+
+## [0.227.1] — 2026-11-23 · Encargo: paradas en columna y cantidades con −10 / +10
+
+En el formulario del encargo las paradas van una debajo de otra, y cada recurso que se recoge o se deja lleva botones −10 / +10 en vez del campo de texto (en «Deja», sin tope se lee «Todo»). Los precios de las plazas ajenas siguen siendo un campo.
+
+## [0.227.0] — 2026-11-23 · Rutas compuestas, escalas y lanzamiento de 2 min (tandas 3 a 5 de «Tamaños y distancias del mapa») · motor `32e13bf`
+
+Contrato 0.32.0 regenerado (`ParadaEncargoEn`, `mas_paradas` y `tramo`). Va con la partida nueva del motor.
+
+- **El encargo es un circuito de hasta 5 paradas** (origen → destino → hasta tres más → vuelta al origen): la ventana del encargo pasa a una lista de paradas, cada una con su plaza, su «Deja» y su «Recoge», y un botón para añadir (hasta 5, el origen incluido) y quitar paradas. Las plazas solo cambian con la caravana esperando en su origen; las líneas, siempre. «Deja» ofrece lo que se recoge en cualquier parada del circuito.
+- **Una ruta ya puede ir a plazas de otra Facción**, como un envío (con precios en cada línea); sobra el aviso de «una ruta solo va entre plazas tuyas».
+- **La ruta** con más de dos paradas se dibuja como una cadena de plazas con la actual marcada, la fase y lo que hace en cada parada; con dos paradas, el dibujo de siempre.
+- **Rechazos nuevos con texto**: `encargo.demasiadas_paradas`, `encargo.parada_repetida` y `encargo.deja_sin_recoger`; `encargo.supera_capacidad` dice que se mira la vuelta entera; desaparece `encargo.destino_ajeno`. El hecho `comercio.parada_saltada` avisa de una parada que ya no vale.
+- **Lanzar una caravana a mano** tarda como mínimo 2 minutos (`ENCARGO.paradaMinimaMinutos`), también con un solo carro: el botón y la ficha lo dicen.
+
+## [0.226.0] — 2026-11-23 · Tamaños y distancias del mapa, tandas 1 y 2: fundar, aldea y puerta por el contorno · motor `3cd9a30`
+
+Sin cambio de contrato; va con el mundo nuevo y la partida nueva del motor (PR #42, nucleo 0.55.0).
+
+- **Fundar**: las cifras de hoy como respaldo son las nuevas (60 u a otra plaza y a un campamento, zona inicial de 24 u, techos de 30 a 90). Regla nueva: a menos de `FUNDACION.distanciaMinimaANodo` (12 u) de un nodo de recurso no se funda; el aro lo pone en rojo con el motivo «Muy cerca de un yacimiento» y `fundacion.cerca_de_nodo` tiene su texto. El río mira ahora el radio de la plaza (15 u).
+- **La aldea**: dos separaciones en vez de una, 15 u a una plaza y 7,5 u a otro pueblo o aldea (`separacionAPlaza` y `separacionAPueblo`); los sitios del mapa, las ayudas y el aviso de «tierra fértil a menos de…» las usan. Los anillos de las aldeas siguen los techos nuevos.
+- **La puerta es todo el contorno** (`ui/puerta.ts`): estar a la puerta de una plaza, un pueblo, una aldea, una avanzada o un campamento es estar a 1 u o menos de su borde, por cualquier lado, con el radio de `TAMANOS_MAPA` (la plaza por nivel y muralla, la aldea por nivel, la avanzada por etapa). Vale para Entrar, Llenar víveres, la Armería, el mostrador, la taberna, el almacén de la puerta, dejar y recoger guarnición, la entrega de materiales y los avisos «Acércate…» (que dicen la distancia al borde).
+- **Atacar** una plaza, un pueblo, una avanzada o un campamento de bandidos se mide desde el borde del objetivo.
+- Los textos del camino a la primera plaza leen la distancia de fundar del motor en vez de «20».
+
 ## [0.225.0] — 2026-11-22 · Guía hasta la primera plaza · motor `e5be579`
 
 Solo cliente, sin cambios de contrato. En las pruebas de juego muchos jugadores nuevos no encontraban cómo fundar su primera plaza y lo dejaban a la hora (Víctor, ideas 1, 3 y 4).

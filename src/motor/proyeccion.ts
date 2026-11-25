@@ -321,6 +321,7 @@ function encargo(e: pb.Encargo): d.Encargo {
   return {
     modo: e.modo === 'envio' ? 'envio' : 'ruta', destinoAsentamientoId: e.destinoAsentamientoId, salirEn: instante(e.salirEnMs),
     paradaOrigen: parada(e.paradaOrigen), paradaDestino: parada(e.paradaDestino), vueltas: e.vueltas,
+    ...(e.masParadas.length ? { masParadas: e.masParadas.map((m) => ({ asentamientoId: m.asentamientoId, parada: parada(m.parada) })) } : {}), ...(e.tramo ? { tramo: e.tramo } : {}),
     paradaActual: e.paradaActual === 'destino' ? 'destino' : 'origen', fase: (['espera', 'descarga', 'carga'].includes(e.fase) ? e.fase : '') as d.Encargo['fase'],
     finPaso: instante(e.finPasoMs), inicioPaso: instante(e.inicioPasoMs), cancelado: e.cancelado, detener: e.detener || undefined,
   };

@@ -11,6 +11,7 @@
 import { bloqueDeDatos, capacidadDeViveres, radioDePuerta, tropasReclutables, type ProyeccionJugador, type TropaReclutable } from '../apiCliente';
 import { RECURSO_ICONO, RECURSO_NOMBRE } from '../paletas';
 import type { Asentamiento, AvanzadaDeMapa, Escuadron } from '../tiposDominio';
+import { distanciaAlBorde } from './puerta';
 import { ayuda } from './ayuda';
 import { miColumna } from './ejercitos';
 import { iconoEnFila } from './iconosTropa';
@@ -109,9 +110,9 @@ export function puertaDeAvanzada(p: ProyeccionJugador, x: AvanzadaDeMapa, e: Esc
   const nada = { acciones: [] as AccionPuerta[], ventanas: {} as Record<string, () => VentanaPuerta>, nota: '' };
   const mi = miColumna(p);
   if (!mi || !operativa(x) || !puertaAbierta(p, x)) return nada;
-  const d = Math.hypot(mi.posicionActual.x - x.posicion.x, mi.posicionActual.y - x.posicion.y);
+  const d = distanciaAlBorde(p, mi.posicionActual, x.posicion);
   const puerta = radioDePuerta();
-  if (d > puerta) return { ...nada, nota: `<p class="asent-lado-nota">Acerca tu columna a su puerta (está a ${n0(d)}; se entra a ${puerta} o menos).</p>` };
+  if (d > puerta) return { ...nada, nota: `<p class="asent-lado-nota">Acerca tu columna a su puerta (está a ${n0(Math.ceil(d))} de su borde; se entra a ${puerta} o menos).</p>` };
   const solo = mi.participantes.length === 1;
   const lider = solo || mi.liderId === p.heroeId;
   const acciones: AccionPuerta[] = [];

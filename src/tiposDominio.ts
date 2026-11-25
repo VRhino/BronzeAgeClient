@@ -434,6 +434,10 @@ export interface Encargo {
   salirEn?: number;
   paradaOrigen?: ParadaEncargo;
   paradaDestino?: ParadaEncargo;
+  /** La ruta compuesta (motor 23-11, contrato 0.32.0): las paradas después del destino, en orden (vacío = el encargo de siempre, de dos paradas). */
+  masParadas?: { asentamientoId: string; parada?: ParadaEncargo }[];
+  /** Con `paradaActual` = destino, en qué parada de fuera está o hacia cuál va: 0 el destino, k la k-ésima de `masParadas`. */
+  tramo?: number;
   vueltas: number;
   /** Donde espera o hacia donde va. */
   paradaActual: 'origen' | 'destino';

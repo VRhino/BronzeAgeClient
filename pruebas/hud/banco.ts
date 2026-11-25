@@ -295,6 +295,12 @@ if (ventana === 'caravanas' || ventana === 'mercado') {
     { id: 'car-3', nombre: 'Grano del valle', tipo: 'comercial', origenAsentamientoId: a.id, posicionActual: aldea, estado: 'aparcada', carros: [{ tipoCarro: 'basico', animal: 'camello' }], contenido: { trigo: 180 } },
     { id: 'car-4', tipo: 'comercial', origenAsentamientoId: a.id, posicionActual: a.posicion, estado: 'disponible', carros: [], contenido: {} },
   ];
+  // `&circuito=1`: la ruta de car-2 con dos paradas más (as-7 y de nuevo tuya), hacia la primera de ellas (23-11, contrato 0.32.0).
+  if (qs.get('circuito')) {
+    const k = q.caravanas.find((x) => x.id === 'car-2')!.encargo as { masParadas?: unknown[]; tramo?: number; paradaDestino: unknown };
+    k.masParadas = [{ asentamientoId: 'as-7', parada: { dejar: [{ recurso: 'cobre' }], desecharSobrante: false, recoger: [{ recurso: 'vino', cantidad: 80, precioMax: 3 }], esperarExistencias: false } }];
+    k.tramo = 1;
+  }
   // `&detener=1`: la ruta de car-2 ya detenida (0.141.0): acaba la vuelta y se queda sin ruta.
   if (qs.get('detener')) (q.caravanas.find((x) => x.id === 'car-2')!.encargo as { detener?: boolean }).detener = true;
   // `&visita=1`: de visita con tu columna (0.139.0): no resides, pero cedes escolta de la columna.

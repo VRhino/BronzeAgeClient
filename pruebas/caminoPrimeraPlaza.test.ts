@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('../src/apiCliente', () => ({ radioDePuerta: () => 2 }));
+vi.mock('../src/apiCliente', () => ({ bloqueDeDatos: () => null, radioDePuerta: () => 2, distanciasDeFundar: () => ({ plazas: 60, campamentos: 60 }) }));
 import type { ProyeccionJugador } from '../src/apiCliente';
 import { pasoDelCamino } from '../src/ui/caminoPrimeraPlaza';
 

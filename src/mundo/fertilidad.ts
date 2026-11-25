@@ -1,4 +1,4 @@
-// Dónde cabe una aldea agrícola (mecánica 50): el motor la acepta en tierra firme, dentro de la zona de la plaza, a `separacionMinima` de toda
+// Dónde cabe una aldea agrícola (mecánica 50): el motor la acepta en tierra firme, dentro de la zona de la plaza, a la separación (15 a una plaza, 7,5 a otro pueblo) de toda
 // plaza y todo pueblo y con fertilidad de `fertilidadMinima` o más en ese punto (`pueblos.rs`, `sitio_de_aldea_sin_ruta`). Aquí se buscan esos
 // puntos con la capa de fertilidad de su cultivo (`fertilidad` el trigo, `fertilidadVid` y `fertilidadOliva` la vid y el olivo: tanda 69;
 // `fertilidadCebada` y `fertilidadSesamo` la cebada y el sésamo: motor b55e90f) del artefacto,
@@ -83,9 +83,9 @@ function dentroDelPoligono(p: Point, poligono: readonly Point[]): boolean {
 export function sitiosDeAldea(
   mapa: MapaGenerado,
   zona: { centro: Point; radio: number; poligono?: readonly Point[]; anillo?: { desde: number; hasta: number } },
-  ocupados: readonly Point[],
+  ocupados: readonly Point[] | { plazas: readonly Point[]; pueblos: readonly Point[] },
   fertilidadMinima: number,
-  separacionMinima: number,
+  separacion: number | { plaza: number; pueblo: number },
   cultivo: Cultivo = 'trigo',
 ): SitiosDeAldea | null {
   if (!capaDe(mapa, cultivo)) return null;
@@ -94,7 +94,10 @@ export function sitiosDeAldea(
     ? pol.reduce((c, q) => ({ x0: Math.min(c.x0, q.x), y0: Math.min(c.y0, q.y), x1: Math.max(c.x1, q.x), y1: Math.max(c.y1, q.y) }), { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity })
     : { x0: zona.centro.x - zona.radio, y0: zona.centro.y - zona.radio, x1: zona.centro.x + zona.radio, y1: zona.centro.y + zona.radio };
   const dentro = (p: Point) => (pol ? dentroDelPoligono(p, pol) : Math.hypot(p.x - zona.centro.x, p.y - zona.centro.y) <= zona.radio);
-  const s2 = separacionMinima * separacionMinima;
+  // Desde el 23-11 la aldea guarda una distancia a las plazas y otra (menor) a otro pueblo o aldea; una lista y un número valen para ambas.
+  const plazas = Array.isArray(ocupados) ? (ocupados as readonly Point[]) : (ocupados as { plazas: readonly Point[] }).plazas;
+  const pueblos = Array.isArray(ocupados) ? [] : (ocupados as { pueblos: readonly Point[] }).pueblos;
+  const sPlaza = (typeof separacion === 'number' ? separacion : separacion.plaza) ** 2, sPueblo = (typeof separacion === 'number' ? separacion : separacion.pueblo) ** 2;
   const r: SitiosDeAldea = { validos: [], cerca: [], mejor: 0, paso: PASO };
   for (let y = Math.ceil(caja.y0 / PASO) * PASO; y <= caja.y1; y += PASO) {
     for (let x = Math.ceil(caja.x0 / PASO) * PASO; x <= caja.x1; x += PASO) {
@@ -104,7 +107,7 @@ export function sitiosDeAldea(
       if (zona.anillo) { const d = Math.hypot(x - zona.centro.x, y - zona.centro.y); if (d <= zona.anillo.desde || d > zona.anillo.hasta) continue; }
       const f = fertilidadEn(mapa, p, cultivo) ?? 0;
       if (f < fertilidadMinima) continue;
-      if (ocupados.some((o) => (o.x - x) ** 2 + (o.y - y) ** 2 < s2)) { r.cerca.push(p); continue; }
+      if (plazas.some((o) => (o.x - x) ** 2 + (o.y - y) ** 2 < sPlaza) || pueblos.some((o) => (o.x - x) ** 2 + (o.y - y) ** 2 < sPueblo)) { r.cerca.push(p); continue; }
       r.validos.push(p);
       r.mejor = Math.max(r.mejor, f);
     }

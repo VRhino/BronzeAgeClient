@@ -764,29 +764,29 @@ function balance(alCargar?: () => void): BalancePublico | null {
 
 
 /** Las distancias de fundar (`reglas.territorio` de `/v1/datos`, en milésimas): a cuánto de otra plaza (`separacion_plazas`) y de un campamento de
- * mercenarios (`exclusion_campamento`). Sin el dato, las de los bloques `FUNDACION.separacionPlazas` y `MERCENARIOS.radioExclusionFundar`; si no, 20. */
+ * mercenarios (`exclusion_campamento`). Sin el dato, las de los bloques `FUNDACION.separacionPlazas` y `MERCENARIOS.radioExclusionFundar`; si no, 60 (la cifra del 23-11). */
 export function distanciasDeFundar(alCargar?: () => void): { plazas: number; campamentos: number } {
   const b = balance(alCargar)?.catalogos as Record<string, { separacionPlazas?: number; radioExclusionFundar?: number } | undefined> | undefined;
   const t = reglasDePartida?.territorio;
   const deReglas = (v: number | undefined): number | null => (Number(v) > 0 ? Number(v) / 1000 : null);
   return {
-    plazas: deReglas(t?.separacion_plazas) ?? b?.FUNDACION?.separacionPlazas ?? 20,
-    campamentos: deReglas(t?.exclusion_campamento) ?? b?.MERCENARIOS?.radioExclusionFundar ?? 20,
+    plazas: deReglas(t?.separacion_plazas) ?? b?.FUNDACION?.separacionPlazas ?? 60,
+    campamentos: deReglas(t?.exclusion_campamento) ?? b?.MERCENARIOS?.radioExclusionFundar ?? 60,
   };
 }
 
-/** Radio con el que nace la zona de una plaza (`reglas.territorio.radio_inicial` de `/v1/datos`); 6, la cifra de hoy, mientras no llegue. */
+/** Radio con el que nace la zona de una plaza (`reglas.territorio.radio_inicial` de `/v1/datos`); 24 (la cifra del 23-11, antes 6) mientras no llegue. */
 export function radioZonaInicial(alCargar?: () => void): number {
   balance(alCargar);
   const r = Number(reglasDePartida?.territorio?.radio_inicial) / 1000;
-  return r > 0 ? r : 6;
+  return r > 0 ? r : 24;
 }
 
-/** Los techos de la zona de una plaza por nivel, en u (`reglas.territorio.techos` de `/v1/datos`); 10 / 15 / 20 / 25 / 30 mientras no lleguen. */
+/** Los techos de la zona de una plaza por nivel, en u (`reglas.territorio.techos` de `/v1/datos`); 30 / 50 / 70 / 80 / 90 (las del 23-11) mientras no lleguen. */
 export function techosDeZona(alCargar?: () => void): number[] {
   balance(alCargar);
   const t = reglasDePartida?.territorio?.techos;
-  return Array.isArray(t) && t.length ? t.map((x) => Number(x) / 1000) : [10, 15, 20, 25, 30];
+  return Array.isArray(t) && t.length ? t.map((x) => Number(x) / 1000) : [30, 50, 70, 80, 90];
 }
 
 /** Un bloque de parámetros de `GET /v1/datos` por su nombre (`PUEBLOS_EXTRACTORES`, `NIVEL_ASENTAMIENTO`…); `null` mientras no llegue. */
@@ -830,9 +830,9 @@ export function nivelesDeEdificio(tipo: string, alCargar?: () => void): Record<s
   return balance(alCargar)?.catalogos?.EDIFICIO_CATALOGO?.[tipo]?.niveles ?? null;
 }
 
-/** A qué distancia de la puerta de una plaza o campamento se actúa (`MOVIMIENTO.radioPuerta`); 10 mientras no llegue el balance. */
+/** A qué distancia de la puerta de una plaza o campamento se actúa (`MOVIMIENTO.radioPuerta`, del BORDE del lugar desde el 23-11); 1 mientras no llegue el balance. */
 export function radioDePuerta(): number {
-  return balance()?.mundoYMilitar?.MOVIMIENTO?.radioPuerta ?? 10;
+  return balance()?.mundoYMilitar?.MOVIMIENTO?.radioPuerta ?? 1;
 }
 
 /** A cuánto se inspecciona a otro (`MOVIMIENTO.radioInspeccion`); 40 mientras no llegue el balance. */
