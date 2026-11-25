@@ -110,7 +110,7 @@ export const PlanSchema: GenMessage<Plan> = /*@__PURE__*/
 /**
  * Ritmo: valor(t) = clamp(valor_en_t0 + por_minuto * (t - t0) / 60000, minimo, maximo).
  * Todas las cantidades en milésimas. Sirve para almacenes, víveres, población, medidor, reputación...
- *
+ * 
  * ESCALONES (economía por minuto, decisión del autor del 2026-10-22): con `en_escalones = true` el valor NO es una recta, sino un
  * escalón que el servidor renueva en cada paso de minuto de la plaza: el cliente NO interpola, muestra `valor_en_t0` tal cual y
  * rotula `por_minuto` como TENDENCIA «+N/min» (el neto real del último paso: producción − consumo − mantenimiento, ya con los gastos
@@ -159,7 +159,7 @@ export const RitmoSchema: GenMessage<Ritmo> = /*@__PURE__*/
 
 /**
  * Un recurso almacenado: cantidad (como ritmo) y capacidad.
- *
+ * 
  * ENTERO (economía entera, decisión C3b del autor del 2026-10-24): todo lo almacenado —almacenes de plaza, pueblo y avanzada, carros,
  * caravanas, almacén personal y existencias de los campamentos— guarda unidades enteras, así que `cantidad.valor_en_t0` es siempre
  * múltiplo de 1.000. La fracción que llevan los flujos por minuto (producción, comida, mantenimiento, recaudación) es un «resto oculto»
@@ -167,12 +167,12 @@ export const RitmoSchema: GenMessage<Ritmo> = /*@__PURE__*/
  * Una unidad que se está consumiendo sigue en `valor_en_t0` hasta que su consumo se completa (EE-2), así que lo que se puede mover o vender puede
  * ser una unidad menos que lo que se ve.
  * La capacidad puede no ser entera (sale de factores): lo que cabe es su parte entera.
- *
+ * 
  * PRODUCIDO Y CONSUMIDO (mecánica 60, 2026-10-28): en el almacén de una plaza, `producido_por_minuto` es lo que entró de ese recurso por los
  * flujos del último paso de minuto (Granjas, Leñeras, extracción, recetas, recaudación) y `consumido_por_minuto` lo que salió (comida de la
  * población y de la guarnición, mantenimiento, insumos de las recetas), por separado y en milésimas. El neto sigue en `cantidad.por_minuto`.
  * No cuentan las entregas, las compras ni las obras (no son flujo por minuto). Fuera del almacén de una plaza (pueblos, avanzadas) van a 0.
- *
+ * 
  * PRODUCCIÓN (2026-11-03): `produccion_por_minuto` es lo que rindieron de verdad esos flujos en el último paso, **quepa o no**: con el almacén
  * lleno, `producido_por_minuto` baja a lo que entró (lo que dejó el consumo) y esto sigue diciendo lo que dan los edificios (lo que no cabe se
  * pierde). Sin almacén lleno es igual a `producido_por_minuto`. Es la cifra para enseñar «produce / consume»; el neto real sigue en

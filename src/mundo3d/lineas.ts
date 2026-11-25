@@ -129,16 +129,24 @@ export interface OpcionesCinta {
   /** Cada cuánto se muestrea, en u. */
   paso?: number;
   /** Corre la cinta de lado, en u: positivo hacia la izquierda del sentido de los puntos (el interior de un contorno antihorario). */
-  desplazar?: number;
+  desplazar?: number | ((x: number, y: number) => number);
   /** Con coordenadas de textura: `u` de 0 (izquierda) a 1 (derecha) de lado a lado y `v` = lo recorrido / `periodo` (lo que ocupa una vez la
    * textura a lo largo, en u), contando desde `desde` u (lo andado antes del primer punto: así un tramo recortado no corre la textura). */
   textura?: { periodo: number; desde?: number };
+  /** Con `asiento: 'bajo'`, la altura ya calculada de la cinta en una muestra (x, y), si la hay (el nivel del agua de un río, que se
+   * calcula una vez a lo largo de todo él); sin ella, la del punto más bajo del corte. */
+  nivel?: (x: number, y: number) => number | undefined;
 }
 
+/** Hasta dónde llega una cinta por dentro de una curva, en radios de la curva (1 sería su centro). */
+const DOBLEZ = 0.9;
+
 /** Una cinta de `ancho` u a lo largo de `puntos`, pegada al relieve: una muestra cada `paso` u con un vértice a cada lado. Las caras miran
- * arriba. `null` si no hay tramo. */
-export function cinta(puntos: readonly Punto[], alturaU: (x: number, y: number) => number, ancho: number, o: OpcionesCinta = {}): THREE.BufferGeometry | null {
-  const paso = o.paso ?? 0.5, dy = o.dy ?? 0.05, medio = ancho / 2;
+ * arriba. `null` si no hay tramo. El ancho (y `desplazar`) pueden ir por punto, para un río que crece aguas abajo. */
+export function cinta(puntos: readonly Punto[], alturaU: (x: number, y: number) => number, ancho: number | ((x: number, y: number) => number), o: OpcionesCinta = {}): THREE.BufferGeometry | null {
+  const paso = o.paso ?? 0.5, dy = o.dy ?? 0.05;
+  const anchoEn = typeof ancho === 'number' ? () => ancho : ancho;
+  const desplazarEn = typeof o.desplazar === 'function' ? o.desplazar : (() => { const d = (o.desplazar as number | undefined) ?? 0; return () => d; })();
   // las muestras, con lo recorrido hasta cada una (para la raya discontinua)
   const xs: number[] = [], ys: number[] = [], s: number[] = [];
   let recorrido = 0;
@@ -156,13 +164,26 @@ export function cinta(puntos: readonly Punto[], alturaU: (x: number, y: number) 
   const pos = new Float32Array(m * 6), nor = new Float32Array(m * 6), uv = o.textura ? new Float32Array(m * 4) : null;
   for (let k = 0; k < m; k++) {
     if (uv) { const v = ((o.textura!.desde ?? 0) + s[k]!) / o.textura!.periodo; uv.set([0, v, 1, v], 4 * k); }
-    const a = Math.max(0, k - 1), b = Math.min(m - 1, k + 1), tx = xs[b]! - xs[a]!, ty = ys[b]! - ys[a]!, l = Math.hypot(tx, ty) || 1;
-    const ux = -ty / l, uy = tx / l, nx = ux * medio, ny = uy * medio, x = xs[k]! + ux * (o.desplazar ?? 0), y = ys[k]! + uy * (o.desplazar ?? 0);
-    const hc = alturaU(x, y), hi = alturaU(x + nx, y + ny), hd = alturaU(x - nx, y - ny);
+    const a = Math.max(0, k - 1), b = Math.min(m - 1, k + 1);
+    const tx = xs[b]! - xs[a]!, ty = ys[b]! - ys[a]!, l = Math.hypot(tx, ty) || 1;
+    const medio = anchoEn(xs[k]!, ys[k]!) / 2, desplazar = desplazarEn(xs[k]!, ys[k]!);
+    const ux = -ty / l, uy = tx / l, x = xs[k]! + ux * desplazar, y = ys[k]! + uy * desplazar;
+    // lo que se aparta del eje cada lado (+ a la izquierda); por dentro de una curva, nunca más allá de su centro (`DOBLEZ` de su radio):
+    // si no, la cinta se dobla sobre sí misma y barre un triángulo fuera del río (autor, 2026-11-25: «desastre de meandros»)
+    let ladoI = desplazar + medio, ladoD = desplazar - medio;
+    if (k > 0 && k < m - 1) {
+      const pa = { x: xs[k - 1]!, y: ys[k - 1]! }, pd = { x: xs[k + 1]!, y: ys[k + 1]! };
+      const ax = xs[k]! - pa.x, ay = ys[k]! - pa.y, bx = pd.x - xs[k]!, by = pd.y - ys[k]!, giro = Math.atan2(ax * by - ay * bx, ax * bx + ay * by);
+      const radio = (Math.hypot(ax, ay) + Math.hypot(bx, by)) / 2 / Math.max(1e-9, Math.abs(giro));
+      if (giro > 0) { ladoI = Math.min(ladoI, radio * DOBLEZ); ladoD = Math.min(ladoD, radio * DOBLEZ); }
+      else if (giro < 0) { ladoI = Math.max(ladoI, -radio * DOBLEZ); ladoD = Math.max(ladoD, -radio * DOBLEZ); }
+    }
+    const xi = xs[k]! + ux * ladoI, yi = ys[k]! + uy * ladoI, xd = xs[k]! + ux * ladoD, yd = ys[k]! + uy * ladoD;
+    const hc = alturaU(x, y), hi = alturaU(xi, yi), hd = alturaU(xd, yd);
     let izq: number, der: number;
-    if (o.asiento === 'bajo') izq = der = Math.min(hc, hi, hd);
+    if (o.asiento === 'bajo') izq = der = o.nivel?.(xs[k]!, ys[k]!) ?? Math.min(hc, hi, hd);
     else { const subir = Math.max(0, hc - (hi + hd) / 2); izq = hi + subir; der = hd + subir; }
-    pos.set([x + nx, izq + dy, y + ny, x - nx, der + dy, y - ny], 6 * k);
+    pos.set([xi, izq + dy, yi, xd, der + dy, yd], 6 * k);
     nor.set([0, 1, 0, 0, 1, 0], 6 * k);
   }
   const indices: number[] = [];

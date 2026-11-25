@@ -29,6 +29,7 @@ import { CapaDeFertilidad } from './capaFertilidad';
 import type { Cultivo } from '../mundo/fertilidad';
 import { Cielo, colorHorizonte } from './cielo';
 import { Paisaje } from './paisaje';
+import { CampoDeRios } from './rios';
 import { Terreno, type SueloPintado } from './terreno';
 import { Trazos } from './trazos';
 import type { MapaGenerado } from '../terreno';
@@ -158,8 +159,10 @@ export class VistaMundo3D {
 
     this.territorio = new Territorio();
     this.fertilidad = new CapaDeFertilidad(o.mapa);
-    this.terreno = new Terreno(o.fuente, o.mapa, this.niebla, this.agua.mar, this.territorio, this.fertilidad);
-    this.paisaje = new Paisaje(o.fuente, o.mapa, this.niebla, this.suelo, this.agua.rio);
+    // los ríos: su cauce y su agua son parte del suelo (`rios.ts`); el paisaje pone sus vados
+    const rios = new CampoDeRios(o.mapa.rios, o.fuente);
+    this.terreno = new Terreno(o.fuente, o.mapa, rios, this.niebla, this.agua.mar, this.territorio, this.fertilidad);
+    this.paisaje = new Paisaje(o.fuente, o.mapa, this.niebla, this.suelo, rios);
     this.arboles = new Arboles(o.fuente, o.mapa, this.niebla, this.suelo);
     this.matas = new Matas(o.fuente, o.mapa, this.niebla, this.suelo);
     this.vida = new Vida(this.niebla, this.suelo);

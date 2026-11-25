@@ -2,7 +2,7 @@
 // quedan lejos. Cerca van a 0,5 u (las muestras del paquete de relieve), más lejos a 1 y a 2 u; un faldón en el borde de cada tesela tapa las
 // grietas entre niveles. Color por clase de terreno (los umbrales del generador), verde donde el suelo es fértil (el raster de fertilidad del
 // artefacto) y por manchas, roca en las laderas y sotobosque donde hay bosque. Donde hay agua (mar o lago) el fondo baja desde la orilla y
-// encima va su lámina (`agua.ts`).
+// encima va su lámina (`agua.ts`). Los ríos son parte del suelo (`rios.ts`): cada tesela talla su cauce y su agua va en la misma lámina.
 import * as THREE from 'three';
 import type { MapaGenerado } from '../terreno';
 import { AGUA, colorDelFondo, distanciaATierra, laminaDeAgua, mascaraSuave, nivelDelAgua, sueloJuntoAlAgua } from './agua';
@@ -12,10 +12,13 @@ import { manchas } from './ruido';
 import type { NieblaDeGuerra } from './niebla';
 import type { CapaDeFertilidad } from './capaFertilidad';
 import type { Territorio } from './territorio';
+import type { CampoDeRios } from './rios';
 
 const { metrosPorUnidad: MPU, ladoTesela: LADO, umbrales: U } = MUNDO3D;
 /** Lo que baja el faldón del borde de cada tesela. */
 const FALDON = 3;
+/** El medio ancho con que se pinta como poco un río, en muestras del suelo: a menos, un río estrecho caería entre ellas. */
+const MEDIO_MINIMO = 0.75;
 
 /** Un color sRGB (0..1) en el espacio lineal en que se mezclan los colores de vértice. */
 const lineal = (r: number, g: number, b: number): [number, number, number] => {
@@ -32,6 +35,8 @@ const PAL = {
   sotobosque: lineal(0.36, 0.44, 0.25),
   pasto: lineal(0.5, 0.58, 0.31),
   pastoRico: lineal(0.39, 0.5, 0.24),
+  /** El suelo mojado junto a un río. */
+  mojado: lineal(0.42, 0.37, 0.26),
 };
 /** Un número fijo entre 0 y 1 por punto de la rejilla, para variar un poco el color y que el suelo no se vea liso. */
 const ruido = (x: number, y: number): number => {
@@ -60,7 +65,7 @@ export function colorDelSuelo(h: number, pendiente: number, bosque: number, f = 
 }
 
 /** La malla de la tesela (tx, ty) con muestras cada `paso` u, y su lámina de agua si la tiene. */
-function mallaDeTesela(fuente: FuenteDeAltura, mapa: MapaGenerado, tx: number, ty: number, paso: number, material: THREE.Material, materialAgua: THREE.Material): { suelo: THREE.Mesh; agua: THREE.Mesh | null; pisada: Float32Array } {
+function mallaDeTesela(fuente: FuenteDeAltura, mapa: MapaGenerado, rios: CampoDeRios, tx: number, ty: number, paso: number, material: THREE.Material, materialAgua: THREE.Material): { suelo: THREE.Mesh; agua: THREE.Mesh | null; pisada: Float32Array } {
   const n = Math.round(LADO / paso) + 1, x0 = tx * LADO, y0 = ty * LADO, m = n + 2;
   // alturas con un anillo de más alrededor, para las normales del borde
   const h = new Float32Array(m * m);
@@ -94,8 +99,34 @@ function mallaDeTesela(fuente: FuenteDeAltura, mapa: MapaGenerado, tx: number, t
       }
     }
   }
+  // los ríos: su cauce, tallado en el suelo, y su agua a su nivel (donde no hay ya mar o lago); un río estrecho se pinta con el medio ancho
+  // que la rejilla recoge siempre (`MEDIO_MINIMO` muestras)
+  const mojado = new Float32Array(m * m), corriente = new Float32Array(m * m * 2);
+  for (let j = 0; j < m; j++) for (let i = 0; i < m; i++) {
+    const k = j * m + i, r = rios.en(x0 + (i - 1) * paso, y0 + (j - 1) * paso, h[k]!, MEDIO_MINIMO * paso);
+    if (!r || !Number.isNaN(nivel[k]!)) continue;
+    h[k] = r.suelo;
+    mojado[k] = r.mojado;
+    if (Number.isNaN(r.nivel)) continue;
+    nivel[k] = r.nivel / MPU;
+    corriente[2 * k] = r.cx; corriente[2 * k + 1] = r.cy;
+    hayAgua = true;
+  }
   const perimetro = 4 * (n - 1), total = n * n + perimetro;
   const pos = new Float32Array(total * 3), nor = new Float32Array(total * 3), col = new Float32Array(total * 3);
+  // La pendiente del color (la roca), promediada en 3×3 muestras: en una ladera que ronda el umbral de la roca, la de cada muestra salta
+  // de un lado al otro y el borde de la roca sale en dientes de sierra.
+  const pendiente = new Float32Array(m * m);
+  for (let j = 1; j < m - 1; j++) for (let i = 1; i < m - 1; i++) {
+    const c = j * m + i;
+    pendiente[c] = Math.hypot(h[c + 1]! - h[c - 1]!, h[c + m]! - h[c - m]!) / MPU / (2 * paso);
+  }
+  const pendienteSuave = (c: number): number => {
+    const i0 = c % m, j0 = Math.floor(c / m);
+    let s = 0, k = 0;
+    for (let j = Math.max(1, j0 - 1); j <= Math.min(m - 2, j0 + 1); j++) for (let i = Math.max(1, i0 - 1); i <= Math.min(m - 2, i0 + 1); i++) { s += pendiente[j * m + i]!; k++; }
+    return s / k;
+  };
   for (let j = 0; j < n; j++) {
     for (let i = 0; i < n; i++) {
       const k = j * n + i, c = (j + 1) * m + (i + 1), x = x0 + i * paso, y = y0 + j * paso, alt = h[c]!;
@@ -105,7 +136,9 @@ function mallaDeTesela(fuente: FuenteDeAltura, mapa: MapaGenerado, tx: number, t
       pos.set([x, alt / MPU, y], 3 * k);
       nor.set([-dx / l, 1 / l, -dz / l], 3 * k);
       const cubre = nivel[c]! - alt / MPU;
-      const base = cubre >= 0 ? colorDelFondo(cubre) : colorDelSuelo(alt, Math.hypot(dx, dz), bosqueEn(mapa, x, y), fertilidadEn(mapa, x, y), x, y), v = 0.95 + 0.08 * ruido(x, y);
+      // la orilla de un río es su cauce tallado, no una ladera: ahí no sale roca
+      const seco = cubre >= 0 ? null : colorDelSuelo(alt, pendienteSuave(c) * (1 - mojado[c]!), bosqueEn(mapa, x, y), fertilidadEn(mapa, x, y), x, y);
+      const base = seco ? mezcla(seco, PAL.mojado, 0.75 * mojado[c]!) : colorDelFondo(cubre), v = 0.95 + 0.08 * ruido(x, y);
       col.set([base[0] * v, base[1] * v, base[2] * v], 3 * k);
     }
   }
@@ -146,9 +179,12 @@ function mallaDeTesela(fuente: FuenteDeAltura, mapa: MapaGenerado, tx: number, t
   malla.matrixAutoUpdate = false;
   if (!hayAgua) return { suelo: malla, agua: null, pisada };
   // la lámina: el nivel y el fondo de los vértices de la tesela (sin el anillo)
-  const nv = new Float32Array(n * n), fondo = new Float32Array(n * n);
-  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const c = (j + 1) * m + (i + 1); nv[j * n + i] = nivel[c]!; fondo[j * n + i] = h[c]! / MPU; }
-  const lamina = laminaDeAgua(n, paso, x0, y0, nv, fondo);
+  const nv = new Float32Array(n * n), fondo = new Float32Array(n * n), corre = new Float32Array(n * n * 2);
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+    const c = (j + 1) * m + (i + 1), k = j * n + i;
+    nv[k] = nivel[c]!; fondo[k] = h[c]! / MPU; corre[2 * k] = corriente[2 * c]!; corre[2 * k + 1] = corriente[2 * c + 1]!;
+  }
+  const lamina = laminaDeAgua(n, paso, x0, y0, nv, fondo, corre);
   if (!lamina) return { suelo: malla, agua: null, pisada };
   const agua = new THREE.Mesh(lamina, materialAgua);
   agua.receiveShadow = true;
@@ -210,7 +246,7 @@ export class Terreno {
   /** Sube cada vez que se pone o se quita una tesela: lo que se colocó con `alturaPintada` sabe así que el suelo de debajo pudo cambiar. */
   version = 0;
 
-  constructor(private readonly fuente: FuenteDeAltura, private readonly mapa: MapaGenerado, niebla: NieblaDeGuerra, private readonly materialAgua: THREE.Material, territorio: Territorio, fertilidad: CapaDeFertilidad) {
+  constructor(private readonly fuente: FuenteDeAltura, private readonly mapa: MapaGenerado, private readonly rios: CampoDeRios, niebla: NieblaDeGuerra, private readonly materialAgua: THREE.Material, territorio: Territorio, fertilidad: CapaDeFertilidad) {
     this.material = materialDelSuelo(niebla, territorio, fertilidad);
   }
 
@@ -245,7 +281,7 @@ export class Terreno {
     let hechas = 0;
     for (const [clave, t] of pendientes) {
       if (hechas && performance.now() > hasta) break;
-      const { suelo: malla, agua, pisada } = mallaDeTesela(this.fuente, this.mapa, t.tx, t.ty, t.paso, this.material, this.materialAgua);
+      const { suelo: malla, agua, pisada } = mallaDeTesela(this.fuente, this.mapa, this.rios, t.tx, t.ty, t.paso, this.material, this.materialAgua);
       this.soltar(clave);
       this.grupo.add(malla);
       if (agua) this.grupo.add(agua);

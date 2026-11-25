@@ -120,8 +120,9 @@ function bolas(lista: readonly [r: number, x: number, y: number, z: number, ey: 
   return g;
 }
 
-/** Las geometrías, de alto 1 más o menos (la escala de cada mata las pone a su tamaño), en el orden de `TIPOS_DE_MATA`. */
-const GEO = [
+/** Las geometrías, de alto 1 más o menos (la escala de cada mata las pone a su tamaño), en el orden de `TIPOS_DE_MATA`. (Exportadas para la
+ * mesa del campo de batalla, `pruebas/campo3d/`.) */
+export const GEO = [
   hojas(5, 0.34, 0.5, 0.72, (k) => 0.65 + 0.35 * ((k * 7) % 5) / 4),
   bolas([[0.22, 0, 0.55, 0, 1], [0.19, 0.42, 0.4, 0.2, 1], [0.2, -0.3, 0.42, -0.3, 1]], 0.95, 0, 'flor'),
   bolas([[0.5, 0, 0.35, 0, 0.7], [0.36, 0.36, 0.28, 0.14, 0.7]], 0.6),

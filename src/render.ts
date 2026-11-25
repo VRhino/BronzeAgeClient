@@ -1,4 +1,5 @@
 import { contornosBosques, evaluarBioma, type MapaGenerado } from './terreno';
+import { anchoDelRio, anchoJunto } from './terreno/tipos';
 import { caravanaEnElMapa } from './mundo/caravanas';
 import { radioDeProteccionMercenarios, radioZonaInicial, type ProyeccionJugador } from './apiCliente';
 import type { Asentamiento, Sigilo, Edificio, MiradaIntel, NieblaProyectada, Point, RectanguloLocal, TrazadoAsentamiento, TrazadoMuralla } from './tiposDominio';
@@ -52,7 +53,7 @@ function capaGeneral(mapa: MapaGenerado): HTMLCanvasElement {
   for (const rio of mapa.rios) {
     if (rio.puntos.length < 2) continue;
     c.strokeStyle = 'rgba(38, 90, 145, 0.9)';
-    c.lineWidth = rio.navegable ? 3 : 1.6;
+    c.lineWidth = rio.orden ? 0.8 + 0.6 * rio.orden : rio.navegable ? 3 : 1.6;
     c.beginPath();
     rio.puntos.forEach((p, i) => (i === 0 ? c.moveTo(p.x * k, p.y * k) : c.lineTo(p.x * k, p.y * k)));
     c.stroke();
@@ -618,28 +619,29 @@ export function pintarTerreno(
   }
   for (const rio of general ? [] : mapa.rios) {
     if (rio.puntos.length < 2 || !rioALaVista(rio, vista)) continue;
-    const anchoPx = Math.max(rio.navegable ? 5 : 2.5, (rio.navegable ? 3 : 1.5) * escalaCanvas);
-    const trazo = () => {
-      ctx.beginPath();
-      rio.puntos.forEach((p, i) => {
-        if (i === 0) ctx.moveTo(p.x * escalaCanvas, p.y * escalaCanvas);
-        else ctx.lineTo(p.x * escalaCanvas, p.y * escalaCanvas);
-      });
-      ctx.stroke();
+    // el ancho de cada tramo, el de sus dos puntos (crece aguas abajo con el caudal)
+    const anchoPxEn = (k: number) => Math.max(rio.navegable ? 5 : 2.5, ((anchoDelRio(rio, k) + anchoDelRio(rio, k + 1)) / 2) * escalaCanvas);
+    const trazo = (extra: number) => {
+      for (let k = 0; k + 1 < rio.puntos.length; k++) {
+        const a = rio.puntos[k]!, b = rio.puntos[k + 1]!;
+        ctx.lineWidth = anchoPxEn(k) + extra;
+        ctx.beginPath();
+        ctx.moveTo(a.x * escalaCanvas, a.y * escalaCanvas);
+        ctx.lineTo(b.x * escalaCanvas, b.y * escalaCanvas);
+        ctx.stroke();
+      }
     };
     if (cerca) {
       ctx.strokeStyle = 'rgba(92, 84, 52, 0.55)';
-      ctx.lineWidth = anchoPx + Math.max(2, 0.6 * escalaCanvas);
-      trazo();
+      trazo(Math.max(2, 0.6 * escalaCanvas));
     }
     ctx.strokeStyle = 'rgba(38, 90, 145, 0.9)';
-    ctx.lineWidth = anchoPx;
-    trazo();
+    trazo(0);
     // Los vados: por donde se cruza a pie. Una franja de piedras clara atravesando el cauce.
     for (const [i, v] of (rio.vados ?? []).entries()) {
       if (!aLaVista(v, 4)) continue;
       const d = rumboDelVado(rio, i);
-      const largo = anchoPx * 1.4 + 4;
+      const largo = Math.max(rio.navegable ? 5 : 2.5, anchoJunto(rio, v.x, v.y) * escalaCanvas) * 1.4 + 4;
       const vx = v.x * escalaCanvas;
       const vy = v.y * escalaCanvas;
       ctx.lineCap = 'butt';

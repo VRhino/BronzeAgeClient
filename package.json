@@ -11,7 +11,8 @@
     "contrato": "node scripts/contrato.mjs",
     "test": "vitest run",
     "mundo3d": "vite --open /pruebas/mundo3d/",
-    "ciudad3d": "vite --open /pruebas/ciudad3d/"
+    "ciudad3d": "vite --open /pruebas/ciudad3d/",
+    "campo3d": "vite --open /pruebas/campo3d/"
   },
   "devDependencies": {
     "@bufbuild/buf": "1.73.0",

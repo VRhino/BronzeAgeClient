@@ -16,7 +16,9 @@ import type { NieblaDeGuerra } from '../src/mundo3d/niebla';
 import { bloquesDeTropa, FigurasDeColumna } from '../src/mundo3d/figuras';
 import { fuenteDesdeMapa, type FuenteDeAltura } from '../src/mundo3d/fuente';
 import { chaikin, cinta, circulo, rutaPendiente, simplificar, suavizarCamino, tramosEnCaja } from '../src/mundo3d/lineas';
-import { alargarHastaElAgua, suavizar, tramosEnTierra } from '../src/mundo3d/paisaje';
+import { suavizar } from '../src/mundo3d/paisaje';
+import { alargarHastaElAgua, CampoDeRios, RIO } from '../src/mundo3d/rios';
+import type { RioZona } from '../src/terreno/tipos';
 import type { MapaGenerado } from '../src/terreno';
 import type { AsentamientoConocido, Ejercito } from '../src/tiposDominio';
 
@@ -391,23 +393,36 @@ describe('los árboles', () => {
   });
 });
 
-describe('ríos que llegan a un lago', () => {
-  // un lago en x >= 10
-  const lago = (x: number) => x >= 10;
-  test('el cauce se corta en la orilla: la tierra llega a la primera muestra de agua y el agua se mete 2 u', () => {
-    const t = tramosEnTierra([{ x: 0, y: 0 }, { x: 20, y: 0 }], lago);
-    expect(t.length).toBe(1);
-    expect(t[0]!.tierra.at(-1)!.x).toBe(10);
-    expect(t[0]!.agua.at(-1)!.x).toBe(12);
-    expect(t[0]!.agua[0]!.x).toBe(0);
-  });
-  test('un río que cruza el lago son dos tramos, y uno que va todo por agua, ninguno', () => {
-    expect(tramosEnTierra([{ x: 0, y: 0 }, { x: 30, y: 0 }], (x) => x >= 10 && x <= 20).length).toBe(2);
-    expect(tramosEnTierra([{ x: 10, y: 0 }, { x: 20, y: 0 }], lago).length).toBe(0);
-  });
+describe('los ríos, parte del suelo', () => {
+  // un llano a 500 m; un lago en x >= 40
+  const fuente: FuenteDeAltura = { ancho: 64, alto: 64, paso: 0.5, alturaEn: () => 500, aguaEn: (x) => x >= 40 };
+  const rio = (id: string, puntos: { x: number; y: number }[], ancho: number): RioZona =>
+    ({ id, puntos, anchos: puntos.map(() => ancho), navegable: false, vados: [] }) as unknown as RioZona;
   test('si acaba a poco del agua se alarga hasta ella; si no, se queda', () => {
+    const lago = (x: number) => x >= 10;
     expect(alargarHastaElAgua([{ x: 0, y: 0 }, { x: 7, y: 0 }], lago).at(-1)!.x).toBe(10);
     expect(alargarHastaElAgua([{ x: 0, y: 0 }, { x: 1, y: 0 }], lago).length).toBe(2);
+  });
+  test('en el cauce, agua a su nivel sobre el suelo tallado; en la orilla, suelo sobre el agua y mojado; lejos, nada', () => {
+    const campo = new CampoDeRios([rio('a', [{ x: 2, y: 10 }, { x: 20, y: 10 }, { x: 30, y: 10 }], 2)], fuente);
+    const medio = campo.en(15, 10, 500, 0)!;
+    expect(medio.nivel).toBeCloseTo(500, 6);
+    expect(medio.suelo).toBeLessThan(medio.nivel - 0.5 * 12);
+    expect(Math.abs(medio.cx)).toBeCloseTo(1, 6);
+    const orilla = campo.en(15, 11.3, 500, 0)!;
+    expect(Number.isNaN(orilla.nivel)).toBe(true);
+    expect(orilla.suelo).toBeGreaterThan(500);
+    expect(orilla.mojado).toBeGreaterThan(0);
+    expect(campo.en(15, 20, 500, 0)).toBeNull();
+  });
+  test('un río estrecho se pinta con el medio ancho mínimo, y en una junta el agua va al nivel del más bajo', () => {
+    const fuenteBaja: FuenteDeAltura = { ...fuente, alturaEn: (x) => 520 - x * 0.5 };
+    const campo = new CampoDeRios([rio('a', [{ x: 2, y: 10 }, { x: 30, y: 10 }], 0.4), rio('b', [{ x: 20, y: 0 }, { x: 20, y: 10 }], 1)], fuenteBaja);
+    expect(Number.isNaN(campo.en(10, 10.3, 515, 0)!.nivel)).toBe(true);
+    expect(Number.isNaN(campo.en(10, 10.3, 515, RIO.orillaMinima)!.nivel)).toBe(false);
+    // en la junta, el de `b` (que lleva todo su recorrido el nivel de su nacimiento, 510 m) y el de `a` (que baja hasta 510 m en x = 20)
+    const junta = campo.en(20, 9.9, 510, 0)!;
+    expect(junta.nivel).toBeLessThanOrEqual(510 + 1e-6);
   });
 });
 
@@ -421,7 +436,7 @@ describe('lo que camina pisa el suelo que se pinta', () => {
   };
   const mapa = { config: { ancho: 256, alto: 256, seed: 0 }, rios: [] } as unknown as MapaGenerado;
   const agua = new THREE.MeshBasicMaterial();
-  const terreno = new Terreno(fuente, mapa, {} as NieblaDeGuerra, agua, new Territorio(), new CapaDeFertilidad(mapa));
+  const terreno = new Terreno(fuente, mapa, new CampoDeRios([], fuente), {} as NieblaDeGuerra, agua, new Territorio(), new CapaDeFertilidad(mapa));
   terreno.actualizar(10, 10, 200, Number.POSITIVE_INFINITY);
   terreno.grupo.updateMatrixWorld(true);
   const rayo = new THREE.Raycaster();

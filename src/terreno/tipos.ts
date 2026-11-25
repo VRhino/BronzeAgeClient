@@ -18,7 +18,31 @@ export interface RioZona {
   navegable: boolean;
   /** Los vados del río (artefacto de mundo): por donde se cruza a pie. */
   vados?: Point[];
+  /** Por punto, del artefacto (vacíos en artefactos antiguos): área drenada en hectáreas y ancho del cauce en u. */
+  caudal?: number[];
+  anchos?: number[];
+  /** Orden de Strahler del tramo (0 si el artefacto no lo trae). */
+  orden?: number;
 }
+
+/** Ancho del río (u) en su punto `i`: el del artefacto o, si no lo trae, el fijo de siempre. */
+export const anchoDelRio = (r: Pick<RioZona, 'anchos' | 'navegable'>, i: number): number =>
+  r.anchos?.length ? r.anchos[Math.min(i, r.anchos.length - 1)]! : r.navegable ? 3 : 1.5;
+
+/** Ancho del río (u) junto a (x, y): el de su tramo más cercano, interpolado entre sus dos puntos. */
+export function anchoJunto(r: Pick<RioZona, 'puntos' | 'anchos' | 'navegable'>, x: number, y: number): number {
+  if (!r.anchos?.length) return anchoDelRio(r, 0);
+  let mejor = Infinity, ancho = anchoDelRio(r, 0);
+  for (let k = 0; k + 1 < r.puntos.length; k++) {
+    const a = r.puntos[k]!, b = r.puntos[k + 1]!, dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy || 1;
+    const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / l2)), d = (a.x + dx * t - x) ** 2 + (a.y + dy * t - y) ** 2;
+    if (d < mejor) { mejor = d; ancho = anchoDelRio(r, k) + (anchoDelRio(r, k + 1) - anchoDelRio(r, k)) * t; }
+  }
+  return ancho;
+}
+
+/** El mayor ancho del río (u). */
+export const anchoMaximo = (r: Pick<RioZona, 'anchos' | 'navegable'>): number => (r.anchos?.length ? Math.max(...r.anchos) : anchoDelRio(r, 0));
 
 export interface ZonaBosque {
   id: string;

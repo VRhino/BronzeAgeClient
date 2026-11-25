@@ -5,6 +5,7 @@
 // él; su material va bajo la niebla como el suelo. Ni en el agua, ni en los cauces, ni en las laderas muy empinadas, ni en los claros de plazas y pueblos.
 import * as THREE from 'three';
 import type { MapaGenerado } from '../terreno';
+import { anchoDelRio } from '../terreno/tipos';
 import { distanciaATierra } from './agua';
 import { MUNDO3D } from './config';
 import { colorDeCopa, especieDe, geometrias, materialDeArboles } from './especies';
@@ -32,22 +33,23 @@ export const POR_ARBOL = 5;
  * descartar las lejanas. */
 export interface Cauces { rios: { x0: number; y0: number; x1: number; y1: number; tramos: Float32Array }[] }
 
-export function franjas(lineas: readonly { puntos: readonly Punto[]; medio: number }[]): Cauces {
+export function franjas(lineas: readonly { puntos: readonly Punto[]; medio: number | ((k: number) => number) }[]): Cauces {
   return {
     rios: lineas.filter((r) => r.puntos.length >= 2).map((r) => {
       const tramos = new Float32Array((r.puntos.length - 1) * 5);
       let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
       r.puntos.forEach((p, k) => {
         x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y);
-        if (k) { const a = r.puntos[k - 1]!; tramos.set([a.x, a.y, p.x, p.y, r.medio], (k - 1) * 5); }
+        if (k) { const a = r.puntos[k - 1]!; tramos.set([a.x, a.y, p.x, p.y, typeof r.medio === 'number' ? r.medio : r.medio(k - 1)], (k - 1) * 5); }
       });
       return { x0, y0, x1, y1, tramos };
     }),
   };
 }
 
-/** Los cauces de los ríos del artefacto: 1,5 u, 3 si es navegable. */
-export const caucesDe = (mapa: MapaGenerado): Cauces => franjas(mapa.rios.map((r) => ({ puntos: r.puntos, medio: (r.navegable ? 3 : 1.5) / 2 })));
+/** Los cauces de los ríos del artefacto, cada tramo con el mayor ancho de sus dos puntos (1,5 u, 3 si es navegable, sin anchos). */
+export const caucesDe = (mapa: MapaGenerado): Cauces =>
+  franjas(mapa.rios.map((r) => ({ puntos: r.puntos, medio: (k: number) => Math.max(anchoDelRio(r, k), anchoDelRio(r, k + 1)) / 2 })));
 
 /** Los tramos de río que pasan a menos de `m` u de la caja. */
 export function caucesCerca(c: Cauces, x0: number, y0: number, x1: number, y1: number, m: number): number[] {

@@ -1,5 +1,5 @@
 // El agua del mundo 3D (Víctor, 2026-11-03: «que no solo sea el piso pintado de azul»). El mar y los lagos son una lámina a su nivel sobre un
-// fondo que baja desde la orilla; los ríos, una cinta de la misma agua que corre. La lámina es transparente: turquesa donde cubre poco, azul
+// fondo que baja desde la orilla; los ríos, la misma lámina por su cauce, con las olas bajando con la corriente. La lámina es transparente: turquesa donde cubre poco, azul
 // hondo mar adentro, con olas que se mueven, el brillo del sol, el cielo reflejado cuando se mira de lado y espuma en la orilla. La orilla es
 // donde el suelo corta la lámina, no el borde de las muestras de agua: sale suave, sin dientes.
 import * as THREE from 'three';
@@ -114,7 +114,7 @@ export function distanciaATierra(agua: Uint8Array, ancho: number, alto: number):
  * vecino de agua y quedan bajo el suelo, que corta la lámina por la orilla. Cada vértice lleva lo que cubre (`profundidad`, u; 0 en tierra).
  * Si todo es agua honda, basta un cuadrado. `null` sin agua.
  */
-export function laminaDeAgua(n: number, paso: number, x0: number, y0: number, nivel: Float32Array, fondo: Float32Array): THREE.BufferGeometry | null {
+export function laminaDeAgua(n: number, paso: number, x0: number, y0: number, nivel: Float32Array, fondo: Float32Array, corriente?: Float32Array): THREE.BufferGeometry | null {
   const agua = (k: number) => !Number.isNaN(nivel[k]!);
   // el nivel de cada vértice: el suyo, o el de un vecino de agua
   const nv = new Float32Array(n * n).fill(Number.NaN);
@@ -143,13 +143,14 @@ export function laminaDeAgua(n: number, paso: number, x0: number, y0: number, ni
     geo.computeBoundingSphere();
     return geo;
   }
-  const indice = new Int32Array(n * n).fill(-1), pos: number[] = [], prof: number[] = [], indices: number[] = [];
+  const indice = new Int32Array(n * n).fill(-1), pos: number[] = [], prof: number[] = [], corre: number[] = [], indices: number[] = [];
   const vertice = (k: number): number => {
     if (indice[k]! >= 0) return indice[k]!;
     const i = k % n, j = (k - i) / n;
     indice[k] = pos.length / 3;
     pos.push(x0 + i * paso, nv[k]!, y0 + j * paso);
     prof.push(Math.max(0, nv[k]! - fondo[k]!));
+    corre.push(corriente?.[2 * k] ?? 0, corriente?.[2 * k + 1] ?? 0);
     return indice[k]!;
   };
   for (let j = 0; j < n - 1; j++) {
@@ -167,6 +168,7 @@ export function laminaDeAgua(n: number, paso: number, x0: number, y0: number, ni
   geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3));
   geo.setAttribute('normal', new THREE.BufferAttribute(normales, 3));
   geo.setAttribute('profundidad', new THREE.BufferAttribute(new Float32Array(prof), 1));
+  if (corriente) geo.setAttribute('corriente', new THREE.BufferAttribute(new Float32Array(corre), 2));
   geo.setIndex(indices);
   geo.computeBoundingSphere();
   return geo;
@@ -188,8 +190,13 @@ vec2 olas(vec2 p, float t) {
   return g * (0.55 + 0.45 * sin(dot(p, vec2(0.11, 0.17)) + t * 0.15));
 }`;
 
-/** El agua: el material del mar y los lagos, el de los ríos (`#define RIO`: el perfil y la corriente salen de la cinta, `uvRio`) y el reloj de
- * las olas. Los dos van bajo la niebla de guerra, como la geografía. */
+/** Lo que avanzan las olas de un río, en u por segundo, a lo largo de su corriente (el atributo `corriente` de la lámina; 0 en el mar). */
+const CORRIENTE = 1.1;
+/** Cada cuántos segundos vuelve a empezar el corrimiento de las olas de un río (en dos fases que se funden). */
+const CICLO_CORRIENTE = 3;
+
+/** El agua: el material del mar, los lagos y los ríos (todos en la misma lámina, `terreno.ts`), y el reloj de las olas. En un río las olas
+ * bajan con la corriente. Va bajo la niebla de guerra, como la geografía. */
 export class Agua {
   private readonly uniformes = {
     uTiempo: { value: 0 },
@@ -199,63 +206,33 @@ export class Agua {
     uCielo: { value: new THREE.Color().setHex(AGUA.cielo, THREE.SRGBColorSpace) },
   };
   readonly mar: THREE.MeshPhongMaterial;
-  readonly rio: THREE.MeshPhongMaterial;
 
   constructor(niebla: NieblaDeGuerra) {
-    this.mar = this.material(niebla, false);
-    this.rio = this.material(niebla, true);
-  }
-
-  /** Mueve las olas: `segundos` desde que empezó la vista. */
-  actualizar(segundos: number): void {
-    this.uniformes.uTiempo.value = segundos % 3600;
-  }
-
-  private material(niebla: NieblaDeGuerra, rio: boolean): THREE.MeshPhongMaterial {
-    const m = new THREE.MeshPhongMaterial({
-      color: 0xffffff, specular: 0xd8e4e8, shininess: 70, transparent: true, depthWrite: false,
-      ...(rio ? { polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 } : {}),
-    });
-    if (rio) m.defines = { RIO: '' };
+    const m = new THREE.MeshPhongMaterial({ color: 0xffffff, specular: 0xd8e4e8, shininess: 70, transparent: true, depthWrite: false });
     const u = this.uniformes;
     m.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, u);
-      sh.vertexShader = `attribute float profundidad; varying float vProf; varying vec3 vAguaMundo;
-        #ifdef RIO
-        attribute vec2 uvRio; varying vec2 vRioUv;
-        #endif
+      sh.vertexShader = `attribute float profundidad; attribute vec2 corriente; varying float vProf; varying vec2 vCorriente; varying vec3 vAguaMundo;
         ` + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
           vAguaMundo = (modelMatrix * vec4(transformed, 1.0)).xyz;
-          #ifdef RIO
-          vRioUv = uvRio; vProf = 0.0;
-          #else
           vProf = profundidad;
-          #endif`);
+          vCorriente = corriente;`);
       sh.fragmentShader = `uniform float uTiempo; uniform vec3 uSomero; uniform vec3 uHondo; uniform vec3 uEspuma; uniform vec3 uCielo;
-        varying float vProf; varying vec3 vAguaMundo;
-        #ifdef RIO
-        varying vec2 vRioUv;
-        #endif
+        varying float vProf; varying vec2 vCorriente; varying vec3 vAguaMundo;
         ${OLAS}
         ` + sh.fragmentShader
         .replace('#include <color_fragment>', `#include <color_fragment>
-          #ifdef RIO
-          // de orilla a orilla: somero en los bordes y más hondo en medio
-          float prof = 1.5 * (1.0 - pow(abs(vRioUv.x * 2.0 - 1.0), 2.0));
-          #else
           float prof = vProf;
-          #endif
           diffuseColor.rgb = mix(uSomero, uHondo, smoothstep(0.0, 2.4, prof));
           diffuseColor.a = mix(0.45, 0.9, smoothstep(0.0, 1.4, prof));`)
         .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
-          #ifdef RIO
-          // la corriente: las olas bajan por el río
-          vec2 pOla = vec2(vRioUv.x * 1.4, vRioUv.y * 1.6 - uTiempo * 1.1);
-          #else
-          vec2 pOla = vAguaMundo.xz;
-          #endif
+          // en un río, las olas bajan con la corriente: en dos fases que vuelven a empezar cada \`CICLO_CORRIENTE\` s y se funden (como un mapa
+          // de flujo); con el corrimiento creciendo sin fin, donde la corriente cambia de rumbo entre dos vértices las olas se estiraban en rayas
+          float f1 = fract(uTiempo / ${CICLO_CORRIENTE.toFixed(2)}), f2 = fract(uTiempo / ${CICLO_CORRIENTE.toFixed(2)} + 0.5);
+          vec2 corre = vCorriente * ${(CORRIENTE * CICLO_CORRIENTE).toFixed(3)};
+          vec2 gOla = mix(olas(vAguaMundo.xz - corre * f1, uTiempo), olas(vAguaMundo.xz - corre * f2, uTiempo), abs(1.0 - 2.0 * f1));
           // de lejos, más lisa: las olas finas a lo lejos solo harían rayas
-          vec2 gOla = olas(pOla, uTiempo) * mix(0.45, 1.0, smoothstep(0.0, 1.2, prof)) * mix(1.0, 0.25, smoothstep(15.0, 90.0, length(vViewPosition)));
+          gOla *= mix(0.45, 1.0, smoothstep(0.0, 1.2, prof)) * mix(1.0, 0.25, smoothstep(15.0, 90.0, length(vViewPosition)));
           normal = normalize(normal + (viewMatrix * vec4(-gOla.x, 0.0, -gOla.y, 0.0)).xyz);`)
         .replace('#include <opaque_fragment>', `#include <opaque_fragment>
           {
@@ -269,13 +246,17 @@ export class Agua {
           }`);
       niebla.parchear(sh);
     };
-    m.customProgramCacheKey = () => (rio ? 'agua-rio' : 'agua-mar');
-    return m;
+    m.customProgramCacheKey = () => 'agua';
+    this.mar = m;
+  }
+
+  /** Mueve las olas: `segundos` desde que empezó la vista. */
+  actualizar(segundos: number): void {
+    this.uniformes.uTiempo.value = segundos % 3600;
   }
 
   destruir(): void {
     this.mar.dispose();
-    this.rio.dispose();
   }
 }
 
