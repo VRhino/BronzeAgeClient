@@ -3,6 +3,10 @@
 Formato: cada entrada anota la **fecha de sincronización con el backend** (`BronzeAgeFase0`) y contra qué
 commit suyo se midió. La brecha detallada vive en `docs/Analisis_Brecha_Backend.md` y `docs/COMANDOS.md`.
 
+## [0.228.1] — 2026-11-26 · Tamaños de las maquetas rehechas (tanda 6 del motor, PR #48 y #49)
+
+Cifras de serie al día (`TAMANOS_MAPA`: plazas 1,38 a 6,27, pueblo 1,27, avanzadas 0,9 / 1,69 / 2,28, bandidos 1,61 y alijo 0,52), y bandidos y alijos cuentan desde su borde. Fundar: nodo a 10 u (antes 12) y orilla de río de la plaza a 8 u (antes 15) cuando faltan los datos. El rebaño de las aldeas ajenas ya lo leía la proyección. Va con la partida nueva.
+
 ## [0.228.0] — 2026-11-25 · Ríos del mapa de mundo, rehechos · motor `ea24360`
 
 Contrato 0.33.0 regenerado (`Rio` lleva `caudal` y `anchos` por punto y su `orden`). Va con el mundo nuevo del motor: los ríos salen de su generador nuevo (meandros en proporción, brazos muertos, trenzas y un cauce que siempre baja).

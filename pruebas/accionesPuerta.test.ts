@@ -28,7 +28,7 @@ const contexto = (p: ProyeccionJugador): ContextoPlaza => ({ proyeccion: p, asen
 
 describe('guarnición de la plaza propia desde la puerta', () => {
   it('a la puerta: se recoge a la columna y se puede dejar la de la columna', () => {
-    const html = SUBPESTANA_GUARNICION.html(contexto(proyeccion({ x: 103, y: 100 })));
+    const html = SUBPESTANA_GUARNICION.html(contexto(proyeccion({ x: 102.5, y: 100 })));
     expect(html).toContain('data-guarnicion-retirar="s2"');
     expect(html).toContain('data-guarnicion-mas');
     expect(html).toContain('A la puerta');

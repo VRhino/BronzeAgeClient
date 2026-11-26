@@ -13,16 +13,18 @@ interface RadiosDelMapa {
   avanzada?: Record<string, number>;
   campamentoMercenarios?: number;
   campamentoBandidos?: number;
+  alijo?: number;
 }
 
-/** Las cifras de hoy (23-11) para cuando aún no llegan los datos del motor. */
+/** Las cifras de hoy (25-11, tanda 6) para cuando aún no llegan los datos del motor. */
 const RADIOS_DE_SERIE: Required<RadiosDelMapa> = {
-  plaza: { sinMuralla: { 1: 1.49, 2: 3.2, 3: 5.6, 4: 6.4, 5: 7.2 }, conMuralla: { 1: 1.49, 2: 3.42, 3: 6.27, 4: 7.09, 5: 8.05 } },
-  pueblo: 2.04,
+  plaza: { sinMuralla: { 1: 1.38, 2: 1.76, 3: 4.21, 4: 5.13, 5: 5.68 }, conMuralla: { 1: 1.38, 2: 1.98, 3: 4.65, 4: 5.71, 5: 6.27 } },
+  pueblo: 1.27,
   aldea: { 1: 2.3, 2: 3.0, 3: 3.58 },
-  avanzada: { atalaya: 0.68, fuerte: 1.28, ciudadela: 1.44 },
+  avanzada: { atalaya: 0.9, fuerte: 1.69, ciudadela: 2.28 },
   campamentoMercenarios: 2.2,
-  campamentoBandidos: 0.1,
+  campamentoBandidos: 1.61,
+  alijo: 0.52,
 };
 
 function radios(): RadiosDelMapa {
@@ -62,6 +64,7 @@ export function radioDelLugarEn(p: ProyeccionJugador, punto: Punto): number {
   const obra = (p.obrasDeMapa ?? []).find((o) => cerca(o.posicion, punto));
   if (obra) return obra.tipo === 'avanzada' ? tabla(R.avanzada, 'atalaya', RADIOS_DE_SERIE.avanzada) : obra.tipo === 'aldea' ? tabla(R.aldea, 1, RADIOS_DE_SERIE.aldea) : (R.pueblo ?? RADIOS_DE_SERIE.pueblo);
   if ((p.campamentosBandidos ?? []).some((c) => cerca(c.posicion, punto))) return R.campamentoBandidos ?? RADIOS_DE_SERIE.campamentoBandidos;
+  if ((p.alijos ?? []).some((c) => cerca(c.posicion, punto))) return R.alijo ?? RADIOS_DE_SERIE.alijo;
   return 0;
 }
 
